@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Morphology Builder Stage 1 to 3</title>
+  <style>
+    :root { --bg:#0b0c10; --panel:#14161c; --card:#1b1f2a; --text:#eef2ff; --muted:#b7c0d8; --line:#2a3142; --ok:#7ee787; --warn:#ffcf66; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:var(--text); }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 18px; }
+    .top { display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:space-between; }
+    h1 { font-size: 18px; margin:0; font-weight: 800; letter-spacing: .2px; }
+    .controls { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    button, select { background:var(--card); color:var(--text); border:1px solid var(--line); border-radius:10px; padding:10px 12px; cursor:pointer; }
+    button:hover, select:hover { border-color:#3a4664; }
+    .pill { display:inline-flex; gap:8px; align-items:center; padding: 6px 10px; border:1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.02); color: var(--muted); font-size: 12px; }
+    .grid { display:grid; grid-template-columns: 1.2fr .8fr; gap: 14px; margin-top: 14px; }
+    @media (max-width: 950px){ .grid { grid-template-columns: 1fr; } }
+    .panel { background:var(--panel); border:1px solid var(--line); border-radius: 14px; padding: 14px; }
+    .panel h2 { margin:0 0 10px 0; font-size: 13px; color: var(--muted); font-weight: 800; letter-spacing:.3px; text-transform: uppercase; }
+    .banks { display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    @media (max-width: 950px){ .banks { grid-template-columns: 1fr; } }
+    .bank { background: rgba(255,255,255,.02); border: 1px dashed var(--line); border-radius: 14px; padding: 10px; min-height: 190px; }
+    .bank h3 { margin:0 0 8px 0; font-size: 13px; font-weight: 800; color: var(--text); }
+    .tiles { display:flex; flex-wrap:wrap; gap:8px; }
+    .tile {
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px 10px 8px 10px;
+      min-width: 120px;
+      cursor: grab;
+      user-select:none;
+      opacity: 1;
+      transition: opacity .12s ease, transform .12s ease, border-color .12s ease;
+    }
+    .tile:active { cursor: grabbing; transform: scale(0.99); }
+    .tile.disabled { opacity: .28; cursor: not-allowed; }
+    .tile .form { font-weight: 900; font-size: 14px; }
+    .tile .meaning { margin-top: 2px; font-size: 12px; color: var(--muted); }
+    .tile .meta { margin-top: 6px; font-size: 11px; color: #98a2c7; }
+    .builder { display:grid; gap:10px; }
+    .slotLabel { font-size:12px; color:var(--muted); margin: 0 0 6px 2px; }
+    .dropzone {
+      background: rgba(255,255,255,.02);
+      border: 2px dashed var(--line);
+      border-radius: 16px;
+      padding: 12px;
+      min-height: 70px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .dropzone.dragover { border-color:#6c7cff; background: rgba(108,124,255,.08); }
+    .output { background: rgba(255,255,255,.03); border:1px solid var(--line); border-radius: 14px; padding: 12px; }
+    .word { font-size: 26px; font-weight: 950; letter-spacing:.2px; }
+    .gloss { margin-top: 6px; color: var(--muted); font-size: 14px; line-height: 1.35; }
+    .note { margin-top: 10px; font-size: 12px; color: #aab3d3; }
+    .status { margin-top: 8px; font-size: 12px; }
+    .status.ok { color: var(--ok); }
+    .status.warn { color: var(--warn); }
+    .tiny { font-size: 11px; color: #97a1c6; opacity: .9; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <h1>Morphology Builder Stage 1 to 3</h1>
+      <div class="controls">
+        <span class="pill" id="modePill">Guided mode on</span>
+        <select id="packSelect" title="Stage pack">
+          <option value="stage1">Stage 1 pack</option>
+          <option value="stage2">Stage 2 pack</option>
+          <option value="stage3">Stage 3 pack</option>
+        </select>
+        <button id="clearBtn" type="button">Clear builder</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <h2>Morpheme bank (drag tiles)</h2>
+        <div class="banks">
+          <div class="bank">
+            <h3>Prefixes</h3>
+            <div class="tiles" id="prefixBank"></div>
+          </div>
+          <div class="bank">
+            <h3>Base words</h3>
+            <div class="tiles" id="baseBank"></div>
+          </div>
+          <div class="bank">
+            <h3>Suffixes</h3>
+            <div class="tiles" id="suffixBank"></div>
+          </div>
+        </div>
+        <div class="tiny">Tip: drag a base word first. Prefixes and suffixes will only activate if they are compatible with that base word.</div>
+      </div>
+
+      <div class="panel">
+        <h2>Build a word</h2>
+        <div class="builder">
+          <div>
+            <div class="slotLabel">Prefix slot</div>
+            <div class="dropzone" id="prefixZone" data-zone="prefix"></div>
+          </div>
+          <div>
+            <div class="slotLabel">Base word slot (required)</div>
+            <div class="dropzone" id="baseZone" data-zone="base"></div>
+          </div>
+          <div>
+            <div class="slotLabel">Suffix slot</div>
+            <div class="dropzone" id="suffixZone" data-zone="suffix"></div>
+          </div>
+        </div>
+
+        <div style="height:10px"></div>
+
+        <div class="output">
+          <div class="word" id="wordOut">Drag a base word</div>
+          <div class="gloss" id="meaningOut">Then add a prefix or suffix to change the meaning.</div>
+          <div class="status warn" id="statusOut"></div>
+        </div>
+
+        <div class="note">Spelling rules included: drop final e before vowel suffixes (make → making), and y to i before consonant suffixes (happy → happiness). You can extend rules later if you want.</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const PACKS = {
+    stage1: {
+      name: "Stage 1",
+      prefixes: [
+        { id:"re", form:"re", meaning:"again", allowedPos:["verb"] },
+        { id:"un", form:"un", meaning:"not", allowedPos:["adj","verb"] }
+      ],
+      bases: [
+        { id:"play", form:"play", meaning:"to do for fun", pos:["verb"] },
+        { id:"help", form:"help", meaning:"to give support", pos:["verb"] },
+        { id:"jump", form:"jump", meaning:"to leap", pos:["verb"] },
+        { id:"kind", form:"kind", meaning:"friendly, caring", pos:["adj"] },
+        { id:"fair", form:"fair", meaning:"just, equal", pos:["adj"] },
+        { id:"happy", form:"happy", meaning:"feeling good", pos:["adj"] }
+      ],
+      suffixes: [
+        { id:"s", form:"s", meaning:"more than one or does now", allowedPos:["noun","verb"], hint:"plural or present tense" },
+        { id:"ed", form:"ed", meaning:"happened in the past", allowedPos:["verb"], hint:"past tense" },
+        { id:"ing", form:"ing", meaning:"happening now", allowedPos:["verb"], hint:"present participle" }
+      ],
+      realWords: new Set(["replay","unfair","unkind","playing","played","helps","helped","helping","jumps","jumped","jumping","happier"])
+    },
+
+    stage2: {
+      name: "Stage 2",
+      prefixes: [
+        { id:"un", form:"un", meaning:"not", allowedPos:["adj","verb"] },
+        { id:"re", form:"re", meaning:"again", allowedPos:["verb"] },
+        { id:"dis", form:"dis", meaning:"not or opposite of", allowedPos:["verb","noun"] },
+        { id:"mis", form:"mis", meaning:"wrong or badly", allowedPos:["verb","noun"] }
+      ],
+      bases: [
+        { id:"hope", form:"hope", meaning:"to want something to happen", pos:["verb","noun"] },
+        { id:"care", form:"care", meaning:"to look after", pos:["verb","noun"] },
+        { id:"agree", form:"agree", meaning:"to have the same opinion", pos:["verb"] },
+        { id:"appear", form:"appear", meaning:"to come into view", pos:["verb"] },
+        { id:"use", form:"use", meaning:"to do something with", pos:["verb"] },
+        { id:"happy", form:"happy", meaning:"feeling good", pos:["adj"] }
+      ],
+      suffixes: [
+        { id:"ness", form:"ness", meaning:"state of being", allowedPos:["adj"], hint:"turns adj into noun" },
+        { id:"ful", form:"ful", meaning:"full of", allowedPos:["noun"], hint:"turns noun into adj" },
+        { id:"less", form:"less", meaning:"without", allowedPos:["noun"], hint:"turns noun into adj" },
+        { id:"ment", form:"ment", meaning:"result or act of", allowedPos:["verb"], hint:"turns verb into noun" },
+        { id:"er", form:"er", meaning:"a person who does", allowedPos:["verb"], hint:"turns verb into noun" },
+        { id:"ing", form:"ing", meaning:"happening now", allowedPos:["verb"] },
+        { id:"ed", form:"ed", meaning:"happened in the past", allowedPos:["verb"] }
+      ],
+      realWords: new Set(["happiness","careless","hopeful","agreement","disagree","misuse","useful","useless","appeared","appearing","user","hopeful"])
+    },
+
+    stage3: {
+      name: "Stage 3",
+      prefixes: [
+        { id:"un", form:"un", meaning:"not", allowedPos:["adj","verb"] },
+        { id:"re", form:"re", meaning:"again", allowedPos:["verb"] },
+        { id:"pre", form:"pre", meaning:"before", allowedPos:["verb","noun","adj"] },
+        { id:"sub", form:"sub", meaning:"under, below", allowedPos:["noun","adj"] },
+        { id:"inter", form:"inter", meaning:"between", allowedPos:["noun","verb","adj"] }
+      ],
+      bases: [
+        { id:"predict", form:"predict", meaning:"to say before it happens", pos:["verb"] },
+        { id:"act", form:"act", meaning:"to do something", pos:["verb","noun"] },
+        { id:"create", form:"create", meaning:"to make", pos:["verb"] },
+        { id:"cycle", form:"cycle", meaning:"a repeating series", pos:["noun"] },
+        { id:"possible", form:"possible", meaning:"able to happen", pos:["adj"] },
+        { id:"move", form:"move", meaning:"to change place", pos:["verb"] }
+      ],
+      suffixes: [
+        { id:"tion", form:"tion", meaning:"the act or result of", allowedPos:["verb"], hint:"turns verb into noun" },
+        { id:"ive", form:"ive", meaning:"having the quality of", allowedPos:["verb","noun"], hint:"often makes adj" },
+        { id:"able", form:"able", meaning:"can be", allowedPos:["verb"], hint:"turns verb into adj" },
+        { id:"er", form:"er", meaning:"a person who does", allowedPos:["verb"] },
+        { id:"ment", form:"ment", meaning:"result or act of", allowedPos:["verb"] },
+        { id:"ness", form:"ness", meaning:"state of being", allowedPos:["adj"] }
+      ],
+      realWords: new Set(["prediction","predictive","creation","creative","movement","creator","possible","impossible","recreate","recreation","action","active"])
+    }
+  };
+
+  const els = {
+    packSelect: document.getElementById("packSelect"),
+    prefixBank: document.getElementById("prefixBank"),
+    baseBank: document.getElementById("baseBank"),
+    suffixBank: document.getElementById("suffixBank"),
+    prefixZone: document.getElementById("prefixZone"),
+    baseZone: document.getElementById("baseZone"),
+    suffixZone: document.getElementById("suffixZone"),
+    clearBtn: document.getElementById("clearBtn"),
+    wordOut: document.getElementById("wordOut"),
+    meaningOut: document.getElementById("meaningOut"),
+    statusOut: document.getElementById("statusOut")
+  };
+
+  let packKey = els.packSelect.value;
+  let current = { prefix:null, base:null, suffix:null };
+
+  function makeTile(item, type) {
+    const div = document.createElement("div");
+    div.className = "tile";
+    div.draggable = true;
+    div.dataset.id = item.id;
+    div.dataset.type = type;
+
+    const form = document.createElement("div");
+    form.className = "form";
+    form.textContent = item.form;
+
+    const meaning = document.createElement("div");
+    meaning.className = "meaning";
+    meaning.textContent = item.meaning;
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    if (type === "base") meta.textContent = "base (" + item.pos.join(", ") + ")";
+    if (type === "prefix") meta.textContent = "prefix (" + item.allowedPos.join(", ") + ")";
+    if (type === "suffix") meta.textContent = "suffix (" + item.allowedPos.join(", ") + (item.hint ? ", " + item.hint : "") + ")";
+
+    div.appendChild(form);
+    div.appendChild(meaning);
+    div.appendChild(meta);
+
+    div.addEventListener("dragstart", (e) => {
+      if (div.classList.contains("disabled")) { e.preventDefault(); return; }
+      e.dataTransfer.setData("text/plain", JSON.stringify({ type, id: item.id }));
+    });
+
+    return div;
+  }
+
+  function clearZone(zoneEl) {
+    zoneEl.innerHTML = "";
+  }
+
+  function renderZones() {
+    clearZone(els.prefixZone);
+    clearZone(els.baseZone);
+    clearZone(els.suffixZone);
+
+    const p = current.prefix;
+    const b = current.base;
+    const s = current.suffix;
+    if (p) els.prefixZone.appendChild(makeTile(p, "prefix"));
+    if (b) els.baseZone.appendChild(makeTile(b, "base"));
+    if (s) els.suffixZone.appendChild(makeTile(s, "suffix"));
+  }
+
+  function basePosSet() {
+    if (!current.base) return null;
+    return new Set(current.base.pos);
+  }
+
+  function isCompatiblePrefix(prefix, base) {
+    if (!base) return false;
+    const basePos = new Set(base.pos);
+    return prefix.allowedPos.some(p => basePos.has(p));
+  }
+
+  function isCompatibleSuffix(suffix, base) {
+    if (!base) return false;
+    const basePos = new Set(base.pos);
+    return suffix.allowedPos.some(p => basePos.has(p));
+  }
+
+  function renderBanks() {
+    const pack = PACKS[packKey];
+    els.prefixBank.innerHTML = "";
+    els.baseBank.innerHTML = "";
+    els.suffixBank.innerHTML = "";
+
+    const base = current.base;
+
+    pack.prefixes.forEach(p => {
+      const t = makeTile(p, "prefix");
+      if (base && !isCompatiblePrefix(p, base)) t.classList.add("disabled");
+      if (!base) t.classList.add("disabled");
+      els.prefixBank.appendChild(t);
+    });
+
+    pack.bases.forEach(b => {
+      const t = makeTile(b, "base");
+      els.baseBank.appendChild(t);
+    });
+
+    pack.suffixes.forEach(s => {
+      const t = makeTile(s, "suffix");
+      if (base && !isCompatibleSuffix(s, base)) t.classList.add("disabled");
+      if (!base) t.classList.add("disabled");
+      els.suffixBank.appendChild(t);
+    });
+  }
+
+  function applySpellingRules(baseForm, suffixForm) {
+    if (!suffixForm) return baseForm;
+
+    const vowels = ["a","e","i","o","u"];
+    const last = baseForm.slice(-1).toLowerCase();
+    const first = suffixForm.slice(0,1).toLowerCase();
+
+    let out = baseForm;
+
+    if (last === "e" && vowels.includes(first)) {
+      out = baseForm.slice(0, -1);
+    }
+
+    if (last === "y" && !vowels.includes(first)) {
+      out = baseForm.slice(0, -1) + "i";
+    }
+
+    return out;
+  }
+
+  function buildWord() {
+    if (!current.base) return "";
+    const prefix = current.prefix ? current.prefix.form : "";
+    const base = current.base.form;
+    const suffix = current.suffix ? current.suffix.form : "";
+
+    const baseAdjusted = applySpellingRules(base, suffix);
+    return prefix + baseAdjusted + suffix;
+  }
+
+  function buildMeaning() {
+    if (!current.base) return "";
+    const parts = [];
+    if (current.prefix) parts.push(current.prefix.meaning);
+    parts.push(current.base.meaning);
+    if (current.suffix) parts.push(current.suffix.meaning);
+    return parts.join(" + ");
+  }
+
+  function updateOutput() {
+    if (!current.base) {
+      els.wordOut.textContent = "Drag a base word";
+      els.meaningOut.textContent = "Then add a prefix or suffix to change the meaning.";
+      els.statusOut.textContent = "";
+      els.statusOut.className = "status warn";
+      return;
+    }
+
+    const word = buildWord();
+    const meaning = buildMeaning();
+    els.wordOut.textContent = word;
+    els.meaningOut.textContent = meaning;
+
+    const pack = PACKS[packKey];
+    const looksReal = pack.realWords && pack.realWords.size ? pack.realWords.has(word.toLowerCase()) : false;
+
+    if (!current.prefix && !current.suffix) {
+      els.statusOut.textContent = "Now add a compatible prefix or suffix.";
+      els.statusOut.className = "status warn";
+      return;
+    }
+
+    if (looksReal) {
+      els.statusOut.textContent = "Looks good in this stage pack.";
+      els.statusOut.className = "status ok";
+    } else {
+      els.statusOut.textContent = "This combo is allowed, but it is not in the stage word list yet. You can add it later if you want.";
+      els.statusOut.className = "status warn";
+    }
+  }
+
+  function findItem(type, id) {
+    const pack = PACKS[packKey];
+    const list = type === "prefix" ? pack.prefixes : type === "suffix" ? pack.suffixes : pack.bases;
+    return list.find(x => x.id === id) || null;
+  }
+
+  function canDrop(type, item) {
+    if (type === "base") return true;
+    if (!current.base) return false;
+    if (type === "prefix") return isCompatiblePrefix(item, current.base);
+    if (type === "suffix") return isCompatibleSuffix(item, current.base);
+    return false;
+  }
+
+  function setupZone(zoneEl) {
+    zoneEl.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      zoneEl.classList.add("dragover");
+    });
+    zoneEl.addEventListener("dragleave", () => zoneEl.classList.remove("dragover"));
+    zoneEl.addEventListener("drop", (e) => {
+      e.preventDefault();
+      zoneEl.classList.remove("dragover");
+      const payload = e.dataTransfer.getData("text/plain");
+      if (!payload) return;
+
+      let data;
+      try { data = JSON.parse(payload); } catch { return; }
+
+      const zoneType = zoneEl.dataset.zone;
+      const draggedType = data.type;
+      const item = findItem(draggedType, data.id);
+      if (!item) return;
+
+      if (zoneType !== draggedType) return;
+
+      if (!canDrop(zoneType, item)) return;
+
+      current[zoneType] = item;
+
+      if (zoneType === "base") {
+        if (current.prefix && !isCompatiblePrefix(current.prefix, current.base)) current.prefix = null;
+        if (current.suffix && !isCompatibleSuffix(current.suffix, current.base)) current.suffix = null;
+      }
+
+      renderZones();
+      renderBanks();
+      updateOutput();
+    });
+
+    zoneEl.addEventListener("dblclick", () => {
+      const zoneType = zoneEl.dataset.zone;
+      current[zoneType] = null;
+      if (zoneType === "base") {
+        current.prefix = null;
+        current.suffix = null;
+      }
+      renderZones();
+      renderBanks();
+      updateOutput();
+    });
+  }
+
+  function clearAll() {
+    current = { prefix:null, base:null, suffix:null };
+    renderZones();
+    renderBanks();
+    updateOutput();
+  }
+
+  els.packSelect.addEventListener("change", () => {
+    packKey = els.packSelect.value;
+    clearAll();
+  });
+
+  els.clearBtn.addEventListener("click", clearAll);
+
+  setupZone(els.prefixZone);
+  setupZone(els.baseZone);
+  setupZone(els.suffixZone);
+
+  clearAll();
+</script>
+</body>
+</html>
