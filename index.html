@@ -124,7 +124,7 @@
             </div>
 
             <div class="tiles" id="baseBank"></div>
-            <div class="tiny">Drag any base word. Prefixes and suffixes will update to show all possible options from any stage.</div>
+            <div class="tiny">Drag any base word. Prefixes and suffixes will update and float possible options to the top.</div>
           </div>
 
           <div class="bank">
@@ -174,7 +174,7 @@
 
 <script>
   // -------------------- DATA --------------------
-  // NOTE: Prefixes/suffixes share forms across stages (re, un, er, etc). We avoid collisions by giving every morpheme a unique uid.
+  // All morphemes get unique uids so duplicates like re/un/er across stages never collide.
 
   const PACKS = {
     stage1: {
@@ -214,27 +214,30 @@
         { id:"er", form:"er", meaning:"a person who does, or more", allowedPos:["verb","adj"], hint:"agent or comparative" }
       ],
       allowedWords: [
+        // base + inflections
         "play","plays","played","playing",
         "help","helps","helped","helping","helper",
         "jump","jumps","jumped","jumping",
         "look","looks","looked","looking",
         "pack","packs","packed","packing",
         "clean","cleans","cleaned","cleaning","cleaner",
-        "cook","cooks","cooked","cooking",
+        "cook","cooks","cooked","cooking","cooker",
         "read","reads","reading","reader",
         "write","writes","writing","writer",
         "make","makes","making","maker",
 
+        // noun plurals
         "book","books","shop","shops","box","boxes","day","days",
 
+        // adjectives / comparative
         "happy","kind","fair","safe","quick","quicker",
 
+        // prefix families (real, common)
         "replay","replays","replayed","replaying",
         "repack","repacks","repacked","repacking",
         "reread","rereads","rereading",
         "rewrite","rewrites","rewriting",
         "remake","remakes","remaking",
-
         "unhappy","unkind","unfair","unsafe",
         "unpack","unpacks","unpacked","unpacking"
       ]
@@ -269,15 +272,21 @@
         { id:"ance", form:"ance", meaning:"state or action", allowedPos:["verb"], hint:"turns verb into noun (appearance)" }
       ],
       allowedWords: [
+        // base + common derivations
         "care","careful","careless",
         "hope","hopeful","hopeless",
-        "agree","disagree","disagreement","agreement",
+        "agree","agreement","disagree","disagreement",
         "appear","appearance","disappear","disappearance",
-        "use","useful","useless","reuse","misuse",
+        "use","useful","useless","reuse","misuse","disuse",
         "teach","teacher",
         "enjoy","enjoyment",
-        "excite","excited","exciting",
-        "amaze","amazed","amazing"
+        "excite","excited","exciting","excitement",
+        "amaze","amazed","amazing","amazement",
+
+        // additional real cross stage combos (because tool is global)
+        "unhelpful","helpless","helpful",
+        "unhappy","happiness","kindness","quickly","safely","happily",
+        "unhappiness","unkindness","unsafeness"
       ]
     },
 
@@ -321,12 +330,16 @@
         "organise","organisation",
         "develop","development",
         "possible",
-        "transport","transportation"
+        "transport","transportation",
+
+        // extra real cross stage combos using Stage 3 suffixes
+        "usable","unusable","reusable",
+        "movement"  // move + ment (cross stage base)
       ]
     }
   };
 
-  // Normalise and dedupe allowed word lists
+  // Normalise + dedupe allowed words per stage
   function dedupeWords(arr){
     const out = [];
     const seen = new Set();
@@ -340,13 +353,23 @@
     PACKS[key].allowedWords = dedupeWords(PACKS[key].allowedWords);
   }
 
+  // Combine all allowed words into one global set (strict mode uses this)
+  const GLOBAL_ALLOWED = (() => {
+    const set = new Set();
+    for (const stageKey of Object.keys(PACKS)){
+      for (const w of PACKS[stageKey].allowedWords){
+        set.add(String(w).toLowerCase());
+      }
+    }
+    return set;
+  })();
+
   // -------------------- BUILD GLOBAL MORPHEME BANKS WITH UNIQUE IDs --------------------
   function mkUid(stage, type, id){ return `${stage}:${type}:${id}`; }
 
   const ALL_BASES = [];
   const ALL_PREFIXES = [];
   const ALL_SUFFIXES = [];
-
   for (const stageKey of Object.keys(PACKS)){
     for (const b of PACKS[stageKey].bases){
       ALL_BASES.push({ ...b, stage: stageKey, uid: mkUid(stageKey, "base", b.id) });
@@ -359,17 +382,7 @@
     }
   }
 
-  const GLOBAL_ALLOWED = (() => {
-    const set = new Set();
-    for (const stageKey of Object.keys(PACKS)){
-      for (const w of PACKS[stageKey].allowedWords){
-        set.add(String(w).toLowerCase());
-      }
-    }
-    return set;
-  })();
-
-  // Fast lookup by uid
+  // Lookup by uid
   const BY_UID = new Map();
   for (const x of [...ALL_BASES, ...ALL_PREFIXES, ...ALL_SUFFIXES]){
     BY_UID.set(x.uid, x);
@@ -400,8 +413,8 @@
     modePill: document.getElementById("modePill")
   };
 
-  let packKey = els.packSelect.value;    // recommended stage
-  let strict = els.strictToggle.checked; // only listed words
+  let packKey = els.packSelect.value;
+  let strict = els.strictToggle.checked;
   let current = { prefix:null, base:null, suffix:null };
 
   function stageLabel(stageKey){
@@ -418,8 +431,10 @@
     const last = baseForm.slice(-1).toLowerCase();
     const first = suffixForm.slice(0,1).toLowerCase();
     let out = baseForm;
+
     if (last === "e" && v.has(first)) out = baseForm.slice(0, -1);
     if (last === "y" && !v.has(first)) out = baseForm.slice(0, -1) + "i";
+
     return out;
   }
 
@@ -454,12 +469,10 @@
   }
 
   // -------------------- BASE-DRIVEN “POSSIBLE OPTIONS” --------------------
-  // Once a base is selected, compute exactly which prefixes/suffixes can form a listed word with that base.
-  // If a prefix is already selected, compute suffixes that can work with (prefix+base+suffix) in the list, and vice versa.
   function possibleAffixesForCurrentBase(){
     const base = current.base;
-    const possiblePrefixes = new Set(); // uids
-    const possibleSuffixes = new Set(); // uids
+    const possiblePrefixes = new Set();
+    const possibleSuffixes = new Set();
 
     if (!base) return { possiblePrefixes, possibleSuffixes };
 
@@ -468,12 +481,10 @@
 
     for (const p of prefixCandidates){
       if (p && !posCompatiblePrefix(p, base)) continue;
-      // if a prefix is already selected, only evaluate that one
       if (current.prefix && (!p || p.uid !== current.prefix.uid)) continue;
 
       for (const s of suffixCandidates){
         if (s && !posCompatibleSuffix(s, base)) continue;
-        // if a suffix is already selected, only evaluate that one
         if (current.suffix && (!s || s.uid !== current.suffix.uid)) continue;
 
         const word = computeWord(p, base, s);
@@ -537,9 +548,7 @@
       return false;
     }
 
-    // strict: base is enabled if it can make at least one listed word with any affix (global)
     if (type === "base"){
-      // quick check: try all prefixes/suffixes until we find a listed word
       for (const p of [null, ...ALL_PREFIXES]){
         if (p && !posCompatiblePrefix(p, item)) continue;
         for (const s of [null, ...ALL_SUFFIXES]){
@@ -553,7 +562,6 @@
 
     if (!current.base) return false;
 
-    // strict: once base chosen, enable exactly the options that actually lead to a listed word (from any stage)
     if (type === "prefix"){
       if (!posCompatiblePrefix(item, current.base)) return false;
       return possibleSets.possiblePrefixes.has(item.uid);
@@ -567,7 +575,7 @@
     return false;
   }
 
-  // -------------------- RENDER BANKS --------------------
+  // -------------------- RENDER BANKS (ENABLED OPTIONS FLOAT TO TOP) --------------------
   function renderBanks() {
     els.prefixBank.innerHTML = "";
     els.baseBank.innerHTML = "";
@@ -575,18 +583,23 @@
 
     const possibleSets = possibleAffixesForCurrentBase();
 
-    // Prefixes
+    // Prefixes (enabled first)
     let prefixEnabledCount = 0;
+    const prefixEnabled = [];
+    const prefixDisabled = [];
+
     for (const p of ALL_PREFIXES){
       const tile = makeTile(p, "prefix", stageLabel(p.stage));
       const enabled = isEnabledTile("prefix", p, possibleSets);
       if (!enabled) tile.classList.add("disabled");
-      if (enabled) prefixEnabledCount++;
-      els.prefixBank.appendChild(tile);
+      if (enabled) { prefixEnabledCount++; prefixEnabled.push(tile); }
+      else { prefixDisabled.push(tile); }
     }
+
+    els.prefixBank.append(...prefixEnabled, ...prefixDisabled);
     els.prefixCount.textContent = String(prefixEnabledCount);
 
-    // Bases with search
+    // Bases (search)
     const q = (els.baseSearch.value || "").trim().toLowerCase();
     const basesFiltered = ALL_BASES
       .filter(b => !q || b.form.toLowerCase().includes(q))
@@ -602,15 +615,20 @@
     }
     els.baseCount.textContent = String(baseEnabledCount);
 
-    // Suffixes
+    // Suffixes (enabled first)
     let suffixEnabledCount = 0;
+    const suffixEnabled = [];
+    const suffixDisabled = [];
+
     for (const s of ALL_SUFFIXES){
       const tile = makeTile(s, "suffix", stageLabel(s.stage));
       const enabled = isEnabledTile("suffix", s, possibleSets);
       if (!enabled) tile.classList.add("disabled");
-      if (enabled) suffixEnabledCount++;
-      els.suffixBank.appendChild(tile);
+      if (enabled) { suffixEnabledCount++; suffixEnabled.push(tile); }
+      else { suffixDisabled.push(tile); }
     }
+
+    els.suffixBank.append(...suffixEnabled, ...suffixDisabled);
     els.suffixCount.textContent = String(suffixEnabledCount);
 
     els.modePill.textContent = strict ? "Global morphemes • Only listed words enabled" : "Global morphemes • POS filtering only";
@@ -646,7 +664,7 @@
     els.meaningOut.textContent = meaning;
 
     if (!current.prefix && !current.suffix){
-      els.statusOut.textContent = strict ? "Now add a prefix or suffix (only real listed options are enabled)." : "Now add a compatible prefix or suffix.";
+      els.statusOut.textContent = strict ? "Now add a prefix or suffix (only real options are enabled and moved to the top)." : "Now add a compatible prefix or suffix.";
       els.statusOut.className = "status warn";
       return;
     }
@@ -691,7 +709,7 @@
       let next = { ...current };
       next[zoneType] = item;
 
-      // Auto switch recommended stage to base stage
+      // Auto switch recommended stage to base stage (nice UI, doesn’t restrict affixes)
       if (zoneType === "base" && item.stage && item.stage !== packKey){
         setPack(item.stage);
       }
@@ -712,28 +730,25 @@
         if (!posCompatibleSuffix(next.suffix, next.base)) return;
       }
 
-      // Strict: only allow drops that can result in a real listed word
-      if (strict){
+      // Strict: only allow drops that can result in a listed word (now or by adding the other affix)
+      if (strict && next.base){
         const wordNow = computeWord(next.prefix, next.base, next.suffix);
-        if (next.base && (next.prefix || next.suffix)){
-          // if word is not currently complete, only allow if it can be completed to a listed word
-          if (!GLOBAL_ALLOWED.has(wordNow)){
-            // try completing missing side
-            let ok = false;
-            const prefixes = next.prefix ? [next.prefix] : [null, ...ALL_PREFIXES];
-            const suffixes = next.suffix ? [next.suffix] : [null, ...ALL_SUFFIXES];
 
-            for (const p of prefixes){
-              if (p && !posCompatiblePrefix(p, next.base)) continue;
-              for (const s of suffixes){
-                if (s && !posCompatibleSuffix(s, next.base)) continue;
-                const w = computeWord(p, next.base, s);
-                if (w && GLOBAL_ALLOWED.has(w)){ ok = true; break; }
-              }
-              if (ok) break;
+        if ((next.prefix || next.suffix) && !GLOBAL_ALLOWED.has(wordNow)){
+          let ok = false;
+          const prefixes = next.prefix ? [next.prefix] : [null, ...ALL_PREFIXES];
+          const suffixes = next.suffix ? [next.suffix] : [null, ...ALL_SUFFIXES];
+
+          for (const p of prefixes){
+            if (p && !posCompatiblePrefix(p, next.base)) continue;
+            for (const s of suffixes){
+              if (s && !posCompatibleSuffix(s, next.base)) continue;
+              const w = computeWord(p, next.base, s);
+              if (w && GLOBAL_ALLOWED.has(w)){ ok = true; break; }
             }
-            if (!ok) return;
+            if (ok) break;
           }
+          if (!ok) return;
         }
       }
 
