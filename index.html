@@ -86,6 +86,7 @@
     .wordTile.selected { border-color:#6c7cff; box-shadow: 0 0 0 2px rgba(108,124,255,.25) inset; }
     .subpanel { border:1px solid var(--line); border-radius: 14px; padding: 12px; background: rgba(255,255,255,.02); }
     .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+    .hide { display:none !important; }
   </style>
 </head>
 <body>
@@ -153,32 +154,58 @@
       </div>
 
       <div class="panel">
-        <h2>Word explorer (base-first, with full morpheme explanations)</h2>
+        <h2>Word explorer</h2>
 
         <div class="subpanel">
           <div class="row" style="margin-bottom:10px;">
-            <input id="explorerQuery" class="searchBox" type="text" placeholder="Search base words (eg fair, amaze, predict)..." />
+            <select id="explorerMode" title="Choose how the explorer finds base words">
+              <option value="curated">Explorer mode: Curated (from base bank)</option>
+              <option value="dictionary">Explorer mode: Dictionary (any word)</option>
+              <option value="off">Explorer mode: Off</option>
+            </select>
           </div>
 
-          <div class="tiny" id="explorerStatus">Search a base word, then click a base tile to explore buildable real words.</div>
+          <div id="explorerBody">
+            <div class="row" style="margin-bottom:10px;">
+              <input id="explorerQuery" class="searchBox" type="text" placeholder="Search base words (eg fair, amaze, predict)..." />
+            </div>
 
-          <div style="height:10px"></div>
-          <div class="slotLabel">Matching base tiles (click to select)</div>
-          <div class="tiles" id="explorerBaseTiles"></div>
+            <div id="dictBaseControls" class="hide">
+              <div class="row" style="margin-bottom:10px;">
+                <select id="dictBasePos" title="Optional: restrict prefixes/suffixes using POS rules">
+                  <option value="any">POS: any</option>
+                  <option value="verb">POS: verb</option>
+                  <option value="noun">POS: noun</option>
+                  <option value="adj">POS: adjective</option>
+                </select>
+                <input id="dictBaseMeaning" type="text" placeholder="Base meaning (optional, for the gloss)" style="flex:1; min-width:220px;" />
+              </div>
+              <div class="tiny">In Dictionary mode, the base word might not have a built in meaning. Add one here so the gloss matches your bank style.</div>
+              <div style="height:10px"></div>
+            </div>
 
-          <div style="height:12px"></div>
-          <div class="slotLabel">Valid prefixes for selected base (click to build)</div>
-          <div class="tiles" id="explorerPrefixes"></div>
+            <div class="tiny" id="explorerStatus">Search a base word, then click a base tile to explore buildable real words.</div>
 
-          <div style="height:12px"></div>
-          <div class="slotLabel">Valid suffixes for selected base (click to build)</div>
-          <div class="tiles" id="explorerSuffixes"></div>
+            <div style="height:10px"></div>
+            <div class="slotLabel">Matching base tiles (click to select)</div>
+            <div class="tiles" id="explorerBaseTiles"></div>
 
-          <div style="height:12px"></div>
-          <div class="slotLabel">Buildable real words (click to auto-fill builder with parts)</div>
-          <div class="tiles" id="explorerWords"></div>
+            <div style="height:12px"></div>
+            <div class="slotLabel">Valid prefixes for selected base (click to build)</div>
+            <div class="tiles" id="explorerPrefixes"></div>
 
-          <div class="hint">This explorer only uses base words from your base bank so meanings always show. If you want a wider range, add more base words to the bank.</div>
+            <div style="height:12px"></div>
+            <div class="slotLabel">Valid suffixes for selected base (click to build)</div>
+            <div class="tiles" id="explorerSuffixes"></div>
+
+            <div style="height:12px"></div>
+            <div class="slotLabel">Buildable real words (click to auto-fill builder with parts)</div>
+            <div class="tiles" id="explorerWords"></div>
+
+            <div class="hint" id="explorerHint">
+              Curated mode uses your bank bases so meanings always show. Dictionary mode searches all words in dictionary.txt and then computes buildable real words.
+            </div>
+          </div>
         </div>
 
         <div style="height:14px"></div>
@@ -399,8 +426,32 @@
   const BY_UID = new Map();
   for (const x of [...ALL_BASES, ...ALL_PREFIXES, ...ALL_SUFFIXES]) BY_UID.set(x.uid, x);
 
+  // Temp bases created from dictionary search
+  const TEMP_BASES = new Map(); // key: form -> baseObj
+  const TEMP_BASE_MEANINGS = new Map(); // key: form -> meaning string
+
+  function registerTempBase(form, posArr, meaning){
+    const f = (form || "").trim().toLowerCase();
+    if (!f) return null;
+
+    const uid = `temp:base:${f}`;
+    const obj = {
+      id: f,
+      uid,
+      stage: "temp",
+      form: f,
+      meaning: meaning || TEMP_BASE_MEANINGS.get(f) || "",
+      pos: Array.isArray(posArr) && posArr.length ? posArr : ["verb","noun","adj"]
+    };
+
+    TEMP_BASES.set(f, obj);
+    BY_UID.set(uid, obj);
+    return obj;
+  }
+
   // -------------------- DICTIONARY --------------------
   let DICT_SET = null;
+  let DICT_ARR = null;
   let dictLoaded = false;
 
   async function loadDictionary(){
@@ -416,11 +467,13 @@
         set.add(w);
       }
       DICT_SET = set;
+      DICT_ARR = Array.from(set).sort((a,b)=>a.localeCompare(b));
       dictLoaded = true;
       updateDictPill();
       renderBanks(); updateOutput(); renderExplorer();
     } catch {
       DICT_SET = null;
+      DICT_ARR = null;
       dictLoaded = false;
       updateDictPill();
       renderBanks(); updateOutput(); renderExplorer();
@@ -466,25 +519,33 @@
     meaningOut: document.getElementById("meaningOut"),
     statusOut: document.getElementById("statusOut"),
 
+    explorerMode: document.getElementById("explorerMode"),
+    explorerBody: document.getElementById("explorerBody"),
     explorerQuery: document.getElementById("explorerQuery"),
     explorerStatus: document.getElementById("explorerStatus"),
     explorerBaseTiles: document.getElementById("explorerBaseTiles"),
     explorerPrefixes: document.getElementById("explorerPrefixes"),
     explorerSuffixes: document.getElementById("explorerSuffixes"),
-    explorerWords: document.getElementById("explorerWords")
+    explorerWords: document.getElementById("explorerWords"),
+    explorerHint: document.getElementById("explorerHint"),
+
+    dictBaseControls: document.getElementById("dictBaseControls"),
+    dictBasePos: document.getElementById("dictBasePos"),
+    dictBaseMeaning: document.getElementById("dictBaseMeaning")
   };
 
   let packKey = els.packSelect.value;
   let strict = els.strictToggle.checked;
   let current = { prefix:null, base:null, suffix:null };
 
-  // Explorer state: selected base (so search can move without losing selection)
+  // Explorer state
   let explorerSelectedBaseUid = null;
 
   function stageLabel(stageKey){
     if (stageKey === "stage1") return "Stage 1";
     if (stageKey === "stage2") return "Stage 2";
-    return "Stage 3";
+    if (stageKey === "stage3") return "Stage 3";
+    return "Dictionary";
   }
 
   // -------------------- SPELLING RULES --------------------
@@ -514,24 +575,24 @@
     if (!baseObj) return "";
     const parts = [];
     if (prefixObj) parts.push(prefixObj.meaning);
-    parts.push(baseObj.meaning);
+    parts.push(baseObj.meaning || "(base meaning not set)");
     if (suffixObj) parts.push(suffixObj.meaning);
     return parts.join(" + ");
   }
 
   function posCompatiblePrefix(prefixObj, baseObj){
     if (!prefixObj || !baseObj) return false;
-    const basePos = new Set(baseObj.pos);
+    const basePos = new Set(baseObj.pos || []);
     return prefixObj.allowedPos.some(p => basePos.has(p));
   }
 
   function posCompatibleSuffix(suffixObj, baseObj){
     if (!suffixObj || !baseObj) return false;
-    const basePos = new Set(baseObj.pos);
+    const basePos = new Set(baseObj.pos || []);
     return suffixObj.allowedPos.some(p => basePos.has(p));
   }
 
-  // -------------------- REAL-WORD ENABLE SETS (for floating enabled options) --------------------
+  // -------------------- REAL-WORD ENABLE SETS --------------------
   function possibleAffixesForBase(baseObj, lockedPrefixUid=null, lockedSuffixUid=null){
     const possiblePrefixes = new Set();
     const possibleSuffixes = new Set();
@@ -541,11 +602,11 @@
     const suffixCandidates = [null, ...ALL_SUFFIXES];
 
     for (const p of prefixCandidates){
-      if (p && !posCompatiblePrefix(p, baseObj)) continue;
+      if (p && baseObj.pos && baseObj.pos.length && !posCompatiblePrefix(p, baseObj)) continue;
       if (lockedPrefixUid && (!p || p.uid !== lockedPrefixUid)) continue;
 
       for (const s of suffixCandidates){
-        if (s && !posCompatibleSuffix(s, baseObj)) continue;
+        if (s && baseObj.pos && baseObj.pos.length && !posCompatibleSuffix(s, baseObj)) continue;
         if (lockedSuffixUid && (!s || s.uid !== lockedSuffixUid)) continue;
 
         const word = computeWord(p, baseObj, s);
@@ -586,7 +647,7 @@
     meta.className = "meta";
     if (!compact){
       const stageLabelTxt = stageTxt ? ` • ${stageTxt}` : "";
-      if (type === "base") meta.textContent = `base (${item.pos.join(", ")})${stageLabelTxt}`;
+      if (type === "base") meta.textContent = `base (${(item.pos||[]).join(", ") || "any"})${stageLabelTxt}`;
       else if (type === "prefix") meta.textContent = `prefix (${item.allowedPos.join(", ")})${stageLabelTxt}`;
       else meta.textContent = `suffix (${item.allowedPos.join(", ")}${item.hint ? ", " + item.hint : ""})${stageLabelTxt}`;
     }
@@ -623,13 +684,12 @@
     if (!strict){
       if (type === "base") return true;
       if (!current.base) return false;
-      if (type === "prefix") return posCompatiblePrefix(item, current.base);
-      if (type === "suffix") return posCompatibleSuffix(item, current.base);
+      if (type === "prefix") return (!current.base.pos || !current.base.pos.length) ? true : posCompatiblePrefix(item, current.base);
+      if (type === "suffix") return (!current.base.pos || !current.base.pos.length) ? true : posCompatibleSuffix(item, current.base);
       return false;
     }
 
     if (type === "base"){
-      // base enabled if it can create at least one real word with any prefix/suffix
       const sets = possibleAffixesForBase(item);
       return sets.possiblePrefixes.size > 0 || sets.possibleSuffixes.size > 0 || isRealWord(item.form.toLowerCase());
     }
@@ -637,12 +697,12 @@
     if (!current.base) return false;
 
     if (type === "prefix"){
-      if (!posCompatiblePrefix(item, current.base)) return false;
+      if (current.base.pos && current.base.pos.length && !posCompatiblePrefix(item, current.base)) return false;
       return possibleSets.possiblePrefixes.has(item.uid);
     }
 
     if (type === "suffix"){
-      if (!posCompatibleSuffix(item, current.base)) return false;
+      if (current.base.pos && current.base.pos.length && !posCompatibleSuffix(item, current.base)) return false;
       return possibleSets.possibleSuffixes.has(item.uid);
     }
 
@@ -670,7 +730,7 @@
     els.prefixBank.append(...prefixEnabled, ...prefixDisabled);
     els.prefixCount.textContent = String(prefixEnabledCount);
 
-    // Bases with search
+    // Bases with search (curated bank only)
     const q = (els.baseSearch.value || "").trim().toLowerCase();
     const basesFiltered = ALL_BASES
       .filter(b => !q || b.form.toLowerCase().includes(q))
@@ -738,7 +798,7 @@
       els.statusOut.textContent = "Real word.";
       els.statusOut.className = "status ok";
     } else {
-      els.statusOut.textContent = strict ? "Not a real word (based on current checker)." : "POS-compatible combo (not a real word in checker).";
+      els.statusOut.textContent = strict ? "Not a real word (based on current checker)." : "Compatible combo (not a real word in checker).";
       els.statusOut.className = strict ? "status bad" : "status warn";
     }
   }
@@ -755,24 +815,23 @@
 
     if (type === "base"){
       next.base = item;
-      if (next.prefix && !posCompatiblePrefix(next.prefix, next.base)) next.prefix = null;
-      if (next.suffix && !posCompatibleSuffix(next.suffix, next.base)) next.suffix = null;
-      if (item.stage && item.stage !== packKey) setPack(item.stage);
+      if (next.prefix && next.base.pos && next.base.pos.length && !posCompatiblePrefix(next.prefix, next.base)) next.prefix = null;
+      if (next.suffix && next.base.pos && next.base.pos.length && !posCompatibleSuffix(next.suffix, next.base)) next.suffix = null;
 
-      // Keep explorer synced to builder base
+      if (item.stage && item.stage !== "temp" && item.stage !== packKey) setPack(item.stage);
+
       explorerSelectedBaseUid = item.uid;
       if (els.explorerQuery.value.trim() === "") els.explorerQuery.value = item.form;
     } else if (type === "prefix"){
       if (!next.base) return;
-      if (!posCompatiblePrefix(item, next.base)) return;
+      if (next.base.pos && next.base.pos.length && !posCompatiblePrefix(item, next.base)) return;
       next.prefix = item;
     } else if (type === "suffix"){
       if (!next.base) return;
-      if (!posCompatibleSuffix(item, next.base)) return;
+      if (next.base.pos && next.base.pos.length && !posCompatibleSuffix(item, next.base)) return;
       next.suffix = item;
     }
 
-    // Strict: only accept if it can lead to a real word
     if (strict && next.base){
       const wordNow = computeWord(next.prefix, next.base, next.suffix);
       if ((next.prefix || next.suffix) && !isRealWord(wordNow)){
@@ -780,9 +839,9 @@
         const prefixes = next.prefix ? [next.prefix] : [null, ...ALL_PREFIXES];
         const suffixes = next.suffix ? [next.suffix] : [null, ...ALL_SUFFIXES];
         for (const p of prefixes){
-          if (p && !posCompatiblePrefix(p, next.base)) continue;
+          if (p && next.base.pos && next.base.pos.length && !posCompatiblePrefix(p, next.base)) continue;
           for (const s of suffixes){
-            if (s && !posCompatibleSuffix(s, next.base)) continue;
+            if (s && next.base.pos && next.base.pos.length && !posCompatibleSuffix(s, next.base)) continue;
             const w = computeWord(p, next.base, s);
             if (w && isRealWord(w)){ ok = true; break; }
           }
@@ -795,7 +854,6 @@
     current = next;
     renderZones(); renderBanks(); updateOutput();
 
-    // If base changed, re-render explorer so it updates prefixes/suffixes/words immediately
     const baseAfter = current.base ? current.base.uid : null;
     if (baseBefore !== baseAfter) renderExplorer();
   }
@@ -839,7 +897,7 @@
     renderZones(); renderBanks(); updateOutput(); renderExplorer();
   }
 
-  // -------------------- WORD -> MORPHEME ANALYSER (so explorer words can fill builder with parts) --------------------
+  // -------------------- WORD -> MORPHEME ANALYSER --------------------
   function analyseWordToMorphemes(targetWord){
     const w = (targetWord || "").trim().toLowerCase();
     if (!w) return null;
@@ -849,12 +907,15 @@
     const prefixCandidates = [null, ...ALL_PREFIXES];
     const suffixCandidates = [null, ...ALL_SUFFIXES];
 
-    for (const base of ALL_BASES){
+    // Include curated bases + temp bases
+    const bases = [...ALL_BASES, ...Array.from(TEMP_BASES.values())];
+
+    for (const base of bases){
       for (const p of prefixCandidates){
-        if (p && !posCompatiblePrefix(p, base)) continue;
+        if (p && base.pos && base.pos.length && !posCompatiblePrefix(p, base)) continue;
 
         for (const s of suffixCandidates){
-          if (s && !posCompatibleSuffix(s, base)) continue;
+          if (s && base.pos && base.pos.length && !posCompatibleSuffix(s, base)) continue;
 
           const built = computeWord(p, base, s);
           if (built !== w) continue;
@@ -869,22 +930,31 @@
   }
 
   // -------------------- EXPLORER --------------------
+  function explorerGetMode(){
+    return els.explorerMode.value;
+  }
+
   function explorerGetQuery(){
     return (els.explorerQuery.value || "").trim().toLowerCase();
   }
 
   function explorerGetSelectedBase(){
-    // Prefer explicit explorer selection
     if (explorerSelectedBaseUid){
       const b = BY_UID.get(explorerSelectedBaseUid);
-      if (b && b.pos) return b;
+      if (b && b.form) return b;
     }
-    // Otherwise, if builder has a base, use it
     if (current.base) return current.base;
 
-    // Otherwise, pick the first base match by query
     const q = explorerGetQuery();
     if (!q) return null;
+
+    if (explorerGetMode() === "dictionary"){
+      if (!dictLoaded || !DICT_ARR) return null;
+      const match = DICT_ARR.find(w => w.includes(q));
+      if (!match) return null;
+      return registerTempBase(match, ["verb","noun","adj"], TEMP_BASE_MEANINGS.get(match) || "");
+    }
+
     const match = ALL_BASES
       .filter(b => b.form.toLowerCase().includes(q))
       .sort((a,b)=>a.form.localeCompare(b.form))[0];
@@ -903,12 +973,11 @@
       .filter(s => sets.possibleSuffixes.has(s.uid))
       .sort((a,b)=>a.form.localeCompare(b.form));
 
-    // Build words list from real combinations (p/base/s)
     const words = new Set();
     for (const p of [null, ...validPrefixes]){
-      if (p && !posCompatiblePrefix(p, baseObj)) continue;
+      if (p && baseObj.pos && baseObj.pos.length && !posCompatiblePrefix(p, baseObj)) continue;
       for (const s of [null, ...validSuffixes]){
-        if (s && !posCompatibleSuffix(s, baseObj)) continue;
+        if (s && baseObj.pos && baseObj.pos.length && !posCompatibleSuffix(s, baseObj)) continue;
         const w = computeWord(p, baseObj, s);
         if (w && isRealWord(w)) words.add(w);
       }
@@ -926,6 +995,19 @@
   }
 
   function renderExplorer(){
+    const mode = explorerGetMode();
+
+    // Off mode hides explorer body completely
+    if (mode === "off"){
+      els.explorerBody.classList.add("hide");
+      return;
+    }
+    els.explorerBody.classList.remove("hide");
+
+    // Toggle dictionary controls
+    if (mode === "dictionary") els.dictBaseControls.classList.remove("hide");
+    else els.dictBaseControls.classList.add("hide");
+
     els.explorerBaseTiles.innerHTML = "";
     els.explorerPrefixes.innerHTML = "";
     els.explorerSuffixes.innerHTML = "";
@@ -934,33 +1016,70 @@
     const q = explorerGetQuery();
     const selectedBase = explorerGetSelectedBase();
 
-    // Base tiles list (search driven)
-    const matches = ALL_BASES
-      .filter(b => !q || b.form.toLowerCase().includes(q))
-      .sort((a,b)=>a.form.localeCompare(b.form))
-      .slice(0, 60);
+    // Base tiles list
+    if (mode === "dictionary"){
+      if (!dictLoaded || !DICT_ARR){
+        els.explorerStatus.textContent = "Dictionary mode needs dictionary.txt loaded. Switch to Curated mode or add dictionary.txt beside this HTML file.";
+        return;
+      }
 
-    for (const b of matches){
-      const isSel = selectedBase && b.uid === selectedBase.uid;
-      els.explorerBaseTiles.appendChild(
-        makeChip(b.form, () => {
-          explorerSelectedBaseUid = b.uid;
-          // Keep builder + explorer in sync: set builder base too
-          addToBuilder("base", b);
-          renderExplorer();
-        }, isSel)
-      );
+      const matches = DICT_ARR
+        .filter(w => !q || w.includes(q))
+        .slice(0, 60);
+
+      for (const w of matches){
+        const isSel = selectedBase && selectedBase.form === w;
+        els.explorerBaseTiles.appendChild(
+          makeChip(w, () => {
+            // POS selection
+            const posChoice = els.dictBasePos.value;
+            const posArr = posChoice === "any" ? ["verb","noun","adj"] : [posChoice];
+
+            // Meaning input
+            const meaning = (els.dictBaseMeaning.value || "").trim();
+            if (meaning) TEMP_BASE_MEANINGS.set(w, meaning);
+
+            const tempBase = registerTempBase(w, posArr, TEMP_BASE_MEANINGS.get(w) || "");
+            explorerSelectedBaseUid = tempBase.uid;
+
+            addToBuilder("base", tempBase);
+            renderExplorer();
+          }, isSel)
+        );
+      }
+    } else {
+      const matches = ALL_BASES
+        .filter(b => !q || b.form.toLowerCase().includes(q))
+        .sort((a,b)=>a.form.localeCompare(b.form))
+        .slice(0, 60);
+
+      for (const b of matches){
+        const isSel = selectedBase && b.uid === selectedBase.uid;
+        els.explorerBaseTiles.appendChild(
+          makeChip(b.form, () => {
+            explorerSelectedBaseUid = b.uid;
+            addToBuilder("base", b);
+            renderExplorer();
+          }, isSel)
+        );
+      }
     }
 
     if (!selectedBase){
-      els.explorerStatus.textContent = "Search a base word, then click a base tile to explore buildable real words.";
+      els.explorerStatus.textContent = mode === "dictionary"
+        ? "Search any word from the dictionary, then click it to use as your base."
+        : "Search a base word, then click a base tile to explore buildable real words.";
       return;
+    }
+
+    // If dictionary mode, keep the meaning box synced to the currently selected dictionary base
+    if (mode === "dictionary"){
+      els.dictBaseMeaning.value = TEMP_BASE_MEANINGS.get(selectedBase.form) || selectedBase.meaning || "";
     }
 
     const result = explorerComputeForBase(selectedBase);
     els.explorerStatus.textContent = `Selected base: ${selectedBase.form}. Found ${result.words.length} buildable real words.`;
 
-    // Prefix options for the selected base
     for (const p of result.prefixes){
       els.explorerPrefixes.appendChild(
         makeChip(p.form, () => {
@@ -970,7 +1089,6 @@
       );
     }
 
-    // Suffix options for the selected base
     for (const s of result.suffixes){
       els.explorerSuffixes.appendChild(
         makeChip(s.form, () => {
@@ -980,25 +1098,26 @@
       );
     }
 
-    // Words list (click to auto-fill builder with morphemes so meanings show)
     for (const w of result.words){
       els.explorerWords.appendChild(
         makeChip(w, () => {
           const analysis = analyseWordToMorphemes(w);
           if (analysis){
-            // Fill builder with analysed parts
             current = { prefix:null, base:null, suffix:null };
             renderZones(); renderBanks(); updateOutput();
             addToBuilder("base", analysis.base);
             if (analysis.prefix) addToBuilder("prefix", analysis.prefix);
             if (analysis.suffix) addToBuilder("suffix", analysis.suffix);
           } else {
-            // If it cannot be analysed using your morpheme banks, copy instead
             copyText(w);
           }
         })
       );
     }
+
+    els.explorerHint.textContent = mode === "dictionary"
+      ? "Dictionary mode uses dictionary.txt to find any base word and compute real buildable words. Add a base meaning and optional POS for better gloss and filtering."
+      : "Curated mode uses your bank bases so meanings and POS always show.";
   }
 
   // -------------------- EVENTS --------------------
@@ -1009,14 +1128,47 @@
   els.baseSearch.addEventListener("input", () => renderBanks());
   els.clearBtn.addEventListener("click", clearAll);
 
+  els.explorerMode.addEventListener("change", () => {
+    // Reset selection when switching modes to avoid weird cross-mode uid issues
+    explorerSelectedBaseUid = null;
+    renderExplorer();
+  });
+
   els.explorerQuery.addEventListener("input", () => {
-    // If the user is typing a new query, clear selection unless it still matches
     const q = explorerGetQuery();
     if (explorerSelectedBaseUid){
       const b = BY_UID.get(explorerSelectedBaseUid);
       if (!b || (q && !b.form.toLowerCase().includes(q))) explorerSelectedBaseUid = null;
     }
     renderExplorer();
+  });
+
+  els.dictBasePos.addEventListener("change", () => {
+    // Re-register selected base with new POS and re-render options
+    const b = explorerGetSelectedBase();
+    if (b && b.stage === "temp"){
+      const posChoice = els.dictBasePos.value;
+      const posArr = posChoice === "any" ? ["verb","noun","adj"] : [posChoice];
+      const meaning = (els.dictBaseMeaning.value || "").trim();
+      if (meaning) TEMP_BASE_MEANINGS.set(b.form, meaning);
+      const tempBase = registerTempBase(b.form, posArr, TEMP_BASE_MEANINGS.get(b.form) || "");
+      explorerSelectedBaseUid = tempBase.uid;
+      addToBuilder("base", tempBase);
+    }
+    renderExplorer();
+  });
+
+  els.dictBaseMeaning.addEventListener("input", () => {
+    const b = explorerGetSelectedBase();
+    if (b && b.stage === "temp"){
+      const meaning = (els.dictBaseMeaning.value || "").trim();
+      TEMP_BASE_MEANINGS.set(b.form, meaning);
+      b.meaning = meaning;
+      if (current.base && current.base.uid === b.uid){
+        current.base.meaning = meaning;
+        updateOutput();
+      }
+    }
   });
 
   setupZone(els.prefixZone);
@@ -1030,4 +1182,3 @@
 </script>
 </body>
 </html>
-
