@@ -429,11 +429,8 @@
   let DICT_ARR = null;
   let dictLoaded = false;
 
-  // Smaller meaning bank: base_meanings.json
-  // Structure: { "word": { "meaning": "...", "pos": ["verb"] } }
-  let BASE_MEANINGS = null;
+  let BASE_MEANINGS = null; // from base_meanings.json
 
-  // Temp bases created from dictionary search
   const TEMP_BASES = new Map(); // key: form -> baseObj
 
   function getLocalMeaningsStore(){
@@ -520,7 +517,7 @@
       (Array.isArray(posArrFromUI) && posArrFromUI.length ? posArrFromUI : null) ||
       (fromLocal && fromLocal.pos) ||
       (fromFile && fromFile.pos) ||
-      ["verb","noun","adj"]; // fallback if unknown
+      ["verb","noun","adj"];
 
     const obj = {
       id: f,
@@ -579,7 +576,6 @@
   let strict = els.strictToggle.checked;
   let current = { prefix:null, base:null, suffix:null };
 
-  // Explorer state: selected base (so search can move without losing selection)
   let explorerSelectedBaseUid = null;
 
   function stageLabel(stageKey){
@@ -633,7 +629,7 @@
     return suffixObj.allowedPos.some(p => basePos.has(p));
   }
 
-  // -------------------- REAL-WORD ENABLE SETS (for floating enabled options) --------------------
+  // -------------------- REAL-WORD ENABLE SETS --------------------
   function possibleAffixesForBase(baseObj, lockedPrefixUid=null, lockedSuffixUid=null){
     const possiblePrefixes = new Set();
     const possibleSuffixes = new Set();
@@ -757,7 +753,6 @@
 
     const possibleSets = possibleAffixesForCurrentBase();
 
-    // Prefixes
     let prefixEnabledCount = 0;
     const prefixEnabled = [];
     const prefixDisabled = [];
@@ -771,7 +766,6 @@
     els.prefixBank.append(...prefixEnabled, ...prefixDisabled);
     els.prefixCount.textContent = String(prefixEnabledCount);
 
-    // Bases with search
     const q = (els.baseSearch.value || "").trim().toLowerCase();
     const basesFiltered = ALL_BASES
       .filter(b => !q || b.form.toLowerCase().includes(q))
@@ -787,7 +781,6 @@
     }
     els.baseCount.textContent = String(baseEnabledCount);
 
-    // Suffixes
     let suffixEnabledCount = 0;
     const suffixEnabled = [];
     const suffixDisabled = [];
@@ -860,7 +853,6 @@
       if (next.suffix && !posCompatibleSuffix(next.suffix, next.base)) next.suffix = null;
       if (item.stage && item.stage !== "temp" && item.stage !== packKey) setPack(item.stage);
 
-      // Keep explorer synced to builder base
       explorerSelectedBaseUid = item.uid;
       if (els.explorerQuery.value.trim() === "") els.explorerQuery.value = item.form;
     } else if (type === "prefix"){
@@ -873,7 +865,6 @@
       next.suffix = item;
     }
 
-    // Strict: only accept if it can lead to a real word
     if (strict && next.base){
       const wordNow = computeWord(next.prefix, next.base, next.suffix);
       if ((next.prefix || next.suffix) && !isRealWord(wordNow)){
@@ -896,7 +887,6 @@
     current = next;
     renderZones(); renderBanks(); updateOutput();
 
-    // If base changed, re-render explorer so it updates prefixes/suffixes/words immediately
     const baseAfter = current.base ? current.base.uid : null;
     if (baseBefore !== baseAfter) renderExplorer();
   }
@@ -992,9 +982,9 @@
 
       const posChoice = els.dictBasePos.value;
       const posArr = posChoice === "any" ? ["verb","noun","adj"] : [posChoice];
-      const meaning = (els.dictBaseMeaning.value || "").trim();
 
-      return registerTempBase(match, posArr, meaning);
+      // IMPORTANT: do NOT reuse textbox meaning for auto-selected matches
+      return registerTempBase(match, posArr, null);
     }
 
     const match = ALL_BASES
@@ -1056,7 +1046,6 @@
     const q = explorerGetQuery();
     const selectedBase = explorerGetSelectedBase();
 
-    // Base tiles list
     if (mode === "dictionary"){
       if (!dictLoaded || !DICT_ARR){
         els.explorerStatus.textContent = "Dictionary mode needs dictionary.txt loaded (and ideally base_meanings.json).";
@@ -1073,12 +1062,12 @@
           makeChip(w, () => {
             const posChoice = els.dictBasePos.value;
             const posArr = posChoice === "any" ? ["verb","noun","adj"] : [posChoice];
-            const typedMeaning = (els.dictBaseMeaning.value || "").trim();
 
-            const tempBase = registerTempBase(w, posArr, typedMeaning);
+            // IMPORTANT: do NOT pass the textbox meaning when selecting a new word
+            const tempBase = registerTempBase(w, posArr, null);
             explorerSelectedBaseUid = tempBase.uid;
 
-            // Keep the meaning box in sync with whatever we know
+            // Show the selected base’s meaning (from file/local). This stops the “same meaning for all” bug.
             els.dictBaseMeaning.value = tempBase.meaning || "";
 
             addToBuilder("base", tempBase);
@@ -1112,7 +1101,6 @@
     }
 
     if (mode === "dictionary"){
-      // Sync meaning input to selected base (from file/local)
       els.dictBaseMeaning.value = selectedBase.meaning || "";
     }
 
@@ -1182,14 +1170,15 @@
   });
 
   els.dictBasePos.addEventListener("change", () => {
-    // re-register selected temp base with new POS
     const b = explorerGetSelectedBase();
     if (b && b.stage === "temp"){
       const posChoice = els.dictBasePos.value;
       const posArr = posChoice === "any" ? ["verb","noun","adj"] : [posChoice];
-      const typedMeaning = (els.dictBaseMeaning.value || "").trim();
-      const tempBase = registerTempBase(b.form, posArr, typedMeaning);
+
+      // re-register without forcing textbox meaning
+      const tempBase = registerTempBase(b.form, posArr, null);
       explorerSelectedBaseUid = tempBase.uid;
+      els.dictBaseMeaning.value = tempBase.meaning || "";
       addToBuilder("base", tempBase);
     }
     renderExplorer();
@@ -1203,10 +1192,8 @@
       const posChoice = els.dictBasePos.value;
       const posArr = posChoice === "any" ? ["verb","noun","adj"] : [posChoice];
 
-      // Save on this device
       setLocalMeaning(b.form, meaning, posArr);
 
-      // Update current objects
       b.meaning = meaning;
       if (current.base && current.base.uid === b.uid){
         current.base.meaning = meaning;
@@ -1222,8 +1209,6 @@
   // -------------------- INIT --------------------
   clearAll();
   updateDictPill();
-
-  // Load base meanings first (optional), then dictionary
   loadBaseMeanings().then(loadDictionary);
 </script>
 </body>
