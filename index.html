@@ -1,5 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Morphology Word Matrix Years 5–6</title>
+  <style>
+    :root { --bg:#0b0c10; --panel:#14161c; --card:#1b1f2a; --text:#eef2ff; --muted:#b7c0d8; --line:#2a3142; --ok:#7ee787; --warn:#ffcf66; --bad:#ff7b72; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:var(--text); }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 18px; }
+    .top { display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:space-between; }
+    h1 { font-size: 18px; margin:0; font-weight: 900; letter-spacing: .2px; }
+    .controls { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    button, input[type="text"] { background:var(--card); color:var(--text); border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
+    button { cursor:pointer; }
+    button:hover, input[type="text"]:hover { border-color:#3a4664; }
+    .pill { display:inline-flex; gap:8px; align-items:center; padding: 6px 10px; border:1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.02); color: var(--muted); font-size: 12px; }
+    .grid { display:grid; grid-template-columns: 1.25fr .75fr; gap: 14px; margin-top: 14px; }
+    @media (max-width: 1000px){ .grid { grid-template-columns: 1fr; } }
+    .panel { background:var(--panel); border:1px solid var(--line); border-radius: 14px; padding: 14px; }
+    .panel h2 { margin:0 0 10px 0; font-size: 13px; color: var(--muted); font-weight: 900; letter-spacing:.3px; text-transform: uppercase; }
+    .banks { display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    @media (max-width: 1000px){ .banks { grid-template-columns: 1fr; } }
+    .bank { background: rgba(255,255,255,.02); border: 1px dashed var(--line); border-radius: 14px; padding: 10px; min-height: 210px; }
+    .bankHead { display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+    .bank h3 { margin:0 0 8px 0; font-size: 13px; font-weight: 900; color: var(--text); }
+    .tiles { display:flex; flex-wrap:wrap; gap:8px; }
+    .tile {
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px 10px 8px 10px;
+      min-width: 140px;
+      cursor: grab;
+      user-select:none;
+      opacity: 1;
+      transition: opacity .12s ease, transform .12s ease, border-color .12s ease;
+    }
+    .tile:active { cursor: grabbing; transform: scale(0.99); }
+    .tile.disabled { opacity: .22; cursor: not-allowed; }
+    .tile .form { font-weight: 950; font-size: 14px; }
+    .tile .meaning { margin-top: 2px; font-size: 12px; color: var(--muted); }
+    .tile .meta { margin-top: 6px; font-size: 11px; color: #98a2c7; }
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .searchBox { width:100%; }
+    .builder { display:grid; gap:10px; }
+    .slotLabel { font-size:12px; color:var(--muted); margin: 0 0 6px 2px; }
+    .dropzone {
+      background: rgba(255,255,255,.02);
+      border: 2px dashed var(--line);
+      border-radius: 16px;
+      padding: 12px;
+      min-height: 70px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .dropzone.dragover { border-color:#6c7cff; background: rgba(108,124,255,.08); }
+    .output { background: rgba(255,255,255,.03); border:1px solid var(--line); border-radius: 14px; padding: 12px; }
+    .word { font-size: 28px; font-weight: 950; letter-spacing:.2px; }
+    .gloss { margin-top: 6px; color: var(--muted); font-size: 14px; line-height: 1.35; }
+    .status { margin-top: 10px; font-size: 12px; }
+    .status.warn { color: var(--warn); }
+    .status.ok { color: var(--ok); }
+    .status.bad { color: var(--bad); }
+    .note { margin-top: 12px; font-size: 12px; color: #aab3d3; line-height: 1.35; }
+    .tiny { font-size: 11px; color: #97a1c6; opacity: .9; margin-top: 10px; line-height: 1.35; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <h1>Morphology Word Matrix Years 5–6</h1>
+      <div class="controls">
+        <span class="pill" id="dictPill">Word checker: loading...</span>
+        <button id="clearBtn" type="button">Clear builder</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <h2>Morpheme bank (only real-word options enabled)</h2>
+
+        <div class="banks">
+          <div class="bank">
+            <div class="bankHead">
+              <h3>Prefixes</h3>
+              <span class="pill" id="prefixCount">0</span>
+            </div>
+            <div class="tiles" id="prefixBank"></div>
+            <div class="tiny">Viable prefixes float to the top. Non viable are greyed out.</div>
+          </div>
+
+          <div class="bank">
+            <div class="bankHead">
+              <h3>Base words (Years 5–6)</h3>
+              <span class="pill" id="baseCount">0</span>
+            </div>
+            <div class="row" style="margin-bottom:8px;">
+              <input id="baseSearch" class="searchBox" type="text" placeholder="Search base words..." />
+            </div>
+            <div class="tiles" id="baseBank"></div>
+            <div class="tiny">Bases that can make at least one real word are enabled.</div>
+          </div>
+
+          <div class="bank">
+            <div class="bankHead">
+              <h3>Suffixes</h3>
+              <span class="pill" id="suffixCount">0</span>
+            </div>
+            <div class="tiles" id="suffixBank"></div>
+            <div class="tiny">Viable suffixes float to the top. Non viable are greyed out.</div>
+          </div>
+        </div>
+
+        <div class="tiny">Tip: double click a tile in the builder to remove it.</div>
+      </div>
+
+      <div class="panel">
+        <h2>Build a word</h2>
+
+        <div class="builder">
+          <div>
+            <div class="slotLabel">Prefix slot</div>
+            <div class="dropzone" id="prefixZone" data-zone="prefix"></div>
+          </div>
+          <div>
+            <div class="slotLabel">Base word slot (required)</div>
+            <div class="dropzone" id="baseZone" data-zone="base"></div>
+          </div>
+          <div>
+            <div class="slotLabel">Suffix slot</div>
+            <div class="dropzone" id="suffixZone" data-zone="suffix"></div>
+          </div>
+        </div>
+
+        <div style="height:10px"></div>
+
+        <div class="output">
+          <div class="word" id="wordOut">Choose a base word</div>
+          <div class="gloss" id="meaningOut">Then add a prefix or suffix to change the meaning.</div>
+          <div class="status warn" id="statusOut"></div>
+        </div>
+
+        <div class="note">
+          Spelling rules included: drop final e before vowel suffixes (create → creation, use → usable), y to i before consonant suffixes (apply → applied).
+        </div>
+      </div>
+    </div>
+  </div>
+
 <script>
-  // -------------------- DATA --------------------
+  // This version:
+  // - Enforces "true word only" using dictionary.txt if present
+  // - Falls back to a small built-in list if dictionary.txt is missing
+  // - Floats viable options to the top and greys out the rest
+  // - Prevents clicking/dragging non viable tiles into the builder
+  // FIX ADDED:
+  // - Prevent redundant prefixing: if base already starts with the prefix, disallow it (con+construct etc)
+
   const PREFIXES = [
     { id:"anti", form:"anti", meaning:"against", allowedPos:["noun","adj","verb"] },
     { id:"con", form:"con", meaning:"with or together", allowedPos:["noun","adj","verb"] },
@@ -190,7 +350,6 @@
     "manage","management"
   ];
 
-  // -------------------- UID + INDEXES --------------------
   function mkUid(type, id){ return `${type}:${id}`; }
   const ALL_PREFIXES = PREFIXES.map(p => ({ ...p, uid: mkUid("prefix", p.id) }));
   const ALL_SUFFIXES = SUFFIXES.map(s => ({ ...s, uid: mkUid("suffix", s.id) }));
@@ -199,7 +358,6 @@
   const BY_UID = new Map();
   for (const x of [...ALL_BASES, ...ALL_PREFIXES, ...ALL_SUFFIXES]) BY_UID.set(x.uid, x);
 
-  // -------------------- UI ELEMENTS --------------------
   const els = {
     dictPill: document.getElementById("dictPill"),
     clearBtn: document.getElementById("clearBtn"),
@@ -226,6 +384,7 @@
 
   // -------------------- WORD CHECKER --------------------
   let DICT_SET = null;
+  let dictLoaded = false;
 
   async function loadDictionary(){
     try{
@@ -240,9 +399,11 @@
         set.add(w);
       }
       DICT_SET = set;
+      dictLoaded = true;
       els.dictPill.textContent = `Word checker: dictionary.txt loaded (${set.size.toLocaleString()} words)`;
     } catch {
       DICT_SET = new Set(FALLBACK_ALLOWED_WORDS.map(x=>String(x).toLowerCase()));
+      dictLoaded = false;
       els.dictPill.textContent = "Word checker: dictionary.txt not found (using small fallback list)";
     }
     renderAll();
@@ -262,6 +423,7 @@
     const last = baseForm.slice(-1).toLowerCase();
     const first = suffixForm.slice(0,1).toLowerCase();
     let out = baseForm;
+
     if (last === "e" && v.has(first)) out = baseForm.slice(0, -1);
     if (last === "y" && !v.has(first)) out = baseForm.slice(0, -1) + "i";
     return out;
@@ -291,202 +453,82 @@
     return (affixObj.allowedPos || []).some(p => basePos.has(p));
   }
 
+  // -------------------- FIX: REDUNDANT PREFIX RULE --------------------
+  // Block prefixes that are already at the start of the base (con+construct, inter+interact, re+review, etc).
   function redundantPrefix(prefixObj, baseObj){
     if (!prefixObj || !baseObj) return false;
     const p = (prefixObj.form || "").toLowerCase();
     const b = (baseObj.form || "").toLowerCase();
-    return !!p && !!b && b.startsWith(p);
+    if (!p || !b) return false;
+    return b.startsWith(p);
   }
 
-  // -------------------- ONE-PASS VIABILITY (FAST) --------------------
-  // Computes which prefixes/bases/suffixes are viable given the current selection state.
-  // This runs once per render (not once per tile).
-  function computeViability(){
-    const viable = {
-      prefixes: new Set(),
-      bases: new Set(),
-      suffixes: new Set()
-    };
+  // -------------------- STRICT REAL-WORD ENABLEMENT --------------------
+  function possibleAffixesForBase(baseObj, lockedPrefixUid=null, lockedSuffixUid=null){
+    const possiblePrefixes = new Set();
+    const possibleSuffixes = new Set();
+    if (!baseObj) return { possiblePrefixes, possibleSuffixes };
 
-    const lockedP = current.prefix;
-    const lockedS = current.suffix;
-    const lockedB = current.base;
+    const prefixCandidates = [null, ...ALL_PREFIXES];
+    const suffixCandidates = [null, ...ALL_SUFFIXES];
 
-    // Helper: test a specific combination quickly (including POS + redundant rules)
-    function comboOk(p, b, s){
-      if (!b) return false;
+    for (const p of prefixCandidates){
       if (p){
-        if (!posCompatible(p, b)) return false;
-        if (redundantPrefix(p, b)) return false;
+        if (!posCompatible(p, baseObj)) continue;
+        if (redundantPrefix(p, baseObj)) continue; // FIX applied here
       }
-      if (s){
-        if (!posCompatible(s, b)) return false;
-      }
-      const w = computeWord(p, b, s);
-      return isRealWord(w);
-    }
+      if (lockedPrefixUid && (!p || p.uid !== lockedPrefixUid)) continue;
 
-    // CASE 1: base chosen -> only scan prefixes/suffixes against that base (fast)
-    if (lockedB){
-      // Base itself can always stay enabled if it can form any word (including itself)
-      if (isRealWord(lockedB.form)) viable.bases.add(lockedB.uid);
+      for (const s of suffixCandidates){
+        if (s && !posCompatible(s, baseObj)) continue;
+        if (lockedSuffixUid && (!s || s.uid !== lockedSuffixUid)) continue;
 
-      // Prefixes viable with (base + maybe locked suffix)
-      for (const p of ALL_PREFIXES){
-        if (lockedP && p.uid !== lockedP.uid) continue; // if a prefix is already locked, only it remains "selected"
-        if (lockedS){
-          if (comboOk(p, lockedB, lockedS)) viable.prefixes.add(p.uid);
-        } else {
-          // any suffix or none
-          if (comboOk(p, lockedB, null)) viable.prefixes.add(p.uid);
-          for (const s of ALL_SUFFIXES){
-            if (comboOk(p, lockedB, s)){ viable.prefixes.add(p.uid); break; }
-          }
-        }
-      }
-
-      // Suffixes viable with (base + maybe locked prefix)
-      for (const s of ALL_SUFFIXES){
-        if (lockedS && s.uid !== lockedS.uid) continue;
-        if (lockedP){
-          if (comboOk(lockedP, lockedB, s)) viable.suffixes.add(s.uid);
-        } else {
-          if (comboOk(null, lockedB, s)) viable.suffixes.add(s.uid);
-          for (const p of ALL_PREFIXES){
-            if (comboOk(p, lockedB, s)){ viable.suffixes.add(s.uid); break; }
-          }
-        }
-      }
-
-      // Bases list should also float those that work with current locks
-      for (const b of ALL_BASES){
-        if (lockedP && !posCompatible(lockedP, b)) continue;
-        if (lockedP && redundantPrefix(lockedP, b)) continue;
-        if (lockedS && !posCompatible(lockedS, b)) continue;
-
-        if (lockedP && lockedS){
-          if (comboOk(lockedP, b, lockedS)) viable.bases.add(b.uid);
-        } else if (lockedP){
-          if (comboOk(lockedP, b, null)) viable.bases.add(b.uid);
-          else {
-            for (const s of ALL_SUFFIXES){ if (comboOk(lockedP, b, s)){ viable.bases.add(b.uid); break; } }
-          }
-        } else if (lockedS){
-          if (comboOk(null, b, lockedS)) viable.bases.add(b.uid);
-          else {
-            for (const p of ALL_PREFIXES){ if (comboOk(p, b, lockedS)){ viable.bases.add(b.uid); break; } }
-          }
-        } else {
-          // base with anything
-          if (isRealWord(b.form)) viable.bases.add(b.uid);
-          else {
-            // any prefix or suffix makes a real word
-            for (const p of ALL_PREFIXES){
-              if (comboOk(p, b, null)){ viable.bases.add(b.uid); break; }
-            }
-            if (!viable.bases.has(b.uid)){
-              for (const s of ALL_SUFFIXES){
-                if (comboOk(null, b, s)){ viable.bases.add(b.uid); break; }
-              }
-            }
-          }
-        }
-      }
-
-      // Ensure locked items stay "enabled" visually if they are valid
-      if (lockedP) viable.prefixes.add(lockedP.uid);
-      if (lockedS) viable.suffixes.add(lockedS.uid);
-
-      return viable;
-    }
-
-    // CASE 2: no base chosen -> scan bases with the current lock(s) ONCE and fill viable sets
-    for (const b of ALL_BASES){
-      // respect locks
-      if (lockedP){
-        if (!posCompatible(lockedP, b)) continue;
-        if (redundantPrefix(lockedP, b)) continue;
-      }
-      if (lockedS){
-        if (!posCompatible(lockedS, b)) continue;
-      }
-
-      // both locks -> only check that exact word
-      if (lockedP && lockedS){
-        if (comboOk(lockedP, b, lockedS)){
-          viable.bases.add(b.uid);
-          viable.prefixes.add(lockedP.uid);
-          viable.suffixes.add(lockedS.uid);
-        }
-        continue;
-      }
-
-      // prefix lock only -> check all suffixes (and none)
-      if (lockedP && !lockedS){
-        if (comboOk(lockedP, b, null)){
-          viable.bases.add(b.uid);
-          viable.prefixes.add(lockedP.uid);
-        }
-        for (const s of ALL_SUFFIXES){
-          if (comboOk(lockedP, b, s)){
-            viable.bases.add(b.uid);
-            viable.prefixes.add(lockedP.uid);
-            viable.suffixes.add(s.uid);
-          }
-        }
-        continue;
-      }
-
-      // suffix lock only -> check all prefixes (and none)
-      if (!lockedP && lockedS){
-        if (comboOk(null, b, lockedS)){
-          viable.bases.add(b.uid);
-          viable.suffixes.add(lockedS.uid);
-        }
-        for (const p of ALL_PREFIXES){
-          if (comboOk(p, b, lockedS)){
-            viable.bases.add(b.uid);
-            viable.prefixes.add(p.uid);
-            viable.suffixes.add(lockedS.uid);
-          }
-        }
-        continue;
-      }
-
-      // no locks -> check base itself plus any prefix/suffix combos
-      if (isRealWord(b.form)){
-        viable.bases.add(b.uid);
-      }
-      for (const p of ALL_PREFIXES){
-        if (!posCompatible(p, b)) continue;
-        if (redundantPrefix(p, b)) continue;
-        if (comboOk(p, b, null)){
-          viable.bases.add(b.uid);
-          viable.prefixes.add(p.uid);
-        }
-        for (const s of ALL_SUFFIXES){
-          if (!posCompatible(s, b)) continue;
-          if (comboOk(p, b, s)){
-            viable.bases.add(b.uid);
-            viable.prefixes.add(p.uid);
-            viable.suffixes.add(s.uid);
-          }
-        }
-      }
-      for (const s of ALL_SUFFIXES){
-        if (!posCompatible(s, b)) continue;
-        if (comboOk(null, b, s)){
-          viable.bases.add(b.uid);
-          viable.suffixes.add(s.uid);
+        const w = computeWord(p, baseObj, s);
+        if (isRealWord(w)){
+          if (p) possiblePrefixes.add(p.uid);
+          if (s) possibleSuffixes.add(s.uid);
         }
       }
     }
+    return { possiblePrefixes, possibleSuffixes };
+  }
 
-    // Keep locked affixes enabled even if only a few bases work
-    if (lockedP) viable.prefixes.add(lockedP.uid);
-    if (lockedS) viable.suffixes.add(lockedS.uid);
+  function baseIsViable(baseObj){
+    if (!baseObj) return false;
+    const sets = possibleAffixesForBase(baseObj);
+    return isRealWord(baseObj.form) || sets.possiblePrefixes.size > 0 || sets.possibleSuffixes.size > 0;
+  }
 
-    return viable;
+  function prefixIsViable(prefixObj){
+    if (!current.base) return false;
+    if (!posCompatible(prefixObj, current.base)) return false;
+    if (redundantPrefix(prefixObj, current.base)) return false; // FIX applied here
+
+    // If suffix already chosen, require that exact word is real
+    if (current.suffix){
+      return isRealWord(computeWord(prefixObj, current.base, current.suffix));
+    }
+
+    // Otherwise, allow if prefix+base is a real word OR any suffix can make a real word
+    if (isRealWord(computeWord(prefixObj, current.base, null))) return true;
+    const sets = possibleAffixesForBase(current.base, prefixObj.uid, null);
+    return sets.possibleSuffixes.size > 0;
+  }
+
+  function suffixIsViable(suffixObj){
+    if (!current.base) return false;
+    if (!posCompatible(suffixObj, current.base)) return false;
+
+    // If prefix already chosen, require that exact word is real
+    if (current.prefix){
+      if (redundantPrefix(current.prefix, current.base)) return false; // FIX safety
+      return isRealWord(computeWord(current.prefix, current.base, suffixObj));
+    }
+
+    // Otherwise, allow if base+suffix is a real word OR any prefix can make a real word
+    if (isRealWord(computeWord(null, current.base, suffixObj))) return true;
+    const sets = possibleAffixesForBase(current.base, null, suffixObj.uid);
+    return sets.possiblePrefixes.size > 0;
   }
 
   // -------------------- UI BUILDERS --------------------
@@ -533,21 +575,7 @@
     els.baseBank.innerHTML = "";
     els.suffixBank.innerHTML = "";
 
-    const viable = computeViability();
-
-    // Prefixes: enabled first
-    const prefixEnabled = [];
-    const prefixDisabled = [];
-    for (const p of ALL_PREFIXES){
-      const t = makeTile(p, "prefix");
-      const enabled = viable.prefixes.has(p.uid);
-      if (!enabled) { t.classList.add("disabled"); prefixDisabled.push(t); }
-      else prefixEnabled.push(t);
-    }
-    els.prefixBank.append(...prefixEnabled, ...prefixDisabled);
-    els.prefixCount.textContent = String(prefixEnabled.length);
-
-    // Bases: enabled first + search filter
+    // Bases (enabled first)
     const q = (els.baseSearch.value || "").trim().toLowerCase();
     const basesFiltered = ALL_BASES
       .filter(b => !q || b.form.toLowerCase().includes(q))
@@ -557,24 +585,37 @@
     const baseDisabled = [];
     for (const b of basesFiltered){
       const t = makeTile(b, "base");
-      const enabled = viable.bases.has(b.uid);
-      if (!enabled) { t.classList.add("disabled"); baseDisabled.push(t); }
+      if (!baseIsViable(b)) { t.classList.add("disabled"); baseDisabled.push(t); }
       else baseEnabled.push(t);
     }
     els.baseBank.append(...baseEnabled, ...baseDisabled);
     els.baseCount.textContent = String(baseEnabled.length);
 
+    // Prefixes
+    let prefixEnabledCount = 0;
+    const prefixEnabled = [];
+    const prefixDisabled = [];
+    for (const p of ALL_PREFIXES){
+      const t = makeTile(p, "prefix");
+      const enabled = current.base ? prefixIsViable(p) : false;
+      if (!enabled) { t.classList.add("disabled"); prefixDisabled.push(t); }
+      else { prefixEnabledCount++; prefixEnabled.push(t); }
+    }
+    els.prefixBank.append(...prefixEnabled, ...prefixDisabled);
+    els.prefixCount.textContent = String(prefixEnabledCount);
+
     // Suffixes
+    let suffixEnabledCount = 0;
     const suffixEnabled = [];
     const suffixDisabled = [];
     for (const s of ALL_SUFFIXES){
       const t = makeTile(s, "suffix");
-      const enabled = viable.suffixes.has(s.uid);
+      const enabled = current.base ? suffixIsViable(s) : false;
       if (!enabled) { t.classList.add("disabled"); suffixDisabled.push(t); }
-      else suffixEnabled.push(t);
+      else { suffixEnabledCount++; suffixEnabled.push(t); }
     }
     els.suffixBank.append(...suffixEnabled, ...suffixDisabled);
-    els.suffixCount.textContent = String(suffixEnabled.length);
+    els.suffixCount.textContent = String(suffixEnabledCount);
   }
 
   function clearZone(zoneEl){ zoneEl.innerHTML = ""; }
@@ -593,19 +634,12 @@
     if (!current.base){
       els.wordOut.textContent = "Choose a base word";
       els.meaningOut.textContent = "Then add a prefix or suffix to change the meaning.";
-      if (current.prefix && current.suffix){
-        els.statusOut.textContent = "Now choose a base word that works with both (enabled bases are valid).";
-      } else if (current.prefix){
-        els.statusOut.textContent = "Now choose a base word that works with this prefix (enabled bases are valid).";
-      } else if (current.suffix){
-        els.statusOut.textContent = "Now choose a base word that works with this suffix (enabled bases are valid).";
-      } else {
-        els.statusOut.textContent = "Only combinations that create real words are enabled.";
-      }
+      els.statusOut.textContent = "Only combinations that create real words are enabled.";
       els.statusOut.className = "status warn";
       return;
     }
 
+    // If prefix is redundant, treat as invalid state (shouldn't happen, but just in case)
     if (current.prefix && redundantPrefix(current.prefix, current.base)){
       els.wordOut.textContent = computeWord(null, current.base, current.suffix);
       els.meaningOut.textContent = computeMeaning(null, current.base, current.suffix);
@@ -628,60 +662,66 @@
       els.statusOut.textContent = "Real word.";
       els.statusOut.className = "status ok";
     } else {
-      els.statusOut.textContent = "Not a real word. Try a different part (enabled options are valid).";
+      els.statusOut.textContent = "Not a real word. Try a different prefix or suffix (enabled options are valid).";
       els.statusOut.className = "status bad";
     }
   }
 
-  function renderAll(){
-    renderZones();
-    renderBanks();
-    updateOutput();
+  function wouldSelectionStillAllowRealWord(next){
+    if (!next.base) return true;
+
+    if (next.prefix && redundantPrefix(next.prefix, next.base)) return false; // FIX applied here
+
+    const exact = computeWord(next.prefix, next.base, next.suffix);
+    if ((next.prefix || next.suffix) && isRealWord(exact)) return true;
+
+    const lockedP = next.prefix ? next.prefix.uid : null;
+    const lockedS = next.suffix ? next.suffix.uid : null;
+    const sets = possibleAffixesForBase(next.base, lockedP, lockedS);
+
+    if (!next.prefix && !next.suffix){
+      return isRealWord(next.base.form) || sets.possiblePrefixes.size > 0 || sets.possibleSuffixes.size > 0;
+    }
+
+    if (next.prefix && !next.suffix){
+      return sets.possibleSuffixes.size > 0 || isRealWord(computeWord(next.prefix, next.base, null));
+    }
+    if (!next.prefix && next.suffix){
+      return sets.possiblePrefixes.size > 0 || isRealWord(computeWord(null, next.base, next.suffix));
+    }
+
+    return false;
   }
 
   function addToBuilder(type, item){
     const next = { ...current };
 
+    if (type === "base"){
+      next.base = item;
+
+      // Clear incompatible OR redundant prefix when base changes
+      if (next.prefix && (!posCompatible(next.prefix, next.base) || redundantPrefix(next.prefix, next.base))) next.prefix = null;
+      if (next.suffix && !posCompatible(next.suffix, next.base)) next.suffix = null;
+
+      if (!wouldSelectionStillAllowRealWord(next)) return;
+    }
+
     if (type === "prefix"){
+      if (!next.base) return;
+      if (!posCompatible(item, next.base)) return;
+      if (redundantPrefix(item, next.base)) return; // FIX applied here
       next.prefix = item;
-      // if base exists, enforce immediate compatibility + redundancy
-      if (next.base){
-        if (!posCompatible(item, next.base)) return;
-        if (redundantPrefix(item, next.base)) return;
-      }
+      if (!wouldSelectionStillAllowRealWord(next)) return;
     }
 
     if (type === "suffix"){
+      if (!next.base) return;
+      if (!posCompatible(item, next.base)) return;
       next.suffix = item;
-      if (next.base){
-        if (!posCompatible(item, next.base)) return;
-      }
+      if (!wouldSelectionStillAllowRealWord(next)) return;
     }
 
-    if (type === "base"){
-      next.base = item;
-      // clear incompatible locked affixes
-      if (next.prefix && (!posCompatible(next.prefix, next.base) || redundantPrefix(next.prefix, next.base))) next.prefix = null;
-      if (next.suffix && !posCompatible(next.suffix, next.base)) next.suffix = null;
-    }
-
-    // After changing state, ensure the new state still has at least one viable path
-    // by checking viability once.
     current = next;
-    const viable = computeViability();
-    // If base chosen, it must be viable
-    if (current.base && !viable.bases.has(current.base.uid)){
-      // rollback
-      current = { ...next };
-      return;
-    }
-    // If no base, but prefix/suffix chosen must still have at least one viable base
-    if (!current.base && (current.prefix || current.suffix) && viable.bases.size === 0){
-      // rollback
-      current = { ...next };
-      return;
-    }
-
     renderAll();
   }
 
@@ -704,11 +744,10 @@
       const item = BY_UID.get(data.uid);
       if (!item) return;
 
-      // Only allow drop if item is currently viable
-      const viable = computeViability();
-      if (zoneType === "prefix" && !viable.prefixes.has(item.uid)) return;
-      if (zoneType === "suffix" && !viable.suffixes.has(item.uid)) return;
-      if (zoneType === "base" && !viable.bases.has(item.uid)) return;
+      // prevent dropping disabled items (use the same viability rules)
+      if (zoneType === "prefix" && !prefixIsViable(item)) return;
+      if (zoneType === "suffix" && !suffixIsViable(item)) return;
+      if (zoneType === "base" && !baseIsViable(item)) return;
 
       addToBuilder(zoneType, item);
     });
@@ -717,10 +756,8 @@
       const zoneType = zoneEl.dataset.zone;
       current[zoneType] = null;
       if (zoneType === "base"){
-        // keep prefix/suffix filters if you want to keep searching bases by them
-        // if you want clearing base to reset everything, uncomment:
-        // current.prefix = null;
-        // current.suffix = null;
+        current.prefix = null;
+        current.suffix = null;
       }
       renderAll();
     });
@@ -731,6 +768,12 @@
     renderAll();
   }
 
+  function renderAll(){
+    renderZones();
+    renderBanks();
+    updateOutput();
+  }
+
   els.baseSearch.addEventListener("input", renderBanks);
   els.clearBtn.addEventListener("click", clearAll);
 
@@ -738,6 +781,9 @@
   setupZone(els.baseZone);
   setupZone(els.suffixZone);
 
+  // Init
   clearAll();
   loadDictionary();
 </script>
+</body>
+</html>
