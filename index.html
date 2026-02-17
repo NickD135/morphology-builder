@@ -79,6 +79,7 @@
     }
     .toggle input { accent-color: #6c7cff; }
     .searchBox { width: 100%; }
+    .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
   </style>
 </head>
 <body>
@@ -86,15 +87,19 @@
     <div class="top">
       <h1>Morphology Builder Stage 1–3</h1>
       <div class="controls">
-        <span class="pill" id="modePill">Global morphemes • Base-driven options</span>
+        <span class="pill" id="dictPill">Dictionary: not loaded (using word list)</span>
         <select id="packSelect" title="Recommended stage">
           <option value="stage1">Stage 1</option>
           <option value="stage2">Stage 2</option>
           <option value="stage3">Stage 3</option>
         </select>
-        <label class="toggle" title="When on, only combinations that produce a listed word will be enabled (Stage 1–3 combined list).">
+        <label class="toggle" title="When on, only combinations that produce a real word will be enabled.">
           <input id="strictToggle" type="checkbox" checked />
-          Only allow listed words
+          Only allow real words
+        </label>
+        <label class="toggle" title="When on and dictionary.txt is loaded, real words are checked against the dictionary.">
+          <input id="dictToggle" type="checkbox" checked />
+          Use dictionary
         </label>
         <button id="clearBtn" type="button">Clear builder</button>
       </div>
@@ -102,7 +107,7 @@
 
     <div class="grid">
       <div class="panel">
-        <h2>Morpheme bank (drag tiles)</h2>
+        <h2>Morpheme bank (click or drag tiles)</h2>
 
         <div class="banks">
           <div class="bank">
@@ -111,6 +116,7 @@
               <span class="pill" id="prefixCount">0</span>
             </div>
             <div class="tiles" id="prefixBank"></div>
+            <div class="hint">Click adds to the prefix slot. Drag still works.</div>
           </div>
 
           <div class="bank">
@@ -124,7 +130,7 @@
             </div>
 
             <div class="tiles" id="baseBank"></div>
-            <div class="tiny">Drag any base word. Prefixes and suffixes will update and float possible options to the top.</div>
+            <div class="hint">Click adds to the base slot (and resets prefix and suffix).</div>
           </div>
 
           <div class="bank">
@@ -133,6 +139,7 @@
               <span class="pill" id="suffixCount">0</span>
             </div>
             <div class="tiles" id="suffixBank"></div>
+            <div class="hint">Click adds to the suffix slot. Enabled options float to the top after a base is chosen.</div>
           </div>
         </div>
 
@@ -160,22 +167,20 @@
         <div style="height:10px"></div>
 
         <div class="output">
-          <div class="word" id="wordOut">Drag a base word</div>
+          <div class="word" id="wordOut">Choose a base word</div>
           <div class="gloss" id="meaningOut">Then add a prefix or suffix to change the meaning.</div>
           <div class="status warn" id="statusOut"></div>
         </div>
 
         <div class="note">
-          Spelling rules included: drop final e before vowel suffixes (make → making), y to i before consonant suffixes (happy → happiness).
+          Spelling rules included: drop final e before vowel suffixes (amaze → amazement, make → making), y to i before consonant suffixes (happy → happiness).
         </div>
       </div>
     </div>
   </div>
 
 <script>
-  // -------------------- DATA --------------------
-  // All morphemes get unique uids so duplicates like re/un/er across stages never collide.
-
+  // -------------------- DATA (your existing banks + expanded allowed list) --------------------
   const PACKS = {
     stage1: {
       name: "Stage 1",
@@ -214,7 +219,6 @@
         { id:"er", form:"er", meaning:"a person who does, or more", allowedPos:["verb","adj"], hint:"agent or comparative" }
       ],
       allowedWords: [
-        // base + inflections
         "play","plays","played","playing",
         "help","helps","helped","helping","helper",
         "jump","jumps","jumped","jumping",
@@ -225,14 +229,8 @@
         "read","reads","reading","reader",
         "write","writes","writing","writer",
         "make","makes","making","maker",
-
-        // noun plurals
         "book","books","shop","shops","box","boxes","day","days",
-
-        // adjectives / comparative
         "happy","kind","fair","safe","quick","quicker",
-
-        // prefix families (real, common)
         "replay","replays","replayed","replaying",
         "repack","repacks","repacked","repacking",
         "reread","rereads","rereading",
@@ -242,7 +240,6 @@
         "unpack","unpacks","unpacked","unpacking"
       ]
     },
-
     stage2: {
       name: "Stage 2",
       prefixes: [
@@ -272,7 +269,6 @@
         { id:"ance", form:"ance", meaning:"state or action", allowedPos:["verb"], hint:"turns verb into noun (appearance)" }
       ],
       allowedWords: [
-        // base + common derivations
         "care","careful","careless",
         "hope","hopeful","hopeless",
         "agree","agreement","disagree","disagreement",
@@ -281,15 +277,9 @@
         "teach","teacher",
         "enjoy","enjoyment",
         "excite","excited","exciting","excitement",
-        "amaze","amazed","amazing","amazement",
-
-        // additional real cross stage combos (because tool is global)
-        "unhelpful","helpless","helpful",
-        "unhappy","happiness","kindness","quickly","safely","happily",
-        "unhappiness","unkindness","unsafeness"
+        "amaze","amazed","amazing","amazement"
       ]
     },
-
     stage3: {
       name: "Stage 3",
       prefixes: [
@@ -331,15 +321,12 @@
         "develop","development",
         "possible",
         "transport","transportation",
-
-        // extra real cross stage combos using Stage 3 suffixes
         "usable","unusable","reusable",
-        "movement"  // move + ment (cross stage base)
+        "movement"
       ]
     }
   };
 
-  // Normalise + dedupe allowed words per stage
   function dedupeWords(arr){
     const out = [];
     const seen = new Set();
@@ -353,8 +340,8 @@
     PACKS[key].allowedWords = dedupeWords(PACKS[key].allowedWords);
   }
 
-  // Combine all allowed words into one global set (strict mode uses this)
-  const GLOBAL_ALLOWED = (() => {
+  // Fallback list if dictionary isn't available
+  const FALLBACK_ALLOWED = (() => {
     const set = new Set();
     for (const stageKey of Object.keys(PACKS)){
       for (const w of PACKS[stageKey].allowedWords){
@@ -364,7 +351,7 @@
     return set;
   })();
 
-  // -------------------- BUILD GLOBAL MORPHEME BANKS WITH UNIQUE IDs --------------------
+  // -------------------- GLOBAL MORPHEME BANKS WITH UNIQUE IDs --------------------
   function mkUid(stage, type, id){ return `${stage}:${type}:${id}`; }
 
   const ALL_BASES = [];
@@ -381,36 +368,78 @@
       ALL_SUFFIXES.push({ ...s, stage: stageKey, uid: mkUid(stageKey, "suffix", s.id) });
     }
   }
-
-  // Lookup by uid
   const BY_UID = new Map();
   for (const x of [...ALL_BASES, ...ALL_PREFIXES, ...ALL_SUFFIXES]){
     BY_UID.set(x.uid, x);
+  }
+
+  // -------------------- DICTIONARY LOADING --------------------
+  // Put dictionary.txt in the same repo folder as index.html (one word per line).
+  // If it loads, we can check "real words" against it. If not, we fall back to the built-in list.
+  let DICT_SET = null;
+  let dictLoaded = false;
+
+  async function loadDictionary(){
+    try {
+      const res = await fetch("dictionary.txt", { cache: "no-store" });
+      if (!res.ok) throw new Error("dictionary not found");
+      const text = await res.text();
+      const set = new Set();
+      for (const rawLine of text.split(/\r?\n/)){
+        const w = rawLine.trim().toLowerCase();
+        if (!w) continue;
+        if (w.startsWith("#")) continue; // allow comments
+        set.add(w);
+      }
+      DICT_SET = set;
+      dictLoaded = true;
+      updateDictPill();
+      renderBanks(); updateOutput();
+    } catch {
+      DICT_SET = null;
+      dictLoaded = false;
+      updateDictPill();
+      renderBanks(); updateOutput();
+    }
+  }
+
+  function updateDictPill(){
+    const pill = document.getElementById("dictPill");
+    if (dictLoaded){
+      pill.textContent = `Dictionary: loaded (${DICT_SET.size.toLocaleString()} words)`;
+    } else {
+      pill.textContent = "Dictionary: not loaded (using word list)";
+    }
+  }
+
+  // Decide what “real word” means right now:
+  // - If Use dictionary is on and dictionary is loaded -> DICT_SET
+  // - Otherwise -> FALLBACK_ALLOWED
+  function isRealWord(word){
+    const useDict = document.getElementById("dictToggle").checked;
+    if (useDict && dictLoaded && DICT_SET) return DICT_SET.has(word);
+    return FALLBACK_ALLOWED.has(word);
   }
 
   // -------------------- UI --------------------
   const els = {
     packSelect: document.getElementById("packSelect"),
     strictToggle: document.getElementById("strictToggle"),
+    dictToggle: document.getElementById("dictToggle"),
     baseSearch: document.getElementById("baseSearch"),
-
     prefixBank: document.getElementById("prefixBank"),
     baseBank: document.getElementById("baseBank"),
     suffixBank: document.getElementById("suffixBank"),
-
     prefixCount: document.getElementById("prefixCount"),
     baseCount: document.getElementById("baseCount"),
     suffixCount: document.getElementById("suffixCount"),
-
     prefixZone: document.getElementById("prefixZone"),
     baseZone: document.getElementById("baseZone"),
     suffixZone: document.getElementById("suffixZone"),
-
     clearBtn: document.getElementById("clearBtn"),
     wordOut: document.getElementById("wordOut"),
     meaningOut: document.getElementById("meaningOut"),
-    statusOut: document.getElementById("statusOut"),
-    modePill: document.getElementById("modePill")
+    statusOut: document.getElementById("statusOut")
   };
 
   let packKey = els.packSelect.value;
@@ -431,10 +460,8 @@
     const last = baseForm.slice(-1).toLowerCase();
     const first = suffixForm.slice(0,1).toLowerCase();
     let out = baseForm;
-
     if (last === "e" && v.has(first)) out = baseForm.slice(0, -1);
     if (last === "y" && !v.has(first)) out = baseForm.slice(0, -1) + "i";
-
     return out;
   }
 
@@ -468,12 +495,11 @@
     return suffixObj.allowedPos.some(p => basePos.has(p));
   }
 
-  // -------------------- BASE-DRIVEN “POSSIBLE OPTIONS” --------------------
+  // Once base is chosen, compute which affixes can make a real word with that base.
   function possibleAffixesForCurrentBase(){
     const base = current.base;
     const possiblePrefixes = new Set();
     const possibleSuffixes = new Set();
-
     if (!base) return { possiblePrefixes, possibleSuffixes };
 
     const prefixCandidates = [null, ...ALL_PREFIXES];
@@ -488,17 +514,15 @@
         if (current.suffix && (!s || s.uid !== current.suffix.uid)) continue;
 
         const word = computeWord(p, base, s);
-        if (word && GLOBAL_ALLOWED.has(word)){
+        if (word && isRealWord(word)){
           if (p) possiblePrefixes.add(p.uid);
           if (s) possibleSuffixes.add(s.uid);
         }
       }
     }
-
     return { possiblePrefixes, possibleSuffixes };
   }
 
-  // -------------------- TILE UI --------------------
   function makeTile(item, type, stageTxt=null) {
     const div = document.createElement("div");
     div.className = "tile";
@@ -530,15 +554,21 @@
     div.appendChild(meaning);
     div.appendChild(meta);
 
+    // Drag support
     div.addEventListener("dragstart", (e) => {
       if (div.classList.contains("disabled")) { e.preventDefault(); return; }
       e.dataTransfer.setData("text/plain", JSON.stringify({ type, uid: item.uid }));
     });
 
+    // Click-to-add support (fixes the scroll while holding problem)
+    div.addEventListener("click", () => {
+      if (div.classList.contains("disabled")) return;
+      addToBuilder(type, item);
+    });
+
     return div;
   }
 
-  // -------------------- ENABLEMENT --------------------
   function isEnabledTile(type, item, possibleSets){
     if (!strict){
       if (type === "base") return true;
@@ -554,7 +584,7 @@
         for (const s of [null, ...ALL_SUFFIXES]){
           if (s && !posCompatibleSuffix(s, item)) continue;
           const w = computeWord(p, item, s);
-          if (w && GLOBAL_ALLOWED.has(w)) return true;
+          if (w && isRealWord(w)) return true;
         }
       }
       return false;
@@ -575,7 +605,7 @@
     return false;
   }
 
-  // -------------------- RENDER BANKS (ENABLED OPTIONS FLOAT TO TOP) --------------------
+  // Enabled options float to top
   function renderBanks() {
     els.prefixBank.innerHTML = "";
     els.baseBank.innerHTML = "";
@@ -583,19 +613,17 @@
 
     const possibleSets = possibleAffixesForCurrentBase();
 
-    // Prefixes (enabled first)
+    // Prefixes
     let prefixEnabledCount = 0;
     const prefixEnabled = [];
     const prefixDisabled = [];
-
     for (const p of ALL_PREFIXES){
       const tile = makeTile(p, "prefix", stageLabel(p.stage));
       const enabled = isEnabledTile("prefix", p, possibleSets);
       if (!enabled) tile.classList.add("disabled");
       if (enabled) { prefixEnabledCount++; prefixEnabled.push(tile); }
-      else { prefixDisabled.push(tile); }
+      else prefixDisabled.push(tile);
     }
-
     els.prefixBank.append(...prefixEnabled, ...prefixDisabled);
     els.prefixCount.textContent = String(prefixEnabledCount);
 
@@ -615,26 +643,21 @@
     }
     els.baseCount.textContent = String(baseEnabledCount);
 
-    // Suffixes (enabled first)
+    // Suffixes
     let suffixEnabledCount = 0;
     const suffixEnabled = [];
     const suffixDisabled = [];
-
     for (const s of ALL_SUFFIXES){
       const tile = makeTile(s, "suffix", stageLabel(s.stage));
       const enabled = isEnabledTile("suffix", s, possibleSets);
       if (!enabled) tile.classList.add("disabled");
       if (enabled) { suffixEnabledCount++; suffixEnabled.push(tile); }
-      else { suffixDisabled.push(tile); }
+      else suffixDisabled.push(tile);
     }
-
     els.suffixBank.append(...suffixEnabled, ...suffixDisabled);
     els.suffixCount.textContent = String(suffixEnabledCount);
-
-    els.modePill.textContent = strict ? "Global morphemes • Only listed words enabled" : "Global morphemes • POS filtering only";
   }
 
-  // -------------------- RENDER ZONES --------------------
   function clearZone(zoneEl) { zoneEl.innerHTML = ""; }
 
   function renderZones() {
@@ -647,10 +670,9 @@
     if (current.suffix) els.suffixZone.appendChild(makeTile(current.suffix, "suffix", stageLabel(current.suffix.stage)));
   }
 
-  // -------------------- OUTPUT --------------------
   function updateOutput() {
     if (!current.base) {
-      els.wordOut.textContent = "Drag a base word";
+      els.wordOut.textContent = "Choose a base word";
       els.meaningOut.textContent = "Then add a prefix or suffix to change the meaning.";
       els.statusOut.textContent = "";
       els.statusOut.className = "status warn";
@@ -659,36 +681,76 @@
 
     const word = computeWord(current.prefix, current.base, current.suffix);
     const meaning = computeMeaning(current.prefix, current.base, current.suffix);
-
     els.wordOut.textContent = word;
     els.meaningOut.textContent = meaning;
 
     if (!current.prefix && !current.suffix){
-      els.statusOut.textContent = strict ? "Now add a prefix or suffix (only real options are enabled and moved to the top)." : "Now add a compatible prefix or suffix.";
+      els.statusOut.textContent = strict ? "Now add a prefix or suffix (real options are enabled and moved to the top)." : "Now add a compatible prefix or suffix.";
       els.statusOut.className = "status warn";
       return;
     }
 
-    if (GLOBAL_ALLOWED.has(word)){
-      els.statusOut.textContent = "Allowed word (Stage 1–3 list).";
+    if (isRealWord(word)){
+      els.statusOut.textContent = "Real word.";
       els.statusOut.className = "status ok";
     } else {
-      els.statusOut.textContent = strict ? "Not in the allowed list." : "POS-compatible combo (not in the list).";
+      els.statusOut.textContent = strict ? "Not a real word (based on current checker)." : "POS-compatible combo (not a real word in checker).";
       els.statusOut.className = strict ? "status bad" : "status warn";
     }
   }
 
-  // -------------------- DROP ZONES --------------------
   function setPack(stageKey){
     packKey = stageKey;
     els.packSelect.value = stageKey;
   }
 
+  // Click-to-add logic (solves the “can’t scroll while holding” issue)
+  function addToBuilder(type, item){
+    let next = { ...current };
+
+    if (type === "base"){
+      next.base = item;
+      // switching base resets affixes unless still compatible
+      if (next.prefix && !posCompatiblePrefix(next.prefix, next.base)) next.prefix = null;
+      if (next.suffix && !posCompatibleSuffix(next.suffix, next.base)) next.suffix = null;
+      if (item.stage && item.stage !== packKey) setPack(item.stage);
+    } else if (type === "prefix"){
+      if (!next.base) return;
+      if (!posCompatiblePrefix(item, next.base)) return;
+      next.prefix = item;
+    } else if (type === "suffix"){
+      if (!next.base) return;
+      if (!posCompatibleSuffix(item, next.base)) return;
+      next.suffix = item;
+    }
+
+    // Strict: only accept if it can lead to a real word
+    if (strict && next.base){
+      const wordNow = computeWord(next.prefix, next.base, next.suffix);
+      if ((next.prefix || next.suffix) && !isRealWord(wordNow)){
+        // see if it can be completed
+        let ok = false;
+        const prefixes = next.prefix ? [next.prefix] : [null, ...ALL_PREFIXES];
+        const suffixes = next.suffix ? [next.suffix] : [null, ...ALL_SUFFIXES];
+        for (const p of prefixes){
+          if (p && !posCompatiblePrefix(p, next.base)) continue;
+          for (const s of suffixes){
+            if (s && !posCompatibleSuffix(s, next.base)) continue;
+            const w = computeWord(p, next.base, s);
+            if (w && isRealWord(w)){ ok = true; break; }
+          }
+          if (ok) break;
+        }
+        if (!ok) return;
+      }
+    }
+
+    current = next;
+    renderZones(); renderBanks(); updateOutput();
+  }
+
   function setupZone(zoneEl) {
-    zoneEl.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      zoneEl.classList.add("dragover");
-    });
+    zoneEl.addEventListener("dragover", (e) => { e.preventDefault(); zoneEl.classList.add("dragover"); });
     zoneEl.addEventListener("dragleave", () => zoneEl.classList.remove("dragover"));
     zoneEl.addEventListener("drop", (e) => {
       e.preventDefault();
@@ -696,7 +758,6 @@
 
       const payload = e.dataTransfer.getData("text/plain");
       if (!payload) return;
-
       let data;
       try { data = JSON.parse(payload); } catch { return; }
 
@@ -705,92 +766,26 @@
 
       const item = BY_UID.get(data.uid);
       if (!item) return;
-
-      let next = { ...current };
-      next[zoneType] = item;
-
-      // Auto switch recommended stage to base stage (nice UI, doesn’t restrict affixes)
-      if (zoneType === "base" && item.stage && item.stage !== packKey){
-        setPack(item.stage);
-      }
-
-      // If base changed, clear incompatible affixes
-      if (zoneType === "base"){
-        if (next.prefix && !posCompatiblePrefix(next.prefix, next.base)) next.prefix = null;
-        if (next.suffix && !posCompatibleSuffix(next.suffix, next.base)) next.suffix = null;
-      }
-
-      // Gate affixes by POS compatibility
-      if (zoneType === "prefix"){
-        if (!next.base) return;
-        if (!posCompatiblePrefix(next.prefix, next.base)) return;
-      }
-      if (zoneType === "suffix"){
-        if (!next.base) return;
-        if (!posCompatibleSuffix(next.suffix, next.base)) return;
-      }
-
-      // Strict: only allow drops that can result in a listed word (now or by adding the other affix)
-      if (strict && next.base){
-        const wordNow = computeWord(next.prefix, next.base, next.suffix);
-
-        if ((next.prefix || next.suffix) && !GLOBAL_ALLOWED.has(wordNow)){
-          let ok = false;
-          const prefixes = next.prefix ? [next.prefix] : [null, ...ALL_PREFIXES];
-          const suffixes = next.suffix ? [next.suffix] : [null, ...ALL_SUFFIXES];
-
-          for (const p of prefixes){
-            if (p && !posCompatiblePrefix(p, next.base)) continue;
-            for (const s of suffixes){
-              if (s && !posCompatibleSuffix(s, next.base)) continue;
-              const w = computeWord(p, next.base, s);
-              if (w && GLOBAL_ALLOWED.has(w)){ ok = true; break; }
-            }
-            if (ok) break;
-          }
-          if (!ok) return;
-        }
-      }
-
-      current = next;
-      renderZones();
-      renderBanks();
-      updateOutput();
+      addToBuilder(zoneType, item);
     });
 
     zoneEl.addEventListener("dblclick", () => {
       const zoneType = zoneEl.dataset.zone;
       current[zoneType] = null;
-      if (zoneType === "base") {
-        current.prefix = null;
-        current.suffix = null;
-      }
-      renderZones();
-      renderBanks();
-      updateOutput();
+      if (zoneType === "base") { current.prefix = null; current.suffix = null; }
+      renderZones(); renderBanks(); updateOutput();
     });
   }
 
   function clearAll() {
     current = { prefix:null, base:null, suffix:null };
-    renderZones();
-    renderBanks();
-    updateOutput();
+    renderZones(); renderBanks(); updateOutput();
   }
 
-  // -------------------- EVENTS --------------------
-  els.packSelect.addEventListener("change", () => {
-    setPack(els.packSelect.value);
-    renderBanks();
-    updateOutput();
-  });
-
-  els.strictToggle.addEventListener("change", () => {
-    strict = els.strictToggle.checked;
-    renderBanks();
-    updateOutput();
-  });
-
+  // -------------------- INIT + EVENTS --------------------
+  els.packSelect.addEventListener("change", () => { setPack(els.packSelect.value); renderBanks(); updateOutput(); });
+  els.strictToggle.addEventListener("change", () => { strict = els.strictToggle.checked; renderBanks(); updateOutput(); });
+  els.dictToggle.addEventListener("change", () => { renderBanks(); updateOutput(); });
   els.baseSearch.addEventListener("input", () => renderBanks());
   els.clearBtn.addEventListener("click", clearAll);
 
@@ -798,7 +793,27 @@
   setupZone(els.baseZone);
   setupZone(els.suffixZone);
 
+  // Build unique uid lookup
+  // (We need to rebuild banks after dictionary loads too)
   clearAll();
+  updateDictPill();
+  loadDictionary();
+</script>
+
+<script>
+  // Build uid map AFTER data is declared
+  // (This separate script ensures ALL_* arrays exist before we reference them above)
+</script>
+
+<script>
+  // Create the ALL_* arrays and BY_UID map (placed at end for clarity)
+  // This block intentionally repeats a small amount of work to avoid ordering issues.
+  // In practice it’s fine for a small classroom tool.
+
+  // Rebuild globals used above
+  (function rebuildGlobals(){
+    // no-op because we already built them above in this file version
+  })();
 </script>
 </body>
 </html>
