@@ -375,12 +375,8 @@ document.addEventListener("DOMContentLoaded", () => {
     statusOut: document.getElementById("statusOut"),
   };
 
-  // -------------------- STATE --------------------
-  // You can now select prefix or suffix before base.
-  // If a user clicks the same prefix/suffix again, it toggles off (nice for exploration).
   let current = { prefix:null, base:null, suffix:null };
 
-  // -------------------- WORD CHECKER --------------------
   let DICT_SET = null;
   let dictLoaded = false;
 
@@ -412,7 +408,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return DICT_SET && DICT_SET.has(String(word).toLowerCase());
   }
 
-  // -------------------- SPELLING RULES --------------------
   function vowels(){ return new Set(["a","e","i","o","u"]); }
 
   function applySpellingRules(baseForm, suffixForm) {
@@ -450,7 +445,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return (affixObj.allowedPos || []).some(p => basePos.has(p));
   }
 
-  // -------------------- REDUNDANT PREFIX RULE --------------------
   function redundantPrefix(prefixObj, baseObj){
     if (!prefixObj || !baseObj) return false;
     const p = (prefixObj.form || "").toLowerCase();
@@ -459,9 +453,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return b.startsWith(p);
   }
 
-  // -------------------- CORE "EXISTS A REAL WORD" CHECK --------------------
-  // This is the heart of "start from any part":
-  // given locks (maybe null), does there exist at least one real word?
   function existsRealWordWithLocks(prefixObj, baseObj, suffixObj){
     const prefixCandidates = prefixObj ? [prefixObj] : [null, ...ALL_PREFIXES];
     const baseCandidates   = baseObj   ? [baseObj]   : ALL_BASES;
@@ -483,26 +474,26 @@ document.addEventListener("DOMContentLoaded", () => {
     return false;
   }
 
-  // For floating + greying: compute viable sets based on current locks.
   function computeViableSets(){
     const viablePrefixes = new Set();
     const viableBases = new Set();
     const viableSuffixes = new Set();
 
-    // Which bases are viable given current prefix/suffix locks?
+    const hasAffixLock = !!current.prefix || !!current.suffix;
+
     for (const b of ALL_BASES){
-      const ok = existsRealWordWithLocks(current.prefix, b, current.suffix) || isRealWord(b.form);
+      const ok = hasAffixLock
+        ? existsRealWordWithLocks(current.prefix, b, current.suffix)
+        : (existsRealWordWithLocks(null, b, null) || isRealWord(b.form));
+
       if (ok) viableBases.add(b.uid);
     }
 
-    // Which prefixes are viable given current base/suffix locks (base may be null)?
     for (const p of ALL_PREFIXES){
-      // If base is chosen, enforce POS + redundant check at prefix-level; if base not chosen, let the existence check handle it.
       const ok = existsRealWordWithLocks(p, current.base, current.suffix);
       if (ok) viablePrefixes.add(p.uid);
     }
 
-    // Which suffixes are viable given current prefix/base locks (base may be null)?
     for (const s of ALL_SUFFIXES){
       const ok = existsRealWordWithLocks(current.prefix, current.base, s);
       if (ok) viableSuffixes.add(s.uid);
@@ -511,7 +502,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return { viablePrefixes, viableBases, viableSuffixes };
   }
 
-  // -------------------- UI BUILDERS --------------------
   function makeTile(item, type, enabled, selected) {
     const div = document.createElement("div");
     div.className = "tile";
@@ -560,7 +550,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const sets = computeViableSets();
 
-    // Bases (search + enabled first)
     const q = (els.baseSearch.value || "").trim().toLowerCase();
     const basesFiltered = ALL_BASES
       .filter(b => !q || b.form.toLowerCase().includes(q))
@@ -577,7 +566,6 @@ document.addEventListener("DOMContentLoaded", () => {
     els.baseBank.append(...baseEnabled, ...baseDisabled);
     els.baseCount.textContent = String(baseEnabled.length);
 
-    // Prefixes (now can be chosen first)
     let prefixEnabledCount = 0;
     const prefixEnabled = [];
     const prefixDisabled = [];
@@ -591,7 +579,6 @@ document.addEventListener("DOMContentLoaded", () => {
     els.prefixBank.append(...prefixEnabled, ...prefixDisabled);
     els.prefixCount.textContent = String(prefixEnabledCount);
 
-    // Suffixes (now can be chosen first)
     let suffixEnabledCount = 0;
     const suffixEnabled = [];
     const suffixDisabled = [];
@@ -670,7 +657,6 @@ document.addEventListener("DOMContentLoaded", () => {
   function addToBuilder(type, item){
     const next = { ...current };
 
-    // Toggle behaviour for prefix/suffix selection in the banks
     if (type === "prefix"){
       if (next.prefix && next.prefix.uid === item.uid) next.prefix = null;
       else next.prefix = item;
@@ -681,7 +667,6 @@ document.addEventListener("DOMContentLoaded", () => {
       next.base = item;
     }
 
-    // If base exists, enforce POS compatibility and redundant prefix.
     if (next.base){
       if (next.prefix){
         if (!posCompatible(next.prefix, next.base)) next.prefix = null;
@@ -690,13 +675,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (next.suffix && !posCompatible(next.suffix, next.base)) next.suffix = null;
     }
 
-    // Hard rule: after the change, the current locks must still allow at least one real word.
-    // If base chosen, allow base-alone if base is a real word OR there is at least one completion.
     if (next.base){
       const ok = isRealWord(next.base.form) || existsRealWordWithLocks(next.prefix, next.base, next.suffix);
       if (!ok) return;
     } else {
-      // No base yet: prefix/suffix selection must still be completable by some base (and maybe the other affix).
       const ok = existsRealWordWithLocks(next.prefix, null, next.suffix);
       if (!ok) return;
     }
@@ -724,17 +706,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const item = BY_UID.get(data.uid);
       if (!item) return;
 
-      // Same rule as clicking: only allow if it keeps at least one real completion.
       addToBuilder(zoneType, item);
     });
 
     zoneEl.addEventListener("dblclick", () => {
       const zoneType = zoneEl.dataset.zone;
       current[zoneType] = null;
-      if (zoneType === "base"){
-        // keep prefix/suffix so they can still drive the options after removing the base
-        // (this matches your "start from prefix/suffix" goal)
-      }
       renderAll();
     });
   }
