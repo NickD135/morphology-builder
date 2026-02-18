@@ -489,11 +489,41 @@ document.addEventListener("DOMContentLoaded", () => {
     const viableBases = new Set();
     const viableSuffixes = new Set();
 
-    // Which bases are viable given current prefix/suffix locks?
+  function computeViableSets(){
+    const viablePrefixes = new Set();
+    const viableBases = new Set();
+    const viableSuffixes = new Set();
+
+    // ---- BASES: when a prefix or suffix is selected, only show bases that can make a real word with it ----
+    const hasAffixLock = !!(current.prefix || current.suffix);
+
     for (const b of ALL_BASES){
-      const ok = existsRealWordWithLocks(current.prefix, b, current.suffix) || isRealWord(b.form);
+      let ok;
+      if (hasAffixLock){
+        // strict: base must work with the chosen prefix/suffix (and any completion if the other affix is blank)
+        ok = existsRealWordWithLocks(current.prefix, b, current.suffix);
+      } else {
+        // normal: base alone can be real OR it can take some prefix/suffix to become real
+        ok = isRealWord(b.form) || existsRealWordWithLocks(null, b, null);
+      }
       if (ok) viableBases.add(b.uid);
     }
+
+    // ---- PREFIXES ----
+    for (const p of ALL_PREFIXES){
+      const ok = existsRealWordWithLocks(p, current.base, current.suffix);
+      if (ok) viablePrefixes.add(p.uid);
+    }
+
+    // ---- SUFFIXES ----
+    for (const s of ALL_SUFFIXES){
+      const ok = existsRealWordWithLocks(current.prefix, current.base, s);
+      if (ok) viableSuffixes.add(s.uid);
+    }
+
+    return { viablePrefixes, viableBases, viableSuffixes };
+  }
+
 
     // Which prefixes are viable given current base/suffix locks (base may be null)?
     for (const p of ALL_PREFIXES){
