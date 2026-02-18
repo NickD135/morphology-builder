@@ -3,18 +3,30 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Morphology Word Matrix Years 5–6</title>
+  <title>Morphology Word Matrix Years 3–6</title>
   <style>
-    :root { --bg:#0b0c10; --panel:#14161c; --card:#1b1f2a; --text:#eef2ff; --muted:#b7c0d8; --line:#2a3142; --ok:#7ee787; --warn:#ffcf66; --bad:#ff7b72; }
+    :root {
+      --bg:#0b0c10; --panel:#14161c; --card:#1b1f2a; --text:#eef2ff; --muted:#b7c0d8; --line:#2a3142;
+      --ok:#7ee787; --warn:#ffcf66; --bad:#ff7b72;
+
+      /* Colour coding (adjust these to match your physical cards) */
+      --c-prefix:#b56bff;   /* Prefix cards */
+      --c-suffix:#ffb86b;   /* Suffix cards */
+      --c-core:#6c7cff;     /* Your original "Core" base list */
+      --c-anglo:#7ee787;    /* Anglo-Saxon base cards */
+      --c-latin:#4dd6ff;    /* Latin roots */
+      --c-greek:#ff7b72;    /* Greek roots */
+    }
     * { box-sizing:border-box; }
     body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:var(--text); }
     .wrap { max-width: 1180px; margin: 0 auto; padding: 18px; }
     .top { display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:space-between; }
     h1 { font-size: 18px; margin:0; font-weight: 900; letter-spacing: .2px; }
     .controls { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-    button, input[type="text"] { background:var(--card); color:var(--text); border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
+    button, input[type="text"], select { background:var(--card); color:var(--text); border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
+    select { cursor:pointer; }
     button { cursor:pointer; }
-    button:hover, input[type="text"]:hover { border-color:#3a4664; }
+    button:hover, input[type="text"]:hover, select:hover { border-color:#3a4664; }
     .pill { display:inline-flex; gap:8px; align-items:center; padding: 6px 10px; border:1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.02); color: var(--muted); font-size: 12px; }
     .grid { display:grid; grid-template-columns: 1.25fr .75fr; gap: 14px; margin-top: 14px; }
     @media (max-width: 1000px){ .grid { grid-template-columns: 1fr; } }
@@ -26,9 +38,10 @@
     .bankHead { display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
     .bank h3 { margin:0 0 8px 0; font-size: 13px; font-weight: 900; color: var(--text); }
     .tiles { display:flex; flex-wrap:wrap; gap:8px; }
+
     .tile{
       background:var(--card);
-      border:1px solid var(--line);
+      border:2px solid var(--line);
       border-radius: 14px;
       padding: 10px 10px 8px 10px;
       min-width: 140px;
@@ -39,7 +52,7 @@
     }
     .tile:active { cursor: grabbing; transform: scale(0.99); }
     .tile.disabled { opacity: .22; cursor: not-allowed; }
-    .tile.selected { border-color:#6c7cff; box-shadow: 0 0 0 2px rgba(108,124,255,.25) inset; }
+    .tile.selected { box-shadow: 0 0 0 2px rgba(255,255,255,.12) inset, 0 0 0 2px rgba(108,124,255,.25); }
     .tile .form { font-weight: 950; font-size: 14px; }
     .tile .meaning { margin-top: 2px; font-size: 12px; color: var(--muted); }
     .tile .meta { margin-top: 6px; font-size: 11px; color: #98a2c7; }
@@ -68,12 +81,24 @@
     .status.bad { color: var(--bad); }
     .note { margin-top: 12px; font-size: 12px; color: #aab3d3; line-height: 1.35; }
     .tiny { font-size: 11px; color: #97a1c6; opacity: .9; margin-top: 10px; line-height: 1.35; }
+
+    /* Colour coding by group (matches cards/categories) */
+    .tile[data-group="prefix"]{ border-color: var(--c-prefix); }
+    .tile[data-group="suffix"]{ border-color: var(--c-suffix); }
+    .tile[data-group="core"]{ border-color: var(--c-core); }
+    .tile[data-group="anglo"]{ border-color: var(--c-anglo); }
+    .tile[data-group="latin"]{ border-color: var(--c-latin); }
+    .tile[data-group="greek"]{ border-color: var(--c-greek); }
+
+    /* Small helper row spacing */
+    .filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+    .filters > * { flex: 1 1 auto; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="top">
-      <h1>Morphology Word Matrix Years 5–6</h1>
+      <h1>Morphology Word Matrix Years 3–6</h1>
       <div class="controls">
         <span class="pill" id="dictPill">Word checker: loading...</span>
         <button id="clearBtn" type="button">Clear builder</button>
@@ -84,6 +109,17 @@
       <div class="panel">
         <h2>Morpheme bank (only real-word options enabled)</h2>
 
+        <div class="filters">
+          <input id="globalSearch" class="searchBox" type="text" placeholder="Search prefixes, bases, suffixes..." />
+          <select id="baseType">
+            <option value="all">All base types</option>
+            <option value="core">Core bases</option>
+            <option value="anglo">Anglo-Saxon bases</option>
+            <option value="latin">Latin roots</option>
+            <option value="greek">Greek roots</option>
+          </select>
+        </div>
+
         <div class="banks">
           <div class="bank">
             <div class="bankHead">
@@ -91,19 +127,19 @@
               <span class="pill" id="prefixCount">0</span>
             </div>
             <div class="tiles" id="prefixBank"></div>
-            <div class="tiny">You can start with a prefix, base word, or suffix. Viable options float to the top. Non viable are greyed out.</div>
+            <div class="tiny">Viable options float to the top. Non viable are greyed out.</div>
           </div>
 
           <div class="bank">
             <div class="bankHead">
-              <h3>Base words (Years 5–6)</h3>
+              <h3>Base words / roots</h3>
               <span class="pill" id="baseCount">0</span>
             </div>
             <div class="row" style="margin-bottom:8px;">
-              <input id="baseSearch" class="searchBox" type="text" placeholder="Search base words..." />
+              <input id="baseSearch" class="searchBox" type="text" placeholder="Search bases..." />
             </div>
             <div class="tiles" id="baseBank"></div>
-            <div class="tiny">Bases that can make at least one real word are enabled.</div>
+            <div class="tiny">Use the dropdown to filter base type.</div>
           </div>
 
           <div class="bank">
@@ -112,7 +148,7 @@
               <span class="pill" id="suffixCount">0</span>
             </div>
             <div class="tiles" id="suffixBank"></div>
-            <div class="tiny">You can start with a suffix. Viable options float to the top. Non viable are greyed out.</div>
+            <div class="tiny">Viable options float to the top. Non viable are greyed out.</div>
           </div>
         </div>
 
@@ -155,15 +191,20 @@
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 
+  /* -------------------- CARD-ALIGNED MORPHEMES -------------------- */
+
+  // Prefix set = your original + extra card ones (a-, dif-, super-, e-)
   const PREFIXES = [
     { id:"anti", form:"anti", meaning:"against", allowedPos:["noun","adj","verb"] },
     { id:"con", form:"con", meaning:"with or together", allowedPos:["noun","adj","verb"] },
     { id:"contra", form:"contra", meaning:"against; opposite", allowedPos:["noun","adj","verb"] },
     { id:"de", form:"de", meaning:"undo; remove; down", allowedPos:["verb"] },
     { id:"dis", form:"dis", meaning:"not; opposite; apart", allowedPos:["noun","adj","verb"] },
+    { id:"dif", form:"dif", meaning:"not; apart (variant)", allowedPos:["noun","adj","verb"] },
     { id:"en", form:"en", meaning:"cause to; make", allowedPos:["verb"] },
     { id:"em", form:"em", meaning:"cause to; make", allowedPos:["verb"] },
     { id:"ex", form:"ex", meaning:"out of; former", allowedPos:["noun","adj"] },
+    { id:"e", form:"e", meaning:"out of; electronic (context)", allowedPos:["noun","adj"] },
     { id:"extra", form:"extra", meaning:"beyond", allowedPos:["noun","adj"] },
     { id:"fore", form:"fore", meaning:"before", allowedPos:["noun","adj"] },
     { id:"hyper", form:"hyper", meaning:"over; excessive", allowedPos:["adj","noun"] },
@@ -186,11 +227,14 @@ document.addEventListener("DOMContentLoaded", () => {
     { id:"re", form:"re", meaning:"again", allowedPos:["verb"] },
     { id:"semi", form:"semi", meaning:"half", allowedPos:["noun","adj"] },
     { id:"sub", form:"sub", meaning:"under", allowedPos:["noun","adj","verb"] },
+    { id:"super", form:"super", meaning:"above; beyond", allowedPos:["noun","adj","verb"] },
     { id:"trans", form:"trans", meaning:"across", allowedPos:["noun","adj","verb"] },
     { id:"un", form:"un", meaning:"not", allowedPos:["adj","verb"] },
-    { id:"under", form:"under", meaning:"below", allowedPos:["noun","adj","verb"] }
+    { id:"under", form:"under", meaning:"below", allowedPos:["noun","adj","verb"] },
+    { id:"a", form:"a", meaning:"not; without", allowedPos:["adj","noun"] },
   ];
 
+  // Suffix set = your original + card hint of -or
   const SUFFIXES = [
     { id:"s", form:"s", meaning:"plural or present tense", allowedPos:["noun","verb"], hint:"books, runs" },
     { id:"es", form:"es", meaning:"plural or present tense", allowedPos:["noun","verb"], hint:"boxes, watches" },
@@ -198,45 +242,47 @@ document.addEventListener("DOMContentLoaded", () => {
     { id:"ing", form:"ing", meaning:"happening now", allowedPos:["verb"], hint:"building, running" },
     { id:"en", form:"en", meaning:"made of; to make", allowedPos:["adj","verb"], hint:"wooden, widen" },
     { id:"er", form:"er", meaning:"person who; more", allowedPos:["verb","adj"], hint:"teacher, faster" },
+    { id:"or", form:"or", meaning:"person who", allowedPos:["verb","noun"], hint:"actor, inventor" },
     { id:"est", form:"est", meaning:"most", allowedPos:["adj"], hint:"fastest" },
+    { id:"ly", form:"ly", meaning:"in a way", allowedPos:["adj"], hint:"quickly" },
+    { id:"ion", form:"ion", meaning:"act or result of", allowedPos:["verb"], hint:"action, creation" },
     { id:"able", form:"able", meaning:"able to", allowedPos:["verb"], hint:"usable, movable" },
     { id:"ible", form:"ible", meaning:"able to", allowedPos:["verb"], hint:"possible pattern" },
+    { id:"y", form:"y", meaning:"characterised by", allowedPos:["noun"], hint:"rainy" },
+    { id:"ful", form:"ful", meaning:"full of", allowedPos:["noun"], hint:"helpful" },
+    { id:"less", form:"less", meaning:"without", allowedPos:["noun"], hint:"careless" },
+    { id:"ish", form:"ish", meaning:"somewhat; like", allowedPos:["noun","adj"], hint:"childish" },
+    { id:"ness", form:"ness", meaning:"state of", allowedPos:["adj"], hint:"kindness" },
+    { id:"ment", form:"ment", meaning:"result of action", allowedPos:["verb"], hint:"development" },
     { id:"al", form:"al", meaning:"related to", allowedPos:["noun","verb"], hint:"national, educational" },
     { id:"ial", form:"ial", meaning:"related to", allowedPos:["noun","verb"], hint:"essential pattern" },
+    { id:"ty", form:"ty", meaning:"state or quality", allowedPos:["adj"], hint:"safety pattern" },
+    { id:"ity", form:"ity", meaning:"state or quality", allowedPos:["adj"], hint:"responsibility pattern" },
+    { id:"ous", form:"ous", meaning:"full of", allowedPos:["noun","verb"], hint:"dangerous pattern" },
+    { id:"ee", form:"ee", meaning:"person who receives", allowedPos:["verb"], hint:"employee pattern" },
+    { id:"ist", form:"ist", meaning:"person who", allowedPos:["noun","verb"], hint:"artist" },
     { id:"ance", form:"ance", meaning:"state of", allowedPos:["verb"], hint:"appearance" },
     { id:"ence", form:"ence", meaning:"state of", allowedPos:["verb"], hint:"existence pattern" },
     { id:"ant", form:"ant", meaning:"person who", allowedPos:["verb"], hint:"assistant" },
     { id:"ent", form:"ent", meaning:"person who", allowedPos:["verb"], hint:"student pattern" },
     { id:"ate", form:"ate", meaning:"to make; to become", allowedPos:["noun","adj"], hint:"activate pattern" },
-    { id:"ee", form:"ee", meaning:"person who receives", allowedPos:["verb"], hint:"employee pattern" },
     { id:"eer", form:"eer", meaning:"person who", allowedPos:["noun","verb"], hint:"engineer pattern" },
-    { id:"ful", form:"ful", meaning:"full of", allowedPos:["noun"], hint:"helpful" },
     { id:"fy", form:"fy", meaning:"make", allowedPos:["noun","adj"], hint:"simplify pattern" },
     { id:"ify", form:"ify", meaning:"make", allowedPos:["noun","adj"], hint:"identify pattern" },
     { id:"hood", form:"hood", meaning:"state of", allowedPos:["noun"], hint:"childhood" },
     { id:"ian", form:"ian", meaning:"person connected to", allowedPos:["noun"], hint:"musician pattern" },
     { id:"ic", form:"ic", meaning:"related to", allowedPos:["noun","verb"], hint:"historic pattern" },
-    { id:"ion", form:"ion", meaning:"act or result of", allowedPos:["verb"], hint:"action, creation" },
-    { id:"ish", form:"ish", meaning:"somewhat; like", allowedPos:["noun","adj"], hint:"childish" },
-    { id:"ist", form:"ist", meaning:"person who", allowedPos:["noun","verb"], hint:"artist" },
     { id:"ive", form:"ive", meaning:"having quality of", allowedPos:["verb","noun"], hint:"active, creative" },
     { id:"ize", form:"ize", meaning:"make", allowedPos:["noun","adj"], hint:"organise uses -ise in Australia" },
-    { id:"less", form:"less", meaning:"without", allowedPos:["noun"], hint:"careless" },
     { id:"like", form:"like", meaning:"like; similar to", allowedPos:["noun"], hint:"childlike" },
     { id:"logy", form:"logy", meaning:"study of", allowedPos:["noun"], hint:"biology pattern" },
     { id:"ologist", form:"ologist", meaning:"person who studies", allowedPos:["noun"], hint:"biologist pattern" },
-    { id:"ly", form:"ly", meaning:"in a way", allowedPos:["adj"], hint:"quickly" },
-    { id:"ment", form:"ment", meaning:"result of action", allowedPos:["verb"], hint:"development" },
-    { id:"ness", form:"ness", meaning:"state of", allowedPos:["adj"], hint:"kindness" },
-    { id:"ous", form:"ous", meaning:"full of", allowedPos:["noun","verb"], hint:"dangerous pattern" },
     { id:"ship", form:"ship", meaning:"state or skill", allowedPos:["noun"], hint:"friendship" },
-    { id:"ty", form:"ty", meaning:"state or quality", allowedPos:["adj"], hint:"safety pattern" },
-    { id:"ity", form:"ity", meaning:"state or quality", allowedPos:["adj"], hint:"responsibility pattern" },
     { id:"ure", form:"ure", meaning:"result of", allowedPos:["verb"], hint:"closure pattern" },
-    { id:"y", form:"y", meaning:"characterised by", allowedPos:["noun"], hint:"rainy" }
   ];
 
-  const BASES = [
+  // Your original core bases (tagged as "core")
+  const CORE_BASES = [
     { id:"act", form:"act", meaning:"do", pos:["verb","noun"] },
     { id:"appear", form:"appear", meaning:"come into view", pos:["verb"] },
     { id:"apply", form:"apply", meaning:"put to use", pos:["verb"] },
@@ -322,6 +368,37 @@ document.addEventListener("DOMContentLoaded", () => {
     { id:"write", form:"write", meaning:"put words on a page", pos:["verb"] }
   ];
 
+  // Anglo-Saxon base cards (group: anglo). POS is intentionally broad so they can be used.
+  const ANGLO_BASES = [
+    "teach","meet","rest","go","tall","help","ask","eat","train","usual","end","turn","open","make","jump","bad","lock",
+    "move","like","care","happy","push","zip","take","see","brisk","wake","send","round","cloud","pay","lift","pack",
+    "sound","correct","part","live","sad","trust","merge"
+  ].map((w,i)=>({ id:`anglo_${i}`, form:w, meaning:"", pos:["noun","adj","verb"] }));
+
+  // Latin root cards (group: latin). These are roots, so meaning is blank unless you want to fill it later.
+  // Note: bracket/variant forms in the cards have been converted into practical spellings as separate options.
+  const LATIN_BASES = [
+    "rupt","tract","form","cred","dic","dict","struct","scrib","script","port","aud","flex","flect","ject","spec","spect","spic",
+    "miss","mit","sci","pend","pens","vis","vid","fer","vers","vert","duc","duct","sec","sect","claus","clos","vit","viv",
+    "ped","pel","puls","voc","voke","cap","plic","ply","vent","ven","quer","quest","quire","frater","pater","patr","mater","matr",
+    "uni","bi","tri","quadr","quar","oct","deca","dec"
+  ].map((w,i)=>({ id:`latin_${i}`, form:w, meaning:"", pos:["noun","adj","verb"] }));
+
+  // Greek base cards (group: greek).
+  const GREEK_BASES = [
+    "graph","gram","micro","hydr","hydro","therm","thermo","phon","logy","phobia","chron","chrono","photo","scope",
+    "crat","cracy","ortho","tele","biblio","geo","path","auto","bio","meter","metr","psych","aero","poli","cycl","cyclo",
+    "pod","astro","ped","arch","sphere","mono","di","tri","tetra","pent","penta","hex","hept","hepta","octa","ennea","deca"
+  ].map((w,i)=>({ id:`greek_${i}`, form:w, meaning:"", pos:["noun","adj","verb"] }));
+
+  // Combine bases into one list, but keep a "group" so we can filter and colour code
+  const BASES = [
+    ...CORE_BASES.map(b => ({ ...b, group:"core" })),
+    ...ANGLO_BASES.map(b => ({ ...b, group:"anglo" })),
+    ...LATIN_BASES.map(b => ({ ...b, group:"latin" })),
+    ...GREEK_BASES.map(b => ({ ...b, group:"greek" })),
+  ];
+
   const FALLBACK_ALLOWED_WORDS = [
     "act","action","active","react","reactive","reactions",
     "create","creation","creative","recreate","recreation",
@@ -346,9 +423,9 @@ document.addEventListener("DOMContentLoaded", () => {
   ];
 
   function mkUid(type, id){ return `${type}:${id}`; }
-  const ALL_PREFIXES = PREFIXES.map(p => ({ ...p, uid: mkUid("prefix", p.id) }));
-  const ALL_SUFFIXES = SUFFIXES.map(s => ({ ...s, uid: mkUid("suffix", s.id) }));
-  const ALL_BASES = BASES.map(b => ({ ...b, uid: mkUid("base", b.id) }));
+  const ALL_PREFIXES = PREFIXES.map(p => ({ ...p, uid: mkUid("prefix", p.id), group:"prefix" }));
+  const ALL_SUFFIXES = SUFFIXES.map(s => ({ ...s, uid: mkUid("suffix", s.id), group:"suffix" }));
+  const ALL_BASES    = BASES.map(b => ({ ...b, uid: mkUid("base", b.id) }));
 
   const BY_UID = new Map();
   for (const x of [...ALL_BASES, ...ALL_PREFIXES, ...ALL_SUFFIXES]) BY_UID.set(x.uid, x);
@@ -357,6 +434,8 @@ document.addEventListener("DOMContentLoaded", () => {
     dictPill: document.getElementById("dictPill"),
     clearBtn: document.getElementById("clearBtn"),
     baseSearch: document.getElementById("baseSearch"),
+    globalSearch: document.getElementById("globalSearch"),
+    baseType: document.getElementById("baseType"),
 
     prefixBank: document.getElementById("prefixBank"),
     baseBank: document.getElementById("baseBank"),
@@ -375,8 +454,10 @@ document.addEventListener("DOMContentLoaded", () => {
     statusOut: document.getElementById("statusOut"),
   };
 
+  // -------------------- STATE --------------------
   let current = { prefix:null, base:null, suffix:null };
 
+  // -------------------- WORD CHECKER --------------------
   let DICT_SET = null;
   let dictLoaded = false;
 
@@ -408,6 +489,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return DICT_SET && DICT_SET.has(String(word).toLowerCase());
   }
 
+  // -------------------- SPELLING RULES --------------------
   function vowels(){ return new Set(["a","e","i","o","u"]); }
 
   function applySpellingRules(baseForm, suffixForm) {
@@ -433,9 +515,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function computeMeaning(prefixObj, baseObj, suffixObj) {
     const parts = [];
-    if (prefixObj) parts.push(prefixObj.meaning);
-    if (baseObj) parts.push(baseObj.meaning);
-    if (suffixObj) parts.push(suffixObj.meaning);
+    if (prefixObj && prefixObj.meaning) parts.push(prefixObj.meaning);
+    if (baseObj && baseObj.meaning) parts.push(baseObj.meaning);
+    if (suffixObj && suffixObj.meaning) parts.push(suffixObj.meaning);
     return parts.join(" + ");
   }
 
@@ -485,7 +567,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const ok = hasAffixLock
         ? existsRealWordWithLocks(current.prefix, b, current.suffix)
         : (existsRealWordWithLocks(null, b, null) || isRealWord(b.form));
-
       if (ok) viableBases.add(b.uid);
     }
 
@@ -502,6 +583,20 @@ document.addEventListener("DOMContentLoaded", () => {
     return { viablePrefixes, viableBases, viableSuffixes };
   }
 
+  function matchesSearch(item){
+    const q = (els.globalSearch.value || "").trim().toLowerCase();
+    if (!q) return true;
+    const hay = `${item.form || ""} ${item.meaning || ""}`.toLowerCase();
+    return hay.includes(q);
+  }
+
+  function baseTypeOk(base){
+    const t = els.baseType.value;
+    if (t === "all") return true;
+    return (base.group || "core") === t;
+  }
+
+  // -------------------- UI BUILDERS --------------------
   function makeTile(item, type, enabled, selected) {
     const div = document.createElement("div");
     div.className = "tile";
@@ -511,6 +606,11 @@ document.addEventListener("DOMContentLoaded", () => {
     div.draggable = true;
     div.dataset.uid = item.uid;
     div.dataset.type = type;
+
+    // colour group
+    if (type === "prefix") div.dataset.group = "prefix";
+    else if (type === "suffix") div.dataset.group = "suffix";
+    else div.dataset.group = item.group || "core";
 
     const form = document.createElement("div");
     form.className = "form";
@@ -522,7 +622,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const meta = document.createElement("div");
     meta.className = "meta";
-    if (type === "base") meta.textContent = `base (${(item.pos||[]).join(", ")})`;
+    if (type === "base"){
+      const g = item.group || "core";
+      const label = (g === "core") ? "core base" : (g === "anglo") ? "anglo base" : (g === "latin") ? "latin root" : "greek root";
+      meta.textContent = `${label} (${(item.pos||[]).join(", ") || "noun, adj, verb"})`;
+    }
     if (type === "prefix") meta.textContent = `prefix`;
     if (type === "suffix") meta.textContent = `suffix${item.hint ? " • " + item.hint : ""}`;
 
@@ -550,9 +654,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const sets = computeViableSets();
 
-    const q = (els.baseSearch.value || "").trim().toLowerCase();
+    // Bases: baseSearch + baseType + globalSearch
+    const qBase = (els.baseSearch.value || "").trim().toLowerCase();
     const basesFiltered = ALL_BASES
-      .filter(b => !q || b.form.toLowerCase().includes(q))
+      .filter(b => baseTypeOk(b))
+      .filter(b => matchesSearch(b))
+      .filter(b => !qBase || b.form.toLowerCase().includes(qBase))
       .sort((a,b)=>a.form.localeCompare(b.form));
 
     const baseEnabled = [];
@@ -566,10 +673,12 @@ document.addEventListener("DOMContentLoaded", () => {
     els.baseBank.append(...baseEnabled, ...baseDisabled);
     els.baseCount.textContent = String(baseEnabled.length);
 
+    // Prefixes: globalSearch + enabled first
     let prefixEnabledCount = 0;
     const prefixEnabled = [];
     const prefixDisabled = [];
     for (const p of ALL_PREFIXES){
+      if (!matchesSearch(p)) continue;
       const enabled = sets.viablePrefixes.has(p.uid);
       const selected = current.prefix && current.prefix.uid === p.uid;
       const t = makeTile(p, "prefix", enabled, selected);
@@ -579,10 +688,12 @@ document.addEventListener("DOMContentLoaded", () => {
     els.prefixBank.append(...prefixEnabled, ...prefixDisabled);
     els.prefixCount.textContent = String(prefixEnabledCount);
 
+    // Suffixes: globalSearch + enabled first
     let suffixEnabledCount = 0;
     const suffixEnabled = [];
     const suffixDisabled = [];
     for (const s of ALL_SUFFIXES){
+      if (!matchesSearch(s)) continue;
       const enabled = sets.viableSuffixes.has(s.uid);
       const selected = current.suffix && current.suffix.uid === s.uid;
       const t = makeTile(s, "suffix", enabled, selected);
@@ -637,8 +748,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const w = computeWord(current.prefix, current.base, current.suffix);
     els.wordOut.textContent = w;
-    els.meaningOut.textContent = computeMeaning(current.prefix, current.base, current.suffix);
-
+    els.meaningOut.textContent = computeMeaning(current.prefix, current.base, current.suffix) || " ";
     if (!current.prefix && !current.suffix){
       els.statusOut.textContent = "Add a prefix or suffix. Only real-word options are available.";
       els.statusOut.className = "status warn";
@@ -728,6 +838,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   els.baseSearch.addEventListener("input", renderBanks);
+  els.globalSearch.addEventListener("input", renderBanks);
+  els.baseType.addEventListener("change", renderBanks);
   els.clearBtn.addEventListener("click", clearAll);
 
   setupZone(els.prefixZone);
