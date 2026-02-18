@@ -1,840 +1,190 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Morphology Word Matrix Years 5–6</title>
-  <style>
-    :root { --bg:#0b0c10; --panel:#14161c; --card:#1b1f2a; --text:#eef2ff; --muted:#b7c0d8; --line:#2a3142; --ok:#7ee787; --warn:#ffcf66; --bad:#ff7b72; }
-    * { box-sizing:border-box; }
-    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:var(--text); }
-    .wrap { max-width: 1180px; margin: 0 auto; padding: 18px; }
-    .top { display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:space-between; }
-    h1 { font-size: 18px; margin:0; font-weight: 900; letter-spacing: .2px; }
-    .controls { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-    button, input[type="text"] { background:var(--card); color:var(--text); border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
-    button { cursor:pointer; }
-    button:hover, input[type="text"]:hover { border-color:#3a4664; }
-    .pill { display:inline-flex; gap:8px; align-items:center; padding: 6px 10px; border:1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.02); color: var(--muted); font-size: 12px; }
-    .grid { display:grid; grid-template-columns: 1.25fr .75fr; gap: 14px; margin-top: 14px; }
-    @media (max-width: 1000px){ .grid { grid-template-columns: 1fr; } }
-    .panel { background:var(--panel); border:1px solid var(--line); border-radius: 14px; padding: 14px; }
-    .panel h2 { margin:0 0 10px 0; font-size: 13px; color: var(--muted); font-weight: 900; letter-spacing:.3px; text-transform: uppercase; }
-    .banks { display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-    @media (max-width: 1000px){ .banks { grid-template-columns: 1fr; } }
-    .bank { background: rgba(255,255,255,.02); border: 1px dashed var(--line); border-radius: 14px; padding: 10px; min-height: 210px; }
-    .bankHead { display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
-    .bank h3 { margin:0 0 8px 0; font-size: 13px; font-weight: 900; color: var(--text); }
-    .tiles { display:flex; flex-wrap:wrap; gap:8px; }
-    .tile{
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius: 14px;
-      padding: 10px 10px 8px 10px;
-      min-width: 140px;
-      cursor: grab;
-      user-select:none;
-      opacity: 1;
-      transition: opacity .12s ease, transform .12s ease, border-color .12s ease, box-shadow .12s ease;
-    }
-    .tile:active { cursor: grabbing; transform: scale(0.99); }
-    .tile.disabled { opacity: .22; cursor: not-allowed; }
-    .tile.selected { border-color:#6c7cff; box-shadow: 0 0 0 2px rgba(108,124,255,.25) inset; }
-    .tile .form { font-weight: 950; font-size: 14px; }
-    .tile .meaning { margin-top: 2px; font-size: 12px; color: var(--muted); }
-    .tile .meta { margin-top: 6px; font-size: 11px; color: #98a2c7; }
-    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-    .searchBox { width:100%; }
-    .builder { display:grid; gap:10px; }
-    .slotLabel { font-size:12px; color:var(--muted); margin: 0 0 6px 2px; }
-    .dropzone{
-      background: rgba(255,255,255,.02);
-      border: 2px dashed var(--line);
-      border-radius: 16px;
-      padding: 12px;
-      min-height: 70px;
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      align-items:center;
-    }
-    .dropzone.dragover { border-color:#6c7cff; background: rgba(108,124,255,.08); }
-    .output { background: rgba(255,255,255,.03); border:1px solid var(--line); border-radius: 14px; padding: 12px; }
-    .word { font-size: 28px; font-weight: 950; letter-spacing:.2px; }
-    .gloss { margin-top: 6px; color: var(--muted); font-size: 14px; line-height: 1.35; }
-    .status { margin-top: 10px; font-size: 12px; }
-    .status.warn { color: var(--warn); }
-    .status.ok { color: var(--ok); }
-    .status.bad { color: var(--bad); }
-    .note { margin-top: 12px; font-size: 12px; color: #aab3d3; line-height: 1.35; }
-    .tiny { font-size: 11px; color: #97a1c6; opacity: .9; margin-top: 10px; line-height: 1.35; }
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="top">
-      <h1>Morphology Word Matrix Years 5–6</h1>
-      <div class="controls">
-        <span class="pill" id="dictPill">Word checker: loading...</span>
-        <button id="clearBtn" type="button">Clear builder</button>
-      </div>
-    </div>
-
-    <div class="grid">
-      <div class="panel">
-        <h2>Morpheme bank (only real-word options enabled)</h2>
-
-        <div class="banks">
-          <div class="bank">
-            <div class="bankHead">
-              <h3>Prefixes</h3>
-              <span class="pill" id="prefixCount">0</span>
-            </div>
-            <div class="tiles" id="prefixBank"></div>
-            <div class="tiny">You can start with a prefix, base word, or suffix. Viable options float to the top. Non viable are greyed out.</div>
-          </div>
-
-          <div class="bank">
-            <div class="bankHead">
-              <h3>Base words (Years 5–6)</h3>
-              <span class="pill" id="baseCount">0</span>
-            </div>
-            <div class="row" style="margin-bottom:8px;">
-              <input id="baseSearch" class="searchBox" type="text" placeholder="Search base words..." />
-            </div>
-            <div class="tiles" id="baseBank"></div>
-            <div class="tiny">Bases that can make at least one real word are enabled.</div>
-          </div>
-
-          <div class="bank">
-            <div class="bankHead">
-              <h3>Suffixes</h3>
-              <span class="pill" id="suffixCount">0</span>
-            </div>
-            <div class="tiles" id="suffixBank"></div>
-            <div class="tiny">You can start with a suffix. Viable options float to the top. Non viable are greyed out.</div>
-          </div>
-        </div>
-
-        <div class="tiny">Tip: double click a tile in the builder to remove it.</div>
-      </div>
-
-      <div class="panel">
-        <h2>Build a word</h2>
-
-        <div class="builder">
-          <div>
-            <div class="slotLabel">Prefix slot</div>
-            <div class="dropzone" id="prefixZone" data-zone="prefix"></div>
-          </div>
-          <div>
-            <div class="slotLabel">Base word slot (required)</div>
-            <div class="dropzone" id="baseZone" data-zone="base"></div>
-          </div>
-          <div>
-            <div class="slotLabel">Suffix slot</div>
-            <div class="dropzone" id="suffixZone" data-zone="suffix"></div>
-          </div>
-        </div>
-
-        <div style="height:10px"></div>
-
-        <div class="output">
-          <div class="word" id="wordOut">Choose a base word</div>
-          <div class="gloss" id="meaningOut">Then add a prefix or suffix to change the meaning.</div>
-          <div class="status warn" id="statusOut"></div>
-        </div>
-
-        <div class="note">
-          Spelling rules included: drop final e before vowel suffixes (create → creation, use → usable), y to i before consonant suffixes (apply → applied).
-        </div>
-      </div>
-    </div>
-  </div>
-
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 
-  const PREFIXES = [
-    { id:"anti", form:"anti", meaning:"against", allowedPos:["noun","adj","verb"] },
-    { id:"con", form:"con", meaning:"with or together", allowedPos:["noun","adj","verb"] },
-    { id:"contra", form:"contra", meaning:"against; opposite", allowedPos:["noun","adj","verb"] },
-    { id:"de", form:"de", meaning:"undo; remove; down", allowedPos:["verb"] },
-    { id:"dis", form:"dis", meaning:"not; opposite; apart", allowedPos:["noun","adj","verb"] },
-    { id:"en", form:"en", meaning:"cause to; make", allowedPos:["verb"] },
-    { id:"em", form:"em", meaning:"cause to; make", allowedPos:["verb"] },
-    { id:"ex", form:"ex", meaning:"out of; former", allowedPos:["noun","adj"] },
-    { id:"extra", form:"extra", meaning:"beyond", allowedPos:["noun","adj"] },
-    { id:"fore", form:"fore", meaning:"before", allowedPos:["noun","adj"] },
-    { id:"hyper", form:"hyper", meaning:"over; excessive", allowedPos:["adj","noun"] },
-    { id:"il", form:"il", meaning:"not", allowedPos:["adj"] },
-    { id:"im", form:"im", meaning:"not", allowedPos:["adj"] },
-    { id:"ir", form:"ir", meaning:"not", allowedPos:["adj"] },
-    { id:"in", form:"in", meaning:"not; into", allowedPos:["adj","verb"] },
-    { id:"inter", form:"inter", meaning:"between", allowedPos:["noun","adj","verb"] },
-    { id:"mal", form:"mal", meaning:"bad", allowedPos:["noun","adj"] },
-    { id:"mega", form:"mega", meaning:"large", allowedPos:["noun","adj"] },
-    { id:"micro", form:"micro", meaning:"small", allowedPos:["noun","adj"] },
-    { id:"mid", form:"mid", meaning:"middle", allowedPos:["noun","adj"] },
-    { id:"mis", form:"mis", meaning:"wrong", allowedPos:["verb"] },
-    { id:"multi", form:"multi", meaning:"many", allowedPos:["noun","adj"] },
-    { id:"non", form:"non", meaning:"not", allowedPos:["noun","adj"] },
-    { id:"over", form:"over", meaning:"too much", allowedPos:["verb","adj"] },
-    { id:"post", form:"post", meaning:"after", allowedPos:["noun","adj"] },
-    { id:"pre", form:"pre", meaning:"before", allowedPos:["noun","adj","verb"] },
-    { id:"pro", form:"pro", meaning:"in favour of; forward", allowedPos:["noun","adj"] },
-    { id:"re", form:"re", meaning:"again", allowedPos:["verb"] },
-    { id:"semi", form:"semi", meaning:"half", allowedPos:["noun","adj"] },
-    { id:"sub", form:"sub", meaning:"under", allowedPos:["noun","adj","verb"] },
-    { id:"trans", form:"trans", meaning:"across", allowedPos:["noun","adj","verb"] },
-    { id:"un", form:"un", meaning:"not", allowedPos:["adj","verb"] },
-    { id:"under", form:"under", meaning:"below", allowedPos:["noun","adj","verb"] }
-  ];
+const PREFIXES = [...];   // KEEP YOUR EXISTING PREFIXES ARRAY
+const SUFFIXES = [...];   // KEEP YOUR EXISTING SUFFIXES ARRAY
+const BASES = [...];      // KEEP YOUR EXISTING BASES ARRAY
+const FALLBACK_ALLOWED_WORDS = [...]; // KEEP YOUR EXISTING FALLBACK LIST
 
-  const SUFFIXES = [
-    { id:"s", form:"s", meaning:"plural or present tense", allowedPos:["noun","verb"], hint:"books, runs" },
-    { id:"es", form:"es", meaning:"plural or present tense", allowedPos:["noun","verb"], hint:"boxes, watches" },
-    { id:"ed", form:"ed", meaning:"past tense", allowedPos:["verb"], hint:"played, developed" },
-    { id:"ing", form:"ing", meaning:"happening now", allowedPos:["verb"], hint:"building, running" },
-    { id:"en", form:"en", meaning:"made of; to make", allowedPos:["adj","verb"], hint:"wooden, widen" },
-    { id:"er", form:"er", meaning:"person who; more", allowedPos:["verb","adj"], hint:"teacher, faster" },
-    { id:"est", form:"est", meaning:"most", allowedPos:["adj"], hint:"fastest" },
-    { id:"able", form:"able", meaning:"able to", allowedPos:["verb"], hint:"usable, movable" },
-    { id:"ible", form:"ible", meaning:"able to", allowedPos:["verb"], hint:"possible pattern" },
-    { id:"al", form:"al", meaning:"related to", allowedPos:["noun","verb"], hint:"national, educational" },
-    { id:"ial", form:"ial", meaning:"related to", allowedPos:["noun","verb"], hint:"essential pattern" },
-    { id:"ance", form:"ance", meaning:"state of", allowedPos:["verb"], hint:"appearance" },
-    { id:"ence", form:"ence", meaning:"state of", allowedPos:["verb"], hint:"existence pattern" },
-    { id:"ant", form:"ant", meaning:"person who", allowedPos:["verb"], hint:"assistant" },
-    { id:"ent", form:"ent", meaning:"person who", allowedPos:["verb"], hint:"student pattern" },
-    { id:"ate", form:"ate", meaning:"to make; to become", allowedPos:["noun","adj"], hint:"activate pattern" },
-    { id:"ee", form:"ee", meaning:"person who receives", allowedPos:["verb"], hint:"employee pattern" },
-    { id:"eer", form:"eer", meaning:"person who", allowedPos:["noun","verb"], hint:"engineer pattern" },
-    { id:"ful", form:"ful", meaning:"full of", allowedPos:["noun"], hint:"helpful" },
-    { id:"fy", form:"fy", meaning:"make", allowedPos:["noun","adj"], hint:"simplify pattern" },
-    { id:"ify", form:"ify", meaning:"make", allowedPos:["noun","adj"], hint:"identify pattern" },
-    { id:"hood", form:"hood", meaning:"state of", allowedPos:["noun"], hint:"childhood" },
-    { id:"ian", form:"ian", meaning:"person connected to", allowedPos:["noun"], hint:"musician pattern" },
-    { id:"ic", form:"ic", meaning:"related to", allowedPos:["noun","verb"], hint:"historic pattern" },
-    { id:"ion", form:"ion", meaning:"act or result of", allowedPos:["verb"], hint:"action, creation" },
-    { id:"ish", form:"ish", meaning:"somewhat; like", allowedPos:["noun","adj"], hint:"childish" },
-    { id:"ist", form:"ist", meaning:"person who", allowedPos:["noun","verb"], hint:"artist" },
-    { id:"ive", form:"ive", meaning:"having quality of", allowedPos:["verb","noun"], hint:"active, creative" },
-    { id:"ize", form:"ize", meaning:"make", allowedPos:["noun","adj"], hint:"organise uses -ise in Australia" },
-    { id:"less", form:"less", meaning:"without", allowedPos:["noun"], hint:"careless" },
-    { id:"like", form:"like", meaning:"like; similar to", allowedPos:["noun"], hint:"childlike" },
-    { id:"logy", form:"logy", meaning:"study of", allowedPos:["noun"], hint:"biology pattern" },
-    { id:"ologist", form:"ologist", meaning:"person who studies", allowedPos:["noun"], hint:"biologist pattern" },
-    { id:"ly", form:"ly", meaning:"in a way", allowedPos:["adj"], hint:"quickly" },
-    { id:"ment", form:"ment", meaning:"result of action", allowedPos:["verb"], hint:"development" },
-    { id:"ness", form:"ness", meaning:"state of", allowedPos:["adj"], hint:"kindness" },
-    { id:"ous", form:"ous", meaning:"full of", allowedPos:["noun","verb"], hint:"dangerous pattern" },
-    { id:"ship", form:"ship", meaning:"state or skill", allowedPos:["noun"], hint:"friendship" },
-    { id:"ty", form:"ty", meaning:"state or quality", allowedPos:["adj"], hint:"safety pattern" },
-    { id:"ity", form:"ity", meaning:"state or quality", allowedPos:["adj"], hint:"responsibility pattern" },
-    { id:"ure", form:"ure", meaning:"result of", allowedPos:["verb"], hint:"closure pattern" },
-    { id:"y", form:"y", meaning:"characterised by", allowedPos:["noun"], hint:"rainy" }
-  ];
+const ALL_PREFIXES = PREFIXES.map(p => ({...p, uid:"prefix:"+p.id}));
+const ALL_SUFFIXES = SUFFIXES.map(s => ({...s, uid:"suffix:"+s.id}));
+const ALL_BASES = BASES.map(b => ({...b, uid:"base:"+b.id}));
 
-  const BASES = [
-    { id:"act", form:"act", meaning:"do", pos:["verb","noun"] },
-    { id:"appear", form:"appear", meaning:"come into view", pos:["verb"] },
-    { id:"apply", form:"apply", meaning:"put to use", pos:["verb"] },
-    { id:"argue", form:"argue", meaning:"give reasons", pos:["verb"] },
-    { id:"assist", form:"assist", meaning:"help", pos:["verb"] },
-    { id:"attract", form:"attract", meaning:"pull towards", pos:["verb"] },
-    { id:"behave", form:"behave", meaning:"act in a way", pos:["verb"] },
-    { id:"believe", form:"believe", meaning:"think something is true", pos:["verb"] },
-    { id:"build", form:"build", meaning:"make by putting parts together", pos:["verb"] },
-    { id:"care", form:"care", meaning:"look after; attention", pos:["verb","noun"] },
-    { id:"collect", form:"collect", meaning:"gather together", pos:["verb"] },
-    { id:"communicate", form:"communicate", meaning:"share information", pos:["verb"] },
-    { id:"connect", form:"connect", meaning:"join together", pos:["verb"] },
-    { id:"construct", form:"construct", meaning:"build", pos:["verb"] },
-    { id:"create", form:"create", meaning:"make", pos:["verb"] },
-    { id:"decide", form:"decide", meaning:"choose after thinking", pos:["verb"] },
-    { id:"develop", form:"develop", meaning:"grow or improve", pos:["verb"] },
-    { id:"direct", form:"direct", meaning:"guide; control", pos:["verb","adj"] },
-    { id:"educate", form:"educate", meaning:"teach", pos:["verb"] },
-    { id:"employ", form:"employ", meaning:"give work to; use", pos:["verb"] },
-    { id:"encourage", form:"encourage", meaning:"support; give confidence", pos:["verb"] },
-    { id:"enjoy", form:"enjoy", meaning:"like; take pleasure in", pos:["verb"] },
-    { id:"excite", form:"excite", meaning:"make interested or happy", pos:["verb"] },
-    { id:"expect", form:"expect", meaning:"think will happen", pos:["verb"] },
-    { id:"explore", form:"explore", meaning:"investigate", pos:["verb"] },
-    { id:"express", form:"express", meaning:"show or say", pos:["verb"] },
-    { id:"extend", form:"extend", meaning:"make longer; stretch", pos:["verb"] },
-    { id:"form", form:"form", meaning:"make; shape", pos:["verb","noun"] },
-    { id:"friend", form:"friend", meaning:"a person you like and trust", pos:["noun"] },
-    { id:"govern", form:"govern", meaning:"rule; manage", pos:["verb"] },
-    { id:"grow", form:"grow", meaning:"increase; get bigger", pos:["verb"] },
-    { id:"help", form:"help", meaning:"give support", pos:["verb","noun"] },
-    { id:"inform", form:"inform", meaning:"tell; give information", pos:["verb"] },
-    { id:"inspire", form:"inspire", meaning:"encourage; motivate", pos:["verb"] },
-    { id:"introduce", form:"introduce", meaning:"bring in; present", pos:["verb"] },
-    { id:"invest", form:"invest", meaning:"put money into", pos:["verb"] },
-    { id:"join", form:"join", meaning:"connect", pos:["verb"] },
-    { id:"judge", form:"judge", meaning:"decide; form an opinion", pos:["verb","noun"] },
-    { id:"learn", form:"learn", meaning:"gain knowledge", pos:["verb"] },
-    { id:"locate", form:"locate", meaning:"find where something is", pos:["verb"] },
-    { id:"manage", form:"manage", meaning:"control; run", pos:["verb"] },
-    { id:"measure", form:"measure", meaning:"find size or amount", pos:["verb","noun"] },
-    { id:"migrate", form:"migrate", meaning:"move to another place", pos:["verb"] },
-    { id:"motivate", form:"motivate", meaning:"make someone want to act", pos:["verb"] },
-    { id:"move", form:"move", meaning:"go from one place to another", pos:["verb"] },
-    { id:"observe", form:"observe", meaning:"watch carefully", pos:["verb"] },
-    { id:"operate", form:"operate", meaning:"work; run", pos:["verb"] },
-    { id:"organise", form:"organise", meaning:"plan and arrange", pos:["verb"] },
-    { id:"participate", form:"participate", meaning:"take part", pos:["verb"] },
-    { id:"perform", form:"perform", meaning:"do; carry out", pos:["verb"] },
-    { id:"persuade", form:"persuade", meaning:"convince", pos:["verb"] },
-    { id:"predict", form:"predict", meaning:"say before it happens", pos:["verb"] },
-    { id:"prepare", form:"prepare", meaning:"get ready", pos:["verb"] },
-    { id:"prevent", form:"prevent", meaning:"stop from happening", pos:["verb"] },
-    { id:"produce", form:"produce", meaning:"make", pos:["verb"] },
-    { id:"protect", form:"protect", meaning:"keep safe", pos:["verb"] },
-    { id:"react", form:"react", meaning:"respond", pos:["verb"] },
-    { id:"reduce", form:"reduce", meaning:"make smaller", pos:["verb"] },
-    { id:"reflect", form:"reflect", meaning:"think back; show", pos:["verb"] },
-    { id:"reject", form:"reject", meaning:"refuse", pos:["verb"] },
-    { id:"relate", form:"relate", meaning:"connect; link", pos:["verb"] },
-    { id:"remove", form:"remove", meaning:"take away", pos:["verb"] },
-    { id:"repair", form:"repair", meaning:"fix", pos:["verb"] },
-    { id:"replace", form:"replace", meaning:"put in place of", pos:["verb"] },
-    { id:"report", form:"report", meaning:"tell; write information", pos:["verb","noun"] },
-    { id:"respect", form:"respect", meaning:"treat well; value", pos:["verb","noun"] },
-    { id:"respond", form:"respond", meaning:"answer", pos:["verb"] },
-    { id:"return", form:"return", meaning:"go back; give back", pos:["verb"] },
-    { id:"reveal", form:"reveal", meaning:"show; make known", pos:["verb"] },
-    { id:"review", form:"review", meaning:"look again", pos:["verb","noun"] },
-    { id:"revise", form:"revise", meaning:"improve; study again", pos:["verb"] },
-    { id:"rotate", form:"rotate", meaning:"turn around", pos:["verb"] },
-    { id:"solve", form:"solve", meaning:"find an answer", pos:["verb"] },
-    { id:"structure", form:"structure", meaning:"arrange parts", pos:["noun","verb"] },
-    { id:"suggest", form:"suggest", meaning:"offer an idea", pos:["verb"] },
-    { id:"support", form:"support", meaning:"help; hold up", pos:["verb","noun"] },
-    { id:"transport", form:"transport", meaning:"carry from place to place", pos:["verb","noun"] },
-    { id:"trust", form:"trust", meaning:"believe someone will do the right thing", pos:["verb","noun"] },
-    { id:"use", form:"use", meaning:"do something with", pos:["verb","noun"] },
-    { id:"value", form:"value", meaning:"how much something is worth", pos:["noun","verb"] },
-    { id:"visit", form:"visit", meaning:"go to see", pos:["verb","noun"] },
-    { id:"watch", form:"watch", meaning:"look at for a time", pos:["verb","noun"] },
-    { id:"write", form:"write", meaning:"put words on a page", pos:["verb"] }
-  ];
+const BY_UID = new Map();
+[...ALL_PREFIXES, ...ALL_SUFFIXES, ...ALL_BASES].forEach(x => BY_UID.set(x.uid, x));
 
-  const FALLBACK_ALLOWED_WORDS = [
-    "act","action","active","react","reactive","reactions",
-    "create","creation","creative","recreate","recreation",
-    "use","usable","useful","useless","reuse","reused","reusing",
-    "appear","appearance","disappear","disappearance",
-    "help","helpful","helpless",
-    "develop","development","developing","developed",
-    "inform","information","uninformed","informative",
-    "organise","organisation","reorganise",
-    "predict","prediction","predictable","unpredictable",
-    "respect","respectful","disrespect","disrespectful",
-    "prepare","preparation","prepared",
-    "connect","connection","disconnect","reconnect",
-    "construct","construction","reconstruct",
-    "protect","protection","unprotected",
-    "transport","transportation",
-    "reflect","reflection",
-    "remove","removal",
-    "replace","replacement",
-    "support","supportive",
-    "manage","management"
-  ];
+const els = {
+  dictPill: document.getElementById("dictPill"),
+  clearBtn: document.getElementById("clearBtn"),
+  baseSearch: document.getElementById("baseSearch"),
+  prefixBank: document.getElementById("prefixBank"),
+  baseBank: document.getElementById("baseBank"),
+  suffixBank: document.getElementById("suffixBank"),
+  prefixCount: document.getElementById("prefixCount"),
+  baseCount: document.getElementById("baseCount"),
+  suffixCount: document.getElementById("suffixCount"),
+  prefixZone: document.getElementById("prefixZone"),
+  baseZone: document.getElementById("baseZone"),
+  suffixZone: document.getElementById("suffixZone"),
+  wordOut: document.getElementById("wordOut"),
+  meaningOut: document.getElementById("meaningOut"),
+  statusOut: document.getElementById("statusOut")
+};
 
-  function mkUid(type, id){ return `${type}:${id}`; }
-  const ALL_PREFIXES = PREFIXES.map(p => ({ ...p, uid: mkUid("prefix", p.id) }));
-  const ALL_SUFFIXES = SUFFIXES.map(s => ({ ...s, uid: mkUid("suffix", s.id) }));
-  const ALL_BASES = BASES.map(b => ({ ...b, uid: mkUid("base", b.id) }));
+let current = { prefix:null, base:null, suffix:null };
 
-  const BY_UID = new Map();
-  for (const x of [...ALL_BASES, ...ALL_PREFIXES, ...ALL_SUFFIXES]) BY_UID.set(x.uid, x);
+let DICT = new Set();
 
-  const els = {
-    dictPill: document.getElementById("dictPill"),
-    clearBtn: document.getElementById("clearBtn"),
-    baseSearch: document.getElementById("baseSearch"),
-
-    prefixBank: document.getElementById("prefixBank"),
-    baseBank: document.getElementById("baseBank"),
-    suffixBank: document.getElementById("suffixBank"),
-
-    prefixCount: document.getElementById("prefixCount"),
-    baseCount: document.getElementById("baseCount"),
-    suffixCount: document.getElementById("suffixCount"),
-
-    prefixZone: document.getElementById("prefixZone"),
-    baseZone: document.getElementById("baseZone"),
-    suffixZone: document.getElementById("suffixZone"),
-
-    wordOut: document.getElementById("wordOut"),
-    meaningOut: document.getElementById("meaningOut"),
-    statusOut: document.getElementById("statusOut"),
-  };
-
-  // -------------------- STATE --------------------
-  // You can now select prefix or suffix before base.
-  // If a user clicks the same prefix/suffix again, it toggles off (nice for exploration).
-  let current = { prefix:null, base:null, suffix:null };
-
-  // -------------------- WORD CHECKER --------------------
-  let DICT_SET = null;
-  let dictLoaded = false;
-
-  async function loadDictionary(){
-    try{
-      const res = await fetch("dictionary.txt", { cache:"no-store" });
-      if (!res.ok) throw new Error("no dictionary");
-      const text = await res.text();
-      const set = new Set();
-      for (const raw of text.split(/\r?\n/)){
-        const w = raw.trim().toLowerCase();
-        if (!w) continue;
-        if (w.startsWith("#")) continue;
-        set.add(w);
-      }
-      DICT_SET = set;
-      dictLoaded = true;
-      els.dictPill.textContent = `Word checker: dictionary.txt loaded (${set.size.toLocaleString()} words)`;
-    } catch {
-      DICT_SET = new Set(FALLBACK_ALLOWED_WORDS.map(x=>String(x).toLowerCase()));
-      dictLoaded = false;
-      els.dictPill.textContent = "Word checker: dictionary.txt not found (using small fallback list)";
-    }
-    renderAll();
+async function loadDictionary(){
+  try{
+    const res = await fetch("dictionary.txt", {cache:"no-store"});
+    const text = await res.text();
+    text.split(/\r?\n/).forEach(w=>{
+      w=w.trim().toLowerCase();
+      if(w) DICT.add(w);
+    });
+    els.dictPill.textContent = `Word checker: ${DICT.size.toLocaleString()} words`;
+  }catch{
+    FALLBACK_ALLOWED_WORDS.forEach(w=>DICT.add(w.toLowerCase()));
+    els.dictPill.textContent = "Word checker: fallback list";
   }
+  renderAll();
+}
 
-  function isRealWord(word){
-    if (!word) return false;
-    return DICT_SET && DICT_SET.has(String(word).toLowerCase());
-  }
+const vowels = new Set(["a","e","i","o","u"]);
 
-  // -------------------- SPELLING RULES --------------------
-  function vowels(){ return new Set(["a","e","i","o","u"]); }
+function applySpelling(base, suffix){
+  if(!suffix) return base;
+  const last = base.slice(-1);
+  const first = suffix[0];
+  if(last==="e" && vowels.has(first)) return base.slice(0,-1);
+  if(last==="y" && !vowels.has(first)) return base.slice(0,-1)+"i";
+  return base;
+}
 
-  function applySpellingRules(baseForm, suffixForm) {
-    if (!suffixForm) return baseForm;
-    const v = vowels();
-    const last = baseForm.slice(-1).toLowerCase();
-    const first = suffixForm.slice(0,1).toLowerCase();
-    let out = baseForm;
+function redundantPrefix(p,b){
+  return b.form.toLowerCase().startsWith(p.form.toLowerCase());
+}
 
-    if (last === "e" && v.has(first)) out = baseForm.slice(0, -1);
-    if (last === "y" && !v.has(first)) out = baseForm.slice(0, -1) + "i";
-    return out;
-  }
+function isReal(w){ return DICT.has(w.toLowerCase()); }
 
-  function computeWord(prefixObj, baseObj, suffixObj) {
-    if (!baseObj) return "";
-    const p = prefixObj ? prefixObj.form : "";
-    const b = baseObj.form;
-    const s = suffixObj ? suffixObj.form : "";
-    const bAdj = suffixObj ? applySpellingRules(b, s) : b;
-    return (p + bAdj + s).toLowerCase();
-  }
+function computeWord(p,b,s){
+  if(!b) return "";
+  const baseAdj = s ? applySpelling(b.form, s.form) : b.form;
+  return `${p?p.form:""}${baseAdj}${s?s.form:""}`.toLowerCase();
+}
 
-  function computeMeaning(prefixObj, baseObj, suffixObj) {
-    const parts = [];
-    if (prefixObj) parts.push(prefixObj.meaning);
-    if (baseObj) parts.push(baseObj.meaning);
-    if (suffixObj) parts.push(suffixObj.meaning);
-    return parts.join(" + ");
-  }
+function existsReal({prefix,base,suffix}){
+  const bases = base?[base]:ALL_BASES;
+  const prefixes = prefix?[prefix]:[null,...ALL_PREFIXES];
+  const suffixes = suffix?[suffix]:[null,...ALL_SUFFIXES];
 
-  function posCompatible(affixObj, baseObj){
-    if (!affixObj || !baseObj) return false;
-    const basePos = new Set(baseObj.pos || []);
-    return (affixObj.allowedPos || []).some(p => basePos.has(p));
-  }
-
-  // -------------------- REDUNDANT PREFIX RULE --------------------
-  function redundantPrefix(prefixObj, baseObj){
-    if (!prefixObj || !baseObj) return false;
-    const p = (prefixObj.form || "").toLowerCase();
-    const b = (baseObj.form || "").toLowerCase();
-    if (!p || !b) return false;
-    return b.startsWith(p);
-  }
-
-  // Returns true if there exists at least one real word consistent with the locks you’ve chosen.
-// Any of prefixObj / baseObj / suffixObj can be null.
-// If baseObj is null, it searches across ALL_BASES.
-function existsRealWordWithLocks(prefixObj, baseObj, suffixObj){
-  const bases = baseObj ? [baseObj] : ALL_BASES;
-
-  const prefixChoices = prefixObj ? [prefixObj] : [null, ...ALL_PREFIXES];
-  const suffixChoices = suffixObj ? [suffixObj] : [null, ...ALL_SUFFIXES];
-
-  for (const b of bases){
-    for (const p of prefixChoices){
-      if (p){
-        if (!posCompatible(p, b)) continue;
-        if (redundantPrefix(p, b)) continue;
-      }
-      for (const s of suffixChoices){
-        if (s && !posCompatible(s, b)) continue;
-        const w = computeWord(p, b, s);
-        if (isRealWord(w)) return true;
+  for(const b of bases){
+    for(const p of prefixes){
+      if(p && redundantPrefix(p,b)) continue;
+      for(const s of suffixes){
+        const w = computeWord(p,b,s);
+        if(isReal(w)) return true;
       }
     }
   }
   return false;
 }
 
-// Computes which tiles should be enabled + sorted to top, based on current selections.
-// Key change: bases respond to selected prefix/suffix even when no base is selected yet.
-function computeViableSets(){
-  const viablePrefixes = new Set();
-  const viableBases = new Set();
-  const viableSuffixes = new Set();
+function computeViable(){
+  const vP=new Set(), vB=new Set(), vS=new Set();
 
-  // BASES: if a prefix/suffix is chosen first, only bases that can make a real word with that lock stay enabled.
-  const hasAffixLock = !!(current.prefix || current.suffix);
+  ALL_BASES.forEach(b=>{
+    if(existsReal({prefix:current.prefix, base:b, suffix:current.suffix}))
+      vB.add(b.uid);
+  });
 
-  for (const b of ALL_BASES){
-    let ok;
-    if (hasAffixLock){
-      ok = existsRealWordWithLocks(current.prefix, b, current.suffix);
-    } else {
-      // no affix lock: base is viable if it’s a real word OR it can make any real word with some affix
-      ok = isRealWord(b.form) || existsRealWordWithLocks(null, b, null);
-    }
-    if (ok) viableBases.add(b.uid);
-  }
+  ALL_PREFIXES.forEach(p=>{
+    if(existsReal({prefix:p, base:current.base, suffix:current.suffix}))
+      vP.add(p.uid);
+  });
 
-  // PREFIXES:
-  // If base is selected, only prefixes that can make a real word with that base (and any suffix lock) are enabled.
-  // If base is NOT selected yet, enable prefixes that can work with ANY base (and any suffix lock).
-  for (const p of ALL_PREFIXES){
-    const ok = current.base
-      ? existsRealWordWithLocks(p, current.base, current.suffix)
-      : existsRealWordWithLocks(p, null, current.suffix);
-    if (ok) viablePrefixes.add(p.uid);
-  }
+  ALL_SUFFIXES.forEach(s=>{
+    if(existsReal({prefix:current.prefix, base:current.base, suffix:s}))
+      vS.add(s.uid);
+  });
 
-  // SUFFIXES:
-  // Same idea as prefixes.
-  for (const s of ALL_SUFFIXES){
-    const ok = current.base
-      ? existsRealWordWithLocks(current.prefix, current.base, s)
-      : existsRealWordWithLocks(current.prefix, null, s);
-    if (ok) viableSuffixes.add(s.uid);
-  }
-
-  return { viablePrefixes, viableBases, viableSuffixes };
+  return {vP,vB,vS};
 }
 
-
-  // For floating + greying: compute viable sets based on current locks.
-  function computeViableSets(){
-    const viablePrefixes = new Set();
-    const viableBases = new Set();
-    const viableSuffixes = new Set();
-
-  function computeViableSets(){
-    const viablePrefixes = new Set();
-    const viableBases = new Set();
-    const viableSuffixes = new Set();
-
-    // ---- BASES: when a prefix or suffix is selected, only show bases that can make a real word with it ----
-    const hasAffixLock = !!(current.prefix || current.suffix);
-
-    for (const b of ALL_BASES){
-      let ok;
-      if (hasAffixLock){
-        // strict: base must work with the chosen prefix/suffix (and any completion if the other affix is blank)
-        ok = existsRealWordWithLocks(current.prefix, b, current.suffix);
-      } else {
-        // normal: base alone can be real OR it can take some prefix/suffix to become real
-        ok = isRealWord(b.form) || existsRealWordWithLocks(null, b, null);
-      }
-      if (ok) viableBases.add(b.uid);
+function tile(item,type){
+  const d=document.createElement("div");
+  d.className="tile";
+  d.textContent=item.form;
+  d.onclick=()=>{
+    if(d.classList.contains("disabled")) return;
+    current[type]=item;
+    if(type==="base"){
+      if(current.prefix && redundantPrefix(current.prefix,item)) current.prefix=null;
     }
-
-    // ---- PREFIXES ----
-    for (const p of ALL_PREFIXES){
-      const ok = existsRealWordWithLocks(p, current.base, current.suffix);
-      if (ok) viablePrefixes.add(p.uid);
-    }
-
-    // ---- SUFFIXES ----
-    for (const s of ALL_SUFFIXES){
-      const ok = existsRealWordWithLocks(current.prefix, current.base, s);
-      if (ok) viableSuffixes.add(s.uid);
-    }
-
-    return { viablePrefixes, viableBases, viableSuffixes };
-  }
-
-
-    // Which prefixes are viable given current base/suffix locks (base may be null)?
-    for (const p of ALL_PREFIXES){
-      // If base is chosen, enforce POS + redundant check at prefix-level; if base not chosen, let the existence check handle it.
-      const ok = existsRealWordWithLocks(p, current.base, current.suffix);
-      if (ok) viablePrefixes.add(p.uid);
-    }
-
-    // Which suffixes are viable given current prefix/base locks (base may be null)?
-    for (const s of ALL_SUFFIXES){
-      const ok = existsRealWordWithLocks(current.prefix, current.base, s);
-      if (ok) viableSuffixes.add(s.uid);
-    }
-
-    return { viablePrefixes, viableBases, viableSuffixes };
-  }
-
-  // -------------------- UI BUILDERS --------------------
-  function makeTile(item, type, enabled, selected) {
-    const div = document.createElement("div");
-    div.className = "tile";
-    if (!enabled) div.classList.add("disabled");
-    if (selected) div.classList.add("selected");
-
-    div.draggable = true;
-    div.dataset.uid = item.uid;
-    div.dataset.type = type;
-
-    const form = document.createElement("div");
-    form.className = "form";
-    form.textContent = item.form;
-
-    const meaning = document.createElement("div");
-    meaning.className = "meaning";
-    meaning.textContent = item.meaning || "";
-
-    const meta = document.createElement("div");
-    meta.className = "meta";
-    if (type === "base") meta.textContent = `base (${(item.pos||[]).join(", ")})`;
-    if (type === "prefix") meta.textContent = `prefix`;
-    if (type === "suffix") meta.textContent = `suffix${item.hint ? " • " + item.hint : ""}`;
-
-    div.appendChild(form);
-    div.appendChild(meaning);
-    div.appendChild(meta);
-
-    div.addEventListener("dragstart", (e) => {
-      if (div.classList.contains("disabled")) { e.preventDefault(); return; }
-      e.dataTransfer.setData("text/plain", JSON.stringify({ type, uid: item.uid }));
-    });
-
-    div.addEventListener("click", () => {
-      if (div.classList.contains("disabled")) return;
-      addToBuilder(type, item);
-    });
-
-    return div;
-  }
+    renderAll();
+  };
+  return d;
+}
 
 function renderBanks(){
-  els.prefixBank.innerHTML = "";
-  els.baseBank.innerHTML = "";
-  els.suffixBank.innerHTML = "";
+  const {vP,vB,vS}=computeViable();
 
-  const sets = computeViableSets();
+  els.prefixBank.innerHTML="";
+  els.baseBank.innerHTML="";
+  els.suffixBank.innerHTML="";
 
-  // Bases (enabled first, and respond to prefix/suffix selection)
-  const q = (els.baseSearch.value || "").trim().toLowerCase();
-  const basesFiltered = ALL_BASES
-    .filter(b => !q || b.form.toLowerCase().includes(q))
-    .sort((a,b)=>a.form.localeCompare(b.form));
+  const bases=[...ALL_BASES].sort((a,b)=>a.form.localeCompare(b.form));
+  bases.forEach(b=>{
+    const t=tile(b,"base");
+    if(!vB.has(b.uid)) t.classList.add("disabled");
+    els.baseBank.appendChild(t);
+  });
+  els.baseCount.textContent=vB.size;
 
-  const baseEnabled = [];
-  const baseDisabled = [];
-  for (const b of basesFiltered){
-    const t = makeTile(b, "base");
-    const enabled = sets.viableBases.has(b.uid);
-    if (!enabled) { t.classList.add("disabled"); baseDisabled.push(t); }
-    else baseEnabled.push(t);
-  }
-  els.baseBank.append(...baseEnabled, ...baseDisabled);
-  els.baseCount.textContent = String(baseEnabled.length);
+  ALL_PREFIXES.forEach(p=>{
+    const t=tile(p,"prefix");
+    if(!vP.has(p.uid)) t.classList.add("disabled");
+    els.prefixBank.appendChild(t);
+  });
+  els.prefixCount.textContent=vP.size;
 
-  // Prefixes (enabled first)
-  let prefixEnabledCount = 0;
-  const prefixEnabled = [];
-  const prefixDisabled = [];
-  for (const p of ALL_PREFIXES){
-    const t = makeTile(p, "prefix");
-    const enabled = sets.viablePrefixes.has(p.uid);
-    if (!enabled) { t.classList.add("disabled"); prefixDisabled.push(t); }
-    else { prefixEnabledCount++; prefixEnabled.push(t); }
-  }
-  els.prefixBank.append(...prefixEnabled, ...prefixDisabled);
-  els.prefixCount.textContent = String(prefixEnabledCount);
-
-  // Suffixes (enabled first)
-  let suffixEnabledCount = 0;
-  const suffixEnabled = [];
-  const suffixDisabled = [];
-  for (const s of ALL_SUFFIXES){
-    const t = makeTile(s, "suffix");
-    const enabled = sets.viableSuffixes.has(s.uid);
-    if (!enabled) { t.classList.add("disabled"); suffixDisabled.push(t); }
-    else { suffixEnabledCount++; suffixEnabled.push(t); }
-  }
-  els.suffixBank.append(...suffixEnabled, ...suffixDisabled);
-  els.suffixCount.textContent = String(suffixEnabledCount);
+  ALL_SUFFIXES.forEach(s=>{
+    const t=tile(s,"suffix");
+    if(!vS.has(s.uid)) t.classList.add("disabled");
+    els.suffixBank.appendChild(t);
+  });
+  els.suffixCount.textContent=vS.size;
 }
 
+function renderZones(){
+  els.prefixZone.innerHTML=current.prefix?current.prefix.form:"";
+  els.baseZone.innerHTML=current.base?current.base.form:"";
+  els.suffixZone.innerHTML=current.suffix?current.suffix.form:"";
+}
 
-  function clearZone(zoneEl){ zoneEl.innerHTML = ""; }
-
-  function renderZones(){
-    clearZone(els.prefixZone);
-    clearZone(els.baseZone);
-    clearZone(els.suffixZone);
-
-    if (current.prefix) els.prefixZone.appendChild(makeTile(current.prefix, "prefix", true, false));
-    if (current.base) els.baseZone.appendChild(makeTile(current.base, "base", true, false));
-    if (current.suffix) els.suffixZone.appendChild(makeTile(current.suffix, "suffix", true, false));
+function renderOutput(){
+  if(!current.base){
+    els.wordOut.textContent="Choose a base word";
+    els.statusOut.textContent="";
+    return;
   }
+  const w=computeWord(current.prefix,current.base,current.suffix);
+  els.wordOut.textContent=w;
+  els.statusOut.textContent=isReal(w)?"Real word":"";
+}
 
-  function updateOutput(){
-    const hasAny = current.prefix || current.base || current.suffix;
+function renderAll(){
+  renderBanks();
+  renderZones();
+  renderOutput();
+}
 
-    if (!hasAny){
-      els.wordOut.textContent = "Choose a base word";
-      els.meaningOut.textContent = "Or start with a prefix or suffix, then pick parts that make a real word.";
-      els.statusOut.textContent = "Only combinations that create real words are enabled.";
-      els.statusOut.className = "status warn";
-      return;
-    }
+els.clearBtn.onclick=()=>{
+  current={prefix:null,base:null,suffix:null};
+  renderAll();
+};
 
-    if (!current.base){
-      const pTxt = current.prefix ? current.prefix.form : "";
-      const sTxt = current.suffix ? current.suffix.form : "";
-      const bits = [pTxt, "____", sTxt].filter(x => x !== "");
-      els.wordOut.textContent = bits.join("");
-      els.meaningOut.textContent = computeMeaning(current.prefix, null, current.suffix) || "Now choose a base word that makes a real word.";
-      els.statusOut.textContent = "Choose a base word next (enabled bases will make a real word).";
-      els.statusOut.className = "status warn";
-      return;
-    }
-
-    if (current.prefix && redundantPrefix(current.prefix, current.base)){
-      els.wordOut.textContent = computeWord(null, current.base, current.suffix);
-      els.meaningOut.textContent = computeMeaning(null, current.base, current.suffix);
-      els.statusOut.textContent = "That prefix is already in the base word, so it has been blocked.";
-      els.statusOut.className = "status bad";
-      return;
-    }
-
-    const w = computeWord(current.prefix, current.base, current.suffix);
-    els.wordOut.textContent = w;
-    els.meaningOut.textContent = computeMeaning(current.prefix, current.base, current.suffix);
-
-    if (!current.prefix && !current.suffix){
-      els.statusOut.textContent = "Add a prefix or suffix. Only real-word options are available.";
-      els.statusOut.className = "status warn";
-      return;
-    }
-
-    if (isRealWord(w)){
-      els.statusOut.textContent = "Real word.";
-      els.statusOut.className = "status ok";
-    } else {
-      els.statusOut.textContent = "Not a real word. Choose a different enabled option.";
-      els.statusOut.className = "status bad";
-    }
-  }
-
-  function addToBuilder(type, item){
-    const next = { ...current };
-
-    // Toggle behaviour for prefix/suffix selection in the banks
-    if (type === "prefix"){
-      if (next.prefix && next.prefix.uid === item.uid) next.prefix = null;
-      else next.prefix = item;
-    } else if (type === "suffix"){
-      if (next.suffix && next.suffix.uid === item.uid) next.suffix = null;
-      else next.suffix = item;
-    } else if (type === "base"){
-      next.base = item;
-    }
-
-    // If base exists, enforce POS compatibility and redundant prefix.
-    if (next.base){
-      if (next.prefix){
-        if (!posCompatible(next.prefix, next.base)) next.prefix = null;
-        else if (redundantPrefix(next.prefix, next.base)) next.prefix = null;
-      }
-      if (next.suffix && !posCompatible(next.suffix, next.base)) next.suffix = null;
-    }
-
-    // Hard rule: after the change, the current locks must still allow at least one real word.
-    // If base chosen, allow base-alone if base is a real word OR there is at least one completion.
-    if (next.base){
-      const ok = isRealWord(next.base.form) || existsRealWordWithLocks(next.prefix, next.base, next.suffix);
-      if (!ok) return;
-    } else {
-      // No base yet: prefix/suffix selection must still be completable by some base (and maybe the other affix).
-      const ok = existsRealWordWithLocks(next.prefix, null, next.suffix);
-      if (!ok) return;
-    }
-
-    current = next;
-    renderAll();
-  }
-
-  function setupZone(zoneEl){
-    zoneEl.addEventListener("dragover", (e) => { e.preventDefault(); zoneEl.classList.add("dragover"); });
-    zoneEl.addEventListener("dragleave", () => zoneEl.classList.remove("dragover"));
-    zoneEl.addEventListener("drop", (e) => {
-      e.preventDefault();
-      zoneEl.classList.remove("dragover");
-
-      const payload = e.dataTransfer.getData("text/plain");
-      if (!payload) return;
-
-      let data;
-      try { data = JSON.parse(payload); } catch { return; }
-
-      const zoneType = zoneEl.dataset.zone;
-      if (zoneType !== data.type) return;
-
-      const item = BY_UID.get(data.uid);
-      if (!item) return;
-
-      // Same rule as clicking: only allow if it keeps at least one real completion.
-      addToBuilder(zoneType, item);
-    });
-
-    zoneEl.addEventListener("dblclick", () => {
-      const zoneType = zoneEl.dataset.zone;
-      current[zoneType] = null;
-      if (zoneType === "base"){
-        // keep prefix/suffix so they can still drive the options after removing the base
-        // (this matches your "start from prefix/suffix" goal)
-      }
-      renderAll();
-    });
-  }
-
-  function clearAll(){
-    current = { prefix:null, base:null, suffix:null };
-    renderAll();
-  }
-
-  function renderAll(){
-    renderZones();
-    renderBanks();
-    updateOutput();
-  }
-
-  els.baseSearch.addEventListener("input", renderBanks);
-  els.clearBtn.addEventListener("click", clearAll);
-
-  setupZone(els.prefixZone);
-  setupZone(els.baseZone);
-  setupZone(els.suffixZone);
-
-  clearAll();
-  loadDictionary();
-
+loadDictionary();
 });
 </script>
-</body>
-</html>
