@@ -1,22 +1,49 @@
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 
-const PREFIXES = [...];   // KEEP YOUR EXISTING PREFIXES ARRAY
-const SUFFIXES = [...];   // KEEP YOUR EXISTING SUFFIXES ARRAY
-const BASES = [...];      // KEEP YOUR EXISTING BASES ARRAY
-const FALLBACK_ALLOWED_WORDS = [...]; // KEEP YOUR EXISTING FALLBACK LIST
+/* ===================== DATA ===================== */
 
-const ALL_PREFIXES = PREFIXES.map(p => ({...p, uid:"prefix:"+p.id}));
-const ALL_SUFFIXES = SUFFIXES.map(s => ({...s, uid:"suffix:"+s.id}));
-const ALL_BASES = BASES.map(b => ({...b, uid:"base:"+b.id}));
+const PREFIXES = [
+  { id:"anti", form:"anti", meaning:"against" },
+  { id:"con", form:"con", meaning:"with or together" },
+  { id:"de", form:"de", meaning:"undo; remove" },
+  { id:"dis", form:"dis", meaning:"not; opposite" },
+  { id:"in", form:"in", meaning:"not; into" },
+  { id:"inter", form:"inter", meaning:"between" },
+  { id:"mis", form:"mis", meaning:"wrong" },
+  { id:"non", form:"non", meaning:"not" },
+  { id:"over", form:"over", meaning:"too much" },
+  { id:"pre", form:"pre", meaning:"before" },
+  { id:"re", form:"re", meaning:"again" },
+  { id:"sub", form:"sub", meaning:"under" },
+  { id:"trans", form:"trans", meaning:"across" },
+  { id:"un", form:"un", meaning:"not" }
+];
 
-const BY_UID = new Map();
-[...ALL_PREFIXES, ...ALL_SUFFIXES, ...ALL_BASES].forEach(x => BY_UID.set(x.uid, x));
+const SUFFIXES = [
+  { id:"s", form:"s", meaning:"plural" },
+  { id:"ed", form:"ed", meaning:"past tense" },
+  { id:"ing", form:"ing", meaning:"happening now" },
+  { id:"er", form:"er", meaning:"person who" },
+  { id:"est", form:"est", meaning:"most" },
+  { id:"able", form:"able", meaning:"able to" },
+  { id:"ful", form:"ful", meaning:"full of" },
+  { id:"less", form:"less", meaning:"without" },
+  { id:"ly", form:"ly", meaning:"in a way" },
+  { id:"ment", form:"ment", meaning:"result of action" },
+  { id:"ness", form:"ness", meaning:"state of" },
+  { id:"ion", form:"ion", meaning:"act or result" }
+];
+
+const BASES = [
+  "act","appear","apply","build","care","connect","construct","create","develop",
+  "educate","employ","help","inform","organise","predict","prepare","protect",
+  "react","reduce","respect","review","support","use"
+].map(w => ({ id:w, form:w }));
+
+/* ===================== DOM ===================== */
 
 const els = {
-  dictPill: document.getElementById("dictPill"),
-  clearBtn: document.getElementById("clearBtn"),
-  baseSearch: document.getElementById("baseSearch"),
   prefixBank: document.getElementById("prefixBank"),
   baseBank: document.getElementById("baseBank"),
   suffixBank: document.getElementById("suffixBank"),
@@ -28,150 +55,131 @@ const els = {
   suffixZone: document.getElementById("suffixZone"),
   wordOut: document.getElementById("wordOut"),
   meaningOut: document.getElementById("meaningOut"),
-  statusOut: document.getElementById("statusOut")
+  statusOut: document.getElementById("statusOut"),
+  clearBtn: document.getElementById("clearBtn"),
+  dictPill: document.getElementById("dictPill")
 };
 
-let current = { prefix:null, base:null, suffix:null };
+/* ===================== STATE ===================== */
 
+let current = { prefix:null, base:null, suffix:null };
 let DICT = new Set();
 
-async function loadDictionary(){
-  try{
-    const res = await fetch("dictionary.txt", {cache:"no-store"});
-    const text = await res.text();
-    text.split(/\r?\n/).forEach(w=>{
-      w=w.trim().toLowerCase();
-      if(w) DICT.add(w);
-    });
-    els.dictPill.textContent = `Word checker: ${DICT.size.toLocaleString()} words`;
-  }catch{
-    FALLBACK_ALLOWED_WORDS.forEach(w=>DICT.add(w.toLowerCase()));
-    els.dictPill.textContent = "Word checker: fallback list";
-  }
-  renderAll();
+/* ===================== DICTIONARY ===================== */
+
+fetch("dictionary.txt")
+  .then(r => r.text())
+  .then(t => {
+    t.split(/\r?\n/).forEach(w => DICT.add(w.trim().toLowerCase()));
+    els.dictPill.textContent = `Word checker: ${DICT.size.toLocaleString()} words loaded`;
+    renderAll();
+  })
+  .catch(() => {
+    els.dictPill.textContent = "Word checker: dictionary not found";
+    renderAll();
+  });
+
+function isReal(word){
+  return DICT.has(word.toLowerCase());
 }
 
-const vowels = new Set(["a","e","i","o","u"]);
+/* ===================== WORD LOGIC ===================== */
+
+function redundantPrefix(p, b){
+  return b.startsWith(p);
+}
 
 function applySpelling(base, suffix){
-  if(!suffix) return base;
-  const last = base.slice(-1);
-  const first = suffix[0];
-  if(last==="e" && vowels.has(first)) return base.slice(0,-1);
-  if(last==="y" && !vowels.has(first)) return base.slice(0,-1)+"i";
+  if (!suffix) return base;
+  if (base.endsWith("e") && /^[aeiou]/.test(suffix)) return base.slice(0,-1);
+  if (base.endsWith("y") && !/^[aeiou]/.test(suffix)) return base.slice(0,-1)+"i";
   return base;
 }
 
-function redundantPrefix(p,b){
-  return b.form.toLowerCase().startsWith(p.form.toLowerCase());
+function buildWord(p,b,s){
+  if (!b) return "";
+  const baseAdj = s ? applySpelling(b, s) : b;
+  return `${p||""}${baseAdj}${s||""}`;
 }
 
-function isReal(w){ return DICT.has(w.toLowerCase()); }
+/* ===================== VIABILITY ===================== */
 
-function computeWord(p,b,s){
-  if(!b) return "";
-  const baseAdj = s ? applySpelling(b.form, s.form) : b.form;
-  return `${p?p.form:""}${baseAdj}${s?s.form:""}`.toLowerCase();
-}
-
-function existsReal({prefix,base,suffix}){
-  const bases = base?[base]:ALL_BASES;
-  const prefixes = prefix?[prefix]:[null,...ALL_PREFIXES];
-  const suffixes = suffix?[suffix]:[null,...ALL_SUFFIXES];
-
-  for(const b of bases){
-    for(const p of prefixes){
-      if(p && redundantPrefix(p,b)) continue;
-      for(const s of suffixes){
-        const w = computeWord(p,b,s);
-        if(isReal(w)) return true;
-      }
+function baseWorks(b){
+  for (const p of [null, ...PREFIXES]){
+    if (p && redundantPrefix(p.form, b.form)) continue;
+    for (const s of [null, ...SUFFIXES]){
+      if (isReal(buildWord(p?.form, b.form, s?.form))) return true;
     }
   }
   return false;
 }
 
-function computeViable(){
-  const vP=new Set(), vB=new Set(), vS=new Set();
-
-  ALL_BASES.forEach(b=>{
-    if(existsReal({prefix:current.prefix, base:b, suffix:current.suffix}))
-      vB.add(b.uid);
-  });
-
-  ALL_PREFIXES.forEach(p=>{
-    if(existsReal({prefix:p, base:current.base, suffix:current.suffix}))
-      vP.add(p.uid);
-  });
-
-  ALL_SUFFIXES.forEach(s=>{
-    if(existsReal({prefix:current.prefix, base:current.base, suffix:s}))
-      vS.add(s.uid);
-  });
-
-  return {vP,vB,vS};
+function prefixWorks(p){
+  for (const b of BASES){
+    if (redundantPrefix(p.form, b.form)) continue;
+    for (const s of [null, ...SUFFIXES]){
+      if (isReal(buildWord(p.form, b.form, s?.form))) return true;
+    }
+  }
+  return false;
 }
 
-function tile(item,type){
-  const d=document.createElement("div");
-  d.className="tile";
-  d.textContent=item.form;
-  d.onclick=()=>{
-    if(d.classList.contains("disabled")) return;
-    current[type]=item;
-    if(type==="base"){
-      if(current.prefix && redundantPrefix(current.prefix,item)) current.prefix=null;
+function suffixWorks(s){
+  for (const b of BASES){
+    for (const p of [null, ...PREFIXES]){
+      if (p && redundantPrefix(p.form, b.form)) continue;
+      if (isReal(buildWord(p?.form, b.form, s.form))) return true;
     }
-    renderAll();
-  };
+  }
+  return false;
+}
+
+/* ===================== UI ===================== */
+
+function makeTile(obj,type){
+  const d = document.createElement("div");
+  d.className = "tile";
+  d.innerHTML = `<div class="form">${obj.form}</div><div class="meaning">${obj.meaning||""}</div>`;
+  d.onclick = () => add(type,obj);
   return d;
 }
 
+function renderBank(list, worksFn, el, countEl, type){
+  el.innerHTML="";
+  let enabled=[], disabled=[];
+  for (const o of list){
+    const t = makeTile(o,type);
+    if (!worksFn(o)){
+      t.classList.add("disabled");
+      disabled.push(t);
+    } else enabled.push(t);
+  }
+  el.append(...enabled, ...disabled);
+  countEl.textContent = enabled.length;
+}
+
 function renderBanks(){
-  const {vP,vB,vS}=computeViable();
-
-  els.prefixBank.innerHTML="";
-  els.baseBank.innerHTML="";
-  els.suffixBank.innerHTML="";
-
-  const bases=[...ALL_BASES].sort((a,b)=>a.form.localeCompare(b.form));
-  bases.forEach(b=>{
-    const t=tile(b,"base");
-    if(!vB.has(b.uid)) t.classList.add("disabled");
-    els.baseBank.appendChild(t);
-  });
-  els.baseCount.textContent=vB.size;
-
-  ALL_PREFIXES.forEach(p=>{
-    const t=tile(p,"prefix");
-    if(!vP.has(p.uid)) t.classList.add("disabled");
-    els.prefixBank.appendChild(t);
-  });
-  els.prefixCount.textContent=vP.size;
-
-  ALL_SUFFIXES.forEach(s=>{
-    const t=tile(s,"suffix");
-    if(!vS.has(s.uid)) t.classList.add("disabled");
-    els.suffixBank.appendChild(t);
-  });
-  els.suffixCount.textContent=vS.size;
+  renderBank(PREFIXES, prefixWorks, els.prefixBank, els.prefixCount, "prefix");
+  renderBank(BASES, baseWorks, els.baseBank, els.baseCount, "base");
+  renderBank(SUFFIXES, suffixWorks, els.suffixBank, els.suffixCount, "suffix");
 }
 
 function renderZones(){
-  els.prefixZone.innerHTML=current.prefix?current.prefix.form:"";
-  els.baseZone.innerHTML=current.base?current.base.form:"";
-  els.suffixZone.innerHTML=current.suffix?current.suffix.form:"";
+  els.prefixZone.innerHTML = current.prefix ? makeTile(current.prefix,"prefix").outerHTML : "";
+  els.baseZone.innerHTML = current.base ? makeTile(current.base,"base").outerHTML : "";
+  els.suffixZone.innerHTML = current.suffix ? makeTile(current.suffix,"suffix").outerHTML : "";
 }
 
 function renderOutput(){
-  if(!current.base){
-    els.wordOut.textContent="Choose a base word";
-    els.statusOut.textContent="";
+  if (!current.base){
+    els.wordOut.textContent = "Choose a base word";
+    els.meaningOut.textContent = "";
+    els.statusOut.textContent = "";
     return;
   }
-  const w=computeWord(current.prefix,current.base,current.suffix);
-  els.wordOut.textContent=w;
-  els.statusOut.textContent=isReal(w)?"Real word":"";
+  const w = buildWord(current.prefix?.form, current.base.form, current.suffix?.form);
+  els.wordOut.textContent = w;
+  els.statusOut.textContent = isReal(w) ? "Real word" : "Not a real word";
 }
 
 function renderAll(){
@@ -180,11 +188,19 @@ function renderAll(){
   renderOutput();
 }
 
-els.clearBtn.onclick=()=>{
+/* ===================== INTERACTION ===================== */
+
+function add(type,obj){
+  if (type==="prefix") current.prefix=obj;
+  if (type==="base") current.base=obj;
+  if (type==="suffix") current.suffix=obj;
+  renderAll();
+}
+
+els.clearBtn.onclick = () => {
   current={prefix:null,base:null,suffix:null};
   renderAll();
 };
 
-loadDictionary();
 });
 </script>
