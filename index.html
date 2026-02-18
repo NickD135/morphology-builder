@@ -92,6 +92,20 @@
 
     .filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
     .filters > * { flex: 1 1 auto; }
+
+    /* Dictionary panel */
+    .dictPanel {
+      margin-top: 12px;
+      background: rgba(255,255,255,.02);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px 12px;
+    }
+    .dictTitle { font-size: 12px; color: var(--muted); font-weight: 900; letter-spacing:.2px; }
+    .dictWord { margin-top: 6px; font-size: 14px; font-weight: 950; }
+    .dictDef { margin-top: 6px; font-size: 13px; color: var(--muted); line-height: 1.35; }
+    .dictMeta { margin-top: 6px; font-size: 11px; color: #98a2c7; }
+    .dictRow { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -180,6 +194,18 @@
           <div class="status warn" id="statusOut"></div>
         </div>
 
+        <div class="dictPanel" id="dictPanel">
+          <div class="dictTitle">Dictionary meaning (for the word shown above)</div>
+          <div class="dictWord" id="dictWord">No word yet</div>
+          <div class="dictDef" id="dictDef">Build or search a word to see a student friendly meaning.</div>
+          <div class="dictMeta" id="dictMeta"></div>
+          <div class="dictRow">
+            <button id="dictLookupBtn" type="button">Look up again</button>
+            <button id="dictOpenBtn" type="button">Open in dictionary</button>
+          </div>
+          <div class="tiny">If your device is offline or the dictionary site is blocked, this may not work.</div>
+        </div>
+
         <div class="note">
           Spelling rules included: drop final e before vowel suffixes (create → creation, use → usable), y to i before consonant suffixes (apply → applied).
         </div>
@@ -192,8 +218,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   /* -------------------- MORPHEMES -------------------- */
 
-  // Note: removed "dif" because it does not behave cleanly as a real prefix in this simple build model.
-  // If you want it back later, we can add it as "diff" with special casing, but it is better not to for Years 3–6.
   const PREFIXES = [
     { id:"anti", form:"anti", meaning:"against", allowedPos:["noun","adj","verb"] },
     { id:"con", form:"con", meaning:"with or together", allowedPos:["noun","adj","verb"] },
@@ -207,9 +231,9 @@ document.addEventListener("DOMContentLoaded", () => {
     { id:"extra", form:"extra", meaning:"beyond", allowedPos:["noun","adj"] },
     { id:"fore", form:"fore", meaning:"before", allowedPos:["noun","adj"] },
     { id:"hyper", form:"hyper", meaning:"over; excessive", allowedPos:["adj","noun"] },
-    { id:"il", form:"il", meaning:"not", allowedPos:["adj"] },    // illegal, illogical, illiterate
+    { id:"il", form:"il", meaning:"not", allowedPos:["adj"] },
     { id:"im", form:"im", meaning:"not", allowedPos:["adj"] },
-    { id:"ir", form:"ir", meaning:"not", allowedPos:["adj"] },    // irregular, irrational, irresponsible
+    { id:"ir", form:"ir", meaning:"not", allowedPos:["adj"] },
     { id:"in", form:"in", meaning:"not; into", allowedPos:["adj","verb"] },
     { id:"inter", form:"inter", meaning:"between", allowedPos:["noun","adj","verb"] },
     { id:"mal", form:"mal", meaning:"bad", allowedPos:["noun","adj"] },
@@ -226,11 +250,11 @@ document.addEventListener("DOMContentLoaded", () => {
     { id:"re", form:"re", meaning:"again", allowedPos:["verb"] },
     { id:"semi", form:"semi", meaning:"half", allowedPos:["noun","adj"] },
     { id:"sub", form:"sub", meaning:"under", allowedPos:["noun","adj","verb"] },
-    { id:"super", form:"super", meaning:"above; beyond", allowedPos:["noun","adj","verb"] },  // superhero, supermarket, superpower
+    { id:"super", form:"super", meaning:"above; beyond", allowedPos:["noun","adj","verb"] },
     { id:"trans", form:"trans", meaning:"across", allowedPos:["noun","adj","verb"] },
     { id:"un", form:"un", meaning:"not", allowedPos:["adj","verb"] },
     { id:"under", form:"under", meaning:"below", allowedPos:["noun","adj","verb"] },
-    { id:"a", form:"a", meaning:"not; without", allowedPos:["adj","noun"] } // atypical (kept)
+    { id:"a", form:"a", meaning:"not; without", allowedPos:["adj","noun"] }
   ];
 
   const SUFFIXES = [
@@ -543,7 +567,7 @@ document.addEventListener("DOMContentLoaded", () => {
     cyclo: { meaning:"circle", pos:["noun"] },
     pod: { meaning:"foot", pos:["noun"] },
     astro: { meaning:"star", pos:["noun"] },
-    ped: { meaning:"child", pos:["noun"] }, // used as in paediatric (often spelled paed)
+    ped: { meaning:"child", pos:["noun"] },
     arch: { meaning:"chief; ruler", pos:["noun","adj"] },
     sphere: { meaning:"ball; round shape", pos:["noun"] },
     mono: { meaning:"one", pos:["adj","noun"] },
@@ -571,7 +595,6 @@ document.addEventListener("DOMContentLoaded", () => {
     pos:(GREEK_BASE_INFO[w]?.pos || ["noun","adj","verb"])
   }));
 
-
   const BASES = [
     ...CORE_BASES.map(b => ({ ...b, group:"core" })),
     ...ANGLO_BASES.map(b => ({ ...b, group:"anglo" })),
@@ -579,7 +602,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ...GREEK_BASES.map(b => ({ ...b, group:"greek" }))
   ];
 
-  /* Fallback (only used if dictionary.txt fails to load). Add the new builds here so prefixes still show options. */
+  /* Fallback (only used if dictionary.txt fails to load). */
   const FALLBACK_ALLOWED_WORDS = [
     "act","action","active","react","reactive","reactions",
     "create","creation","creative","recreate","recreation",
@@ -601,8 +624,6 @@ document.addEventListener("DOMContentLoaded", () => {
     "replace","replacement",
     "support","supportive",
     "manage","management",
-
-    /* Added builds */
     "illegal","illogical","illiterate",
     "irregular","irrational","irresponsible",
     "atypical",
@@ -638,7 +659,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     wordOut: document.getElementById("wordOut"),
     meaningOut: document.getElementById("meaningOut"),
-    statusOut: document.getElementById("statusOut")
+    statusOut: document.getElementById("statusOut"),
+
+    dictPanel: document.getElementById("dictPanel"),
+    dictWord: document.getElementById("dictWord"),
+    dictDef: document.getElementById("dictDef"),
+    dictMeta: document.getElementById("dictMeta"),
+    dictLookupBtn: document.getElementById("dictLookupBtn"),
+    dictOpenBtn: document.getElementById("dictOpenBtn")
   };
 
   /* -------------------- STATE -------------------- */
@@ -671,6 +699,90 @@ document.addEventListener("DOMContentLoaded", () => {
   function isRealWord(word){
     if (!word) return false;
     return DICT_SET && DICT_SET.has(String(word).toLowerCase());
+  }
+
+  /* -------------------- DICTIONARY LOOKUP (MEANING) -------------------- */
+
+  // Online dictionary lookup (needs internet access). If blocked/offline, you can still open Wiktionary.
+  // Uses dictionaryapi.dev (free). Caches results to reduce requests.
+  const DICT_CACHE = new Map();
+  let lastLookupWord = "";
+
+  async function lookupMeaningOnline(word){
+    const w = String(word || "").trim().toLowerCase();
+    if (!w) return { ok:false, word:"", definition:"", partOfSpeech:"" };
+
+    if (DICT_CACHE.has(w)) return DICT_CACHE.get(w);
+
+    try{
+      const url = `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(w)}`;
+      const res = await fetch(url, { cache:"force-cache" });
+      if (!res.ok) throw new Error("no entry");
+      const data = await res.json();
+
+      const entry = Array.isArray(data) ? data[0] : null;
+      const meaning = entry?.meanings?.[0];
+      const def = meaning?.definitions?.[0]?.definition || "";
+
+      const out = {
+        ok: !!def,
+        word: w,
+        definition: def,
+        partOfSpeech: meaning?.partOfSpeech || ""
+      };
+      DICT_CACHE.set(w, out);
+      return out;
+    } catch {
+      const out = { ok:false, word:w, definition:"", partOfSpeech:"" };
+      DICT_CACHE.set(w, out);
+      return out;
+    }
+  }
+
+  function openDictionaryPage(word){
+    const w = String(word || "").trim();
+    if (!w) return;
+    window.open(`https://en.wiktionary.org/wiki/${encodeURIComponent(w)}`, "_blank", "noopener,noreferrer");
+  }
+
+  function setDictPanelLoading(word){
+    els.dictWord.textContent = word ? word : "No word yet";
+    els.dictDef.textContent = word ? "Looking up meaning..." : "Build or search a word to see a student friendly meaning.";
+    els.dictMeta.textContent = "";
+  }
+
+  function setDictPanelResult(result){
+    if (!result || !result.word){
+      els.dictWord.textContent = "No word yet";
+      els.dictDef.textContent = "Build or search a word to see a student friendly meaning.";
+      els.dictMeta.textContent = "";
+      return;
+    }
+
+    els.dictWord.textContent = result.word;
+
+    if (result.ok){
+      els.dictDef.textContent = result.definition;
+      els.dictMeta.textContent = result.partOfSpeech ? `Part of speech: ${result.partOfSpeech}` : "";
+    } else {
+      els.dictDef.textContent = "No online definition found. Try another form or check spelling. You can also open the dictionary.";
+      els.dictMeta.textContent = "";
+    }
+  }
+
+  async function updateDictionaryPanelForWord(word){
+    const w = String(word || "").trim().toLowerCase();
+    lastLookupWord = w;
+
+    if (!w){
+      setDictPanelResult(null);
+      return;
+    }
+
+    setDictPanelLoading(w);
+    const res = await lookupMeaningOnline(w);
+    // Only apply if it’s still the latest requested word (prevents race conditions)
+    if (lastLookupWord === w) setDictPanelResult(res);
   }
 
   /* -------------------- SPELLING RULES -------------------- */
@@ -904,6 +1016,7 @@ document.addEventListener("DOMContentLoaded", () => {
       els.meaningOut.textContent = "Or start with a prefix or suffix, then pick parts that make a real word.";
       els.statusOut.textContent = "Only combinations that create real words are enabled.";
       els.statusOut.className = "status warn";
+      updateDictionaryPanelForWord("");
       return;
     }
 
@@ -915,14 +1028,17 @@ document.addEventListener("DOMContentLoaded", () => {
       els.meaningOut.textContent = computeMeaning(current.prefix, null, current.suffix) || "Now choose a base word that makes a real word.";
       els.statusOut.textContent = "Choose a base word next (enabled bases will make a real word).";
       els.statusOut.className = "status warn";
+      updateDictionaryPanelForWord(""); // no whole word yet
       return;
     }
 
     if (current.prefix && redundantPrefix(current.prefix, current.base)){
-      els.wordOut.textContent = computeWord(null, current.base, current.suffix);
+      const wBlocked = computeWord(null, current.base, current.suffix);
+      els.wordOut.textContent = wBlocked;
       els.meaningOut.textContent = computeMeaning(null, current.base, current.suffix);
       els.statusOut.textContent = "That prefix is already in the base word, so it has been blocked.";
       els.statusOut.className = "status bad";
+      updateDictionaryPanelForWord(wBlocked);
       return;
     }
 
@@ -933,15 +1049,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!current.prefix && !current.suffix){
       els.statusOut.textContent = "Add a prefix or suffix. Only real-word options are available.";
       els.statusOut.className = "status warn";
+      updateDictionaryPanelForWord(w);
       return;
     }
 
     if (isRealWord(w)){
       els.statusOut.textContent = "Real word.";
       els.statusOut.className = "status ok";
+      updateDictionaryPanelForWord(w);
     } else {
       els.statusOut.textContent = "Not a real word. Choose a different enabled option.";
       els.statusOut.className = "status bad";
+      updateDictionaryPanelForWord(w);
     }
   }
 
@@ -1017,6 +1136,10 @@ document.addEventListener("DOMContentLoaded", () => {
     renderBanks();
     updateOutput();
   }
+
+  // Buttons for dictionary panel
+  els.dictLookupBtn.addEventListener("click", () => updateDictionaryPanelForWord(els.wordOut.textContent));
+  els.dictOpenBtn.addEventListener("click", () => openDictionaryPage(els.wordOut.textContent));
 
   els.baseSearch.addEventListener("input", renderBanks);
   els.globalSearch.addEventListener("input", renderBanks);
