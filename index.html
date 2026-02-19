@@ -116,7 +116,7 @@
     .defItem{ font-size:13px; color:var(--muted); line-height:1.35; margin:0; }
     .defExample{ font-size:12px; color:#97a1c6; margin-top:6px; }
 
-    /* Spelling rules UI */
+    /* Word building rules UI (prefix + suffix) */
     .spellBox{
       margin-top:10px;
       border:1px solid var(--line);
@@ -323,20 +323,21 @@
 
           <div class="spellBox" id="spellBox" style="display:none;">
             <div class="spellTop">
-              <div class="spellTitle">Spelling rule used</div>
+              <div class="spellTitle">Word building rules used</div>
               <button class="explainBtn" id="spellExplainBtn" type="button">Explain</button>
             </div>
             <div class="spellSteps mono" id="spellSteps"></div>
             <div class="spellRuleText" id="spellRuleText"></div>
             <div class="spellRef" id="spellRef">
-              <div class="spellTitle">Stage 3 spelling rules reference</div>
+              <div class="spellTitle">Stage 3 reference (prefix and suffix)</div>
               <ul>
-                <li>Drop the final <b>e</b> before a vowel suffix (create + ing → creating).</li>
-                <li>Keep the final <b>e</b> before a consonant suffix (care + ful → careful).</li>
-                <li>Change <b>y</b> to <b>i</b> before adding most suffixes (apply + ed → applied). Do not do this for <b>-ing</b> (apply + ing → applying), and do not do this if there is a vowel before the y (pay + ment → payment).</li>
-                <li>Double the final consonant when a short vowel is followed by one consonant and the suffix begins with a vowel (run + ing → running).</li>
-                <li>Change <b>ie</b> to <b>y</b> before <b>-ing</b> (die + ing → dying).</li>
-                <li>If none apply, the base word stays the same (play + ing → playing).</li>
+                <li><b>Prefix sound changes (assimilation)</b>: some prefixes change to make pronunciation easier (in + possible → impossible, con + form → conform / com + pose → compose).</li>
+                <li><b>Drop the final e</b> before a vowel suffix (create + ing → creating).</li>
+                <li><b>Keep the final e</b> before a consonant suffix (care + ful → careful).</li>
+                <li><b>Change y to i</b> before adding most suffixes (apply + ed → applied). Do not do this for <b>-ing</b> (apply + ing → applying), and do not do this if there is a vowel before the y (pay + ment → payment).</li>
+                <li><b>Double the final consonant</b> when a short vowel is followed by one consonant and the suffix begins with a vowel (run + ing → running).</li>
+                <li><b>Change ie to y</b> before <b>-ing</b> (die + ing → dying).</li>
+                <li>If none apply, just join the parts (re + do → redo; play + ing → playing).</li>
               </ul>
             </div>
           </div>
@@ -359,7 +360,7 @@
         </div>
 
         <div class="note">
-          Uses your dictionary.txt as the source of truth. If a combination makes a word that exists in dictionary.txt, it will be enabled (including applied).
+          Uses your dictionary.txt as the source of truth. If a combination makes a word that exists in dictionary.txt, it will be enabled (including applied). Prefix tiles also support common sound change rules (for example in → im, il, ir; con → com; en → em) when checking real words.
         </div>
       </div>
     </div>
@@ -654,7 +655,8 @@
         "happy","happiness",
         "pay","payment",
         "care","careful",
-        "use","usable","useful","useless"
+        "use","usable","useful","useless",
+        "impossible","illegal","irregular","compose","employ"
       ];
 
       function mkUid(type, id){ return `${type}:${id}`; }
@@ -709,7 +711,7 @@
 
       let DICT_SET = null;
 
-      // NEW: global viability sets (tiles that EVER work anywhere)
+      // Tiles that EVER work anywhere (global viability)
       let GLOBAL_VIABLE = {
         prefixes: new Set(),
         bases: new Set(),
@@ -735,9 +737,7 @@
           els.dictPill.textContent = "Word checker: dictionary.txt not found (using small fallback list)";
         }
 
-        // NEW: compute global viability once dictionary exists
         computeGlobalViableSets();
-
         renderAll();
       }
 
@@ -877,7 +877,7 @@
         if (lastLookupWord === w) setDictPanelResult(res);
       }
 
-      /* -------------------- SPELLING RULES -------------------- */
+      /* -------------------- HELPERS -------------------- */
 
       function isVowel(ch){
         return ["a","e","i","o","u"].includes(String(ch||"").toLowerCase());
@@ -897,7 +897,107 @@
         return true;
       }
 
-      function applySpellingRulesDetailed(baseForm, suffixForm){
+      /* -------------------- PREFIX RULES (NEW) -------------------- */
+
+      function applyPrefixRulesDetailed(prefixForm, baseForm){
+        const prefix = String(prefixForm || "");
+        const base = String(baseForm || "");
+        if (!prefix || !base){
+          return { prefixBefore: prefix, prefixAfter: prefix, base, ruleId: null, ruleText: null, stepsHtml: "" };
+        }
+
+        const p = prefix.toLowerCase();
+        const first = base[0]?.toLowerCase() || "";
+
+        // 1) in- assimilation: in + p/b/m -> im; in + l -> il; in + r -> ir
+        if (p === "in"){
+          if (["p","b","m"].includes(first)){
+            const prefixAfter = "im";
+            return {
+              prefixBefore: prefix,
+              prefixAfter,
+              base,
+              ruleId: "in_assim_im",
+              ruleText: "Prefix rule: in can change to im before p, b, m (in + possible → impossible).",
+              stepsHtml: `<span class='hlChange'>in</span><span class='hlAdd'> + </span>${base} <span class='hlAdd'>→</span> <span class='hlChange'>im</span>${base}`
+            };
+          }
+          if (first === "l"){
+            const prefixAfter = "il";
+            return {
+              prefixBefore: prefix,
+              prefixAfter,
+              base,
+              ruleId: "in_assim_il",
+              ruleText: "Prefix rule: in can change to il before l (in + legal → illegal).",
+              stepsHtml: `<span class='hlChange'>in</span><span class='hlAdd'> + </span>${base} <span class='hlAdd'>→</span> <span class='hlChange'>il</span>${base}`
+            };
+          }
+          if (first === "r"){
+            const prefixAfter = "ir";
+            return {
+              prefixBefore: prefix,
+              prefixAfter,
+              base,
+              ruleId: "in_assim_ir",
+              ruleText: "Prefix rule: in can change to ir before r (in + regular → irregular).",
+              stepsHtml: `<span class='hlChange'>in</span><span class='hlAdd'> + </span>${base} <span class='hlAdd'>→</span> <span class='hlChange'>ir</span>${base}`
+            };
+          }
+          return {
+            prefixBefore: prefix,
+            prefixAfter: prefix,
+            base,
+            ruleId: "in_no_change",
+            ruleText: "Prefix rule: no sound change needed for in.",
+            stepsHtml: `${prefix}<span class='hlAdd'> + </span>${base} <span class='hlAdd'>→</span> ${prefix}${base}`
+          };
+        }
+
+        // 2) con- assimilation: con + p/b/m -> com (common in many words: compose, combine)
+        if (p === "con" && ["p","b","m"].includes(first)){
+          const prefixAfter = "com";
+          return {
+            prefixBefore: prefix,
+            prefixAfter,
+            base,
+            ruleId: "con_assim_com",
+            ruleText: "Prefix rule: con can change to com before p, b, m (con + pose → compose).",
+            stepsHtml: `<span class='hlChange'>con</span><span class='hlAdd'> + </span>${base} <span class='hlAdd'>→</span> <span class='hlChange'>com</span>${base}`
+          };
+        }
+
+        // 3) en- assimilation: en + p/b/m -> em (en + ploy → employ)
+        if (p === "en" && ["p","b","m"].includes(first)){
+          const prefixAfter = "em";
+          return {
+            prefixBefore: prefix,
+            prefixAfter,
+            base,
+            ruleId: "en_assim_em",
+            ruleText: "Prefix rule: en can change to em before p, b, m (en + ploy → employ).",
+            stepsHtml: `<span class='hlChange'>en</span><span class='hlAdd'> + </span>${base} <span class='hlAdd'>→</span> <span class='hlChange'>em</span>${base}`
+          };
+        }
+
+        // default: no change
+        return {
+          prefixBefore: prefix,
+          prefixAfter: prefix,
+          base,
+          ruleId: "prefix_no_change",
+          ruleText: "Prefix rule: join the prefix directly to the base.",
+          stepsHtml: `${prefix}<span class='hlAdd'> + </span>${base} <span class='hlAdd'>→</span> ${prefix}${base}`
+        };
+      }
+
+      function applyPrefixRules(prefixForm, baseForm){
+        return applyPrefixRulesDetailed(prefixForm, baseForm).prefixAfter || prefixForm;
+      }
+
+      /* -------------------- SUFFIX RULES -------------------- */
+
+      function applySuffixRulesDetailed(baseForm, suffixForm){
         const base = String(baseForm||"");
         const suff = String(suffixForm||"");
         if (!suff) {
@@ -920,7 +1020,7 @@
             baseAfter,
             suffix: suff,
             ruleId: "ie_to_y",
-            ruleText: "Rule: Change 'ie' to 'y' before adding -ing (die + ing → dying).",
+            ruleText: "Suffix rule: change ie to y before adding ing (die + ing → dying).",
             stepsHtml: `${before} <span class='hlAdd'> + </span>${suff} <span class='hlAdd'>→</span> ${mid} <span class='hlAdd'>→</span> ${final}`
           };
         }
@@ -937,12 +1037,12 @@
             baseAfter,
             suffix: suff,
             ruleId: "drop_e",
-            ruleText: "Rule: Drop the final 'e' before adding a suffix that begins with a vowel (create + ing → creating).",
+            ruleText: "Suffix rule: drop the final e before a vowel suffix (create + ing → creating).",
             stepsHtml: `${before} <span class='hlAdd'> + </span>${suff} <span class='hlAdd'>→</span> ${mid} <span class='hlAdd'>→</span> ${final}`
           };
         }
 
-        // 2) y → i for most suffixes (including -ed), but NOT -ing, and NOT if vowel before y (pay + ment)
+        // 2) y → i for most suffixes (including ed), but NOT ing, and NOT if vowel before y (pay + ment)
         if (last === "y" && prev && isConsonant(prev) && suffixLower !== "ing"){
           const baseAfter = base.slice(0,-1) + "i";
           const before = `${base.slice(0,-1)}<span class='hlChange'>y</span>`;
@@ -953,7 +1053,7 @@
             baseAfter,
             suffix: suff,
             ruleId: "y_to_i",
-            ruleText: "Rule: Change 'y' to 'i' before adding most suffixes (apply + ed → applied; happy + ness → happiness). Do not do this for -ing (applying), and do not do this if there is a vowel before the y (pay + ment → payment).",
+            ruleText: "Suffix rule: change y to i before most suffixes (apply + ed → applied; happy + ness → happiness). Not for ing, and not when a vowel comes before y (pay + ment → payment).",
             stepsHtml: `${before} <span class='hlAdd'> + </span>${suff} <span class='hlAdd'>→</span> ${mid} <span class='hlAdd'>→</span> ${final}`
           };
         }
@@ -970,7 +1070,7 @@
             baseAfter,
             suffix: suff,
             ruleId: "double_consonant",
-            ruleText: "Rule: Double the final consonant when a short vowel is followed by one consonant and the suffix begins with a vowel (run + ing → running).",
+            ruleText: "Suffix rule: double the final consonant for CVC + vowel suffix (run + ing → running).",
             stepsHtml: `${before} <span class='hlAdd'> + </span>${suff} <span class='hlAdd'>→</span> ${mid} <span class='hlAdd'>→</span> ${final}`
           };
         }
@@ -984,7 +1084,7 @@
             baseAfter: base,
             suffix: suff,
             ruleId: "keep_e",
-            ruleText: "Rule: Keep the final 'e' when the suffix begins with a consonant (care + ful → careful).",
+            ruleText: "Suffix rule: keep the final e before a consonant suffix (care + ful → careful).",
             stepsHtml: `${before} <span class='hlAdd'> + </span>${suff} <span class='hlAdd'>→</span> ${final}`
           };
         }
@@ -995,26 +1095,27 @@
           baseAfter: base,
           suffix: suff,
           ruleId: "no_change",
-          ruleText: "Rule: No spelling change needed.",
+          ruleText: "Suffix rule: no spelling change needed.",
           stepsHtml: `${base} <span class='hlAdd'> + </span>${suff} <span class='hlAdd'>→</span> ${base}${suff}`
         };
       }
 
-      /* -------------------- WORD BUILDING -------------------- */
+      /* -------------------- WORD BUILDING (PREFIX + BASE + SUFFIX) -------------------- */
 
       function computeWord(prefixObj, baseObj, suffixObj) {
         if (!baseObj) return "";
-        const p = prefixObj ? prefixObj.form : "";
-        const b = baseObj.form;
-        const s = suffixObj ? suffixObj.form : "";
-        const detail = suffixObj ? applySpellingRulesDetailed(b, s) : null;
-        const bAdj = detail ? detail.baseAfter : b;
-        return (p + bAdj + s).toLowerCase();
-      }
+        const base = baseObj.form;
 
-      function computeSpellingDetail(baseObj, suffixObj){
-        if (!baseObj || !suffixObj) return null;
-        return applySpellingRulesDetailed(baseObj.form, suffixObj.form);
+        // prefix rules are based on the start of the base
+        const pRaw = prefixObj ? prefixObj.form : "";
+        const pAdj = prefixObj ? applyPrefixRules(pRaw, base) : "";
+
+        // suffix rules are based on the end of the base
+        const s = suffixObj ? suffixObj.form : "";
+        const suffixDetail = suffixObj ? applySuffixRulesDetailed(base, s) : null;
+        const bAdj = suffixDetail ? suffixDetail.baseAfter : base;
+
+        return (String(pAdj) + String(bAdj) + String(s)).toLowerCase();
       }
 
       function computeMeaning(prefixObj, baseObj, suffixObj) {
@@ -1023,6 +1124,54 @@
         if (baseObj && baseObj.meaning) parts.push(baseObj.meaning);
         if (suffixObj && suffixObj.meaning) parts.push(suffixObj.meaning);
         return parts.join(" + ");
+      }
+
+      function buildDetails(prefixObj, baseObj, suffixObj){
+        if (!baseObj) return null;
+
+        const base = baseObj.form;
+        const prefixRaw = prefixObj ? prefixObj.form : "";
+        const suffixRaw = suffixObj ? suffixObj.form : "";
+
+        const prefixDetail = prefixObj ? applyPrefixRulesDetailed(prefixRaw, base) : null;
+        const prefixApplied = prefixDetail ? prefixDetail.prefixAfter : "";
+        const suffixDetail = suffixObj ? applySuffixRulesDetailed(base, suffixRaw) : null;
+
+        const baseAfterSuffix = suffixDetail ? suffixDetail.baseAfter : base;
+        const word = (String(prefixApplied || "") + String(baseAfterSuffix) + String(suffixRaw || "")).toLowerCase();
+
+        const rules = [];
+        if (prefixDetail && prefixObj){
+          // only show a meaningful prefix rule if there is any prefix selected
+          rules.push(prefixDetail.ruleText || "Prefix rule: join the prefix directly to the base.");
+        }
+        if (suffixDetail && suffixObj){
+          rules.push(suffixDetail.ruleText || "Suffix rule: no spelling change needed.");
+        }
+
+        // Steps: show prefix join (with any change), then suffix join (with any change)
+        const stepParts = [];
+        if (prefixObj){
+          stepParts.push(prefixDetail?.stepsHtml || `${prefixRaw}<span class='hlAdd'> + </span>${base} <span class='hlAdd'>→</span> ${prefixApplied}${base}`);
+        }
+        if (suffixObj){
+          // show suffix step based on base only (that is what students learn), then final word
+          const suffixStep = suffixDetail?.stepsHtml || `${base}<span class='hlAdd'> + </span>${suffixRaw} <span class='hlAdd'>→</span> ${base}${suffixRaw}`;
+          stepParts.push(suffixStep);
+        }
+
+        // If both prefix + suffix chosen, also show final assembly clearly
+        if (prefixObj && suffixObj){
+          stepParts.push(`${String(prefixApplied || prefixRaw)}${String(baseAfterSuffix)}${String(suffixRaw)} <span class='hlAdd'>→</span> ${word}`);
+        }
+
+        return {
+          word,
+          prefixApplied,
+          baseAfterSuffix,
+          rules,
+          stepsHtml: stepParts.join("<br>")
+        };
       }
 
       function redundantPrefix(prefixObj, baseObj){
@@ -1034,7 +1183,6 @@
       }
 
       // Source of truth = dictionary.txt.
-      // We DO NOT block combinations using POS tags, only by whether the final word exists.
       function existsRealWordWithLocks(prefixObj, baseObj, suffixObj){
         const prefixCandidates = prefixObj ? [prefixObj] : [null, ...ALL_PREFIXES];
         const baseCandidates   = baseObj   ? [baseObj]   : ALL_BASES;
@@ -1052,7 +1200,8 @@
         return false;
       }
 
-      // NEW: global viability check (find tiles that EVER work anywhere)
+      /* -------------------- GLOBAL VIABILITY (GREY OUT TILES THAT NEVER WORK) -------------------- */
+
       function computeGlobalViableSets(){
         const prefixes = new Set();
         const bases = new Set();
@@ -1074,6 +1223,8 @@
         GLOBAL_VIABLE = { prefixes, bases, suffixes };
       }
 
+      /* -------------------- CURRENT VIABILITY (GREY OUT TILES THAT DONT WORK RIGHT NOW) -------------------- */
+
       function computeViableSets(){
         const viablePrefixes = new Set();
         const viableBases = new Set();
@@ -1091,13 +1242,11 @@
           }
         }
 
-        // prefixes viable with current base/suffix lock
         for (const p of ALL_PREFIXES){
           const ok = existsRealWordWithLocks(p, current.base, current.suffix);
           if (ok) viablePrefixes.add(p.uid);
         }
 
-        // suffixes viable with current prefix/base lock
         for (const s of ALL_SUFFIXES){
           const ok = existsRealWordWithLocks(current.prefix, current.base, s);
           if (ok) viableSuffixes.add(s.uid);
@@ -1105,6 +1254,8 @@
 
         return { viablePrefixes, viableBases, viableSuffixes };
       }
+
+      /* -------------------- UI FILTERING -------------------- */
 
       function matchesSearch(item){
         const q = (els.globalSearch.value || "").trim().toLowerCase();
@@ -1185,7 +1336,6 @@
         const baseEnabled = [];
         const baseDisabled = [];
         for (const b of basesFiltered){
-          // NEW: must be globally viable AND currently viable
           const enabled = GLOBAL_VIABLE.bases.has(b.uid) && sets.viableBases.has(b.uid);
           const selected = current.base && current.base.uid === b.uid;
           const t = makeTile(b, "base", enabled, selected);
@@ -1199,7 +1349,6 @@
         const prefixDisabled = [];
         for (const p of ALL_PREFIXES){
           if (!matchesSearch(p)) continue;
-          // NEW: must be globally viable AND currently viable
           const enabled = GLOBAL_VIABLE.prefixes.has(p.uid) && sets.viablePrefixes.has(p.uid);
           const selected = current.prefix && current.prefix.uid === p.uid;
           const t = makeTile(p, "prefix", enabled, selected);
@@ -1214,7 +1363,6 @@
         const suffixDisabled = [];
         for (const s of ALL_SUFFIXES){
           if (!matchesSearch(s)) continue;
-          // NEW: must be globally viable AND currently viable
           const enabled = GLOBAL_VIABLE.suffixes.has(s.uid) && sets.viableSuffixes.has(s.uid);
           const selected = current.suffix && current.suffix.uid === s.uid;
           const t = makeTile(s, "suffix", enabled, selected);
@@ -1237,7 +1385,7 @@
         if (current.suffix) els.suffixZone.appendChild(makeTile(current.suffix, "suffix", true, false));
       }
 
-      function setSpellingUIVisible(on){
+      function setRulesUIVisible(on){
         els.spellBox.style.display = on ? "block" : "none";
         if (!on){
           els.spellSteps.innerHTML = "";
@@ -1248,15 +1396,15 @@
         }
       }
 
-      function updateSpellingUI(){
-        const detail = computeSpellingDetail(current.base, current.suffix);
-        if (!detail){
-          setSpellingUIVisible(false);
+      function updateRulesUI(){
+        const detail = buildDetails(current.prefix, current.base, current.suffix);
+        if (!detail || (!current.prefix && !current.suffix)){
+          setRulesUIVisible(false);
           return;
         }
-        setSpellingUIVisible(true);
+        setRulesUIVisible(true);
         els.spellSteps.innerHTML = detail.stepsHtml || "";
-        els.spellRuleText.textContent = detail.ruleText || "Rule: No spelling change needed.";
+        els.spellRuleText.textContent = (detail.rules && detail.rules.length) ? detail.rules.join("  ") : "No rule notes.";
       }
 
       function updateOutput(){
@@ -1267,7 +1415,7 @@
           els.meaningOut.textContent = "Or start with a prefix or suffix, then pick parts that make a real word.";
           els.statusOut.textContent = "Only combinations that create real words are enabled.";
           els.statusOut.className = "status warn";
-          setSpellingUIVisible(false);
+          setRulesUIVisible(false);
           return;
         }
 
@@ -1279,7 +1427,7 @@
           els.meaningOut.textContent = computeMeaning(current.prefix, null, current.suffix) || "Now choose a base word that makes a real word.";
           els.statusOut.textContent = "Choose a base word next (enabled bases will make a real word).";
           els.statusOut.className = "status warn";
-          setSpellingUIVisible(false);
+          setRulesUIVisible(false);
           return;
         }
 
@@ -1288,15 +1436,17 @@
           els.meaningOut.textContent = computeMeaning(null, current.base, current.suffix);
           els.statusOut.textContent = "That prefix is already in the base word, so it has been blocked.";
           els.statusOut.className = "status bad";
-          setSpellingUIVisible(false);
+          setRulesUIVisible(false);
           return;
         }
 
-        const w = computeWord(current.prefix, current.base, current.suffix);
+        const detail = buildDetails(current.prefix, current.base, current.suffix);
+        const w = detail ? detail.word : computeWord(current.prefix, current.base, current.suffix);
+
         els.wordOut.textContent = w;
         els.meaningOut.textContent = computeMeaning(current.prefix, current.base, current.suffix) || " ";
 
-        updateSpellingUI();
+        updateRulesUI();
 
         if (!current.prefix && !current.suffix){
           els.statusOut.textContent = "Add a prefix or suffix. Only real-word options are available.";
@@ -1326,10 +1476,10 @@
           next.base = item;
         }
 
-        // Only block redundant prefix (do not POS-filter; dictionary decides)
+        // block redundant prefix only (dictionary decides everything else)
         if (next.base && next.prefix && redundantPrefix(next.prefix, next.base)) next.prefix = null;
 
-        // Do not allow a state where nothing in dictionary is possible
+        // never allow a state where nothing in dictionary is possible
         if (next.base){
           const ok = isRealWord(next.base.form) || existsRealWordWithLocks(next.prefix, next.base, next.suffix);
           if (!ok) return;
