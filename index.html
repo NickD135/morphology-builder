@@ -330,7 +330,7 @@
         </div>
 
         <div class="note">
-          Uses your dictionary.txt as the source of truth. If a combination makes a word that exists in dictionary.txt, it will be enabled (including applied).
+          Uses your dictionary.txt as the source of truth. If a combination makes a word that exists in dictionary.txt, it will be enabled.
         </div>
       </div>
     </div>
@@ -418,7 +418,10 @@ document.addEventListener("DOMContentLoaded", () => {
     { id:"ian", form:"ian", meaning:"person connected to", allowedPos:["noun"], hint:"musician pattern" },
     { id:"ic", form:"ic", meaning:"related to", allowedPos:["noun","verb"], hint:"historic pattern" },
     { id:"ive", form:"ive", meaning:"having quality of", allowedPos:["verb","noun"], hint:"active, creative" },
-    { id:"ize", form:"ize", meaning:"make", allowedPos:["noun","adj"], hint:"organise uses -ise in Australia" },
+
+    /* CHANGE 1: use Australian spelling */
+    { id:"ise", form:"ise", meaning:"make (Australian spelling)", allowedPos:["noun","adj"], hint:"organise, reorganise" },
+
     { id:"like", form:"like", meaning:"like; similar to", allowedPos:["noun"], hint:"childlike" },
     { id:"logy", form:"logy", meaning:"study of", allowedPos:["noun"], hint:"biology pattern" },
     { id:"ologist", form:"ologist", meaning:"person who studies", allowedPos:["noun"], hint:"biologist pattern" },
@@ -569,7 +572,6 @@ document.addEventListener("DOMContentLoaded", () => {
     plan:{ meaning:"to organise what you will do", pos:["verb","noun"] },
     hop:{ meaning:"to jump on one foot", pos:["verb","noun"] }
   };
-
   const ANGLO_BASES = [
     "teach","meet","rest","go","tall","help","ask","eat","train","usual","end","turn","open","make","jump","bad","lock",
     "move","like","care","happy","push","zip","take","see","brisk","wake","send","round","cloud","pay","lift","pack",
@@ -623,7 +625,8 @@ document.addEventListener("DOMContentLoaded", () => {
     "happy","happiness",
     "pay","payment",
     "care","careful",
-    "use","usable","useful","useless"
+    "use","usable","useful","useless",
+    "organise","organised","organising","organisation"
   ];
 
   function mkUid(type, id){ return `${type}:${id}`; }
@@ -677,18 +680,30 @@ document.addEventListener("DOMContentLoaded", () => {
   /* -------------------- WORD CHECKER -------------------- */
   let DICT_SET = null;
 
+  /* CHANGE 2: robust dictionary parsing */
   async function loadDictionary(){
     try{
       const res = await fetch("dictionary.txt", { cache:"no-store" });
       if (!res.ok) throw new Error("no dictionary");
       const text = await res.text();
+
       const set = new Set();
-      for (const raw of text.split(/\r?\n/)){
-        const w = raw.trim().toLowerCase();
-        if (!w) continue;
-        if (w.startsWith("#")) continue;
-        set.add(w);
+
+      for (let raw of text.split(/\r?\n/)){
+        if (!raw) continue;
+        raw = raw.replace(/^\uFEFF/, "").trim();
+        if (!raw) continue;
+        if (raw.startsWith("#")) continue;
+
+        // Extract all pure letter words from the line (fixes merged/dirty lines)
+        const tokens = raw.toLowerCase().match(/[a-z]+/g);
+        if (!tokens) continue;
+
+        for (const t of tokens){
+          if (t.length > 1) set.add(t);
+        }
       }
+
       DICT_SET = set;
       els.dictPill.textContent = `Word checker: dictionary.txt loaded (${set.size.toLocaleString()} words)`;
     } catch {
@@ -700,7 +715,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function isRealWord(word){
     if (!word) return false;
-    return DICT_SET && DICT_SET.has(String(word).toLowerCase());
+    const w = String(word).toLowerCase();
+    if (!DICT_SET) return false;
+    if (DICT_SET.has(w)) return true;
+
+    // Optional AU/US bridge for -ise/-ize (helps if some variants exist)
+    if (w.endsWith("ise") && DICT_SET.has(w.slice(0,-3) + "ize")) return true;
+    if (w.endsWith("ize") && DICT_SET.has(w.slice(0,-3) + "ise")) return true;
+
+    return false;
   }
 
   /* -------------------- DICTIONARY DEFINITIONS (NO MORPHEMES) -------------------- */
@@ -836,15 +859,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   /* -------------------- SPELLING RULES -------------------- */
 
-  function isVowel(ch){
-    return ["a","e","i","o","u"].includes(String(ch||"").toLowerCase());
-  }
-
+  function isVowel(ch){ return ["a","e","i","o","u"].includes(String(ch||"").toLowerCase()); }
   function isConsonant(ch){
     const c = String(ch||"").toLowerCase();
     return c >= "a" && c <= "z" && !isVowel(c);
   }
-
   function isCVC(word){
     const w = String(word||"").toLowerCase();
     if (w.length < 3) return false;
@@ -991,7 +1010,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Source of truth = dictionary.txt.
-  // We DO NOT block combinations using POS tags, only by whether the final word exists.
   function existsRealWordWithLocks(prefixObj, baseObj, suffixObj){
     const prefixCandidates = prefixObj ? [prefixObj] : [null, ...ALL_PREFIXES];
     const baseCandidates   = baseObj   ? [baseObj]   : ALL_BASES;
@@ -1026,13 +1044,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // prefixes viable with current base/suffix lock
     for (const p of ALL_PREFIXES){
       const ok = existsRealWordWithLocks(p, current.base, current.suffix);
       if (ok) viablePrefixes.add(p.uid);
     }
 
-    // suffixes viable with current prefix/base lock
     for (const s of ALL_SUFFIXES){
       const ok = existsRealWordWithLocks(current.prefix, current.base, s);
       if (ok) viableSuffixes.add(s.uid);
@@ -1360,8 +1376,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   clearAll();
   loadDictionary();
-
 });
 </script>
 </body>
-  </html>
+</html>
