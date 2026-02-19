@@ -1,3 +1,4 @@
+```html
 <!doctype html>
 <html lang="en">
 <head>
@@ -147,13 +148,18 @@
       font-size:12px;
     }
     .explainBtn:hover{ border-color:#3a4664; }
+
+    /* UPDATED: keep steps on one visual line (scroll if long) */
     .spellSteps{
       margin-top:8px;
       font-size:13px;
       color:var(--muted);
       line-height:1.35;
       word-break:break-word;
+      white-space:nowrap;
+      overflow-x:auto;
     }
+
     .spellRuleText{
       margin-top:8px;
       font-size:12px;
@@ -897,7 +903,7 @@
         return true;
       }
 
-      /* -------------------- PREFIX RULES (NEW) -------------------- */
+      /* -------------------- PREFIX RULES -------------------- */
 
       function applyPrefixRulesDetailed(prefixForm, baseForm){
         const prefix = String(prefixForm || "");
@@ -954,7 +960,7 @@
           };
         }
 
-        // 2) con- assimilation: con + p/b/m -> com (common in many words: compose, combine)
+        // 2) con- assimilation: con + p/b/m -> com
         if (p === "con" && ["p","b","m"].includes(first)){
           const prefixAfter = "com";
           return {
@@ -967,7 +973,7 @@
           };
         }
 
-        // 3) en- assimilation: en + p/b/m -> em (en + ploy → employ)
+        // 3) en- assimilation: en + p/b/m -> em
         if (p === "en" && ["p","b","m"].includes(first)){
           const prefixAfter = "em";
           return {
@@ -1042,7 +1048,7 @@
           };
         }
 
-        // 2) y → i for most suffixes (including ed), but NOT ing, and NOT if vowel before y (pay + ment)
+        // 2) y → i for most suffixes, but NOT ing, and NOT if vowel before y
         if (last === "y" && prev && isConsonant(prev) && suffixLower !== "ing"){
           const baseAfter = base.slice(0,-1) + "i";
           const before = `${base.slice(0,-1)}<span class='hlChange'>y</span>`;
@@ -1142,35 +1148,71 @@
 
         const rules = [];
         if (prefixDetail && prefixObj){
-          // only show a meaningful prefix rule if there is any prefix selected
           rules.push(prefixDetail.ruleText || "Prefix rule: join the prefix directly to the base.");
         }
         if (suffixDetail && suffixObj){
           rules.push(suffixDetail.ruleText || "Suffix rule: no spelling change needed.");
         }
 
-        // Steps: show prefix join (with any change), then suffix join (with any change)
-        const stepParts = [];
-        if (prefixObj){
-          stepParts.push(prefixDetail?.stepsHtml || `${prefixRaw}<span class='hlAdd'> + </span>${base} <span class='hlAdd'>→</span> ${prefixApplied}${base}`);
-        }
-        if (suffixObj){
-          // show suffix step based on base only (that is what students learn), then final word
-          const suffixStep = suffixDetail?.stepsHtml || `${base}<span class='hlAdd'> + </span>${suffixRaw} <span class='hlAdd'>→</span> ${base}${suffixRaw}`;
-          stepParts.push(suffixStep);
+        // UPDATED: single-line explanation (no <br>)
+        function prefixDisplayHtml(){
+          if (!prefixObj) return "";
+          const before = (prefixDetail?.prefixBefore || prefixRaw || "");
+          const after  = (prefixDetail?.prefixAfter  || prefixRaw || "");
+          if (before.toLowerCase() !== after.toLowerCase()){
+            return `<span class='hlChange'>${after}</span>`;
+          }
+          return `${prefixRaw}`;
         }
 
-        // If both prefix + suffix chosen, also show final assembly clearly
-        if (prefixObj && suffixObj){
-          stepParts.push(`${String(prefixApplied || prefixRaw)}${String(baseAfterSuffix)}${String(suffixRaw)} <span class='hlAdd'>→</span> ${word}`);
+        function baseDisplayHtml(){
+          if (!suffixObj || !suffixDetail) return `${base}`;
+
+          const rule = suffixDetail.ruleId;
+
+          if (rule === "drop_e"){
+            return `${base.slice(0,-1)}<span class='hlDrop'>e</span>`;
+          }
+
+          if (rule === "ie_to_y"){
+            return `${base.slice(0,-2)}<span class='hlChange'>ie</span>`;
+          }
+
+          if (rule === "y_to_i"){
+            return `${base.slice(0,-1)}<span class='hlChange'>y</span>`;
+          }
+
+          if (rule === "double_consonant"){
+            const c = base.slice(-1);
+            return `${base}<span class='hlAdd'>${c}</span>`;
+          }
+
+          return `${base}`;
         }
+
+        const parts = [];
+
+        if (prefixObj){
+          parts.push(prefixDisplayHtml());
+          parts.push("<span class='hlAdd'> + </span>");
+        }
+
+        parts.push(baseDisplayHtml());
+
+        if (suffixObj){
+          parts.push("<span class='hlAdd'> + </span>");
+          parts.push(`${suffixRaw}`);
+        }
+
+        parts.push(" <span class='hlAdd'>→</span> ");
+        parts.push(`${word}`);
 
         return {
           word,
           prefixApplied,
           baseAfterSuffix,
           rules,
-          stepsHtml: stepParts.join("<br>")
+          stepsHtml: parts.join("")
         };
       }
 
@@ -1582,3 +1624,4 @@
   </script>
 </body>
 </html>
+```
