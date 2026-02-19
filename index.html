@@ -797,31 +797,37 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function computeViableSets(){
-    const viablePrefixes = new Set();
-    const viableBases = new Set();
-    const viableSuffixes = new Set();
+  const viablePrefixes = new Set();
+  const viableBases = new Set();
+  const viableSuffixes = new Set();
 
-    const hasAffixLock = !!current.prefix || !!current.suffix;
+  const hasAffixLock = !!current.prefix || !!current.suffix;
 
+  // KEY CHANGE:
+  // If nothing is selected (no prefix/suffix lock), let students pick ANY base to start.
+  if (!hasAffixLock){
+    for (const b of ALL_BASES) viableBases.add(b.uid);
+  } else {
     for (const b of ALL_BASES){
-      const ok = hasAffixLock
-        ? existsRealWordWithLocks(current.prefix, b, current.suffix)
-        : (existsRealWordWithLocks(null, b, null) || isRealWord(b.form));
+      const ok = existsRealWordWithLocks(current.prefix, b, current.suffix);
       if (ok) viableBases.add(b.uid);
     }
-
-    for (const p of ALL_PREFIXES){
-      const ok = existsRealWordWithLocks(p, current.base, current.suffix);
-      if (ok) viablePrefixes.add(p.uid);
-    }
-
-    for (const s of ALL_SUFFIXES){
-      const ok = existsRealWordWithLocks(current.prefix, current.base, s);
-      if (ok) viableSuffixes.add(s.uid);
-    }
-
-    return { viablePrefixes, viableBases, viableSuffixes };
   }
+
+  // Prefixes only enabled if they can make at least one real word with the current base/suffix lock
+  for (const p of ALL_PREFIXES){
+    const ok = existsRealWordWithLocks(p, current.base, current.suffix);
+    if (ok) viablePrefixes.add(p.uid);
+  }
+
+  // Suffixes only enabled if they can make at least one real word with the current prefix/base lock
+  for (const s of ALL_SUFFIXES){
+    const ok = existsRealWordWithLocks(current.prefix, current.base, s);
+    if (ok) viableSuffixes.add(s.uid);
+  }
+
+  return { viablePrefixes, viableBases, viableSuffixes };
+}
 
   function matchesSearch(item){
     const q = (els.globalSearch.value || "").trim().toLowerCase();
