@@ -109,6 +109,96 @@
     .defPos{ font-size:11px; color:#98a2c7; margin-bottom:6px; font-weight:800; text-transform:uppercase; letter-spacing:.2px; }
     .defItem{ font-size:13px; color:var(--muted); line-height:1.35; margin:0; }
     .defExample{ font-size:12px; color:#97a1c6; margin-top:6px; }
+
+    /* -------------------- NEW: Spelling rules UI -------------------- */
+    .spellBox{
+      margin-top:10px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.02);
+      border-radius:14px;
+      padding:10px;
+    }
+    .spellTop{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .spellTitle{
+      font-size:12px;
+      color:var(--muted);
+      font-weight:900;
+      letter-spacing:.2px;
+    }
+    .explainBtn{
+      padding:8px 10px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.03);
+      cursor:pointer;
+      font-weight:800;
+      font-size:12px;
+    }
+    .explainBtn:hover{ border-color:#3a4664; }
+    .spellSteps{
+      margin-top:8px;
+      font-size:13px;
+      color:var(--muted);
+      line-height:1.35;
+      word-break:break-word;
+    }
+    .spellRuleText{
+      margin-top:8px;
+      font-size:12px;
+      color:#aab3d3;
+      line-height:1.35;
+      display:none;
+    }
+    .spellRuleText.open{ display:block; }
+    .spellRef{
+      margin-top:10px;
+      padding-top:10px;
+      border-top:1px dashed var(--line);
+      display:none;
+    }
+    .spellRef.open{ display:block; }
+    .spellRef ul{
+      margin:8px 0 0 16px;
+      padding:0;
+      color:#aab3d3;
+      font-size:12px;
+      line-height:1.35;
+    }
+
+    .hlAdd{
+      padding:0 4px;
+      border-radius:8px;
+      background:rgba(126,231,135,.14);
+      color:var(--text);
+      border:1px solid rgba(126,231,135,.35);
+      font-weight:900;
+    }
+    .hlChange{
+      padding:0 4px;
+      border-radius:8px;
+      background:rgba(255,207,102,.14);
+      color:var(--text);
+      border:1px solid rgba(255,207,102,.35);
+      font-weight:900;
+    }
+    .hlDrop{
+      padding:0 4px;
+      border-radius:8px;
+      background:rgba(255,123,114,.12);
+      color:var(--text);
+      border:1px solid rgba(255,123,114,.35);
+      font-weight:900;
+      text-decoration:line-through;
+    }
+    .mono{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
   </style>
 </head>
 <body>
@@ -194,6 +284,27 @@
         <div class="output">
           <div class="word" id="wordOut">Choose a base word</div>
           <div class="gloss" id="meaningOut">Then add a prefix or suffix to change the meaning.</div>
+
+          <!-- NEW: spelling rules + highlight panel -->
+          <div class="spellBox" id="spellBox" style="display:none;">
+            <div class="spellTop">
+              <div class="spellTitle">Spelling rule used</div>
+              <button class="explainBtn" id="spellExplainBtn" type="button">Explain</button>
+            </div>
+            <div class="spellSteps mono" id="spellSteps"></div>
+            <div class="spellRuleText" id="spellRuleText"></div>
+            <div class="spellRef" id="spellRef">
+              <div class="spellTitle">Stage 3 spelling rules reference</div>
+              <ul>
+                <li>Drop the final <b>e</b> before a vowel suffix (create + ing → creating).</li>
+                <li>Keep the final <b>e</b> before a consonant suffix (care + ful → careful).</li>
+                <li>Change <b>y</b> to <b>i</b> before adding a consonant suffix (happy + ness → happiness). Do not do this if there is a vowel before the y (pay + ment → payment).</li>
+                <li>Double the final consonant when a short vowel is followed by one consonant and the suffix begins with a vowel (run + ing → running).</li>
+                <li>If none apply, the base word stays the same (play + ing → playing).</li>
+              </ul>
+            </div>
+          </div>
+
           <div class="status warn" id="statusOut"></div>
         </div>
 
@@ -213,7 +324,7 @@
         </div>
 
         <div class="note">
-          Spelling rules included: drop final e before vowel suffixes (create → creation, use → usable), y to i before consonant suffixes (apply → applied).
+          Spelling rules included: drop final e before vowel suffixes (create → creating), y to i before consonant suffixes (apply → applied), and a Stage 3 friendly explanation button.
         </div>
       </div>
     </div>
@@ -448,13 +559,16 @@ document.addEventListener("DOMContentLoaded", () => {
     live:{ meaning:"to be alive; to reside", pos:["verb","adj"] },
     sad:{ meaning:"unhappy; feeling sorrow", pos:["adj"] },
     trust:{ meaning:"to believe someone is reliable; belief", pos:["verb","noun"] },
-    merge:{ meaning:"to join together into one", pos:["verb"] }
+    merge:{ meaning:"to join together into one", pos:["verb"] },
+    run:{ meaning:"to move quickly on foot", pos:["verb","noun"] },
+    plan:{ meaning:"to organise what you will do", pos:["verb","noun"] },
+    hop:{ meaning:"to jump on one foot", pos:["verb","noun"] }
   };
 
   const ANGLO_BASES = [
     "teach","meet","rest","go","tall","help","ask","eat","train","usual","end","turn","open","make","jump","bad","lock",
     "move","like","care","happy","push","zip","take","see","brisk","wake","send","round","cloud","pay","lift","pack",
-    "sound","correct","part","live","sad","trust","merge"
+    "sound","correct","part","live","sad","trust","merge","run","plan","hop"
   ].map((w,i)=>({ id:`anglo_${i}`, form:w, meaning:(ANGLO_BASE_INFO[w]?.meaning||""), pos:(ANGLO_BASE_INFO[w]?.pos||["noun","adj","verb"]) }));
 
   const LATIN_BASE_INFO = {
@@ -467,42 +581,24 @@ document.addEventListener("DOMContentLoaded", () => {
     pens:{ meaning:"weigh; think", pos:["verb"] }, vis:{ meaning:"see", pos:["verb"] }, vid:{ meaning:"see", pos:["verb"] }, fer:{ meaning:"carry; bring", pos:["verb"] },
     vers:{ meaning:"turn", pos:["verb"] }, vert:{ meaning:"turn", pos:["verb"] }, duc:{ meaning:"lead", pos:["verb"] }, duct:{ meaning:"lead", pos:["verb"] },
     sec:{ meaning:"cut", pos:["verb"] }, sect:{ meaning:"cut", pos:["verb"] }, claus:{ meaning:"close", pos:["verb"] }, clos:{ meaning:"close", pos:["verb"] },
-    vit:{ meaning:"life", pos:["noun"] }, viv:{ meaning:"live", pos:["verb"] }, ped:{ meaning:"foot", pos:["noun"] }, pel:{ meaning:"drive; push", pos:["verb"] },
-    puls:{ meaning:"push; drive", pos:["verb"] }, voc:{ meaning:"call; voice", pos:["verb","noun"] }, voke:{ meaning:"call", pos:["verb"] }, cap:{ meaning:"take; seize", pos:["verb"] },
-    plic:{ meaning:"fold", pos:["verb"] }, ply:{ meaning:"fold", pos:["verb"] }, vent:{ meaning:"come", pos:["verb"] }, ven:{ meaning:"come", pos:["verb"] },
-    quer:{ meaning:"ask; seek", pos:["verb"] }, quest:{ meaning:"ask; seek", pos:["verb"] }, quire:{ meaning:"ask; seek", pos:["verb"] },
-    frater:{ meaning:"brother", pos:["noun"] }, pater:{ meaning:"father", pos:["noun"] }, patr:{ meaning:"father", pos:["noun"] }, mater:{ meaning:"mother", pos:["noun"] }, matr:{ meaning:"mother", pos:["noun"] },
-    uni:{ meaning:"one", pos:["adj","noun"] }, bi:{ meaning:"two", pos:["adj","noun"] }, tri:{ meaning:"three", pos:["adj","noun"] }, quadr:{ meaning:"four", pos:["adj","noun"] }, quar:{ meaning:"four", pos:["adj","noun"] },
-    oct:{ meaning:"eight", pos:["adj","noun"] }, deca:{ meaning:"ten", pos:["adj","noun"] }, dec:{ meaning:"ten", pos:["adj","noun"] }
+    vit:{ meaning:"life", pos:["noun"] }, viv:{ meaning:"live", pos:["verb"] }
   };
   const LATIN_BASES = [
     "rupt","tract","form","cred","dic","dict","struct","scrib","script","port","aud","flex","flect","ject","spec","spect","spic",
-    "miss","mit","sci","pend","pens","vis","vid","fer","vers","vert","duc","duct","sec","sect","claus","clos","vit","viv",
-    "ped","pel","puls","voc","voke","cap","plic","ply","vent","ven","quer","quest","quire","frater","pater","patr","mater","matr",
-    "uni","bi","tri","quadr","quar","oct","deca","dec"
+    "miss","mit","sci","pend","pens","vis","vid","fer","vers","vert","duc","duct","sec","sect","claus","clos","vit","viv"
   ].map((w,i)=>({ id:`latin_${i}`, form:w, meaning:(LATIN_BASE_INFO[w]?.meaning||""), pos:(LATIN_BASE_INFO[w]?.pos||["noun","adj","verb"]) }));
 
   const GREEK_BASE_INFO = {
     graph:{ meaning:"write; drawing", pos:["verb","noun"] }, gram:{ meaning:"written; something written", pos:["adj","noun"] },
     micro:{ meaning:"small", pos:["adj"] }, hydr:{ meaning:"water", pos:["noun"] }, hydro:{ meaning:"water", pos:["noun"] },
     therm:{ meaning:"heat", pos:["noun"] }, thermo:{ meaning:"heat", pos:["noun"] }, phon:{ meaning:"sound; voice", pos:["noun"] },
-    logy:{ meaning:"study of", pos:["noun"] }, phobia:{ meaning:"fear", pos:["noun"] },
+    logy:{ meaning:"study of", pos:["noun"] },
     chron:{ meaning:"time", pos:["noun"] }, chrono:{ meaning:"time", pos:["noun"] }, photo:{ meaning:"light", pos:["noun"] },
-    scope:{ meaning:"look; view; examine", pos:["noun","verb"] }, crat:{ meaning:"ruler; power", pos:["noun"] }, cracy:{ meaning:"rule; government", pos:["noun"] },
-    ortho:{ meaning:"straight; correct", pos:["adj"] }, tele:{ meaning:"far; distant", pos:["adj"] }, biblio:{ meaning:"book", pos:["noun"] }, geo:{ meaning:"earth", pos:["noun"] },
-    path:{ meaning:"feeling; disease", pos:["noun"] }, auto:{ meaning:"self", pos:["adj","noun"] }, bio:{ meaning:"life", pos:["noun"] },
-    meter:{ meaning:"measure", pos:["noun","verb"] }, metr:{ meaning:"measure", pos:["noun","verb"] }, psych:{ meaning:"mind", pos:["noun"] }, aero:{ meaning:"air", pos:["noun"] },
-    poli:{ meaning:"city; society", pos:["noun"] }, cycl:{ meaning:"circle", pos:["noun"] }, cyclo:{ meaning:"circle", pos:["noun"] },
-    pod:{ meaning:"foot", pos:["noun"] }, astro:{ meaning:"star", pos:["noun"] }, ped:{ meaning:"child", pos:["noun"] }, arch:{ meaning:"chief; ruler", pos:["noun","adj"] },
-    sphere:{ meaning:"ball; round shape", pos:["noun"] },
-    mono:{ meaning:"one", pos:["adj","noun"] }, di:{ meaning:"two", pos:["adj","noun"] }, tri:{ meaning:"three", pos:["adj","noun"] }, tetra:{ meaning:"four", pos:["adj","noun"] },
-    pent:{ meaning:"five", pos:["adj","noun"] }, penta:{ meaning:"five", pos:["adj","noun"] }, hex:{ meaning:"six", pos:["adj","noun"] }, hept:{ meaning:"seven", pos:["adj","noun"] }, hepta:{ meaning:"seven", pos:["adj","noun"] },
-    octa:{ meaning:"eight", pos:["adj","noun"] }, ennea:{ meaning:"nine", pos:["adj","noun"] }, deca:{ meaning:"ten", pos:["adj","noun"] }
+    scope:{ meaning:"look; view; examine", pos:["noun","verb"] },
+    meter:{ meaning:"measure", pos:["noun","verb"] }, aero:{ meaning:"air", pos:["noun"] }
   };
   const GREEK_BASES = [
-    "graph","gram","micro","hydr","hydro","therm","thermo","phon","logy","phobia","chron","chrono","photo","scope",
-    "crat","cracy","ortho","tele","biblio","geo","path","auto","bio","meter","metr","psych","aero","poli","cycl","cyclo",
-    "pod","astro","ped","arch","sphere","mono","di","tri","tetra","pent","penta","hex","hept","hepta","octa","ennea","deca"
+    "graph","gram","micro","hydr","hydro","therm","thermo","phon","logy","chron","chrono","photo","scope","meter","aero"
   ].map((w,i)=>({ id:`greek_${i}`, form:w, meaning:(GREEK_BASE_INFO[w]?.meaning||""), pos:(GREEK_BASE_INFO[w]?.pos||["noun","adj","verb"]) }));
 
   const BASES = [
@@ -519,7 +615,8 @@ document.addEventListener("DOMContentLoaded", () => {
     "organise","organisation","reorganise","predict","prediction","predictable","unpredictable","respect","respectful","disrespect","disrespectful",
     "prepare","preparation","prepared","connect","connection","disconnect","reconnect","construct","construction","reconstruct","protect","protection","unprotected",
     "transport","transportation","reflect","reflection","remove","removal","replace","replacement","support","supportive","manage","management",
-    "illegal","illogical","illiterate","irregular","irrational","irresponsible","atypical","superhero","supermarket","superpower","superfast"
+    "illegal","illogical","illiterate","irregular","irrational","irresponsible","atypical","superhero","supermarket","superpower","superfast",
+    "payment","happiness","childhood","run","running","planned","planning"
   ];
 
   function mkUid(type, id){ return `${type}:${id}`; }
@@ -559,7 +656,14 @@ document.addEventListener("DOMContentLoaded", () => {
     dictWord: document.getElementById("dictWord"),
     dictDef: document.getElementById("dictDef"),
     dictMeta: document.getElementById("dictMeta"),
-    dictDefs: document.getElementById("dictDefs")
+    dictDefs: document.getElementById("dictDefs"),
+
+    // NEW: spelling UI
+    spellBox: document.getElementById("spellBox"),
+    spellSteps: document.getElementById("spellSteps"),
+    spellRuleText: document.getElementById("spellRuleText"),
+    spellRef: document.getElementById("spellRef"),
+    spellExplainBtn: document.getElementById("spellExplainBtn")
   };
 
   let current = { prefix:null, base:null, suffix:null };
@@ -729,37 +833,150 @@ document.addEventListener("DOMContentLoaded", () => {
     if (lastLookupWord === w) setDictPanelResult(res);
   }
 
-  /* -------------------- SPELLING RULES -------------------- */
-  function vowels(){ return new Set(["a","e","i","o","u"]); }
+  /* -------------------- SPELLING RULES (DETAILED + VISUAL) -------------------- */
 
-  function applySpellingRules(baseForm, suffixForm) {
-  if (!suffixForm) return baseForm;
-  const v = vowels();
-  const last = baseForm.slice(-1).toLowerCase();
-  const prev = baseForm.slice(-2, -1).toLowerCase(); // letter before the last
-  const first = suffixForm.slice(0,1).toLowerCase();
-  let out = baseForm;
-
-  // drop final e before vowel suffixes (create → creation)
-  if (last === "e" && v.has(first)) out = baseForm.slice(0, -1);
-
-  // y → i only if:
-  // - suffix starts with a consonant
-  // - AND the letter before y is a consonant (happy → happiness, but pay → payment)
-  if (last === "y" && !v.has(first) && prev && !v.has(prev)) {
-    out = baseForm.slice(0, -1) + "i";
+  function isVowel(ch){
+    return ["a","e","i","o","u"].includes(String(ch||"").toLowerCase());
   }
 
-  return out;
-}
+  function isConsonant(ch){
+    const c = String(ch||"").toLowerCase();
+    return c >= "a" && c <= "z" && !isVowel(c);
+  }
+
+  function isCVC(word){
+    const w = String(word||"").toLowerCase();
+    if (w.length < 3) return false;
+    const a = w[w.length-3], b = w[w.length-2], c = w[w.length-1];
+    // simple Stage 3 CVC check; avoids doubling when ending in w/x/y
+    if (!isConsonant(a) || !isVowel(b) || !isConsonant(c)) return false;
+    if (["w","x","y"].includes(c)) return false;
+    return true;
+  }
+
+  function applySpellingRulesDetailed(baseForm, suffixForm){
+    const base = String(baseForm||"");
+    const suff = String(suffixForm||"");
+    if (!suff) {
+      return {
+        baseBefore: base,
+        baseAfter: base,
+        suffix: "",
+        ruleId: null,
+        ruleText: null,
+        stepsHtml: ""
+      };
+    }
+
+    const last = base.slice(-1).toLowerCase();
+    const prev = base.slice(-2, -1).toLowerCase();
+    const first = suff[0]?.toLowerCase() || "";
+
+    // default
+    let baseAfter = base;
+    let ruleId = "no_change";
+    let ruleText = "Rule: No spelling change needed.";
+
+    // 1) Drop final e before vowel suffix
+    if (last === "e" && isVowel(first)){
+      baseAfter = base.slice(0, -1);
+      ruleId = "drop_e";
+      ruleText = "Rule: Drop the final 'e' before adding a suffix that begins with a vowel (create + ing → creating).";
+      const dropped = "<span class='hlDrop'>e</span>";
+      const before = `${base.slice(0,-1)}${dropped}`;
+      const mid = `${baseAfter}<span class='hlAdd'> + </span>${suff}`;
+      const final = `${baseAfter}${suff}`;
+      return {
+        baseBefore: base,
+        baseAfter,
+        suffix: suff,
+        ruleId,
+        ruleText,
+        stepsHtml: `${before} <span class='hlAdd'> + </span>${suff} <span class='hlAdd'>→</span> ${mid} <span class='hlAdd'>→</span> ${final}`
+      };
+    }
+
+    // 2) y → i before consonant suffix (but not if vowel before y: pay + ment)
+    if (last === "y" && isConsonant(first) && prev && isConsonant(prev)){
+      baseAfter = base.slice(0,-1) + "i";
+      ruleId = "y_to_i";
+      ruleText = "Rule: Change 'y' to 'i' before adding a suffix that begins with a consonant (happy + ness → happiness). Do not do this if there is a vowel before the y (pay + ment → payment).";
+      const before = `${base.slice(0,-1)}<span class='hlChange'>y</span>`;
+      const mid = `${baseAfter}<span class='hlAdd'> + </span>${suff}`;
+      const final = `${baseAfter}${suff}`;
+      return {
+        baseBefore: base,
+        baseAfter,
+        suffix: suff,
+        ruleId,
+        ruleText,
+        stepsHtml: `${before} <span class='hlAdd'> + </span>${suff} <span class='hlAdd'>→</span> ${mid} <span class='hlAdd'>→</span> ${final}`
+      };
+    }
+
+    // 3) Double final consonant for CVC + vowel suffix
+    if (isCVC(base) && isVowel(first)){
+      const c = base.slice(-1);
+      baseAfter = base + c;
+      ruleId = "double_consonant";
+      ruleText = "Rule: Double the final consonant when a short vowel is followed by a single consonant and the suffix begins with a vowel (run + ing → running).";
+      const before = `${base.slice(0,-1)}<span class='hlChange'>${base.slice(-1)}</span>`;
+      const mid = `${base}<span class='hlAdd'>${c}</span><span class='hlAdd'> + </span>${suff}`;
+      const final = `${baseAfter}${suff}`;
+      return {
+        baseBefore: base,
+        baseAfter,
+        suffix: suff,
+        ruleId,
+        ruleText,
+        stepsHtml: `${before} <span class='hlAdd'> + </span>${suff} <span class='hlAdd'>→</span> ${mid} <span class='hlAdd'>→</span> ${final}`
+      };
+    }
+
+    // 4) Keep final e before consonant suffix (informational)
+    if (last === "e" && isConsonant(first)){
+      ruleId = "keep_e";
+      ruleText = "Rule: Keep the final 'e' when the suffix begins with a consonant (care + ful → careful).";
+      const before = `${base.slice(0,-1)}<span class='hlAdd'>e</span>`;
+      const final = `${base}${suff}`;
+      return {
+        baseBefore: base,
+        baseAfter: base,
+        suffix: suff,
+        ruleId,
+        ruleText,
+        stepsHtml: `${before} <span class='hlAdd'> + </span>${suff} <span class='hlAdd'>→</span> ${final}`
+      };
+    }
+
+    // default no-change visual
+    return {
+      baseBefore: base,
+      baseAfter: baseAfter,
+      suffix: suff,
+      ruleId,
+      ruleText,
+      stepsHtml: `${base} <span class='hlAdd'> + </span>${suff} <span class='hlAdd'>→</span> ${baseAfter}${suff}`
+    };
+  }
+
+  /* -------------------- WORD BUILDING -------------------- */
 
   function computeWord(prefixObj, baseObj, suffixObj) {
     if (!baseObj) return "";
     const p = prefixObj ? prefixObj.form : "";
     const b = baseObj.form;
     const s = suffixObj ? suffixObj.form : "";
-    const bAdj = suffixObj ? applySpellingRules(b, s) : b;
+    const detail = suffixObj ? applySpellingRulesDetailed(b, s) : null;
+    const bAdj = detail ? detail.baseAfter : b;
     return (p + bAdj + s).toLowerCase();
+  }
+
+  function computeSpellingDetail(prefixObj, baseObj, suffixObj){
+    if (!baseObj || !suffixObj) return null;
+    const b = baseObj.form;
+    const s = suffixObj.form;
+    return applySpellingRulesDetailed(b, s);
   }
 
   function computeMeaning(prefixObj, baseObj, suffixObj) {
@@ -806,37 +1023,34 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function computeViableSets(){
-  const viablePrefixes = new Set();
-  const viableBases = new Set();
-  const viableSuffixes = new Set();
+    const viablePrefixes = new Set();
+    const viableBases = new Set();
+    const viableSuffixes = new Set();
 
-  const hasAffixLock = !!current.prefix || !!current.suffix;
+    const hasAffixLock = !!current.prefix || !!current.suffix;
 
-  // KEY CHANGE:
-  // If nothing is selected (no prefix/suffix lock), let students pick ANY base to start.
-  if (!hasAffixLock){
-    for (const b of ALL_BASES) viableBases.add(b.uid);
-  } else {
-    for (const b of ALL_BASES){
-      const ok = existsRealWordWithLocks(current.prefix, b, current.suffix);
-      if (ok) viableBases.add(b.uid);
+    // If nothing is selected (no prefix/suffix lock), let students pick ANY base to start.
+    if (!hasAffixLock){
+      for (const b of ALL_BASES) viableBases.add(b.uid);
+    } else {
+      for (const b of ALL_BASES){
+        const ok = existsRealWordWithLocks(current.prefix, b, current.suffix);
+        if (ok) viableBases.add(b.uid);
+      }
     }
-  }
 
-  // Prefixes only enabled if they can make at least one real word with the current base/suffix lock
-  for (const p of ALL_PREFIXES){
-    const ok = existsRealWordWithLocks(p, current.base, current.suffix);
-    if (ok) viablePrefixes.add(p.uid);
-  }
+    for (const p of ALL_PREFIXES){
+      const ok = existsRealWordWithLocks(p, current.base, current.suffix);
+      if (ok) viablePrefixes.add(p.uid);
+    }
 
-  // Suffixes only enabled if they can make at least one real word with the current prefix/base lock
-  for (const s of ALL_SUFFIXES){
-    const ok = existsRealWordWithLocks(current.prefix, current.base, s);
-    if (ok) viableSuffixes.add(s.uid);
-  }
+    for (const s of ALL_SUFFIXES){
+      const ok = existsRealWordWithLocks(current.prefix, current.base, s);
+      if (ok) viableSuffixes.add(s.uid);
+    }
 
-  return { viablePrefixes, viableBases, viableSuffixes };
-}
+    return { viablePrefixes, viableBases, viableSuffixes };
+  }
 
   function matchesSearch(item){
     const q = (els.globalSearch.value || "").trim().toLowerCase();
@@ -966,6 +1180,28 @@ document.addEventListener("DOMContentLoaded", () => {
     if (current.suffix) els.suffixZone.appendChild(makeTile(current.suffix, "suffix", true, false));
   }
 
+  function setSpellingUIVisible(on){
+    els.spellBox.style.display = on ? "block" : "none";
+    if (!on){
+      els.spellSteps.innerHTML = "";
+      els.spellRuleText.textContent = "";
+      els.spellRuleText.classList.remove("open");
+      els.spellRef.classList.remove("open");
+      els.spellExplainBtn.textContent = "Explain";
+    }
+  }
+
+  function updateSpellingUI(){
+    const detail = computeSpellingDetail(current.prefix, current.base, current.suffix);
+    if (!detail){
+      setSpellingUIVisible(false);
+      return;
+    }
+    setSpellingUIVisible(true);
+    els.spellSteps.innerHTML = detail.stepsHtml || "";
+    els.spellRuleText.textContent = detail.ruleText || "Rule: No spelling change needed.";
+  }
+
   function updateOutput(){
     const hasAny = current.prefix || current.base || current.suffix;
 
@@ -974,6 +1210,7 @@ document.addEventListener("DOMContentLoaded", () => {
       els.meaningOut.textContent = "Or start with a prefix or suffix, then pick parts that make a real word.";
       els.statusOut.textContent = "Only combinations that create real words are enabled.";
       els.statusOut.className = "status warn";
+      setSpellingUIVisible(false);
       return;
     }
 
@@ -985,6 +1222,7 @@ document.addEventListener("DOMContentLoaded", () => {
       els.meaningOut.textContent = computeMeaning(current.prefix, null, current.suffix) || "Now choose a base word that makes a real word.";
       els.statusOut.textContent = "Choose a base word next (enabled bases will make a real word).";
       els.statusOut.className = "status warn";
+      setSpellingUIVisible(false);
       return;
     }
 
@@ -993,12 +1231,15 @@ document.addEventListener("DOMContentLoaded", () => {
       els.meaningOut.textContent = computeMeaning(null, current.base, current.suffix);
       els.statusOut.textContent = "That prefix is already in the base word, so it has been blocked.";
       els.statusOut.className = "status bad";
+      setSpellingUIVisible(false);
       return;
     }
 
     const w = computeWord(current.prefix, current.base, current.suffix);
     els.wordOut.textContent = w;
     els.meaningOut.textContent = computeMeaning(current.prefix, current.base, current.suffix) || " ";
+
+    updateSpellingUI();
 
     if (!current.prefix && !current.suffix){
       els.statusOut.textContent = "Add a prefix or suffix. Only real-word options are available.";
@@ -1105,6 +1346,20 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.key === "Enter"){
       e.preventDefault();
       runDictionaryLookup(currentDictQuery());
+    }
+  });
+
+  /* -------------------- NEW: Explanation toggle -------------------- */
+  els.spellExplainBtn.addEventListener("click", () => {
+    const isOpen = els.spellRuleText.classList.contains("open");
+    if (isOpen){
+      els.spellRuleText.classList.remove("open");
+      els.spellRef.classList.remove("open");
+      els.spellExplainBtn.textContent = "Explain";
+    } else {
+      els.spellRuleText.classList.add("open");
+      els.spellRef.classList.add("open");
+      els.spellExplainBtn.textContent = "Hide";
     }
   });
 
