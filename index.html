@@ -85,7 +85,7 @@
     .filters{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
     .filters > *{ flex:1 1 auto; }
 
-    /* Dictionary lookup box (independent search) */
+    /* Dictionary lookup box (definition only) */
     .dictPanel{
       margin-top:12px;
       background:rgba(255,255,255,.02);
@@ -99,6 +99,16 @@
     .dictWord{ margin-top:8px; font-size:14px; font-weight:950; }
     .dictDef{ margin-top:6px; font-size:13px; color:var(--muted); line-height:1.35; }
     .dictMeta{ margin-top:6px; font-size:11px; color:#98a2c7; }
+    .defs{ margin-top:8px; display:grid; gap:8px; }
+    .defCard{
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.02);
+      border-radius:12px;
+      padding:10px;
+    }
+    .defPos{ font-size:11px; color:#98a2c7; margin-bottom:6px; font-weight:800; text-transform:uppercase; letter-spacing:.2px; }
+    .defItem{ font-size:13px; color:var(--muted); line-height:1.35; margin:0; }
+    .defExample{ font-size:12px; color:#97a1c6; margin-top:6px; }
   </style>
 </head>
 <body>
@@ -187,19 +197,19 @@
           <div class="status warn" id="statusOut"></div>
         </div>
 
-        <!-- Independent dictionary lookup (works even if the word is not in your builder) -->
+        <!-- Dictionary lookup (definition only, no morpheme parsing) -->
         <div class="dictPanel" id="dictPanel">
-          <div class="dictTitle">Dictionary search (type any word)</div>
+          <div class="dictTitle">Dictionary search (definition only)</div>
           <div class="dictRow">
-            <input id="dictInput" type="text" placeholder="Type a word e.g. magnificent" />
+            <input id="dictInput" type="text" placeholder="Type a word e.g. rush" />
             <button id="dictSearchBtn" type="button">Search</button>
             <button id="dictOpenBtn" type="button">Open</button>
           </div>
           <div class="dictWord" id="dictWord">No word searched yet</div>
           <div class="dictDef" id="dictDef">Type a word above and press Search to see meanings.</div>
-          <div class="dictMeta" id="dictMorph"></div>
           <div class="dictMeta" id="dictMeta"></div>
-          <div class="tiny">Needs internet access for instant meanings. If blocked, use Open to view the definition page.</div>
+          <div class="defs" id="dictDefs"></div>
+          <div class="tiny">Needs internet access for instant meanings. If blocked, use Open.</div>
         </div>
 
         <div class="note">
@@ -502,7 +512,6 @@ document.addEventListener("DOMContentLoaded", () => {
     ...GREEK_BASES.map(b => ({ ...b, group:"greek" }))
   ];
 
-  /* Fallback (only used if dictionary.txt fails to load). */
   const FALLBACK_ALLOWED_WORDS = [
     "act","action","active","react","reactive","reactions","create","creation","creative","recreate","recreation",
     "use","usable","useful","useless","reuse","reused","reusing","appear","appearance","disappear","disappearance",
@@ -549,11 +558,10 @@ document.addEventListener("DOMContentLoaded", () => {
     dictOpenBtn: document.getElementById("dictOpenBtn"),
     dictWord: document.getElementById("dictWord"),
     dictDef: document.getElementById("dictDef"),
-    dictMorph: document.getElementById("dictMorph"),
-    dictMeta: document.getElementById("dictMeta")
+    dictMeta: document.getElementById("dictMeta"),
+    dictDefs: document.getElementById("dictDefs")
   };
 
-  /* -------------------- STATE -------------------- */
   let current = { prefix:null, base:null, suffix:null };
 
   /* -------------------- WORD CHECKER -------------------- */
@@ -585,31 +593,10 @@ document.addEventListener("DOMContentLoaded", () => {
     return DICT_SET && DICT_SET.has(String(word).toLowerCase());
   }
 
-  /* -------------------- DICTIONARY MEANING SEARCH (MULTI + MORPHEMES) -------------------- */
+  /* -------------------- DICTIONARY DEFINITIONS (NO MORPHEMES) -------------------- */
 
   const DICT_CACHE = new Map();
   let lastLookupWord = "";
-
-  const POS_PRIORITY = {
-    verb: 0, noun: 1, adjective: 2, adverb: 3, pronoun: 4, preposition: 5, conjunction: 6, interjection: 7
-  };
-
-  function escapeHtml(str){
-    return String(str || "")
-      .replace(/&/g,"&amp;")
-      .replace(/</g,"&lt;")
-      .replace(/>/g,"&gt;")
-      .replace(/"/g,"&quot;")
-      .replace(/'/g,"&#039;");
-  }
-
-  function sortMeanings(meanings){
-    return [...meanings].sort((a,b)=>{
-      const pa = POS_PRIORITY[String(a.partOfSpeech||"").toLowerCase()] ?? 50;
-      const pb = POS_PRIORITY[String(b.partOfSpeech||"").toLowerCase()] ?? 50;
-      return pa - pb;
-    });
-  }
 
   function normaliseDictInput(raw){
     return String(raw || "")
@@ -619,9 +606,9 @@ document.addEventListener("DOMContentLoaded", () => {
       .trim();
   }
 
-  async function lookupMeaningsOnline(word){
-    const w = normaliseDictInput(word);
-    if (!w) return { ok:false, word:"", meanings:[] };
+  async function lookupDefinitionsOnline(word){
+    const w = String(word || "").trim().toLowerCase();
+    if (!w) return { ok:false, word:"", items:[] };
 
     if (DICT_CACHE.has(w)) return DICT_CACHE.get(w);
 
@@ -632,21 +619,28 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await res.json();
 
       const entry = Array.isArray(data) ? data[0] : null;
-      const meaningsRaw = entry?.meanings || [];
+      const meanings = entry?.meanings || [];
 
-      const meanings = meaningsRaw.map(m => ({
-        partOfSpeech: (m.partOfSpeech || "").toLowerCase(),
-        defs: (m.definitions || []).map(d => ({
-          definition: d.definition || "",
-          example: d.example || ""
-        })).filter(x => x.definition)
-      })).filter(m => m.partOfSpeech && m.defs.length);
+      const items = [];
+      for (const m of meanings){
+        const pos = m?.partOfSpeech || "";
+        const defs = Array.isArray(m?.definitions) ? m.definitions : [];
+        for (const d of defs){
+          const definition = d?.definition || "";
+          if (!definition) continue;
+          items.push({
+            partOfSpeech: pos,
+            definition,
+            example: d?.example || ""
+          });
+        }
+      }
 
-      const out = { ok: meanings.length > 0, word: w, meanings: sortMeanings(meanings) };
+      const out = { ok: items.length > 0, word: w, items };
       DICT_CACHE.set(w, out);
       return out;
     } catch {
-      const out = { ok:false, word:w, meanings:[] };
+      const out = { ok:false, word:w, items:[] };
       DICT_CACHE.set(w, out);
       return out;
     }
@@ -660,138 +654,79 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function setDictPanelLoading(word){
     els.dictWord.textContent = word ? word : "No word searched yet";
-    els.dictDef.innerHTML = word ? "<div>Looking up meanings...</div>" : "<div>Type a word above and press Search to see meanings.</div>";
-    els.dictMorph.textContent = "";
+    els.dictDef.textContent = word ? "Looking up meanings..." : "Type a word above and press Search to see meanings.";
     els.dictMeta.textContent = "";
+    els.dictDefs.innerHTML = "";
   }
 
-  function renderMeanings(result){
-    if (!result?.ok){
-      els.dictDef.innerHTML = "<div>No online definition found. Check spelling, or try another form. You can also open the dictionary.</div>";
+  function setDictPanelResult(result){
+    if (!result || !result.word){
+      els.dictWord.textContent = "No word searched yet";
+      els.dictDef.textContent = "Type a word above and press Search to see meanings.";
+      els.dictMeta.textContent = "";
+      els.dictDefs.innerHTML = "";
       return;
     }
 
-    const blocks = [];
-    for (const m of result.meanings){
-      const posLabel = escapeHtml(m.partOfSpeech);
-      const defs = m.defs.slice(0, 4);
-      const items = defs.map((d) => {
-        const def = escapeHtml(d.definition);
-        const ex = d.example ? `<div style="margin-top:4px; font-size:12px; color:#98a2c7;">Example: ${escapeHtml(d.example)}</div>` : "";
-        return `<li style="margin:6px 0;"><div>${def}</div>${ex}</li>`;
-      }).join("");
+    els.dictWord.textContent = result.word;
 
-      blocks.push(`
-        <div style="margin-top:10px;">
-          <div style="font-weight:900; color:#eef2ff; font-size:12px; text-transform:capitalize;">${posLabel}</div>
-          <ol style="margin:6px 0 0 18px; padding:0; color: var(--muted); line-height:1.35;">
-            ${items}
-          </ol>
-        </div>
-      `);
+    if (!result.ok){
+      els.dictDef.textContent = "No online definition found (or internet blocked). Check spelling or use Open.";
+      els.dictMeta.textContent = "";
+      els.dictDefs.innerHTML = "";
+      return;
     }
 
-    els.dictDef.innerHTML = blocks.join("");
-  }
+    els.dictDef.textContent = `Found ${result.items.length} meaning(s).`;
+    els.dictMeta.textContent = "";
 
-  // Quick morpheme analyser using your existing banks
-  const BASE_BY_FORM = new Map(ALL_BASES.map(b => [String(b.form).toLowerCase(), b]));
-  const PREFIX_LIST = [...ALL_PREFIXES].sort((a,b)=>String(b.form).length - String(a.form).length);
-  const SUFFIX_LIST = [...ALL_SUFFIXES].sort((a,b)=>String(b.form).length - String(a.form).length);
+    els.dictDefs.innerHTML = "";
+    const maxItems = 8;
+    result.items.slice(0, maxItems).forEach((it, idx) => {
+      const card = document.createElement("div");
+      card.className = "defCard";
 
-  function analyseMorphemes(word){
-    const w = normaliseDictInput(word);
-    if (!w) return null;
+      const pos = document.createElement("div");
+      pos.className = "defPos";
+      pos.textContent = it.partOfSpeech ? `${it.partOfSpeech}` : "meaning";
 
-    let best = null;
+      const p = document.createElement("p");
+      p.className = "defItem";
+      p.textContent = `${idx + 1}. ${it.definition}`;
 
-    const prefixes = [null, ...PREFIX_LIST];
-    const suffixes = [null, ...SUFFIX_LIST];
+      card.appendChild(pos);
+      card.appendChild(p);
 
-    for (const p of prefixes){
-      const pForm = p ? String(p.form).toLowerCase() : "";
-      if (pForm && !w.startsWith(pForm)) continue;
-
-      const afterP = pForm ? w.slice(pForm.length) : w;
-
-      for (const s of suffixes){
-        const sForm = s ? String(s.form).toLowerCase() : "";
-        if (sForm && !afterP.endsWith(sForm)) continue;
-
-        const baseCandidate = sForm ? afterP.slice(0, -sForm.length) : afterP;
-        if (!baseCandidate) continue;
-
-        const baseObj = BASE_BY_FORM.get(baseCandidate) || null;
-
-        const score =
-          (baseObj ? 100 : 0) +
-          (p ? 10 : 0) +
-          (s ? 10 : 0) +
-          baseCandidate.length;
-
-        if (!best || score > best.score){
-          best = {
-            score,
-            prefix: p,
-            base: baseObj ? baseObj : { form: baseCandidate, meaning:"", pos:[] },
-            suffix: s
-          };
-        }
+      if (it.example){
+        const ex = document.createElement("div");
+        ex.className = "defExample";
+        ex.textContent = `Example: ${it.example}`;
+        card.appendChild(ex);
       }
-    }
 
-    return best;
-  }
+      els.dictDefs.appendChild(card);
+    });
 
-  function renderMorphemes(word){
-    const split = analyseMorphemes(word);
-    if (!split){
-      els.dictMorph.textContent = "";
-      return;
+    if (result.items.length > maxItems){
+      const more = document.createElement("div");
+      more.className = "tiny";
+      more.textContent = `Showing the first ${maxItems}. Use Open to view more.`;
+      els.dictDefs.appendChild(more);
     }
-
-    const parts = [];
-    if (split.prefix){
-      parts.push(`prefix: ${split.prefix.form} (${split.prefix.meaning || "—"})`);
-    }
-    if (split.base){
-      const baseMeaning = split.base.meaning ? split.base.meaning : "base not in bank (typed word)";
-      parts.push(`base: ${split.base.form} (${baseMeaning})`);
-    }
-    if (split.suffix){
-      parts.push(`suffix: ${split.suffix.form} (${split.suffix.meaning || "—"})`);
-    }
-
-    els.dictMorph.textContent = "Morpheme breakdown: " + parts.join(" | ");
   }
 
   async function runDictionaryLookup(word){
-    const w = normaliseDictInput(word);
+    const w = String(word || "").trim().toLowerCase();
     lastLookupWord = w;
 
     if (!w){
-      els.dictWord.textContent = "No word searched yet";
-      els.dictDef.textContent = "Type a word above and press Search to see meanings.";
-      els.dictMorph.textContent = "";
-      els.dictMeta.textContent = "";
+      setDictPanelResult(null);
       return;
     }
 
     setDictPanelLoading(w);
-    const res = await lookupMeaningsOnline(w);
-    if (lastLookupWord !== w) return;
-
-    els.dictWord.textContent = w;
-
-    if (res.ok){
-      renderMeanings(res);
-      renderMorphemes(w);
-      els.dictMeta.textContent = "Scroll for more meanings. If something looks wrong, click Open.";
-    } else {
-      els.dictDef.textContent = "No online definition found. Try another form or check spelling. You can also open the dictionary.";
-      renderMorphemes(w);
-      els.dictMeta.textContent = "";
-    }
+    const res = await lookupDefinitionsOnline(w);
+    if (lastLookupWord === w) setDictPanelResult(res);
   }
 
   /* -------------------- SPELLING RULES -------------------- */
@@ -901,7 +836,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return (base.group || "core") === t;
   }
 
-  /* -------------------- UI BUILDERS -------------------- */
   function makeTile(item, type, enabled, selected) {
     const div = document.createElement("div");
     div.className = "tile";
@@ -1149,8 +1083,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   els.dictOpenBtn.addEventListener("click", () => {
     const q = currentDictQuery();
-    if (!q) { openDictionaryPage(els.dictWord.textContent || ""); return; }
-    openDictionaryPage(q);
+    openDictionaryPage(q || els.dictWord.textContent || "");
   });
 
   els.dictInput.addEventListener("keydown", (e) => {
