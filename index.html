@@ -733,16 +733,25 @@ document.addEventListener("DOMContentLoaded", () => {
   function vowels(){ return new Set(["a","e","i","o","u"]); }
 
   function applySpellingRules(baseForm, suffixForm) {
-    if (!suffixForm) return baseForm;
-    const v = vowels();
-    const last = baseForm.slice(-1).toLowerCase();
-    const first = suffixForm.slice(0,1).toLowerCase();
-    let out = baseForm;
+  if (!suffixForm) return baseForm;
+  const v = vowels();
+  const last = baseForm.slice(-1).toLowerCase();
+  const prev = baseForm.slice(-2, -1).toLowerCase(); // letter before the last
+  const first = suffixForm.slice(0,1).toLowerCase();
+  let out = baseForm;
 
-    if (last === "e" && v.has(first)) out = baseForm.slice(0, -1);
-    if (last === "y" && !v.has(first)) out = baseForm.slice(0, -1) + "i";
-    return out;
+  // drop final e before vowel suffixes (create → creation)
+  if (last === "e" && v.has(first)) out = baseForm.slice(0, -1);
+
+  // y → i only if:
+  // - suffix starts with a consonant
+  // - AND the letter before y is a consonant (happy → happiness, but pay → payment)
+  if (last === "y" && !v.has(first) && prev && !v.has(prev)) {
+    out = baseForm.slice(0, -1) + "i";
   }
+
+  return out;
+}
 
   function computeWord(prefixObj, baseObj, suffixObj) {
     if (!baseObj) return "";
