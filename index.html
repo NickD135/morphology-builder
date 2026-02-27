@@ -308,30 +308,249 @@
     }
     .iconMerge .mIcon svg{
       width:16px;
-      height:16px;
-    }
-    .iconMerge.merging{
-      animation: mergePulse .35s ease-out;
-    }
-    @keyframes mergePulse{
-      0%{ transform:scale(.92); }
-      100%{ transform:scale(1); }
-    }
+<!-- REPLACE your entire “/* -------------------- ICONS -------------------- */” section with this one -->
 
-    .tile .topLine{
-      display:flex;
-      align-items:center;
-      gap:8px;
-    }
-    .tile .mIcon{
-      width:16px;
-      height:16px;
-      opacity:.9;
-    }
-    .tile .mIcon svg{
-      width:16px;
-      height:16px;
-    }
+/* -------------------- ICONS (unique per morpheme) -------------------- */
+
+function hash32(str){
+  // deterministic 32 bit hash
+  let h = 2166136261;
+  const s = String(str || "");
+  for (let i = 0; i < s.length; i++){
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function iconVariantKey(item, type){
+  // allow some shared icons (you said non + in can share)
+  if (type === "prefix" && (item.id === "in" || item.id === "non")) return "prefix:NEGATION";
+  return `${type}:${item.id || item.form || ""}`;
+}
+
+function svgIcon(name, variantKey){
+  const I = {
+    "dot": `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/></svg>`,
+    "arrow-right": `<svg viewBox="0 0 24 24"><path d="M4 12h14"/><path d="M12 6l6 6-6 6"/></svg>`,
+    "arrow-left": `<svg viewBox="0 0 24 24"><path d="M20 12H6"/><path d="M12 6l-6 6 6 6"/></svg>`,
+    "arrow-down": `<svg viewBox="0 0 24 24"><path d="M12 4v14"/><path d="M6 12l6 6 6-6"/></svg>`,
+    "arrow-up": `<svg viewBox="0 0 24 24"><path d="M12 20V6"/><path d="M18 12l-6-6-6 6"/></svg>`,
+    "between": `<svg viewBox="0 0 24 24"><path d="M7 7h10"/><path d="M7 17h10"/><path d="M12 7v10"/></svg>`,
+    "plus": `<svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>`,
+    "minus": `<svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>`,
+    "ban": `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M7.5 16.5l9-9"/></svg>`,
+    "undo": `<svg viewBox="0 0 24 24"><path d="M9 14l-4-4 4-4"/><path d="M5 10h8a6 6 0 1 1 0 12"/></svg>`,
+    "repeat": `<svg viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>`,
+    "together": `<svg viewBox="0 0 24 24"><path d="M7 7l10 10"/><path d="M17 7L7 17"/></svg>`,
+    "chain": `<svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 1 0-7l1-1a5 5 0 0 1 7 7l-1 1"/><path d="M14 11a5 5 0 0 1 0 7l-1 1a5 5 0 0 1-7-7l1-1"/></svg>`,
+    "split": `<svg viewBox="0 0 24 24"><path d="M12 4v6"/><path d="M12 10l-5 5"/><path d="M12 10l5 5"/><circle cx="12" cy="4" r="2"/><circle cx="7" cy="15" r="2"/><circle cx="17" cy="15" r="2"/></svg>`,
+    "out": `<svg viewBox="0 0 24 24"><path d="M10 14l-4-4 4-4"/><path d="M6 10h8a5 5 0 1 1 0 10"/></svg>`,
+    "beyond": `<svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M6 9l6-6 6 6"/><path d="M6 15l6 6 6-6"/></svg>`,
+    "before": `<svg viewBox="0 0 24 24"><path d="M8 12h12"/><path d="M12 6l-6 6 6 6"/></svg>`,
+    "after": `<svg viewBox="0 0 24 24"><path d="M4 12h12"/><path d="M12 6l6 6-6 6"/></svg>`,
+    "up": `<svg viewBox="0 0 24 24"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg>`,
+    "down": `<svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg>`,
+    "across": `<svg viewBox="0 0 24 24"><path d="M4 12h16"/><path d="M16 8l4 4-4 4"/></svg>`,
+    "small": `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M8 8l-3-3"/><path d="M16 8l3-3"/><path d="M8 16l-3 3"/><path d="M16 16l3 3"/></svg>`,
+    "big": `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>`,
+    "middle": `<svg viewBox="0 0 24 24"><path d="M4 12h16"/><path d="M12 6v12"/></svg>`,
+    "not": `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M7 17l10-10"/></svg>`,
+    "favour": `<svg viewBox="0 0 24 24"><path d="M14 10V4"/><path d="M14 10h4"/><path d="M7 20h9a3 3 0 0 0 3-3v-6a2 2 0 0 0-2-2h-6"/><path d="M7 20l-2-8h6l-2 8z"/></svg>`,
+    "electronic": `<svg viewBox="0 0 24 24"><path d="M7 2h10v6H7z"/><path d="M9 22v-6"/><path d="M15 22v-6"/><path d="M12 16v6"/><path d="M5 12h14"/><path d="M7 8v8"/><path d="M17 8v8"/></svg>`,
+
+    "magnet": `<svg viewBox="0 0 24 24"><path d="M7 3v9a5 5 0 0 0 10 0V3"/><path d="M7 6h4"/><path d="M13 6h4"/></svg>`,
+    "paper-plane": `<svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>`,
+    "box": `<svg viewBox="0 0 24 24"><path d="M21 8l-9 5-9-5"/><path d="M3 8V19a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8"/><path d="M7 5h10l4 3H3l4-3z"/></svg>`,
+    "ear": `<svg viewBox="0 0 24 24"><path d="M8 13a4 4 0 1 0 8 0"/><path d="M10 16c0 3 2 5 4 5"/><path d="M9 12c0-5 7-6 7-1 0 2-2 3-2 4"/></svg>`,
+    "eye": `<svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="2"/></svg>`,
+    "bricks": `<svg viewBox="0 0 24 24"><path d="M3 7h8v4H3z"/><path d="M13 7h8v4h-8z"/><path d="M3 13h8v4H3z"/><path d="M13 13h8v4h-8z"/></svg>`,
+    "bend": `<svg viewBox="0 0 24 24"><path d="M4 16c6-10 10 10 16 0"/></svg>`,
+    "throw": `<svg viewBox="0 0 24 24"><path d="M4 12h8"/><path d="M12 12l8-6v12l-8-6z"/></svg>`,
+    "believe": `<svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 5.5-7 10-7 10z"/></svg>`,
+    "speak": `<svg viewBox="0 0 24 24"><path d="M4 11a7 7 0 0 1 7-7h6a3 3 0 0 1 3 3v4a3 3 0 0 1-3 3h-4l-4 3v-3h-1a4 4 0 0 1-4-4z"/></svg>`,
+    "know": `<svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 4 13v2H8v-2a7 7 0 0 1 4-13z"/><path d="M9 22h6"/></svg>`,
+    "hang": `<svg viewBox="0 0 24 24"><path d="M12 2v6"/><path d="M8 8h8"/><path d="M7 8v6a5 5 0 0 0 10 0V8"/></svg>`,
+    "weigh": `<svg viewBox="0 0 24 24"><path d="M12 3v3"/><path d="M6 6h12"/><path d="M7 6l-3 6h6l-3-6z"/><path d="M17 6l-3 6h6l-3-6z"/><path d="M12 9v12"/></svg>`,
+    "turn": `<svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v6h-6"/></svg>`,
+    "lead": `<svg viewBox="0 0 24 24"><path d="M4 12h12"/><path d="M12 6l6 6-6 6"/></svg>`,
+    "cut": `<svg viewBox="0 0 24 24"><path d="M4 4l16 16"/><path d="M9 9a3 3 0 1 1-5 0 3 3 0 0 1 5 0z"/><path d="M20 15a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/></svg>`,
+    "close": `<svg viewBox="0 0 24 24"><path d="M6 7h12"/><path d="M6 17h12"/><path d="M8 7v10"/><path d="M16 7v10"/></svg>`,
+    "life": `<svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 5.5-7 10-7 10z"/></svg>`,
+    "write": `<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4L16.5 3.5z"/></svg>`,
+    "carry": `<svg viewBox="0 0 24 24"><path d="M7 7h10l2 4H5l2-4z"/><path d="M6 11v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8"/></svg>`,
+    "fix": `<svg viewBox="0 0 24 24"><path d="M14 7l3 3"/><path d="M12 9l3-3 3 3-3 3"/><path d="M4 20l8-8"/><path d="M7 17l3 3"/></svg>`,
+    "take": `<svg viewBox="0 0 24 24"><path d="M12 3v14"/><path d="M7 8l5-5 5 5"/><path d="M5 21h14"/></svg>`,
+    "press": `<svg viewBox="0 0 24 24"><path d="M7 8h10"/><path d="M6 8v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg>`,
+    "step": `<svg viewBox="0 0 24 24"><path d="M6 20h6"/><path d="M10 20V8l4-2v10l4 2v2h-8"/></svg>`,
+    "sign": `<svg viewBox="0 0 24 24"><path d="M4 7h12"/><path d="M4 12h16"/><path d="M4 17h12"/><path d="M18 7l2 2-2 2"/><path d="M18 12l2 2-2 2"/></svg>`,
+    "breathe": `<svg viewBox="0 0 24 24"><path d="M3 12c3-6 6 6 9 0s6 6 9 0"/><path d="M7 12h2"/><path d="M15 12h2"/></svg>`,
+    "block": `<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M8 12h8"/></svg>`,
+
+    "default-prefix": `<svg viewBox="0 0 24 24"><path d="M4 12h10"/><path d="M10 6l6 6-6 6"/></svg>`,
+    "default-base": `<svg viewBox="0 0 24 24"><path d="M12 3l7 4v10l-7 4-7-4V7l7-4z"/><path d="M12 7v14"/><path d="M5 7l7 4 7-4"/></svg>`,
+    "default-suffix": `<svg viewBox="0 0 24 24"><path d="M7 4h10"/><path d="M7 8h10"/><path d="M7 12h6"/><path d="M7 16h10"/><path d="M7 20h10"/></svg>`
+  };
+
+  const raw = I[name] || I["dot"];
+  const inner = String(raw)
+    .replace(/^<svg[^>]*>/i, "")
+    .replace(/<\/svg>\s*$/i, "");
+
+  // small unique “signature” marks (outline) so each morpheme gets its own SVG
+  const key = variantKey || name || "";
+  const h = hash32(key);
+
+  const positions = [
+    [6,6],[12,6],[18,6],
+    [6,12],[18,12],
+    [6,18],[12,18],[18,18]
+  ];
+
+  const p1 = positions[h & 7];
+  const p2 = positions[(h >>> 3) & 7];
+  const p3 = positions[(h >>> 6) & 7];
+
+  const n = 1 + ((h >>> 9) % 3); // 1..3 marks
+  const r = 1.1;
+  const dot = (x,y)=>`<circle cx="${x}" cy="${y}" r="${r}"/>`;
+
+  // tiny “corner tag” line, also deterministic
+  const corner = ((h >>> 12) & 3);
+  const cornerLine = [
+    `<path d="M4 7V4h3"/>`,
+    `<path d="M20 7V4h-3"/>`,
+    `<path d="M4 17v3h3"/>`,
+    `<path d="M20 17v3h-3"/>`
+  ][corner];
+
+  const marks = `
+    <g data-variant="1">
+      ${cornerLine}
+      ${n >= 1 ? dot(p1[0], p1[1]) : ""}
+      ${n >= 2 ? dot(p2[0], p2[1]) : ""}
+      ${n >= 3 ? dot(p3[0], p3[1]) : ""}
+    </g>
+  `;
+
+  return `<svg viewBox="0 0 24 24" aria-hidden="true">${inner}${marks}</svg>`;
+}
+
+/* keep your existing PREFIX_ICON / SUFFIX_ICON / BASE_ICON maps */
+function getTileIconName(item, type){
+  if (type === "prefix") return PREFIX_ICON[item.id] || "default-prefix";
+  if (type === "suffix") return SUFFIX_ICON[item.id] || "default-suffix";
+  const k = (item.form || "").toLowerCase();
+  if (BASE_ICON[k]) return BASE_ICON[k];
+  return "default-base";
+}
+
+/* update these two places where svgIcon() is called */
+
+function buildIconRowHtml(prefixObj, baseObj, suffixObj){
+  if (!baseObj) return "";
+
+  const pName = prefixObj ? getTileIconName(prefixObj, "prefix") : null;
+  const bName = getTileIconName(baseObj, "base");
+  const sName = suffixObj ? getTileIconName(suffixObj, "suffix") : null;
+
+  const pKey = prefixObj ? iconVariantKey(prefixObj, "prefix") : "";
+  const bKey = baseObj ? iconVariantKey(baseObj, "base") : "";
+  const sKey = suffixObj ? iconVariantKey(suffixObj, "suffix") : "";
+
+  const pHtml = prefixObj ? `<span class="iconChip"><span class="mIcon">${svgIcon(pName, pKey)}</span><span class="iconLabel">${prefixObj.form}</span></span>` : "";
+  const bHtml = `<span class="iconChip"><span class="mIcon">${svgIcon(bName, bKey)}</span><span class="iconLabel">${baseObj.form}</span></span>`;
+  const sHtml = suffixObj ? `<span class="iconChip"><span class="mIcon">${svgIcon(sName, sKey)}</span><span class="iconLabel">${suffixObj.form}</span></span>` : "";
+
+  const plus = `<span class="iconPlus">+</span>`;
+
+  const combinedInner = `
+    <span class="mIcon">${svgIcon(pName || "default-prefix", pKey || "merge:prefix")}</span>
+    <span class="mIcon">${svgIcon(bName || "default-base", bKey || "merge:base")}</span>
+    <span class="mIcon">${svgIcon(sName || "default-suffix", sKey || "merge:suffix")}</span>
+  `.trim();
+
+  const combined = `<span class="iconMerge" id="iconMerge" title="Combined meaning">${combinedInner}</span>`;
+
+  return `
+    <div class="iconRow">
+      ${pHtml ? (pHtml + plus) : ""}
+      ${bHtml}
+      ${sHtml ? (plus + sHtml) : ""}
+      <span class="iconPlus">→</span>
+      ${combined}
+    </div>
+  `;
+}
+
+function makeTile(item, type, enabled, selected) {
+  const div = document.createElement("div");
+  div.className = "tile";
+  if (!enabled) div.classList.add("disabled");
+  if (selected) div.classList.add("selected");
+
+  div.draggable = true;
+  div.dataset.uid = item.uid;
+  div.dataset.type = type;
+
+  if (type === "prefix") div.dataset.group = "prefix";
+  else if (type === "suffix") div.dataset.group = "suffix";
+  else div.dataset.group = item.group || "core";
+
+  const topLine = document.createElement("div");
+  topLine.className = "topLine";
+
+  const iconName = getTileIconName(item, type);
+  const icon = document.createElement("span");
+  icon.className = "mIcon";
+  icon.innerHTML = svgIcon(iconName, iconVariantKey(item, type));
+
+  const form = document.createElement("div");
+  form.className = "form";
+  form.textContent = item.form;
+
+  topLine.appendChild(icon);
+  topLine.appendChild(form);
+  div.appendChild(topLine);
+
+  /* ...the rest of your existing makeTile stays the same... */
+  // (leave everything below unchanged)
+  if (type === "prefix" && Array.isArray(item.altForms) && item.altForms.length){
+    const alts = document.createElement("div");
+    alts.className = "alts";
+    alts.textContent = `(${item.altForms.join(", ")})`;
+    div.appendChild(alts);
+  }
+
+  const meaning = document.createElement("div");
+  meaning.className = "meaning";
+  meaning.textContent = item.meaning || "";
+
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  if (type === "base"){
+    const g = item.group || "core";
+    const label = (g === "core") ? "core base" : (g === "anglo") ? "anglo base" : (g === "latin") ? "latin root" : "greek root";
+    meta.textContent = `${label}`;
+  }
+  if (type === "prefix") meta.textContent = `prefix`;
+  if (type === "suffix") meta.textContent = `suffix${item.hint ? " • " + item.hint : ""}`;
+
+  div.appendChild(meaning);
+  div.appendChild(meta);
+
+  div.addEventListener("dragstart", (e) => {
+    if (div.classList.contains("disabled")) { e.preventDefault(); return; }
+    e.dataTransfer.setData("text/plain", JSON.stringify({ type, uid: item.uid }));
+  });
+
+  div.addEventListener("click", () => {
+    if (div.classList.contains("disabled")) return;
+    addToBuilder(type, item);
+  });
+
+  return div;
+}
   </style>
 </head>
 
