@@ -1,4 +1,3 @@
-```html
 <!doctype html>
 <html lang="en">
 <head>
@@ -379,6 +378,10 @@
 
       const PREFIXES = [
         { id:"anti", form:"anti", meaning:"against", allowedPos:["noun","adj","verb"] },
+
+        /* UPDATED: add underlying Latin prefix ad- (towards) with assimilation handled by rules */
+        { id:"ad", form:"ad", meaning:"towards", allowedPos:["noun","adj","verb"] },
+
         { id:"con", form:"con", meaning:"with or together", allowedPos:["noun","adj","verb"] },
         { id:"contra", form:"contra", meaning:"against; opposite", allowedPos:["noun","adj","verb"] },
         { id:"de", form:"de", meaning:"undo; remove; down", allowedPos:["verb"] },
@@ -662,7 +665,10 @@
         "pay","payment",
         "care","careful",
         "use","usable","useful","useless",
-        "impossible","illegal","irregular","compose","employ"
+        "impossible","illegal","irregular","compose","employ",
+
+        /* OPTIONAL: a few common ad- family words for fallback mode */
+        "attract","affect","assist","apply","appoint","adapt","add","adhere"
       ];
 
       function mkUid(type, id){ return `${type}:${id}`; }
@@ -915,6 +921,30 @@
         const p = prefix.toLowerCase();
         const first = base[0]?.toLowerCase() || "";
 
+        /* NEW: ad- assimilation (ad → ac/af/al/ap/as/at before c/f/l/p/s/t) */
+        if (p === "ad"){
+          const map = { c:"ac", f:"af", l:"al", p:"ap", s:"as", t:"at" };
+          const prefixAfter = map[first] || "ad";
+          if (prefixAfter !== "ad"){
+            return {
+              prefixBefore: prefix,
+              prefixAfter,
+              base,
+              ruleId: `ad_assim_${prefixAfter}`,
+              ruleText: `Prefix rule: ad can change to ${prefixAfter} before ${first} (ad = towards; the meaning stays the same).`,
+              stepsHtml: `<span class='hlChange'>ad</span><span class='hlAdd'> + </span>${base} <span class='hlAdd'>→</span> <span class='hlChange'>${prefixAfter}</span>${base}`
+            };
+          }
+          return {
+            prefixBefore: prefix,
+            prefixAfter: "ad",
+            base,
+            ruleId: "ad_no_change",
+            ruleText: "Prefix rule: no sound change needed for ad.",
+            stepsHtml: `${prefix}<span class='hlAdd'> + </span>${base} <span class='hlAdd'>→</span> ${prefix}${base}`
+          };
+        }
+
         // 1) in- assimilation: in + p/b/m -> im; in + l -> il; in + r -> ir
         if (p === "in"){
           if (["p","b","m"].includes(first)){
@@ -1159,6 +1189,12 @@
           if (!prefixObj) return "";
           const before = (prefixDetail?.prefixBefore || prefixRaw || "");
           const after  = (prefixDetail?.prefixAfter  || prefixRaw || "");
+
+          /* NEW: if ad assimilates, show underlying ad plus the changed form */
+          if (before.toLowerCase() === "ad" && after.toLowerCase() !== "ad"){
+            return `<span class='hlChange'>ad</span><span class='hlAdd'>→</span><span class='hlChange'>${after}</span>`;
+          }
+
           if (before.toLowerCase() !== after.toLowerCase()){
             return `<span class='hlChange'>${after}</span>`;
           }
@@ -1624,4 +1660,3 @@
   </script>
 </body>
 </html>
-```
