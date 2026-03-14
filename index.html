@@ -1626,38 +1626,40 @@
         GLOBAL_VIABLE = { prefixes, bases, suffixes };
       }
 
-      function computeViableSets(){
-        const viablePrefixes = new Set();
-        const viableBases = new Set();
-        const viableSuffixes = new Set();
+     function computeViableSets(){
+  const viablePrefixes = new Set();
+  const viableBases = new Set();
+  const viableSuffix1 = new Set();
+  const viableSuffix2 = new Set();
 
-        const hasAffixLock = !!current.prefix || !!current.suffix1 || !!current.suffix2;
+  const hasAffixLock = !!current.prefix || !!current.suffix1 || !!current.suffix2;
 
-        if (!hasAffixLock){
-          for (const b of ALL_BASES) viableBases.add(b.uid);
-        } else {
-          for (const b of ALL_BASES){
-            const ok = existsRealWordWithLocks(current.prefix, b, current.suffix1, current.suffix2);
-            if (ok) viableBases.add(b.uid);
-          }
-        }
+  if (!hasAffixLock){
+    for (const b of ALL_BASES) viableBases.add(b.uid);
+  } else {
+    for (const b of ALL_BASES){
+      const ok = existsRealWordWithLocks(current.prefix, b, current.suffix1, current.suffix2);
+      if (ok) viableBases.add(b.uid);
+    }
+  }
 
-        for (const p of ALL_PREFIXES){
-          const ok = existsRealWordWithLocks(p, current.base, current.suffix1, current.suffix2);
-          if (ok) viablePrefixes.add(p.uid);
-        }
+  for (const p of ALL_PREFIXES){
+    const ok = existsRealWordWithLocks(p, current.base, current.suffix1, current.suffix2);
+    if (ok) viablePrefixes.add(p.uid);
+  }
 
-        for (const s of ALL_SUFFIXES){
-          const ok =
-            existsRealWordWithLocks(current.prefix, current.base, s, current.suffix2) ||
-            existsRealWordWithLocks(current.prefix, current.base, current.suffix1, s);
+  for (const s of ALL_SUFFIXES){
+    const ok1 = existsRealWordWithLocks(current.prefix, current.base, s, current.suffix2);
+    if (ok1) viableSuffix1.add(s.uid);
 
-          if (ok) viableSuffixes.add(s.uid);
-        }
+    const ok2 = current.suffix1
+      ? existsRealWordWithLocks(current.prefix, current.base, current.suffix1, s)
+      : false;
+    if (ok2) viableSuffix2.add(s.uid);
+  }
 
-        return { viablePrefixes, viableBases, viableSuffixes };
-      }
-
+  return { viablePrefixes, viableBases, viableSuffix1, viableSuffix2 };
+}
       function matchesSearch(item){
         const q = (els.globalSearch.value || "").trim().toLowerCase();
         if (!q) return true;
@@ -1778,18 +1780,40 @@
         els.prefixCount.textContent = String(prefixEnabledCount);
 
         let suffixEnabledCount = 0;
-        const suffixEnabled = [];
-        const suffixDisabled = [];
-        for (const s of ALL_SUFFIXES){
-          if (!matchesSearch(s)) continue;
-          const enabled = GLOBAL_VIABLE.suffixes.has(s.uid) && sets.viableSuffixes.has(s.uid);
-          const selected = (current.suffix1 && current.suffix1.uid === s.uid) || (current.suffix2 && current.suffix2.uid === s.uid);
-          const t = makeTile(s, "suffix", enabled, selected);
-          if (!enabled) suffixDisabled.push(t);
-          else { suffixEnabledCount++; suffixEnabled.push(t); }
-        }
-        els.suffixBank.append(...suffixEnabled, ...suffixDisabled);
-        els.suffixCount.textContent = String(suffixEnabledCount);
+const suffixEnabled = [];
+const suffixDisabled = [];
+
+const fillingSuffix2 = !!current.suffix1 && !current.suffix2;
+const fillingSuffix1 = !current.suffix1;
+
+for (const s of ALL_SUFFIXES){
+  if (!matchesSearch(s)) continue;
+
+  let enabled = false;
+
+  if (fillingSuffix1){
+    enabled = GLOBAL_VIABLE.suffixes.has(s.uid) && sets.viableSuffix1.has(s.uid);
+  } else if (fillingSuffix2){
+    enabled = GLOBAL_VIABLE.suffixes.has(s.uid) && sets.viableSuffix2.has(s.uid);
+  } else {
+    enabled =
+      (GLOBAL_VIABLE.suffixes.has(s.uid) && sets.viableSuffix1.has(s.uid)) ||
+      (GLOBAL_VIABLE.suffixes.has(s.uid) && sets.viableSuffix2.has(s.uid));
+  }
+
+  const selected = (current.suffix1 && current.suffix1.uid === s.uid) || (current.suffix2 && current.suffix2.uid === s.uid);
+  const t = makeTile(s, "suffix", enabled, selected);
+
+  if (!enabled) {
+    suffixDisabled.push(t);
+  } else {
+    suffixEnabledCount++;
+    suffixEnabled.push(t);
+  }
+}
+
+els.suffixBank.append(...suffixEnabled, ...suffixDisabled);
+els.suffixCount.textContent = String(suffixEnabledCount);
       }
 
       function clearZone(zoneEl){ zoneEl.innerHTML = ""; }
@@ -1897,40 +1921,70 @@
       }
 
       function addToBuilder(type, item){
-        const next = { ...current };
+  const next = { ...current };
 
-        if (type === "prefix"){
-          if (next.prefix && next.prefix.uid === item.uid) next.prefix = null;
-          else next.prefix = item;
-        } else if (type === "base"){
-          next.base = item;
-        } else if (type === "suffix1"){
-          if (next.suffix1 && next.suffix1.uid === item.uid) next.suffix1 = null;
-          else next.suffix1 = item;
-        } else if (type === "suffix2"){
-          if (next.suffix2 && next.suffix2.uid === item.uid) next.suffix2 = null;
-          else next.suffix2 = item;
-        } else if (type === "suffix"){
-          if (!next.suffix1) next.suffix1 = item;
-          else if (!next.suffix2) next.suffix2 = item;
-          else if (next.suffix2.uid === item.uid) next.suffix2 = null;
-          else next.suffix2 = item;
-        }
+  if (type === "prefix"){
+    if (next.prefix && next.prefix.uid === item.uid) next.prefix = null;
+    else next.prefix = item;
 
-        if (next.base && next.prefix && redundantPrefix(next.prefix, next.base)) next.prefix = null;
-        if (!next.suffix1 && next.suffix2) next.suffix2 = null;
+  } else if (type === "base"){
+    next.base = item;
 
-        if (next.base){
-          const ok = isRealWord(next.base.form) || existsRealWordWithLocks(next.prefix, next.base, next.suffix1, next.suffix2);
-          if (!ok) return;
-        } else {
-          const ok = existsRealWordWithLocks(next.prefix, null, next.suffix1, next.suffix2);
-          if (!ok) return;
-        }
-
-        current = next;
-        renderAll();
+  } else if (type === "suffix1"){
+    if (next.suffix1 && next.suffix1.uid === item.uid) {
+      next.suffix1 = null;
+      next.suffix2 = null;
+    } else {
+      next.suffix1 = item;
+      if (next.suffix2){
+        const stillValid = existsRealWordWithLocks(next.prefix, next.base, next.suffix1, next.suffix2);
+        if (!stillValid) next.suffix2 = null;
       }
+    }
+
+  } else if (type === "suffix2"){
+    if (!next.suffix1) return;
+
+    if (next.suffix2 && next.suffix2.uid === item.uid) next.suffix2 = null;
+    else next.suffix2 = item;
+
+  } else if (type === "suffix"){
+    if (!next.suffix1) {
+      next.suffix1 = item;
+
+    } else if (!next.suffix2) {
+      if (next.suffix1.uid === item.uid) {
+        next.suffix1 = null;
+      } else {
+        next.suffix2 = item;
+      }
+
+    } else {
+      if (next.suffix1.uid === item.uid) {
+        next.suffix1 = null;
+        next.suffix2 = null;
+      } else if (next.suffix2.uid === item.uid) {
+        next.suffix2 = null;
+      } else {
+        next.suffix2 = item;
+      }
+    }
+  }
+
+  if (next.base && next.prefix && redundantPrefix(next.prefix, next.base)) next.prefix = null;
+  if (!next.suffix1 && next.suffix2) next.suffix2 = null;
+
+  if (next.base){
+    const ok = isRealWord(next.base.form) || existsRealWordWithLocks(next.prefix, next.base, next.suffix1, next.suffix2);
+    if (!ok) return;
+  } else {
+    const ok = existsRealWordWithLocks(next.prefix, null, next.suffix1, next.suffix2);
+    if (!ok) return;
+  }
+
+  current = next;
+  renderAll();
+}
 
       function setupZone(zoneEl){
         zoneEl.addEventListener("dragover", (e) => { e.preventDefault(); zoneEl.classList.add("dragover"); });
