@@ -851,6 +851,54 @@
       };
 
       let current = { prefix:null, base:null, suffix1:null, suffix2:null };
+      let DICT_SET = null;
+      let GLOBAL_VIABLE = {
+        prefixes: new Set(),
+        bases: new Set(),
+        suffixes: new Set()
+      };
+      let currentViableSets = {
+        viablePrefixes: new Set(),
+        viableBases: new Set(),
+        viableSuffix1: new Set(),
+        viableSuffix2: new Set()
+      };
+
+      const viabilityCache = new Map();
+      const wordCache = new Map();
+      const DICT_CACHE = new Map();
+      let lastLookupWord = "";
+
+      function clearComputedCaches(){
+        viabilityCache.clear();
+        wordCache.clear();
+      }
+
+      function getLockKey(prefixObj, baseObj, suffix1Obj, suffix2Obj){
+        return [
+          prefixObj?.uid || "-",
+          baseObj?.uid || "-",
+          suffix1Obj?.uid || "-",
+          suffix2Obj?.uid || "-"
+        ].join("|");
+      }
+
+      function getWordKey(prefixObj, baseObj, suffix1Obj, suffix2Obj){
+        return [
+          prefixObj?.uid || "-",
+          baseObj?.uid || "-",
+          suffix1Obj?.uid || "-",
+          suffix2Obj?.uid || "-"
+        ].join("|");
+      }
+
+      function debounce(fn, delay = 120){
+        let t = null;
+        return (...args) => {
+          clearTimeout(t);
+          t = setTimeout(() => fn(...args), delay);
+        };
+      }
 
       function svgIcon(name){
         const I = {
@@ -1038,13 +1086,6 @@
         `;
       }
 
-      let DICT_SET = null;
-      let GLOBAL_VIABLE = {
-        prefixes: new Set(),
-        bases: new Set(),
-        suffixes: new Set()
-      };
-
       async function loadDictionary(){
         try{
           const res = await fetch("dictionary.txt", { cache:"no-store" });
@@ -1064,17 +1105,15 @@
           els.dictPill.textContent = "Word checker: dictionary.txt not found (using small fallback list)";
         }
 
+        clearComputedCaches();
         computeGlobalViableSets();
-        renderAll();
+        refreshState();
       }
 
       function isRealWord(word){
         if (!word) return false;
         return DICT_SET && DICT_SET.has(String(word).toLowerCase());
       }
-
-      const DICT_CACHE = new Map();
-      let lastLookupWord = "";
 
       function normaliseDictInput(raw){
         return String(raw || "")
@@ -1502,13 +1541,18 @@
       function computeWord(prefixObj, baseObj, suffix1Obj, suffix2Obj) {
         if (!baseObj) return "";
 
+        const key = getWordKey(prefixObj, baseObj, suffix1Obj, suffix2Obj);
+        if (wordCache.has(key)) return wordCache.get(key);
+
         const base = baseObj.form;
         const pRaw = prefixObj ? prefixObj.form : "";
         const pAdj = prefixObj ? applyPrefixRules(pRaw, base) : "";
         const prefixedBase = String(pAdj) + String(base);
 
         const suffixChain = applySuffixChain(prefixedBase, suffix1Obj, suffix2Obj);
-        return suffixChain.finalWord;
+        const out = suffixChain.finalWord;
+        wordCache.set(key, out);
+        return out;
       }
 
       function computeMeaning(prefixObj, baseObj, suffix1Obj, suffix2Obj) {
@@ -1582,6 +1626,9 @@
       }
 
       function existsRealWordWithLocks(prefixObj, baseObj, suffix1Obj, suffix2Obj){
+        const key = getLockKey(prefixObj, baseObj, suffix1Obj, suffix2Obj);
+        if (viabilityCache.has(key)) return viabilityCache.get(key);
+
         const prefixCandidates = prefixObj ? [prefixObj] : [null, ...ALL_PREFIXES];
         const baseCandidates = baseObj ? [baseObj] : ALL_BASES;
         const suffix1Candidates = suffix1Obj ? [suffix1Obj] : [null, ...ALL_SUFFIXES];
@@ -1595,11 +1642,16 @@
               for (const s2 of suffix2Candidates){
                 if (!s1 && s2) continue;
                 const w = computeWord(p, b, s1, s2);
-                if (isRealWord(w)) return true;
+                if (isRealWord(w)) {
+                  viabilityCache.set(key, true);
+                  return true;
+                }
               }
             }
           }
         }
+
+        viabilityCache.set(key, false);
         return false;
       }
 
@@ -1626,40 +1678,41 @@
         GLOBAL_VIABLE = { prefixes, bases, suffixes };
       }
 
-     function computeViableSets(){
-  const viablePrefixes = new Set();
-  const viableBases = new Set();
-  const viableSuffix1 = new Set();
-  const viableSuffix2 = new Set();
+      function computeViableSets(){
+        const viablePrefixes = new Set();
+        const viableBases = new Set();
+        const viableSuffix1 = new Set();
+        const viableSuffix2 = new Set();
 
-  const hasAffixLock = !!current.prefix || !!current.suffix1 || !!current.suffix2;
+        const hasAffixLock = !!current.prefix || !!current.suffix1 || !!current.suffix2;
 
-  if (!hasAffixLock){
-    for (const b of ALL_BASES) viableBases.add(b.uid);
-  } else {
-    for (const b of ALL_BASES){
-      const ok = existsRealWordWithLocks(current.prefix, b, current.suffix1, current.suffix2);
-      if (ok) viableBases.add(b.uid);
-    }
-  }
+        if (!hasAffixLock){
+          for (const b of ALL_BASES) viableBases.add(b.uid);
+        } else {
+          for (const b of ALL_BASES){
+            const ok = existsRealWordWithLocks(current.prefix, b, current.suffix1, current.suffix2);
+            if (ok) viableBases.add(b.uid);
+          }
+        }
 
-  for (const p of ALL_PREFIXES){
-    const ok = existsRealWordWithLocks(p, current.base, current.suffix1, current.suffix2);
-    if (ok) viablePrefixes.add(p.uid);
-  }
+        for (const p of ALL_PREFIXES){
+          const ok = existsRealWordWithLocks(p, current.base, current.suffix1, current.suffix2);
+          if (ok) viablePrefixes.add(p.uid);
+        }
 
-  for (const s of ALL_SUFFIXES){
-    const ok1 = existsRealWordWithLocks(current.prefix, current.base, s, current.suffix2);
-    if (ok1) viableSuffix1.add(s.uid);
+        for (const s of ALL_SUFFIXES){
+          const ok1 = existsRealWordWithLocks(current.prefix, current.base, s, current.suffix2);
+          if (ok1) viableSuffix1.add(s.uid);
 
-    const ok2 = current.suffix1
-      ? existsRealWordWithLocks(current.prefix, current.base, current.suffix1, s)
-      : false;
-    if (ok2) viableSuffix2.add(s.uid);
-  }
+          const ok2 = current.suffix1
+            ? existsRealWordWithLocks(current.prefix, current.base, current.suffix1, s)
+            : false;
+          if (ok2) viableSuffix2.add(s.uid);
+        }
 
-  return { viablePrefixes, viableBases, viableSuffix1, viableSuffix2 };
-}
+        return { viablePrefixes, viableBases, viableSuffix1, viableSuffix2 };
+      }
+
       function matchesSearch(item){
         const q = (els.globalSearch.value || "").trim().toLowerCase();
         if (!q) return true;
@@ -1673,81 +1726,42 @@
         return (base.group || "core") === t;
       }
 
-      function makeTile(item, type, enabled, selected) {
-        const div = document.createElement("div");
-        div.className = "tile";
-        if (!enabled) div.classList.add("disabled");
-        if (selected) div.classList.add("selected");
-
-        div.draggable = true;
-        div.dataset.uid = item.uid;
-        div.dataset.type = type;
-
-        if (type === "prefix") div.dataset.group = "prefix";
-        else if (type === "suffix") div.dataset.group = "suffix";
-        else div.dataset.group = item.group || "core";
-
-        const topLine = document.createElement("div");
-        topLine.className = "topLine";
-
-        const iconName = getTileIconName(item, type);
-        const icon = document.createElement("span");
-        icon.className = "mIcon";
-        icon.innerHTML = svgIcon(iconName);
-
-        const form = document.createElement("div");
-        form.className = "form";
-        form.textContent = item.form;
-
-        topLine.appendChild(icon);
-        topLine.appendChild(form);
-        div.appendChild(topLine);
-
-        if (type === "prefix" && Array.isArray(item.altForms) && item.altForms.length){
-          const alts = document.createElement("div");
-          alts.className = "alts";
-          alts.textContent = `(${item.altForms.join(", ")})`;
-          div.appendChild(alts);
-        }
-
-        const meaning = document.createElement("div");
-        meaning.className = "meaning";
-        meaning.textContent = item.meaning || "";
-
-        const meta = document.createElement("div");
-        meta.className = "meta";
+      function getTileMetaText(item, type){
         if (type === "base"){
           const g = item.group || "core";
-          const label = (g === "core") ? "core base" : (g === "anglo") ? "anglo base" : (g === "latin") ? "latin root" : "greek root";
-          meta.textContent = `${label}`;
+          return (g === "core") ? "core base" : (g === "anglo") ? "anglo base" : (g === "latin") ? "latin root" : "greek root";
         }
-        if (type === "prefix") meta.textContent = `prefix`;
-        if (type === "suffix") meta.textContent = `suffix${item.hint ? " • " + item.hint : ""}`;
+        if (type === "prefix") return "prefix";
+        if (type === "suffix") return `suffix${item.hint ? " • " + item.hint : ""}`;
+        return "";
+      }
 
-        div.appendChild(meaning);
-        div.appendChild(meta);
+      function makeTileHtml(item, type, enabled, selected){
+        const iconName = getTileIconName(item, type);
+        const group = type === "prefix" ? "prefix" : type === "suffix" ? "suffix" : (item.group || "core");
 
-        div.addEventListener("dragstart", (e) => {
-          if (div.classList.contains("disabled")) { e.preventDefault(); return; }
-          e.dataTransfer.setData("text/plain", JSON.stringify({ type, uid: item.uid }));
-        });
-
-        div.addEventListener("click", () => {
-          if (div.classList.contains("disabled")) return;
-          addToBuilder(type, item);
-        });
-
-        return div;
+        return `
+          <div class="tile${enabled ? "" : " disabled"}${selected ? " selected" : ""}"
+               draggable="${enabled ? "true" : "false"}"
+               data-uid="${item.uid}"
+               data-type="${type}"
+               data-group="${group}">
+            <div class="topLine">
+              <span class="mIcon">${svgIcon(iconName)}</span>
+              <div class="form">${item.form}</div>
+            </div>
+            ${type === "prefix" && Array.isArray(item.altForms) && item.altForms.length ? `<div class="alts">(${item.altForms.join(", ")})</div>` : ""}
+            <div class="meaning">${item.meaning || ""}</div>
+            <div class="meta">${getTileMetaText(item, type)}</div>
+          </div>
+        `;
       }
 
       function renderBanks(){
-        els.prefixBank.innerHTML = "";
-        els.baseBank.innerHTML = "";
-        els.suffixBank.innerHTML = "";
-
-        const sets = computeViableSets();
+        const sets = currentViableSets;
 
         const qBase = (els.baseSearch.value || "").trim().toLowerCase();
+
         const basesFiltered = ALL_BASES
           .filter(b => baseTypeOk(b))
           .filter(b => matchesSearch(b))
@@ -1759,10 +1773,10 @@
         for (const b of basesFiltered){
           const enabled = GLOBAL_VIABLE.bases.has(b.uid) && sets.viableBases.has(b.uid);
           const selected = current.base && current.base.uid === b.uid;
-          const t = makeTile(b, "base", enabled, selected);
-          if (!enabled) baseDisabled.push(t); else baseEnabled.push(t);
+          const html = makeTileHtml(b, "base", enabled, selected);
+          if (enabled) baseEnabled.push(html); else baseDisabled.push(html);
         }
-        els.baseBank.append(...baseEnabled, ...baseDisabled);
+        els.baseBank.innerHTML = baseEnabled.join("") + baseDisabled.join("");
         els.baseCount.textContent = String(baseEnabled.length);
 
         let prefixEnabledCount = 0;
@@ -1772,62 +1786,63 @@
           if (!matchesSearch(p)) continue;
           const enabled = GLOBAL_VIABLE.prefixes.has(p.uid) && sets.viablePrefixes.has(p.uid);
           const selected = current.prefix && current.prefix.uid === p.uid;
-          const t = makeTile(p, "prefix", enabled, selected);
-          if (!enabled) prefixDisabled.push(t);
-          else { prefixEnabledCount++; prefixEnabled.push(t); }
+          const html = makeTileHtml(p, "prefix", enabled, selected);
+          if (enabled){
+            prefixEnabledCount++;
+            prefixEnabled.push(html);
+          } else {
+            prefixDisabled.push(html);
+          }
         }
-        els.prefixBank.append(...prefixEnabled, ...prefixDisabled);
+        els.prefixBank.innerHTML = prefixEnabled.join("") + prefixDisabled.join("");
         els.prefixCount.textContent = String(prefixEnabledCount);
 
         let suffixEnabledCount = 0;
-const suffixEnabled = [];
-const suffixDisabled = [];
+        const suffixEnabled = [];
+        const suffixDisabled = [];
 
-const fillingSuffix2 = !!current.suffix1 && !current.suffix2;
-const fillingSuffix1 = !current.suffix1;
+        const fillingSuffix2 = !!current.suffix1 && !current.suffix2;
+        const fillingSuffix1 = !current.suffix1;
 
-for (const s of ALL_SUFFIXES){
-  if (!matchesSearch(s)) continue;
+        for (const s of ALL_SUFFIXES){
+          if (!matchesSearch(s)) continue;
 
-  let enabled = false;
+          let enabled = false;
 
-  if (fillingSuffix1){
-    enabled = GLOBAL_VIABLE.suffixes.has(s.uid) && sets.viableSuffix1.has(s.uid);
-  } else if (fillingSuffix2){
-    enabled = GLOBAL_VIABLE.suffixes.has(s.uid) && sets.viableSuffix2.has(s.uid);
-  } else {
-    enabled =
-      (GLOBAL_VIABLE.suffixes.has(s.uid) && sets.viableSuffix1.has(s.uid)) ||
-      (GLOBAL_VIABLE.suffixes.has(s.uid) && sets.viableSuffix2.has(s.uid));
-  }
+          if (fillingSuffix1){
+            enabled = GLOBAL_VIABLE.suffixes.has(s.uid) && sets.viableSuffix1.has(s.uid);
+          } else if (fillingSuffix2){
+            enabled = GLOBAL_VIABLE.suffixes.has(s.uid) && sets.viableSuffix2.has(s.uid);
+          } else {
+            enabled =
+              (GLOBAL_VIABLE.suffixes.has(s.uid) && sets.viableSuffix1.has(s.uid)) ||
+              (GLOBAL_VIABLE.suffixes.has(s.uid) && sets.viableSuffix2.has(s.uid));
+          }
 
-  const selected = (current.suffix1 && current.suffix1.uid === s.uid) || (current.suffix2 && current.suffix2.uid === s.uid);
-  const t = makeTile(s, "suffix", enabled, selected);
+          const selected = (current.suffix1 && current.suffix1.uid === s.uid) || (current.suffix2 && current.suffix2.uid === s.uid);
+          const html = makeTileHtml(s, "suffix", enabled, selected);
 
-  if (!enabled) {
-    suffixDisabled.push(t);
-  } else {
-    suffixEnabledCount++;
-    suffixEnabled.push(t);
-  }
-}
+          if (enabled){
+            suffixEnabledCount++;
+            suffixEnabled.push(html);
+          } else {
+            suffixDisabled.push(html);
+          }
+        }
 
-els.suffixBank.append(...suffixEnabled, ...suffixDisabled);
-els.suffixCount.textContent = String(suffixEnabledCount);
+        els.suffixBank.innerHTML = suffixEnabled.join("") + suffixDisabled.join("");
+        els.suffixCount.textContent = String(suffixEnabledCount);
       }
 
-      function clearZone(zoneEl){ zoneEl.innerHTML = ""; }
+      function renderZoneTile(zoneEl, item, type){
+        zoneEl.innerHTML = item ? makeTileHtml(item, type, true, false) : "";
+      }
 
       function renderZones(){
-        clearZone(els.prefixZone);
-        clearZone(els.baseZone);
-        clearZone(els.suffix1Zone);
-        clearZone(els.suffix2Zone);
-
-        if (current.prefix) els.prefixZone.appendChild(makeTile(current.prefix, "prefix", true, false));
-        if (current.base) els.baseZone.appendChild(makeTile(current.base, "base", true, false));
-        if (current.suffix1) els.suffix1Zone.appendChild(makeTile(current.suffix1, "suffix", true, false));
-        if (current.suffix2) els.suffix2Zone.appendChild(makeTile(current.suffix2, "suffix", true, false));
+        renderZoneTile(els.prefixZone, current.prefix, "prefix");
+        renderZoneTile(els.baseZone, current.base, "base");
+        renderZoneTile(els.suffix1Zone, current.suffix1, "suffix");
+        renderZoneTile(els.suffix2Zone, current.suffix2, "suffix");
       }
 
       function setRulesUIVisible(on){
@@ -1920,75 +1935,125 @@ els.suffixCount.textContent = String(suffixEnabledCount);
         }
       }
 
+      function refreshState(){
+        currentViableSets = computeViableSets();
+        renderZones();
+        renderBanks();
+        updateOutput();
+      }
+
+      function refreshFiltersOnly(){
+        renderBanks();
+      }
+
       function addToBuilder(type, item){
-  const next = { ...current };
+        const next = { ...current };
 
-  if (type === "prefix"){
-    if (next.prefix && next.prefix.uid === item.uid) next.prefix = null;
-    else next.prefix = item;
+        if (type === "prefix"){
+          if (next.prefix && next.prefix.uid === item.uid) next.prefix = null;
+          else next.prefix = item;
 
-  } else if (type === "base"){
-    next.base = item;
+        } else if (type === "base"){
+          next.base = item;
 
-  } else if (type === "suffix1"){
-    if (next.suffix1 && next.suffix1.uid === item.uid) {
-      next.suffix1 = null;
-      next.suffix2 = null;
-    } else {
-      next.suffix1 = item;
-      if (next.suffix2){
-        const stillValid = existsRealWordWithLocks(next.prefix, next.base, next.suffix1, next.suffix2);
-        if (!stillValid) next.suffix2 = null;
+        } else if (type === "suffix1"){
+          if (next.suffix1 && next.suffix1.uid === item.uid) {
+            next.suffix1 = null;
+            next.suffix2 = null;
+          } else {
+            next.suffix1 = item;
+            if (next.suffix2){
+              const stillValid = existsRealWordWithLocks(next.prefix, next.base, next.suffix1, next.suffix2);
+              if (!stillValid) next.suffix2 = null;
+            }
+          }
+
+        } else if (type === "suffix2"){
+          if (!next.suffix1) return;
+
+          if (next.suffix2 && next.suffix2.uid === item.uid) next.suffix2 = null;
+          else next.suffix2 = item;
+
+        } else if (type === "suffix"){
+          if (!next.suffix1) {
+            next.suffix1 = item;
+
+          } else if (!next.suffix2) {
+            if (next.suffix1.uid === item.uid) {
+              next.suffix1 = null;
+            } else {
+              next.suffix2 = item;
+            }
+
+          } else {
+            if (next.suffix1.uid === item.uid) {
+              next.suffix1 = null;
+              next.suffix2 = null;
+            } else if (next.suffix2.uid === item.uid) {
+              next.suffix2 = null;
+            } else {
+              next.suffix2 = item;
+            }
+          }
+        }
+
+        if (next.base && next.prefix && redundantPrefix(next.prefix, next.base)) next.prefix = null;
+        if (!next.suffix1 && next.suffix2) next.suffix2 = null;
+
+        if (next.base){
+          const ok = isRealWord(next.base.form) || existsRealWordWithLocks(next.prefix, next.base, next.suffix1, next.suffix2);
+          if (!ok) return;
+        } else {
+          const ok = existsRealWordWithLocks(next.prefix, null, next.suffix1, next.suffix2);
+          if (!ok) return;
+        }
+
+        current = next;
+        refreshState();
       }
-    }
 
-  } else if (type === "suffix2"){
-    if (!next.suffix1) return;
-
-    if (next.suffix2 && next.suffix2.uid === item.uid) next.suffix2 = null;
-    else next.suffix2 = item;
-
-  } else if (type === "suffix"){
-    if (!next.suffix1) {
-      next.suffix1 = item;
-
-    } else if (!next.suffix2) {
-      if (next.suffix1.uid === item.uid) {
-        next.suffix1 = null;
-      } else {
-        next.suffix2 = item;
+      function clearAll(){
+        current = { prefix:null, base:null, suffix1:null, suffix2:null };
+        refreshState();
       }
 
-    } else {
-      if (next.suffix1.uid === item.uid) {
-        next.suffix1 = null;
-        next.suffix2 = null;
-      } else if (next.suffix2.uid === item.uid) {
-        next.suffix2 = null;
-      } else {
-        next.suffix2 = item;
+      function getTileFromEventTarget(target){
+        const tile = target.closest(".tile");
+        if (!tile) return null;
+        const uid = tile.dataset.uid;
+        if (!uid) return null;
+        const item = BY_UID.get(uid);
+        if (!item) return null;
+        return { tile, item, type: tile.dataset.type };
       }
-    }
-  }
 
-  if (next.base && next.prefix && redundantPrefix(next.prefix, next.base)) next.prefix = null;
-  if (!next.suffix1 && next.suffix2) next.suffix2 = null;
+      function setupBankEvents(bankEl){
+        bankEl.addEventListener("click", (e) => {
+          const hit = getTileFromEventTarget(e.target);
+          if (!hit) return;
+          if (hit.tile.classList.contains("disabled")) return;
+          addToBuilder(hit.type, hit.item);
+        });
 
-  if (next.base){
-    const ok = isRealWord(next.base.form) || existsRealWordWithLocks(next.prefix, next.base, next.suffix1, next.suffix2);
-    if (!ok) return;
-  } else {
-    const ok = existsRealWordWithLocks(next.prefix, null, next.suffix1, next.suffix2);
-    if (!ok) return;
-  }
-
-  current = next;
-  renderAll();
-}
+        bankEl.addEventListener("dragstart", (e) => {
+          const hit = getTileFromEventTarget(e.target);
+          if (!hit) return;
+          if (hit.tile.classList.contains("disabled")) {
+            e.preventDefault();
+            return;
+          }
+          e.dataTransfer.setData("text/plain", JSON.stringify({ type: hit.type, uid: hit.item.uid }));
+        });
+      }
 
       function setupZone(zoneEl){
-        zoneEl.addEventListener("dragover", (e) => { e.preventDefault(); zoneEl.classList.add("dragover"); });
+        zoneEl.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          zoneEl.classList.add("dragover");
+        });
+
         zoneEl.addEventListener("dragleave", () => zoneEl.classList.remove("dragover"));
+
         zoneEl.addEventListener("drop", (e) => {
           e.preventDefault();
           zoneEl.classList.remove("dragover");
@@ -2017,19 +2082,14 @@ els.suffixCount.textContent = String(suffixEnabledCount);
           const zoneType = zoneEl.dataset.zone;
           current[zoneType] = null;
           if (zoneType === "suffix1") current.suffix2 = null;
-          renderAll();
+          refreshState();
         });
-      }
 
-      function clearAll(){
-        current = { prefix:null, base:null, suffix1:null, suffix2:null };
-        renderAll();
-      }
-
-      function renderAll(){
-        renderZones();
-        renderBanks();
-        updateOutput();
+        zoneEl.addEventListener("dragstart", (e) => {
+          const hit = getTileFromEventTarget(e.target);
+          if (!hit) return;
+          e.dataTransfer.setData("text/plain", JSON.stringify({ type: hit.type, uid: hit.item.uid }));
+        });
       }
 
       function currentDictQuery(){
@@ -2063,17 +2123,25 @@ els.suffixCount.textContent = String(suffixEnabledCount);
         }
       });
 
-      els.baseSearch.addEventListener("input", renderBanks);
-      els.globalSearch.addEventListener("input", renderBanks);
-      els.baseType.addEventListener("change", renderBanks);
+      const debouncedFilterRender = debounce(refreshFiltersOnly, 120);
+
+      els.baseSearch.addEventListener("input", debouncedFilterRender);
+      els.globalSearch.addEventListener("input", debouncedFilterRender);
+      els.baseType.addEventListener("change", refreshFiltersOnly);
       els.clearBtn.addEventListener("click", clearAll);
+
+      setupBankEvents(els.prefixBank);
+      setupBankEvents(els.baseBank);
+      setupBankEvents(els.suffixBank);
 
       setupZone(els.prefixZone);
       setupZone(els.baseZone);
       setupZone(els.suffix1Zone);
       setupZone(els.suffix2Zone);
 
-      clearAll();
+      renderZones();
+      renderBanks();
+      updateOutput();
       loadDictionary();
     });
   </script>
