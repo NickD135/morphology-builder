@@ -470,7 +470,7 @@
     </div>
   </div>
 
- <script>
+<script>
 document.addEventListener("DOMContentLoaded", () => {
 
   const PREFIXES = [
@@ -802,7 +802,9 @@ document.addEventListener("DOMContentLoaded", () => {
     "sign","signal","signals","signify","signifies","signifying","significant","significance"
   ];
 
-  const MAX_RENDERED_PER_BANK = 100;
+  const PREFIX_SUFFIX_CAP = 100;
+  const BASE_RENDER_CHUNK = 80;
+  let baseRenderCount = BASE_RENDER_CHUNK;
 
   function mkUid(type, id){ return `${type}:${id}`; }
   const ALL_PREFIXES = PREFIXES.map(p => ({ ...p, uid: mkUid("prefix", p.id), group:"prefix" }));
@@ -1743,30 +1745,54 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
+  function renderShowMoreButton(remaining){
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "showMoreBtn";
+    btn.style.marginTop = "10px";
+    btn.textContent = `Show more (${remaining} remaining)`;
+    btn.addEventListener("click", () => {
+      baseRenderCount += BASE_RENDER_CHUNK;
+      renderBanks();
+    });
+    return btn;
+  }
+
   function renderBanks(){
     const sets = currentViableSets;
 
     const qBase = (els.baseSearch.value || "").trim().toLowerCase();
 
-    const prefixesFiltered = ALL_PREFIXES.filter(matchesSearch).slice(0, MAX_RENDERED_PER_BANK);
-    const suffixesFiltered = ALL_SUFFIXES.filter(matchesSearch).slice(0, MAX_RENDERED_PER_BANK);
+    const prefixesFiltered = ALL_PREFIXES
+      .filter(matchesSearch)
+      .slice(0, PREFIX_SUFFIX_CAP);
+
+    const suffixesFiltered = ALL_SUFFIXES
+      .filter(matchesSearch)
+      .slice(0, PREFIX_SUFFIX_CAP);
+
     const basesFiltered = ALL_BASES
       .filter(baseTypeOk)
       .filter(matchesSearch)
       .filter(b => !qBase || b.form.toLowerCase().includes(qBase))
-      .sort((a,b)=>a.form.localeCompare(b.form))
-      .slice(0, MAX_RENDERED_PER_BANK);
+      .sort((a,b)=>a.form.localeCompare(b.form));
+
+    const visibleBases = basesFiltered.slice(0, baseRenderCount);
 
     const baseEnabled = [];
     const baseDisabled = [];
-    for (const b of basesFiltered){
+    for (const b of visibleBases){
       const enabled = (!GLOBAL_VIABLE_READY || GLOBAL_VIABLE.bases.has(b.uid)) && sets.viableBases.has(b.uid);
       const selected = current.base && current.base.uid === b.uid;
       const html = makeTileHtml(b, "base", enabled, selected);
       if (enabled) baseEnabled.push(html); else baseDisabled.push(html);
     }
     els.baseBank.innerHTML = baseEnabled.join("") + baseDisabled.join("");
-    els.baseCount.textContent = String(baseEnabled.length);
+    els.baseCount.textContent = String(basesFiltered.length);
+
+    if (basesFiltered.length > baseRenderCount){
+      els.baseBank.appendChild(renderShowMoreButton(basesFiltered.length - baseRenderCount));
+    }
 
     let prefixEnabledCount = 0;
     const prefixEnabled = [];
@@ -1998,6 +2024,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function clearAll(){
     current = { prefix:null, base:null, suffix1:null, suffix2:null };
+    baseRenderCount = BASE_RENDER_CHUNK;
     renderZones();
     updateOutput();
     requestAnimationFrame(() => {
@@ -2112,11 +2139,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  const debouncedFilterRender = debounce(refreshFiltersOnly, 120);
+  const debouncedFilterRender = debounce(() => {
+    baseRenderCount = BASE_RENDER_CHUNK;
+    refreshFiltersOnly();
+  }, 120);
 
   els.baseSearch.addEventListener("input", debouncedFilterRender);
   els.globalSearch.addEventListener("input", debouncedFilterRender);
-  els.baseType.addEventListener("change", refreshFiltersOnly);
+  els.baseType.addEventListener("change", () => {
+    baseRenderCount = BASE_RENDER_CHUNK;
+    refreshFiltersOnly();
+  });
   els.clearBtn.addEventListener("click", clearAll);
 
   setupBankEvents(els.prefixBank);
