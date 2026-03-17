@@ -503,212 +503,224 @@
       </section>
     </main>
   </div>
+<script src="data.js"></script>
+<script>
+  const PREFIXES = window.MORPHEMES.prefixes || [];
+  const BASES = window.MORPHEMES.bases || [];
 
-  <script src="data.js"></script>
-  <script>
-    const PREFIXES = window.MORPHEMES.prefixes;
-    const BASES = window.MORPHEMES.bases;
+  let score = 0;
+  let streak = 0;
+  let fuel = 100;
+  let currentQuestion = null;
+  let buttonsLocked = false;
+  let fuelInterval = null;
 
-    let score = 0;
-    let streak = 0;
-    let fuel = 100;
-    let currentQuestion = null;
-    let buttonsLocked = false;
-    let fuelInterval = null;
+  const wordEl = document.getElementById("word");
+  const baseMeaningEl = document.getElementById("baseMeaning");
+  const optionsEl = document.getElementById("options");
+  const feedbackEl = document.getElementById("feedback");
+  const subFeedbackEl = document.getElementById("subFeedback");
+  const scorePillEl = document.getElementById("scorePill");
+  const streakPillEl = document.getElementById("streakPill");
+  const fuelBarEl = document.getElementById("fuelBar");
+  const fuelLabelEl = document.getElementById("fuelLabel");
+  const dropZoneEl = document.getElementById("prefixDropZone");
+  const dropZoneTextEl = document.getElementById("dropZoneText");
 
-    const wordEl = document.getElementById("word");
-    const baseMeaningEl = document.getElementById("baseMeaning");
-    const optionsEl = document.getElementById("options");
-    const feedbackEl = document.getElementById("feedback");
-    const subFeedbackEl = document.getElementById("subFeedback");
-    const scorePillEl = document.getElementById("scorePill");
-    const streakPillEl = document.getElementById("streakPill");
-    const fuelBarEl = document.getElementById("fuelBar");
-    const fuelLabelEl = document.getElementById("fuelLabel");
-    const dropZoneEl = document.getElementById("prefixDropZone");
-    const dropZoneTextEl = document.getElementById("dropZoneText");
+  function getPrefixLabel(prefix) {
+    if (!prefix) return "";
+    return (prefix.display || prefix.form || "").toUpperCase();
+  }
 
-    function shuffleArray(arr) {
-      return [...arr].sort(() => Math.random() - 0.5);
-    }
+  function getBaseLabel(base) {
+    if (!base) return "";
+    return (base.display || base.form || "").toUpperCase();
+  }
 
-    function updateHud() {
-      scorePillEl.textContent = `${score} XP`;
-      streakPillEl.textContent = `Streak: ${streak}`;
-      fuelBarEl.style.width = `${Math.max(fuel, 0)}%`;
-      fuelLabelEl.textContent = `${Math.max(Math.round(fuel), 0)}%`;
-    }
+  function shuffleArray(arr) {
+    return [...arr].sort(() => Math.random() - 0.5);
+  }
 
-    function startFuelDrain() {
-      clearInterval(fuelInterval);
-      fuelInterval = setInterval(() => {
-        fuel -= 0.35;
-        if (fuel <= 0) {
-          fuel = 0;
-          updateHud();
-          endGame();
-          clearInterval(fuelInterval);
-          return;
-        }
+  function updateHud() {
+    scorePillEl.textContent = `${score} XP`;
+    streakPillEl.textContent = `Streak: ${streak}`;
+    fuelBarEl.style.width = `${Math.max(fuel, 0)}%`;
+    fuelLabelEl.textContent = `${Math.max(Math.round(fuel), 0)}%`;
+  }
+
+  function startFuelDrain() {
+    clearInterval(fuelInterval);
+    fuelInterval = setInterval(() => {
+      fuel -= 0.35;
+      if (fuel <= 0) {
+        fuel = 0;
         updateHud();
-      }, 180);
-    }
+        endGame();
+        clearInterval(fuelInterval);
+        return;
+      }
+      updateHud();
+    }, 180);
+  }
 
-    function endGame() {
-      buttonsLocked = true;
-      feedbackEl.textContent = "Out of energy";
+  function endGame() {
+    buttonsLocked = true;
+    feedbackEl.textContent = "Out of energy";
+    feedbackEl.className = "feedback bad";
+    subFeedbackEl.textContent = `Final score: ${score} XP`;
+    optionsEl.innerHTML = "";
+    dropZoneTextEl.textContent = "----";
+  }
+
+  function isCompatible(prefix, base) {
+    const prefixPos = prefix.allowedPos || ["noun","adj","verb"];
+    const basePos = base.pos || ["noun","adj","verb"];
+    return basePos.some(pos => prefixPos.includes(pos));
+  }
+
+  function generatePrefixQuestion() {
+    const validBases = BASES.filter(b => b && b.form);
+    const validPrefixes = PREFIXES.filter(p => p && p.form);
+
+    const base = validBases[Math.floor(Math.random() * validBases.length)];
+    const compatible = validPrefixes.filter(prefix => isCompatible(prefix, base));
+    const source = compatible.length >= 3 ? compatible : validPrefixes;
+
+    const correctPrefix = source[Math.floor(Math.random() * source.length)];
+    const wrongOptions = shuffleArray(
+      validPrefixes.filter(p => p.id !== correctPrefix.id)
+    ).slice(0, 2);
+
+    const optionObjects = shuffleArray([correctPrefix, ...wrongOptions]);
+
+    return {
+      base,
+      correct: correctPrefix,
+      options: optionObjects
+    };
+  }
+
+  function getBubbleClass(index) {
+    const classes = ["blue", "green", "purple", "orange"];
+    return classes[index % classes.length];
+  }
+
+  function resetDropZone() {
+    dropZoneEl.classList.remove("flashSuccess", "flashFail");
+    dropZoneTextEl.textContent = "____";
+    dropZoneTextEl.style.color = "#a5b4fc";
+  }
+
+  function loadQuestion() {
+    if (fuel <= 0) return;
+
+    buttonsLocked = false;
+    currentQuestion = generatePrefixQuestion();
+
+    wordEl.textContent = getBaseLabel(currentQuestion.base);
+    baseMeaningEl.textContent = `Base meaning: ${currentQuestion.base.meaning || ""}`;
+    feedbackEl.textContent = "";
+    feedbackEl.className = "feedback";
+    subFeedbackEl.textContent = "";
+    resetDropZone();
+
+    optionsEl.innerHTML = "";
+
+    currentQuestion.options.forEach((option, index) => {
+      const btn = document.createElement("button");
+      btn.className = `bubbleBtn ${getBubbleClass(index)}`;
+      btn.type = "button";
+      btn.style.animationDelay = `${index * 0.18}s`;
+
+      const inner = document.createElement("div");
+      inner.className = "bubbleInner";
+
+      const main = document.createElement("span");
+      main.textContent = getPrefixLabel(option);
+
+      const small = document.createElement("small");
+      small.textContent = option.meaning || "";
+
+      inner.appendChild(main);
+      inner.appendChild(small);
+      btn.appendChild(inner);
+
+      btn.addEventListener("click", () => checkAnswer(option));
+      optionsEl.appendChild(btn);
+    });
+  }
+
+  function lockButtons() {
+    const buttons = optionsEl.querySelectorAll("button");
+    buttons.forEach(btn => btn.disabled = true);
+  }
+
+  function checkAnswer(choice) {
+    if (buttonsLocked || fuel <= 0) return;
+    buttonsLocked = true;
+    lockButtons();
+
+    if (choice.id === currentQuestion.correct.id) {
+      score += 50 + (streak * 10);
+      streak += 1;
+      fuel = Math.min(fuel + 10, 100);
+
+      feedbackEl.textContent = "Correct";
+      feedbackEl.className = "feedback ok";
+      subFeedbackEl.textContent = `${getPrefixLabel(choice)} means "${choice.meaning || ""}"`;
+      dropZoneTextEl.textContent = getPrefixLabel(choice);
+      dropZoneTextEl.style.color = "#16a34a";
+      dropZoneEl.classList.add("flashSuccess");
+    } else {
+      streak = 0;
+      fuel = Math.max(fuel - 12, 0);
+
+      feedbackEl.textContent = "Not quite";
       feedbackEl.className = "feedback bad";
-      subFeedbackEl.textContent = `Final score: ${score} XP`;
-      optionsEl.innerHTML = "";
-      dropZoneTextEl.textContent = "----";
+      subFeedbackEl.textContent = `Correct answer: ${getPrefixLabel(currentQuestion.correct)} — ${currentQuestion.correct.meaning || ""}`;
+      dropZoneTextEl.textContent = getPrefixLabel(choice);
+      dropZoneTextEl.style.color = "#dc2626";
+      dropZoneEl.classList.add("flashFail");
     }
 
-    function isCompatible(prefix, base) {
-      const prefixPos = prefix.allowedPos || ["noun","adj","verb"];
-      const basePos = base.pos || ["noun","adj","verb"];
-      return basePos.some(pos => prefixPos.includes(pos));
+    updateHud();
+
+    if (fuel <= 0) {
+      endGame();
+      clearInterval(fuelInterval);
+      return;
     }
 
-    function generatePrefixQuestion() {
-      const base = BASES[Math.floor(Math.random() * BASES.length)];
-      const compatible = PREFIXES.filter(prefix => isCompatible(prefix, base));
-      const source = compatible.length >= 3 ? compatible : PREFIXES;
+    setTimeout(loadQuestion, 1400);
+  }
 
-      const correctPrefix = source[Math.floor(Math.random() * source.length)];
-      const wrongOptions = shuffleArray(
-        PREFIXES.filter(p => p.id !== correctPrefix.id)
-      ).slice(0, 2);
-
-      const optionObjects = shuffleArray([correctPrefix, ...wrongOptions]);
-
-      return {
-        base,
-        correct: correctPrefix,
-        options: optionObjects
-      };
-    }
-
-    function getBubbleClass(index) {
-      const classes = ["blue", "green", "purple", "orange"];
-      return classes[index % classes.length];
-    }
-
-    function resetDropZone() {
-      dropZoneEl.classList.remove("flashSuccess", "flashFail");
-      dropZoneTextEl.textContent = "____";
-      dropZoneTextEl.style.color = "#a5b4fc";
-    }
-
-    function loadQuestion() {
-      if (fuel <= 0) return;
-
-      buttonsLocked = false;
-      currentQuestion = generatePrefixQuestion();
-
-      wordEl.textContent = currentQuestion.base.form.toUpperCase();
-      baseMeaningEl.textContent = `Base meaning: ${currentQuestion.base.meaning}`;
-      feedbackEl.textContent = "";
-      feedbackEl.className = "feedback";
-      subFeedbackEl.textContent = "";
-      resetDropZone();
-
-      optionsEl.innerHTML = "";
-
-      currentQuestion.options.forEach((option, index) => {
-        const btn = document.createElement("button");
-        btn.className = `bubbleBtn ${getBubbleClass(index)}`;
-        btn.type = "button";
-        btn.style.animationDelay = `${index * 0.18}s`;
-
-        const inner = document.createElement("div");
-        inner.className = "bubbleInner";
-
-        const main = document.createElement("span");
-        main.textContent = option.display.toUpperCase();
-
-        const small = document.createElement("small");
-        small.textContent = option.meaning;
-
-        inner.appendChild(main);
-        inner.appendChild(small);
-        btn.appendChild(inner);
-
-        btn.addEventListener("click", () => checkAnswer(option));
-        optionsEl.appendChild(btn);
-      });
-    }
-
-    function lockButtons() {
-      const buttons = optionsEl.querySelectorAll("button");
-      buttons.forEach(btn => btn.disabled = true);
-    }
-
-    function checkAnswer(choice) {
-      if (buttonsLocked || fuel <= 0) return;
-      buttonsLocked = true;
-      lockButtons();
-
-      if (choice.id === currentQuestion.correct.id) {
-        score += 50 + (streak * 10);
-        streak += 1;
-        fuel = Math.min(fuel + 10, 100);
-
-        feedbackEl.textContent = "Correct";
-        feedbackEl.className = "feedback ok";
-        subFeedbackEl.textContent = `${choice.display} means "${choice.meaning}"`;
-        dropZoneTextEl.textContent = choice.display.toUpperCase();
-        dropZoneTextEl.style.color = "#16a34a";
-        dropZoneEl.classList.add("flashSuccess");
-      } else {
-        streak = 0;
-        fuel = Math.max(fuel - 12, 0);
-
-        feedbackEl.textContent = "Not quite";
-        feedbackEl.className = "feedback bad";
-        subFeedbackEl.textContent = `Correct answer: ${currentQuestion.correct.display.toUpperCase()} — ${currentQuestion.correct.meaning}`;
-        dropZoneTextEl.textContent = choice.display.toUpperCase();
-        dropZoneTextEl.style.color = "#dc2626";
-        dropZoneEl.classList.add("flashFail");
-      }
-
-      updateHud();
-
-      if (fuel <= 0) {
-        endGame();
-        clearInterval(fuelInterval);
-        return;
-      }
-
-      setTimeout(loadQuestion, 1400);
-    }
-
-    document.getElementById("recalibrateBtn").addEventListener("click", () => {
-      score = 0;
-      streak = 0;
-      fuel = 100;
-      updateHud();
-      startFuelDrain();
-      loadQuestion();
-    });
-
-    document.getElementById("skipBtn").addEventListener("click", () => {
-      if (fuel <= 0) return;
-      streak = 0;
-      fuel = Math.max(fuel - 8, 0);
-      updateHud();
-
-      if (fuel <= 0) {
-        endGame();
-        clearInterval(fuelInterval);
-        return;
-      }
-
-      loadQuestion();
-    });
-
+  document.getElementById("recalibrateBtn").addEventListener("click", () => {
+    score = 0;
+    streak = 0;
+    fuel = 100;
     updateHud();
     startFuelDrain();
     loadQuestion();
-  </script>
+  });
+
+  document.getElementById("skipBtn").addEventListener("click", () => {
+    if (fuel <= 0) return;
+    streak = 0;
+    fuel = Math.max(fuel - 8, 0);
+    updateHud();
+
+    if (fuel <= 0) {
+      endGame();
+      clearInterval(fuelInterval);
+      return;
+    }
+
+    loadQuestion();
+  });
+
+  updateHud();
+  startFuelDrain();
+  loadQuestion();
+        </script>
 </body>
 </html>
