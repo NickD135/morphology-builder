@@ -449,15 +449,20 @@
             </label>
 
             <label class="option">
-              <input type="radio" name="cardType" value="baseOrigin">
+              <input type="radio" name="cardType" value="baseGroup">
               <span>Bases by origin</span>
             </label>
           </div>
         </div>
 
-        <div class="section" id="originSection" style="display:none;">
+        <div class="section" id="groupSection" style="display:none;">
           <h2>Choose base origin</h2>
-          <select id="originSelect"></select>
+          <select id="groupSelect">
+            <option value="core">Core</option>
+            <option value="anglo">Anglo Saxon / Old English</option>
+            <option value="latin">Latin</option>
+            <option value="greek">Greek</option>
+          </select>
         </div>
 
         <div class="section">
@@ -477,7 +482,7 @@
 
         <div class="section">
           <h2>Build deck</h2>
-          <p>This version is designed to plug into your existing morpheme lists.</p>
+          <p>This page reads directly from your shared <code>data.js</code> file.</p>
           <div class="inline">
             <button class="primary" id="buildDeckBtn">Build deck</button>
             <button class="secondary" id="shuffleBtn">Shuffle deck</button>
@@ -492,7 +497,7 @@
           <div class="stat">Card: <span id="cardNumber">0</span></div>
         </div>
 
-        <div class="stage" id="stage">
+        <div class="stage">
           <div class="empty" id="emptyState">
             Build a deck to begin your flashcards.
           </div>
@@ -502,7 +507,7 @@
               <div class="card-face front">
                 <div class="badge" id="frontBadge">Prefix</div>
                 <h2 class="morpheme" id="frontMorpheme">un</h2>
-                <p class="hint">Click the card to flip it and reveal the meaning, sentence, origin and visual cue.</p>
+                <p class="hint">Click the card to flip it and reveal the meaning, example and origin.</p>
               </div>
 
               <div class="card-face back">
@@ -526,7 +531,7 @@
                   </div>
 
                   <div class="info full">
-                    <span class="label">Example sentence</span>
+                    <span class="label">Example / hint</span>
                     <div class="value" id="sentenceText"></div>
                   </div>
                 </div>
@@ -543,184 +548,9 @@
     </div>
   </div>
 
+  <script src="data.js"></script>
   <script>
-    /*
-      ============================================================
-      FLASHCARD DATA ADAPTER
-      ============================================================
-
-      This page is built to work with your existing morphology data.
-
-      EASIEST WAY TO USE IT:
-      1. Paste your current prefixes / suffixes / bases arrays in this file
-         OR load the same shared JS file your main builder uses.
-      2. Update the 3 variables below so they point to your real arrays.
-
-      Example:
-      const RAW_PREFIXES = prefixes;
-      const RAW_SUFFIXES = suffixes;
-      const RAW_BASES = bases;
-
-      If your arrays are named something else, just change these 3 lines.
-    */
-
-    const RAW_PREFIXES = window.prefixes || [];
-    const RAW_SUFFIXES = window.suffixes || [];
-    const RAW_BASES = window.bases || [];
-
-    /*
-      OPTIONAL:
-      If your real site stores the data in a different structure, only edit
-      the normalisePrefix, normaliseSuffix and normaliseBase functions below.
-    */
-
-    function titleCase(text) {
-      return String(text || "")
-        .replace(/[_-]+/g, " ")
-        .replace(/\s+/g, " ")
-        .trim()
-        .replace(/\b\w/g, c => c.toUpperCase());
-    }
-
-    function cleanText(value, fallback = "") {
-      if (value === undefined || value === null) return fallback;
-      return String(value).trim();
-    }
-
-    function pick(obj, keys, fallback = "") {
-      for (const key of keys) {
-        if (obj && obj[key] !== undefined && obj[key] !== null && String(obj[key]).trim() !== "") {
-          return obj[key];
-        }
-      }
-      return fallback;
-    }
-
-    function guessVisualCue(text, type) {
-      const t = String(text || "").toLowerCase();
-
-      if (type === "Prefix") {
-        if (t.includes("not") || t.includes("opposite")) return "🚫";
-        if (t.includes("again") || t.includes("back")) return "🔁";
-        if (t.includes("before")) return "⏮️";
-        if (t.includes("under") || t.includes("below")) return "⬇️";
-        if (t.includes("wrong")) return "❌";
-      }
-
-      if (type === "Suffix") {
-        if (t.includes("full of")) return "🪣";
-        if (t.includes("without")) return "🚫";
-        if (t.includes("state") || t.includes("quality")) return "✨";
-        if (t.includes("person")) return "🧑";
-        if (t.includes("able")) return "✅";
-      }
-
-      if (t.includes("build")) return "🏗️";
-      if (t.includes("carry")) return "📦";
-      if (t.includes("write") || t.includes("mark")) return "✍️";
-      if (t.includes("light")) return "💡";
-      if (t.includes("look") || t.includes("see")) return "👀";
-      if (t.includes("life")) return "🌱";
-      if (t.includes("sound")) return "🔊";
-      if (t.includes("water")) return "💧";
-      if (t.includes("earth")) return "🌍";
-      if (t.includes("heat")) return "🔥";
-      if (t.includes("hand")) return "✋";
-      if (t.includes("move")) return "🏃";
-      return "🧠";
-    }
-
-    function buildExampleSentence(morpheme, meaning, type) {
-      const m = cleanText(morpheme);
-      const mean = cleanText(meaning, "a useful meaning");
-      if (type === "Prefix") return `The prefix ${m} means ${mean}.`;
-      if (type === "Suffix") return `The suffix ${m} means ${mean}.`;
-      return `The base ${m} means ${mean}.`;
-    }
-
-    function normaliseOrigin(rawOrigin) {
-      const value = String(rawOrigin || "").trim();
-      if (!value) return { key: "unknown", label: "Unknown" };
-
-      const low = value.toLowerCase();
-
-      if (low.includes("latin")) return { key: "latin", label: "Latin" };
-      if (low.includes("greek")) return { key: "greek", label: "Greek" };
-      if (low.includes("old english") || low.includes("anglo") || low.includes("saxon")) {
-        return { key: "anglo", label: "Anglo Saxon / Old English" };
-      }
-      if (low.includes("french")) return { key: "french", label: "French" };
-      return { key: low.replace(/\s+/g, "-"), label: titleCase(value) };
-    }
-
-    function normalisePrefix(item) {
-      const morpheme = cleanText(pick(item, ["morpheme", "text", "prefix", "form", "label", "name"]));
-      if (!morpheme) return null;
-
-      const meaning = cleanText(pick(item, ["meaning", "definition", "gloss", "meanings"]));
-      const originRaw = cleanText(pick(item, ["origin", "etymology", "language"]), "Unknown");
-      const sentence = cleanText(pick(item, ["sentence", "example", "exampleSentence"]), buildExampleSentence(morpheme, meaning, "Prefix"));
-      const emoji = cleanText(pick(item, ["emoji", "icon", "visual", "picture"]), guessVisualCue(meaning, "Prefix"));
-      const origin = normaliseOrigin(originRaw);
-
-      return {
-        morpheme,
-        type: "Prefix",
-        meaning: meaning || "Meaning not added yet",
-        origin: origin.key,
-        originLabel: origin.label,
-        sentence,
-        emoji
-      };
-    }
-
-    function normaliseSuffix(item) {
-      const morpheme = cleanText(pick(item, ["morpheme", "text", "suffix", "form", "label", "name"]));
-      if (!morpheme) return null;
-
-      const meaning = cleanText(pick(item, ["meaning", "definition", "gloss", "meanings"]));
-      const originRaw = cleanText(pick(item, ["origin", "etymology", "language"]), "Unknown");
-      const sentence = cleanText(pick(item, ["sentence", "example", "exampleSentence"]), buildExampleSentence(morpheme, meaning, "Suffix"));
-      const emoji = cleanText(pick(item, ["emoji", "icon", "visual", "picture"]), guessVisualCue(meaning, "Suffix"));
-      const origin = normaliseOrigin(originRaw);
-
-      return {
-        morpheme,
-        type: "Suffix",
-        meaning: meaning || "Meaning not added yet",
-        origin: origin.key,
-        originLabel: origin.label,
-        sentence,
-        emoji
-      };
-    }
-
-    function normaliseBase(item) {
-      const morpheme = cleanText(pick(item, ["morpheme", "text", "base", "root", "form", "label", "name"]));
-      if (!morpheme) return null;
-
-      const meaning = cleanText(pick(item, ["meaning", "definition", "gloss", "meanings"]));
-      const originRaw = cleanText(pick(item, ["origin", "etymology", "language", "originType"]), "Unknown");
-      const sentence = cleanText(pick(item, ["sentence", "example", "exampleSentence"]), buildExampleSentence(morpheme, meaning, "Base"));
-      const emoji = cleanText(pick(item, ["emoji", "icon", "visual", "picture"]), guessVisualCue(meaning, "Base"));
-      const origin = normaliseOrigin(originRaw);
-
-      return {
-        morpheme,
-        type: "Base",
-        meaning: meaning || "Meaning not added yet",
-        origin: origin.key,
-        originLabel: origin.label,
-        sentence,
-        emoji
-      };
-    }
-
-    const MORPHEME_DATA = {
-      prefixes: RAW_PREFIXES.map(normalisePrefix).filter(Boolean),
-      suffixes: RAW_SUFFIXES.map(normaliseSuffix).filter(Boolean),
-      bases: RAW_BASES.map(normaliseBase).filter(Boolean)
-    };
+    const DATA = window.MORPHEMES || { prefixes: [], suffixes: [], bases: [] };
 
     const state = {
       deck: [],
@@ -736,10 +566,18 @@
     const deckSizeEl = $("deckSize");
     const currentTypeEl = $("currentType");
     const cardNumberEl = $("cardNumber");
-    const originSection = $("originSection");
-    const originSelect = $("originSelect");
+    const groupSection = $("groupSection");
+    const groupSelect = $("groupSelect");
     const showEmoji = $("showEmoji");
     const randomMode = $("randomMode");
+
+    function titleCase(text) {
+      return String(text || "")
+        .replace(/[_-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .replace(/\b\w/g, c => c.toUpperCase());
+    }
 
     function getSelectedCardType() {
       return document.querySelector('input[name="cardType"]:checked').value;
@@ -754,46 +592,119 @@
       return copy;
     }
 
-    function getAvailableOrigins() {
-      const seen = new Map();
-      for (const item of MORPHEME_DATA.bases) {
-        if (!seen.has(item.origin)) {
-          seen.set(item.origin, item.originLabel || titleCase(item.origin));
-        }
+    function visualCueFromMeaning(meaning, type) {
+      const t = String(meaning || "").toLowerCase();
+
+      if (type === "Prefix") {
+        if (t.includes("not") || t.includes("without")) return "🚫";
+        if (t.includes("again")) return "🔁";
+        if (t.includes("before")) return "⏮️";
+        if (t.includes("under") || t.includes("below")) return "⬇️";
+        if (t.includes("against")) return "⚔️";
+        if (t.includes("small")) return "🔬";
+        if (t.includes("large")) return "🦣";
       }
-      return [...seen.entries()].map(([key, label]) => ({ key, label }));
+
+      if (type === "Suffix") {
+        if (t.includes("plural")) return "👥";
+        if (t.includes("past")) return "⏪";
+        if (t.includes("person who")) return "🧑";
+        if (t.includes("without")) return "🚫";
+        if (t.includes("full of")) return "🪣";
+        if (t.includes("state")) return "✨";
+        if (t.includes("study of")) return "📘";
+        if (t.includes("make")) return "🛠️";
+      }
+
+      if (t.includes("build")) return "🏗️";
+      if (t.includes("write")) return "✍️";
+      if (t.includes("carry")) return "📦";
+      if (t.includes("hear") || t.includes("sound")) return "🔊";
+      if (t.includes("look") || t.includes("see")) return "👀";
+      if (t.includes("water")) return "💧";
+      if (t.includes("heat")) return "🔥";
+      if (t.includes("time")) return "⏰";
+      if (t.includes("light")) return "💡";
+      if (t.includes("measure")) return "📏";
+      if (t.includes("air")) return "🌬️";
+      if (t.includes("life")) return "🌱";
+      if (t.includes("break")) return "💥";
+      if (t.includes("bend")) return "↪️";
+      if (t.includes("lead")) return "➡️";
+      if (t.includes("send")) return "📨";
+      if (t.includes("turn")) return "🔄";
+      return "🧠";
     }
 
-    function populateOriginSelect() {
-      const origins = getAvailableOrigins();
-      originSelect.innerHTML = "";
+    function baseGroupLabel(group) {
+      if (group === "core") return "Core";
+      if (group === "anglo") return "Anglo Saxon / Old English";
+      if (group === "latin") return "Latin";
+      if (group === "greek") return "Greek";
+      return titleCase(group || "Unknown");
+    }
 
-      if (!origins.length) {
-        const option = document.createElement("option");
-        option.value = "unknown";
-        option.textContent = "Unknown";
-        originSelect.appendChild(option);
-        return;
-      }
+    function normalisePrefix(item) {
+      return {
+        morpheme: item.display || item.form || "",
+        cleanMorpheme: item.form || item.display || "",
+        type: "Prefix",
+        meaning: item.meaning || "Meaning not added yet",
+        originLabel: "Prefix",
+        sentence: item.altForms?.length
+          ? `Also seen in forms like ${item.altForms.join(", ")}.`
+          : `Can be used with ${item.allowedPos?.join(", ") || "different word types"}.`,
+        emoji: visualCueFromMeaning(item.meaning, "Prefix")
+      };
+    }
 
-      for (const origin of origins) {
-        const option = document.createElement("option");
-        option.value = origin.key;
-        option.textContent = origin.label;
-        originSelect.appendChild(option);
-      }
+    function normaliseSuffix(item) {
+      return {
+        morpheme: item.display || item.form || "",
+        cleanMorpheme: item.form || item.display || "",
+        type: "Suffix",
+        meaning: item.meaning || "Meaning not added yet",
+        originLabel: "Suffix",
+        sentence: item.hint || `Can be used with ${item.allowedPos?.join(", ") || "different word types"}.`,
+        emoji: visualCueFromMeaning(item.meaning, "Suffix")
+      };
+    }
+
+    function normaliseBase(item) {
+      return {
+        morpheme: item.display || item.form || "",
+        cleanMorpheme: item.form || item.display || "",
+        type: "Base",
+        meaning: item.meaning || "Meaning not added yet",
+        originLabel: baseGroupLabel(item.group),
+        sentence: `Can be used as: ${item.pos?.join(", ") || "various word types"}.`,
+        emoji: visualCueFromMeaning(item.meaning, "Base"),
+        group: item.group || "core"
+      };
     }
 
     function getDeckFromSelection() {
       const selected = getSelectedCardType();
 
-      if (selected === "prefix") return [...MORPHEME_DATA.prefixes];
-      if (selected === "suffix") return [...MORPHEME_DATA.suffixes];
-      if (selected === "baseAll") return [...MORPHEME_DATA.bases];
-      if (selected === "baseOrigin") {
-        const chosenOrigin = originSelect.value;
-        return MORPHEME_DATA.bases.filter(item => item.origin === chosenOrigin);
+      if (selected === "prefix") {
+        return DATA.prefixes.map(normalisePrefix);
       }
+
+      if (selected === "suffix") {
+        return DATA.suffixes.map(normaliseSuffix);
+      }
+
+      if (selected === "baseAll") {
+        return DATA.bases.map(normaliseBase);
+      }
+
+      if (selected === "baseGroup") {
+        const chosenGroup = groupSelect.value;
+        return DATA.bases
+          .filter(item => (item.group || "core") === chosenGroup)
+          .map(normaliseBase);
+      }
+
       return [];
     }
 
@@ -802,13 +713,13 @@
       if (selected === "prefix") return "Prefixes";
       if (selected === "suffix") return "Suffixes";
       if (selected === "baseAll") return "All bases";
-      if (selected === "baseOrigin") return "Bases by origin";
+      if (selected === "baseGroup") return "Bases by origin";
       return "Deck";
     }
 
-    function updateOriginVisibility() {
+    function updateGroupVisibility() {
       const selected = getSelectedCardType();
-      originSection.style.display = selected === "baseOrigin" ? "block" : "none";
+      groupSection.style.display = selected === "baseGroup" ? "block" : "none";
     }
 
     function showEmpty(message) {
@@ -827,7 +738,7 @@
       $("backMorpheme").textContent = card.morpheme;
       $("meaningText").textContent = card.meaning || "Meaning not added yet";
       $("originText").textContent = card.originLabel || "Unknown";
-      $("sentenceText").textContent = card.sentence || "No example sentence added yet.";
+      $("sentenceText").textContent = card.sentence || "No extra note added yet.";
       $("emojiBox").textContent = showEmoji.checked ? (card.emoji || "🧠") : "";
 
       emptyState.style.display = "none";
@@ -850,7 +761,7 @@
       cardNumberEl.textContent = deck.length ? 1 : 0;
 
       if (!deck.length) {
-        showEmpty("No cards were found. Check that this page is pointing to your real prefixes, bases and suffixes arrays.");
+        showEmpty("No cards were found in this selection.");
         return;
       }
 
@@ -897,7 +808,7 @@
 
     document.querySelectorAll('input[name="cardType"]').forEach(input => {
       input.addEventListener("change", () => {
-        updateOriginVisibility();
+        updateGroupVisibility();
         deckSizeEl.textContent = "0";
         cardNumberEl.textContent = "0";
         currentTypeEl.textContent = getTypeLabel();
@@ -905,10 +816,10 @@
       });
     });
 
-    originSelect.addEventListener("change", () => {
-      showEmpty("Build a deck to begin your flashcards.");
+    groupSelect.addEventListener("change", () => {
       deckSizeEl.textContent = "0";
       cardNumberEl.textContent = "0";
+      showEmpty("Build a deck to begin your flashcards.");
     });
 
     showEmoji.addEventListener("change", () => {
@@ -923,12 +834,11 @@
     $("flipBtn").addEventListener("click", flipCard);
     flashcard.addEventListener("click", flipCard);
 
-    populateOriginSelect();
-    updateOriginVisibility();
+    updateGroupVisibility();
     currentTypeEl.textContent = getTypeLabel();
 
-    if (!RAW_PREFIXES.length && !RAW_SUFFIXES.length && !RAW_BASES.length) {
-      showEmpty("Your flashcard page is ready, but it is not yet connected to your existing morpheme arrays. Link the three RAW variables at the top of the script to your real data.");
+    if (!DATA.prefixes.length && !DATA.suffixes.length && !DATA.bases.length) {
+      showEmpty("Your data.js file was not loaded. Make sure flashcard-mode.html is in the same folder and that the script tag points to data.js.");
     }
   </script>
 </body>
