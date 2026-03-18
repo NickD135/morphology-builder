@@ -1664,7 +1664,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const PREFIX_SUFFIX_CAP  = 100;
   const BASE_RENDER_CHUNK  = 80;
   // Delay (ms) before starting the expensive global viability scan
-  const GLOBAL_VIABLE_DELAY = 1800;
+  const GLOBAL_VIABLE_DELAY = 4000; // start background scan well after page is interactive
 
   // ─── BUILD LOOKUP TABLES ─────────────────────────────────────────────────────
 
@@ -1736,9 +1736,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Per-selection viability (computed on demand, fast)
   let currentViableSets = {
-    viablePrefixes: new Set(),
+    viablePrefixes: new Set(ALL_PREFIXES.map(p => p.uid)),
     viableBases:    new Set(ALL_BASES.map(b => b.uid)),
-    viableSuffix1:  new Set(),
+    viableSuffix1:  new Set(ALL_SUFFIXES.map(s => s.uid)),
     viableSuffix2:  new Set()
   };
 
@@ -1961,10 +1961,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     clearComputedCaches();
 
-    // Page is NOW interactive — render immediately
-    refreshState();
+    // Dictionary ready — update the status text on any built word, re-render tiles.
+    // Do NOT run computeViableSets() here — it is O(n^4) and blocks the thread.
+    // Viability is computed lazily only when the user picks something.
+    renderZones();
+    renderBanks();
+    updateOutput();
 
-    // Defer the expensive global viability scan so the UI can breathe first
+    // Kick off the background global scan well after the page is responsive.
     setTimeout(() => computeGlobalViableSetsChunked(), GLOBAL_VIABLE_DELAY);
   }
 
@@ -2362,21 +2366,21 @@ document.addEventListener("DOMContentLoaded", () => {
     for (let i = 0; i < ALL_PREFIXES.length; i++){
       if (existsRealWordWithLocks(ALL_PREFIXES[i], null, null, null))
         prefixes.add(ALL_PREFIXES[i].uid);
-      if (i % 2 === 0) await pause();
+      await pause();
     }
 
     for (let i = 0; i < ALL_SUFFIXES.length; i++){
       const s = ALL_SUFFIXES[i];
       if (existsRealWordWithLocks(null, null, s, null) || existsRealWordWithLocks(null, null, null, s))
         suffixes.add(s.uid);
-      if (i % 2 === 0) await pause();
+      await pause();
     }
 
     for (let i = 0; i < ALL_BASES.length; i++){
       const b = ALL_BASES[i];
       if (isRealWord(b.form) || existsRealWordWithLocks(null, b, null, null))
         bases.add(b.uid);
-      if (i % 2 === 0) await pause();
+      await pause();
     }
 
     GLOBAL_VIABLE = { prefixes, bases, suffixes };
@@ -2386,13 +2390,24 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function computeViableSets(){
+    // Fast path: nothing selected yet — everything is potentially viable.
+    // Avoid the O(n^4) sweep entirely on first load.
+    if (!current.prefix && !current.base && !current.suffix1 && !current.suffix2){
+      return {
+        viablePrefixes: new Set(ALL_PREFIXES.map(p => p.uid)),
+        viableBases:    new Set(ALL_BASES.map(b => b.uid)),
+        viableSuffix1:  new Set(ALL_SUFFIXES.map(s => s.uid)),
+        viableSuffix2:  new Set()
+      };
+    }
+
     const viablePrefixes = new Set();
     const viableBases    = new Set();
     const viableSuffix1  = new Set();
     const viableSuffix2  = new Set();
 
+    // Bases: only sweep if an affix is locked (otherwise all bases stay open)
     const hasAffixLock = !!current.prefix || !!current.suffix1 || !!current.suffix2;
-
     if (!hasAffixLock){
       for (const b of ALL_BASES) viableBases.add(b.uid);
     } else {
@@ -2402,16 +2417,28 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    for (const p of ALL_PREFIXES){
-      if (existsRealWordWithLocks(p, current.base, current.suffix1, current.suffix2))
-        viablePrefixes.add(p.uid);
+    // Prefixes: only sweep if a base is selected (much cheaper — base is locked)
+    if (current.base){
+      for (const p of ALL_PREFIXES){
+        if (existsRealWordWithLocks(p, current.base, current.suffix1, current.suffix2))
+          viablePrefixes.add(p.uid);
+      }
+    } else {
+      // No base yet — show all prefixes as available
+      for (const p of ALL_PREFIXES) viablePrefixes.add(p.uid);
     }
 
-    for (const s of ALL_SUFFIXES){
-      if (existsRealWordWithLocks(current.prefix, current.base, s, current.suffix2))
-        viableSuffix1.add(s.uid);
-      if (current.suffix1 && existsRealWordWithLocks(current.prefix, current.base, current.suffix1, s))
-        viableSuffix2.add(s.uid);
+    // Suffixes: only sweep if a base is selected
+    if (current.base){
+      for (const s of ALL_SUFFIXES){
+        if (existsRealWordWithLocks(current.prefix, current.base, s, current.suffix2))
+          viableSuffix1.add(s.uid);
+        if (current.suffix1 && existsRealWordWithLocks(current.prefix, current.base, current.suffix1, s))
+          viableSuffix2.add(s.uid);
+      }
+    } else {
+      // No base yet — show all suffixes as available
+      for (const s of ALL_SUFFIXES) viableSuffix1.add(s.uid);
     }
 
     return { viablePrefixes, viableBases, viableSuffix1, viableSuffix2 };
@@ -2789,12 +2816,13 @@ document.addEventListener("DOMContentLoaded", () => {
   setupZone(els.suffix2Zone);
 
   // ─── BOOT SEQUENCE ───────────────────────────────────────────────────────────
-  // 1. Render the UI immediately (all tiles enabled by default, no dict yet)
+  // 1. Render everything immediately — no viability check, no dictionary needed.
+  //    currentViableSets defaults to all-enabled so every tile is clickable instantly.
   renderZones();
   renderBanks();
   updateOutput();
 
-  // 2. Fetch + parse dictionary in the background — page is already interactive
+  // 2. Load dictionary in the background — page is fully usable before this finishes.
   loadDictionary();
 });
   </script>
