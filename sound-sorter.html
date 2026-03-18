@@ -1,0 +1,978 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Lab – Sound Sorter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#f5f5f5; --panel:#ffffff; --panel-soft:#f8fafc; --line:#e2e8f0;
+      --text:#0f172a; --muted:#64748b;
+      --indigo:#4338ca; --indigo-2:#6366f1; --indigo-soft:#eef2ff;
+      --blue:#2563eb; --blue-soft:#eff6ff; --blue-line:#bfdbfe; --blue-text:#1e40af;
+      --green:#16a34a; --green-soft:#f0fdf4; --green-line:#bbf7d0; --green-text:#166534;
+      --orange:#ea580c; --orange-soft:#fff7ed; --orange-line:#fed7aa; --orange-text:#9a3412;
+      --purple:#7c3aed; --purple-soft:#f5f3ff; --purple-line:#ddd6fe; --purple-text:#4c1d95;
+      --teal:#0d9488; --teal-soft:#f0fdfa; --teal-line:#99f6e4; --teal-text:#134e4a;
+      --ok:#15803d; --warn:#b45309; --bad:#dc2626;
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:'Lexend',sans-serif; background:var(--bg); color:var(--text); line-height:1.5; letter-spacing:.02em; }
+    button,input,select{ font:inherit; }
+
+    /* ── Header ── */
+    .header{ position:sticky; top:0; z-index:20; background:var(--bg); border-bottom:1px solid var(--line); box-shadow:0 1px 2px rgba(15,23,42,.05); }
+    .headerInner{ max-width:1000px; margin:0 auto; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+    .brand{ display:flex; align-items:center; gap:12px; }
+    .brandIcon{ width:50px; height:50px; border-radius:14px; background:var(--teal); color:#fff; display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 12px 24px rgba(13,148,136,.2); flex:0 0 auto; }
+    .brandText h1{ margin:0; font-size:24px; font-weight:900; letter-spacing:-.02em; color:var(--teal-text); }
+    .brandText .sub{ font-size:10px; text-transform:uppercase; letter-spacing:.25em; color:var(--teal); font-weight:900; margin-top:3px; display:block; }
+    .hud{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .pill{ display:inline-flex; align-items:center; justify-content:center; min-height:40px; border:1px solid var(--line); border-radius:999px; background:#fff; padding:8px 16px; font-size:13px; font-weight:800; color:#334155; }
+    .pill.score{ background:var(--teal); color:#fff; border-color:transparent; }
+    .pill.streak{ background:var(--orange-soft); color:var(--orange-text); border-color:var(--orange-line); }
+    .topBtn{ border:none; background:#0f172a; color:#fff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:.12em; padding:12px 16px; border-radius:14px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; }
+    .topBtn:hover{ background:#000; }
+
+    /* ── Layout ── */
+    .wrap{ max-width:1000px; margin:0 auto; padding:20px; display:flex; flex-direction:column; gap:16px; }
+    .panel{ background:var(--panel); border:4px solid var(--line); border-radius:28px; box-shadow:0 20px 28px rgba(15,23,42,.06); overflow:hidden; }
+    .panelInner{ padding:24px; }
+    .panelTitle{ margin:0 0 14px; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.22em; color:var(--teal); }
+
+    /* ── Setup screen ── */
+    .setupGrid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+    @media(max-width:700px){ .setupGrid{ grid-template-columns:1fr; } }
+
+    .setupSection h3{ font-size:13px; font-weight:900; color:#312e81; margin:0 0 10px; text-transform:uppercase; letter-spacing:.1em; }
+    .optionStack{ display:flex; flex-direction:column; gap:8px; }
+    .optBtn{
+      border:2px solid var(--line); background:#fff; border-radius:14px;
+      padding:11px 16px; font-weight:800; font-size:13px; cursor:pointer;
+      color:var(--muted); transition:all .15s; text-align:left;
+      display:flex; align-items:center; gap:10px;
+    }
+    .optBtn:hover:not(.active){ border-color:#cbd5e1; color:var(--text); }
+    .optBtn.active{ border-color:var(--teal); background:var(--teal-soft); color:var(--teal-text); }
+    .optBtn .optIcon{ font-size:18px; flex-shrink:0; }
+    .optBtn .optLabel{ font-size:13px; font-weight:800; }
+    .optBtn .optSub{ font-size:11px; font-weight:600; color:var(--muted); margin-top:1px; }
+
+    .soundPickWrap{ margin-top:8px; }
+    .soundPickLabel{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); margin-bottom:8px; }
+    .soundPills{ display:flex; flex-wrap:wrap; gap:6px; }
+    .soundPill{
+      border:2px solid var(--line); background:#fff; border-radius:999px;
+      padding:7px 14px; font-size:12px; font-weight:800; cursor:pointer;
+      color:var(--muted); transition:all .12s;
+    }
+    .soundPill:hover{ border-color:#cbd5e1; color:var(--text); }
+    .soundPill.active{ border-color:var(--teal); background:var(--teal-soft); color:var(--teal-text); }
+
+    .startGameBtn{
+      border:none; background:var(--teal); color:#fff;
+      font-weight:900; font-size:16px; letter-spacing:.08em;
+      padding:18px 48px; border-radius:20px; cursor:pointer;
+      text-transform:uppercase;
+      box-shadow:0 16px 32px rgba(13,148,136,.24);
+      transition:all .15s; display:block; margin:0 auto;
+    }
+    .startGameBtn:hover{ background:#0f766e; transform:translateY(-2px); }
+
+    /* ── Game screen ── */
+    .gameTopRow{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+    .levelBadge{ display:inline-flex; align-items:center; gap:6px; background:var(--teal-soft); border:2px solid var(--teal-line); border-radius:999px; padding:7px 14px; font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; color:var(--teal-text); }
+    .soundBadge{ display:inline-flex; align-items:center; gap:6px; background:var(--purple-soft); border:2px solid var(--purple-line); border-radius:999px; padding:7px 14px; font-size:12px; font-weight:900; color:var(--purple-text); }
+    .changeBtn{ border:2px solid var(--line); background:#fff; color:#334155; font-weight:800; font-size:12px; padding:9px 16px; border-radius:12px; cursor:pointer; text-transform:uppercase; letter-spacing:.08em; }
+    .changeBtn:hover{ background:#f8fafc; }
+
+    /* Word display */
+    .wordDisplay{ text-align:center; margin-bottom:28px; }
+    .wordPromptLabel{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.22em; color:var(--muted); margin-bottom:12px; }
+    .clueText{ font-size:14px; color:#475569; font-weight:700; background:var(--panel-soft); border:2px solid var(--line); border-radius:12px; padding:8px 16px; display:inline-block; margin-bottom:16px; }
+    .wordRow{ display:flex; align-items:center; justify-content:center; gap:0; flex-wrap:wrap; margin-bottom:8px; }
+
+    .wordPart{ font-size:60px; font-weight:900; color:#312e81; letter-spacing:.01em; line-height:1; }
+    .wordPartSplit{ font-size:60px; font-weight:900; color:#312e81; letter-spacing:.01em; line-height:1; }
+
+    /* Drop zone */
+    .dropZone{
+      min-width:100px; height:76px;
+      border:4px dashed var(--teal-line);
+      border-radius:16px;
+      background:var(--teal-soft);
+      display:inline-flex; align-items:center; justify-content:center;
+      transition:all .15s;
+      vertical-align:middle;
+      position:relative;
+      margin:0 4px;
+    }
+    .dropZone.dragover{ border-color:var(--teal); background:#ccfbf1; transform:scale(1.04); }
+    .dropZone.filled{ border-style:solid; border-color:var(--teal); background:#ccfbf1; }
+    .dropZone.correct{ border-color:var(--green); background:var(--green-soft); animation:correctPop .35s ease-out; }
+    .dropZone.wrong{ border-color:var(--bad); background:#fef2f2; animation:wrongShake .4s ease-out; }
+    .dropZoneText{ font-size:14px; font-weight:900; text-transform:uppercase; letter-spacing:.14em; color:var(--teal); }
+    .dropZoneAnswer{ font-size:52px; font-weight:900; color:var(--teal-text); line-height:1; }
+
+    @keyframes correctPop{ 0%{ transform:scale(.9); } 60%{ transform:scale(1.08); } 100%{ transform:scale(1); } }
+    @keyframes wrongShake{ 0%,100%{ transform:translateX(0); } 20%{ transform:translateX(-8px); } 40%{ transform:translateX(8px); } 60%{ transform:translateX(-5px); } 80%{ transform:translateX(5px); } }
+
+    /* Sound hint */
+    .soundHint{ font-size:13px; font-weight:800; color:var(--muted); text-align:center; margin-bottom:20px; }
+    .soundHintSound{ color:var(--teal); font-size:16px; }
+
+    /* Grapheme tiles */
+    .tilesSection{ margin-bottom:20px; }
+    .tilesLabel{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.18em; color:var(--muted); text-align:center; margin-bottom:12px; }
+    .tiles{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+    .tile{
+      padding:14px 22px; border-radius:16px;
+      border:3px solid var(--teal-line);
+      background:var(--teal-soft); color:var(--teal-text);
+      font-size:28px; font-weight:900;
+      cursor:pointer; user-select:none;
+      transition:all .12s;
+      draggable:true;
+    }
+    .tile:hover:not(.used){ border-color:var(--teal); transform:translateY(-3px); box-shadow:0 10px 20px rgba(13,148,136,.18); }
+    .tile.used{ opacity:.3; cursor:not-allowed; transform:none; box-shadow:none; }
+    .tile.correct-tile{ border-color:var(--green); background:var(--green-soft); color:var(--green-text); }
+    .tile.wrong-tile{ border-color:var(--bad); background:#fef2f2; color:var(--bad); animation:wrongShake .35s ease-out; }
+
+    /* Speak button */
+    .speakBtn{ border:2px solid var(--teal-line); background:var(--teal-soft); color:var(--teal-text); border-radius:14px; padding:10px 20px; font-weight:800; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all .15s; margin-bottom:20px; }
+    .speakBtn:hover{ background:var(--teal-line); border-color:var(--teal); }
+
+    /* Feedback */
+    .feedbackPanel{ border-radius:20px; padding:18px 22px; font-size:14px; line-height:1.7; display:none; animation:slideIn .25s ease-out; margin-bottom:16px; }
+    .feedbackPanel.correct{ display:block; background:var(--green-soft); border:2px solid var(--green-line); color:var(--green-text); }
+    .feedbackPanel.wrong{ display:block; background:#fef2f2; border:2px solid #fecaca; color:var(--bad); }
+    .feedbackTitle{ font-size:18px; font-weight:900; margin-bottom:4px; }
+    .feedbackExplain{ font-size:13px; color:#334155; font-weight:700; line-height:1.6; margin-top:6px; }
+    @keyframes slideIn{ 0%{ transform:translateY(-8px); opacity:0; } 100%{ transform:translateY(0); opacity:1; } }
+
+    /* Actions */
+    .actionRow{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+    .nextBtn{ border:none; background:#0f172a; color:#fff; font-weight:900; font-size:14px; letter-spacing:.08em; padding:14px 32px; border-radius:16px; cursor:pointer; text-transform:uppercase; transition:background .15s; display:none; }
+    .nextBtn:hover{ background:#000; }
+    .nextBtn.visible{ display:inline-flex; }
+    .tryAgainBtn{ border:2px solid var(--line); background:#fff; color:#334155; font-weight:800; font-size:13px; padding:12px 22px; border-radius:16px; cursor:pointer; transition:all .15s; display:none; }
+    .tryAgainBtn:hover{ background:#f8fafc; }
+    .tryAgainBtn.visible{ display:inline-flex; }
+
+    /* Right column stats */
+    .statsGrid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+    .statBox{ background:var(--panel-soft); border:2px solid var(--line); border-radius:16px; padding:14px; text-align:center; }
+    .statVal{ font-size:32px; font-weight:900; color:var(--teal); line-height:1; }
+    .statLbl{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); margin-top:4px; }
+
+    .histList{ display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto; }
+    .histItem{ display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:14px; border:2px solid var(--line); font-size:13px; }
+    .histItem.correct{ background:var(--green-soft); border-color:var(--green-line); }
+    .histItem.wrong{ background:#fef2f2; border-color:#fecaca; }
+    .histWord{ font-weight:900; flex:1; color:#312e81; }
+    .histGrapheme{ font-size:12px; color:var(--muted); }
+
+    .hidden{ display:none !important; }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="headerInner">
+    <div class="brand">
+      <div class="brandIcon">🔤</div>
+      <div class="brandText"><h1>Sound Sorter</h1><span class="sub">Word Lab · Grapheme Mode</span></div>
+    </div>
+    <div class="hud">
+      <span class="pill streak" id="streakPill">🔥 0 streak</span>
+      <span class="pill score" id="scorePill">Score: 0</span>
+      <a href="index.html" class="topBtn">← Builder</a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ── Setup screen ─────────────────────────────────────────── -->
+  <div id="setupScreen">
+    <div class="panel"><div class="panelInner">
+      <div class="panelTitle">Choose your settings</div>
+      <div class="setupGrid">
+
+        <!-- Level -->
+        <div class="setupSection">
+          <h3>1. Level</h3>
+          <div class="optionStack">
+            <button class="optBtn active" data-level="starter" onclick="selectLevel('starter',this)">
+              <span class="optIcon">🌱</span>
+              <div><div class="optLabel">Starter</div><div class="optSub">Full clue · 3 common options</div></div>
+            </button>
+            <button class="optBtn" data-level="levelup" onclick="selectLevel('levelup',this)">
+              <span class="optIcon">📈</span>
+              <div><div class="optLabel">Level Up</div><div class="optSub">Brief clue · 4 options</div></div>
+            </button>
+            <button class="optBtn" data-level="challenge" onclick="selectLevel('challenge',this)">
+              <span class="optIcon">🔥</span>
+              <div><div class="optLabel">Challenge</div><div class="optSub">Minimal clue · 5 options incl. tricky</div></div>
+            </button>
+            <button class="optBtn" data-level="mixed" onclick="selectLevel('mixed',this)">
+              <span class="optIcon">🎲</span>
+              <div><div class="optLabel">Mixed</div><div class="optSub">All levels, any word</div></div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Sound type -->
+        <div class="setupSection">
+          <h3>2. Sound type</h3>
+          <div class="optionStack">
+            <button class="optBtn active" data-type="vowel" onclick="selectType('vowel',this)">
+              <span class="optIcon">🔵</span>
+              <div><div class="optLabel">Vowel sounds</div><div class="optSub">Long a, long e, or sound, ar…</div></div>
+            </button>
+            <button class="optBtn" data-type="consonant" onclick="selectType('consonant',this)">
+              <span class="optIcon">🟠</span>
+              <div><div class="optLabel">Consonant patterns</div><div class="optSub">sh, ch, th, ck, ph, tch…</div></div>
+            </button>
+            <button class="optBtn" data-type="mixed" onclick="selectType('mixed',this)">
+              <span class="optIcon">🟣</span>
+              <div><div class="optLabel">Mixed</div><div class="optSub">Both vowel and consonant</div></div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Specific sound -->
+        <div class="setupSection">
+          <h3>3. Narrow to a sound <span style="font-weight:600;color:var(--muted);font-size:11px;">(optional)</span></h3>
+          <div class="soundPickWrap">
+            <div class="soundPickLabel">Leave on "All" or pick one:</div>
+            <div class="soundPills" id="soundPills"></div>
+          </div>
+        </div>
+
+      </div>
+      <div style="margin-top:28px; text-align:center;">
+        <button class="startGameBtn" onclick="startGame()">Start Sorting! →</button>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- ── Game screen ───────────────────────────────────────────── -->
+  <div id="gameScreen" class="hidden">
+
+    <div class="panel"><div class="panelInner">
+
+      <div class="gameTopRow">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <span class="levelBadge" id="levelBadge">🌱 Starter</span>
+          <span class="soundBadge" id="soundBadge">Vowel sounds</span>
+        </div>
+        <button class="changeBtn" onclick="goToSetup()">Change settings</button>
+      </div>
+
+      <div class="wordDisplay">
+        <div class="wordPromptLabel">Which grapheme makes this sound in this word?</div>
+        <div id="clueWrap"><span class="clueText" id="clueText"></span></div>
+        <div style="text-align:center;margin-bottom:12px;">
+          <button class="speakBtn" onclick="speakWord()">🔊 Hear the word</button>
+        </div>
+        <div class="wordRow" id="wordRow"></div>
+        <div class="soundHint" id="soundHint"></div>
+      </div>
+
+      <div class="tilesSection">
+        <div class="tilesLabel">Tap the correct grapheme for this word</div>
+        <div class="tiles" id="tilesRow"></div>
+      </div>
+
+      <div class="feedbackPanel" id="feedbackPanel">
+        <div class="feedbackTitle" id="feedbackTitle"></div>
+        <div id="feedbackBody"></div>
+        <div class="feedbackExplain" id="feedbackExplain"></div>
+      </div>
+
+      <div class="actionRow">
+        <button class="tryAgainBtn" id="tryAgainBtn" onclick="tryAgain()">Try again</button>
+        <button class="nextBtn" id="nextBtn" onclick="nextWord()">Next word →</button>
+      </div>
+
+    </div></div>
+
+    <!-- Stats row -->
+    <div class="panel"><div class="panelInner">
+      <div class="statsGrid">
+        <div class="statBox"><div class="statVal" id="statScore">0</div><div class="statLbl">Score</div></div>
+        <div class="statBox"><div class="statVal" id="statCorrect">0</div><div class="statLbl">Correct</div></div>
+        <div class="statBox"><div class="statVal" id="statBest">0</div><div class="statLbl">Best streak</div></div>
+      </div>
+    </div></div>
+
+    <!-- History -->
+    <div class="panel"><div class="panelInner">
+      <div class="panelTitle" style="margin-bottom:12px;">History</div>
+      <div class="histList" id="histList"><div style="color:var(--muted);font-size:13px;">No attempts yet.</div></div>
+    </div></div>
+
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// WORD DATA
+// Each entry: { word, sound, soundLabel, grapheme, before, after, clue, level, type, distractors, explain }
+// before/after = text either side of the blank
+// grapheme = the correct answer
+// distractors = other plausible grapheme options for this sound
+// level: 'starter' | 'levelup' | 'challenge'
+// type: 'vowel' | 'consonant'
+// ═══════════════════════════════════════════════════════════════
+
+const WORDS = [
+
+  // ── LONG A ──────────────────────────────────────────────────
+  { word:"rain",     sound:"long-a", soundLabel:"Long A",  grapheme:"ai",   before:"r",    after:"n",    clue:"water falling from the sky",           level:"starter",   type:"vowel", distractors:["ay","a_e"],        explain:"The 'ai' grapheme makes the long a sound in the middle of words." },
+  { word:"play",     sound:"long-a", soundLabel:"Long A",  grapheme:"ay",   before:"pl",   after:"",     clue:"have fun",                             level:"starter",   type:"vowel", distractors:["ai","a_e"],        explain:"The 'ay' grapheme usually comes at the end of words." },
+  { word:"cake",     sound:"long-a", soundLabel:"Long A",  grapheme:"a_e",  before:"c",    after:"k",    clue:"a birthday treat",                     level:"starter",   type:"vowel", distractors:["ai","ay"],         explain:"The split digraph a_e (magic e) makes a long a sound." },
+  { word:"break",    sound:"long-a", soundLabel:"Long A",  grapheme:"ea",   before:"br",   after:"k",    clue:"snap or rest",                         level:"levelup",   type:"vowel", distractors:["ai","ay","a_e"],   explain:"The 'ea' grapheme usually makes a long e sound, but in 'break' it makes long a." },
+  { word:"they",     sound:"long-a", soundLabel:"Long A",  grapheme:"ey",   before:"th",   after:"",     clue:"those people",                         level:"levelup",   type:"vowel", distractors:["ay","ai","a_e"],   explain:"The 'ey' grapheme at the end of some words makes a long a sound." },
+  { word:"eight",    sound:"long-a", soundLabel:"Long A",  grapheme:"eigh", before:"",     after:"t",    clue:"the number after seven",               level:"challenge", type:"vowel", distractors:["ai","ay","a_e","ea"], explain:"The 'eigh' grapheme makes a long a sound — this is an unusual spelling." },
+  { word:"straight", sound:"long-a", soundLabel:"Long A",  grapheme:"aigh", before:"str",  after:"t",    clue:"not curved",                           level:"challenge", type:"vowel", distractors:["ai","ay","eigh","a_e"], explain:"The 'aigh' grapheme is rare but makes a long a sound here." },
+  { word:"lady",     sound:"long-a", soundLabel:"Long A",  grapheme:"a",    before:"l",    after:"dy",   clue:"a woman",                              level:"levelup",   type:"vowel", distractors:["ai","ay","a_e"],   explain:"A single 'a' before a consonant cluster can make a long a sound." },
+  { word:"steak",    sound:"long-a", soundLabel:"Long A",  grapheme:"ea",   before:"st",   after:"k",    clue:"a thick cut of meat",                  level:"challenge", type:"vowel", distractors:["ai","ay","a_e","ey"], explain:"'ea' usually makes long e, but in 'steak' it makes long a — a tricky one!" },
+
+  // ── LONG E ──────────────────────────────────────────────────
+  { word:"feet",     sound:"long-e", soundLabel:"Long E",  grapheme:"ee",   before:"f",    after:"t",    clue:"you walk on these",                    level:"starter",   type:"vowel", distractors:["ea","e_e"],        explain:"The 'ee' grapheme is one of the most common ways to spell the long e sound." },
+  { word:"seat",     sound:"long-e", soundLabel:"Long E",  grapheme:"ea",   before:"s",    after:"t",    clue:"where you sit",                        level:"starter",   type:"vowel", distractors:["ee","e_e"],        explain:"The 'ea' grapheme is very common for the long e sound." },
+  { word:"these",    sound:"long-e", soundLabel:"Long E",  grapheme:"e_e",  before:"th",   after:"s",    clue:"the ones here",                        level:"levelup",   type:"vowel", distractors:["ee","ea","e"],      explain:"The split digraph e_e makes a long e sound." },
+  { word:"me",       sound:"long-e", soundLabel:"Long E",  grapheme:"e",    before:"m",    after:"",     clue:"referring to yourself",                level:"starter",   type:"vowel", distractors:["ee","ea"],         explain:"A single 'e' at the end of short words often makes a long e sound." },
+  { word:"baby",     sound:"long-e", soundLabel:"Long E",  grapheme:"y",    before:"bab",  after:"",     clue:"a very young child",                   level:"starter",   type:"vowel", distractors:["ee","ey","ie"],     explain:"The 'y' grapheme at the end of words often makes a long e sound." },
+  { word:"money",    sound:"long-e", soundLabel:"Long E",  grapheme:"ey",   before:"mon",  after:"",     clue:"coins and notes",                      level:"levelup",   type:"vowel", distractors:["ee","ea","y","ie"], explain:"The 'ey' grapheme at the end of words makes a long e sound." },
+  { word:"babies",   sound:"long-e", soundLabel:"Long E",  grapheme:"ie",   before:"bab",  after:"s",    clue:"more than one baby",                   level:"levelup",   type:"vowel", distractors:["ee","ea","y","ey"], explain:"The 'ie' grapheme makes a long e sound in plurals like babies." },
+  { word:"steel",    sound:"long-e", soundLabel:"Long E",  grapheme:"ee",   before:"st",   after:"l",    clue:"a strong metal",                       level:"starter",   type:"vowel", distractors:["ea","e_e","ie"],    explain:"The 'ee' grapheme is used in 'steel' — not 'ea' like in 'steal'." },
+  { word:"people",   sound:"long-e", soundLabel:"Long E",  grapheme:"eo",   before:"p",    after:"ple",  clue:"human beings",                         level:"challenge", type:"vowel", distractors:["ee","ea","ie","ey"], explain:"The 'eo' grapheme is unusual for long e — found in only a few words." },
+  { word:"receive",  sound:"long-e", soundLabel:"Long E",  grapheme:"ei",   before:"r",    after:"ve",   clue:"to get something",                     level:"challenge", type:"vowel", distractors:["ee","ea","ie","ey"], explain:"'i before e except after c' — after c, use 'ei' for the long e sound." },
+  { word:"beach",    sound:"long-e", soundLabel:"Long E",  grapheme:"ea",   before:"b",    after:"ch",   clue:"sand beside the ocean",                level:"starter",   type:"vowel", distractors:["ee","e_e"],        explain:"The 'ea' grapheme makes a long e sound in 'beach'." },
+  { word:"field",    sound:"long-e", soundLabel:"Long E",  grapheme:"ie",   before:"f",    after:"ld",   clue:"an open area of grass",                level:"levelup",   type:"vowel", distractors:["ee","ea","ey"],     explain:"The 'ie' grapheme makes a long e sound in many words." },
+
+  // ── LONG I ──────────────────────────────────────────────────
+  { word:"night",    sound:"long-i", soundLabel:"Long I",  grapheme:"igh",  before:"n",    after:"t",    clue:"when it is dark",                      level:"starter",   type:"vowel", distractors:["i_e","ie"],        explain:"The 'igh' grapheme is very common for long i in the middle of words." },
+  { word:"pie",      sound:"long-i", soundLabel:"Long I",  grapheme:"ie",   before:"p",    after:"",     clue:"a baked pastry dish",                  level:"starter",   type:"vowel", distractors:["igh","i_e"],        explain:"The 'ie' grapheme makes long i at the end of short words." },
+  { word:"time",     sound:"long-i", soundLabel:"Long I",  grapheme:"i_e",  before:"t",    after:"m",    clue:"measured in hours and minutes",         level:"starter",   type:"vowel", distractors:["igh","ie"],        explain:"The split digraph i_e (magic e) makes a long i sound." },
+  { word:"fly",      sound:"long-i", soundLabel:"Long I",  grapheme:"y",    before:"fl",   after:"",     clue:"move through the air",                 level:"starter",   type:"vowel", distractors:["i_e","ie","igh"],   explain:"The 'y' at the end of a single-syllable word often makes long i." },
+  { word:"spider",   sound:"long-i", soundLabel:"Long I",  grapheme:"i",    before:"sp",   after:"der",  clue:"an eight-legged creature",             level:"levelup",   type:"vowel", distractors:["i_e","igh","ie"],   explain:"A single 'i' before a consonant + er can make a long i sound." },
+  { word:"height",   sound:"long-i", soundLabel:"Long I",  grapheme:"eigh", before:"h",    after:"t",    clue:"how tall something is",                level:"challenge", type:"vowel", distractors:["igh","i_e","ie","y"], explain:"The 'eigh' grapheme makes long i in 'height' — the same letters make long a in 'eight'!" },
+  { word:"bright",   sound:"long-i", soundLabel:"Long I",  grapheme:"igh",  before:"br",   after:"t",    clue:"very light or clever",                 level:"starter",   type:"vowel", distractors:["i_e","ie","y"],     explain:"The 'igh' grapheme makes long i in 'bright'." },
+  { word:"tried",    sound:"long-i", soundLabel:"Long I",  grapheme:"ie",   before:"tr",   after:"d",    clue:"made an attempt",                      level:"levelup",   type:"vowel", distractors:["i_e","igh","y"],    explain:"When 'y' changes to 'i' and adds 'ed', the 'ie' makes a long i sound." },
+
+  // ── LONG O ──────────────────────────────────────────────────
+  { word:"boat",     sound:"long-o", soundLabel:"Long O",  grapheme:"oa",   before:"b",    after:"t",    clue:"a vessel on water",                    level:"starter",   type:"vowel", distractors:["o_e","ow"],        explain:"The 'oa' grapheme is very common for long o in the middle of words." },
+  { word:"rose",     sound:"long-o", soundLabel:"Long O",  grapheme:"o_e",  before:"r",    after:"s",    clue:"a flowering plant",                    level:"starter",   type:"vowel", distractors:["oa","ow"],         explain:"The split digraph o_e makes a long o sound." },
+  { word:"window",   sound:"long-o", soundLabel:"Long O",  grapheme:"ow",   before:"wind", after:"",     clue:"a glass opening in a wall",            level:"starter",   type:"vowel", distractors:["oa","o_e"],        explain:"The 'ow' grapheme at the end of words often makes a long o sound." },
+  { word:"toe",      sound:"long-o", soundLabel:"Long O",  grapheme:"oe",   before:"t",    after:"",     clue:"a digit on your foot",                 level:"levelup",   type:"vowel", distractors:["oa","o_e","ow"],   explain:"The 'oe' grapheme makes long o at the end of short words." },
+  { word:"comb",     sound:"long-o", soundLabel:"Long O",  grapheme:"o",    before:"c",    after:"mb",   clue:"used to tidy hair",                    level:"levelup",   type:"vowel", distractors:["oa","o_e","ow","oe"], explain:"In 'comb', a single 'o' makes the long o sound — the 'b' is silent." },
+  { word:"though",   sound:"long-o", soundLabel:"Long O",  grapheme:"ough", before:"th",   after:"",     clue:"despite that",                         level:"challenge", type:"vowel", distractors:["oa","ow","o_e","oe"], explain:"The 'ough' grapheme makes long o in 'though' — one of its many sounds!" },
+  { word:"road",     sound:"long-o", soundLabel:"Long O",  grapheme:"oa",   before:"r",    after:"d",    clue:"a path for vehicles",                  level:"starter",   type:"vowel", distractors:["o_e","ow","oe"],   explain:"The 'oa' grapheme makes long o in 'road'." },
+  { word:"snow",     sound:"long-o", soundLabel:"Long O",  grapheme:"ow",   before:"sn",   after:"",     clue:"frozen white precipitation",           level:"starter",   type:"vowel", distractors:["oa","o_e","oe"],   explain:"The 'ow' grapheme makes long o at the end of 'snow'." },
+
+  // ── LONG U / OO ─────────────────────────────────────────────
+  { word:"boot",     sound:"long-u", soundLabel:"Long U",  grapheme:"oo",   before:"b",    after:"t",    clue:"a shoe for the whole foot",            level:"starter",   type:"vowel", distractors:["ue","ew"],         explain:"The 'oo' grapheme is the most common way to spell the long oo sound." },
+  { word:"glue",     sound:"long-u", soundLabel:"Long U",  grapheme:"ue",   before:"gl",   after:"",     clue:"sticky substance",                     level:"starter",   type:"vowel", distractors:["oo","ew"],         explain:"The 'ue' grapheme makes the long oo sound, especially at the end of words." },
+  { word:"screw",    sound:"long-u", soundLabel:"Long U",  grapheme:"ew",   before:"scr",  after:"",     clue:"a type of fastener",                   level:"levelup",   type:"vowel", distractors:["oo","ue","ou"],     explain:"The 'ew' grapheme makes the long oo sound at the end of words." },
+  { word:"flute",    sound:"long-u", soundLabel:"Long U",  grapheme:"u_e",  before:"fl",   after:"t",    clue:"a wind instrument",                    level:"levelup",   type:"vowel", distractors:["oo","ue","ew"],     explain:"The split digraph u_e makes the long oo sound." },
+  { word:"group",    sound:"long-u", soundLabel:"Long U",  grapheme:"ou",   before:"gr",   after:"p",    clue:"a collection of people",               level:"levelup",   type:"vowel", distractors:["oo","ue","ew"],     explain:"The 'ou' grapheme makes the long oo sound in 'group'." },
+  { word:"through",  sound:"long-u", soundLabel:"Long U",  grapheme:"ough", before:"thr",  after:"",     clue:"from one side to the other",           level:"challenge", type:"vowel", distractors:["oo","ue","ew","ou"], explain:"The 'ough' grapheme makes the long oo sound in 'through' — one of its many sounds!" },
+  { word:"fruit",    sound:"long-u", soundLabel:"Long U",  grapheme:"ui",   before:"fr",   after:"t",    clue:"grows on trees and is sweet",          level:"levelup",   type:"vowel", distractors:["oo","ue","ew"],     explain:"The 'ui' grapheme makes the long oo sound in 'fruit'." },
+  { word:"shoe",     sound:"long-u", soundLabel:"Long U",  grapheme:"oe",   before:"sh",   after:"",     clue:"you wear it on your foot",             level:"challenge", type:"vowel", distractors:["oo","ue","ew","ou"], explain:"The 'oe' grapheme makes the long oo sound in 'shoe'." },
+
+  // ── OO (book) ────────────────────────────────────────────────
+  { word:"book",     sound:"oo-short", soundLabel:"OO (book)", grapheme:"oo", before:"b",  after:"k",    clue:"you read it",                          level:"starter",   type:"vowel", distractors:["ou","u"],          explain:"The 'oo' grapheme can make two sounds — the short oo as in 'book'." },
+  { word:"cook",     sound:"oo-short", soundLabel:"OO (book)", grapheme:"oo", before:"c",  after:"k",    clue:"to prepare food",                      level:"starter",   type:"vowel", distractors:["ou","u"],          explain:"The 'oo' makes a short oo sound in words like 'cook' and 'hook'." },
+  { word:"could",    sound:"oo-short", soundLabel:"OO (book)", grapheme:"oul", before:"c", after:"d",    clue:"was able to",                          level:"challenge", type:"vowel", distractors:["oo","u","ou"],     explain:"The 'oul' grapheme makes the short oo sound in 'could', 'would', 'should'." },
+
+  // ── OW sound ─────────────────────────────────────────────────
+  { word:"cloud",    sound:"ow",     soundLabel:"OW sound", grapheme:"ou",  before:"cl",   after:"d",    clue:"fluffy thing in the sky",              level:"starter",   type:"vowel", distractors:["ow"],              explain:"The 'ou' grapheme makes the ow sound in 'cloud'." },
+  { word:"flower",   sound:"ow",     soundLabel:"OW sound", grapheme:"ow",  before:"fl",   after:"er",   clue:"a blooming plant",                     level:"starter",   type:"vowel", distractors:["ou"],              explain:"The 'ow' grapheme makes the ow sound in 'flower'." },
+  { word:"mouth",    sound:"ow",     soundLabel:"OW sound", grapheme:"ou",  before:"m",    after:"th",   clue:"you speak with this",                  level:"starter",   type:"vowel", distractors:["ow"],              explain:"The 'ou' grapheme makes the ow sound in 'mouth'." },
+  { word:"town",     sound:"ow",     soundLabel:"OW sound", grapheme:"ow",  before:"t",    after:"n",    clue:"a small city",                         level:"starter",   type:"vowel", distractors:["ou"],              explain:"The 'ow' grapheme makes the ow sound in 'town'." },
+  { word:"plough",   sound:"ow",     soundLabel:"OW sound", grapheme:"ough",before:"pl",   after:"",     clue:"a farming tool",                       level:"challenge", type:"vowel", distractors:["ou","ow"],          explain:"The 'ough' grapheme makes the ow sound in 'plough' — its rarest pronunciation." },
+
+  // ── OY sound ─────────────────────────────────────────────────
+  { word:"boy",      sound:"oy",     soundLabel:"OY sound", grapheme:"oy",  before:"b",    after:"",     clue:"a male child",                         level:"starter",   type:"vowel", distractors:["oi"],              explain:"The 'oy' grapheme comes at the end of words." },
+  { word:"coin",     sound:"oy",     soundLabel:"OY sound", grapheme:"oi",  before:"c",    after:"n",    clue:"a piece of money",                     level:"starter",   type:"vowel", distractors:["oy"],              explain:"The 'oi' grapheme comes in the middle of words." },
+  { word:"noise",    sound:"oy",     soundLabel:"OY sound", grapheme:"oi",  before:"n",    after:"se",   clue:"a loud sound",                         level:"starter",   type:"vowel", distractors:["oy"],              explain:"The 'oi' grapheme makes the oy sound in 'noise'." },
+  { word:"enjoy",    sound:"oy",     soundLabel:"OY sound", grapheme:"oy",  before:"enj",  after:"",     clue:"to like something",                    level:"levelup",   type:"vowel", distractors:["oi"],              explain:"The 'oy' grapheme comes at the end of 'enjoy'." },
+
+  // ── OR sound ─────────────────────────────────────────────────
+  { word:"horse",    sound:"or",     soundLabel:"OR sound", grapheme:"or",  before:"h",    after:"se",   clue:"an animal you can ride",               level:"starter",   type:"vowel", distractors:["ore","aw","au"],    explain:"The 'or' grapheme is the most common spelling for the or sound." },
+  { word:"core",     sound:"or",     soundLabel:"OR sound", grapheme:"ore", before:"c",    after:"",     clue:"the centre of something",              level:"starter",   type:"vowel", distractors:["or","aw","au"],     explain:"The 'ore' grapheme makes the or sound at the end of words." },
+  { word:"paw",      sound:"or",     soundLabel:"OR sound", grapheme:"aw",  before:"p",    after:"",     clue:"an animal's foot",                     level:"starter",   type:"vowel", distractors:["or","ore","au"],    explain:"The 'aw' grapheme makes the or sound, often at the end of words." },
+  { word:"sauce",    sound:"or",     soundLabel:"OR sound", grapheme:"au",  before:"s",    after:"ce",   clue:"a liquid topping for food",            level:"levelup",   type:"vowel", distractors:["or","aw","ore"],    explain:"The 'au' grapheme makes the or sound in 'sauce'." },
+  { word:"door",     sound:"or",     soundLabel:"OR sound", grapheme:"oor", before:"d",    after:"",     clue:"you open and close it",                level:"levelup",   type:"vowel", distractors:["or","ore","aw"],    explain:"The 'oor' grapheme makes the or sound in 'door' and 'floor'." },
+  { word:"ball",     sound:"or",     soundLabel:"OR sound", grapheme:"al",  before:"b",    after:"l",    clue:"round object used in sport",           level:"levelup",   type:"vowel", distractors:["or","aw","au"],     explain:"The 'al' grapheme makes the or sound in words like 'ball' and 'talk'." },
+  { word:"caught",   sound:"or",     soundLabel:"OR sound", grapheme:"augh",before:"c",    after:"t",    clue:"past tense of 'catch'",                level:"challenge", type:"vowel", distractors:["or","aw","au","oor"], explain:"The 'augh' grapheme makes the or sound in 'caught', 'taught', 'daughter'." },
+  { word:"bought",   sound:"or",     soundLabel:"OR sound", grapheme:"ough",before:"b",    after:"t",    clue:"past tense of 'buy'",                  level:"challenge", type:"vowel", distractors:["or","aw","au","augh"], explain:"The 'ough' grapheme makes the or sound in 'bought', 'thought', 'fought'." },
+
+  // ── AR sound ─────────────────────────────────────────────────
+  { word:"star",     sound:"ar",     soundLabel:"AR sound", grapheme:"ar",  before:"st",   after:"",     clue:"a shining light in the sky",           level:"starter",   type:"vowel", distractors:["a","ear"],         explain:"The 'ar' grapheme is the most common spelling for the ar sound." },
+  { word:"glass",    sound:"ar",     soundLabel:"AR sound", grapheme:"a",   before:"gl",   after:"ss",   clue:"a drinking vessel",                    level:"levelup",   type:"vowel", distractors:["ar","ear","au"],    explain:"In some accents, 'a' before 'ss' makes an ar sound — as in glass, class, pass." },
+  { word:"heart",    sound:"ar",     soundLabel:"AR sound", grapheme:"ear", before:"h",    after:"t",    clue:"pumps blood around the body",          level:"levelup",   type:"vowel", distractors:["ar","a"],           explain:"The 'ear' grapheme makes the ar sound in 'heart' and 'hearth'." },
+  { word:"half",     sound:"ar",     soundLabel:"AR sound", grapheme:"al",  before:"h",    after:"f",    clue:"one of two equal parts",               level:"challenge", type:"vowel", distractors:["ar","a","ear"],     explain:"The 'al' grapheme makes the ar sound in 'half' and 'calm' — the 'l' is silent." },
+  { word:"laugh",    sound:"ar",     soundLabel:"AR sound", grapheme:"au",  before:"l",    after:"gh",   clue:"what you do when something is funny",  level:"challenge", type:"vowel", distractors:["ar","a","ear","al"], explain:"The 'au' makes an ar sound in 'laugh' — and the 'gh' is silent." },
+
+  // ── ER sound ─────────────────────────────────────────────────
+  { word:"bird",     sound:"er",     soundLabel:"ER sound", grapheme:"ir",  before:"b",    after:"d",    clue:"a feathered creature that flies",      level:"starter",   type:"vowel", distractors:["ur","er"],         explain:"The 'ir' grapheme is common for the er sound in short words." },
+  { word:"nurse",    sound:"er",     soundLabel:"ER sound", grapheme:"ur",  before:"n",    after:"se",   clue:"a healthcare worker",                  level:"starter",   type:"vowel", distractors:["ir","er"],         explain:"The 'ur' grapheme makes the er sound in 'nurse'." },
+  { word:"fern",     sound:"er",     soundLabel:"ER sound", grapheme:"er",  before:"f",    after:"n",    clue:"a leafy plant",                        level:"starter",   type:"vowel", distractors:["ir","ur"],         explain:"The 'er' grapheme makes the er sound in 'fern'." },
+  { word:"world",    sound:"er",     soundLabel:"ER sound", grapheme:"or",  before:"w",    after:"ld",   clue:"planet Earth",                         level:"levelup",   type:"vowel", distractors:["ir","ur","er"],    explain:"The 'or' grapheme makes the er sound after 'w' — as in 'word', 'work', 'worm'." },
+  { word:"early",    sound:"er",     soundLabel:"ER sound", grapheme:"ear", before:"",     after:"ly",   clue:"before the expected time",             level:"levelup",   type:"vowel", distractors:["ir","ur","er","or"], explain:"The 'ear' grapheme makes the er sound in 'early', 'learn', 'earth'." },
+  { word:"journey",  sound:"er",     soundLabel:"ER sound", grapheme:"our", before:"j",    after:"ney",  clue:"a long trip",                          level:"challenge", type:"vowel", distractors:["ir","ur","er","ear"], explain:"The 'our' grapheme makes the er sound in 'journey' and 'colour'." },
+  { word:"myrtle",   sound:"er",     soundLabel:"ER sound", grapheme:"yr",  before:"m",    after:"tle",  clue:"a type of plant",                      level:"challenge", type:"vowel", distractors:["ir","ur","er","ear"], explain:"The 'yr' grapheme makes the er sound in 'myrtle' and 'martyr'." },
+
+  // ── AIR sound ────────────────────────────────────────────────
+  { word:"chair",    sound:"air",    soundLabel:"AIR sound",grapheme:"air", before:"ch",   after:"",     clue:"you sit on this",                      level:"starter",   type:"vowel", distractors:["are","ear"],       explain:"The 'air' grapheme is the most common spelling for this sound." },
+  { word:"square",   sound:"air",    soundLabel:"AIR sound",grapheme:"are", before:"sq",   after:"",     clue:"a shape with four equal sides",        level:"starter",   type:"vowel", distractors:["air","ear"],       explain:"The 'are' grapheme makes the air sound in 'square' and 'care'." },
+  { word:"bear",     sound:"air",    soundLabel:"AIR sound",grapheme:"ear", before:"b",    after:"",     clue:"a large furry animal",                 level:"levelup",   type:"vowel", distractors:["air","are","ere"],  explain:"The 'ear' grapheme usually makes a long e sound, but in 'bear' it makes the air sound." },
+  { word:"where",    sound:"air",    soundLabel:"AIR sound",grapheme:"ere", before:"wh",   after:"",     clue:"in what place",                        level:"levelup",   type:"vowel", distractors:["air","are","ear"],  explain:"The 'ere' grapheme makes the air sound in 'where' and 'there'." },
+  { word:"their",    sound:"air",    soundLabel:"AIR sound",grapheme:"eir", before:"th",   after:"",     clue:"belonging to them",                    level:"challenge", type:"vowel", distractors:["air","are","ear","ere"], explain:"The 'eir' grapheme makes the air sound in 'their' — easy to confuse with 'there'!" },
+
+  // ── EAR sound ────────────────────────────────────────────────
+  { word:"deer",     sound:"ear",    soundLabel:"EAR sound",grapheme:"eer", before:"d",    after:"",     clue:"a graceful woodland animal",           level:"starter",   type:"vowel", distractors:["ear","ere"],       explain:"The 'eer' grapheme makes the ear sound at the end of words." },
+  { word:"ear",      sound:"ear",    soundLabel:"EAR sound",grapheme:"ear", before:"",     after:"",     clue:"you listen with this",                 level:"starter",   type:"vowel", distractors:["eer","ere"],       explain:"The 'ear' grapheme makes the ear sound in 'ear', 'hear', 'fear'." },
+  { word:"here",     sound:"ear",    soundLabel:"EAR sound",grapheme:"ere", before:"h",    after:"",     clue:"in this place",                        level:"levelup",   type:"vowel", distractors:["eer","ear","ier"],  explain:"The 'ere' grapheme makes the ear sound in 'here' — it makes an air sound in 'where'." },
+  { word:"fierce",   sound:"ear",    soundLabel:"EAR sound",grapheme:"ier", before:"f",    after:"ce",   clue:"very intense or powerful",             level:"challenge", type:"vowel", distractors:["eer","ear","ere"],  explain:"The 'ier' grapheme makes the ear sound in 'fierce' and 'pier'." },
+
+  // ── SHORT A ──────────────────────────────────────────────────
+  { word:"apple",    sound:"short-a",soundLabel:"Short A",  grapheme:"a",   before:"",     after:"pple", clue:"a round fruit",                        level:"starter",   type:"vowel", distractors:["ai","ay"],         explain:"The short a sound is most often spelled with just 'a'." },
+  { word:"cat",      sound:"short-a",soundLabel:"Short A",  grapheme:"a",   before:"c",    after:"t",    clue:"a furry pet",                          level:"starter",   type:"vowel", distractors:["ai","ay"],         explain:"Short 'a' in a CVC word." },
+  { word:"hand",     sound:"short-a",soundLabel:"Short A",  grapheme:"a",   before:"h",    after:"nd",   clue:"at the end of your arm",               level:"starter",   type:"vowel", distractors:["ai","ay"],         explain:"The short a sound in 'hand'." },
+
+  // ── SHORT E ──────────────────────────────────────────────────
+  { word:"egg",      sound:"short-e",soundLabel:"Short E",  grapheme:"e",   before:"",     after:"gg",   clue:"comes from a hen",                     level:"starter",   type:"vowel", distractors:["ea","ie"],         explain:"The short e sound is most commonly spelled with 'e'." },
+  { word:"head",     sound:"short-e",soundLabel:"Short E",  grapheme:"ea",  before:"h",    after:"d",    clue:"the top of your body",                 level:"levelup",   type:"vowel", distractors:["e","ie"],          explain:"The 'ea' grapheme makes a short e sound in 'head', 'bread', 'dead'." },
+  { word:"friend",   sound:"short-e",soundLabel:"Short E",  grapheme:"ie",  before:"fr",   after:"nd",   clue:"someone you like",                     level:"challenge", type:"vowel", distractors:["e","ea"],          explain:"The 'ie' grapheme makes a short e sound in 'friend' — unusual!" },
+  { word:"bread",    sound:"short-e",soundLabel:"Short E",  grapheme:"ea",  before:"br",   after:"d",    clue:"baked food from flour",                level:"levelup",   type:"vowel", distractors:["e","ie"],          explain:"The 'ea' grapheme makes a short e sound in 'bread' and 'dead'." },
+
+  // ── SHORT I ──────────────────────────────────────────────────
+  { word:"igloo",    sound:"short-i",soundLabel:"Short I",  grapheme:"i",   before:"",     after:"gloo", clue:"an ice home",                          level:"starter",   type:"vowel", distractors:["y","e"],           explain:"The short i sound is most commonly spelled with 'i'." },
+  { word:"gym",      sound:"short-i",soundLabel:"Short I",  grapheme:"y",   before:"g",    after:"m",    clue:"where you exercise",                   level:"levelup",   type:"vowel", distractors:["i","e"],           explain:"The 'y' grapheme makes a short i sound in 'gym' and 'myth'." },
+  { word:"build",    sound:"short-i",soundLabel:"Short I",  grapheme:"ui",  before:"b",    after:"ld",   clue:"to construct something",               level:"challenge", type:"vowel", distractors:["i","y","e"],       explain:"The 'ui' grapheme makes a short i sound in 'build' and 'guilty'." },
+
+  // ── SHORT O ──────────────────────────────────────────────────
+  { word:"orange",   sound:"short-o",soundLabel:"Short O",  grapheme:"o",   before:"",     after:"range",clue:"a citrus fruit",                       level:"starter",   type:"vowel", distractors:["a","au"],          explain:"The short o sound is most commonly spelled with 'o'." },
+  { word:"watch",    sound:"short-o",soundLabel:"Short O",  grapheme:"a",   before:"w",    after:"tch",  clue:"a device that tells time",             level:"challenge", type:"vowel", distractors:["o","au"],          explain:"The 'a' grapheme makes a short o sound after 'w' — as in 'was', 'want', 'what'." },
+  { word:"sausage",  sound:"short-o",soundLabel:"Short O",  grapheme:"au",  before:"s",    after:"sage", clue:"a type of meat in a casing",           level:"challenge", type:"vowel", distractors:["o","a"],           explain:"The 'au' grapheme makes a short o sound in 'sausage'." },
+
+  // ── SHORT U ──────────────────────────────────────────────────
+  { word:"umbrella", sound:"short-u",soundLabel:"Short U",  grapheme:"u",   before:"",     after:"mbrella",clue:"keeps you dry in rain",              level:"starter",   type:"vowel", distractors:["o","ou"],          explain:"The short u sound is most commonly spelled with 'u'." },
+  { word:"monkey",   sound:"short-u",soundLabel:"Short U",  grapheme:"o",   before:"m",    after:"nkey", clue:"a primate with a tail",                level:"levelup",   type:"vowel", distractors:["u","ou"],          explain:"The 'o' grapheme makes a short u sound in 'monkey', 'money', 'honey'." },
+  { word:"young",    sound:"short-u",soundLabel:"Short U",  grapheme:"ou",  before:"y",    after:"ng",   clue:"not old",                              level:"challenge", type:"vowel", distractors:["u","o"],           explain:"The 'ou' grapheme makes a short u sound in 'young', 'country', 'touch'." },
+
+  // ══════════════════════════════════════════════════════════════
+  // CONSONANT PATTERNS
+  // ══════════════════════════════════════════════════════════════
+
+  // ── SH sound ─────────────────────────────────────────────────
+  { word:"shell",    sound:"sh",     soundLabel:"SH sound", grapheme:"sh",  before:"",     after:"ell",  clue:"a hard outer casing",                  level:"starter",   type:"consonant", distractors:["ch","ti"],    explain:"The 'sh' grapheme is the most common spelling for this sound." },
+  { word:"station",  sound:"sh",     soundLabel:"SH sound", grapheme:"ti",  before:"sta",  after:"on",   clue:"a building for trains or buses",        level:"challenge", type:"consonant", distractors:["sh","si","ch"], explain:"The 'ti' grapheme makes the sh sound in words ending in -tion." },
+  { word:"chef",     sound:"sh",     soundLabel:"SH sound", grapheme:"ch",  before:"",     after:"ef",   clue:"a professional cook",                  level:"levelup",   type:"consonant", distractors:["sh","ti"],    explain:"The 'ch' grapheme makes a sh sound in French-origin words like 'chef'." },
+  { word:"tension",  sound:"sh",     soundLabel:"SH sound", grapheme:"si",  before:"ten",  after:"on",   clue:"stress or strain",                     level:"challenge", type:"consonant", distractors:["sh","ti","ch"], explain:"The 'si' grapheme makes the sh sound in words ending in -sion." },
+  { word:"mission",  sound:"sh",     soundLabel:"SH sound", grapheme:"ssi", before:"mi",   after:"on",   clue:"an important task",                    level:"challenge", type:"consonant", distractors:["sh","si","ti"], explain:"The 'ssi' grapheme makes the sh sound in 'mission' and 'passion'." },
+
+  // ── CH sound ─────────────────────────────────────────────────
+  { word:"chicken",  sound:"ch",     soundLabel:"CH sound", grapheme:"ch",  before:"",     after:"icken",clue:"a farmyard bird",                      level:"starter",   type:"consonant", distractors:["tch","ti"],   explain:"The 'ch' grapheme is the most common spelling for this sound." },
+  { word:"match",    sound:"ch",     soundLabel:"CH sound", grapheme:"tch", before:"ma",   after:"",     clue:"a stick that makes fire",              level:"levelup",   type:"consonant", distractors:["ch"],          explain:"The 'tch' grapheme comes right after a short vowel." },
+  { word:"question", sound:"ch",     soundLabel:"CH sound", grapheme:"ti",  before:"ques", after:"on",   clue:"something you ask",                    level:"challenge", type:"consonant", distractors:["ch","tch"],    explain:"The 'ti' grapheme makes a ch sound in words like 'question'." },
+  { word:"lunch",    sound:"ch",     soundLabel:"CH sound", grapheme:"ch",  before:"lun",  after:"",     clue:"midday meal",                          level:"starter",   type:"consonant", distractors:["tch"],         explain:"The 'ch' grapheme makes the ch sound at the end of 'lunch'." },
+  { word:"catch",    sound:"ch",     soundLabel:"CH sound", grapheme:"tch", before:"ca",   after:"",     clue:"to grab something thrown",             level:"levelup",   type:"consonant", distractors:["ch"],          explain:"The 'tch' grapheme comes after a short vowel — catch, fetch, stitch." },
+
+  // ── TH sound ─────────────────────────────────────────────────
+  { word:"thin",     sound:"th",     soundLabel:"TH sound", grapheme:"th",  before:"",     after:"in",   clue:"not thick",                            level:"starter",   type:"consonant", distractors:["t","d"],      explain:"The 'th' grapheme makes the soft th sound as in 'thin' and 'think'." },
+  { word:"feather",  sound:"th",     soundLabel:"TH sound", grapheme:"th",  before:"fea",  after:"er",   clue:"grows on a bird",                      level:"starter",   type:"consonant", distractors:["t","d"],      explain:"The 'th' grapheme makes the voiced th sound in 'feather' and 'breathe'." },
+  { word:"thong",    sound:"th",     soundLabel:"TH sound", grapheme:"th",  before:"",     after:"ong",  clue:"a rubber sandal",                      level:"starter",   type:"consonant", distractors:["t","d"],      explain:"'th' at the start of words often makes the voiceless th sound." },
+
+  // ── F sound ──────────────────────────────────────────────────
+  { word:"fish",     sound:"f",      soundLabel:"F sound",  grapheme:"f",   before:"",     after:"ish",  clue:"a creature that swims",                level:"starter",   type:"consonant", distractors:["ff","ph"],    explain:"The single 'f' is the most common spelling for the f sound." },
+  { word:"cliff",    sound:"f",      soundLabel:"F sound",  grapheme:"ff",  before:"cli",  after:"",     clue:"a steep rocky face",                   level:"levelup",   type:"consonant", distractors:["f","ph"],     explain:"The 'ff' grapheme comes at the end of short vowel words." },
+  { word:"phone",    sound:"f",      soundLabel:"F sound",  grapheme:"ph",  before:"",     after:"one",  clue:"you call people on this",              level:"levelup",   type:"consonant", distractors:["f","ff"],     explain:"The 'ph' grapheme makes the f sound in Greek-origin words." },
+  { word:"laugh",    sound:"f",      soundLabel:"F sound",  grapheme:"gh",  before:"la",   after:"",     clue:"what you do when amused",              level:"challenge", type:"consonant", distractors:["f","ff","ph"], explain:"The 'gh' grapheme makes the f sound in words like 'laugh', 'rough', 'tough'." },
+
+  // ── K sound ──────────────────────────────────────────────────
+  { word:"kite",     sound:"k",      soundLabel:"K sound",  grapheme:"k",   before:"",     after:"ite",  clue:"you fly this in the wind",             level:"starter",   type:"consonant", distractors:["c","ck"],     explain:"The 'k' grapheme comes before e, i and y." },
+  { word:"cat",      sound:"k",      soundLabel:"K sound",  grapheme:"c",   before:"",     after:"at",   clue:"a furry pet",                          level:"starter",   type:"consonant", distractors:["k","ck"],     explain:"The 'c' grapheme makes the k sound before a, o and u." },
+  { word:"sock",     sound:"k",      soundLabel:"K sound",  grapheme:"ck",  before:"so",   after:"",     clue:"worn on your foot",                    level:"starter",   type:"consonant", distractors:["k","c"],      explain:"The 'ck' grapheme comes directly after a short vowel." },
+  { word:"school",   sound:"k",      soundLabel:"K sound",  grapheme:"ch",  before:"s",    after:"ool",  clue:"where you learn",                      level:"challenge", type:"consonant", distractors:["k","c","ck"], explain:"The 'ch' grapheme makes the k sound in Greek-origin words like 'school'." },
+  { word:"cheque",   sound:"k",      soundLabel:"K sound",  grapheme:"que", before:"che",  after:"",     clue:"a written bank payment",               level:"challenge", type:"consonant", distractors:["k","c","ck","ch"], explain:"The 'que' grapheme makes the k sound in French-origin words." },
+
+  // ── J sound ──────────────────────────────────────────────────
+  { word:"jump",     sound:"j",      soundLabel:"J sound",  grapheme:"j",   before:"",     after:"ump",  clue:"to leap into the air",                 level:"starter",   type:"consonant", distractors:["g","dge"],    explain:"The 'j' grapheme is the most common spelling for this sound." },
+  { word:"giraffe",  sound:"j",      soundLabel:"J sound",  grapheme:"g",   before:"",     after:"iraffe",clue:"a tall African animal",               level:"levelup",   type:"consonant", distractors:["j","dge"],    explain:"The 'g' grapheme makes the j sound before e, i and y." },
+  { word:"bridge",   sound:"j",      soundLabel:"J sound",  grapheme:"dge", before:"bri",  after:"",     clue:"a structure over water",               level:"levelup",   type:"consonant", distractors:["j","g"],      explain:"The 'dge' grapheme comes directly after a short vowel." },
+  { word:"region",   sound:"j",      soundLabel:"J sound",  grapheme:"gi",  before:"re",   after:"on",   clue:"an area or zone",                      level:"challenge", type:"consonant", distractors:["j","g","dge"], explain:"The 'gi' grapheme makes the j sound in 'region' and 'legion'." },
+
+  // ── Z sound ──────────────────────────────────────────────────
+  { word:"zebra",    sound:"z",      soundLabel:"Z sound",  grapheme:"z",   before:"",     after:"ebra", clue:"a striped African animal",             level:"starter",   type:"consonant", distractors:["s","zz"],     explain:"The 'z' grapheme is used at the start of words for the z sound." },
+  { word:"puzzle",   sound:"z",      soundLabel:"Z sound",  grapheme:"zz",  before:"pu",   after:"le",   clue:"a problem to solve",                   level:"levelup",   type:"consonant", distractors:["z","s"],      explain:"The 'zz' grapheme makes the z sound in words like 'puzzle' and 'fizz'." },
+  { word:"cheese",   sound:"z",      soundLabel:"Z sound",  grapheme:"se",  before:"chee", after:"",     clue:"a dairy food",                         level:"levelup",   type:"consonant", distractors:["z","zz","s"],  explain:"The 'se' grapheme makes the z sound at the end of words like 'cheese'." },
+  { word:"scissors", sound:"z",      soundLabel:"Z sound",  grapheme:"ss",  before:"sci",  after:"ors",  clue:"used for cutting paper",               level:"challenge", type:"consonant", distractors:["z","zz","se"], explain:"The 'ss' grapheme makes the z sound in 'scissors' — unusual!" },
+
+  // ── N sound ──────────────────────────────────────────────────
+  { word:"net",      sound:"n",      soundLabel:"N sound",  grapheme:"n",   before:"",     after:"et",   clue:"a mesh used in sport",                 level:"starter",   type:"consonant", distractors:["kn","gn"],    explain:"The 'n' grapheme is the most common spelling for the n sound." },
+  { word:"knife",    sound:"n",      soundLabel:"N sound",  grapheme:"kn",  before:"",     after:"ife",  clue:"a sharp cutting tool",                 level:"levelup",   type:"consonant", distractors:["n","gn"],     explain:"The 'kn' grapheme makes the n sound — the 'k' is silent." },
+  { word:"gnome",    sound:"n",      soundLabel:"N sound",  grapheme:"gn",  before:"",     after:"ome",  clue:"a garden ornament",                    level:"challenge", type:"consonant", distractors:["n","kn"],     explain:"The 'gn' grapheme makes the n sound — the 'g' is silent." },
+
+  // ── R sound ──────────────────────────────────────────────────
+  { word:"robot",    sound:"r",      soundLabel:"R sound",  grapheme:"r",   before:"",     after:"obot", clue:"a mechanical machine",                 level:"starter",   type:"consonant", distractors:["rr","wr"],    explain:"The single 'r' is the most common spelling." },
+  { word:"carrot",   sound:"r",      soundLabel:"R sound",  grapheme:"rr",  before:"ca",   after:"ot",   clue:"an orange vegetable",                  level:"levelup",   type:"consonant", distractors:["r","wr"],     explain:"The 'rr' grapheme appears in the middle of words." },
+  { word:"wrist",    sound:"r",      soundLabel:"R sound",  grapheme:"wr",  before:"",     after:"ist",  clue:"the joint between hand and arm",       level:"levelup",   type:"consonant", distractors:["r","rr"],     explain:"The 'wr' grapheme makes the r sound — the 'w' is silent." },
+
+  // ── M sound ──────────────────────────────────────────────────
+  { word:"moon",     sound:"m",      soundLabel:"M sound",  grapheme:"m",   before:"",     after:"oon",  clue:"orbits Earth",                         level:"starter",   type:"consonant", distractors:["mm","mb"],    explain:"The single 'm' is the most common spelling." },
+  { word:"hammer",   sound:"m",      soundLabel:"M sound",  grapheme:"mm",  before:"ha",   after:"er",   clue:"a tool for hitting nails",             level:"levelup",   type:"consonant", distractors:["m","mb"],     explain:"The 'mm' grapheme appears in the middle of words." },
+  { word:"thumb",    sound:"m",      soundLabel:"M sound",  grapheme:"mb",  before:"thu",  after:"",     clue:"the short thick finger",               level:"levelup",   type:"consonant", distractors:["m","mm"],     explain:"The 'mb' grapheme makes the m sound — the 'b' is silent." },
+  { word:"column",   sound:"m",      soundLabel:"M sound",  grapheme:"mn",  before:"colu", after:"",     clue:"a vertical pillar",                    level:"challenge", type:"consonant", distractors:["m","mb","mm"], explain:"The 'mn' grapheme makes the m sound — the 'n' is silent." },
+
+  // ── S sound ──────────────────────────────────────────────────
+  { word:"seal",     sound:"s",      soundLabel:"S sound",  grapheme:"s",   before:"",     after:"eal",  clue:"a marine mammal",                      level:"starter",   type:"consonant", distractors:["ss","c","ce"], explain:"The single 's' is the most common spelling." },
+  { word:"kiss",     sound:"s",      soundLabel:"S sound",  grapheme:"ss",  before:"ki",   after:"",     clue:"a loving greeting",                    level:"starter",   type:"consonant", distractors:["s","c","ce"],  explain:"The 'ss' grapheme comes after a short vowel." },
+  { word:"juice",    sound:"s",      soundLabel:"S sound",  grapheme:"ce",  before:"jui",  after:"",     clue:"liquid from fruit",                    level:"levelup",   type:"consonant", distractors:["s","ss","c"],  explain:"The 'ce' grapheme makes the s sound at the end of words." },
+  { word:"pencil",   sound:"s",      soundLabel:"S sound",  grapheme:"c",   before:"pen",  after:"il",   clue:"used for writing",                     level:"levelup",   type:"consonant", distractors:["s","ss","ce"], explain:"The 'c' grapheme makes the s sound before e, i and y." },
+  { word:"science",  sound:"s",      soundLabel:"S sound",  grapheme:"sc",  before:"",     after:"ience",clue:"study of the natural world",            level:"challenge", type:"consonant", distractors:["s","ss","c","ce"], explain:"The 'sc' grapheme makes the s sound before e and i." },
+
+  // ── NG sound ─────────────────────────────────────────────────
+  { word:"ring",     sound:"ng",     soundLabel:"NG sound", grapheme:"ng",  before:"ri",   after:"",     clue:"circular jewellery",                   level:"starter",   type:"consonant", distractors:["n","nk"],     explain:"The 'ng' grapheme makes the ng sound at the end of words." },
+  { word:"wink",     sound:"ng",     soundLabel:"NG sound", grapheme:"n",   before:"wi",   after:"k",    clue:"to close one eye quickly",             level:"levelup",   type:"consonant", distractors:["ng","nk"],    explain:"The 'n' before 'k' makes the ng sound." },
+  { word:"tongue",   sound:"ng",     soundLabel:"NG sound", grapheme:"ngue",before:"to",   after:"",     clue:"used for tasting and speaking",        level:"challenge", type:"consonant", distractors:["ng","n"],     explain:"The 'ngue' grapheme makes the ng sound in 'tongue'." },
+
+  // ── W sound ──────────────────────────────────────────────────
+  { word:"web",      sound:"w",      soundLabel:"W sound",  grapheme:"w",   before:"",     after:"eb",   clue:"a spider makes this",                  level:"starter",   type:"consonant", distractors:["wh","u"],     explain:"The 'w' grapheme is the most common spelling." },
+  { word:"whale",    sound:"w",      soundLabel:"W sound",  grapheme:"wh",  before:"",     after:"ale",  clue:"the largest sea creature",             level:"levelup",   type:"consonant", distractors:["w","u"],      explain:"The 'wh' grapheme makes the w sound in many question words." },
+  { word:"queen",    sound:"w",      soundLabel:"W sound",  grapheme:"u",   before:"q",    after:"een",  clue:"female royalty",                       level:"challenge", type:"consonant", distractors:["w","wh"],     explain:"In 'qu' words, the 'u' acts like a 'w' sound." },
+
+  // ── ZH sound ─────────────────────────────────────────────────
+  { word:"treasure", sound:"zh",     soundLabel:"ZH sound", grapheme:"s",   before:"trea", after:"ure",  clue:"gold and jewels",                      level:"levelup",   type:"consonant", distractors:["si","ge"],    explain:"The 's' grapheme makes the zh sound in 'treasure' and 'measure'." },
+  { word:"television",sound:"zh",    soundLabel:"ZH sound", grapheme:"si", before:"televi",after:"on",   clue:"a screen for watching shows",          level:"challenge", type:"consonant", distractors:["s","ge"],     explain:"The 'si' grapheme makes the zh sound in 'television' and 'vision'." },
+  { word:"mirage",   sound:"zh",     soundLabel:"ZH sound", grapheme:"ge",  before:"mira", after:"",     clue:"an optical illusion in the desert",    level:"challenge", type:"consonant", distractors:["s","si"],     explain:"The 'ge' grapheme makes the zh sound in French-origin words." },
+];
+
+// ═══════════════════════════════════════════════════════════════
+// SOUND GROUP DEFINITIONS (for the pill picker)
+// ═══════════════════════════════════════════════════════════════
+const SOUND_GROUPS = {
+  vowel: [
+    { id:"long-a",   label:"Long A" },
+    { id:"long-e",   label:"Long E" },
+    { id:"long-i",   label:"Long I" },
+    { id:"long-o",   label:"Long O" },
+    { id:"long-u",   label:"Long U / OO" },
+    { id:"oo-short", label:"OO (book)" },
+    { id:"ow",       label:"OW sound" },
+    { id:"oy",       label:"OY sound" },
+    { id:"or",       label:"OR sound" },
+    { id:"ar",       label:"AR sound" },
+    { id:"er",       label:"ER sound" },
+    { id:"air",      label:"AIR sound" },
+    { id:"ear",      label:"EAR sound" },
+    { id:"short-a",  label:"Short A" },
+    { id:"short-e",  label:"Short E" },
+    { id:"short-i",  label:"Short I" },
+    { id:"short-o",  label:"Short O" },
+    { id:"short-u",  label:"Short U" },
+  ],
+  consonant: [
+    { id:"sh",  label:"SH sound" },
+    { id:"ch",  label:"CH sound" },
+    { id:"th",  label:"TH sound" },
+    { id:"f",   label:"F sound" },
+    { id:"k",   label:"K sound" },
+    { id:"j",   label:"J sound" },
+    { id:"z",   label:"Z sound" },
+    { id:"n",   label:"N sound" },
+    { id:"r",   label:"R sound" },
+    { id:"m",   label:"M sound" },
+    { id:"s",   label:"S sound" },
+    { id:"ng",  label:"NG sound" },
+    { id:"w",   label:"W sound" },
+    { id:"zh",  label:"ZH sound" },
+  ]
+};
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let selectedLevel    = 'starter';
+let selectedType     = 'vowel';
+let selectedSound    = 'all';
+let score = 0, streak = 0, bestStreak = 0, correctCount = 0, wrongCount = 0;
+let currentWord      = null;
+let usedWords        = new Set();
+let checked          = false;
+let attempts         = 0;
+
+// ═══════════════════════════════════════════════════════════════
+// SETUP UI
+// ═══════════════════════════════════════════════════════════════
+function selectLevel(level, btn){
+  selectedLevel = level;
+  document.querySelectorAll('[data-level]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function selectType(type, btn){
+  selectedType = type;
+  document.querySelectorAll('[data-type]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedSound = 'all';
+  buildSoundPills();
+}
+
+function buildSoundPills(){
+  const container = document.getElementById('soundPills');
+  container.innerHTML = '';
+
+  const groups = selectedType === 'mixed'
+    ? [...SOUND_GROUPS.vowel, ...SOUND_GROUPS.consonant]
+    : (SOUND_GROUPS[selectedType] || SOUND_GROUPS.vowel);
+
+  // All pill
+  const allPill = document.createElement('button');
+  allPill.className = 'soundPill' + (selectedSound === 'all' ? ' active' : '');
+  allPill.textContent = 'All';
+  allPill.onclick = () => { selectedSound = 'all'; buildSoundPills(); };
+  container.appendChild(allPill);
+
+  groups.forEach(g => {
+    const pill = document.createElement('button');
+    pill.className = 'soundPill' + (selectedSound === g.id ? ' active' : '');
+    pill.textContent = g.label;
+    pill.onclick = () => { selectedSound = g.id; buildSoundPills(); };
+    container.appendChild(pill);
+  });
+}
+
+function goToSetup(){
+  document.getElementById('setupScreen').classList.remove('hidden');
+  document.getElementById('gameScreen').classList.add('hidden');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GAME LOGIC
+// ═══════════════════════════════════════════════════════════════
+function startGame(){
+  usedWords.clear();
+  document.getElementById('setupScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.remove('hidden');
+
+  // Update badges
+  const levelLabels = { starter:'🌱 Starter', levelup:'📈 Level Up', challenge:'🔥 Challenge', mixed:'🎲 Mixed' };
+  document.getElementById('levelBadge').textContent = levelLabels[selectedLevel] || selectedLevel;
+
+  const typeLabel = selectedType === 'vowel' ? 'Vowel sounds' : selectedType === 'consonant' ? 'Consonant patterns' : 'Mixed';
+  const soundLabel = selectedSound === 'all' ? typeLabel : (SOUND_GROUPS[selectedType === 'mixed' ? 'vowel' : selectedType] || [...SOUND_GROUPS.vowel,...SOUND_GROUPS.consonant]).find(g=>g.id===selectedSound)?.label || selectedSound;
+  document.getElementById('soundBadge').textContent = soundLabel;
+
+  loadWord();
+}
+
+function getPool(){
+  let pool = WORDS;
+
+  // Filter by type
+  if(selectedType !== 'mixed') pool = pool.filter(w => w.type === selectedType);
+
+  // Filter by specific sound
+  if(selectedSound !== 'all') pool = pool.filter(w => w.sound === selectedSound);
+
+  // Filter by level (mixed includes all)
+  if(selectedLevel !== 'mixed'){
+    const levelOrder = { starter:0, levelup:1, challenge:2 };
+    const maxLevel = levelOrder[selectedLevel] ?? 2;
+    pool = pool.filter(w => (levelOrder[w.level] ?? 0) <= maxLevel);
+    // For starter, prefer starter words; for levelup prefer levelup etc
+    const preferred = pool.filter(w => w.level === selectedLevel);
+    if(preferred.length >= 3) pool = preferred;
+  }
+
+  const fresh = pool.filter(w => !usedWords.has(w.word));
+  return fresh.length > 0 ? fresh : pool;
+}
+
+function loadWord(){
+  const pool = getPool();
+  if(!pool.length){
+    document.getElementById('wordRow').innerHTML = '<div style="color:var(--muted);font-weight:700;font-size:15px;">No words found for this selection. Try changing your settings.</div>';
+    return;
+  }
+
+  currentWord = pool[Math.floor(Math.random() * pool.length)];
+  usedWords.add(currentWord.word);
+  checked = false;
+  attempts = 0;
+
+  // Clue — always shown at every level to avoid homophone confusion,
+  // but presented differently by difficulty
+  const clueWrap = document.getElementById('clueWrap');
+  const clueEl   = document.getElementById('clueText');
+  clueWrap.style.display = 'block';
+  if(selectedLevel === 'starter' || currentWord.level === 'starter'){
+    clueEl.innerHTML = '💡 <strong>Clue:</strong> ' + currentWord.clue;
+    clueEl.style.fontSize = '14px';
+  } else if(selectedLevel === 'levelup' || currentWord.level === 'levelup'){
+    clueEl.innerHTML = '📌 ' + currentWord.clue;
+    clueEl.style.fontSize = '13px';
+  } else {
+    // Challenge — minimal, just enough to disambiguate homophones
+    clueEl.innerHTML = currentWord.clue;
+    clueEl.style.fontSize = '12px';
+  }
+
+  // Build word row
+  buildWordRow();
+
+  // Sound hint
+  document.getElementById('soundHint').innerHTML =
+    `Listen for the <span class="soundHintSound">${currentWord.soundLabel}</span> sound in this word`;
+
+  // Build tiles
+  buildTiles();
+
+  // Reset feedback
+  hideFeedback();
+  document.getElementById('nextBtn').classList.remove('visible');
+  document.getElementById('tryAgainBtn').classList.remove('visible');
+
+  // Auto-speak
+  setTimeout(speakWord, 400);
+}
+
+function buildWordRow(){
+  const row = document.getElementById('wordRow');
+  row.innerHTML = '';
+
+  const { before, after, grapheme } = currentWord;
+
+  // Show blank width proportional to grapheme length
+  const blankWidth = Math.max(80, grapheme.length * 36) + 'px';
+
+  if(before){
+    const b = document.createElement('span');
+    b.className = 'wordPart';
+    b.textContent = before;
+    row.appendChild(b);
+  }
+
+  const zone = document.createElement('div');
+  zone.className = 'dropZone';
+  zone.style.minWidth = blankWidth;
+  zone.id = 'dropZone';
+
+  const zoneText = document.createElement('span');
+  zoneText.className = 'dropZoneText';
+  zoneText.textContent = '?';
+  zoneText.id = 'dropZoneText';
+  zone.appendChild(zoneText);
+
+  // Drag events
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    const g = e.dataTransfer.getData('text/plain');
+    if(g) checkAnswer(g);
+  });
+
+  row.appendChild(zone);
+
+  if(after){
+    const a = document.createElement('span');
+    a.className = 'wordPart';
+    a.textContent = after;
+    row.appendChild(a);
+  }
+}
+
+function buildTiles(){
+  const container = document.getElementById('tilesRow');
+  container.innerHTML = '';
+
+  // Build distractor set based on level
+  let options = [currentWord.grapheme];
+  const distractors = currentWord.distractors || [];
+
+  if(selectedLevel === 'starter' || currentWord.level === 'starter'){
+    options = options.concat(distractors.slice(0,2));
+  } else if(selectedLevel === 'levelup' || currentWord.level === 'levelup'){
+    options = options.concat(distractors.slice(0,3));
+  } else {
+    options = options.concat(distractors.slice(0,4));
+  }
+
+  // Dedupe and shuffle
+  options = [...new Set(options)].sort(() => Math.random() - .5);
+
+  options.forEach(g => {
+    const tile = document.createElement('div');
+    tile.className = 'tile';
+    tile.textContent = g;
+    tile.draggable = true;
+    tile.dataset.grapheme = g;
+
+    tile.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', g);
+    });
+    tile.addEventListener('click', () => {
+      if(!checked || attempts === 0) checkAnswer(g);
+    });
+
+    container.appendChild(tile);
+  });
+}
+
+function checkAnswer(grapheme){
+  if(checked) return;
+  attempts++;
+
+  const zone = document.getElementById('dropZone');
+  const zoneText = document.getElementById('dropZoneText');
+
+  // Show the answer in the zone
+  zoneText.className = 'dropZoneAnswer';
+  zoneText.textContent = grapheme;
+
+  // Mark tile
+  document.querySelectorAll('.tile').forEach(t => {
+    if(t.dataset.grapheme === grapheme){
+      if(grapheme === currentWord.grapheme){
+        t.classList.add('correct-tile');
+      } else {
+        t.classList.add('wrong-tile');
+      }
+    }
+  });
+
+  if(grapheme === currentWord.grapheme){
+    // CORRECT
+    checked = true;
+    zone.classList.add('correct');
+
+    const pts = 10 + (streak >= 3 ? 5 : 0) - (attempts - 1) * 3;
+    score += Math.max(pts, 2);
+    streak++;
+    correctCount++;
+    if(streak > bestStreak) bestStreak = streak;
+
+    showFeedback('correct',
+      `✅ ${currentWord.word} — the ${currentWord.soundLabel} sound is spelled "${currentWord.grapheme}"`,
+      currentWord.explain
+    );
+
+    updateStats();
+    addHistory(currentWord.word, currentWord.grapheme, true);
+    document.getElementById('nextBtn').classList.add('visible');
+    document.getElementById('tryAgainBtn').classList.remove('visible');
+
+    speakWord();
+  } else {
+    // WRONG
+    zone.classList.add('wrong');
+    zone.classList.remove('filled');
+    setTimeout(() => {
+      zone.classList.remove('wrong');
+      zoneText.className = 'dropZoneText';
+      zoneText.textContent = '?';
+    }, 600);
+
+    if(selectedLevel === 'starter' && attempts < 3){
+      // On starter, let them try again
+      showFeedback('wrong', `❌ Not quite — try again!`, '');
+      document.getElementById('tryAgainBtn').classList.add('visible');
+    } else {
+      checked = true;
+      score = Math.max(score - 2, 0);
+      streak = 0;
+      wrongCount++;
+
+      showFeedback('wrong',
+        `❌ The ${currentWord.soundLabel} sound in "${currentWord.word}" is spelled "${currentWord.grapheme}"`,
+        currentWord.explain
+      );
+
+      // Show correct answer in zone
+      zoneText.className = 'dropZoneAnswer';
+      zoneText.textContent = currentWord.grapheme;
+      zone.classList.add('correct');
+
+      // Highlight correct tile
+      document.querySelectorAll('.tile').forEach(t => {
+        if(t.dataset.grapheme === currentWord.grapheme) t.classList.add('correct-tile');
+      });
+
+      updateStats();
+      addHistory(currentWord.word, currentWord.grapheme, false);
+      document.getElementById('nextBtn').classList.add('visible');
+      document.getElementById('tryAgainBtn').classList.remove('visible');
+    }
+
+    updateStats();
+  }
+}
+
+function tryAgain(){
+  document.getElementById('tryAgainBtn').classList.remove('visible');
+  hideFeedback();
+}
+
+function nextWord(){ loadWord(); }
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+function speakWord(){
+  if(!currentWord || !('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(currentWord.word);
+  utt.lang = 'en-AU'; utt.rate = 0.85;
+  window.speechSynthesis.speak(utt);
+}
+
+function showFeedback(type, title, explain){
+  const panel = document.getElementById('feedbackPanel');
+  panel.className = 'feedbackPanel ' + type;
+  panel.style.display = 'block';
+  document.getElementById('feedbackTitle').textContent = title;
+  document.getElementById('feedbackExplain').textContent = explain;
+}
+
+function hideFeedback(){
+  const panel = document.getElementById('feedbackPanel');
+  panel.style.display = 'none';
+  panel.className = 'feedbackPanel';
+}
+
+function updateStats(){
+  document.getElementById('scorePill').textContent  = `Score: ${score}`;
+  document.getElementById('streakPill').textContent = `🔥 ${streak} streak`;
+  document.getElementById('statScore').textContent   = score;
+  document.getElementById('statCorrect').textContent = correctCount;
+  document.getElementById('statBest').textContent    = bestStreak;
+}
+
+function addHistory(word, grapheme, ok){
+  const list = document.getElementById('histList');
+  const ph = list.querySelector('div[style]');
+  if(ph) ph.remove();
+  const item = document.createElement('div');
+  item.className = `histItem ${ok ? 'correct' : 'wrong'}`;
+  item.innerHTML = `<span style="font-size:15px;">${ok?'✅':'❌'}</span><span class="histWord">${word}</span><span class="histGrapheme">"${grapheme}"</span>`;
+  list.insertBefore(item, list.firstChild);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════
+buildSoundPills();
+</script>
+</body>
+</html>
