@@ -1,1 +1,935 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Morphology Flashcards</title>
 
+  <style>
+    :root{
+      --bg:#f4f7fb;
+      --panel:#ffffff;
+      --panel-soft:#eef4ff;
+      --text:#142033;
+      --muted:#5f6f86;
+      --line:#d8e1ef;
+      --accent:#3b82f6;
+      --accent-2:#2563eb;
+      --shadow:0 10px 30px rgba(20,32,51,0.10);
+      --radius:22px;
+    }
+
+    *{box-sizing:border-box}
+
+    html,body{
+      margin:0;
+      padding:0;
+      font-family:Arial, Helvetica, sans-serif;
+      background:linear-gradient(180deg,#f7faff 0%, #eef4fb 100%);
+      color:var(--text);
+    }
+
+    body{
+      min-height:100vh;
+    }
+
+    .wrap{
+      max-width:1200px;
+      margin:0 auto;
+      padding:24px;
+    }
+
+    .topbar{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:20px;
+    }
+
+    .titlebox h1{
+      margin:0;
+      font-size:clamp(1.6rem, 2vw, 2.2rem);
+    }
+
+    .titlebox p{
+      margin:6px 0 0;
+      color:var(--muted);
+      font-size:0.98rem;
+    }
+
+    .navbtns{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+
+    .navbtns a{
+      text-decoration:none;
+      color:var(--text);
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:10px 14px;
+      font-weight:700;
+      box-shadow:var(--shadow);
+    }
+
+    .layout{
+      display:grid;
+      grid-template-columns:320px 1fr;
+      gap:20px;
+      align-items:start;
+    }
+
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+    }
+
+    .controls{
+      padding:18px;
+      position:sticky;
+      top:18px;
+    }
+
+    .section{
+      margin-bottom:18px;
+    }
+
+    .section:last-child{
+      margin-bottom:0;
+    }
+
+    .section h2{
+      margin:0 0 10px;
+      font-size:1rem;
+    }
+
+    .section p{
+      margin:0 0 10px;
+      color:var(--muted);
+      font-size:0.92rem;
+      line-height:1.4;
+    }
+
+    .stack{
+      display:grid;
+      gap:10px;
+    }
+
+    .option{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      background:var(--panel-soft);
+      border:1px solid var(--line);
+      border-radius:14px;
+      cursor:pointer;
+      user-select:none;
+    }
+
+    .option input,
+    .option select{
+      cursor:pointer;
+    }
+
+    .option span{
+      font-weight:600;
+    }
+
+    .inline{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    select{
+      width:100%;
+      padding:12px 14px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:#fff;
+      color:var(--text);
+      font-size:0.98rem;
+    }
+
+    button{
+      border:none;
+      border-radius:14px;
+      padding:12px 16px;
+      font-size:0.98rem;
+      font-weight:700;
+      cursor:pointer;
+      transition:transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+    }
+
+    button:hover{
+      transform:translateY(-1px);
+    }
+
+    button.primary{
+      background:var(--accent);
+      color:#fff;
+    }
+
+    button.primary:hover{
+      background:var(--accent-2);
+    }
+
+    button.secondary{
+      background:#fff;
+      color:var(--text);
+      border:1px solid var(--line);
+    }
+
+    button.ghost{
+      background:var(--panel-soft);
+      color:var(--text);
+      border:1px solid var(--line);
+    }
+
+    .main{
+      padding:24px;
+      min-height:700px;
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+    }
+
+    .stats{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+    }
+
+    .stat{
+      background:var(--panel-soft);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:10px 14px;
+      font-weight:700;
+    }
+
+    .stage{
+      flex:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:520px;
+    }
+
+    .card-wrap{
+      width:min(100%, 760px);
+      perspective:1200px;
+    }
+
+    .card{
+      position:relative;
+      width:100%;
+      min-height:470px;
+      transform-style:preserve-3d;
+      transition:transform 0.6s ease;
+      cursor:pointer;
+    }
+
+    .card.flipped{
+      transform:rotateY(180deg);
+    }
+
+    .card-face{
+      position:absolute;
+      inset:0;
+      backface-visibility:hidden;
+      border-radius:28px;
+      border:1px solid var(--line);
+      overflow:hidden;
+      box-shadow:var(--shadow);
+      background:#fff;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      align-items:center;
+      padding:30px;
+      text-align:center;
+    }
+
+    .front{
+      background:linear-gradient(180deg,#ffffff 0%, #f5f9ff 100%);
+    }
+
+    .back{
+      transform:rotateY(180deg);
+      background:linear-gradient(180deg,#ffffff 0%, #eef5ff 100%);
+      justify-content:flex-start;
+      align-items:stretch;
+      text-align:left;
+    }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:110px;
+      padding:8px 12px;
+      border-radius:999px;
+      background:var(--panel-soft);
+      border:1px solid var(--line);
+      color:var(--muted);
+      font-size:0.9rem;
+      font-weight:700;
+      margin-bottom:18px;
+    }
+
+    .morpheme{
+      font-size:clamp(2.4rem, 6vw, 4.8rem);
+      font-weight:900;
+      line-height:1;
+      letter-spacing:0.02em;
+      margin:0 0 14px;
+      word-break:break-word;
+    }
+
+    .hint{
+      color:var(--muted);
+      font-size:1rem;
+      line-height:1.4;
+      max-width:500px;
+      margin:0 auto;
+    }
+
+    .back-top{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:16px;
+    }
+
+    .back-title{
+      font-size:clamp(2rem, 4.2vw, 3.4rem);
+      font-weight:900;
+      margin:0;
+      line-height:1;
+      word-break:break-word;
+    }
+
+    .emoji-box{
+      width:88px;
+      height:88px;
+      border-radius:20px;
+      background:#fff;
+      border:1px solid var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:2.4rem;
+      flex-shrink:0;
+    }
+
+    .info-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
+      margin-top:8px;
+    }
+
+    .info{
+      background:rgba(255,255,255,0.72);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:16px;
+    }
+
+    .info.full{
+      grid-column:1 / -1;
+    }
+
+    .label{
+      display:block;
+      font-size:0.8rem;
+      text-transform:uppercase;
+      letter-spacing:0.08em;
+      color:var(--muted);
+      margin-bottom:8px;
+      font-weight:800;
+    }
+
+    .value{
+      font-size:1rem;
+      line-height:1.5;
+      font-weight:600;
+    }
+
+    .footer-controls{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      justify-content:center;
+    }
+
+    .empty{
+      width:min(100%, 760px);
+      min-height:300px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:var(--panel-soft);
+      border:2px dashed var(--line);
+      border-radius:28px;
+      padding:24px;
+      text-align:center;
+      color:var(--muted);
+      font-size:1.05rem;
+      line-height:1.5;
+    }
+
+    @media (max-width: 980px){
+      .layout{
+        grid-template-columns:1fr;
+      }
+
+      .controls{
+        position:static;
+      }
+
+      .info-grid{
+        grid-template-columns:1fr;
+      }
+
+      .stage{
+        min-height:420px;
+      }
+
+      .card{
+        min-height:420px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="titlebox">
+        <h1>Morphology Flashcards</h1>
+        <p>Choose a morpheme group, flip cards to reveal the meaning, then move to the next one.</p>
+      </div>
+
+      <div class="navbtns">
+        <a href="index.html">Main Builder</a>
+        <a href="meaning-mode.html">Meaning Mode</a>
+        <a href="mission-mode.html">Mission Mode</a>
+        <a href="speed-mode.html">Speed Mode</a>
+        <a href="breakdown-mode.html">Breakdown Mode</a>
+      </div>
+    </div>
+
+    <div class="layout">
+      <aside class="panel controls">
+        <div class="section">
+          <h2>Choose card type</h2>
+          <div class="stack">
+            <label class="option">
+              <input type="radio" name="cardType" value="prefix" checked>
+              <span>Prefixes</span>
+            </label>
+
+            <label class="option">
+              <input type="radio" name="cardType" value="suffix">
+              <span>Suffixes</span>
+            </label>
+
+            <label class="option">
+              <input type="radio" name="cardType" value="baseAll">
+              <span>All bases</span>
+            </label>
+
+            <label class="option">
+              <input type="radio" name="cardType" value="baseOrigin">
+              <span>Bases by origin</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="section" id="originSection" style="display:none;">
+          <h2>Choose base origin</h2>
+          <select id="originSelect"></select>
+        </div>
+
+        <div class="section">
+          <h2>Deck options</h2>
+          <div class="stack">
+            <label class="option">
+              <input type="checkbox" id="randomMode" checked>
+              <span>Random order</span>
+            </label>
+
+            <label class="option">
+              <input type="checkbox" id="showEmoji" checked>
+              <span>Show visual cue</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Build deck</h2>
+          <p>This version is designed to plug into your existing morpheme lists.</p>
+          <div class="inline">
+            <button class="primary" id="buildDeckBtn">Build deck</button>
+            <button class="secondary" id="shuffleBtn">Shuffle deck</button>
+          </div>
+        </div>
+      </aside>
+
+      <main class="panel main">
+        <div class="stats">
+          <div class="stat">Deck size: <span id="deckSize">0</span></div>
+          <div class="stat">Showing: <span id="currentType">Prefixes</span></div>
+          <div class="stat">Card: <span id="cardNumber">0</span></div>
+        </div>
+
+        <div class="stage" id="stage">
+          <div class="empty" id="emptyState">
+            Build a deck to begin your flashcards.
+          </div>
+
+          <div class="card-wrap" id="cardWrap" style="display:none;">
+            <div class="card" id="flashcard">
+              <div class="card-face front">
+                <div class="badge" id="frontBadge">Prefix</div>
+                <h2 class="morpheme" id="frontMorpheme">un</h2>
+                <p class="hint">Click the card to flip it and reveal the meaning, sentence, origin and visual cue.</p>
+              </div>
+
+              <div class="card-face back">
+                <div class="back-top">
+                  <div>
+                    <div class="badge" id="backBadge">Prefix</div>
+                    <h2 class="back-title" id="backMorpheme">un</h2>
+                  </div>
+                  <div class="emoji-box" id="emojiBox">🧠</div>
+                </div>
+
+                <div class="info-grid">
+                  <div class="info">
+                    <span class="label">Meaning</span>
+                    <div class="value" id="meaningText"></div>
+                  </div>
+
+                  <div class="info">
+                    <span class="label">Origin</span>
+                    <div class="value" id="originText"></div>
+                  </div>
+
+                  <div class="info full">
+                    <span class="label">Example sentence</span>
+                    <div class="value" id="sentenceText"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer-controls">
+          <button class="ghost" id="flipBtn">Flip card</button>
+          <button class="primary" id="nextBtn">Next card</button>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    /*
+      ============================================================
+      FLASHCARD DATA ADAPTER
+      ============================================================
+
+      This page is built to work with your existing morphology data.
+
+      EASIEST WAY TO USE IT:
+      1. Paste your current prefixes / suffixes / bases arrays in this file
+         OR load the same shared JS file your main builder uses.
+      2. Update the 3 variables below so they point to your real arrays.
+
+      Example:
+      const RAW_PREFIXES = prefixes;
+      const RAW_SUFFIXES = suffixes;
+      const RAW_BASES = bases;
+
+      If your arrays are named something else, just change these 3 lines.
+    */
+
+    const RAW_PREFIXES = window.prefixes || [];
+    const RAW_SUFFIXES = window.suffixes || [];
+    const RAW_BASES = window.bases || [];
+
+    /*
+      OPTIONAL:
+      If your real site stores the data in a different structure, only edit
+      the normalisePrefix, normaliseSuffix and normaliseBase functions below.
+    */
+
+    function titleCase(text) {
+      return String(text || "")
+        .replace(/[_-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    function cleanText(value, fallback = "") {
+      if (value === undefined || value === null) return fallback;
+      return String(value).trim();
+    }
+
+    function pick(obj, keys, fallback = "") {
+      for (const key of keys) {
+        if (obj && obj[key] !== undefined && obj[key] !== null && String(obj[key]).trim() !== "") {
+          return obj[key];
+        }
+      }
+      return fallback;
+    }
+
+    function guessVisualCue(text, type) {
+      const t = String(text || "").toLowerCase();
+
+      if (type === "Prefix") {
+        if (t.includes("not") || t.includes("opposite")) return "🚫";
+        if (t.includes("again") || t.includes("back")) return "🔁";
+        if (t.includes("before")) return "⏮️";
+        if (t.includes("under") || t.includes("below")) return "⬇️";
+        if (t.includes("wrong")) return "❌";
+      }
+
+      if (type === "Suffix") {
+        if (t.includes("full of")) return "🪣";
+        if (t.includes("without")) return "🚫";
+        if (t.includes("state") || t.includes("quality")) return "✨";
+        if (t.includes("person")) return "🧑";
+        if (t.includes("able")) return "✅";
+      }
+
+      if (t.includes("build")) return "🏗️";
+      if (t.includes("carry")) return "📦";
+      if (t.includes("write") || t.includes("mark")) return "✍️";
+      if (t.includes("light")) return "💡";
+      if (t.includes("look") || t.includes("see")) return "👀";
+      if (t.includes("life")) return "🌱";
+      if (t.includes("sound")) return "🔊";
+      if (t.includes("water")) return "💧";
+      if (t.includes("earth")) return "🌍";
+      if (t.includes("heat")) return "🔥";
+      if (t.includes("hand")) return "✋";
+      if (t.includes("move")) return "🏃";
+      return "🧠";
+    }
+
+    function buildExampleSentence(morpheme, meaning, type) {
+      const m = cleanText(morpheme);
+      const mean = cleanText(meaning, "a useful meaning");
+      if (type === "Prefix") return `The prefix ${m} means ${mean}.`;
+      if (type === "Suffix") return `The suffix ${m} means ${mean}.`;
+      return `The base ${m} means ${mean}.`;
+    }
+
+    function normaliseOrigin(rawOrigin) {
+      const value = String(rawOrigin || "").trim();
+      if (!value) return { key: "unknown", label: "Unknown" };
+
+      const low = value.toLowerCase();
+
+      if (low.includes("latin")) return { key: "latin", label: "Latin" };
+      if (low.includes("greek")) return { key: "greek", label: "Greek" };
+      if (low.includes("old english") || low.includes("anglo") || low.includes("saxon")) {
+        return { key: "anglo", label: "Anglo Saxon / Old English" };
+      }
+      if (low.includes("french")) return { key: "french", label: "French" };
+      return { key: low.replace(/\s+/g, "-"), label: titleCase(value) };
+    }
+
+    function normalisePrefix(item) {
+      const morpheme = cleanText(pick(item, ["morpheme", "text", "prefix", "form", "label", "name"]));
+      if (!morpheme) return null;
+
+      const meaning = cleanText(pick(item, ["meaning", "definition", "gloss", "meanings"]));
+      const originRaw = cleanText(pick(item, ["origin", "etymology", "language"]), "Unknown");
+      const sentence = cleanText(pick(item, ["sentence", "example", "exampleSentence"]), buildExampleSentence(morpheme, meaning, "Prefix"));
+      const emoji = cleanText(pick(item, ["emoji", "icon", "visual", "picture"]), guessVisualCue(meaning, "Prefix"));
+      const origin = normaliseOrigin(originRaw);
+
+      return {
+        morpheme,
+        type: "Prefix",
+        meaning: meaning || "Meaning not added yet",
+        origin: origin.key,
+        originLabel: origin.label,
+        sentence,
+        emoji
+      };
+    }
+
+    function normaliseSuffix(item) {
+      const morpheme = cleanText(pick(item, ["morpheme", "text", "suffix", "form", "label", "name"]));
+      if (!morpheme) return null;
+
+      const meaning = cleanText(pick(item, ["meaning", "definition", "gloss", "meanings"]));
+      const originRaw = cleanText(pick(item, ["origin", "etymology", "language"]), "Unknown");
+      const sentence = cleanText(pick(item, ["sentence", "example", "exampleSentence"]), buildExampleSentence(morpheme, meaning, "Suffix"));
+      const emoji = cleanText(pick(item, ["emoji", "icon", "visual", "picture"]), guessVisualCue(meaning, "Suffix"));
+      const origin = normaliseOrigin(originRaw);
+
+      return {
+        morpheme,
+        type: "Suffix",
+        meaning: meaning || "Meaning not added yet",
+        origin: origin.key,
+        originLabel: origin.label,
+        sentence,
+        emoji
+      };
+    }
+
+    function normaliseBase(item) {
+      const morpheme = cleanText(pick(item, ["morpheme", "text", "base", "root", "form", "label", "name"]));
+      if (!morpheme) return null;
+
+      const meaning = cleanText(pick(item, ["meaning", "definition", "gloss", "meanings"]));
+      const originRaw = cleanText(pick(item, ["origin", "etymology", "language", "originType"]), "Unknown");
+      const sentence = cleanText(pick(item, ["sentence", "example", "exampleSentence"]), buildExampleSentence(morpheme, meaning, "Base"));
+      const emoji = cleanText(pick(item, ["emoji", "icon", "visual", "picture"]), guessVisualCue(meaning, "Base"));
+      const origin = normaliseOrigin(originRaw);
+
+      return {
+        morpheme,
+        type: "Base",
+        meaning: meaning || "Meaning not added yet",
+        origin: origin.key,
+        originLabel: origin.label,
+        sentence,
+        emoji
+      };
+    }
+
+    const MORPHEME_DATA = {
+      prefixes: RAW_PREFIXES.map(normalisePrefix).filter(Boolean),
+      suffixes: RAW_SUFFIXES.map(normaliseSuffix).filter(Boolean),
+      bases: RAW_BASES.map(normaliseBase).filter(Boolean)
+    };
+
+    const state = {
+      deck: [],
+      currentCard: null,
+      currentIndex: 0
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    const emptyState = $("emptyState");
+    const cardWrap = $("cardWrap");
+    const flashcard = $("flashcard");
+    const deckSizeEl = $("deckSize");
+    const currentTypeEl = $("currentType");
+    const cardNumberEl = $("cardNumber");
+    const originSection = $("originSection");
+    const originSelect = $("originSelect");
+    const showEmoji = $("showEmoji");
+    const randomMode = $("randomMode");
+
+    function getSelectedCardType() {
+      return document.querySelector('input[name="cardType"]:checked').value;
+    }
+
+    function shuffleArray(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function getAvailableOrigins() {
+      const seen = new Map();
+      for (const item of MORPHEME_DATA.bases) {
+        if (!seen.has(item.origin)) {
+          seen.set(item.origin, item.originLabel || titleCase(item.origin));
+        }
+      }
+      return [...seen.entries()].map(([key, label]) => ({ key, label }));
+    }
+
+    function populateOriginSelect() {
+      const origins = getAvailableOrigins();
+      originSelect.innerHTML = "";
+
+      if (!origins.length) {
+        const option = document.createElement("option");
+        option.value = "unknown";
+        option.textContent = "Unknown";
+        originSelect.appendChild(option);
+        return;
+      }
+
+      for (const origin of origins) {
+        const option = document.createElement("option");
+        option.value = origin.key;
+        option.textContent = origin.label;
+        originSelect.appendChild(option);
+      }
+    }
+
+    function getDeckFromSelection() {
+      const selected = getSelectedCardType();
+
+      if (selected === "prefix") return [...MORPHEME_DATA.prefixes];
+      if (selected === "suffix") return [...MORPHEME_DATA.suffixes];
+      if (selected === "baseAll") return [...MORPHEME_DATA.bases];
+      if (selected === "baseOrigin") {
+        const chosenOrigin = originSelect.value;
+        return MORPHEME_DATA.bases.filter(item => item.origin === chosenOrigin);
+      }
+      return [];
+    }
+
+    function getTypeLabel() {
+      const selected = getSelectedCardType();
+      if (selected === "prefix") return "Prefixes";
+      if (selected === "suffix") return "Suffixes";
+      if (selected === "baseAll") return "All bases";
+      if (selected === "baseOrigin") return "Bases by origin";
+      return "Deck";
+    }
+
+    function updateOriginVisibility() {
+      const selected = getSelectedCardType();
+      originSection.style.display = selected === "baseOrigin" ? "block" : "none";
+    }
+
+    function showEmpty(message) {
+      emptyState.style.display = "flex";
+      emptyState.textContent = message;
+      cardWrap.style.display = "none";
+    }
+
+    function showCard(card) {
+      state.currentCard = card;
+      flashcard.classList.remove("flipped");
+
+      $("frontBadge").textContent = card.type;
+      $("backBadge").textContent = card.type;
+      $("frontMorpheme").textContent = card.morpheme;
+      $("backMorpheme").textContent = card.morpheme;
+      $("meaningText").textContent = card.meaning || "Meaning not added yet";
+      $("originText").textContent = card.originLabel || "Unknown";
+      $("sentenceText").textContent = card.sentence || "No example sentence added yet.";
+      $("emojiBox").textContent = showEmoji.checked ? (card.emoji || "🧠") : "";
+
+      emptyState.style.display = "none";
+      cardWrap.style.display = "block";
+    }
+
+    function buildDeck() {
+      let deck = getDeckFromSelection();
+
+      if (randomMode.checked) {
+        deck = shuffleArray(deck);
+      }
+
+      state.deck = deck;
+      state.currentIndex = 0;
+      state.currentCard = null;
+
+      deckSizeEl.textContent = deck.length;
+      currentTypeEl.textContent = getTypeLabel();
+      cardNumberEl.textContent = deck.length ? 1 : 0;
+
+      if (!deck.length) {
+        showEmpty("No cards were found. Check that this page is pointing to your real prefixes, bases and suffixes arrays.");
+        return;
+      }
+
+      showCard(deck[0]);
+    }
+
+    function nextCard() {
+      if (!state.deck.length) return;
+
+      if (randomMode.checked) {
+        if (state.deck.length === 1) {
+          showCard(state.deck[0]);
+          cardNumberEl.textContent = 1;
+          return;
+        }
+
+        let next;
+        do {
+          next = state.deck[Math.floor(Math.random() * state.deck.length)];
+        } while (
+          state.currentCard &&
+          next.morpheme === state.currentCard.morpheme &&
+          next.type === state.currentCard.type
+        );
+
+        showCard(next);
+        cardNumberEl.textContent = "Random";
+        return;
+      }
+
+      state.currentIndex++;
+      if (state.currentIndex >= state.deck.length) {
+        state.currentIndex = 0;
+      }
+
+      cardNumberEl.textContent = state.currentIndex + 1;
+      showCard(state.deck[state.currentIndex]);
+    }
+
+    function flipCard() {
+      if (!state.currentCard) return;
+      flashcard.classList.toggle("flipped");
+    }
+
+    document.querySelectorAll('input[name="cardType"]').forEach(input => {
+      input.addEventListener("change", () => {
+        updateOriginVisibility();
+        deckSizeEl.textContent = "0";
+        cardNumberEl.textContent = "0";
+        currentTypeEl.textContent = getTypeLabel();
+        showEmpty("Build a deck to begin your flashcards.");
+      });
+    });
+
+    originSelect.addEventListener("change", () => {
+      showEmpty("Build a deck to begin your flashcards.");
+      deckSizeEl.textContent = "0";
+      cardNumberEl.textContent = "0";
+    });
+
+    showEmoji.addEventListener("change", () => {
+      if (state.currentCard) {
+        $("emojiBox").textContent = showEmoji.checked ? (state.currentCard.emoji || "🧠") : "";
+      }
+    });
+
+    $("buildDeckBtn").addEventListener("click", buildDeck);
+    $("shuffleBtn").addEventListener("click", buildDeck);
+    $("nextBtn").addEventListener("click", nextCard);
+    $("flipBtn").addEventListener("click", flipCard);
+    flashcard.addEventListener("click", flipCard);
+
+    populateOriginSelect();
+    updateOriginVisibility();
+    currentTypeEl.textContent = getTypeLabel();
+
+    if (!RAW_PREFIXES.length && !RAW_SUFFIXES.length && !RAW_BASES.length) {
+      showEmpty("Your flashcard page is ready, but it is not yet connected to your existing morpheme arrays. Link the three RAW variables at the top of the script to your real data.");
+    }
+  </script>
+</body>
+</html>
