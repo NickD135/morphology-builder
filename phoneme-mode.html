@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Lab – Phoneme Splitter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#f5f5f5; --panel:#ffffff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b;
+      --indigo:#4338ca; --indigo-2:#6366f1; --indigo-soft:#eef2ff;
+      --green:#16a34a; --green-soft:#f0fdf4; --green-line:#bbf7d0; --green-text:#166534;
+      --orange:#ea580c; --orange-soft:#fff7ed; --orange-line:#fed7aa; --orange-text:#9a3412;
+      --purple:#7c3aed; --purple-soft:#f5f3ff; --purple-line:#ddd6fe; --purple-text:#4c1d95;
+      --bad:#dc2626;
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:'Lexend',sans-serif; background:var(--bg); color:var(--text); line-height:1.5; letter-spacing:.02em; }
+    button,input,select{ font:inherit; }
+
+    .header{ position:sticky; top:0; z-index:20; background:var(--bg); border-bottom:1px solid var(--line); box-shadow:0 1px 2px rgba(15,23,42,.05); }
+    .headerInner{ max-width:1100px; margin:0 auto; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+    .brand{ display:flex; align-items:center; gap:12px; }
+    .brandIcon{ width:50px; height:50px; border-radius:14px; background:var(--purple); color:#fff; display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 12px 24px rgba(124,58,237,.2); }
+    .brand h1{ margin:0; font-size:26px; font-weight:900; letter-spacing:-.02em; color:#4c1d95; }
+    .brand .sub{ font-size:10px; text-transform:uppercase; letter-spacing:.25em; color:var(--purple); font-weight:900; margin-top:3px; display:block; }
+    .hud{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .pill{ display:inline-flex; align-items:center; justify-content:center; min-height:40px; border:1px solid var(--line); border-radius:999px; background:#fff; padding:8px 16px; font-size:13px; font-weight:800; color:#334155; }
+    .pill.score{ background:var(--purple); color:#fff; border-color:transparent; }
+    .pill.streak{ background:var(--orange-soft); color:var(--orange-text); border-color:var(--orange-line); }
+    .topBtn{ border:none; background:#0f172a; color:#fff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:.12em; padding:12px 16px; border-radius:14px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; }
+    .topBtn:hover{ background:#000; }
+
+    .wrap{ max-width:1100px; margin:0 auto; padding:20px; }
+    .mainGrid{ display:grid; grid-template-columns:1fr 320px; gap:20px; align-items:start; }
+    @media(max-width:820px){ .mainGrid{ grid-template-columns:1fr; } }
+
+    .panel{ background:var(--panel); border:4px solid var(--line); border-radius:28px; box-shadow:0 20px 28px rgba(15,23,42,.06); overflow:hidden; }
+    .panelInner{ padding:28px; }
+    .panelTitle{ margin:0 0 6px 0; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.22em; color:var(--purple); }
+
+    /* Start screen */
+    .startScreen{ text-align:center; padding:36px 20px; }
+    .startIcon{ width:80px; height:80px; border-radius:24px; background:var(--purple); color:#fff; display:flex; align-items:center; justify-content:center; font-size:36px; margin:0 auto 20px auto; box-shadow:0 20px 40px rgba(124,58,237,.24); }
+    .startTitle{ font-size:30px; font-weight:900; color:#4c1d95; margin:0 0 10px; }
+    .startSub{ color:var(--muted); font-size:14px; margin-bottom:24px; max-width:460px; margin-left:auto; margin-right:auto; line-height:1.7; }
+    .howToGrid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:28px; text-align:left; }
+    .howToCard{ background:var(--purple-soft); border:2px solid var(--purple-line); border-radius:16px; padding:14px 16px; }
+    .howToCard.orange{ background:var(--orange-soft); border-color:var(--orange-line); }
+    .howToCard .htIcon{ font-size:20px; margin-bottom:6px; }
+    .howToCard .htTitle{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; color:var(--purple-text); margin-bottom:4px; }
+    .howToCard.orange .htTitle{ color:var(--orange-text); }
+    .howToCard .htDesc{ font-size:13px; color:#334155; line-height:1.5; }
+    .startBtn{ border:none; background:var(--purple); color:#fff; font-weight:900; font-size:16px; letter-spacing:.08em; padding:18px 48px; border-radius:20px; cursor:pointer; text-transform:uppercase; box-shadow:0 16px 32px rgba(124,58,237,.24); transition:all .15s; }
+    .startBtn:hover{ background:#6d28d9; transform:translateY(-2px); }
+
+    /* Diff buttons */
+    .diffRow{ display:flex; gap:8px; margin-bottom:24px; flex-wrap:wrap; }
+    .diffBtn{ border:2px solid var(--line); background:#fff; border-radius:14px; padding:10px 14px; font-weight:800; font-size:12px; cursor:pointer; color:var(--muted); transition:all .15s; text-transform:uppercase; letter-spacing:.06em; }
+    .diffBtn.active{ border-color:var(--purple); background:var(--purple-soft); color:var(--purple-text); }
+    .diffBtn:hover:not(.active){ border-color:#cbd5e1; color:var(--text); }
+
+    /* Game area */
+    .gameArea{ display:flex; flex-direction:column; align-items:center; gap:22px; padding:8px 0; }
+    .wordPrompt{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.22em; color:var(--muted); text-align:center; }
+    .speakBtn{ border:2px solid var(--purple-line); background:var(--purple-soft); color:var(--purple-text); border-radius:14px; padding:10px 20px; font-weight:800; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:8px; transition:all .15s; }
+    .speakBtn:hover{ background:var(--purple-line); border-color:var(--purple); }
+
+    /* ── Core interaction area ── */
+    .chopContainer{ display:flex; align-items:center; justify-content:center; flex-wrap:wrap; user-select:none; min-height:110px; gap:0; }
+
+    /* Each "unit" = one or more letters currently grouped */
+    .unit{ display:inline-flex; align-items:center; position:relative; }
+
+    /* The letter(s) inside a unit */
+    .unitInner{
+      display:inline-flex; align-items:center;
+      border-radius:12px; border:2px solid transparent;
+      padding:4px 4px;
+      transition:background .15s, border-color .15s;
+    }
+
+    /* When merged (2+ letters): orange highlight */
+    .unit.merged .unitInner{
+      background:var(--orange-soft);
+      border-color:var(--orange-line);
+    }
+    .unit.merged .lChar{ color:var(--orange-text); }
+
+    .lChar{ font-size:52px; font-weight:900; line-height:1; color:#312e81; padding:0 2px; transition:color .12s; }
+
+    /* Inner gap between letters within a merged unit — click to unmerge */
+    .innerGap{
+      width:18px; height:52px;
+      display:inline-flex; align-items:center; justify-content:center;
+      cursor:pointer; position:relative;
+    }
+    .innerGap .iLine{ width:2px; height:32px; border-radius:999px; background:rgba(234,88,12,.35); transition:background .12s; }
+    .innerGap:hover .iLine{ background:var(--bad); }
+    .innerGap .iHint{ position:absolute; top:-22px; left:50%; transform:translateX(-50%); font-size:10px; font-weight:800; color:var(--bad); opacity:0; transition:opacity .1s; white-space:nowrap; pointer-events:none; }
+    .innerGap:hover .iHint{ opacity:1; }
+
+    /* Gap between adjacent units */
+    .unitGap{
+      width:28px; height:72px;
+      display:inline-flex; flex-direction:column; align-items:center; justify-content:center;
+      cursor:pointer; position:relative; gap:3px;
+    }
+    .unitGap .gLine{ width:3px; height:44px; border-radius:999px; background:#e2e8f0; transition:background .15s, box-shadow .15s; }
+    .unitGap:hover .gLine{ background:var(--purple); }
+    .unitGap.split .gLine{ background:var(--purple); box-shadow:0 0 0 4px rgba(124,58,237,.15); }
+    .unitGap .gHint{ position:absolute; top:-22px; left:50%; transform:translateX(-50%); font-size:10px; font-weight:800; color:var(--purple); opacity:0; transition:opacity .1s; white-space:nowrap; pointer-events:none; }
+    .unitGap:hover .gHint{ opacity:1; }
+
+    /* The small merge button that sits below an unsplit gap */
+    .mergeBtn{
+      display:none;
+      position:absolute; bottom:-30px; left:50%; transform:translateX(-50%);
+      font-size:10px; font-weight:900; color:var(--orange-text);
+      background:var(--orange-soft); border:1px solid var(--orange-line);
+      border-radius:7px; padding:3px 7px; cursor:pointer; white-space:nowrap;
+      z-index:5;
+    }
+    .unitGap:not(.split):hover .mergeBtn{ display:block; }
+    .mergeBtn:hover{ background:var(--orange-line); }
+
+    /* Preview */
+    .phonemePreview{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; min-height:52px; align-items:center; }
+    .pChip{ padding:8px 16px; border-radius:14px; font-size:20px; font-weight:800; animation:popIn .18s ease-out; }
+    .pChip.single{ background:var(--purple-soft); border:2px solid var(--purple-line); color:var(--purple-text); }
+    .pChip.multi{ background:var(--orange-soft); border:2px solid var(--orange-line); color:var(--orange-text); }
+    @keyframes popIn{ 0%{ transform:scale(.78); opacity:0; } 100%{ transform:scale(1); opacity:1; } }
+
+    /* Actions */
+    .actionRow{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+    .checkBtn{ border:none; background:var(--purple); color:#fff; font-weight:900; font-size:15px; letter-spacing:.06em; padding:16px 36px; border-radius:18px; cursor:pointer; text-transform:uppercase; box-shadow:0 12px 24px rgba(124,58,237,.22); transition:all .15s; }
+    .checkBtn:hover{ background:#6d28d9; transform:translateY(-1px); }
+    .checkBtn:disabled{ background:#cbd5e1; box-shadow:none; cursor:not-allowed; transform:none; }
+    .clearBtn{ border:2px solid var(--line); background:#fff; color:#334155; font-weight:800; font-size:13px; padding:14px 22px; border-radius:16px; cursor:pointer; transition:all .15s; }
+    .clearBtn:hover{ background:#f8fafc; }
+
+    /* Feedback */
+    .feedbackBanner{ width:100%; border-radius:20px; padding:18px 24px; font-weight:800; font-size:14px; display:none; animation:slideIn .25s ease-out; line-height:1.7; }
+    @keyframes slideIn{ 0%{ transform:translateY(-8px); opacity:0; } 100%{ transform:translateY(0); opacity:1; } }
+    .feedbackBanner.correct{ display:block; background:var(--green-soft); color:var(--green-text); border:2px solid var(--green-line); }
+    .feedbackBanner.wrong{ display:block; background:#fef2f2; color:var(--bad); border:2px solid #fecaca; }
+    .nextBtn{ border:none; background:#0f172a; color:#fff; font-weight:900; font-size:14px; letter-spacing:.08em; padding:14px 32px; border-radius:16px; cursor:pointer; text-transform:uppercase; display:none; margin-top:8px; transition:background .15s; }
+    .nextBtn:hover{ background:#000; }
+    .nextBtn.visible{ display:inline-flex; }
+
+    /* Right col */
+    .bigNum{ font-size:64px; font-weight:900; letter-spacing:-.04em; color:#4c1d95; line-height:1; }
+    .subRow{ display:flex; gap:16px; margin-top:16px; flex-wrap:wrap; }
+    .subStat{ flex:1; min-width:80px; }
+    .subStat .val{ font-size:28px; font-weight:900; color:var(--purple); line-height:1; }
+    .subStat .lbl{ font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin-top:2px; }
+    .histList{ display:flex; flex-direction:column; gap:8px; max-height:240px; overflow-y:auto; }
+    .histItem{ display:flex; align-items:flex-start; gap:8px; padding:10px 12px; border-radius:14px; border:2px solid var(--line); font-size:13px; }
+    .histItem.correct{ background:var(--green-soft); border-color:var(--green-line); }
+    .histItem.wrong{ background:#fef2f2; border-color:#fecaca; }
+    .histWord{ font-weight:800; min-width:72px; }
+    .histAnswer{ color:var(--muted); font-size:12px; line-height:1.4; }
+    .tipBox{ background:var(--purple-soft); border:2px solid var(--purple-line); border-radius:16px; padding:14px 16px; font-size:13px; color:#334155; line-height:1.65; margin-bottom:12px; }
+    .tipBox b{ color:var(--purple-text); }
+    .oChip{ display:inline-block; padding:1px 7px; border-radius:6px; background:var(--orange-soft); color:var(--orange-text); border:1px solid var(--orange-line); font-weight:800; font-size:12px; }
+    .pChipInline{ display:inline-block; padding:1px 7px; border-radius:6px; background:var(--purple-soft); color:var(--purple-text); border:1px solid var(--purple-line); font-weight:800; font-size:12px; }
+
+    .hidden{ display:none !important; }
+    @keyframes shake{ 0%,100%{ transform:translateX(0); } 20%{ transform:translateX(-6px); } 40%{ transform:translateX(6px); } 60%{ transform:translateX(-4px); } 80%{ transform:translateX(4px); } }
+    .shake{ animation:shake .4s ease-out; }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="headerInner">
+    <div class="brand">
+      <div class="brandIcon">🔊</div>
+      <div>
+        <h1>Phoneme Splitter</h1>
+        <span class="sub">Word Lab · Sound Mode</span>
+      </div>
+    </div>
+    <div class="hud">
+      <span class="pill score" id="scoreDisplay">Score: 0</span>
+      <span class="pill streak" id="streakDisplay">🔥 0 streak</span>
+      <a href="index.html" class="topBtn">← Builder</a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="mainGrid">
+    <div class="panel">
+      <div class="panelInner">
+
+        <!-- Start screen -->
+        <div id="startScreen" class="startScreen">
+          <div class="startIcon">🔊</div>
+          <div class="startTitle">Phoneme Splitter</div>
+          <div class="startSub">Split words into their individual <em>sounds</em>. Remember — sounds and letters aren't always the same thing!</div>
+          <div class="howToGrid">
+            <div class="howToCard">
+              <div class="htIcon">✂️</div>
+              <div class="htTitle">Split sounds apart</div>
+              <div class="htDesc">Click between letters to add a phoneme boundary — just like the syllable game.</div>
+            </div>
+            <div class="howToCard orange">
+              <div class="htIcon">🔗</div>
+              <div class="htTitle">Merge digraphs</div>
+              <div class="htDesc">Hover over the gap between two letters and click <b>merge</b> to join them into one sound tile.</div>
+            </div>
+            <div class="howToCard">
+              <div class="htIcon">🔊</div>
+              <div class="htTitle">Listen carefully</div>
+              <div class="htDesc">Click "Hear the word" to hear it. Count the <em>sounds</em> you hear, not the letters.</div>
+            </div>
+            <div class="howToCard orange">
+              <div class="htIcon">💡</div>
+              <div class="htTitle">Digraph examples</div>
+              <div class="htDesc"><b>sh</b>ip = 3 sounds &nbsp;·&nbsp; <b>ch</b>at = 3 &nbsp;·&nbsp; ni<b>gh</b>t = 3</div>
+            </div>
+          </div>
+          <button class="startBtn" onclick="startGame()">Start Splitting!</button>
+        </div>
+
+        <!-- Game screen -->
+        <div id="gameScreen" class="hidden">
+          <div class="diffRow">
+            <button class="diffBtn active" data-diff="easy"   onclick="setDiff('easy')">Starter</button>
+            <button class="diffBtn"        data-diff="medium" onclick="setDiff('medium')">Level up</button>
+            <button class="diffBtn"        data-diff="hard"   onclick="setDiff('hard')">Challenge</button>
+            <button class="diffBtn"        data-diff="mixed"  onclick="setDiff('mixed')">Mixed</button>
+          </div>
+
+          <div class="gameArea">
+            <div class="wordPrompt">Split this word into its individual sounds</div>
+            <button class="speakBtn" onclick="speakWord()">🔊 <span>Hear the word</span></button>
+
+            <div class="chopContainer" id="chopContainer"></div>
+
+            <div style="text-align:center;width:100%;">
+              <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.18em;color:var(--muted);margin-bottom:10px;">Your phonemes</div>
+              <div class="phonemePreview" id="phonemePreview">
+                <span style="color:var(--muted);font-size:14px;font-weight:700;">Split or merge letters above</span>
+              </div>
+            </div>
+
+            <div class="feedbackBanner" id="feedbackBanner"></div>
+
+            <div class="actionRow">
+              <button class="clearBtn" onclick="resetWord()">Reset</button>
+              <button class="checkBtn" id="checkBtn" onclick="checkAnswer()">Check ✓</button>
+            </div>
+            <button class="nextBtn" id="nextBtn" onclick="nextWord()">Next word →</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div class="panel">
+        <div class="panelInner">
+          <div class="panelTitle">Score</div>
+          <div class="bigNum" id="bigScore">0</div>
+          <div class="subRow">
+            <div class="subStat"><div class="val" id="statCorrect">0</div><div class="lbl">Correct</div></div>
+            <div class="subStat"><div class="val" id="statWrong">0</div><div class="lbl">Wrong</div></div>
+            <div class="subStat"><div class="val" id="statBest">0</div><div class="lbl">Best streak</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panelInner">
+          <div class="panelTitle" style="margin-bottom:12px;">History</div>
+          <div class="histList" id="histList">
+            <div style="color:var(--muted);font-size:13px;">No attempts yet.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panelInner">
+          <div class="panelTitle" style="margin-bottom:12px;">How to play</div>
+          <div class="tipBox">
+            <b>Split</b> — click between letters to draw a sound boundary (purple line).<br><br>
+            <b>Merge</b> — hover between two letters and click the orange <b>merge</b> button to join them into one <span class="oChip">digraph tile</span>.<br><br>
+            To undo a merge, click the line <em>inside</em> the orange tile.
+          </div>
+          <div style="font-size:13px;color:#334155;line-height:1.8;">
+            <div><b>ship</b> → <span class="oChip">sh</span> · <span class="pChipInline">i</span> · <span class="pChipInline">p</span></div>
+            <div><b>night</b> → <span class="pChipInline">n</span> · <span class="oChip">igh</span> · <span class="pChipInline">t</span></div>
+            <div><b>chain</b> → <span class="oChip">ch</span> · <span class="oChip">ai</span> · <span class="pChipInline">n</span></div>
+            <div><b>street</b> → <span class="pChipInline">s</span> · <span class="pChipInline">t</span> · <span class="pChipInline">r</span> · <span class="oChip">ee</span> · <span class="pChipInline">t</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const WORDS = [
+  // Starter
+  { word:"cat",      phonemes:["c","a","t"],              diff:"easy" },
+  { word:"ship",     phonemes:["sh","i","p"],              diff:"easy" },
+  { word:"chat",     phonemes:["ch","a","t"],              diff:"easy" },
+  { word:"thin",     phonemes:["th","i","n"],              diff:"easy" },
+  { word:"fish",     phonemes:["f","i","sh"],              diff:"easy" },
+  { word:"rich",     phonemes:["r","i","ch"],              diff:"easy" },
+  { word:"bath",     phonemes:["b","a","th"],              diff:"easy" },
+  { word:"shop",     phonemes:["sh","o","p"],              diff:"easy" },
+  { word:"chip",     phonemes:["ch","i","p"],              diff:"easy" },
+  { word:"rush",     phonemes:["r","u","sh"],              diff:"easy" },
+  { word:"much",     phonemes:["m","u","ch"],              diff:"easy" },
+  { word:"then",     phonemes:["th","e","n"],              diff:"easy" },
+  { word:"when",     phonemes:["wh","e","n"],              diff:"easy" },
+  { word:"shed",     phonemes:["sh","e","d"],              diff:"easy" },
+  { word:"chin",     phonemes:["ch","i","n"],              diff:"easy" },
+  { word:"with",     phonemes:["w","i","th"],              diff:"easy" },
+  // Level up
+  { word:"rain",     phonemes:["r","ai","n"],              diff:"medium" },
+  { word:"feet",     phonemes:["f","ee","t"],              diff:"medium" },
+  { word:"boat",     phonemes:["b","oa","t"],              diff:"medium" },
+  { word:"moon",     phonemes:["m","oo","n"],              diff:"medium" },
+  { word:"book",     phonemes:["b","oo","k"],              diff:"medium" },
+  { word:"play",     phonemes:["p","l","ay"],              diff:"medium" },
+  { word:"seed",     phonemes:["s","ee","d"],              diff:"medium" },
+  { word:"coin",     phonemes:["c","oi","n"],              diff:"medium" },
+  { word:"loud",     phonemes:["l","ou","d"],              diff:"medium" },
+  { word:"night",    phonemes:["n","igh","t"],             diff:"medium" },
+  { word:"light",    phonemes:["l","igh","t"],             diff:"medium" },
+  { word:"read",     phonemes:["r","ea","d"],              diff:"medium" },
+  { word:"train",    phonemes:["t","r","ai","n"],          diff:"medium" },
+  { word:"cream",    phonemes:["c","r","ea","m"],          diff:"medium" },
+  { word:"shout",    phonemes:["sh","ou","t"],             diff:"medium" },
+  { word:"chain",    phonemes:["ch","ai","n"],             diff:"medium" },
+  { word:"teeth",    phonemes:["t","ee","th"],             diff:"medium" },
+  { word:"beach",    phonemes:["b","ea","ch"],             diff:"medium" },
+  { word:"sheet",    phonemes:["sh","ee","t"],             diff:"medium" },
+  { word:"wheat",    phonemes:["wh","ea","t"],             diff:"medium" },
+  { word:"cheap",    phonemes:["ch","ea","p"],             diff:"medium" },
+  // Challenge
+  { word:"bright",   phonemes:["b","r","igh","t"],         diff:"hard" },
+  { word:"throat",   phonemes:["th","r","oa","t"],         diff:"hard" },
+  { word:"thought",  phonemes:["th","ough","t"],           diff:"hard" },
+  { word:"street",   phonemes:["s","t","r","ee","t"],      diff:"hard" },
+  { word:"spring",   phonemes:["s","p","r","i","ng"],      diff:"hard" },
+  { word:"strong",   phonemes:["s","t","r","o","ng"],      diff:"hard" },
+  { word:"splash",   phonemes:["s","p","l","a","sh"],      diff:"hard" },
+  { word:"choice",   phonemes:["ch","oi","ce"],            diff:"hard" },
+  { word:"shook",    phonemes:["sh","oo","k"],             diff:"hard" },
+  { word:"teacher",  phonemes:["t","ea","ch","er"],        diff:"hard" },
+  { word:"thunder",  phonemes:["th","u","n","d","er"],     diff:"hard" },
+  { word:"feather",  phonemes:["f","ea","th","er"],        diff:"hard" },
+  { word:"birthday", phonemes:["b","ir","th","d","ay"],    diff:"hard" },
+  { word:"shoulder", phonemes:["sh","ou","l","d","er"],    diff:"hard" },
+];
+
+let currentWord = null;
+let currentDiff = "easy";
+let usedWords   = new Set();
+// State: units[] (strings) + splits[] (bools between consecutive units)
+let units  = [];
+let splits = [];
+let score = 0, streak = 0, bestStreak = 0, correctCount = 0, wrongCount = 0;
+let checked = false;
+
+function setDiff(d){
+  currentDiff = d;
+  document.querySelectorAll('.diffBtn').forEach(b => b.classList.toggle('active', b.dataset.diff === d));
+  usedWords.clear();
+}
+
+function getPool(){
+  let pool = currentDiff === "mixed" ? WORDS : WORDS.filter(w => w.diff === currentDiff);
+  const fresh = pool.filter(w => !usedWords.has(w.word));
+  return fresh.length > 0 ? fresh : pool;
+}
+
+function loadWord(){
+  const pool = getPool();
+  currentWord = pool[Math.floor(Math.random() * pool.length)];
+  usedWords.add(currentWord.word);
+  checked = false;
+  // Start: every letter is its own unit, no splits
+  units  = currentWord.word.split("");
+  splits = new Array(units.length - 1).fill(false);
+  render();
+  updatePreview();
+  hideFeedback();
+  document.getElementById('nextBtn').classList.remove('visible');
+  document.getElementById('checkBtn').disabled = false;
+}
+
+// ── State operations ──────────────────────────────────────────────────────────
+
+// Toggle phoneme boundary BETWEEN units[i] and units[i+1]
+function toggleSplit(i){
+  if(checked) return;
+  splits[i] = !splits[i];
+  render(); updatePreview();
+}
+
+// Merge units[i] and units[i+1] into one unit (remove gap between them)
+function mergeAt(i){
+  if(checked) return;
+  units[i] = units[i] + units[i+1];
+  units.splice(i+1,1);
+  splits.splice(i,1);
+  render(); updatePreview();
+}
+
+// Split unit[i] at internal position pos (after character pos)
+function splitUnit(i, pos){
+  if(checked) return;
+  const left  = units[i].slice(0, pos+1);
+  const right = units[i].slice(pos+1);
+  units.splice(i, 1, left, right);
+  splits.splice(i, 0, false);
+  render(); updatePreview();
+}
+
+function resetWord(){
+  units  = currentWord.word.split("");
+  splits = new Array(units.length - 1).fill(false);
+  render(); updatePreview();
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render(){
+  const c = document.getElementById('chopContainer');
+  c.innerHTML = '';
+
+  units.forEach((u, ui) => {
+    // Unit block
+    const unitEl = document.createElement('div');
+    unitEl.className = 'unit' + (u.length > 1 ? ' merged' : '');
+
+    const inner = document.createElement('div');
+    inner.className = 'unitInner';
+
+    if(u.length === 1){
+      const lc = document.createElement('span');
+      lc.className = 'lChar';
+      lc.textContent = u;
+      inner.appendChild(lc);
+    } else {
+      // Multi-letter merged unit: show letters with inner split affordances
+      for(let li = 0; li < u.length; li++){
+        const lc = document.createElement('span');
+        lc.className = 'lChar';
+        lc.textContent = u[li];
+        inner.appendChild(lc);
+
+        if(li < u.length - 1){
+          const ig = document.createElement('div');
+          ig.className = 'innerGap';
+          const il = document.createElement('div');
+          il.className = 'iLine';
+          const ih = document.createElement('div');
+          ih.className = 'iHint';
+          ih.textContent = 'split';
+          ig.appendChild(il); ig.appendChild(ih);
+          const ci = ui, cl = li;
+          ig.addEventListener('click', e => { e.stopPropagation(); splitUnit(ci, cl); });
+          inner.appendChild(ig);
+        }
+      }
+    }
+
+    unitEl.appendChild(inner);
+    c.appendChild(unitEl);
+
+    // Gap after this unit
+    if(ui < units.length - 1){
+      const gap = document.createElement('div');
+      gap.className = 'unitGap' + (splits[ui] ? ' split' : '');
+
+      const line = document.createElement('div');
+      line.className = 'gLine';
+
+      const hint = document.createElement('div');
+      hint.className = 'gHint';
+      hint.textContent = splits[ui] ? 'remove' : 'split here';
+
+      gap.appendChild(line);
+      gap.appendChild(hint);
+
+      const ci = ui;
+      // Click the gap line area → toggle split
+      line.addEventListener('click', e => { e.stopPropagation(); toggleSplit(ci); });
+      hint.addEventListener('click', e => { e.stopPropagation(); toggleSplit(ci); });
+
+      // Merge button (only when not split)
+      if(!splits[ui]){
+        const mb = document.createElement('div');
+        mb.className = 'mergeBtn';
+        mb.textContent = '🔗 merge';
+        mb.addEventListener('click', e => { e.stopPropagation(); mergeAt(ci); });
+        gap.appendChild(mb);
+      }
+
+      gap.addEventListener('click', () => toggleSplit(ci));
+      c.appendChild(gap);
+    }
+  });
+}
+
+// ── Phoneme preview ───────────────────────────────────────────────────────────
+function getPhonemes(){
+  // Group consecutive units that have NO split between them
+  const groups = [];
+  let cur = units[0];
+  for(let i = 0; i < splits.length; i++){
+    if(splits[i]){ groups.push(cur); cur = units[i+1]; }
+    else { cur += units[i+1]; }
+  }
+  groups.push(cur);
+  return groups;
+}
+
+function updatePreview(){
+  const el = document.getElementById('phonemePreview');
+  const phonemes = getPhonemes();
+  const hasSomething = splits.some(Boolean) || units.some(u => u.length > 1);
+  if(!hasSomething){
+    el.innerHTML = '<span style="color:var(--muted);font-size:14px;font-weight:700;">Split or merge letters above</span>';
+    return;
+  }
+  el.innerHTML = phonemes.map((p,i) =>
+    `<span class="pChip ${p.length > 1 ? 'multi' : 'single'}">${p}</span>${i < phonemes.length-1 ? '<span style="font-size:18px;color:var(--muted);align-self:center;">·</span>' : ''}`
+  ).join('');
+}
+
+// ── Check ─────────────────────────────────────────────────────────────────────
+function checkAnswer(){
+  if(!currentWord || checked) return;
+  checked = true;
+  const user    = getPhonemes();
+  const correct = currentWord.phonemes;
+  const ok      = JSON.stringify(user) === JSON.stringify(correct);
+  const correctStr = correct.join(' · ');
+  const userStr    = user.join(' · ');
+  const banner = document.getElementById('feedbackBanner');
+
+  if(ok){
+    const pts = 10 + (streak >= 3 ? 5 : 0);
+    score += pts; streak++; correctCount++;
+    if(streak > bestStreak) bestStreak = streak;
+    banner.className = 'feedbackBanner correct';
+    banner.innerHTML = `✅ Perfect! <b>${currentWord.word}</b> → ${correctStr} (${correct.length} phonemes)${streak>=3?` <span style="color:var(--orange-text)">🔥 +5 streak bonus!</span>`:''}`;
+  } else {
+    score = Math.max(0, score-2); streak = 0; wrongCount++;
+    banner.className = 'feedbackBanner wrong';
+    banner.innerHTML = `❌ Not quite. Answer: <b>${correctStr}</b> (${correct.length} phonemes)<br><span style="font-size:13px;font-weight:700;color:#64748b;">You had: ${userStr}</span>`;
+    document.getElementById('chopContainer').classList.add('shake');
+    setTimeout(() => document.getElementById('chopContainer').classList.remove('shake'), 400);
+  }
+
+  banner.style.display = 'block';
+  updateStats();
+  addHistory(currentWord.word, correctStr, ok);
+  document.getElementById('nextBtn').classList.add('visible');
+  document.getElementById('checkBtn').disabled = true;
+}
+
+function hideFeedback(){
+  const b = document.getElementById('feedbackBanner');
+  b.style.display = 'none'; b.className = 'feedbackBanner';
+}
+
+function nextWord(){ loadWord(); }
+
+function speakWord(){
+  if(!currentWord || !('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(currentWord.word);
+  u.lang = 'en-AU'; u.rate = 0.8;
+  window.speechSynthesis.speak(u);
+}
+
+function updateStats(){
+  document.getElementById('scoreDisplay').textContent = `Score: ${score}`;
+  document.getElementById('streakDisplay').textContent = `🔥 ${streak} streak`;
+  document.getElementById('bigScore').textContent = score;
+  document.getElementById('statCorrect').textContent = correctCount;
+  document.getElementById('statWrong').textContent = wrongCount;
+  document.getElementById('statBest').textContent = bestStreak;
+}
+
+function addHistory(word, answer, ok){
+  const list = document.getElementById('histList');
+  const ph = list.querySelector('div[style]');
+  if(ph) ph.remove();
+  const item = document.createElement('div');
+  item.className = `histItem ${ok?'correct':'wrong'}`;
+  item.innerHTML = `<span style="font-size:15px;">${ok?'✅':'❌'}</span><span class="histWord">${word}</span><span class="histAnswer">${answer}</span>`;
+  list.insertBefore(item, list.firstChild);
+}
+
+function startGame(){
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.remove('hidden');
+  loadWord();
+}
+</script>
+</body>
+</html>
