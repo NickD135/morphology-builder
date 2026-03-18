@@ -578,350 +578,353 @@
   </div>
 
   <script src="data.js"></script>
-  <script>
-    const DATA = window.MORPHEMES || { prefixes: [], suffixes: [], bases: [] };
+<script>
+  const DATA = window.MORPHEMES || { prefixes: [], suffixes: [], bases: [] };
 
-    const state = {
-      deck: [],
-      currentCard: null,
-      currentIndex: 0
+  const state = {
+    deck: [],
+    currentCard: null,
+    currentIndex: 0
+  };
+
+  const $ = (id) => document.getElementById(id);
+
+  const emptyState = $("emptyState");
+  const cardWrap = $("cardWrap");
+  const flashcard = $("flashcard");
+  const deckSizeEl = $("deckSize");
+  const currentTypeEl = $("currentType");
+  const cardNumberEl = $("cardNumber");
+  const groupSection = $("groupSection");
+  const groupSelect = $("groupSelect");
+  const showEmoji = $("showEmoji");
+  const randomMode = $("randomMode");
+
+  function titleCase(text) {
+    return String(text || "")
+      .replace(/[_-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function getSelectedCardType() {
+    const checked = document.querySelector('input[name="cardType"]:checked');
+    return checked ? checked.value : "prefix";
+  }
+
+  function shuffleArray(arr) {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+
+  function visualCueFromMeaning(meaning, type) {
+    const t = String(meaning || "").toLowerCase();
+
+    if (type === "Prefix") {
+      if (t.includes("not") || t.includes("without")) return "🚫";
+      if (t.includes("again")) return "🔁";
+      if (t.includes("before")) return "⏮️";
+      if (t.includes("under") || t.includes("below")) return "⬇️";
+      if (t.includes("against")) return "⚔️";
+      if (t.includes("small")) return "🔬";
+      if (t.includes("large")) return "🦣";
+      if (t.includes("many")) return "🔢";
+    }
+
+    if (type === "Suffix") {
+      if (t.includes("plural")) return "👥";
+      if (t.includes("past")) return "⏪";
+      if (t.includes("person who")) return "🧑";
+      if (t.includes("without")) return "🚫";
+      if (t.includes("full of")) return "🪣";
+      if (t.includes("state")) return "✨";
+      if (t.includes("study of")) return "📘";
+      if (t.includes("make")) return "🛠️";
+    }
+
+    if (t.includes("build")) return "🏗️";
+    if (t.includes("write")) return "✍️";
+    if (t.includes("carry")) return "📦";
+    if (t.includes("hear") || t.includes("sound")) return "🔊";
+    if (t.includes("look") || t.includes("see")) return "👀";
+    if (t.includes("water")) return "💧";
+    if (t.includes("heat")) return "🔥";
+    if (t.includes("time")) return "⏰";
+    if (t.includes("light")) return "💡";
+    if (t.includes("measure")) return "📏";
+    if (t.includes("air")) return "🌬️";
+    if (t.includes("life")) return "🌱";
+    if (t.includes("break")) return "💥";
+    if (t.includes("bend")) return "↪️";
+    if (t.includes("lead")) return "➡️";
+    if (t.includes("send")) return "📨";
+    if (t.includes("turn")) return "🔄";
+    return "🧩";
+  }
+
+  function baseGroupLabel(group) {
+    if (group === "core") return "Core";
+    if (group === "anglo") return "Anglo Saxon / Old English";
+    if (group === "latin") return "Latin";
+    if (group === "greek") return "Greek";
+    return titleCase(group || "Unknown");
+  }
+
+  function normaliseExamples(examples) {
+    if (!Array.isArray(examples)) return [];
+    return examples
+      .filter(example => typeof example === "string" && example.trim() !== "")
+      .slice(0, 3);
+  }
+
+  function normalisePrefix(item) {
+    return {
+      morpheme: item.display || item.form || "",
+      cleanMorpheme: String(item.form || item.display || "").replace(/-/g, "").toLowerCase(),
+      type: "Prefix",
+      meaning: item.meaning || "Meaning not added yet",
+      originLabel: "Prefix",
+      sentence: item.altForms && item.altForms.length
+        ? `Also seen in forms like ${item.altForms.join(", ")}.`
+        : `Can be used with ${item.allowedPos ? item.allowedPos.join(", ") : "different word types"}.`,
+      emoji: visualCueFromMeaning(item.meaning, "Prefix"),
+      examples: normaliseExamples(item.examples)
     };
+  }
 
-    const $ = (id) => document.getElementById(id);
+  function normaliseSuffix(item) {
+    return {
+      morpheme: item.display || item.form || "",
+      cleanMorpheme: String(item.form || item.display || "").replace(/-/g, "").toLowerCase(),
+      type: "Suffix",
+      meaning: item.meaning || "Meaning not added yet",
+      originLabel: "Suffix",
+      sentence: item.hint || `Can be used with ${item.allowedPos ? item.allowedPos.join(", ") : "different word types"}.`,
+      emoji: visualCueFromMeaning(item.meaning, "Suffix"),
+      examples: normaliseExamples(item.examples)
+    };
+  }
 
-    const emptyState = $("emptyState");
-    const cardWrap = $("cardWrap");
-    const flashcard = $("flashcard");
-    const deckSizeEl = $("deckSize");
-    const currentTypeEl = $("currentType");
-    const cardNumberEl = $("cardNumber");
-    const groupSection = $("groupSection");
-    const groupSelect = $("groupSelect");
-    const showEmoji = $("showEmoji");
-    const randomMode = $("randomMode");
+  function normaliseBase(item) {
+    return {
+      morpheme: item.display || item.form || "",
+      cleanMorpheme: String(item.form || item.display || "").replace(/-/g, "").toLowerCase(),
+      type: "Base",
+      meaning: item.meaning || "Meaning not added yet",
+      originLabel: baseGroupLabel(item.group),
+      sentence: `Can be used as: ${item.pos ? item.pos.join(", ") : "various word types"}.`,
+      emoji: visualCueFromMeaning(item.meaning, "Base"),
+      group: item.group || "core",
+      examples: normaliseExamples(item.examples)
+    };
+  }
 
-    function titleCase(text) {
-      return String(text || "")
-        .replace(/[_-]+/g, " ")
-        .replace(/\s+/g, " ")
-        .trim()
-        .replace(/\b\w/g, c => c.toUpperCase());
-    }
+  function makeFallbackExamples(card) {
+    const clean = String(card.cleanMorpheme || "").replace(/-/g, "");
 
-    function getSelectedCardType() {
-      const checked = document.querySelector('input[name="cardType"]:checked');
-      return checked ? checked.value : "prefix";
-    }
-
-    function shuffleArray(arr) {
-      const copy = [...arr];
-      for (let i = copy.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [copy[i], copy[j]] = [copy[j], copy[i]];
-      }
-      return copy;
-    }
-
-    function visualCueFromMeaning(meaning, type) {
-      const t = String(meaning || "").toLowerCase();
-
-      if (type === "Prefix") {
-        if (t.includes("not") || t.includes("without")) return "🚫";
-        if (t.includes("again")) return "🔁";
-        if (t.includes("before")) return "⏮️";
-        if (t.includes("under") || t.includes("below")) return "⬇️";
-        if (t.includes("against")) return "⚔️";
-        if (t.includes("small")) return "🔬";
-        if (t.includes("large")) return "🦣";
-        if (t.includes("many")) return "🔢";
-      }
-
-      if (type === "Suffix") {
-        if (t.includes("plural")) return "👥";
-        if (t.includes("past")) return "⏪";
-        if (t.includes("person who")) return "🧑";
-        if (t.includes("without")) return "🚫";
-        if (t.includes("full of")) return "🪣";
-        if (t.includes("state")) return "✨";
-        if (t.includes("study of")) return "📘";
-        if (t.includes("make")) return "🛠️";
-      }
-
-      if (t.includes("build")) return "🏗️";
-      if (t.includes("write")) return "✍️";
-      if (t.includes("carry")) return "📦";
-      if (t.includes("hear") || t.includes("sound")) return "🔊";
-      if (t.includes("look") || t.includes("see")) return "👀";
-      if (t.includes("water")) return "💧";
-      if (t.includes("heat")) return "🔥";
-      if (t.includes("time")) return "⏰";
-      if (t.includes("light")) return "💡";
-      if (t.includes("measure")) return "📏";
-      if (t.includes("air")) return "🌬️";
-      if (t.includes("life")) return "🌱";
-      if (t.includes("break")) return "💥";
-      if (t.includes("bend")) return "↪️";
-      if (t.includes("lead")) return "➡️";
-      if (t.includes("send")) return "📨";
-      if (t.includes("turn")) return "🔄";
-      return "🧩";
-    }
-
-    function baseGroupLabel(group) {
-      if (group === "core") return "Core";
-      if (group === "anglo") return "Anglo Saxon / Old English";
-      if (group === "latin") return "Latin";
-      if (group === "greek") return "Greek";
-      return titleCase(group || "Unknown");
-    }
-
-    function normaliseExamples(examples) {
-      if (!Array.isArray(examples)) return [];
-      return examples
-        .filter(example => typeof example === "string" && example.trim() !== "")
-        .slice(0, 3);
-    }
-
-    function normalisePrefix(item) {
-      return {
-        morpheme: item.display || item.form || "",
-        cleanMorpheme: String(item.form || item.display || "").replace(/-/g, "").toLowerCase(),
-        type: "Prefix",
-        meaning: item.meaning || "Meaning not added yet",
-        originLabel: "Prefix",
-        sentence: item.altForms && item.altForms.length
-          ? `Also seen in forms like ${item.altForms.join(", ")}.`
-          : `Can be used with ${item.allowedPos ? item.allowedPos.join(", ") : "different word types"}.`,
-        emoji: visualCueFromMeaning(item.meaning, "Prefix"),
-        examples: normaliseExamples(item.examples)
-      };
-    }
-
-    function normaliseSuffix(item) {
-      return {
-        morpheme: item.display || item.form || "",
-        cleanMorpheme: String(item.form || item.display || "").replace(/-/g, "").toLowerCase(),
-        type: "Suffix",
-        meaning: item.meaning || "Meaning not added yet",
-        originLabel: "Suffix",
-        sentence: item.hint || `Can be used with ${item.allowedPos ? item.allowedPos.join(", ") : "different word types"}.`,
-        emoji: visualCueFromMeaning(item.meaning, "Suffix"),
-        examples: normaliseExamples(item.examples)
-      };
-    }
-
-    function normaliseBase(item) {
-      return {
-        morpheme: item.display || item.form || "",
-        cleanMorpheme: String(item.form || item.display || "").replace(/-/g, "").toLowerCase(),
-        type: "Base",
-        meaning: item.meaning || "Meaning not added yet",
-        originLabel: baseGroupLabel(item.group),
-        sentence: `Can be used as: ${item.pos ? item.pos.join(", ") : "various word types"}.`,
-        emoji: visualCueFromMeaning(item.meaning, "Base"),
-        group: item.group || "core",
-        examples: normaliseExamples(item.examples)
-      };
-    }
-
-    function makeFallbackExamples(card) {
-      const clean = String(card.cleanMorpheme || "").replace(/-/g, "");
-
-      if (card.type === "Prefix") {
-        return [
-          `<u>${clean}</u>example`,
-          `<u>${clean}</u>word`,
-          `<u>${clean}</u>form`
-        ];
-      }
-
-      if (card.type === "Suffix") {
-        return [
-          `word<u>${clean}</u>`,
-          `stem<u>${clean}</u>`,
-          `base<u>${clean}</u>`
-        ];
-      }
-
+    if (card.type === "Prefix") {
       return [
+        `<u>${clean}</u>example`,
         `<u>${clean}</u>word`,
-        `pre<u>${clean}</u>`,
         `<u>${clean}</u>form`
       ];
     }
 
-    function getExamplesForCard(card) {
-      if (Array.isArray(card.examples) && card.examples.length) {
-        return card.examples.slice(0, 3);
-      }
-      return makeFallbackExamples(card);
+    if (card.type === "Suffix") {
+      return [
+        `word<u>${clean}</u>`,
+        `stem<u>${clean}</u>`,
+        `base<u>${clean}</u>`
+      ];
     }
 
-    function renderExamples(card) {
-      const examples = getExamplesForCard(card);
-      $("examplesList").innerHTML = examples
-        .map(example => `<div class="example-item">${example}</div>`)
-        .join("");
+    return [
+      `<u>${clean}</u>word`,
+      `pre<u>${clean}</u>`,
+      `<u>${clean}</u>form`
+    ];
+  }
+
+  function getExamplesForCard(card) {
+    if (Array.isArray(card.examples) && card.examples.length > 0) {
+      return card.examples.slice(0, 3);
+    }
+    return makeFallbackExamples(card);
+  }
+
+  function renderExamples(card) {
+    const examples = getExamplesForCard(card);
+    $("examplesList").innerHTML = examples
+      .map(example => `<div class="example-item">${example}</div>`)
+      .join("");
+  }
+
+  function getDeckFromSelection() {
+    const selected = getSelectedCardType();
+
+    if (selected === "prefix") {
+      return (DATA.prefixes || []).map(normalisePrefix);
     }
 
-    function getDeckFromSelection() {
-      const selected = getSelectedCardType();
-
-      if (selected === "prefix") {
-        return (DATA.prefixes || []).map(normalisePrefix);
-      }
-
-      if (selected === "suffix") {
-        return (DATA.suffixes || []).map(normaliseSuffix);
-      }
-
-      if (selected === "baseAll") {
-        return (DATA.bases || []).map(normaliseBase);
-      }
-
-      if (selected === "baseGroup") {
-        const chosenGroup = groupSelect.value;
-        return (DATA.bases || [])
-          .filter(item => (item.group || "core") === chosenGroup)
-          .map(normaliseBase);
-      }
-
-      return [];
+    if (selected === "suffix") {
+      return (DATA.suffixes || []).map(normaliseSuffix);
     }
 
-    function getTypeLabel() {
-      const selected = getSelectedCardType();
-      if (selected === "prefix") return "Prefixes";
-      if (selected === "suffix") return "Suffixes";
-      if (selected === "baseAll") return "All bases";
-      if (selected === "baseGroup") return "Bases by origin";
-      return "Deck";
+    if (selected === "baseAll") {
+      return (DATA.bases || []).map(normaliseBase);
     }
 
-    function updateGroupVisibility() {
-      const selected = getSelectedCardType();
-      groupSection.style.display = selected === "baseGroup" ? "block" : "none";
+    if (selected === "baseGroup") {
+      const chosenGroup = groupSelect.value;
+      return (DATA.bases || [])
+        .filter(item => (item.group || "core") === chosenGroup)
+        .map(normaliseBase);
     }
 
-    function showEmpty(message) {
-      emptyState.style.display = "flex";
-      emptyState.textContent = message;
-      cardWrap.style.display = "none";
+    return [];
+  }
+
+  function getTypeLabel() {
+    const selected = getSelectedCardType();
+    if (selected === "prefix") return "Prefixes";
+    if (selected === "suffix") return "Suffixes";
+    if (selected === "baseAll") return "All bases";
+    if (selected === "baseGroup") return "Bases by origin";
+    return "Deck";
+  }
+
+  function updateGroupVisibility() {
+    const selected = getSelectedCardType();
+    groupSection.style.display = selected === "baseGroup" ? "block" : "none";
+  }
+
+  function showEmpty(message) {
+    emptyState.style.display = "flex";
+    emptyState.textContent = message;
+    cardWrap.style.display = "none";
+  }
+
+  function showCard(card) {
+    state.currentCard = card;
+    flashcard.classList.remove("flipped");
+
+    $("frontBadge").textContent = card.type;
+    $("backBadge").textContent = card.type;
+    $("frontMorpheme").textContent = card.morpheme;
+    $("backMorpheme").textContent = card.morpheme;
+    $("meaningText").textContent = card.meaning || "Meaning not added yet";
+    $("originText").textContent = card.originLabel || "Unknown";
+    $("sentenceText").textContent = card.sentence || "No extra note added yet.";
+    $("emojiBox").textContent = showEmoji.checked ? (card.emoji || "🧠") : "";
+    renderExamples(card);
+
+    emptyState.style.display = "none";
+    cardWrap.style.display = "block";
+  }
+
+  function buildDeck() {
+    let deck = getDeckFromSelection();
+
+    if (randomMode.checked) {
+      deck = shuffleArray(deck);
     }
 
-    function showCard(card) {
-      state.currentCard = card;
-      flashcard.classList.remove("flipped");
+    state.deck = deck;
+    state.currentIndex = 0;
+    state.currentCard = null;
 
-      $("frontBadge").textContent = card.type;
-      $("backBadge").textContent = card.type;
-      $("frontMorpheme").textContent = card.morpheme;
-      $("backMorpheme").textContent = card.morpheme;
-      $("meaningText").textContent = card.meaning || "Meaning not added yet";
-      $("originText").textContent = card.originLabel || "Unknown";
-      $("sentenceText").textContent = card.sentence || "No extra note added yet.";
-      $("emojiBox").textContent = showEmoji.checked ? (card.emoji || "🧠") : "";
-      renderExamples(card);
-
-      emptyState.style.display = "none";
-      cardWrap.style.display = "block";
-    }
-
-    function buildDeck() {
-      let deck = getDeckFromSelection();
-
-      if (randomMode.checked) {
-        deck = shuffleArray(deck);
-      }
-
-      state.deck = deck;
-      state.currentIndex = 0;
-      state.currentCard = null;
-
-      deckSizeEl.textContent = deck.length;
-      currentTypeEl.textContent = getTypeLabel();
-      cardNumberEl.textContent = deck.length ? 1 : 0;
-
-      if (!deck.length) {
-        showEmpty("No cards were found in this selection. Make sure data.js is loading and window.MORPHEMES exists.");
-        return;
-      }
-
-      showCard(deck[0]);
-    }
-
-    function nextCard() {
-      if (!state.deck.length) return;
-
-      if (randomMode.checked) {
-        if (state.deck.length === 1) {
-          showCard(state.deck[0]);
-          cardNumberEl.textContent = "1";
-          return;
-        }
-
-        let next;
-        do {
-          next = state.deck[Math.floor(Math.random() * state.deck.length)];
-        } while (
-          state.currentCard &&
-          next.morpheme === state.currentCard.morpheme &&
-          next.type === state.currentCard.type
-        );
-
-        showCard(next);
-        cardNumberEl.textContent = "Random";
-        return;
-      }
-
-      state.currentIndex++;
-      if (state.currentIndex >= state.deck.length) {
-        state.currentIndex = 0;
-      }
-
-      cardNumberEl.textContent = String(state.currentIndex + 1);
-      showCard(state.deck[state.currentIndex]);
-    }
-
-    function flipCard() {
-      if (!state.currentCard) return;
-      flashcard.classList.toggle("flipped");
-    }
-
-    function resetView() {
-      deckSizeEl.textContent = "0";
-      cardNumberEl.textContent = "0";
-      currentTypeEl.textContent = getTypeLabel();
-      showEmpty("Build a deck to begin your flashcards.");
-    }
-
-    document.querySelectorAll('input[name="cardType"]').forEach(input => {
-      input.addEventListener("change", () => {
-        updateGroupVisibility();
-        resetView();
-      });
-    });
-
-    groupSelect.addEventListener("change", resetView);
-
-    showEmoji.addEventListener("change", () => {
-      if (state.currentCard) {
-        $("emojiBox").textContent = showEmoji.checked ? (state.currentCard.emoji || "🧠") : "";
-      }
-    });
-
-    $("buildDeckBtn").addEventListener("click", buildDeck);
-    $("shuffleBtn").addEventListener("click", buildDeck);
-    $("nextBtn").addEventListener("click", nextCard);
-    $("flipBtn").addEventListener("click", flipCard);
-    flashcard.addEventListener("click", flipCard);
-
-    updateGroupVisibility();
+    deckSizeEl.textContent = deck.length;
     currentTypeEl.textContent = getTypeLabel();
+    cardNumberEl.textContent = deck.length ? 1 : 0;
 
-    if (!DATA.prefixes.length && !DATA.suffixes.length && !DATA.bases.length) {
-      showEmpty("Your data.js file was not loaded. Make sure flashcard-mode.html is in the same folder as data.js and that data.js defines window.MORPHEMES.");
+    if (!deck.length) {
+      showEmpty("No cards were found in this selection. Make sure data.js is loading and window.MORPHEMES exists.");
+      return;
     }
-  </script>
+
+    showCard(deck[0]);
+  }
+
+  function nextCard() {
+    if (!state.deck.length) return;
+
+    if (randomMode.checked) {
+      if (state.deck.length === 1) {
+        showCard(state.deck[0]);
+        cardNumberEl.textContent = "1";
+        return;
+      }
+
+      let next;
+      do {
+        next = state.deck[Math.floor(Math.random() * state.deck.length)];
+      } while (
+        state.currentCard &&
+        next.morpheme === state.currentCard.morpheme &&
+        next.type === state.currentCard.type
+      );
+
+      showCard(next);
+      cardNumberEl.textContent = "Random";
+      return;
+    }
+
+    state.currentIndex++;
+    if (state.currentIndex >= state.deck.length) {
+      state.currentIndex = 0;
+    }
+
+    cardNumberEl.textContent = String(state.currentIndex + 1);
+    showCard(state.deck[state.currentIndex]);
+  }
+
+  function flipCard() {
+    if (!state.currentCard) return;
+    flashcard.classList.toggle("flipped");
+  }
+
+  function resetView() {
+    deckSizeEl.textContent = "0";
+    cardNumberEl.textContent = "0";
+    currentTypeEl.textContent = getTypeLabel();
+    showEmpty("Build a deck to begin your flashcards.");
+  }
+
+  document.querySelectorAll('input[name="cardType"]').forEach(input => {
+    input.addEventListener("change", () => {
+      updateGroupVisibility();
+      resetView();
+    });
+  });
+
+  groupSelect.addEventListener("change", resetView);
+
+  showEmoji.addEventListener("change", () => {
+    if (state.currentCard) {
+      $("emojiBox").textContent = showEmoji.checked ? (state.currentCard.emoji || "🧠") : "";
+    }
+  });
+
+  $("buildDeckBtn").addEventListener("click", buildDeck);
+  $("shuffleBtn").addEventListener("click", buildDeck);
+  $("nextBtn").addEventListener("click", nextCard);
+  $("flipBtn").addEventListener("click", flipCard);
+  flashcard.addEventListener("click", flipCard);
+
+  updateGroupVisibility();
+  currentTypeEl.textContent = getTypeLabel();
+
+  console.log("MORPHEME DATA LOADED:", DATA);
+  console.log("Sample suffix ate:", (DATA.suffixes || []).find(x => x.form === "ate"));
+
+  if (!DATA.prefixes.length && !DATA.suffixes.length && !DATA.bases.length) {
+    showEmpty("Your data.js file was not loaded. Make sure flashcard-mode.html is in the same folder as data.js and that data.js defines window.MORPHEMES.");
+  }
+</script>
 </body>
 </html>
