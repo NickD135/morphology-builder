@@ -783,31 +783,46 @@
       };
     }
 
-    function makeFallbackExamples(card) {
-      const clean = String(card.cleanMorpheme || "").replace(/-/g, "");
+function makeFallbackExamples(card) {
+  const clean = String(card.cleanMorpheme || "").replace(/-/g, "");
 
-      if (card.type === "Prefix") {
-        return [
-          `<u>${clean}</u> + base word`,
-          `<u>${clean}</u>example`,
-          `<u>${clean}</u>word`
-        ];
-      }
+  // Useful building blocks
+  const commonPrefixes = ["re", "un", "in", "de", "sub", "inter"];
+  const commonSuffixes = ["ion", "ed", "ing", "er", "able", "ly"];
 
-      if (card.type === "Suffix") {
-        return [
-          `base<u>${clean}</u>`,
-          `word<u>${clean}</u>`,
-          `stem<u>${clean}</u>`
-        ];
-      }
+  // PREFIX → attach to real base words
+  if (card.type === "Prefix") {
+    const bases = ["happy", "build", "act", "lock", "write", "play"];
 
-      return [
-        `<u>${clean}</u>`,
-        `pre + <u>${clean}</u>`,
-        `<u>${clean}</u> + suffix`
-      ];
-    }
+    return bases.slice(0,3).map(base =>
+      `<u>${clean}</u>${base}`
+    );
+  }
+
+  // SUFFIX → attach to real base words
+  if (card.type === "Suffix") {
+    const bases = ["help", "teach", "move", "act", "care", "read"];
+
+    return bases.slice(0,3).map(base =>
+      `${base}<u>${clean}</u>`
+    );
+  }
+
+  // BASE → build real words using prefix + base + suffix
+  if (card.type === "Base") {
+    const p1 = commonPrefixes[0] + clean;
+    const p2 = commonPrefixes[1] + clean;
+    const s1 = clean + commonSuffixes[0];
+
+    return [
+      `<u>${clean}</u>`,
+      `${p1.replace(clean, `<u>${clean}</u>`)}`,
+      `${s1.replace(clean, `<u>${clean}</u>`)}`
+    ];
+  }
+
+  return [`<u>${clean}</u>`];
+}
 
     function getExamplesForCard(card) {
       const key = String(card.cleanMorpheme || "").toLowerCase();
