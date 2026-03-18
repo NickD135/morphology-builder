@@ -467,6 +467,22 @@
   let currentQuestion = null;
   let buttonsLocked = false;
   let fuelInterval = null;
+  let dictWords = null;
+
+  async function loadDictionary() {
+    try {
+      const resp = await fetch('dictionary.txt');
+      const text = await resp.text();
+      dictWords = new Set(text.toLowerCase().split(/\s+/).filter(w => w.length > 0));
+    } catch(e) {
+      dictWords = new Set();
+    }
+  }
+
+  function isRealWord(prefix, base) {
+    if (!dictWords || dictWords.size === 0) return true;
+    return dictWords.has((prefix.form + base.form).toLowerCase());
+  }
 
   const wordEl = document.getElementById("word");
   const baseMeaningEl = document.getElementById("baseMeaning");
@@ -511,14 +527,35 @@
   }
 
   function generateQuestion() {
+    // Try up to 50 times to find a base+prefix pair that forms a real word
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const base = BASES[Math.floor(Math.random() * BASES.length)];
+      const compatible = PREFIXES.filter(prefix => isCompatible(prefix, base));
+      const realWordPrefixes = compatible.filter(prefix => isRealWord(prefix, base));
+
+      if (realWordPrefixes.length === 0) continue;
+
+      const correct = realWordPrefixes[Math.floor(Math.random() * realWordPrefixes.length)];
+
+      const wrongOptions = shuffleArray(
+        PREFIXES.filter(p => p.id !== correct.id)
+      ).slice(0, 2);
+
+      return {
+        base,
+        correct,
+        targetMeaning: buildTargetMeaning(correct, base),
+        options: shuffleArray([correct, ...wrongOptions])
+      };
+    }
+
+    // Fallback: ignore dictionary filter if no valid pairs found
     const base = BASES[Math.floor(Math.random() * BASES.length)];
     const compatible = PREFIXES.filter(prefix => isCompatible(prefix, base));
     const correct = compatible[Math.floor(Math.random() * compatible.length)];
-
     const wrongOptions = shuffleArray(
       PREFIXES.filter(p => p.id !== correct.id)
     ).slice(0, 2);
-
     return {
       base,
       correct,
@@ -662,8 +699,10 @@
   });
 
   updateHud();
-  startFuelDrain();
-  loadQuestion();
+  loadDictionary().then(() => {
+    startFuelDrain();
+    loadQuestion();
+  });
 </script>
 </body>
 </html>
