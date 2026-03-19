@@ -176,19 +176,6 @@
 
     .hidden{ display:none !important; }
 
-    /* ── Student login overlay ── */
-    .loginOverlay{ position:fixed; inset:0; background:rgba(15,23,42,.6); z-index:100; display:flex; align-items:center; justify-content:center; }
-    .loginOverlay.hidden{ display:none; }
-    .loginBox{ background:#fff; border-radius:28px; padding:32px; max-width:440px; width:90%; box-shadow:0 40px 80px rgba(15,23,42,.2); text-align:center; }
-    .loginBoxIcon{ font-size:40px; margin-bottom:12px; }
-    .loginBoxTitle{ font-size:22px; font-weight:900; color:#312e81; margin:0 0 6px; }
-    .loginBoxSub{ color:var(--muted); font-size:14px; font-weight:700; margin-bottom:20px; }
-    .studentPickList{ display:flex; flex-direction:column; gap:8px; max-height:280px; overflow-y:auto; margin-bottom:16px; }
-    .studentPickBtn{ border:2px solid var(--line); background:#fff; border-radius:14px; padding:12px 16px; font-weight:800; font-size:14px; cursor:pointer; color:#312e81; text-align:left; transition:all .15s; }
-    .studentPickBtn:hover{ border-color:var(--teal); background:var(--teal-soft); color:var(--teal-text); }
-    .classPickSelect{ width:100%; border:2px solid var(--line); border-radius:14px; padding:12px 14px; font-size:14px; outline:none; margin-bottom:12px; font-family:inherit; font-weight:700; }
-    .classPickSelect:focus{ border-color:var(--teal); }
-    .skipLoginBtn{ border:none; background:none; color:var(--muted); font-size:12px; font-weight:700; cursor:pointer; text-decoration:underline; margin-top:8px; }
     .sessionPill{ background:var(--teal-soft); border:1px solid var(--teal-line); border-radius:999px; padding:6px 14px; font-size:12px; font-weight:800; color:var(--teal-text); cursor:pointer; }
   </style>
 </head>
@@ -203,7 +190,7 @@
     <div class="hud">
       <span class="pill streak" id="streakPill">🔥 0 streak</span>
       <span class="pill score" id="scorePill">Score: 0</span>
-      <span class="sessionPill" id="sessionPill" onclick="showLoginOverlay()" style="display:none;"></span>
+      <span id="wlPillSlot"></span>
       <a href="index.html" class="topBtn">← Builder</a>
     </div>
   </div>
@@ -335,19 +322,6 @@
 </div>
 
 
-<!-- ── Student login overlay ── -->
-<div class="loginOverlay" id="loginOverlay">
-  <div class="loginBox">
-    <div class="loginBoxIcon">👋</div>
-    <div class="loginBoxTitle">Who are you?</div>
-    <div class="loginBoxSub">Select your class, then tap your name to start.</div>
-    <select class="classPickSelect" id="classPickSelect" onchange="loadStudentList()">
-      <option value="">Select class...</option>
-    </select>
-    <div class="studentPickList" id="studentPickList"></div>
-    <button class="skipLoginBtn" onclick="skipLogin()">Skip — play without saving results</button>
-  </div>
-</div>
 
 <script src="wordlab-data.js"></script>
 <script>
@@ -1009,66 +983,20 @@ function addHistory(word, grapheme, ok){
 // BOOT
 // ═══════════════════════════════════════════════════════════════
 
-// ── Student login ────────────────────────────────────────────────
-function showLoginOverlay(){
-  populateClassPick();
-  document.getElementById('loginOverlay').classList.remove('hidden');
-}
-
-function populateClassPick(){
-  const sel = document.getElementById('classPickSelect');
-  const classes = (typeof WordLabData !== 'undefined') ? WordLabData.getClasses() : [];
-  if(!classes.length){
-    sel.innerHTML = '<option value="">No classes set up yet</option>';
-    document.getElementById('studentPickList').innerHTML =
-      '<div style="color:var(--muted);font-size:13px;text-align:center;padding:8px;">Ask your teacher to set up a class first, or skip.</div>';
-    return;
-  }
-  sel.innerHTML = '<option value="">Select class...</option>' +
-    classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-}
-
-function loadStudentList(){
-  const classId = document.getElementById('classPickSelect').value;
-  const list = document.getElementById('studentPickList');
-  if(!classId){ list.innerHTML = ''; return; }
-  const cls = WordLabData.getClass(classId);
-  if(!cls){ list.innerHTML = ''; return; }
-  list.innerHTML = cls.students.map(s =>
-    `<button class="studentPickBtn" onclick="selectStudent('${classId}','${s.id}','${s.name.replace(/'/g,"&#39;")}')">
-      ${s.name}
-    </button>`
-  ).join('');
-}
-
-function selectStudent(classId, studentId, studentName){
-  if(typeof WordLabData !== 'undefined'){
-    WordLabData.startSession(classId, studentId, studentName);
-  }
-  document.getElementById('loginOverlay').classList.add('hidden');
-  const pill = document.getElementById('sessionPill');
-  pill.textContent = '👤 ' + studentName;
-  pill.style.display = 'inline-flex';
-}
-
-function skipLogin(){
-  document.getElementById('loginOverlay').classList.add('hidden');
-  if(typeof WordLabData !== 'undefined') WordLabData.endSession();
-}
-
-// Boot: show login if no active session
-window.addEventListener('DOMContentLoaded', () => {
-  const session = (typeof WordLabData !== 'undefined') ? WordLabData.getSession() : null;
-  if(session){
-    const pill = document.getElementById('sessionPill');
-    pill.textContent = '👤 ' + session.studentName;
-    pill.style.display = 'inline-flex';
-  } else {
-    showLoginOverlay();
-  }
-});
 
 buildSoundPills();
+
+// ── Word Lab login (shared) ──────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  if(typeof WordLabData !== 'undefined') {
+    WordLabData.initLoginUI({
+      accentColor: '#0d9488',
+      accentSoft:  '#f0fdfa',
+      accentLine:  '#99f6e4',
+      accentText:  '#134e4a'
+    });
+  }
+});
 </script>
 </body>
 </html>
