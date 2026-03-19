@@ -140,6 +140,11 @@
           <input type="password" id="classPassword" placeholder="Choose a password" autocomplete="off">
           <span class="hint">You'll use this to view the dashboard</span>
         </div>
+        <div class="field">
+          <label>Class code</label>
+          <input type="text" id="classCodeInput" placeholder="e.g. 3B or SMITH2024" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase;" maxlength="20">
+          <span class="hint">Students use this to log in — keep it short and memorable</span>
+        </div>
       </div>
 
       <div class="field" style="margin-bottom:20px;">
@@ -160,6 +165,7 @@
   </div></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="wordlab-data.js"></script>
 <script>
   function showTab(tab, btn){
@@ -170,33 +176,66 @@
     if(tab === 'manage') renderClasses();
   }
 
-  function createClass(){
-    const name = document.getElementById('className').value.trim();
-    const pass = document.getElementById('classPassword').value.trim();
+  // ── Error / success helpers ──────────────────────────────────
+  function showCreateError(msg) {
+    let el = document.getElementById('createError');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'createError';
+      el.style.cssText = 'background:#fef2f2;border:2px solid #fecaca;border-radius:14px;padding:12px 16px;color:#dc2626;font-size:13px;font-weight:800;margin-bottom:14px;';
+      document.getElementById('successBanner').insertAdjacentElement('afterend', el);
+    }
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+  function hideCreateError() {
+    const el = document.getElementById('createError');
+    if (el) el.style.display = 'none';
+  }
+
+  // ── Create class ─────────────────────────────────────────────
+  async function createClass(){
+    const name     = document.getElementById('className').value.trim();
+    const pass     = document.getElementById('classPassword').value.trim();
+    const code     = document.getElementById('classCodeInput').value.trim().toUpperCase();
     const namesRaw = document.getElementById('studentNames').value.trim();
 
+    hideCreateError();
     if(!name){ alert('Please enter a class name.'); return; }
     if(!pass){ alert('Please enter a dashboard password.'); return; }
+    if(!code){ alert('Please enter a class code.'); return; }
+    if(!/^[A-Z0-9]{1,20}$/.test(code)){ alert('Class code can only contain letters and numbers (no spaces).'); return; }
     if(!namesRaw){ alert('Please enter at least one student name.'); return; }
 
     const students = namesRaw.split('\n').map(n => n.trim()).filter(Boolean);
     if(!students.length){ alert('Please enter at least one student name.'); return; }
 
-    const classId = WordLabData.createClass(name, pass, students);
+    try {
+      const classId = await WordLabData.createClass(name, pass, code, students);
+      document.getElementById('className').value = '';
+      document.getElementById('classPassword').value = '';
+      document.getElementById('classCodeInput').value = '';
+      document.getElementById('studentNames').value = '';
 
-    document.getElementById('className').value = '';
-    document.getElementById('classPassword').value = '';
-    document.getElementById('studentNames').value = '';
-
-    const banner = document.getElementById('successBanner');
-    banner.innerHTML = `✅ Class "<strong>${name}</strong>" created with ${students.length} students! Class code: <strong>${classId}</strong>`;
-    banner.classList.add('show');
-    setTimeout(() => banner.classList.remove('show'), 5000);
+      const banner = document.getElementById('successBanner');
+      banner.innerHTML = `✅ Class "<strong>${name}</strong>" created with ${students.length} students! Class code: <strong>${code}</strong>`;
+      banner.classList.add('show');
+      setTimeout(() => banner.classList.remove('show'), 6000);
+    } catch(e) {
+      if (e && e.code === 'CLASS_CODE_TAKEN') {
+        showCreateError('❌ That class code is already in use. Please choose a different one.');
+      } else {
+        showCreateError('❌ Error creating class. Please try again.');
+        console.error(e);
+      }
+    }
   }
 
-  function renderClasses(){
+  // ── Manage classes ───────────────────────────────────────────
+  async function renderClasses(){
     const container = document.getElementById('classList');
-    const classes = WordLabData.getClasses();
+    container.innerHTML = '<div class="emptyState">Loading...</div>';
+    const classes = await WordLabData.getClasses();
 
     if(!classes.length){
       container.innerHTML = '<div class="emptyState">No classes yet. Create one using the Create tab.</div>';
@@ -211,16 +250,19 @@
             <div class="classMeta">${cls.students.length} student${cls.students.length !== 1 ? 's' : ''} · Created ${new Date(cls.created).toLocaleDateString()}</div>
           </div>
           <div class="classActions">
+            <button class="secondaryBtn" onclick="printClassCodes('${cls.id}')">🖨 Print codes</button>
             <button class="secondaryBtn" onclick="toggleStudents('${cls.id}')">Edit students</button>
-            <button class="dangerBtn" onclick="deleteClass('${cls.id}', '${cls.name}')">Delete</button>
+            <button class="dangerBtn" onclick="deleteClass('${cls.id}', '${cls.name.replace(/'/g,"\\'")}')">Delete</button>
           </div>
         </div>
-        <div class="classCode">🔑 Class code: ${cls.id}</div>
+        <div class="classCode">🔑 Class code: <strong>${cls.class_code || '—'}</strong></div>
         <div class="studentList" id="students_${cls.id}">
           <div class="studentGrid" id="studentGrid_${cls.id}">
             ${cls.students.map(s => `
               <span class="studentChip">
                 ${s.name}
+                <code style="background:#f1f5f9;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:900;font-family:monospace;color:#4338ca;margin:0 2px;">${s.student_code||'?'}</code>
+                <button class="studentChipRemove" onclick="regenerateCode('${cls.id}','${s.id}')" title="Regenerate code">↻</button>
                 <button class="studentChipRemove" onclick="removeStudent('${cls.id}','${s.id}')" title="Remove">×</button>
               </span>
             `).join('')}
@@ -239,32 +281,78 @@
     el.classList.toggle('open');
   }
 
-  function addStudent(classId){
+  async function addStudent(classId){
     const input = document.getElementById(`addInput_${classId}`);
     const name = input.value.trim();
     if(!name) return;
-    WordLabData.addStudent(classId, name);
+    await WordLabData.addStudent(classId, name);
     input.value = '';
-    renderClasses();
+    await renderClasses();
     document.getElementById(`students_${classId}`).classList.add('open');
   }
 
-  function removeStudent(classId, studentId){
+  async function removeStudent(classId, studentId){
     if(!confirm('Remove this student? Their data will be kept.')) return;
-    WordLabData.removeStudent(classId, studentId);
-    renderClasses();
+    await WordLabData.removeStudent(classId, studentId);
+    await renderClasses();
     document.getElementById(`students_${classId}`).classList.add('open');
   }
 
-  function deleteClass(classId, name){
+  async function deleteClass(classId, name){
     if(!confirm(`Delete class "${name}"? All student data will be lost.`)) return;
-    const data = WordLabData.load();
-    delete data.classes[classId];
-    WordLabData.save(data);
-    renderClasses();
+    await WordLabData.deleteClass(classId);
+    await renderClasses();
   }
 
-  // Hidden utility: show the tab
+  async function regenerateCode(classId, studentId) {
+    if(!confirm('Generate a new 3-letter code for this student? Their old code will stop working.')) return;
+    await WordLabData.regenerateStudentCode(classId, studentId);
+    await renderClasses();
+    document.getElementById(`students_${classId}`).classList.add('open');
+  }
+
+  async function printClassCodes(classId) {
+    const cls = await WordLabData.getClass(classId);
+    if (!cls) { alert('Could not load class data.'); return; }
+
+    const classCode = await WordLabData.getClasses().then(list => {
+      const found = list.find(c => c.id === classId);
+      return found ? found.class_code : '—';
+    });
+
+    const rows = cls.students.map(s =>
+      `<tr><td>${s.name}</td><td class="code-cell">${s.student_code || '—'}</td></tr>`
+    ).join('');
+
+    const win = window.open('', '_blank');
+    win.document.write(`<!doctype html><html><head><title>Class Codes — ${cls.name}</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 32px; color: #000; }
+      h1 { font-size: 24px; margin-bottom: 4px; }
+      .meta { font-size: 16px; color: #555; margin-bottom: 24px; }
+      .class-code { font-size: 20px; font-weight: bold; background: #eef2ff; border: 2px solid #c7d2fe; border-radius: 8px; display: inline-block; padding: 8px 20px; margin-bottom: 24px; color: #3730a3; letter-spacing: .1em; }
+      table { width: 100%; border-collapse: collapse; }
+      th { text-align: left; border-bottom: 2px solid #000; padding: 8px 12px; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
+      td { padding: 10px 12px; border-bottom: 1px solid #ddd; font-size: 15px; }
+      .code-cell { font-family: monospace; font-size: 20px; font-weight: bold; color: #3730a3; letter-spacing: .15em; }
+      .instructions { margin-top: 28px; font-size: 13px; color: #555; border-top: 1px solid #ddd; padding-top: 16px; }
+      @media print { body { padding: 16px; } button { display: none; } }
+    </style></head><body>
+    <h1>Word Lab — ${cls.name}</h1>
+    <div class="meta">Student login codes · Print and keep safe</div>
+    <div>Class code: <span class="class-code">${classCode}</span></div>
+    <table>
+      <thead><tr><th>Student name</th><th>3-letter code</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="instructions">
+      To log in: go to Word Lab → enter class code <strong>${classCode}</strong> → pick your name → enter your 3-letter code
+    </div>
+    <br><button onclick="window.print()" style="padding:10px 24px;background:#4338ca;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">🖨 Print this page</button>
+    </body></html>`);
+    win.document.close();
+  }
+
   document.getElementById('tabManage').classList.add('hidden');
   Object.assign(HTMLElement.prototype, {});
 </script>

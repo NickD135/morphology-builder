@@ -1,12 +1,37 @@
 // ═══════════════════════════════════════════════════════════════
-// WORD LAB — Shared Data Layer v3
+// WORD LAB — Shared Data Layer v4 (Supabase)
 // ═══════════════════════════════════════════════════════════════
 
 const WordLabData = (() => {
 
-  const STORAGE_KEY = 'wordlab_data_v1';
-  const SESSION_KEY = 'wordlab_session_v1';
+  const SUPABASE_URL  = 'https://qutsbcfkgiihcwaktsaz.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dHNiY2ZrZ2lpaGN3YWt0c2F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NDE1NDksImV4cCI6MjA4OTUxNzU0OX0.h1N26KCcyHDrW4FRk6iBNmJUMQcFCYi8eHpOC818B8E';
+  const SESSION_KEY   = 'wordlab_session_v1';
 
+  const CODE_LETTERS = 'ABCDEFGHJKLMNPRSTUVWXYZ'; // no I, O, Q
+
+  function generateStudentCode(existingCodes) {
+    existingCodes = (existingCodes || []).map(function(c){ return (c||'').toUpperCase(); });
+    for (var attempts = 0; attempts < 500; attempts++) {
+      var code = '';
+      for (var i = 0; i < 3; i++) {
+        code += CODE_LETTERS[Math.floor(Math.random() * CODE_LETTERS.length)];
+      }
+      if (!existingCodes.includes(code)) return code;
+    }
+    throw new Error('Could not generate unique student code');
+  }
+
+  // Lazy Supabase client — avoids errors if CDN loads after this file
+  let _sbClient = null;
+  function sb() {
+    if (!_sbClient) {
+      _sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    }
+    return _sbClient;
+  }
+
+  // ── Constants ─────────────────────────────────────────────────
   const LEVEL_TITLES = ['Quark Cadet','Lab Apprentice','Lab Assistant','Junior Scientist','Morpheme Scientist','Word Chemist','Senior Researcher','Lead Scientist','Word Professor','Linguistic Expert','Etymology Scholar','Morpheme Master','Word Architect','Language Scientist','Quark Commander','Grand Researcher','Word Alchemist','Linguistic Professor','Grand Etymologist','Word Lab Legend'];
   const LEVEL_XP = [0,100,250,500,900,1400,2000,2800,3800,5000,6500,8500,11000,14000,18000,23000,29000,36000,45000,55000];
 
@@ -32,14 +57,7 @@ const WordLabData = (() => {
     {id:'legend_polymath', label:'Word Lab Legend',      icon:'🌈',  desc:'Earn every other badge'},
   ];
 
-  // ── Storage ──────────────────────────────────────────────────
-  function load() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { classes:{} }; }
-    catch { return { classes:{} }; }
-  }
-  function save(data) {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
-  }
+  // ── Session (sessionStorage) ──────────────────────────────────
   function loadSession() {
     try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)) || null; }
     catch { return null; }
@@ -47,70 +65,10 @@ const WordLabData = (() => {
   function saveSession(s) {
     try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch {}
   }
-
-  // ── Classes ───────────────────────────────────────────────────
-  function createClass(name, password, students) {
-    const data = load();
-    const id = 'class_' + Date.now();
-    data.classes[id] = {
-      id, name, password, created: Date.now(),
-      students: students.map(n => ({
-        id: 'student_' + Math.random().toString(36).slice(2),
-        name: n.trim(), results: {}
-      }))
-    };
-    save(data);
-    return id;
-  }
-  function getClasses() { return Object.values(load().classes); }
-  function getClass(id) { return load().classes[id] || null; }
-  function verifyPassword(id, pw) { const c = getClass(id); return c && c.password === pw; }
-  function addStudent(classId, name) {
-    const data = load();
-    if (!data.classes[classId]) return;
-    data.classes[classId].students.push({
-      id: 'student_' + Math.random().toString(36).slice(2),
-      name: name.trim(), results: {}
-    });
-    save(data);
-  }
-  function removeStudent(classId, studentId) {
-    const data = load();
-    if (!data.classes[classId]) return;
-    data.classes[classId].students = data.classes[classId].students.filter(s => s.id !== studentId);
-    save(data);
-  }
-
-  // ── Session ───────────────────────────────────────────────────
-  function startSession(classId, studentId, studentName) {
-    saveSession({ classId, studentId, studentName, started: Date.now() });
-    try {
-      const data = load();
-      const cls = data.classes[classId];
-      if (cls) {
-        const student = cls.students.find(s => s.id === studentId);
-        if (student) { ensureStudentFields(student); student.stats.sessions++; checkBadges(student); save(data); }
-      }
-    } catch(e) {}
-  }
   function getSession() { return loadSession(); }
   function endSession() { try { sessionStorage.removeItem(SESSION_KEY); } catch {} }
 
-  // ── Student reward fields ─────────────────────────────────────
-  function ensureStudentFields(student) {
-    if (!student.quarks) student.quarks = 0;
-    if (!student.xp)     student.xp = 0;
-    if (!student.badges) student.badges = [];
-    if (!student.scientist) student.scientist = {
-      skinTone:'#FDBCB4', coatColor:'#ffffff', coatPattern:'plain',
-      head:null, face:null, background:'lab', owned:[]
-    };
-    if (!student.stats) student.stats = {
-      totalCorrect:0, totalAnswered:0, sessions:0, activitiesPlayed:[], bestStreak:0
-    };
-    if (typeof student.stats.bestStreak === 'undefined') student.stats.bestStreak = 0;
-  }
-
+  // ── Pure computation ──────────────────────────────────────────
   function getLevel(xp) {
     xp = xp || 0;
     let level = 1;
@@ -121,6 +79,35 @@ const WordLabData = (() => {
     const xpNext  = level < 20 ? LEVEL_XP[level] : LEVEL_XP[19] + 10000;
     const progress = Math.min(100, Math.round(((xp - xpStart) / (xpNext - xpStart)) * 100));
     return { level, title: LEVEL_TITLES[level - 1], progress, xpToNext: Math.max(0, xpNext - xp) };
+  }
+  function getAccuracy(r) {
+    if (!r || r.total === 0) return null;
+    return Math.round((r.correct / r.total) * 100);
+  }
+  function getAvgTime(r) {
+    if (!r || r.total === 0) return null;
+    return Math.round(r.totalTime / r.total);
+  }
+  function isIntervention(r, threshold=70, min=3) {
+    if (!r || r.total < min) return false;
+    return getAccuracy(r) < threshold;
+  }
+
+  // ── Character field defaults ──────────────────────────────────
+  function ensureCharFields(char) {
+    if (!char) char = {};
+    if (!char.quarks) char.quarks = 0;
+    if (!char.xp)     char.xp = 0;
+    if (!char.badges) char.badges = [];
+    if (!char.scientist) char.scientist = {
+      skinTone:'#FDBCB4', coatColor:'#ffffff', coatPattern:'plain',
+      head:null, face:null, background:'lab', owned:[]
+    };
+    if (!char.stats) char.stats = {
+      totalCorrect:0, totalAnswered:0, sessions:0, activitiesPlayed:[], bestStreak:0
+    };
+    if (typeof char.stats.bestStreak === 'undefined') char.stats.bestStreak = 0;
+    return char;
   }
 
   function checkBadges(student) {
@@ -151,112 +138,343 @@ const WordLabData = (() => {
     return newBadges;
   }
 
-  function getStudentData() {
-    const session = loadSession();
-    if (!session) return null;
-    const data = load();
-    const cls = data.classes[session.classId];
-    if (!cls) return null;
-    const student = cls.students.find(s => s.id === session.studentId);
-    if (!student) return null;
-    ensureStudentFields(student);
-    return { quarks: student.quarks, xp: student.xp, badges: student.badges,
-             scientist: student.scientist, stats: student.stats,
-             level: getLevel(student.xp), name: session.studentName };
+  // ── Classes ───────────────────────────────────────────────────
+  async function createClass(name, password, classCode, students) {
+    // Check if class_code already taken (case-insensitive)
+    var { data: existing } = await sb()
+      .from('classes')
+      .select('id')
+      .ilike('class_code', classCode)
+      .maybeSingle();
+    if (existing) {
+      throw { code: 'CLASS_CODE_TAKEN', message: 'That class code is already in use. Please choose a different one.' };
+    }
+    var { data: cls, error: clsErr } = await sb()
+      .from('classes')
+      .insert({ name: name, teacher_password: password, class_code: classCode.toUpperCase() })
+      .select('id')
+      .single();
+    if (clsErr) throw clsErr;
+    var classId = cls.id;
+    // Generate unique codes for each student
+    var usedCodes = [];
+    var rows = students.map(function(n) {
+      var code = generateStudentCode(usedCodes);
+      usedCodes.push(code);
+      return { class_id: classId, name: n.trim(), student_code: code };
+    });
+    var { error: stuErr } = await sb().from('students').insert(rows);
+    if (stuErr) throw stuErr;
+    return classId;
   }
 
-  function getScientist() {
-    const d = getStudentData();
-    return d ? d.scientist : null;
+  async function getClasses() {
+    var { data, error } = await sb()
+      .from('classes')
+      .select('id, name, class_code, created_at, students!students_class_id_fkey(id, name, student_code)')
+      .order('name');
+    if (error) throw error;
+    return (data || []).map(function(c) {
+      return {
+        id: c.id,
+        name: c.name,
+        class_code: c.class_code || '',
+        created: new Date(c.created_at).getTime(),
+        students: (c.students || []).map(function(s) { return { id: s.id, name: s.name, student_code: s.student_code || '' }; })
+      };
+    });
   }
 
-  function saveScientist(updates) {
-    const session = loadSession();
-    if (!session) return;
-    const data = load();
-    const cls = data.classes[session.classId];
-    if (!cls) return;
-    const student = cls.students.find(s => s.id === session.studentId);
-    if (!student) return;
-    ensureStudentFields(student);
-    Object.assign(student.scientist, updates);
-    save(data);
+  async function getClass(id) {
+    const { data: cls, error: clsErr } = await sb()
+      .from('classes')
+      .select('id, name, teacher_password, created_at')
+      .eq('id', id)
+      .single();
+    if (clsErr) throw clsErr;
+
+    const { data: studs, error: stuErr } = await sb()
+      .from('students')
+      .select('id, name, student_code')
+      .eq('class_id', id)
+      .order('name');
+    if (stuErr) throw stuErr;
+
+    const studentIds = (studs || []).map(s => s.id);
+    let progressRows = [];
+    let charRows = [];
+
+    if (studentIds.length) {
+      const { data: prog, error: progErr } = await sb()
+        .from('student_progress')
+        .select('student_id, activity, category, correct, total, total_time')
+        .in('student_id', studentIds);
+      if (progErr) throw progErr;
+      progressRows = prog || [];
+
+      const { data: chars, error: charErr } = await sb()
+        .from('student_character')
+        .select('student_id, quarks, xp, badges, scientist, stats')
+        .in('student_id', studentIds);
+      if (charErr) throw charErr;
+      charRows = chars || [];
+    }
+
+    const charMap = {};
+    charRows.forEach(c => { charMap[c.student_id] = c; });
+
+    const progressMap = {};
+    progressRows.forEach(row => {
+      if (!progressMap[row.student_id]) progressMap[row.student_id] = {};
+      if (!progressMap[row.student_id][row.activity]) progressMap[row.student_id][row.activity] = {};
+      progressMap[row.student_id][row.activity][row.category] = {
+        correct: row.correct,
+        total: row.total,
+        totalTime: row.total_time
+      };
+    });
+
+    const students = (studs || []).map(s => ({
+      id: s.id,
+      name: s.name,
+      student_code: s.student_code || '',
+      results: progressMap[s.id] || {}
+    }));
+
+    return {
+      id: cls.id,
+      name: cls.name,
+      password: cls.teacher_password,
+      created: new Date(cls.created_at).getTime(),
+      students
+    };
   }
 
-  function purchase(itemId, cost) {
-    const session = loadSession();
-    if (!session) return { success:false, reason:'No session' };
-    const data = load();
-    const cls = data.classes[session.classId];
-    if (!cls) return { success:false, reason:'No class' };
-    const student = cls.students.find(s => s.id === session.studentId);
-    if (!student) return { success:false, reason:'No student' };
-    ensureStudentFields(student);
-    if (student.quarks < cost) return { success:false, reason:'Not enough quarks' };
-    student.quarks -= cost;
-    if (!student.scientist.owned.includes(itemId)) student.scientist.owned.push(itemId);
-    save(data);
-    return { success:true, quarks: student.quarks };
+  async function verifyPassword(id, pw) {
+    const { data, error } = await sb()
+      .from('classes')
+      .select('teacher_password')
+      .eq('id', id)
+      .single();
+    if (error || !data) return false;
+    return data.teacher_password === pw;
   }
 
-  // ── Recording ─────────────────────────────────────────────────
-  function recordAttempt(activity, category, correct, timeMs, streak) {
+  async function addStudent(classId, name) {
+    var { data: existing } = await sb()
+      .from('students')
+      .select('student_code')
+      .eq('class_id', classId);
+    var usedCodes = (existing || []).map(function(s){ return s.student_code || ''; });
+    var code = generateStudentCode(usedCodes);
+    var { error } = await sb().from('students').insert({ class_id: classId, name: name.trim(), student_code: code });
+    if (error) throw error;
+    return code;
+  }
+
+  async function removeStudent(classId, studentId) {
+    const { error } = await sb()
+      .from('students')
+      .delete()
+      .eq('id', studentId)
+      .eq('class_id', classId);
+    if (error) throw error;
+  }
+
+  async function deleteClass(classId) {
+    const { data: studs } = await sb()
+      .from('students')
+      .select('id')
+      .eq('class_id', classId);
+    const studentIds = (studs || []).map(s => s.id);
+    if (studentIds.length) {
+      await sb().from('student_progress').delete().in('student_id', studentIds);
+      await sb().from('student_character').delete().in('student_id', studentIds);
+      await sb().from('students').delete().in('id', studentIds);
+    }
+    await sb().from('classes').delete().eq('id', classId);
+  }
+
+  async function regenerateStudentCode(classId, studentId) {
+    var { data: students } = await sb()
+      .from('students')
+      .select('id, student_code')
+      .eq('class_id', classId);
+    var usedCodes = (students || [])
+      .filter(function(s){ return s.id !== studentId; })
+      .map(function(s){ return s.student_code || ''; });
+    var newCode = generateStudentCode(usedCodes);
+    await sb().from('students').update({ student_code: newCode }).eq('id', studentId);
+    return newCode;
+  }
+
+  async function lookupClassByCode(code) {
+    var { data } = await sb()
+      .from('classes')
+      .select('id, name')
+      .ilike('class_code', code)
+      .maybeSingle();
+    return data || null;
+  }
+
+  async function verifyStudentCode(studentId, code) {
+    var { data } = await sb()
+      .from('students')
+      .select('student_code')
+      .eq('id', studentId)
+      .maybeSingle();
+    if (!data || !data.student_code) return false;
+    return data.student_code.toUpperCase() === code.toUpperCase();
+  }
+
+  // ── Session ───────────────────────────────────────────────────
+  async function startSession(classId, studentId, studentName) {
+    saveSession({ classId, studentId, studentName, started: Date.now() });
+    try {
+      const { data: existing } = await sb()
+        .from('student_character')
+        .select('*')
+        .eq('student_id', studentId)
+        .maybeSingle();
+      const char = ensureCharFields(existing ? { ...existing } : { student_id: studentId });
+      char.stats.sessions++;
+      checkBadges(char);
+      await sb().from('student_character').upsert(
+        { student_id: studentId, quarks: char.quarks, xp: char.xp,
+          badges: char.badges, scientist: char.scientist, stats: char.stats },
+        { onConflict: 'student_id' }
+      );
+    } catch(e) { console.warn('startSession character update failed', e); }
+  }
+
+  // ── Record attempt ────────────────────────────────────────────
+  async function recordAttempt(activity, category, correct, timeMs, streak) {
     streak = streak || 0;
     const session = loadSession();
     if (!session) return {};
-    const data = load();
-    const cls = data.classes[session.classId];
-    if (!cls) return {};
-    const student = cls.students.find(s => s.id === session.studentId);
-    if (!student) return {};
-    ensureStudentFields(student);
-    if (!student.results[activity]) student.results[activity] = {};
-    if (!student.results[activity][category])
-      student.results[activity][category] = { correct:0, total:0, totalTime:0, attempts:[] };
-    const r = student.results[activity][category];
-    r.total++;
-    if (correct) r.correct++;
-    r.totalTime += (timeMs || 0);
-    r.attempts.push({ correct, timeMs: timeMs||0, ts: Date.now() });
-    if (r.attempts.length > 50) r.attempts = r.attempts.slice(-50);
-    student.stats.totalAnswered++;
+    const studentId = session.studentId;
+
+    // Fetch existing progress row
+    const { data: existingProg } = await sb()
+      .from('student_progress')
+      .select('correct, total, total_time')
+      .eq('student_id', studentId)
+      .eq('activity', activity)
+      .eq('category', category)
+      .maybeSingle();
+
+    const prevCorrect   = existingProg ? existingProg.correct   : 0;
+    const prevTotal     = existingProg ? existingProg.total     : 0;
+    const prevTotalTime = existingProg ? existingProg.total_time : 0;
+
+    await sb().from('student_progress').upsert({
+      student_id: studentId,
+      activity,
+      category,
+      correct:    prevCorrect   + (correct ? 1 : 0),
+      total:      prevTotal     + 1,
+      total_time: prevTotalTime + (timeMs || 0),
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'student_id,activity,category' });
+
+    // Fetch and update character
+    const { data: existingChar } = await sb()
+      .from('student_character')
+      .select('*')
+      .eq('student_id', studentId)
+      .maybeSingle();
+    const char = ensureCharFields(existingChar ? { ...existingChar } : { student_id: studentId });
+
+    char.stats.totalAnswered++;
     if (correct) {
-      student.stats.totalCorrect++;
-      if (streak > (student.stats.bestStreak || 0)) student.stats.bestStreak = streak;
+      char.stats.totalCorrect++;
+      if (streak > (char.stats.bestStreak || 0)) char.stats.bestStreak = streak;
     }
-    if (!student.stats.activitiesPlayed.includes(activity)) student.stats.activitiesPlayed.push(activity);
+    if (!char.stats.activitiesPlayed.includes(activity)) char.stats.activitiesPlayed.push(activity);
+
     let quarksEarned = 0, xpEarned = 0;
     if (correct) {
       quarksEarned = 2;
       if (streak >= 10) quarksEarned += 25;
       else if (streak >= 5) quarksEarned += 10;
       else if (streak >= 3) quarksEarned += 5;
-      student.quarks += quarksEarned;
+      char.quarks += quarksEarned;
       xpEarned = 10 + (streak >= 3 ? 5 : 0);
-      student.xp += xpEarned;
+      char.xp += xpEarned;
     }
-    const newBadges = checkBadges(student);
-    save(data);
-    return { quarks: student.quarks, xp: student.xp, quarksEarned, xpEarned, newBadges, level: getLevel(student.xp) };
+
+    const newBadges = checkBadges(char);
+    await sb().from('student_character').upsert(
+      { student_id: studentId, quarks: char.quarks, xp: char.xp,
+        badges: char.badges, scientist: char.scientist, stats: char.stats,
+        updated_at: new Date().toISOString() },
+      { onConflict: 'student_id' }
+    );
+
+    return { quarks: char.quarks, xp: char.xp, quarksEarned, xpEarned, newBadges, level: getLevel(char.xp) };
   }
 
-  // ── Analytics ─────────────────────────────────────────────────
-  function getAccuracy(r) {
-    if (!r || r.total === 0) return null;
-    return Math.round((r.correct / r.total) * 100);
+  // ── Student data ──────────────────────────────────────────────
+  async function getStudentData() {
+    const session = loadSession();
+    if (!session) return null;
+    const { data } = await sb()
+      .from('student_character')
+      .select('*')
+      .eq('student_id', session.studentId)
+      .maybeSingle();
+    const char = ensureCharFields(data ? { ...data } : {});
+    return {
+      quarks: char.quarks, xp: char.xp, badges: char.badges,
+      scientist: char.scientist, stats: char.stats,
+      level: getLevel(char.xp), name: session.studentName
+    };
   }
-  function getAvgTime(r) {
-    if (!r || r.total === 0) return null;
-    return Math.round(r.totalTime / r.total);
+
+  async function getScientist() {
+    const d = await getStudentData();
+    return d ? d.scientist : null;
   }
-  function isIntervention(r, threshold=70, min=3) {
-    if (!r || r.total < min) return false;
-    return getAccuracy(r) < threshold;
+
+  async function saveScientist(updates) {
+    const session = loadSession();
+    if (!session) return;
+    const { data: existing } = await sb()
+      .from('student_character')
+      .select('*')
+      .eq('student_id', session.studentId)
+      .maybeSingle();
+    const char = ensureCharFields(existing ? { ...existing } : { student_id: session.studentId });
+    Object.assign(char.scientist, updates);
+    await sb().from('student_character').upsert(
+      { student_id: session.studentId, quarks: char.quarks, xp: char.xp,
+        badges: char.badges, scientist: char.scientist, stats: char.stats },
+      { onConflict: 'student_id' }
+    );
+  }
+
+  async function purchase(itemId, cost) {
+    const session = loadSession();
+    if (!session) return { success: false, reason: 'No session' };
+    const { data: existing } = await sb()
+      .from('student_character')
+      .select('*')
+      .eq('student_id', session.studentId)
+      .maybeSingle();
+    const char = ensureCharFields(existing ? { ...existing } : { student_id: session.studentId });
+    if (char.quarks < cost) return { success: false, reason: 'Not enough quarks' };
+    char.quarks -= cost;
+    if (!char.scientist.owned.includes(itemId)) char.scientist.owned.push(itemId);
+    await sb().from('student_character').upsert(
+      { student_id: session.studentId, quarks: char.quarks, xp: char.xp,
+        badges: char.badges, scientist: char.scientist, stats: char.stats },
+      { onConflict: 'student_id' }
+    );
+    return { success: true, quarks: char.quarks };
   }
 
   // ── Export ────────────────────────────────────────────────────
-  function exportCSV(classId) {
-    const cls = getClass(classId);
+  function exportCSV(cls) {
     if (!cls) return '';
     const activities = ['sound-sorter','phoneme-splitter','syllable-splitter','breakdown-blitz','meaning-mode','mission-mode'];
     const rows = [['Student','Activity','Category','Correct','Total','Accuracy %','Avg Time (ms)']];
@@ -272,8 +490,11 @@ const WordLabData = (() => {
   }
 
   // ── Login UI ──────────────────────────────────────────────────
-  // Call once per page inside DOMContentLoaded.
-  // Injects the overlay into the body and exposes window.wlShowLogin() globally.
+  // Module-level login state
+  var _loginClassId = null;
+  var _loginStudentId = null;
+  var _loginStudentName = null;
+
   function initLoginUI(opts) {
     opts = opts || {};
     var accent     = opts.accentColor || '#4338ca';
@@ -281,10 +502,8 @@ const WordLabData = (() => {
     var accentLine = opts.accentLine  || '#c7d2fe';
     var accentText = opts.accentText  || '#312e81';
 
-    // Don't inject twice
     if (document.getElementById('wlOverlay')) return;
 
-    // CSS
     var style = document.createElement('style');
     style.textContent =
       '.wl-ov{position:fixed;inset:0;background:rgba(15,23,42,.65);z-index:9999;display:flex;align-items:center;justify-content:center;}' +
@@ -293,56 +512,175 @@ const WordLabData = (() => {
       '.wl-icon{font-size:44px;margin-bottom:10px;}' +
       '.wl-title{font-size:22px;font-weight:900;color:#312e81;margin:0 0 6px;}' +
       '.wl-sub{color:#64748b;font-size:14px;font-weight:700;margin-bottom:20px;}' +
-      '.wl-sel{width:100%;border:2px solid #e2e8f0;border-radius:14px;padding:12px 14px;font-size:14px;outline:none;margin-bottom:12px;font-family:\'Lexend\',sans-serif;font-weight:700;}' +
-      '.wl-sel:focus{border-color:' + accent + ';}' +
+      '.wl-inp{width:100%;border:2px solid #e2e8f0;border-radius:14px;padding:12px 14px;font-size:18px;font-weight:800;outline:none;margin-bottom:10px;font-family:\'Lexend\',sans-serif;text-align:center;letter-spacing:.08em;transition:border-color .15s;}' +
+      '.wl-inp:focus{border-color:' + accent + ';}' +
       '.wl-list{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto;margin-bottom:14px;text-align:left;}' +
       '.wl-sbtn{border:2px solid #e2e8f0;background:#fff;border-radius:14px;padding:12px 16px;font-weight:800;font-size:14px;cursor:pointer;color:#312e81;transition:all .15s;font-family:\'Lexend\',sans-serif;width:100%;text-align:left;}' +
       '.wl-sbtn:hover{border-color:' + accent + ';background:' + accentSoft + ';color:' + accentText + ';}' +
+      '.wl-primary-btn{border:none;background:' + accent + ';color:#fff;border-radius:14px;padding:13px;font-size:14px;font-weight:900;cursor:pointer;width:100%;font-family:\'Lexend\',sans-serif;margin-bottom:10px;transition:background .15s;}' +
+      '.wl-primary-btn:hover{background:#3730a3;}' +
+      '.wl-back{color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer;text-align:left;margin-bottom:16px;display:inline-block;}' +
+      '.wl-back:hover{color:#475569;}' +
+      '.wl-err{color:#dc2626;font-size:13px;font-weight:800;margin-bottom:10px;min-height:18px;}' +
       '.wl-skip{border:none;background:none;color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer;text-decoration:underline;font-family:\'Lexend\',sans-serif;}' +
       '.wl-no{color:#94a3b8;font-size:13px;font-weight:700;padding:8px 0;}';
     document.head.appendChild(style);
 
-    // Overlay
     var ov = document.createElement('div');
     ov.id = 'wlOverlay';
-    ov.className = 'wl-ov wl-hide'; // always start hidden — button controls it
+    ov.className = 'wl-ov wl-hide';
     ov.innerHTML =
       '<div class="wl-box">' +
-        '<div class="wl-icon">👋</div>' +
-        '<div class="wl-title">Who are you?</div>' +
-        '<div class="wl-sub">Pick your class and name — your results will be saved.</div>' +
-        '<select class="wl-sel" id="wlClassSel" onchange="WordLabData._loadStudents()"><option value="">Select class...</option></select>' +
-        '<div class="wl-list" id="wlStudentList"></div>' +
-        '<button class="wl-skip" onclick="WordLabData._skip()">Skip — play without saving results</button>' +
+        // Step 1: class code
+        '<div id="wlStep1">' +
+          '<div class="wl-icon">🔑</div>' +
+          '<div class="wl-title">Enter class code</div>' +
+          '<div class="wl-sub">Type the code your teacher gave you</div>' +
+          '<input class="wl-inp" id="wlCodeInput" placeholder="e.g. 3B" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase;" onkeydown="if(event.key===\'Enter\') WordLabData._stepClassCode()">' +
+          '<div class="wl-err" id="wlCodeErr"></div>' +
+          '<button class="wl-primary-btn" onclick="WordLabData._stepClassCode()">Next \u2192</button>' +
+          '<button class="wl-skip" onclick="WordLabData._skip()">Skip \u2014 play without saving results</button>' +
+        '</div>' +
+        // Step 2: student name list
+        '<div id="wlStep2" style="display:none;">' +
+          '<div class="wl-back" onclick="WordLabData._backToStep1()">\u2190 Back</div>' +
+          '<div class="wl-icon">👋</div>' +
+          '<div class="wl-title">Who are you?</div>' +
+          '<div class="wl-sub" id="wlClassNameDisplay">Pick your name</div>' +
+          '<div class="wl-list" id="wlStudentList"></div>' +
+          '<button class="wl-skip" onclick="WordLabData._skip()">Skip \u2014 play without saving results</button>' +
+        '</div>' +
+        // Step 3: student code
+        '<div id="wlStep3" style="display:none;">' +
+          '<div class="wl-back" onclick="WordLabData._backToStep2()">\u2190 Back</div>' +
+          '<div class="wl-icon">🔐</div>' +
+          '<div class="wl-title">Enter your code</div>' +
+          '<div class="wl-sub" id="wlPinNameDisplay">Type your 3-letter code</div>' +
+          '<input class="wl-inp" id="wlPinInput" placeholder="ABC" maxlength="3" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase;font-size:28px;letter-spacing:.25em;" onkeydown="if(event.key===\'Enter\') WordLabData._stepStudentCode()">' +
+          '<div class="wl-err" id="wlPinErr"></div>' +
+          '<button class="wl-primary-btn" onclick="WordLabData._stepStudentCode()">Log in \u2192</button>' +
+        '</div>' +
       '</div>';
     document.body.appendChild(ov);
 
-    // Populate classes
-    var classes = getClasses();
-    var sel = document.getElementById('wlClassSel');
-    if (classes.length) {
-      classes.forEach(function(c) {
-        var opt = document.createElement('option');
-        opt.value = c.id; opt.textContent = c.name;
-        sel.appendChild(opt);
-      });
-      if (classes.length === 1) {
-        sel.value = classes[0].id;
-        WordLabData._loadStudents();
-      }
-    } else {
-      document.getElementById('wlStudentList').innerHTML =
-        '<div class="wl-no">No classes set up yet. Ask your teacher to set one up, or skip.</div>';
-    }
-
-    // Global show function — always works, no scope issues
     window.wlShowLogin = function() {
+      // Always start at step 1 when opening
+      _wlShowStep(1);
       document.getElementById('wlOverlay').classList.remove('wl-hide');
     };
 
-    // Update any pill slot with current session
     var session = loadSession();
     _updatePill(session ? session.studentName : null);
+  }
+
+  function _wlShowStep(n) {
+    var s1 = document.getElementById('wlStep1');
+    var s2 = document.getElementById('wlStep2');
+    var s3 = document.getElementById('wlStep3');
+    if (s1) s1.style.display = n === 1 ? '' : 'none';
+    if (s2) s2.style.display = n === 2 ? '' : 'none';
+    if (s3) s3.style.display = n === 3 ? '' : 'none';
+    if (n === 1) { var inp = document.getElementById('wlCodeInput'); if (inp) { inp.value = ''; setTimeout(function(){ inp.focus(); }, 50); } }
+    if (n === 3) { var pin = document.getElementById('wlPinInput'); if (pin) { pin.value = ''; setTimeout(function(){ pin.focus(); }, 50); } }
+  }
+
+  function _backToStep1() {
+    var err = document.getElementById('wlCodeErr');
+    if (err) err.textContent = '';
+    _wlShowStep(1);
+  }
+
+  function _backToStep2() {
+    var err = document.getElementById('wlPinErr');
+    if (err) err.textContent = '';
+    _wlShowStep(2);
+  }
+
+  function _stepClassCode() {
+    var inp = document.getElementById('wlCodeInput');
+    var err = document.getElementById('wlCodeErr');
+    var code = (inp ? inp.value.trim() : '');
+    if (!code) { if (err) err.textContent = 'Please enter your class code.'; return; }
+    if (err) err.textContent = '';
+    if (inp) inp.disabled = true;
+    (async function() {
+      try {
+        var cls = await lookupClassByCode(code);
+        if (!cls) {
+          if (err) err.textContent = 'Class not found \u2014 check your code.';
+          if (inp) inp.disabled = false;
+          return;
+        }
+        _loginClassId = cls.id;
+        // Load student list
+        var nameDisplay = document.getElementById('wlClassNameDisplay');
+        if (nameDisplay) nameDisplay.textContent = cls.name + ' \u2014 pick your name';
+        var list = document.getElementById('wlStudentList');
+        if (list) list.innerHTML = '<div class="wl-no">Loading...</div>';
+        _wlShowStep(2);
+        var { data: students, error: stuErr } = await sb()
+          .from('students')
+          .select('id, name')
+          .eq('class_id', cls.id)
+          .order('name');
+        if (stuErr || !students || !students.length) {
+          if (list) list.innerHTML = '<div class="wl-no">No students in this class.</div>';
+          return;
+        }
+        if (list) list.innerHTML = students.map(function(s) {
+          return '<button class="wl-sbtn" onclick="WordLabData._pickStudent(\'' + s.id + '\',\'' + s.name.replace(/'/g,"\\'") + '\')">' + s.name + '</button>';
+        }).join('');
+      } catch(e) {
+        if (err) err.textContent = 'Error connecting \u2014 try again.';
+        if (inp) inp.disabled = false;
+      }
+    })();
+  }
+
+  function _pickStudent(studentId, studentName) {
+    _loginStudentId = studentId;
+    _loginStudentName = studentName;
+    var nameDisplay = document.getElementById('wlPinNameDisplay');
+    if (nameDisplay) nameDisplay.textContent = 'Hi ' + studentName + '! Enter your 3-letter code.';
+    var err = document.getElementById('wlPinErr');
+    if (err) err.textContent = '';
+    _wlShowStep(3);
+  }
+
+  function _stepStudentCode() {
+    var inp = document.getElementById('wlPinInput');
+    var err = document.getElementById('wlPinErr');
+    var code = (inp ? inp.value.trim() : '');
+    if (!code || code.length !== 3) { if (err) err.textContent = 'Please enter your 3-letter code.'; return; }
+    if (err) err.textContent = '';
+    if (inp) inp.disabled = true;
+    (async function() {
+      try {
+        var ok = await verifyStudentCode(_loginStudentId, code);
+        if (!ok) {
+          if (err) err.textContent = 'Incorrect code \u2014 try again.';
+          if (inp) { inp.disabled = false; inp.value = ''; inp.focus(); }
+          return;
+        }
+        // Success
+        startSession(_loginClassId, _loginStudentId, _loginStudentName);
+        document.getElementById('wlOverlay').classList.add('wl-hide');
+        _updatePill(_loginStudentName);
+        var btn = document.getElementById('wlLoginBtn');
+        if (btn) btn.style.display = 'none';
+        _loginClassId = null; _loginStudentId = null; _loginStudentName = null;
+      } catch(e) {
+        if (err) err.textContent = 'Error \u2014 try again.';
+        if (inp) inp.disabled = false;
+      }
+    })();
+  }
+
+  // Legacy stubs — kept for backward compat with any direct callers
+  function _loadStudents() { /* replaced by new step flow */ }
+  function _pick(studentId, studentName, classId) {
+    _loginClassId = classId;
+    _pickStudent(studentId, studentName);
   }
 
   var AUDIO_PREF_KEY = 'wordlab_sound_v1';
@@ -354,9 +692,7 @@ const WordLabData = (() => {
   function _toggleAudio() {
     var newVal = !_isAudioOn();
     try { localStorage.setItem(AUDIO_PREF_KEY, newVal ? 'on' : 'off'); } catch {}
-    // Sync with WLAudio engine if loaded
     if (window.WLAudio && window.WLAudio.setEnabled) window.WLAudio.setEnabled(newVal);
-    // Update button in place
     var btn = document.getElementById('wlAudioBtn');
     if (btn) {
       btn.textContent = newVal ? '🔊' : '🔇';
@@ -385,44 +721,20 @@ const WordLabData = (() => {
     slot.innerHTML = audioBtn + studentPill;
   }
 
-  // Called from overlay dropdown
-  function _loadStudents() {
-    var classId = document.getElementById('wlClassSel').value;
-    var list = document.getElementById('wlStudentList');
-    if (!classId) { list.innerHTML = ''; return; }
-    var cls = getClass(classId);
-    if (!cls) { list.innerHTML = ''; return; }
-    list.innerHTML = cls.students
-      .slice()
-      .sort(function(a,b){ return a.name.localeCompare(b.name); })
-      .map(function(s) {
-        return '<button class="wl-sbtn" onclick="WordLabData._pick(\'' + s.id + '\',\'' +
-          s.name.replace(/'/g,"\\'") + '\',\'' + classId + '\')">' + s.name + '</button>';
-      }).join('');
-  }
-
-  function _pick(studentId, studentName, classId) {
-    startSession(classId, studentId, studentName);
-    document.getElementById('wlOverlay').classList.add('wl-hide');
-    _updatePill(studentName);
-    // Hide the plain login button if present
-    var btn = document.getElementById('wlLoginBtn');
-    if (btn) btn.style.display = 'none';
-  }
-
   function _skip() {
     document.getElementById('wlOverlay').classList.add('wl-hide');
   }
 
   return {
     createClass, getClasses, getClass, verifyPassword,
-    addStudent, removeStudent,
+    addStudent, removeStudent, deleteClass, regenerateStudentCode,
+    lookupClassByCode, verifyStudentCode,
     startSession, getSession, endSession,
     recordAttempt,
     getAccuracy, getAvgTime, isIntervention,
     exportCSV, initLoginUI,
-    _loadStudents, _pick, _skip, _toggleAudio,
-    load, save,
+    _loadStudents, _pick, _pickStudent, _stepClassCode, _stepStudentCode,
+    _backToStep1, _backToStep2, _skip, _toggleAudio,
     getStudentData, getLevel, ALL_BADGES, LEGENDARY_BADGES,
     getScientist, saveScientist, purchase
   };

@@ -190,6 +190,7 @@
   <div id="sectionMissionMode" class="hidden"></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="wordlab-data.js"></script>
 <script>
 // ── Column definitions for each activity ────────────────────────
@@ -237,9 +238,10 @@ const THRESHOLD_ATTEMPTS = 3;
 let currentClass = null;
 
 // ── Login ────────────────────────────────────────────────────────
-function populateClassSelect(){
+async function populateClassSelect(){
   const sel = document.getElementById('classSelect');
-  const classes = WordLabData.getClasses();
+  sel.innerHTML = '<option value="">Loading...</option>';
+  const classes = await WordLabData.getClasses();
   if(!classes.length){
     sel.innerHTML = '<option value="">No classes found — set one up first</option>';
     return;
@@ -247,16 +249,17 @@ function populateClassSelect(){
   sel.innerHTML = classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
 }
 
-function login(){
+async function login(){
   const classId = document.getElementById('classSelect').value;
   const pass = document.getElementById('loginPassword').value;
   if(!classId){ alert('Please select a class.'); return; }
-  if(!WordLabData.verifyPassword(classId, pass)){
+  const ok = await WordLabData.verifyPassword(classId, pass);
+  if(!ok){
     document.getElementById('loginError').style.display = 'block';
     return;
   }
   document.getElementById('loginError').style.display = 'none';
-  currentClass = WordLabData.getClass(classId);
+  currentClass = await WordLabData.getClass(classId);
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('dashboardScreen').classList.remove('hidden');
   document.getElementById('logoutBtn').style.display = 'inline-flex';
@@ -521,7 +524,7 @@ function hideTip(){
 // ── Export ───────────────────────────────────────────────────────
 function exportData(){
   if(!currentClass) return;
-  const csv = WordLabData.exportCSV(currentClass.id);
+  const csv = WordLabData.exportCSV(currentClass);
   const blob = new Blob([csv], { type:'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

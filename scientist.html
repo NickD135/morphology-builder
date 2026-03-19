@@ -128,6 +128,7 @@
   <!-- Filled by JS -->
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="wordlab-data.js"></script>
 <script src="wordlab-scientist.js"></script>
 <script>
@@ -171,8 +172,8 @@ const SHOP = {
 const SKIN_TONES = ['#FDBCB4','#F1C27D','#E0AC69','#C68642','#8D5524','#FFCBA4'];
 
 // ── Render ────────────────────────────────────────────────────
-function render() {
-  const sd = (typeof WordLabData !== 'undefined') ? WordLabData.getStudentData() : null;
+async function render() {
+  const sd = (typeof WordLabData !== 'undefined') ? await WordLabData.getStudentData() : null;
   const wrap = document.getElementById('mainWrap');
 
   if (!sd) {
@@ -338,30 +339,30 @@ function switchTab(id, btn) {
   btn.classList.add('active');
 }
 
-function applyOption(field, value) {
+async function applyOption(field, value) {
   const updates = {};
   updates[field] = value === 'null' ? null : value;
-  WordLabData.saveScientist(updates);
-  document.getElementById('sciSVGBig').innerHTML = WLScientist.buildSVG(WordLabData.getScientist(), 'neutral');
-  render(); // re-render to update active states
+  await WordLabData.saveScientist(updates);
+  const sci = await WordLabData.getScientist();
+  document.getElementById('sciSVGBig').innerHTML = WLScientist.buildSVG(sci, 'neutral');
+  await render();
 }
 
-function shopBuy(itemId, cost, field) {
-  const result = WordLabData.purchase(itemId, cost);
+async function shopBuy(itemId, cost, field) {
+  const result = await WordLabData.purchase(itemId, cost);
   if (!result.success) { alert('Not enough quarks!'); return; }
-  // Auto-equip
   const updates = {};
   updates[field] = itemId;
   if (field==='head'||field==='face') updates[field] = itemId==='none'?null:itemId;
-  WordLabData.saveScientist(updates);
-  render();
+  await WordLabData.saveScientist(updates);
+  await render();
 }
 
-function shopEquip(field, itemId) {
+async function shopEquip(field, itemId) {
   const updates = {};
   updates[field] = (itemId==='none' || itemId==='null') ? null : itemId;
-  WordLabData.saveScientist(updates);
-  render();
+  await WordLabData.saveScientist(updates);
+  await render();
 }
 
 // ── Init ──────────────────────────────────────────────────────
@@ -375,7 +376,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (session) btn.style.display = 'none';
   }
   render();
-  // Re-render on login
   const origPick = WordLabData._pick.bind(WordLabData);
   WordLabData._pick = function(sid, sname, cid) { origPick(sid, sname, cid); render(); };
 });
