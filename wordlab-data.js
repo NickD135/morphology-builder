@@ -102,7 +102,7 @@ const WordLabData = (() => {
   function exportCSV(classId) {
     const cls = getClass(classId);
     if (!cls) return '';
-    const activities = ['sound-sorter','phoneme-splitter','syllable-splitter','meaning-mode','mission-mode'];
+    const activities = ['sound-sorter','phoneme-splitter','syllable-splitter','breakdown-blitz','meaning-mode','mission-mode'];
     const rows = [['Student','Activity','Category','Correct','Total','Accuracy %','Avg Time (ms)']];
     cls.students.forEach(student => {
       activities.forEach(activity => {
