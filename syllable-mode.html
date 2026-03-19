@@ -159,6 +159,10 @@
       background:#e2e8f0;
       transition:background .15s, transform .15s;
     }
+    .chopGap.correct-break .chopLine{
+      background:var(--green) !important;
+      box-shadow:0 0 0 4px rgba(22,163,74,.15);
+    }
     .chopGap.chopped .chopLine{
       background:var(--indigo-2);
       box-shadow:0 0 0 4px rgba(99,102,241,.18);
@@ -530,6 +534,10 @@ function setDiff(d){
     b.classList.toggle('active', parseInt(b.dataset.diff) === d);
   });
   usedWords.clear();
+  // Reset all state and load a fresh word immediately
+  choppedGaps.clear();
+  checked = false;
+  renderWord();
 }
 
 function getPool(){
@@ -545,11 +553,18 @@ function getPool(){
 // ── Render word ───────────────────────────────────────────────────────────────
 function renderWord(){
   const pool = getPool();
+  if(!pool || pool.length === 0) return;
   const pick = pool[Math.floor(Math.random() * pool.length)];
   usedWords.add(pick.word);
   currentWord = pick;
   choppedGaps.clear();
   checked = false;
+  // Clear any correct-break markers from previous word
+  document.querySelectorAll('.chopGap').forEach(g => {
+    g.classList.remove('chopped','correct-break');
+    const line = g.querySelector('.chopLine');
+    if(line) line.style.background = '';
+  });
 
   const container = document.getElementById('chopContainer');
   container.innerHTML = '';
@@ -592,7 +607,7 @@ function renderWord(){
 }
 
 function toggleChop(pos, gapEl){
-  if(checked) return;
+  if(checked) { return; }
   if(choppedGaps.has(pos)){
     choppedGaps.delete(pos);
     gapEl.classList.remove('chopped');
@@ -604,8 +619,20 @@ function toggleChop(pos, gapEl){
 }
 
 function clearChops(){
+  // Reset state
   choppedGaps.clear();
-  document.querySelectorAll('.chopGap.chopped').forEach(g => g.classList.remove('chopped'));
+  checked = false;
+
+  // Clear all visual marks from gaps without rebuilding DOM
+  document.querySelectorAll('.chopGap').forEach(g => {
+    g.classList.remove('chopped');
+    const line = g.querySelector('.chopLine');
+    if(line) line.style.background = '';
+  });
+
+  hideFeedback();
+  document.getElementById('checkBtn').disabled = false;
+  document.getElementById('nextBtn').classList.remove('visible');
   updateSyllablePreview();
 }
 
@@ -651,6 +678,7 @@ function checkAnswer(){
     correct++;
     if(streak > bestStreak) bestStreak = streak;
 
+    wlRecord(currentWord.syllables.length + ' syllables', true);
     banner.className = 'feedbackBanner correct';
     banner.innerHTML = `✅ Perfect! <b>${currentWord.word}</b> = ${correctSylls}${streak >= 3 ? ` <span style="color:var(--orange-text)">🔥 +5 streak bonus!</span>` : ''}`;
   } else {
@@ -663,7 +691,7 @@ function checkAnswer(){
     markCorrectBreaks(correct_breaks);
 
     banner.className = 'feedbackBanner wrong';
-    banner.innerHTML = `❌ Not quite. <b>${currentWord.word}</b> = ${correctSylls}`;
+    banner.innerHTML = `❌ Not quite. <b>${currentWord.word}</b> = ${correctSylls}<br><span style="font-size:12px;font-weight:700;opacity:.8;">Green lines show the correct splits. Click Reset to try again.</span>`;
 
     document.getElementById('chopContainer').classList.add('shake');
     setTimeout(() => document.getElementById('chopContainer').classList.remove('shake'), 400);
@@ -692,9 +720,13 @@ function getCorrectBreaks(){
 function markCorrectBreaks(breaks){
   document.querySelectorAll('.chopGap').forEach(g => {
     const p = parseInt(g.dataset.pos);
+    const line = g.querySelector('.chopLine');
     if(breaks.includes(p)){
       g.classList.add('chopped');
-      g.querySelector('.chopLine').style.background = 'var(--green)';
+      if(line) line.style.background = 'var(--green)';
+    } else if(g.classList.contains('chopped')){
+      // Wrong chop — show in red
+      if(line) line.style.background = 'var(--bad)';
     }
   });
 }
@@ -746,18 +778,6 @@ function startGame(){
 }
 </script>
 
-<div class="loginOverlay" id="loginOverlay">
-  <div class="loginBox">
-    <div class="loginBoxIcon">👋</div>
-    <div class="loginBoxTitle">Who are you?</div>
-    <div class="loginBoxSub">Select your class, then tap your name.</div>
-    <select class="classPickSelect" id="classPickSelect" onchange="loadStudentList()">
-      <option value="">Select class...</option>
-    </select>
-    <div class="studentPickList" id="studentPickList"></div>
-    <button class="skipLoginBtn" onclick="skipLogin()">Skip — play without saving results</button>
-  </div>
-</div>
 <script src="wordlab-data.js"></script>
 <script>
 
