@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Lab – Teacher Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#f5f5f5; --panel:#fff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b;
+      --indigo:#4338ca; --indigo-2:#6366f1; --indigo-soft:#eef2ff;
+      --green:#16a34a; --green-soft:#f0fdf4; --green-line:#bbf7d0; --green-text:#166534;
+      --orange:#ea580c; --orange-soft:#fff7ed; --orange-line:#fed7aa; --orange-text:#9a3412;
+      --bad:#dc2626;
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:'Lexend',sans-serif; background:var(--bg); color:var(--text); line-height:1.5; }
+    button,input,select{ font:inherit; }
+
+    .header{ position:sticky; top:0; z-index:20; background:var(--bg); border-bottom:1px solid var(--line); box-shadow:0 1px 2px rgba(15,23,42,.05); }
+    .headerInner{ max-width:1400px; margin:0 auto; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+    .brand{ display:flex; align-items:center; gap:12px; }
+    .brandIcon{ width:50px; height:50px; border-radius:14px; background:var(--indigo); color:#fff; display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 12px 24px rgba(67,56,202,.18); }
+    .brandText h1{ margin:0; font-size:22px; font-weight:900; color:#312e81; }
+    .brandText .sub{ font-size:10px; text-transform:uppercase; letter-spacing:.25em; color:var(--indigo-2); font-weight:900; display:block; }
+    .topBtn{ border:none; background:#0f172a; color:#fff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:.12em; padding:12px 16px; border-radius:14px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; }
+    .topBtn:hover{ background:#000; }
+
+    .wrap{ max-width:1400px; margin:0 auto; padding:20px; }
+    .panel{ background:var(--panel); border:4px solid var(--line); border-radius:28px; box-shadow:0 20px 28px rgba(15,23,42,.06); margin-bottom:20px; }
+    .panelInner{ padding:24px; }
+    .panelTitle{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.22em; color:var(--indigo); margin:0 0 16px; }
+
+    /* Login screen */
+    #loginScreen{ max-width:480px; margin:60px auto; }
+    .loginCard{ background:var(--panel); border:4px solid var(--line); border-radius:28px; padding:32px; box-shadow:0 20px 40px rgba(15,23,42,.08); text-align:center; }
+    .loginIcon{ font-size:48px; margin-bottom:16px; }
+    .loginTitle{ font-size:24px; font-weight:900; color:#312e81; margin:0 0 8px; }
+    .loginSub{ color:var(--muted); font-size:14px; margin-bottom:24px; }
+    .loginField{ margin-bottom:14px; text-align:left; }
+    .loginField label{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); display:block; margin-bottom:6px; }
+    .loginField input, .loginField select{
+      width:100%; border:2px solid var(--line); border-radius:14px;
+      padding:12px 14px; font-size:14px; outline:none; transition:border-color .15s;
+    }
+    .loginField input:focus, .loginField select:focus{ border-color:var(--indigo-2); }
+    .loginBtn{ border:none; background:var(--indigo); color:#fff; font-weight:900; font-size:15px; padding:16px; border-radius:16px; cursor:pointer; width:100%; box-shadow:0 10px 20px rgba(67,56,202,.2); transition:all .15s; text-transform:uppercase; letter-spacing:.08em; }
+    .loginBtn:hover{ background:#3730a3; }
+    .loginError{ color:var(--bad); font-size:13px; font-weight:800; margin-top:8px; display:none; }
+
+    /* Dashboard nav tabs */
+    .navTabs{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:24px; }
+    .navTab{ border:2px solid var(--line); background:#fff; border-radius:14px; padding:10px 16px; font-weight:800; font-size:13px; cursor:pointer; color:var(--muted); transition:all .15s; }
+    .navTab.active{ border-color:var(--indigo-2); background:var(--indigo-soft); color:var(--indigo); }
+
+    /* Intervention flags */
+    .flagGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; }
+    .flagCard{ border:2px solid #fecaca; background:#fef2f2; border-radius:18px; padding:16px; }
+    .flagCard.warn{ border-color:var(--orange-line); background:var(--orange-soft); }
+    .flagStudent{ font-size:16px; font-weight:900; color:#312e81; margin-bottom:4px; }
+    .flagDetail{ font-size:13px; color:#334155; font-weight:700; line-height:1.5; }
+    .flagBadge{ display:inline-block; background:#fecaca; color:var(--bad); border-radius:999px; padding:3px 10px; font-size:11px; font-weight:900; margin-right:4px; margin-bottom:4px; }
+    .flagBadge.warn{ background:var(--orange-line); color:var(--orange-text); }
+    .noFlags{ background:var(--green-soft); border:2px solid var(--green-line); border-radius:18px; padding:20px; text-align:center; color:var(--green-text); font-weight:800; font-size:15px; }
+
+    /* ── HEATMAP ── */
+    .heatmapWrap{ overflow-x:auto; }
+    .heatmap{ border-collapse:collapse; font-size:12px; min-width:100%; }
+    .heatmap th{ padding:6px 10px; font-weight:900; font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); text-align:left; white-space:nowrap; border-bottom:2px solid var(--line); }
+    .heatmap th.rotate{ vertical-align:bottom; padding-bottom:8px; }
+    .heatmap th.rotate span{ writing-mode:vertical-rl; text-orientation:mixed; transform:rotate(180deg); display:inline-block; max-height:100px; }
+    .heatmap td{ padding:4px; border:1px solid rgba(226,232,240,.5); }
+    .heatmap td.student-name{ padding:8px 12px; font-weight:800; font-size:13px; color:#312e81; white-space:nowrap; border-right:2px solid var(--line); background:#fff; position:sticky; left:0; z-index:2; }
+    .cell{
+      width:40px; height:36px; border-radius:8px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:11px; font-weight:800;
+      cursor:pointer; transition:transform .1s;
+      position:relative;
+    }
+    .cell:hover{ transform:scale(1.15); z-index:5; }
+    .cell.no-data{ background:#f1f5f9; color:#cbd5e1; }
+    .cell.not-enough{ background:#f8fafc; color:#94a3b8; font-size:9px; text-align:center; line-height:1.3; }
+
+    /* Accuracy colour scale */
+    .acc-100{ background:#166534; color:#fff; }
+    .acc-90 { background:#16a34a; color:#fff; }
+    .acc-80 { background:#4ade80; color:#166534; }
+    .acc-70 { background:#86efac; color:#166534; }
+    .acc-60 { background:#fef08a; color:#713f12; }
+    .acc-50 { background:#fde047; color:#713f12; }
+    .acc-40 { background:#fb923c; color:#fff; }
+    .acc-30 { background:#ef4444; color:#fff; }
+    .acc-low{ background:#991b1b; color:#fff; }
+
+    /* Time overlay for TTR-style */
+    .cell-fast{ box-shadow:inset 0 0 0 2px rgba(255,255,255,.5); }
+    .cell-slow{ opacity:.75; }
+
+    /* Legend */
+    .legend{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:16px; font-size:11px; font-weight:800; color:var(--muted); }
+    .legendCell{ width:24px; height:20px; border-radius:4px; display:inline-block; }
+
+    /* Summary bar */
+    .summaryRow{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+    .summaryCard{ background:var(--panel); border:2px solid var(--line); border-radius:16px; padding:14px 18px; flex:1; min-width:120px; }
+    .summaryVal{ font-size:32px; font-weight:900; color:var(--indigo); line-height:1; }
+    .summaryLbl{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin-top:4px; }
+
+    /* Tooltip */
+    .tooltip{
+      position:fixed; background:#0f172a; color:#fff; border-radius:10px;
+      padding:8px 12px; font-size:12px; font-weight:700; line-height:1.5;
+      pointer-events:none; z-index:100; display:none; max-width:200px;
+      box-shadow:0 8px 24px rgba(0,0,0,.3);
+    }
+
+    .hidden{ display:none !important; }
+
+    /* Export btn */
+    .exportBtn{ border:2px solid var(--green-line); background:var(--green-soft); color:var(--green-text); font-weight:800; font-size:13px; padding:10px 18px; border-radius:14px; cursor:pointer; transition:all .15s; }
+    .exportBtn:hover{ background:var(--green-line); }
+
+    .classInfo{ font-size:14px; font-weight:700; color:var(--muted); margin-bottom:20px; }
+    .classInfo strong{ color:#312e81; }
+  </style>
+</head>
+<body>
+
+<div class="tooltip" id="tooltip"></div>
+
+<header class="header">
+  <div class="headerInner">
+    <div class="brand">
+      <div class="brandIcon">📊</div>
+      <div class="brandText"><h1>Teacher Dashboard</h1><span class="sub">Word Lab · Assessment</span></div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <span id="classNameDisplay" style="font-weight:800;color:#312e81;font-size:14px;"></span>
+      <button class="topBtn" onclick="logout()" id="logoutBtn" style="display:none;">Log out</button>
+      <a href="class-setup.html" class="topBtn">⚙️ Setup</a>
+      <a href="index.html" class="topBtn">← Builder</a>
+    </div>
+  </div>
+</header>
+
+<!-- ── Login ── -->
+<div id="loginScreen">
+  <div class="loginCard">
+    <div class="loginIcon">📊</div>
+    <div class="loginTitle">Teacher Dashboard</div>
+    <div class="loginSub">Select your class and enter your password to view student data.</div>
+    <div class="loginField">
+      <label>Class</label>
+      <select id="classSelect"><option value="">Loading...</option></select>
+    </div>
+    <div class="loginField">
+      <label>Password</label>
+      <input type="password" id="loginPassword" placeholder="Enter class password" onkeydown="if(event.key==='Enter') login()">
+    </div>
+    <div class="loginError" id="loginError">Incorrect password. Try again.</div>
+    <button class="loginBtn" onclick="login()">View Dashboard →</button>
+    <div style="margin-top:16px;font-size:12px;color:var(--muted);">Don't have a class yet? <a href="class-setup.html" style="color:var(--indigo);font-weight:800;">Set one up here →</a></div>
+  </div>
+</div>
+
+<!-- ── Dashboard ── -->
+<div class="wrap hidden" id="dashboardScreen">
+  <div class="classInfo" id="classInfo"></div>
+
+  <div class="summaryRow" id="summaryRow"></div>
+
+  <div class="navTabs" id="navTabs">
+    <button class="navTab active" onclick="showSection('flags',this)">⚠️ Intervention flags</button>
+    <button class="navTab" onclick="showSection('sound-sorter',this)">🔤 Sound Sorter</button>
+    <button class="navTab" onclick="showSection('phoneme-splitter',this)">🔊 Phoneme Splitter</button>
+    <button class="navTab" onclick="showSection('syllable-splitter',this)">✂️ Syllable Splitter</button>
+    <button class="navTab" onclick="showSection('meaning-mode',this)">🧠 Meaning Mode</button>
+    <button class="navTab" onclick="showSection('mission-mode',this)">⚡ Mission Mode</button>
+  </div>
+
+  <div id="sectionFlags"></div>
+  <div id="sectionSoundSorter" class="hidden"></div>
+  <div id="sectionPhonemeSplitter" class="hidden"></div>
+  <div id="sectionSyllableSplitter" class="hidden"></div>
+  <div id="sectionMeaningMode" class="hidden"></div>
+  <div id="sectionMissionMode" class="hidden"></div>
+</div>
+
+<script src="wordlab-data.js"></script>
+<script>
+// ── Column definitions for each activity ────────────────────────
+const COLUMNS = {
+  'sound-sorter': [
+    'Long A','Long E','Long I','Long O','Long U / OO','OO (book)',
+    'OW sound','OY sound','OR sound','AR sound','ER sound','AIR sound','EAR sound',
+    'Short A','Short E','Short I','Short O','Short U',
+    'SH sound','CH sound','TH sound','F sound','K sound','J sound',
+    'Z sound','N sound','R sound','M sound','S sound','NG sound','W sound','ZH sound'
+  ],
+  'phoneme-splitter': ['Starter','Level up','Challenge','Mixed'],
+  'syllable-splitter': ['2 syllables','3 syllables','4+ syllables','Mixed'],
+  'meaning-mode': [
+    'ad','anti','de','dis','in','inter','mis','non',
+    'over','post','pre','re','sub','super','trans','un','under'
+  ],
+  'mission-mode': [
+    'ad','anti','de','dis','in','inter','mis','non',
+    'over','post','pre','re','sub','super','trans','un','under'
+  ]
+};
+
+const THRESHOLD_PCT = 70;
+const THRESHOLD_ATTEMPTS = 3;
+
+let currentClass = null;
+
+// ── Login ────────────────────────────────────────────────────────
+function populateClassSelect(){
+  const sel = document.getElementById('classSelect');
+  const classes = WordLabData.getClasses();
+  if(!classes.length){
+    sel.innerHTML = '<option value="">No classes found — set one up first</option>';
+    return;
+  }
+  sel.innerHTML = classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+}
+
+function login(){
+  const classId = document.getElementById('classSelect').value;
+  const pass = document.getElementById('loginPassword').value;
+  if(!classId){ alert('Please select a class.'); return; }
+  if(!WordLabData.verifyPassword(classId, pass)){
+    document.getElementById('loginError').style.display = 'block';
+    return;
+  }
+  document.getElementById('loginError').style.display = 'none';
+  currentClass = WordLabData.getClass(classId);
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('dashboardScreen').classList.remove('hidden');
+  document.getElementById('logoutBtn').style.display = 'inline-flex';
+  document.getElementById('classNameDisplay').textContent = currentClass.name;
+  renderDashboard();
+}
+
+function logout(){
+  currentClass = null;
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('dashboardScreen').classList.add('hidden');
+  document.getElementById('logoutBtn').style.display = 'none';
+  document.getElementById('classNameDisplay').textContent = '';
+  document.getElementById('loginPassword').value = '';
+}
+
+// ── Render ───────────────────────────────────────────────────────
+function renderDashboard(){
+  if(!currentClass) return;
+  const students = currentClass.students;
+  const totalStudents = students.length;
+
+  // Summary row
+  let totalAttempts = 0, totalCorrect = 0, flagCount = 0;
+  students.forEach(s => {
+    Object.values(s.results || {}).forEach(act => {
+      Object.values(act).forEach(r => {
+        totalAttempts += r.total || 0;
+        totalCorrect  += r.correct || 0;
+        if(WordLabData.isIntervention(r, THRESHOLD_PCT, THRESHOLD_ATTEMPTS)) flagCount++;
+      });
+    });
+  });
+  const overallAcc = totalAttempts > 0 ? Math.round((totalCorrect/totalAttempts)*100) : '--';
+
+  document.getElementById('summaryRow').innerHTML = `
+    <div class="summaryCard"><div class="summaryVal">${totalStudents}</div><div class="summaryLbl">Students</div></div>
+    <div class="summaryCard"><div class="summaryVal">${totalAttempts.toLocaleString()}</div><div class="summaryLbl">Total attempts</div></div>
+    <div class="summaryCard"><div class="summaryVal">${overallAcc}${totalAttempts>0?'%':''}</div><div class="summaryLbl">Overall accuracy</div></div>
+    <div class="summaryCard"><div class="summaryVal" style="color:${flagCount>0?'var(--bad)':'var(--green)'}">${flagCount}</div><div class="summaryLbl">Intervention flags</div></div>
+    <button class="exportBtn" onclick="exportData()" style="align-self:center;">⬇ Export CSV</button>
+  `;
+
+  document.getElementById('classInfo').innerHTML =
+    `Showing data for <strong>${currentClass.name}</strong> · ${totalStudents} students · Last updated ${new Date().toLocaleTimeString()}`;
+
+  renderFlags();
+  renderHeatmap('sound-sorter');
+  renderHeatmap('phoneme-splitter');
+  renderHeatmap('syllable-splitter');
+  renderHeatmap('meaning-mode');
+  renderHeatmap('mission-mode');
+}
+
+function showSection(name, btn){
+  document.querySelectorAll('.navTab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const ids = ['flags','SoundSorter','PhonemeSplitter','SyllableSplitter','MeaningMode','MissionMode'];
+  document.getElementById('sectionFlags').classList.add('hidden');
+  document.getElementById('sectionSoundSorter').classList.add('hidden');
+  document.getElementById('sectionPhonemeSplitter').classList.add('hidden');
+  document.getElementById('sectionSyllableSplitter').classList.add('hidden');
+  document.getElementById('sectionMeaningMode').classList.add('hidden');
+  document.getElementById('sectionMissionMode').classList.add('hidden');
+
+  const map = {
+    'flags':'sectionFlags',
+    'sound-sorter':'sectionSoundSorter',
+    'phoneme-splitter':'sectionPhonemeSplitter',
+    'syllable-splitter':'sectionSyllableSplitter',
+    'meaning-mode':'sectionMeaningMode',
+    'mission-mode':'sectionMissionMode',
+  };
+  const el = document.getElementById(map[name]);
+  if(el) el.classList.remove('hidden');
+}
+
+// ── Flags ────────────────────────────────────────────────────────
+function renderFlags(){
+  const container = document.getElementById('sectionFlags');
+  const flags = [];
+
+  currentClass.students.forEach(student => {
+    const studentFlags = [];
+    Object.entries(student.results || {}).forEach(([activity, actData]) => {
+      Object.entries(actData).forEach(([category, result]) => {
+        if(WordLabData.isIntervention(result, THRESHOLD_PCT, THRESHOLD_ATTEMPTS)){
+          studentFlags.push({ activity, category, result });
+        }
+      });
+    });
+    if(studentFlags.length) flags.push({ student, flags: studentFlags });
+  });
+
+  if(!flags.length){
+    container.innerHTML = `<div class="panel"><div class="panelInner"><div class="noFlags">✅ No intervention flags — all students are performing above ${THRESHOLD_PCT}% with ${THRESHOLD_ATTEMPTS}+ attempts.</div></div></div>`;
+    return;
+  }
+
+  const activityLabel = {
+    'sound-sorter':'Sound Sorter',
+    'phoneme-splitter':'Phoneme Splitter',
+    'syllable-splitter':'Syllable Splitter',
+    'meaning-mode':'Meaning Mode',
+    'mission-mode':'Mission Mode'
+  };
+
+  container.innerHTML = `
+    <div class="panel"><div class="panelInner">
+      <div class="panelTitle">⚠️ Intervention flags — below ${THRESHOLD_PCT}% after ${THRESHOLD_ATTEMPTS}+ attempts</div>
+      <div class="flagGrid">
+        ${flags.map(({ student, flags: sFlags }) => `
+          <div class="flagCard">
+            <div class="flagStudent">${student.name}</div>
+            <div class="flagDetail">
+              ${sFlags.map(f => `
+                <span class="flagBadge">${activityLabel[f.activity] || f.activity}: ${f.category} — ${WordLabData.getAccuracy(f.result)}% (${f.result.total} attempts)</span>
+              `).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div></div>
+  `;
+}
+
+// ── Heatmap ──────────────────────────────────────────────────────
+function accClass(pct){
+  if(pct === null) return 'no-data';
+  if(pct >= 100) return 'acc-100';
+  if(pct >= 90)  return 'acc-90';
+  if(pct >= 80)  return 'acc-80';
+  if(pct >= 70)  return 'acc-70';
+  if(pct >= 60)  return 'acc-60';
+  if(pct >= 50)  return 'acc-50';
+  if(pct >= 40)  return 'acc-40';
+  if(pct >= 30)  return 'acc-30';
+  return 'acc-low';
+}
+
+function timeClass(avgMs){
+  if(!avgMs) return '';
+  if(avgMs < 3000) return 'cell-fast';
+  if(avgMs > 10000) return 'cell-slow';
+  return '';
+}
+
+function renderHeatmap(activity){
+  const sectionMap = {
+    'sound-sorter':      'sectionSoundSorter',
+    'phoneme-splitter':  'sectionPhonemeSplitter',
+    'syllable-splitter': 'sectionSyllableSplitter',
+    'meaning-mode':      'sectionMeaningMode',
+    'mission-mode':      'sectionMissionMode',
+  };
+  const container = document.getElementById(sectionMap[activity]);
+  if(!container) return;
+
+  const columns = COLUMNS[activity] || [];
+  const students = currentClass.students;
+  const isTTR = (activity === 'meaning-mode' || activity === 'mission-mode');
+
+  const titleMap = {
+    'sound-sorter':      '🔤 Sound Sorter — accuracy by sound group',
+    'phoneme-splitter':  '🔊 Phoneme Splitter — accuracy by difficulty',
+    'syllable-splitter': '✂️ Syllable Splitter — accuracy by difficulty',
+    'meaning-mode':      '🧠 Meaning Mode — accuracy by prefix',
+    'mission-mode':      '⚡ Mission Mode — accuracy by prefix',
+  };
+
+  const legend = `
+    <div class="legend">
+      <span>Accuracy:</span>
+      <span class="legendCell" style="background:#166534;"></span><span>100%</span>
+      <span class="legendCell" style="background:#4ade80;"></span><span>80%+</span>
+      <span class="legendCell" style="background:#86efac;"></span><span>70%+</span>
+      <span class="legendCell" style="background:#fde047;"></span><span>50%+</span>
+      <span class="legendCell" style="background:#ef4444;"></span><span>&lt;50%</span>
+      <span class="legendCell" style="background:#f1f5f9;border:1px solid #cbd5e1;"></span><span>No data</span>
+      ${isTTR ? '<span style="margin-left:8px;">Bright border = answered quickly · Faded = slow</span>' : ''}
+    </div>
+  `;
+
+  const headerCols = columns.map(col =>
+    `<th class="rotate"><span>${col}</span></th>`
+  ).join('');
+
+  const rows = students.map(student => {
+    const actData = (student.results || {})[activity] || {};
+    const cells = columns.map(col => {
+      const result = actData[col] || null;
+      const pct = result ? WordLabData.getAccuracy(result) : null;
+      const avgMs = result ? WordLabData.getAvgTime(result) : null;
+      const total = result ? result.total : 0;
+      const ac = accClass(pct);
+      const tc = isTTR ? timeClass(avgMs) : '';
+      const flagged = result && WordLabData.isIntervention(result, THRESHOLD_PCT, THRESHOLD_ATTEMPTS);
+
+      if(!result || total === 0){
+        return `<td><div class="cell no-data" title="No data yet">–</div></td>`;
+      }
+      if(total < THRESHOLD_ATTEMPTS){
+        return `<td><div class="cell not-enough ${ac}" title="${total} attempt${total!==1?'s':''} (need ${THRESHOLD_ATTEMPTS}+)">${total}<br>att</div></td>`;
+      }
+
+      const timeStr = avgMs ? `Avg: ${(avgMs/1000).toFixed(1)}s` : '';
+      const tooltip = `${student.name} — ${col}\n${pct}% (${result.correct}/${total})${timeStr ? '\n'+timeStr : ''}${flagged ? '\n⚠️ Needs support' : ''}`;
+
+      return `<td>
+        <div class="cell ${ac} ${tc}" 
+             onmouseenter="showTip(event,'${tooltip.replace(/'/g,'&#39;').replace(/\n/g,'<br>')}')"
+             onmouseleave="hideTip()"
+             style="${flagged ? 'outline:3px solid var(--bad);outline-offset:-2px;' : ''}">
+          ${pct}%
+        </div>
+      </td>`;
+    }).join('');
+
+    return `<tr>
+      <td class="student-name">${student.name}</td>
+      ${cells}
+    </tr>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="panel"><div class="panelInner">
+      <div class="panelTitle">${titleMap[activity] || activity}</div>
+      ${legend}
+      <div class="heatmapWrap">
+        <table class="heatmap">
+          <thead>
+            <tr>
+              <th>Student</th>
+              ${headerCols}
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--muted);font-weight:700;">
+        ⚠️ Red outline = below ${THRESHOLD_PCT}% after ${THRESHOLD_ATTEMPTS}+ attempts · "att" = fewer than ${THRESHOLD_ATTEMPTS} attempts so far
+      </div>
+    </div></div>
+  `;
+}
+
+// ── Tooltip ──────────────────────────────────────────────────────
+function showTip(event, html){
+  const tip = document.getElementById('tooltip');
+  tip.innerHTML = html;
+  tip.style.display = 'block';
+  tip.style.left = (event.clientX + 12) + 'px';
+  tip.style.top  = (event.clientY - 8) + 'px';
+}
+function hideTip(){
+  document.getElementById('tooltip').style.display = 'none';
+}
+
+// ── Export ───────────────────────────────────────────────────────
+function exportData(){
+  if(!currentClass) return;
+  const csv = WordLabData.exportCSV(currentClass.id);
+  const blob = new Blob([csv], { type:'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${currentClass.name.replace(/\s+/g,'_')}_wordlab_data.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Boot ─────────────────────────────────────────────────────────
+populateClassSelect();
+</script>
+</body>
+</html>
