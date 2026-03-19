@@ -7,6 +7,31 @@ const WordLabData = (() => {
   const STORAGE_KEY = 'wordlab_data_v1';
   const SESSION_KEY = 'wordlab_session_v1';
 
+  const LEVEL_TITLES = ['Quark Cadet','Lab Apprentice','Lab Assistant','Junior Scientist','Morpheme Scientist','Word Chemist','Senior Researcher','Lead Scientist','Word Professor','Linguistic Expert','Etymology Scholar','Morpheme Master','Word Architect','Language Scientist','Quark Commander','Grand Researcher','Word Alchemist','Linguistic Professor','Grand Etymologist','Word Lab Legend'];
+  const LEVEL_XP = [0,100,250,500,900,1400,2000,2800,3800,5000,6500,8500,11000,14000,18000,23000,29000,36000,45000,55000];
+
+  const ALL_BADGES = [
+    {id:'first_correct',   label:'First Discovery',     icon:'⚗️',  desc:'Answer your first question correctly'},
+    {id:'streak_5',        label:'On a Roll',            icon:'🔥',  desc:'Reach a streak of 5'},
+    {id:'streak_10',       label:'Unstoppable',          icon:'⚡',  desc:'Reach a streak of 10'},
+    {id:'answered_50',     label:'Lab Regular',          icon:'🔬',  desc:'Answer 50 questions'},
+    {id:'answered_100',    label:'Century',              icon:'💯',  desc:'100 correct answers'},
+    {id:'answered_500',    label:'Word Scientist',       icon:'🧬',  desc:'500 correct answers'},
+    {id:'all_activities',  label:'Polymath',             icon:'🌟',  desc:'Play every activity'},
+    {id:'sessions_5',      label:'Dedicated Learner',    icon:'📅',  desc:'5 sessions'},
+    {id:'sessions_20',     label:'Word Lab Veteran',     icon:'🏆',  desc:'20 sessions'},
+    {id:'quarks_100',      label:'Quark Collector',      icon:'⚛️',  desc:'Earn 100 quarks'},
+    {id:'quarks_500',      label:'Quark Hoarder',        icon:'💎',  desc:'Earn 500 quarks'},
+    {id:'xp_level5',       label:'Rising Scientist',     icon:'📈',  desc:'Reach Level 5'},
+    {id:'xp_level10',      label:'Senior Researcher',    icon:'🎓',  desc:'Reach Level 10'},
+    {id:'perfect_session', label:'Flawless',             icon:'✨',  desc:'10 correct in a row'},
+  ];
+  const LEGENDARY_BADGES = [
+    {id:'legend_morpheme', label:'Morpheme Master',      icon:'👑',  desc:'1000 correct answers'},
+    {id:'legend_sessions', label:'Grand Etymologist',    icon:'🔱',  desc:'50 sessions'},
+    {id:'legend_polymath', label:'Word Lab Legend',      icon:'🌈',  desc:'Earn every other badge'},
+  ];
+
   // ── Storage ──────────────────────────────────────────────────
   function load() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { classes:{} }; }
@@ -59,12 +84,93 @@ const WordLabData = (() => {
   // ── Session ───────────────────────────────────────────────────
   function startSession(classId, studentId, studentName) {
     saveSession({ classId, studentId, studentName, started: Date.now() });
+    try {
+      const data = load();
+      const cls = data.classes[classId];
+      if (cls) {
+        const student = cls.students.find(s => s.id === studentId);
+        if (student) { ensureStudentFields(student); student.stats.sessions++; checkBadges(student); save(data); }
+      }
+    } catch(e) {}
   }
   function getSession() { return loadSession(); }
   function endSession() { try { sessionStorage.removeItem(SESSION_KEY); } catch {} }
 
-  // ── Recording ─────────────────────────────────────────────────
-  function recordAttempt(activity, category, correct, timeMs) {
+  // ── Student reward fields ─────────────────────────────────────
+  function ensureStudentFields(student) {
+    if (!student.quarks) student.quarks = 0;
+    if (!student.xp)     student.xp = 0;
+    if (!student.badges) student.badges = [];
+    if (!student.scientist) student.scientist = {
+      skinTone:'#FDBCB4', coatColor:'#ffffff', coatPattern:'plain',
+      head:null, face:null, background:'lab', owned:[]
+    };
+    if (!student.stats) student.stats = {
+      totalCorrect:0, totalAnswered:0, sessions:0, activitiesPlayed:[], bestStreak:0
+    };
+    if (typeof student.stats.bestStreak === 'undefined') student.stats.bestStreak = 0;
+  }
+
+  function getLevel(xp) {
+    xp = xp || 0;
+    let level = 1;
+    for (let i = 1; i < LEVEL_XP.length; i++) {
+      if (xp >= LEVEL_XP[i]) level = i + 1; else break;
+    }
+    const xpStart = LEVEL_XP[level - 1];
+    const xpNext  = level < 20 ? LEVEL_XP[level] : LEVEL_XP[19] + 10000;
+    const progress = Math.min(100, Math.round(((xp - xpStart) / (xpNext - xpStart)) * 100));
+    return { level, title: LEVEL_TITLES[level - 1], progress, xpToNext: Math.max(0, xpNext - xp) };
+  }
+
+  function checkBadges(student) {
+    const s = student.stats;
+    const earned = student.badges;
+    const lvl = getLevel(student.xp).level;
+    const newBadges = [];
+    const checks = [
+      {id:'first_correct',   ok: () => s.totalCorrect >= 1},
+      {id:'streak_5',        ok: () => (s.bestStreak||0) >= 5},
+      {id:'streak_10',       ok: () => (s.bestStreak||0) >= 10},
+      {id:'answered_50',     ok: () => s.totalAnswered >= 50},
+      {id:'answered_100',    ok: () => s.totalCorrect >= 100},
+      {id:'answered_500',    ok: () => s.totalCorrect >= 500},
+      {id:'all_activities',  ok: () => (s.activitiesPlayed||[]).length >= 6},
+      {id:'sessions_5',      ok: () => s.sessions >= 5},
+      {id:'sessions_20',     ok: () => s.sessions >= 20},
+      {id:'quarks_100',      ok: () => student.quarks >= 100},
+      {id:'quarks_500',      ok: () => student.quarks >= 500},
+      {id:'xp_level5',       ok: () => lvl >= 5},
+      {id:'xp_level10',      ok: () => lvl >= 10},
+      {id:'perfect_session', ok: () => (s.bestStreak||0) >= 10},
+      {id:'legend_morpheme', ok: () => s.totalCorrect >= 1000},
+      {id:'legend_sessions', ok: () => s.sessions >= 50},
+      {id:'legend_polymath', ok: () => ALL_BADGES.every(b => earned.includes(b.id))},
+    ];
+    checks.forEach(c => { if (!earned.includes(c.id) && c.ok()) { earned.push(c.id); newBadges.push(c.id); } });
+    return newBadges;
+  }
+
+  function getStudentData() {
+    const session = loadSession();
+    if (!session) return null;
+    const data = load();
+    const cls = data.classes[session.classId];
+    if (!cls) return null;
+    const student = cls.students.find(s => s.id === session.studentId);
+    if (!student) return null;
+    ensureStudentFields(student);
+    return { quarks: student.quarks, xp: student.xp, badges: student.badges,
+             scientist: student.scientist, stats: student.stats,
+             level: getLevel(student.xp), name: session.studentName };
+  }
+
+  function getScientist() {
+    const d = getStudentData();
+    return d ? d.scientist : null;
+  }
+
+  function saveScientist(updates) {
     const session = loadSession();
     if (!session) return;
     const data = load();
@@ -72,6 +178,38 @@ const WordLabData = (() => {
     if (!cls) return;
     const student = cls.students.find(s => s.id === session.studentId);
     if (!student) return;
+    ensureStudentFields(student);
+    Object.assign(student.scientist, updates);
+    save(data);
+  }
+
+  function purchase(itemId, cost) {
+    const session = loadSession();
+    if (!session) return { success:false, reason:'No session' };
+    const data = load();
+    const cls = data.classes[session.classId];
+    if (!cls) return { success:false, reason:'No class' };
+    const student = cls.students.find(s => s.id === session.studentId);
+    if (!student) return { success:false, reason:'No student' };
+    ensureStudentFields(student);
+    if (student.quarks < cost) return { success:false, reason:'Not enough quarks' };
+    student.quarks -= cost;
+    if (!student.scientist.owned.includes(itemId)) student.scientist.owned.push(itemId);
+    save(data);
+    return { success:true, quarks: student.quarks };
+  }
+
+  // ── Recording ─────────────────────────────────────────────────
+  function recordAttempt(activity, category, correct, timeMs, streak) {
+    streak = streak || 0;
+    const session = loadSession();
+    if (!session) return {};
+    const data = load();
+    const cls = data.classes[session.classId];
+    if (!cls) return {};
+    const student = cls.students.find(s => s.id === session.studentId);
+    if (!student) return {};
+    ensureStudentFields(student);
     if (!student.results[activity]) student.results[activity] = {};
     if (!student.results[activity][category])
       student.results[activity][category] = { correct:0, total:0, totalTime:0, attempts:[] };
@@ -81,7 +219,25 @@ const WordLabData = (() => {
     r.totalTime += (timeMs || 0);
     r.attempts.push({ correct, timeMs: timeMs||0, ts: Date.now() });
     if (r.attempts.length > 50) r.attempts = r.attempts.slice(-50);
+    student.stats.totalAnswered++;
+    if (correct) {
+      student.stats.totalCorrect++;
+      if (streak > (student.stats.bestStreak || 0)) student.stats.bestStreak = streak;
+    }
+    if (!student.stats.activitiesPlayed.includes(activity)) student.stats.activitiesPlayed.push(activity);
+    let quarksEarned = 0, xpEarned = 0;
+    if (correct) {
+      quarksEarned = 2;
+      if (streak >= 10) quarksEarned += 25;
+      else if (streak >= 5) quarksEarned += 10;
+      else if (streak >= 3) quarksEarned += 5;
+      student.quarks += quarksEarned;
+      xpEarned = 10 + (streak >= 3 ? 5 : 0);
+      student.xp += xpEarned;
+    }
+    const newBadges = checkBadges(student);
     save(data);
+    return { quarks: student.quarks, xp: student.xp, quarksEarned, xpEarned, newBadges, level: getLevel(student.xp) };
   }
 
   // ── Analytics ─────────────────────────────────────────────────
@@ -266,7 +422,9 @@ const WordLabData = (() => {
     getAccuracy, getAvgTime, isIntervention,
     exportCSV, initLoginUI,
     _loadStudents, _pick, _skip, _toggleAudio,
-    load, save
+    load, save,
+    getStudentData, getLevel, ALL_BADGES, LEGENDARY_BADGES,
+    getScientist, saveScientist, purchase
   };
 
 })();

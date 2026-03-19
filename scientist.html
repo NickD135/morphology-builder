@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Lab – My Scientist</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#f0f4f8; --panel:#fff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b;
+      --indigo:#4338ca; --indigo-2:#6366f1; --indigo-soft:#eef2ff; --indigo-line:#c7d2fe;
+      --green-soft:#f0fdf4; --green-line:#bbf7d0;
+      --amber-soft:#fffbeb; --amber-line:#fde68a; --amber-text:#78350f;
+      --ok:#15803d; --bad:#dc2626;
+    }
+    *{ box-sizing:border-box; margin:0; padding:0; }
+    body{ font-family:'Lexend',sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }
+    button,input,select{ font:inherit; }
+
+    /* Header */
+    .header{ position:sticky; top:0; z-index:50; background:rgba(255,255,255,.93); backdrop-filter:blur(12px); border-bottom:1px solid var(--line); box-shadow:0 1px 3px rgba(15,23,42,.05); }
+    .headerInner{ max-width:1100px; margin:0 auto; padding:14px 24px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .brand{ display:flex; align-items:center; gap:10px; text-decoration:none; }
+    .brandIcon{ width:44px; height:44px; border-radius:12px; background:var(--indigo); color:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow:0 8px 20px rgba(67,56,202,.22); }
+    .brandName{ font-size:20px; font-weight:900; color:#312e81; letter-spacing:-.02em; }
+    .brandSub{ font-size:9px; font-weight:900; text-transform:uppercase; letter-spacing:.25em; color:var(--indigo-2); display:block; }
+    .headerRight{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .topBtn{ border:none; background:#0f172a; color:#fff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:.1em; padding:10px 14px; border-radius:12px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; }
+    .topBtn:hover{ background:#000; }
+    #wlPillSlot{ display:inline-flex; align-items:center; }
+
+    /* Tabs */
+    .wrap{ max-width:1100px; margin:0 auto; padding:32px 24px; }
+    .tabRow{ display:flex; gap:8px; margin-bottom:28px; flex-wrap:wrap; }
+    .tabBtn{ border:2px solid var(--line); background:#fff; border-radius:14px; padding:10px 20px; font-weight:800; font-size:13px; cursor:pointer; color:var(--muted); transition:all .15s; font-family:'Lexend',sans-serif; }
+    .tabBtn.active{ background:var(--indigo); color:#fff; border-color:var(--indigo); }
+    .tabBtn:hover:not(.active){ border-color:#cbd5e1; color:var(--text); }
+    .tabPanel{ display:none; }
+    .tabPanel.active{ display:block; }
+
+    /* My Scientist tab */
+    .sciLayout{ display:grid; grid-template-columns:240px 1fr; gap:24px; }
+    @media(max-width:700px){ .sciLayout{ grid-template-columns:1fr; } }
+    .sciCard{ background:var(--panel); border:2px solid var(--line); border-radius:24px; padding:24px; display:flex; flex-direction:column; align-items:center; gap:16px; }
+    .sciSVGWrap{ width:180px; height:220px; }
+    .sciName{ font-size:20px; font-weight:900; color:#312e81; }
+    .sciTitle{ font-size:13px; font-weight:700; color:var(--indigo-2); }
+    .xpBar{ width:100%; }
+    .xpBarLabels{ display:flex; justify-content:space-between; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:4px; }
+    .xpBarTrack{ width:100%; height:10px; background:var(--line); border-radius:999px; overflow:hidden; }
+    .xpBarFill{ height:100%; background:linear-gradient(90deg,var(--indigo),var(--indigo-2)); border-radius:999px; transition:width .4s ease; }
+    .quarksDisplay{ display:flex; align-items:center; gap:8px; font-size:22px; font-weight:900; color:var(--indigo); }
+    .statsGrid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; }
+    .statBox{ background:var(--indigo-soft); border:1px solid var(--indigo-line); border-radius:14px; padding:10px; text-align:center; }
+    .statVal{ font-size:22px; font-weight:900; color:var(--indigo); }
+    .statLbl{ font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); }
+
+    /* Customise panel */
+    .customPanel{ background:var(--panel); border:2px solid var(--line); border-radius:24px; padding:24px; display:flex; flex-direction:column; gap:20px; }
+    .custSection{ }
+    .custLabel{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.18em; color:var(--indigo); margin-bottom:10px; }
+    .swatchRow{ display:flex; gap:8px; flex-wrap:wrap; }
+    .swatch{ width:32px; height:32px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:all .15s; }
+    .swatch.active{ border-color:var(--indigo); box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--indigo); }
+    .swatch.locked{ opacity:.35; cursor:not-allowed; }
+    .optRow{ display:flex; gap:8px; flex-wrap:wrap; }
+    .optPill{ border:2px solid var(--line); background:#fff; border-radius:12px; padding:7px 14px; font-size:12px; font-weight:800; cursor:pointer; color:var(--muted); transition:all .15s; font-family:'Lexend',sans-serif; }
+    .optPill.active{ background:var(--indigo); color:#fff; border-color:var(--indigo); }
+    .optPill:hover:not(.active):not(.locked){ border-color:#cbd5e1; color:var(--text); }
+    .optPill.locked{ opacity:.4; cursor:not-allowed; }
+
+    /* Badges tab */
+    .badgesGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; }
+    .badgeCard{ background:var(--panel); border:2px solid var(--line); border-radius:18px; padding:16px; text-align:center; }
+    .badgeCard.earned{ background:var(--indigo-soft); border-color:var(--indigo-line); }
+    .badgeCard.legendary{ background:var(--amber-soft); border-color:var(--amber-line); }
+    .badgeCard.legendary.earned{ background:#fffbeb; border-color:#f59e0b; }
+    .badgeIcon{ font-size:32px; margin-bottom:6px; }
+    .badgeName{ font-size:13px; font-weight:900; color:#312e81; margin-bottom:3px; }
+    .badgeDesc{ font-size:11px; color:var(--muted); font-weight:600; line-height:1.4; }
+    .badgeLocked{ opacity:.45; }
+    .badgeSectionTitle{ font-size:13px; font-weight:900; text-transform:uppercase; letter-spacing:.16em; color:var(--amber-text); margin:24px 0 12px; }
+
+    /* Shop tab */
+    .shopBalance{ background:var(--indigo-soft); border:2px solid var(--indigo-line); border-radius:18px; padding:16px 24px; display:flex; align-items:center; gap:12px; margin-bottom:24px; }
+    .shopBalanceAmt{ font-size:28px; font-weight:900; color:var(--indigo); }
+    .shopBalanceLbl{ font-size:13px; font-weight:700; color:var(--muted); }
+    .shopSection{ margin-bottom:28px; }
+    .shopSectionTitle{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.18em; color:var(--indigo); margin-bottom:12px; padding-bottom:8px; border-bottom:2px solid var(--line); }
+    .shopGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
+    .shopItem{ background:var(--panel); border:2px solid var(--line); border-radius:16px; padding:14px; text-align:center; display:flex; flex-direction:column; gap:6px; }
+    .shopItem.owned{ border-color:var(--indigo-line); background:var(--indigo-soft); }
+    .shopItem.locked{ opacity:.5; }
+    .shopItemIcon{ font-size:22px; }
+    .shopItemName{ font-size:12px; font-weight:800; color:#1e1b4b; }
+    .shopItemCost{ font-size:11px; font-weight:700; color:var(--muted); }
+    .shopBtn{ border:none; border-radius:10px; padding:7px 12px; font-size:11px; font-weight:900; cursor:pointer; font-family:'Lexend',sans-serif; transition:all .15s; }
+    .shopBtn.buy{ background:var(--indigo); color:#fff; }
+    .shopBtn.buy:hover{ background:#3730a3; }
+    .shopBtn.equip{ background:var(--green-soft); color:var(--ok); border:2px solid var(--green-line); }
+    .shopBtn.equipped{ background:var(--line); color:var(--muted); cursor:default; }
+    .shopBtn.cantafford{ background:var(--line); color:var(--muted); cursor:not-allowed; }
+
+    /* Login prompt */
+    .loginPrompt{ background:var(--panel); border:2px solid var(--line); border-radius:24px; padding:48px; text-align:center; max-width:480px; margin:80px auto; }
+    .loginPromptIcon{ font-size:48px; margin-bottom:12px; }
+    .loginPromptTitle{ font-size:22px; font-weight:900; color:#312e81; margin-bottom:8px; }
+    .loginPromptDesc{ font-size:14px; color:var(--muted); font-weight:600; margin-bottom:20px; }
+    .loginPromptBtn{ border:none; background:var(--indigo); color:#fff; font-weight:900; font-size:14px; padding:14px 28px; border-radius:16px; cursor:pointer; font-family:'Lexend',sans-serif; }
+  </style>
+</head>
+<body>
+<header class="header">
+  <div class="headerInner">
+    <a class="brand" href="landing.html">
+      <div class="brandIcon">🧪</div>
+      <div><span class="brandName">Word Lab</span><span class="brandSub">My Scientist</span></div>
+    </a>
+    <div class="headerRight">
+      <span id="wlPillSlot"></span>
+      <button id="wlLoginBtn" onclick="wlShowLogin()" style="border:2px solid #e2e8f0;background:#fff;border-radius:12px;padding:8px 14px;font-weight:800;font-size:12px;cursor:pointer;font-family:'Lexend',sans-serif;color:#334155;">👤 Log in</button>
+      <a href="landing.html" class="topBtn">🏠 Home</a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap" id="mainWrap">
+  <!-- Filled by JS -->
+</div>
+
+<script src="wordlab-data.js"></script>
+<script src="wordlab-scientist.js"></script>
+<script>
+// ── Shop catalogue ────────────────────────────────────────────
+const SHOP = {
+  coatColors: [
+    {id:'#ffffff',   name:'Classic White',    cost:0,   free:true},
+    {id:'#bfdbfe',   name:'Lab Blue',         cost:50},
+    {id:'#bbf7d0',   name:'Mint Green',       cost:50},
+    {id:'#ddd6fe',   name:'Lavender',         cost:50},
+    {id:'#fed7aa',   name:'Peach',            cost:50},
+    {id:'#fef08a',   name:'Sunshine Yellow',  cost:50},
+    {id:'#fecaca',   name:'Red Alert',        cost:80},
+    {id:'#1e1b4b',   name:'Midnight Black',   cost:150},
+    {id:'#fbbf24',   name:'Gold Rush',        cost:200},
+    {id:'rainbow',   name:'Rainbow Lab',      cost:500, legendary:true},
+  ],
+  coatPatterns: [
+    {id:'plain',     name:'Plain',      cost:0,   free:true},
+    {id:'stripes',   name:'Stripes',    cost:100},
+    {id:'molecules', name:'Molecules',  cost:150},
+    {id:'stars',     name:'Stars',      cost:120},
+  ],
+  headAccessories: [
+    {id:'none',        name:'None',           cost:0,  free:true,  icon:'❌'},
+    {id:'goggles_head',name:'Goggles',        cost:80,             icon:'🥽'},
+    {id:'grad_cap',    name:'Grad Cap',       cost:120,            icon:'🎓'},
+    {id:'top_hat',     name:'Top Hat',        cost:150,            icon:'🎩'},
+    {id:'hard_hat',    name:'Hard Hat',       cost:100,            icon:'⛑️'},
+    {id:'beanie',      name:'Beanie',         cost:80,             icon:'🧢'},
+    {id:'crown',       name:'Crown',          cost:0,  legendary:true, requiresBadge:'legend_morpheme', icon:'👑'},
+  ],
+  faceAccessories: [
+    {id:'none',           name:'None',          cost:0, free:true,  icon:'❌'},
+    {id:'glasses',        name:'Glasses',       cost:60,            icon:'👓'},
+    {id:'monocle',        name:'Monocle',       cost:100,           icon:'🧐'},
+    {id:'safety_goggles', name:'Safety Goggles',cost:80,            icon:'🥽'},
+    {id:'mask',           name:'Lab Mask',      cost:60,            icon:'😷'},
+  ],
+};
+const SKIN_TONES = ['#FDBCB4','#F1C27D','#E0AC69','#C68642','#8D5524','#FFCBA4'];
+
+// ── Render ────────────────────────────────────────────────────
+function render() {
+  const sd = (typeof WordLabData !== 'undefined') ? WordLabData.getStudentData() : null;
+  const wrap = document.getElementById('mainWrap');
+
+  if (!sd) {
+    wrap.innerHTML = `<div class="loginPrompt">
+      <div class="loginPromptIcon">🧪</div>
+      <div class="loginPromptTitle">Log in to see your scientist</div>
+      <div class="loginPromptDesc">Pick your class and name to access your personal scientist character, quarks, and badges.</div>
+      <button class="loginPromptBtn" onclick="wlShowLogin()">👤 Log in</button>
+    </div>`;
+    return;
+  }
+
+  const lvl  = sd.level;
+  const sci  = sd.scientist || {};
+  const owned = sci.owned || [];
+
+  wrap.innerHTML = `
+    <div class="tabRow">
+      <button class="tabBtn active" onclick="switchTab('scientist',this)">🧬 My Scientist</button>
+      <button class="tabBtn" onclick="switchTab('badges',this)">🏅 Badges</button>
+      <button class="tabBtn" onclick="switchTab('shop',this)">🛍️ Lab Shop</button>
+    </div>
+
+    <!-- TAB 1: My Scientist -->
+    <div id="tab-scientist" class="tabPanel active">
+      <div class="sciLayout">
+        <div class="sciCard">
+          <div class="sciSVGWrap" id="sciSVGBig">${WLScientist.buildSVG(sci,'neutral')}</div>
+          <div class="sciName">${sd.name}</div>
+          <div class="sciTitle">Level ${lvl.level} · ${lvl.title}</div>
+          <div class="xpBar">
+            <div class="xpBarLabels"><span>Lv ${lvl.level}</span><span>${lvl.xpToNext} XP to next</span></div>
+            <div class="xpBarTrack"><div class="xpBarFill" style="width:${lvl.progress}%"></div></div>
+          </div>
+          <div class="quarksDisplay">⚛️ ${sd.quarks} <span style="font-size:13px;color:var(--muted);font-weight:700;">quarks</span></div>
+          <div class="statsGrid">
+            <div class="statBox"><div class="statVal">${sd.stats.totalCorrect}</div><div class="statLbl">Correct</div></div>
+            <div class="statBox"><div class="statVal">${sd.stats.sessions}</div><div class="statLbl">Sessions</div></div>
+            <div class="statBox"><div class="statVal">${sd.badges.length}</div><div class="statLbl">Badges</div></div>
+            <div class="statBox"><div class="statVal">${sd.stats.activitiesPlayed.length}</div><div class="statLbl">Activities</div></div>
+          </div>
+        </div>
+
+        <div class="customPanel">
+          <div class="custSection">
+            <div class="custLabel">Skin Tone</div>
+            <div class="swatchRow">${SKIN_TONES.map(t=>`<div class="swatch${t===sci.skinTone?' active':''}" style="background:${t};" onclick="applyOption('skinTone','${t}')" title="${t}"></div>`).join('')}</div>
+          </div>
+          <div class="custSection">
+            <div class="custLabel">Coat Colour</div>
+            <div class="swatchRow">${SHOP.coatColors.map(c=>{
+              const isOwned = c.free || owned.includes(c.id) || c.id===sci.coatColor;
+              return `<div class="swatch${c.id===sci.coatColor?' active':''}${!isOwned?' locked':''}" style="background:${c.id==='rainbow'?'linear-gradient(135deg,#f87171,#fb923c,#facc15,#4ade80,#60a5fa,#a78bfa)':c.id};" onclick="${isOwned?`applyOption('coatColor','${c.id}')`:'void(0)'}" title="${c.name}${!isOwned?' (buy in shop)':''}"></div>`;
+            }).join('')}</div>
+          </div>
+          <div class="custSection">
+            <div class="custLabel">Coat Pattern</div>
+            <div class="optRow">${SHOP.coatPatterns.map(p=>{
+              const isOwned = p.free || owned.includes(p.id);
+              return `<button class="optPill${p.id===sci.coatPattern?' active':''}${!isOwned?' locked':''}" onclick="${isOwned?`applyOption('coatPattern','${p.id}')`:'void(0)'}">${p.name}</button>`;
+            }).join('')}</div>
+          </div>
+          <div class="custSection">
+            <div class="custLabel">Head Accessory</div>
+            <div class="optRow">${SHOP.headAccessories.map(a=>{
+              const cur = sci.head||'none';
+              const isOwned = a.free || owned.includes(a.id);
+              return `<button class="optPill${a.id===cur?' active':''}${!isOwned?' locked':''}" onclick="${isOwned?`applyOption('head',${a.id==='none'?'null':"'"+a.id+"'"})`:'void(0)'}">${a.icon} ${a.name}</button>`;
+            }).join('')}</div>
+          </div>
+          <div class="custSection">
+            <div class="custLabel">Face Accessory</div>
+            <div class="optRow">${SHOP.faceAccessories.map(a=>{
+              const cur = sci.face||'none';
+              const isOwned = a.free || owned.includes(a.id);
+              return `<button class="optPill${a.id===cur?' active':''}${!isOwned?' locked':''}" onclick="${isOwned?`applyOption('face',${a.id==='none'?'null':"'"+a.id+"'"})`:'void(0)'}">${a.icon} ${a.name}</button>`;
+            }).join('')}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Badges -->
+    <div id="tab-badges" class="tabPanel">
+      <div class="badgesGrid">
+        ${WordLabData.ALL_BADGES.map(b=>{
+          const earned = sd.badges.includes(b.id);
+          return `<div class="badgeCard${earned?' earned':' badgeLocked'}">
+            <div class="badgeIcon">${b.icon}</div>
+            <div class="badgeName">${b.label}</div>
+            <div class="badgeDesc">${b.desc}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="badgeSectionTitle">⭐ Legendary Badges</div>
+      <div class="badgesGrid">
+        ${WordLabData.LEGENDARY_BADGES.map(b=>{
+          const earned = sd.badges.includes(b.id);
+          return `<div class="badgeCard legendary${earned?' earned':' badgeLocked'}">
+            <div class="badgeIcon">${b.icon}</div>
+            <div class="badgeName">${b.label}</div>
+            <div class="badgeDesc">${b.desc}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- TAB 3: Shop -->
+    <div id="tab-shop" class="tabPanel">
+      <div class="shopBalance">
+        <span style="font-size:28px;">⚛️</span>
+        <div><div class="shopBalanceAmt">${sd.quarks}</div><div class="shopBalanceLbl">quarks available</div></div>
+      </div>
+      ${renderShopSection('Coat Colours',       SHOP.coatColors,      'coatColor',    sd)}
+      ${renderShopSection('Coat Patterns',      SHOP.coatPatterns,    'coatPattern',  sd)}
+      ${renderShopSection('Head Accessories',   SHOP.headAccessories, 'head',         sd)}
+      ${renderShopSection('Face Accessories',   SHOP.faceAccessories, 'face',         sd)}
+    </div>
+  `;
+}
+
+function renderShopSection(title, items, field, sd) {
+  const sci   = sd.scientist || {};
+  const owned = sci.owned || [];
+  const curVal = field==='head' ? (sci.head||null) : field==='face' ? (sci.face||null) : sci[field];
+  return `<div class="shopSection">
+    <div class="shopSectionTitle">${title}</div>
+    <div class="shopGrid">${items.map(item => {
+      const isOwned   = item.free || owned.includes(item.id) || item.id === '#ffffff' || item.id === 'plain' || item.id === 'none';
+      const isEquipped= item.id === curVal || (item.id==='none' && !curVal);
+      const canAfford = sd.quarks >= item.cost;
+      const reqBadge  = item.requiresBadge;
+      const hasReqBadge = !reqBadge || sd.badges.includes(reqBadge);
+      const allBadges = [...(WordLabData.ALL_BADGES||[]), ...(WordLabData.LEGENDARY_BADGES||[])];
+      const reqBadgeLabel = reqBadge ? (allBadges.find(b=>b.id===reqBadge)||{}).label : '';
+      let btn = '';
+      if (isEquipped) {
+        btn = `<span class="shopBtn equipped">✓ Equipped</span>`;
+      } else if (isOwned) {
+        btn = `<button class="shopBtn equip" onclick="shopEquip('${field}','${item.id}')">Equip</button>`;
+      } else if (!hasReqBadge) {
+        btn = `<span class="shopBtn cantafford">🔒 Requires: ${reqBadgeLabel}</span>`;
+      } else if (canAfford) {
+        btn = `<button class="shopBtn buy" onclick="shopBuy('${item.id}',${item.cost},'${field}')">⚛️ ${item.cost}</button>`;
+      } else {
+        btn = `<span class="shopBtn cantafford">Need ${item.cost - sd.quarks} more ⚛️</span>`;
+      }
+      const preview = item.id.startsWith('#') ? `<div class="shopItemIcon" style="width:24px;height:24px;border-radius:50%;background:${item.id};border:2px solid var(--line);margin:0 auto;"></div>` : `<div class="shopItemIcon">${item.icon||'🎨'}</div>`;
+      return `<div class="shopItem${isOwned?' owned':''}${item.legendary?' legendary':''}">
+        ${preview}
+        <div class="shopItemName">${item.name}</div>
+        <div class="shopItemCost">${item.free?'Free':item.legendary?'Legendary':'⚛️ '+item.cost}</div>
+        ${btn}
+      </div>`;
+    }).join('')}</div>
+  </div>`;
+}
+
+function switchTab(id, btn) {
+  document.querySelectorAll('.tabPanel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tabBtn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+function applyOption(field, value) {
+  const updates = {};
+  updates[field] = value === 'null' ? null : value;
+  WordLabData.saveScientist(updates);
+  document.getElementById('sciSVGBig').innerHTML = WLScientist.buildSVG(WordLabData.getScientist(), 'neutral');
+  render(); // re-render to update active states
+}
+
+function shopBuy(itemId, cost, field) {
+  const result = WordLabData.purchase(itemId, cost);
+  if (!result.success) { alert('Not enough quarks!'); return; }
+  // Auto-equip
+  const updates = {};
+  updates[field] = itemId;
+  if (field==='head'||field==='face') updates[field] = itemId==='none'?null:itemId;
+  WordLabData.saveScientist(updates);
+  render();
+}
+
+function shopEquip(field, itemId) {
+  const updates = {};
+  updates[field] = (itemId==='none' || itemId==='null') ? null : itemId;
+  WordLabData.saveScientist(updates);
+  render();
+}
+
+// ── Init ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof WordLabData === 'undefined') return;
+  WordLabData.initLoginUI({ accentColor:'#4338ca', accentSoft:'#eef2ff', accentLine:'#c7d2fe', accentText:'#312e81' });
+  var session = WordLabData.getSession();
+  var btn = document.getElementById('wlLoginBtn');
+  if (btn) {
+    btn.onclick = function() { wlShowLogin(); };
+    if (session) btn.style.display = 'none';
+  }
+  render();
+  // Re-render on login
+  const origPick = WordLabData._pick.bind(WordLabData);
+  WordLabData._pick = function(sid, sname, cid) { origPick(sid, sname, cid); render(); };
+});
+</script>
+</body>
+</html>
