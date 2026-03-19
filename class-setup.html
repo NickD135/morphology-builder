@@ -225,8 +225,9 @@
       if (e && e.code === 'CLASS_CODE_TAKEN') {
         showCreateError('❌ That class code is already in use. Please choose a different one.');
       } else {
-        showCreateError('❌ Error creating class. Please try again.');
-        console.error(e);
+        const detail = (e && (e.message || (e.error_description) || JSON.stringify(e))) || 'Unknown error';
+        showCreateError('❌ Error creating class: ' + detail);
+        console.error('createClass error:', e);
       }
     }
   }
@@ -235,7 +236,14 @@
   async function renderClasses(){
     const container = document.getElementById('classList');
     container.innerHTML = '<div class="emptyState">Loading...</div>';
-    const classes = await WordLabData.getClasses();
+    let classes;
+    try {
+      classes = await WordLabData.getClasses();
+    } catch(e) {
+      const detail = (e && (e.message || JSON.stringify(e))) || 'Unknown error';
+      container.innerHTML = `<div class="emptyState" style="color:#dc2626;">Error loading classes: ${detail}</div>`;
+      return;
+    }
 
     if(!classes.length){
       container.innerHTML = '<div class="emptyState">No classes yet. Create one using the Create tab.</div>';
@@ -300,8 +308,14 @@
 
   async function deleteClass(classId, name){
     if(!confirm(`Delete class "${name}"? All student data will be lost.`)) return;
-    await WordLabData.deleteClass(classId);
-    await renderClasses();
+    try {
+      await WordLabData.deleteClass(classId);
+      await renderClasses();
+    } catch(e) {
+      const detail = (e && (e.message || JSON.stringify(e))) || 'Unknown error';
+      alert('Error deleting class: ' + detail);
+      console.error('deleteClass error:', e);
+    }
   }
 
   async function regenerateCode(classId, studentId) {
