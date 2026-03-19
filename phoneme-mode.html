@@ -168,6 +168,19 @@
     .hidden{ display:none !important; }
     @keyframes shake{ 0%,100%{ transform:translateX(0); } 20%{ transform:translateX(-6px); } 40%{ transform:translateX(6px); } 60%{ transform:translateX(-4px); } 80%{ transform:translateX(4px); } }
     .shake{ animation:shake .4s ease-out; }
+
+    .loginOverlay{ position:fixed; inset:0; background:rgba(15,23,42,.6); z-index:100; display:flex; align-items:center; justify-content:center; }
+    .loginOverlay.hidden{ display:none; }
+    .loginBox{ background:#fff; border-radius:28px; padding:32px; max-width:440px; width:90%; box-shadow:0 40px 80px rgba(15,23,42,.2); text-align:center; }
+    .loginBoxIcon{ font-size:40px; margin-bottom:12px; }
+    .loginBoxTitle{ font-size:22px; font-weight:900; color:#312e81; margin:0 0 6px; }
+    .loginBoxSub{ color:var(--muted); font-size:14px; font-weight:700; margin-bottom:20px; }
+    .studentPickList{ display:flex; flex-direction:column; gap:8px; max-height:280px; overflow-y:auto; margin-bottom:16px; }
+    .studentPickBtn{ border:2px solid var(--line); background:#fff; border-radius:14px; padding:12px 16px; font-weight:800; font-size:14px; cursor:pointer; color:#312e81; text-align:left; transition:all .15s; }
+    .studentPickBtn:hover{ border-color:var(--indigo-2); background:var(--indigo-soft); color:var(--indigo); }
+    .classPickSelect{ width:100%; border:2px solid var(--line); border-radius:14px; padding:12px 14px; font-size:14px; outline:none; margin-bottom:12px; font-family:inherit; font-weight:700; }
+    .sessionPill{ background:var(--indigo-soft); border:1px solid #c7d2fe; border-radius:999px; padding:6px 14px; font-size:12px; font-weight:800; color:var(--indigo); cursor:pointer; }
+    .skipLoginBtn{ border:none; background:none; color:var(--muted); font-size:12px; font-weight:700; cursor:pointer; text-decoration:underline; margin-top:8px; }
   </style>
 </head>
 <body>
@@ -184,6 +197,7 @@
     <div class="hud">
       <span class="pill score" id="scoreDisplay">Score: 0</span>
       <span class="pill streak" id="streakDisplay">🔥 0 streak</span>
+      <span class="sessionPill" id="sessionPill" onclick="showLoginOverlay()" style="display:none;"></span>
       <a href="index.html" class="topBtn">← Builder</a>
     </div>
   </div>
@@ -555,6 +569,7 @@ function checkAnswer(){
     banner.innerHTML = `✅ Perfect! <b>${currentWord.word}</b> → ${correctStr} (${correct.length} phonemes)${streak>=3?` <span style="color:var(--orange-text)">🔥 +5 streak bonus!</span>`:''}`;
   } else {
     score = Math.max(0, score-2); streak = 0; wrongCount++;
+    wlRecord(currentWord.diff, false);
     banner.className = 'feedbackBanner wrong';
     banner.innerHTML = `❌ Not quite. Answer: <b>${correctStr}</b> (${correct.length} phonemes)<br><span style="font-size:13px;font-weight:700;color:#64748b;">You had: ${userStr}</span>`;
     document.getElementById('chopContainer').classList.add('shake');
@@ -607,6 +622,64 @@ function startGame(){
   document.getElementById('gameScreen').classList.remove('hidden');
   loadWord();
 }
+</script>
+
+<div class="loginOverlay" id="loginOverlay">
+  <div class="loginBox">
+    <div class="loginBoxIcon">👋</div>
+    <div class="loginBoxTitle">Who are you?</div>
+    <div class="loginBoxSub">Select your class, then tap your name.</div>
+    <select class="classPickSelect" id="classPickSelect" onchange="loadStudentList()">
+      <option value="">Select class...</option>
+    </select>
+    <div class="studentPickList" id="studentPickList"></div>
+    <button class="skipLoginBtn" onclick="skipLogin()">Skip — play without saving results</button>
+  </div>
+</div>
+<script src="wordlab-data.js">
+// ── Student login + tracking ──────────────────────────────────────
+function showLoginOverlay(){
+  const sel = document.getElementById('classPickSelect');
+  const classes = (typeof WordLabData !== 'undefined') ? WordLabData.getClasses() : [];
+  sel.innerHTML = '<option value="">Select class...</option>' +
+    classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  document.getElementById('loginOverlay').classList.remove('hidden');
+}
+function loadStudentList(){
+  const classId = document.getElementById('classPickSelect').value;
+  const list = document.getElementById('studentPickList');
+  if(!classId){ list.innerHTML=''; return; }
+  const cls = WordLabData.getClass(classId);
+  if(!cls){ list.innerHTML=''; return; }
+  list.innerHTML = cls.students.map(s =>
+    `<button class="studentPickBtn" onclick="selectStudent('${s.id}','${s.name.replace(/'/g,'&#39;')}')">${s.name}</button>`
+  ).join('');
+  // store classId for selectStudent
+  list.dataset.classId = classId;
+}
+function selectStudent(studentId, studentName){
+  const classId = document.getElementById('studentPickList').dataset.classId;
+  if(typeof WordLabData !== 'undefined') WordLabData.startSession(classId, studentId, studentName);
+  document.getElementById('loginOverlay').classList.add('hidden');
+  const pill = document.getElementById('sessionPill');
+  pill.textContent = '👤 ' + studentName;
+  pill.style.display = 'inline-flex';
+}
+function skipLogin(){ document.getElementById('loginOverlay').classList.add('hidden'); }
+function wlRecord(category, isCorrect){
+  if(typeof WordLabData !== 'undefined' && WordLabData.getSession()){
+    WordLabData.recordAttempt('phoneme-splitter', category, isCorrect, 0);
+  }
+}
+window.addEventListener('DOMContentLoaded', () => {
+  const session = (typeof WordLabData !== 'undefined') ? WordLabData.getSession() : null;
+  if(session){
+    const pill = document.getElementById('sessionPill');
+    pill.textContent = '👤 ' + session.studentName;
+    pill.style.display = 'inline-flex';
+  } else { showLoginOverlay(); }
+});
+
 </script>
 </body>
 </html>
