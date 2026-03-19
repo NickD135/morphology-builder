@@ -376,6 +376,8 @@ function setDiff(d){
   currentDiff = d;
   document.querySelectorAll('.diffBtn').forEach(b => b.classList.toggle('active', b.dataset.diff === d));
   usedWords.clear();
+  checked = false;
+  loadWord();
 }
 
 function getPool(){
@@ -386,6 +388,7 @@ function getPool(){
 
 function loadWord(){
   const pool = getPool();
+  if(!pool || pool.length === 0) return;
   currentWord = pool[Math.floor(Math.random() * pool.length)];
   usedWords.add(currentWord.word);
   checked = false;
@@ -428,9 +431,14 @@ function splitUnit(i, pos){
 }
 
 function resetWord(){
+  checked = false;
   units  = currentWord.word.split("");
   splits = new Array(units.length - 1).fill(false);
-  render(); updatePreview();
+  render();
+  updatePreview();
+  hideFeedback();
+  document.getElementById('checkBtn').disabled = false;
+  document.getElementById('nextBtn').classList.remove('visible');
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -562,7 +570,13 @@ function checkAnswer(){
     banner.className = 'feedbackBanner wrong';
     banner.innerHTML = `❌ Not quite. Answer: <b>${correctStr}</b> (${correct.length} phonemes)<br><span style="font-size:13px;font-weight:700;color:#64748b;">You had: ${userStr}</span>`;
     document.getElementById('chopContainer').classList.add('shake');
-    setTimeout(() => document.getElementById('chopContainer').classList.remove('shake'), 400);
+    setTimeout(() => {
+      document.getElementById('chopContainer').classList.remove('shake');
+      // Show the correct answer on the word by rebuilding units/splits from correct phonemes
+      units  = currentWord.phonemes.slice();
+      splits = new Array(units.length - 1).fill(true); // split between every phoneme
+      render();
+    }, 400);
   }
 
   banner.style.display = 'block';
@@ -613,18 +627,6 @@ function startGame(){
 }
 </script>
 
-<div class="loginOverlay" id="loginOverlay">
-  <div class="loginBox">
-    <div class="loginBoxIcon">👋</div>
-    <div class="loginBoxTitle">Who are you?</div>
-    <div class="loginBoxSub">Select your class, then tap your name.</div>
-    <select class="classPickSelect" id="classPickSelect" onchange="loadStudentList()">
-      <option value="">Select class...</option>
-    </select>
-    <div class="studentPickList" id="studentPickList"></div>
-    <button class="skipLoginBtn" onclick="skipLogin()">Skip — play without saving results</button>
-  </div>
-</div>
 <script src="wordlab-data.js"></script>
 <script>
 
