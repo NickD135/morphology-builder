@@ -1136,7 +1136,7 @@
         <span class="pill" id="dictPill">Word checker: loading...</span>
         <div class="loadingBar active" id="loadingBar"><div class="loadingBarFill"></div></div>
         <span id="wlPillSlot" style="display:inline-flex;align-items:center;"></span>
-        <button type="button" class="topButton" onclick="wlShowOverlay()" title="Log in or switch student" style="background:var(--indigo-2);">👤 Log in</button>
+        <button type="button" class="topButton" id="wlLoginBtn" title="Log in or switch student" style="background:var(--indigo-2);">👤 Log in</button>
         <button id="clearBtn" class="topButton" type="button">Clear builder</button>
 
         <div class="modeButtons">
@@ -2781,33 +2781,34 @@ document.addEventListener("DOMContentLoaded", () => {
   </script>
 <script src="wordlab-data.js"></script>
 <script>
-// ── Word Lab login (index) ────────────────────────────────────────
-// Define wlShowOverlay as a global immediately so the button always works,
-// even before initLoginUI has run and injected the overlay into the DOM.
-window.wlShowOverlay = function() {
-  var overlay = document.getElementById('wlOverlay');
-  if (overlay) {
-    overlay.classList.remove('wl-hidden');
-  }
-};
+// ── Word Lab login ────────────────────────────────────────────────
+// initLoginUI runs synchronously — it injects the overlay into the DOM
+// immediately so the login button can always find and show it.
+(function() {
+  if (typeof WordLabData === 'undefined') return;
 
-document.addEventListener('DOMContentLoaded', function() {
-  if (typeof WordLabData !== 'undefined') {
-    WordLabData.initLoginUI({
-      accentColor: '#4338ca',
-      accentSoft:  '#eef2ff',
-      accentLine:  '#c7d2fe',
-      accentText:  '#312e81'
-    });
-    // After initLoginUI has run and created the overlay,
-    // update the button label if a session is already active
+  // Build overlay now (synchronous, before DOMContentLoaded)
+  WordLabData.initLoginUI({
+    accentColor: '#4338ca',
+    accentSoft:  '#eef2ff',
+    accentLine:  '#c7d2fe',
+    accentText:  '#312e81'
+  });
+
+  // Wire up the login button once the DOM is ready
+  document.addEventListener('DOMContentLoaded', function() {
+    var btn = document.getElementById('wlLoginBtn');
+    if (!btn) return;
+
     var session = WordLabData.getSession();
-    if (session) {
-      var btn = document.querySelector('[onclick="wlShowOverlay()"]');
-      if (btn) btn.textContent = '👤 ' + session.studentName;
-    }
-  }
-});
+    if (session) btn.textContent = '👤 ' + session.studentName;
+
+    btn.addEventListener('click', function() {
+      var overlay = document.getElementById('wlOverlay');
+      if (overlay) overlay.classList.remove('wl-hidden');
+    });
+  });
+})();
 </script>
 </body>
 </html>
