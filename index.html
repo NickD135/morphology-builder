@@ -62,6 +62,7 @@
       background:var(--bg);
       border-bottom:1px solid var(--line);
       box-shadow:0 1px 2px rgba(15,23,42,.05);
+      overflow:visible;
     }
 
     .headerInner{
@@ -1134,9 +1135,9 @@
         </div>
 
         <span class="pill" id="dictPill">Word checker: loading...</span>
-        <div class="loadingBar active" id="loadingBar"><div class="loadingBarFill"></div></div>
+        <div class="loadingBar active" id="loadingBar" style="position:absolute;bottom:-3px;left:0;right:0;border-radius:0;"><div class="loadingBarFill"></div></div>
         <span id="wlPillSlot" style="display:inline-flex;align-items:center;"></span>
-        <button type="button" class="topButton" id="wlLoginBtn" title="Log in or switch student" style="background:var(--indigo-2);">👤 Log in</button>
+        <button type="button" class="topButton" id="wlLoginBtn" style="background:var(--indigo-2);">👤 Log in</button>
         <button id="clearBtn" class="topButton" type="button">Clear builder</button>
 
         <div class="modeButtons">
@@ -2782,12 +2783,10 @@ document.addEventListener("DOMContentLoaded", () => {
 <script src="wordlab-data.js"></script>
 <script>
 // ── Word Lab login ────────────────────────────────────────────────
-// initLoginUI runs synchronously — it injects the overlay into the DOM
-// immediately so the login button can always find and show it.
-(function() {
+document.addEventListener('DOMContentLoaded', function() {
   if (typeof WordLabData === 'undefined') return;
 
-  // Build overlay now (synchronous, before DOMContentLoaded)
+  // Build the overlay
   WordLabData.initLoginUI({
     accentColor: '#4338ca',
     accentSoft:  '#eef2ff',
@@ -2795,20 +2794,19 @@ document.addEventListener("DOMContentLoaded", () => {
     accentText:  '#312e81'
   });
 
-  // Wire up the login button once the DOM is ready
-  document.addEventListener('DOMContentLoaded', function() {
-    var btn = document.getElementById('wlLoginBtn');
-    if (!btn) return;
+  // Update button label if already logged in
+  var session = WordLabData.getSession();
+  var btn = document.getElementById('wlLoginBtn');
+  if (btn && session) btn.textContent = '👤 ' + session.studentName;
 
-    var session = WordLabData.getSession();
-    if (session) btn.textContent = '👤 ' + session.studentName;
-
+  // Wire the button — guaranteed to work because overlay now exists
+  if (btn) {
     btn.addEventListener('click', function() {
       var overlay = document.getElementById('wlOverlay');
       if (overlay) overlay.classList.remove('wl-hidden');
     });
-  });
-})();
+  }
+});
 </script>
 </body>
 </html>
