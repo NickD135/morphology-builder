@@ -104,7 +104,9 @@
     <div class="hud">
       <span class="pill streak" id="streakPill">🔥 Streak: 0</span>
       <span class="pill score" id="scorePill">0 XP</span>
-      <a href="index.html" class="topBtn">← Builder</a>
+      <span id="wlPillSlot"></span>
+      <button id="wlLoginBtn" onclick="wlShowLogin()" style="border:2px solid #e2e8f0;background:#fff;border-radius:12px;padding:8px 14px;font-weight:800;font-size:12px;cursor:pointer;font-family:'Lexend',sans-serif;color:#334155;">👤 Log in</button>
+      <a href="landing.html" class="topBtn">🏠 Home</a>
     </div>
   </div>
 </header>
@@ -178,7 +180,7 @@
   function loadQuestion(){if(fuel<=0)return;currentQuestion=MISSIONS[Math.floor(Math.random()*MISSIONS.length)];targetWordEl.textContent=currentQuestion.word.toUpperCase();targetHintEl.textContent=`Hint: ${currentQuestion.clue}`;feedbackEl.textContent="";feedbackEl.className="feedback";subFeedbackEl.textContent="";revealEl.classList.remove("show");revealRowEl.innerHTML="";clearBoxes();setLocked(false);writeLog([`[${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}] New target loaded...`,`[SCAN] Target word: ${currentQuestion.word.toUpperCase()}`,`[SCAN] Awaiting decomposition...`]);baseInput.focus();}
   function buildReveal(){revealRowEl.innerHTML="";[{key:"prefix",type:"prefix"},{key:"base",type:"base"},{key:"suffix1",type:"suffix"},{key:"suffix2",type:"suffix"}].forEach(part=>{const value=currentQuestion.answers[part.key];if(!value)return;const chip=document.createElement("span");chip.className=`revealChip ${part.type}`;chip.textContent=value;revealRowEl.appendChild(chip);});}
   function checkSingleBox(key){const expected=normalise(currentQuestion.answers[key]);const actual=normalise(boxMap[key].input.value);if(actual===expected){boxMap[key].card.className=boxMap[key].card.className.replace(/correct|wrong|neutral/g,"correct").trim();boxMap[key].status.className="boxStatus ok";boxMap[key].status.textContent="✓ Correct";return true;}boxMap[key].card.className=boxMap[key].card.className.replace(/correct|wrong|neutral/g,"wrong").trim();boxMap[key].status.className="boxStatus bad";boxMap[key].status.textContent=expected===""?"Should be blank":"Needs fixing";return false;}
-  function checkAnswer(){if(locked||fuel<=0||!currentQuestion)return;const actualBase=normalise(baseInput.value);if(!actualBase){feedbackEl.textContent="Base required";feedbackEl.className="feedback bad";subFeedbackEl.textContent="The base word box must be filled in.";boxMap.base.card.className=boxMap.base.card.className.replace(/correct|wrong|neutral/g,"wrong").trim();boxMap.base.status.className="boxStatus bad";boxMap.base.status.textContent="Base is required";return;}const pOk=checkSingleBox("prefix"),bOk=checkSingleBox("base"),s1Ok=checkSingleBox("suffix1"),s2Ok=checkSingleBox("suffix2");const allOk=pOk&&bOk&&s1Ok&&s2Ok;const count=[pOk,bOk,s1Ok,s2Ok].filter(Boolean).length;if(allOk){score+=80+(streak*10);streak++;fuel=Math.min(fuel+8,100);feedbackEl.textContent="✅ Perfect breakdown!";feedbackEl.className="feedback ok";subFeedbackEl.textContent="All boxes correct.";gameCardEl.classList.add("pulse");writeLog([`[${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}] Breakdown successful.`,`[MATCH] ${currentQuestion.word.toUpperCase()} correctly decomposed.`]);updateHud();setLocked(true);setTimeout(()=>{gameCardEl.classList.remove("pulse");loadQuestion();},1400);return;}streak=0;fuel=Math.max(fuel-10,0);updateHud();feedbackEl.textContent=count>=2?"Almost there!":"Not quite";feedbackEl.className=count>=2?"feedback warn":"feedback bad";subFeedbackEl.textContent=`${count} of 4 boxes are correct.`;revealEl.classList.add("show");buildReveal();gameCardEl.classList.add("shake");writeLog([`[${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}] Mismatch detected.`,`[SCAN] ${count} / 4 boxes correct.`,`[CORRECT] Answer revealed.`]);setLocked(true);setTimeout(()=>gameCardEl.classList.remove("shake"),500);if(fuel<=0){setTimeout(endGame,1200);}}
+  function checkAnswer(){if(locked||fuel<=0||!currentQuestion)return;const actualBase=normalise(baseInput.value);if(!actualBase){feedbackEl.textContent="Base required";feedbackEl.className="feedback bad";subFeedbackEl.textContent="The base word box must be filled in.";boxMap.base.card.className=boxMap.base.card.className.replace(/correct|wrong|neutral/g,"wrong").trim();boxMap.base.status.className="boxStatus bad";boxMap.base.status.textContent="Base is required";return;}const pOk=checkSingleBox("prefix"),bOk=checkSingleBox("base"),s1Ok=checkSingleBox("suffix1"),s2Ok=checkSingleBox("suffix2");const allOk=pOk&&bOk&&s1Ok&&s2Ok;const count=[pOk,bOk,s1Ok,s2Ok].filter(Boolean).length;if(allOk){score+=80+(streak*10);streak++;fuel=Math.min(fuel+8,100);if(typeof WordLabData!=="undefined"&&WordLabData.getSession()){WordLabData.recordAttempt("breakdown-blitz",currentQuestion.word,true,0);}feedbackEl.textContent="✅ Perfect breakdown!";feedbackEl.className="feedback ok";subFeedbackEl.textContent="All boxes correct.";gameCardEl.classList.add("pulse");writeLog([`[${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}] Breakdown successful.`,`[MATCH] ${currentQuestion.word.toUpperCase()} correctly decomposed.`]);updateHud();setLocked(true);setTimeout(()=>{gameCardEl.classList.remove("pulse");loadQuestion();},1400);return;}streak=0;fuel=Math.max(fuel-10,0);if(typeof WordLabData!=="undefined"&&WordLabData.getSession()){WordLabData.recordAttempt("breakdown-blitz",currentQuestion.word,false,0);}updateHud();feedbackEl.textContent=count>=2?"Almost there!":"Not quite";feedbackEl.className=count>=2?"feedback warn":"feedback bad";subFeedbackEl.textContent=`${count} of 4 boxes are correct.`;revealEl.classList.add("show");buildReveal();gameCardEl.classList.add("shake");writeLog([`[${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}] Mismatch detected.`,`[SCAN] ${count} / 4 boxes correct.`,`[CORRECT] Answer revealed.`]);setLocked(true);setTimeout(()=>gameCardEl.classList.remove("shake"),500);if(fuel<=0){setTimeout(endGame,1200);}}
   function startFuelDrain(){clearInterval(fuelInterval);fuelInterval=setInterval(()=>{fuel-=.18;if(fuel<=0){fuel=0;updateHud();endGame();clearInterval(fuelInterval);return;}updateHud();},220);}
   function endGame(){setLocked(true);feedbackEl.textContent="Mission over";feedbackEl.className="feedback bad";subFeedbackEl.textContent=`Final score: ${score} XP`;writeLog([`[${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}] Fuel depleted.`,`[RESULT] Final score: ${score} XP`]);}
   document.getElementById("checkBtn").addEventListener("click",checkAnswer);
@@ -187,5 +189,24 @@
   [prefixInput,baseInput,suffix1Input,suffix2Input].forEach(input=>{input.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();checkAnswer();}});});
   updateHud();startFuelDrain();loadQuestion();
 </script>
+<script src="wordlab-data.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof WordLabData === 'undefined') return;
+  WordLabData.initLoginUI({
+    accentColor: '#4338ca',
+    accentSoft:  '#eef2ff',
+    accentLine:  '#c7d2fe',
+    accentText:  '#312e81'
+  });
+  var session = WordLabData.getSession();
+  var btn = document.getElementById('wlLoginBtn');
+  if (btn) {
+    if (session) btn.textContent = '👤 ' + session.studentName;
+  }
+});
+</script>
+
 </body>
 </html>
