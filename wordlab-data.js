@@ -189,12 +189,44 @@ const WordLabData = (() => {
     _updatePill(session ? session.studentName : null);
   }
 
+  var AUDIO_PREF_KEY = 'wordlab_sound_v1';
+
+  function _isAudioOn() {
+    try { return localStorage.getItem(AUDIO_PREF_KEY) === 'on'; } catch { return false; }
+  }
+
+  function _toggleAudio() {
+    var newVal = !_isAudioOn();
+    try { localStorage.setItem(AUDIO_PREF_KEY, newVal ? 'on' : 'off'); } catch {}
+    // Sync with WLAudio engine if loaded
+    if (window.WLAudio && window.WLAudio.setEnabled) window.WLAudio.setEnabled(newVal);
+    // Update button in place
+    var btn = document.getElementById('wlAudioBtn');
+    if (btn) {
+      btn.textContent = newVal ? '🔊' : '🔇';
+      btn.title = newVal ? 'Sound on — click to mute' : 'Sound off — click to enable';
+      btn.style.background = newVal ? '#eef2ff' : '#fff';
+      btn.style.borderColor = newVal ? '#c7d2fe' : '#e2e8f0';
+    }
+  }
+
   function _updatePill(name) {
     var slot = document.getElementById('wlPillSlot');
     if (!slot) return;
-    if (name) {
-      slot.innerHTML = '<span style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:800;color:#4338ca;cursor:pointer;font-family:Lexend,sans-serif;" onclick="wlShowLogin()">👤 ' + name + '</span>';
-    }
+    var on = _isAudioOn();
+    var audioBtn =
+      '<button id="wlAudioBtn" onclick="WordLabData._toggleAudio()"' +
+      ' title="' + (on ? 'Sound on — click to mute' : 'Sound off — click to enable') + '"' +
+      ' style="border:2px solid ' + (on ? '#c7d2fe' : '#e2e8f0') + ';background:' + (on ? '#eef2ff' : '#fff') + ';border-radius:999px;width:36px;height:36px;font-size:15px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,border-color .15s;">' +
+      (on ? '🔊' : '🔇') +
+      '</button>';
+    var studentPill = name
+      ? '<span style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:800;color:#4338ca;cursor:pointer;font-family:Lexend,sans-serif;" onclick="wlShowLogin()">👤 ' + name + '</span>'
+      : '';
+    slot.style.display = 'inline-flex';
+    slot.style.alignItems = 'center';
+    slot.style.gap = '6px';
+    slot.innerHTML = audioBtn + studentPill;
   }
 
   // Called from overlay dropdown
@@ -233,7 +265,7 @@ const WordLabData = (() => {
     recordAttempt,
     getAccuracy, getAvgTime, isIntervention,
     exportCSV, initLoginUI,
-    _loadStudents, _pick, _skip,
+    _loadStudents, _pick, _skip, _toggleAudio,
     load, save
   };
 
