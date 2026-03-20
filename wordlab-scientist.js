@@ -60,6 +60,7 @@ const WLScientist = (() => {
       hard_hat:     `<path d="M22,24 Q40,10 58,24 Z" fill="#eab308"/><rect x="18" y="22" width="44" height="5" rx="2" fill="#ca8a04"/>`,
       beanie:       `<path d="M21,28 Q21,10 40,10 Q59,10 59,28 Z" fill="#6366f1"/><rect x="18" y="26" width="44" height="5" rx="3" fill="#4338ca"/><circle cx="40" cy="10" r="5" fill="#818cf8"/>`,
       crown:        `<polygon points="40,8 28,20 32,16 40,20 48,16 52,20" fill="#f59e0b"/><circle cx="40" cy="9" r="2.5" fill="#fcd34d"/><circle cx="28" cy="20" r="2" fill="#fcd34d"/><circle cx="52" cy="20" r="2" fill="#fcd34d"/>`,
+      donut_crown:  `<rect x="22" y="19" width="36" height="5" rx="2" fill="#7c3aed"/><circle cx="29" cy="14" r="5.5" fill="#92400e"/><circle cx="29" cy="14" r="2.8" fill="${skin}"/><circle cx="27" cy="12" r="0.9" fill="#fbbf24"/><circle cx="31" cy="12" r="0.9" fill="#f87171"/><circle cx="30" cy="16.5" r="0.9" fill="#6ee7b7"/><circle cx="40" cy="8.5" r="6.5" fill="#f472b6"/><circle cx="40" cy="8.5" r="3.2" fill="${skin}"/><circle cx="37.5" cy="6.5" r="1" fill="#fbbf24"/><circle cx="42.5" cy="6.5" r="1" fill="#a78bfa"/><circle cx="40" cy="12" r="1" fill="#6ee7b7"/><circle cx="51" cy="14" r="5.5" fill="#f87171"/><circle cx="51" cy="14" r="2.8" fill="${skin}"/><circle cx="49" cy="12" r="0.9" fill="#a78bfa"/><circle cx="53" cy="12" r="0.9" fill="#fbbf24"/><circle cx="51" cy="16.5" r="0.9" fill="#6ee7b7"/>`,
     };
     // Face accessories
     const faceAccSVG = {
@@ -101,6 +102,24 @@ const WLScientist = (() => {
 
   // ── Widget ────────────────────────────────────────────────────
   let _widgetEl = null;
+  let _crownActive = null; // null = unchecked, true/false = cached result
+
+  async function _checkCrown() {
+    if (_crownActive !== null) return _crownActive;
+    _crownActive = false;
+    if (typeof WordLabData === 'undefined') return false;
+    try {
+      const session = WordLabData.getSession();
+      if (session && session.classId) {
+        const enabled = await WordLabData.getClassCrownEnabled(session.classId);
+        if (enabled) {
+          const leaderId = await WordLabData.getClassLeader(session.classId);
+          _crownActive = !!(leaderId && leaderId === session.studentId);
+        }
+      }
+    } catch {}
+    return _crownActive;
+  }
 
   async function inject() {
     if (_widgetEl) return;
@@ -133,6 +152,9 @@ const WLScientist = (() => {
     if (typeof WordLabData === 'undefined') return;
     const sd = await WordLabData.getStudentData();
     if (!sd) return;
+    if (await _checkCrown()) {
+      sd.scientist = Object.assign({}, sd.scientist, { head: 'donut_crown' });
+    }
     const lvl = sd.level;
 
     _widgetEl.innerHTML = `

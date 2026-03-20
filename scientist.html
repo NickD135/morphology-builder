@@ -176,6 +176,22 @@ async function render() {
   const sd = (typeof WordLabData !== 'undefined') ? await WordLabData.getStudentData() : null;
   const wrap = document.getElementById('mainWrap');
 
+  // Check donut crown status
+  let crownActive = false;
+  if (sd && typeof WordLabData !== 'undefined') {
+    const session = WordLabData.getSession();
+    if (session && session.classId) {
+      const enabled = await WordLabData.getClassCrownEnabled(session.classId);
+      if (enabled) {
+        const leaderId = await WordLabData.getClassLeader(session.classId);
+        if (leaderId && leaderId === session.studentId) {
+          crownActive = true;
+          sd.scientist = Object.assign({}, sd.scientist, { head: 'donut_crown' });
+        }
+      }
+    }
+  }
+
   if (!sd) {
     wrap.innerHTML = `<div class="loginPrompt">
       <div class="loginPromptIcon">🧪</div>
@@ -238,11 +254,20 @@ async function render() {
           </div>
           <div class="custSection">
             <div class="custLabel">Head Accessory</div>
-            <div class="optRow">${SHOP.headAccessories.map(a=>{
-              const cur = sci.head||'none';
-              const isOwned = a.free || owned.includes(a.id);
-              return `<button class="optPill${a.id===cur?' active':''}${!isOwned?' locked':''}" onclick="${isOwned?`applyOption('head',${a.id==='none'?'null':"'"+a.id+"'"})`:'void(0)'}">${a.icon} ${a.name}</button>`;
-            }).join('')}</div>
+            ${crownActive
+              ? `<div style="background:#fdf4ff;border:2px solid #e879f9;border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+                  <span style="font-size:28px;">🍩</span>
+                  <div>
+                    <div style="font-size:13px;font-weight:900;color:#7e22ce;">You're wearing the Donut Crown!</div>
+                    <div style="font-size:11px;font-weight:700;color:#a21caf;">You have the most correct answers in your class. Keep it up!</div>
+                  </div>
+                </div>`
+              : `<div class="optRow">${SHOP.headAccessories.map(a=>{
+                  const cur = sci.head||'none';
+                  const isOwned = a.free || owned.includes(a.id);
+                  return `<button class="optPill${a.id===cur?' active':''}${!isOwned?' locked':''}" onclick="${isOwned?`applyOption('head',${a.id==='none'?'null':"'"+a.id+"'"})`:'void(0)'}">${a.icon} ${a.name}</button>`;
+                }).join('')}</div>`
+            }
           </div>
           <div class="custSection">
             <div class="custLabel">Face Accessory</div>
