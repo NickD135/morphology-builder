@@ -102,10 +102,10 @@ const WLScientist = (() => {
   // ── Widget ────────────────────────────────────────────────────
   let _widgetEl = null;
 
-  function inject() {
+  async function inject() {
     if (_widgetEl) return;
     if (typeof WordLabData === 'undefined') return;
-    const sd = WordLabData.getStudentData();
+    const sd = await WordLabData.getStudentData();
     if (!sd) return;
 
     const el = document.createElement('div');
@@ -128,10 +128,10 @@ const WLScientist = (() => {
     }
   }
 
-  function _renderWidget(reaction) {
+  async function _renderWidget(reaction) {
     if (!_widgetEl) return;
     if (typeof WordLabData === 'undefined') return;
-    const sd = WordLabData.getStudentData();
+    const sd = await WordLabData.getStudentData();
     if (!sd) return;
     const lvl = sd.level;
 
