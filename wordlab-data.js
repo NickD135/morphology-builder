@@ -705,6 +705,8 @@ const WordLabData = (() => {
   function _updatePill(name) {
     var slot = document.getElementById('wlPillSlot');
     if (!slot) return;
+    var loginBtn = document.getElementById('wlLoginBtn');
+    if (loginBtn) loginBtn.style.display = name ? 'none' : '';
     var on = _isAudioOn();
     var audioBtn =
       '<button id="wlAudioBtn" onclick="WordLabData._toggleAudio()"' +
