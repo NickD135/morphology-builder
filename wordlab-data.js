@@ -476,7 +476,7 @@ const WordLabData = (() => {
   // ── Export ────────────────────────────────────────────────────
   function exportCSV(cls) {
     if (!cls) return '';
-    const activities = ['sound-sorter','phoneme-splitter','syllable-splitter','breakdown-blitz','meaning-mode','mission-mode'];
+    const activities = ['sound-sorter','phoneme-splitter','syllable-splitter','breakdown-blitz','meaning-mode','mission-mode','root-lab'];
     const rows = [['Student','Activity','Category','Correct','Total','Accuracy %','Avg Time (ms)']];
     cls.students.forEach(student => {
       activities.forEach(activity => {
@@ -727,6 +727,48 @@ const WordLabData = (() => {
     document.getElementById('wlOverlay').classList.add('wl-hide');
   }
 
+  // ── Crown Leader ──────────────────────────────────────────────
+  async function getClassLeader(classId) {
+    try {
+      var { data: students } = await sb()
+        .from('students').select('id').eq('class_id', classId);
+      if (!students || !students.length) return null;
+      var studentIds = students.map(function(s){ return s.id; });
+      var { data: chars } = await sb()
+        .from('student_character').select('student_id, stats').in('student_id', studentIds);
+      if (!chars || !chars.length) return null;
+      var leader = null, maxCorrect = 0;
+      chars.forEach(function(c) {
+        var n = (c.stats && c.stats.totalCorrect) || 0;
+        if (n > maxCorrect) { maxCorrect = n; leader = c.student_id; }
+      });
+      return leader;
+    } catch(e) { console.warn('getClassLeader failed', e); return null; }
+  }
+
+  async function getClassCrownEnabled(classId) {
+    try {
+      var { data, error } = await sb()
+        .from('classes').select('settings').eq('id', classId).maybeSingle();
+      if (!error && data && data.settings) return !!data.settings.crownEnabled;
+    } catch {}
+    try { return !!JSON.parse(localStorage.getItem('wl_crown_' + classId)); } catch {}
+    return false;
+  }
+
+  async function setClassCrownEnabled(classId, enabled) {
+    try {
+      var { data: existing, error: fetchErr } = await sb()
+        .from('classes').select('settings').eq('id', classId).maybeSingle();
+      if (!fetchErr) {
+        var settings = (existing && existing.settings) ? Object.assign({}, existing.settings) : {};
+        settings.crownEnabled = enabled;
+        await sb().from('classes').update({ settings: settings }).eq('id', classId);
+      }
+    } catch {}
+    try { localStorage.setItem('wl_crown_' + classId, JSON.stringify(enabled)); } catch {}
+  }
+
   return {
     createClass, getClasses, getClass, verifyPassword,
     addStudent, removeStudent, deleteClass, regenerateStudentCode,
@@ -738,7 +780,8 @@ const WordLabData = (() => {
     _loadStudents, _pick, _pickStudent, _stepClassCode, _stepStudentCode,
     _backToStep1, _backToStep2, _skip, _toggleAudio,
     getStudentData, getLevel, ALL_BADGES, LEGENDARY_BADGES,
-    getScientist, saveScientist, purchase
+    getScientist, saveScientist, purchase,
+    getClassLeader, getClassCrownEnabled, setClassCrownEnabled
   };
 
 })();

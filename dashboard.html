@@ -178,6 +178,7 @@
     <button class="navTab" onclick="showSection('breakdown-blitz',this)">🧩 Breakdown Blitz</button>
     <button class="navTab" onclick="showSection('meaning-mode',this)">🧠 Meaning Mode</button>
     <button class="navTab" onclick="showSection('mission-mode',this)">⚡ Mission Mode</button>
+    <button class="navTab" onclick="showSection('root-lab',this)">🧫 Root Lab</button>
   </div>
 
   <div id="sectionFlags"></div>
@@ -187,6 +188,7 @@
   <div id="sectionBreakdownBlitz" class="hidden"></div>
   <div id="sectionMeaningMode" class="hidden"></div>
   <div id="sectionMissionMode" class="hidden"></div>
+  <div id="sectionRootLab" class="hidden"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -228,13 +230,15 @@ const COLUMNS = {
     'suffix:er','suffix:or','suffix:ing','suffix:ed','suffix:ly','suffix:ful','suffix:less','suffix:ness',
     'suffix:ment','suffix:ion','suffix:able','suffix:ish','suffix:ist','suffix:ive','suffix:ous','suffix:al',
     'suffix:hood','suffix:ship','suffix:ity','suffix:ance','suffix:ic'
-  ]
+  ],
+  'root-lab': ['Starter','Level Up','Challenge','Mixed']
 };
 
 const THRESHOLD_PCT = 70;
 const THRESHOLD_ATTEMPTS = 3;
 
 let currentClass = null;
+let currentCrownLeaderId = null;
 
 // ── Login ────────────────────────────────────────────────────────
 async function populateClassSelect(){
@@ -276,8 +280,14 @@ function logout(){
 }
 
 // ── Render ───────────────────────────────────────────────────────
-function renderDashboard(){
+async function renderDashboard(){
   if(!currentClass) return;
+
+  // Crown leader
+  currentCrownLeaderId = null;
+  const crownOn = await WordLabData.getClassCrownEnabled(currentClass.id);
+  if(crownOn) currentCrownLeaderId = await WordLabData.getClassLeader(currentClass.id);
+
   const students = currentClass.students;
   const totalStudents = students.length;
 
@@ -294,11 +304,22 @@ function renderDashboard(){
   });
   const overallAcc = totalAttempts > 0 ? Math.round((totalCorrect/totalAttempts)*100) : '--';
 
+  const crownHolderName = currentCrownLeaderId
+    ? (students.find(s => s.id === currentCrownLeaderId) || {}).name || null
+    : null;
+  const crownCard = crownOn
+    ? `<div class="summaryCard" style="border-color:#e879f9;background:#fdf4ff;">
+        <div class="summaryVal" style="font-size:22px;color:#7e22ce;">🍩 ${crownHolderName || '—'}</div>
+        <div class="summaryLbl" style="color:#a21caf;">Donut Crown holder</div>
+       </div>`
+    : '';
+
   document.getElementById('summaryRow').innerHTML = `
     <div class="summaryCard"><div class="summaryVal">${totalStudents}</div><div class="summaryLbl">Students</div></div>
     <div class="summaryCard"><div class="summaryVal">${totalAttempts.toLocaleString()}</div><div class="summaryLbl">Total attempts</div></div>
     <div class="summaryCard"><div class="summaryVal">${overallAcc}${totalAttempts>0?'%':''}</div><div class="summaryLbl">Overall accuracy</div></div>
     <div class="summaryCard"><div class="summaryVal" style="color:${flagCount>0?'var(--bad)':'var(--green)'}">${flagCount}</div><div class="summaryLbl">Intervention flags</div></div>
+    ${crownCard}
     <button class="exportBtn" onclick="exportData()" style="align-self:center;">⬇ Export CSV</button>
   `;
 
@@ -312,6 +333,7 @@ function renderDashboard(){
   renderHeatmap('breakdown-blitz');
   renderHeatmap('meaning-mode');
   renderHeatmap('mission-mode');
+  renderHeatmap('root-lab');
 }
 
 function showSection(name, btn){
@@ -319,7 +341,7 @@ function showSection(name, btn){
   btn.classList.add('active');
   // Hide all sections dynamically
   ['sectionFlags','sectionSoundSorter','sectionPhonemeSplitter','sectionSyllableSplitter',
-   'sectionBreakdownBlitz','sectionMeaningMode','sectionMissionMode'].forEach(function(id){
+   'sectionBreakdownBlitz','sectionMeaningMode','sectionMissionMode','sectionRootLab'].forEach(function(id){
     var el = document.getElementById(id);
     if(el) el.classList.add('hidden');
   });
@@ -332,6 +354,7 @@ function showSection(name, btn){
     'breakdown-blitz':'sectionBreakdownBlitz',
     'meaning-mode':'sectionMeaningMode',
     'mission-mode':'sectionMissionMode',
+    'root-lab':'sectionRootLab',
   };
   const el = document.getElementById(map[name]);
   if(el) el.classList.remove('hidden');
@@ -364,7 +387,8 @@ function renderFlags(){
     'phoneme-splitter':'Phoneme Splitter',
     'syllable-splitter':'Syllable Splitter',
     'meaning-mode':'Meaning Mode',
-    'mission-mode':'Mission Mode'
+    'mission-mode':'Mission Mode',
+    'root-lab':'Root Lab'
   };
 
   container.innerHTML = `
@@ -373,7 +397,7 @@ function renderFlags(){
       <div class="flagGrid">
         ${flags.map(({ student, flags: sFlags }) => `
           <div class="flagCard">
-            <div class="flagStudent">${student.name}</div>
+            <div class="flagStudent">${currentCrownLeaderId && student.id === currentCrownLeaderId ? '🍩 ' : ''}${student.name}</div>
             <div class="flagDetail">
               ${sFlags.map(f => `
                 <span class="flagBadge">${activityLabel[f.activity] || f.activity}: ${f.category} — ${WordLabData.getAccuracy(f.result)}% (${f.result.total} attempts)</span>
@@ -415,6 +439,7 @@ function renderHeatmap(activity){
     'breakdown-blitz':   'sectionBreakdownBlitz',
     'meaning-mode':      'sectionMeaningMode',
     'mission-mode':      'sectionMissionMode',
+    'root-lab':          'sectionRootLab',
   };
   const container = document.getElementById(sectionMap[activity]);
   if(!container) return;
@@ -430,6 +455,7 @@ function renderHeatmap(activity){
     'breakdown-blitz':   '🧩 Breakdown Blitz — accuracy by word',
     'meaning-mode':      '🧠 Meaning Mode — accuracy by prefix',
     'mission-mode':      '⚡ Mission Mode — accuracy by prefix',
+    'root-lab':          '🧫 Root Lab — accuracy by difficulty',
   };
 
   const legend = `
@@ -480,8 +506,9 @@ function renderHeatmap(activity){
       </td>`;
     }).join('');
 
+    const isCrownHolder = currentCrownLeaderId && student.id === currentCrownLeaderId;
     return `<tr>
-      <td class="student-name">${student.name}</td>
+      <td class="student-name" style="${isCrownHolder ? 'color:#7e22ce;' : ''}">${isCrownHolder ? '🍩 ' : ''}${student.name}</td>
       ${cells}
     </tr>`;
   }).join('');
