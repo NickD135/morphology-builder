@@ -6,129 +6,659 @@
   <title>Word Lab – Prefix Power-Up</title>
   <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --bg:#f5f5f5; --panel:#ffffff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b;
+    /* ── CSS custom properties ───────────────────────────────────── */
+    :root {
       --indigo:#4338ca; --indigo-2:#6366f1; --indigo-soft:#eef2ff;
-      --green-soft:#f0fdf4; --green-line:#bbf7d0; --green-text:#166534;
-      --orange-soft:#fff7ed; --orange-line:#fed7aa; --orange-text:#9a3412;
       --ok:#15803d; --warn:#b45309; --bad:#dc2626;
+      --orange-soft:#fff7ed; --orange-line:#fed7aa; --orange-text:#9a3412;
+      --green-soft:#f0fdf4; --green-line:#bbf7d0; --green-text:#166534;
+      --line:#e2e8f0; --muted:#64748b; --text:#0f172a;
     }
-    *{ box-sizing:border-box; }
-    body{ margin:0; font-family:'Lexend',sans-serif; background:var(--bg); color:var(--text); line-height:1.6; letter-spacing:.02em; }
-    button,input{ font:inherit; }
-    .header{ position:sticky; top:0; z-index:20; background:var(--bg); border-bottom:1px solid var(--line); box-shadow:0 1px 2px rgba(15,23,42,.05); }
-    .headerInner{ max-width:900px; margin:0 auto; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
-    .brand{ display:flex; align-items:center; gap:12px; }
-    .brandIcon{ width:50px; height:50px; border-radius:14px; background:var(--indigo); color:#fff; display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 12px 24px rgba(67,56,202,.18); flex:0 0 auto; }
-    .brandText h1{ margin:0; font-size:24px; font-weight:900; letter-spacing:-.02em; color:#312e81; }
-    .brandText .sub{ font-size:10px; text-transform:uppercase; letter-spacing:.25em; color:var(--indigo-2); font-weight:900; margin-top:3px; display:block; }
-    .hud{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    .pill{ display:inline-flex; align-items:center; justify-content:center; min-height:40px; border:1px solid var(--line); border-radius:999px; background:#fff; padding:8px 16px; font-size:13px; font-weight:800; color:#334155; }
-    .pill.score{ background:var(--indigo); color:#fff; border-color:transparent; }
-    .pill.streak{ background:var(--orange-soft); color:var(--orange-text); border-color:var(--orange-line); }
-    .topBtn{ border:none; background:#0f172a; color:#fff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:.12em; padding:12px 16px; border-radius:14px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; }
-    .topBtn:hover{ background:#000; }
-    .wrap{ max-width:900px; margin:0 auto; padding:20px; display:flex; flex-direction:column; gap:16px; }
-    .panel{ background:var(--panel); border:4px solid var(--line); border-radius:28px; box-shadow:0 20px 28px rgba(15,23,42,.06); overflow:hidden; }
-    .panelInner{ padding:24px; }
-    .panelTitle{ margin:0 0 12px 0; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.22em; color:var(--indigo); }
-    .energyRow{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:13px; font-weight:800; color:var(--muted); }
-    .bar{ width:100%; height:14px; background:var(--line); border-radius:999px; overflow:hidden; }
-    .barFill{ height:100%; width:100%; background:linear-gradient(90deg,var(--bad) 0%,var(--warn) 50%,var(--ok) 100%); transition:width .2s linear; border-radius:999px; }
-    .missionBadge{ display:inline-block; background:var(--indigo-soft); color:var(--indigo); padding:6px 12px; border-radius:999px; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.12em; margin-bottom:10px; border:1px solid rgba(99,102,241,.2); }
-    .missionTitle{ font-size:20px; font-weight:900; margin:0 0 4px; color:#312e81; }
-    .missionSub{ color:var(--muted); font-weight:600; font-size:14px; }
-    .challengeLabel{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.22em; color:var(--muted); text-align:center; margin-bottom:6px; }
-    .challengeSub{ color:var(--muted); font-weight:700; font-size:13px; text-align:center; margin-bottom:24px; }
-    .wordArea{ display:flex; justify-content:center; align-items:center; gap:16px; flex-wrap:wrap; margin:24px 0 20px; }
-    .dropZone{ width:150px; height:100px; border:4px dashed #c7d2fe; border-radius:20px; background:var(--indigo-soft); display:flex; align-items:center; justify-content:center; transition:.2s ease; }
-    .dropZoneText{ font-size:32px; font-weight:900; color:#a5b4fc; letter-spacing:.05em; }
-    .baseWord{ font-size:56px; line-height:1; font-weight:900; color:#312e81; text-align:center; letter-spacing:-.02em; }
-    .baseMeaning{ text-align:center; color:#334155; font-weight:700; margin-bottom:24px; font-size:15px; line-height:1.7; }
-    .baseMeaning strong{ color:var(--indigo); }
-    .options{ display:flex; justify-content:center; gap:16px; flex-wrap:wrap; margin:8px 0 20px; }
-    .bubbleBtn{ width:116px; height:116px; border-radius:999px; border:4px solid; background:#fff; cursor:pointer; transition:transform .15s ease, box-shadow .15s ease; animation:float 3s ease-in-out infinite; }
-    .bubbleBtn:hover{ transform:translateY(-4px) scale(1.04); box-shadow:0 16px 28px rgba(0,0,0,.12); }
-    .bubbleBtn:disabled{ opacity:.55; cursor:not-allowed; transform:none; animation:none; }
-    .bubbleBtn.blue{ border-color:#bfdbfe; color:#1e40af; }
-    .bubbleBtn.green{ border-color:#bbf7d0; color:#166534; }
-    .bubbleBtn.purple{ border-color:#ddd6fe; color:#6d28d9; }
-    .bubbleBtn.orange{ border-color:var(--orange-line); color:var(--orange-text); }
-    .bubbleInner{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; height:100%; padding:10px; text-align:center; }
-    .bubbleInner span{ font-size:24px; font-weight:900; }
-    .feedback{ min-height:28px; text-align:center; font-size:22px; font-weight:900; }
-    .feedback.ok{ color:var(--ok); }
-    .feedback.bad{ color:var(--bad); }
-    .subFeedback{ min-height:24px; text-align:center; color:var(--muted); font-weight:700; margin-top:4px; line-height:1.5; font-size:14px; }
-    .actionRow{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:20px; }
-    .secondaryBtn{ border:2px solid var(--line); background:#fff; color:#334155; font-weight:800; font-size:13px; padding:12px 20px; border-radius:16px; cursor:pointer; text-transform:uppercase; letter-spacing:.08em; transition:all .15s; }
-    .secondaryBtn:hover{ background:#f8fafc; }
-    .primaryBtn{ border:none; background:var(--indigo); color:#fff; font-weight:900; font-size:13px; padding:14px 28px; border-radius:16px; cursor:pointer; text-transform:uppercase; letter-spacing:.08em; box-shadow:0 10px 20px rgba(67,56,202,.2); transition:all .15s; }
-    .primaryBtn:hover{ background:#3730a3; transform:translateY(-1px); }
-    .flashSuccess{ background:var(--green-soft) !important; border-color:var(--green-line) !important; }
-    .flashFail{ background:#fef2f2 !important; border-color:#fecaca !important; }
-    @keyframes float{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-10px); } }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body { font-family: 'Lexend', sans-serif; color: var(--text); line-height: 1.6; letter-spacing: .02em; }
+    button, input { font: inherit; }
 
-    .modeSel{
-      border:2px solid var(--line); background:#fff; border-radius:12px;
-      padding:8px 18px; font-weight:800; font-size:12px; text-transform:uppercase;
-      letter-spacing:.1em; cursor:pointer; color:var(--muted);
-      font-family:'Lexend',sans-serif; transition:all .15s;
+    /* ── Lab scene (fixed full-bleed backdrop) ───────────────────── */
+    .lab-scene {
+      position: fixed; inset: 0; z-index: 0;
+      display: flex; flex-direction: column;
     }
-    .modeSel.active{ background:var(--indigo); color:#fff; border-color:var(--indigo); }
-    .modeSel:hover:not(.active){ border-color:#cbd5e1; color:var(--text); }
+
+    /* Wall (top 62%) */
+    .lab-wall {
+      flex: 0 0 62%;
+      background: #f8f4ee;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Sky windows */
+    .lab-windows {
+      position: absolute; top: 14px; left: 0; right: 0;
+      display: flex; justify-content: space-around; align-items: flex-start;
+      padding: 0 40px;
+    }
+    .lab-window {
+      width: 80px; height: 90px;
+      border: 6px solid #c8b89a;
+      border-radius: 6px 6px 40px 40px;
+      overflow: hidden;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.1);
+      background: linear-gradient(180deg, #87CEEB 0%, #b0e0ff 100%);
+      animation: skyDay 60s linear infinite;
+      position: relative;
+    }
+    .lab-window::after {
+      content: '';
+      position: absolute; inset: 0;
+      border-top: 3px solid rgba(255,255,255,.35);
+      border-left: 3px solid rgba(255,255,255,.35);
+      pointer-events: none;
+    }
+    /* Cross pane */
+    .lab-window::before {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 3px; background: #c8b89a; z-index: 1;
+    }
+    @keyframes skyDay {
+      0%,100% { background: linear-gradient(180deg,#87CEEB,#b0e0ff); }
+      30%      { background: linear-gradient(180deg,#FFD580,#ffe8a0); }
+      50%      { background: linear-gradient(180deg,#FF8C42,#ffc08a); }
+      70%      { background: linear-gradient(180deg,#2C3E6B,#4a5e90); }
+    }
+
+    /* Overhead bulb */
+    .lab-bulb {
+      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    }
+    .lab-bulb-wire {
+      width: 2px; height: 28px; background: #888; margin: 0 auto;
+    }
+    .lab-bulb-glass {
+      width: 28px; height: 32px;
+      background: radial-gradient(circle at 40% 35%, #fffde0 0%, #ffe96b 55%, #f5c518 100%);
+      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      margin: 0 auto;
+      box-shadow: 0 0 18px 8px rgba(255,230,0,.5), 0 0 40px 18px rgba(255,200,0,.25);
+      animation: bulbPulse 3s ease-in-out infinite;
+    }
+    @keyframes bulbPulse {
+      0%,100% { box-shadow: 0 0 18px 8px rgba(255,230,0,.5), 0 0 40px 18px rgba(255,200,0,.25); }
+      50%      { box-shadow: 0 0 28px 14px rgba(255,230,0,.8), 0 0 60px 28px rgba(255,200,0,.4); }
+    }
+
+    /* Shelves */
+    .lab-shelf {
+      position: absolute; left: 0; right: 0; height: 10px;
+      background: #c8b89a;
+      border-bottom: 3px solid #a89070;
+    }
+    .lab-shelf-1 { top: 38%; }
+    .lab-shelf-2 { top: 56%; }
+    .shelf-items {
+      position: absolute; bottom: 10px; left: 0; right: 0;
+      display: flex; align-items: flex-end; gap: 14px;
+      padding: 0 20px;
+    }
+    .shelf-items svg { display: block; }
+
+    /* Wall monitor */
+    .wall-monitor {
+      position: absolute; right: 30px; top: 18%;
+      width: 110px;
+      background: #111827;
+      border-radius: 8px;
+      border: 4px solid #374151;
+      box-shadow: 0 4px 16px rgba(0,0,0,.4);
+      padding: 8px 10px;
+      color: #a5f3fc;
+      font-size: 11px; font-weight: 800;
+      font-family: 'Lexend', monospace;
+      text-align: center;
+    }
+    .wall-monitor::before {
+      content: '◉ WORD LAB';
+      display: block;
+      font-size: 8px; letter-spacing: .15em;
+      color: #6ee7b7; margin-bottom: 6px;
+    }
+    .wall-monitor .mon-label { color: #6b7280; font-size: 9px; text-transform: uppercase; letter-spacing: .1em; }
+    .wall-monitor .mon-val   { font-size: 14px; color: #fde68a; margin-bottom: 4px; }
+
+    /* Floor (bottom 38%) */
+    .lab-floor {
+      flex: 0 0 38%;
+      background: repeating-linear-gradient(
+        90deg,
+        #e8e0d4 0px, #e8e0d4 48px,
+        #d4ccc0 48px, #d4ccc0 96px
+      );
+      position: relative;
+      border-top: 4px solid #b0a898;
+    }
+
+    /* Benches */
+    .lab-bench {
+      position: absolute; bottom: 0;
+      height: 70%; width: 160px;
+      background: #8b7355;
+      border-top: 6px solid #a08060;
+      border-radius: 4px 4px 0 0;
+    }
+    .lab-bench.left  { left: 16px; }
+    .lab-bench.right { right: 16px; }
+    .bench-top {
+      position: absolute; top: -18px; left: -6px; right: -6px;
+      height: 18px; background: #c8a878;
+      border-radius: 4px 4px 0 0;
+      border-top: 3px solid #d4b888;
+    }
+    .bench-items {
+      position: absolute; top: -70px; left: 0; right: 0;
+      display: flex; justify-content: center; gap: 10px; align-items: flex-end;
+    }
+
+    /* Animated beakers (SVG) */
+    .beaker-wrap { position: relative; }
+
+    /* Steam wisps */
+    .steam {
+      position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 4px;
+    }
+    .steam-line {
+      width: 3px; height: 16px;
+      background: rgba(200,220,255,.7);
+      border-radius: 2px;
+      animation: steamRise 2s ease-in-out infinite;
+    }
+    .steam-line:nth-child(2) { animation-delay: .4s; height: 20px; }
+    .steam-line:nth-child(3) { animation-delay: .8s; height: 12px; }
+    @keyframes steamRise {
+      0%   { opacity: 0; transform: translateY(0) scaleX(1); }
+      40%  { opacity: .8; }
+      100% { opacity: 0; transform: translateY(-22px) scaleX(1.4); }
+    }
+
+    /* Floating particles */
+    #particles { position: fixed; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+    .particle {
+      position: absolute; bottom: -10px;
+      border-radius: 50%;
+      animation: particleFloat linear infinite;
+    }
+    @keyframes particleFloat {
+      from { transform: translateY(0); opacity: .8; }
+      to   { transform: translateY(calc(-100vh - 20px)); opacity: 0; }
+    }
+
+    /* ── Fixed header ─────────────────────────────────────────────── */
+    .site-header {
+      position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+      z-index: 50;
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      background: rgba(15,23,42,.55);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      border-radius: 18px;
+      padding: 8px 14px;
+      max-width: calc(100vw - 24px);
+      box-shadow: 0 4px 20px rgba(0,0,0,.35);
+      border: 1px solid rgba(255,255,255,.12);
+    }
+    .hdr-brand { display: flex; align-items: center; gap: 8px; }
+    .hdr-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: var(--indigo); color: #fff;
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+      flex: 0 0 auto;
+    }
+    .hdr-title { font-size: 15px; font-weight: 900; color: #f1f5f9; letter-spacing: -.01em; }
+    .hdr-sub   { font-size: 9px; text-transform: uppercase; letter-spacing: .22em; color: #a5b4fc; font-weight: 700; display: block; }
+
+    .hud-pill {
+      display: inline-flex; align-items: center;
+      padding: 5px 12px; border-radius: 999px;
+      font-size: 12px; font-weight: 800;
+      white-space: nowrap;
+    }
+    .hud-pill.score  { background: var(--indigo); color: #fff; }
+    .hud-pill.streak { background: rgba(255,237,213,.15); color: #fed7aa; border: 1px solid rgba(251,146,60,.3); }
+
+    .hdr-btn {
+      border: none; border-radius: 10px;
+      padding: 7px 13px; font-size: 11px; font-weight: 800;
+      text-transform: uppercase; letter-spacing: .08em;
+      cursor: pointer; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 4px;
+      transition: opacity .15s;
+    }
+    .hdr-btn:hover { opacity: .85; }
+    .hdr-btn.dark   { background: rgba(255,255,255,.12); color: #e2e8f0; }
+    .hdr-btn.indigo { background: var(--indigo-2); color: #fff; }
+    #wlLoginBtn {
+      border: 1px solid rgba(255,255,255,.2);
+      background: rgba(255,255,255,.1);
+      color: #e2e8f0;
+      font-weight: 800; font-size: 11px;
+      padding: 7px 13px; border-radius: 10px;
+      cursor: pointer; font-family: 'Lexend', sans-serif;
+    }
+
+    /* ── Scientist character (fixed left) ─────────────────────────── */
+    .scientist-stage {
+      position: fixed; left: 16px; bottom: 12%;
+      z-index: 11;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    #sciCharWrap {
+      width: 80px; height: 100px;
+      display: flex; align-items: flex-end; justify-content: center;
+      animation: sciIdle 3s ease-in-out infinite;
+    }
+    #sciCharWrap.sci-correct { animation: sciJump .6s ease-out; }
+    #sciCharWrap.sci-wrong   { animation: sciShake .5s ease-out; }
+    #sciCharWrap.sci-streak  { animation: sciDance .8s ease-in-out infinite; }
+
+    @keyframes sciIdle  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+    @keyframes sciJump  { 0%{transform:translateY(0)} 30%{transform:translateY(-22px)} 100%{transform:translateY(0)} }
+    @keyframes sciShake { 0%,100%{transform:rotate(0)} 20%{transform:rotate(-4deg) translateX(-4px)} 40%{transform:rotate(4deg) translateX(4px)} 60%{transform:rotate(-3deg) translateX(-3px)} 80%{transform:rotate(2deg)} }
+    @keyframes sciDance { 0%,100%{transform:rotate(-6deg)} 50%{transform:rotate(6deg)} }
+
+    /* ── Main game zone (fixed centered) ─────────────────────────── */
+    .game-zone {
+      position: fixed;
+      top: 70px; bottom: 12px;
+      left: 50%; transform: translateX(-50%);
+      width: min(660px, calc(100vw - 200px));
+      z-index: 10;
+      display: flex; flex-direction: column; gap: 10px;
+      overflow-y: auto;
+      padding-bottom: 8px;
+    }
+    /* Scrollbar hidden but functional */
+    .game-zone::-webkit-scrollbar { width: 0; }
+
+    /* Fuel pill */
+    .fuel-pill {
+      background: rgba(255,255,255,.75);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      border-radius: 16px;
+      padding: 10px 16px;
+      border: 1px solid rgba(255,255,255,.6);
+      box-shadow: 0 4px 12px rgba(0,0,0,.08);
+      flex: 0 0 auto;
+    }
+    .fuel-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px; font-weight: 800; color: var(--muted); }
+    .fuel-bar-track { width: 100%; height: 12px; background: rgba(0,0,0,.08); border-radius: 999px; overflow: hidden; }
+    .fuel-bar-fill   { height: 100%; width: 100%; background: linear-gradient(90deg, var(--bad) 0%, var(--warn) 50%, var(--ok) 100%); transition: width .2s linear; border-radius: 999px; }
+
+    /* Main panel (frosted card) */
+    .game-panel {
+      background: rgba(255,255,255,.85);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      border-radius: 24px;
+      border: 3px solid rgba(255,255,255,.6);
+      box-shadow: 0 8px 32px rgba(0,0,0,.12);
+      padding: 22px 24px;
+      flex: 1 1 auto;
+      display: flex; flex-direction: column; gap: 0;
+    }
+
+    /* Mode buttons */
+    .mode-row { display: flex; justify-content: center; gap: 8px; margin-bottom: 18px; }
+    .modeSel {
+      border: 2px solid var(--line); background: rgba(255,255,255,.8); border-radius: 12px;
+      padding: 7px 18px; font-weight: 800; font-size: 11px; text-transform: uppercase;
+      letter-spacing: .1em; cursor: pointer; color: var(--muted);
+      font-family: 'Lexend', sans-serif; transition: all .15s;
+    }
+    .modeSel.active  { background: var(--indigo); color: #fff; border-color: var(--indigo); }
+    .modeSel:hover:not(.active) { border-color: #cbd5e1; color: var(--text); }
+
+    /* Challenge labels */
+    .challengeLabel { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .22em; color: var(--muted); text-align: center; margin-bottom: 4px; }
+    .challengeSub   { color: var(--muted); font-weight: 700; font-size: 13px; text-align: center; margin-bottom: 20px; }
+
+    /* Word area */
+    .wordArea { display: flex; justify-content: center; align-items: center; gap: 16px; flex-wrap: wrap; margin: 20px 0 16px; }
+
+    .dropZone {
+      width: 140px; height: 90px;
+      border: 4px dashed #c7d2fe; border-radius: 20px;
+      background: var(--indigo-soft);
+      display: flex; align-items: center; justify-content: center;
+      transition: .2s ease;
+    }
+    .dropZoneText { font-size: 28px; font-weight: 900; color: #a5b4fc; letter-spacing: .05em; }
+    .flashSuccess { background: var(--green-soft) !important; border-color: var(--green-line) !important; }
+    .flashFail    { background: #fef2f2 !important; border-color: #fecaca !important; }
+
+    .baseWord { font-size: 50px; line-height: 1; font-weight: 900; color: #312e81; text-align: center; letter-spacing: -.02em; }
+    .baseMeaning { text-align: center; color: #334155; font-weight: 700; margin-bottom: 18px; font-size: 14px; line-height: 1.7; }
+    .baseMeaning strong { color: var(--indigo); }
+
+    /* Options */
+    .options { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin: 6px 0 16px; }
+    .bubbleBtn {
+      width: 108px; height: 108px; border-radius: 999px; border: 4px solid;
+      background: rgba(255,255,255,.9); cursor: pointer;
+      transition: transform .15s ease, box-shadow .15s ease;
+      animation: float 3s ease-in-out infinite;
+    }
+    .bubbleBtn:hover    { transform: translateY(-4px) scale(1.04); box-shadow: 0 16px 28px rgba(0,0,0,.12); }
+    .bubbleBtn:disabled { opacity: .55; cursor: not-allowed; transform: none; animation: none; }
+    .bubbleBtn.blue   { border-color: #bfdbfe; color: #1e40af; }
+    .bubbleBtn.green  { border-color: #bbf7d0; color: #166534; }
+    .bubbleBtn.purple { border-color: #ddd6fe; color: #6d28d9; }
+    .bubbleBtn.orange { border-color: var(--orange-line); color: var(--orange-text); }
+    .bubbleInner { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; height: 100%; padding: 10px; text-align: center; }
+    .bubbleInner span { font-size: 22px; font-weight: 900; }
+    @keyframes float { 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-8px); } }
+
+    /* Feedback */
+    .feedback    { min-height: 26px; text-align: center; font-size: 20px; font-weight: 900; }
+    .feedback.ok  { color: var(--ok); }
+    .feedback.bad { color: var(--bad); }
+    .subFeedback  { min-height: 22px; text-align: center; color: var(--muted); font-weight: 700; margin-top: 4px; line-height: 1.5; font-size: 13px; }
+
+    /* Action row */
+    .actionRow { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+    .secondaryBtn {
+      border: 2px solid var(--line); background: rgba(255,255,255,.8); color: #334155;
+      font-weight: 800; font-size: 12px; padding: 11px 18px;
+      border-radius: 14px; cursor: pointer; text-transform: uppercase; letter-spacing: .08em;
+      transition: all .15s; font-family: 'Lexend', sans-serif;
+    }
+    .secondaryBtn:hover { background: #f8fafc; }
+    .primaryBtn {
+      border: none; background: var(--indigo); color: #fff;
+      font-weight: 900; font-size: 12px; padding: 13px 26px;
+      border-radius: 14px; cursor: pointer; text-transform: uppercase; letter-spacing: .08em;
+      box-shadow: 0 10px 20px rgba(67,56,202,.2); transition: all .15s;
+      font-family: 'Lexend', sans-serif;
+    }
+    .primaryBtn:hover { background: #3730a3; transform: translateY(-1px); }
+
+    /* ── Responsive: mobile ────────────────────────────────────────── */
+    @media (max-width: 680px) {
+      .lab-wall, .lab-floor, .scientist-stage, .wall-monitor { display: none; }
+      .lab-scene { background: linear-gradient(160deg, #1e1b4b 0%, #4338ca 60%, #6366f1 100%); }
+      .game-zone { width: calc(100vw - 16px); top: 64px; }
+      .site-header { padding: 6px 10px; }
+    }
   </style>
 </head>
 <body>
-<header class="header">
-  <div class="headerInner">
-    <div class="brand">
-      <div class="brandIcon">⚡</div>
-      <div class="brandText"><h1>Prefix Power-Up</h1><span class="sub">Word Lab · Mission Mode</span></div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     LAB SCENE BACKDROP
+════════════════════════════════════════════════════════════════ -->
+<div class="lab-scene">
+  <!-- Wall -->
+  <div class="lab-wall">
+
+    <!-- Overhead bulb -->
+    <div class="lab-bulb">
+      <div class="lab-bulb-wire"></div>
+      <div class="lab-bulb-glass"></div>
     </div>
-    <div class="hud">
-      <span class="pill streak" id="streakPill">🔥 Streak: 0</span>
-      <span class="pill score" id="scorePill">0 XP</span>
-      <span id="wlPillSlot"></span>
-      <button id="wlLoginBtn" onclick="wlShowLogin()" style="border:2px solid #e2e8f0;background:#fff;border-radius:12px;padding:8px 14px;font-weight:800;font-size:12px;cursor:pointer;font-family:'Lexend',sans-serif;color:#334155;">👤 Log in</button>
-      <a href="landing.html" class="topBtn">🏠 Home</a>
-      <a href="scientist.html" class="topBtn" style="background:var(--indigo-2);">🧬 My Scientist</a>
+
+    <!-- Windows -->
+    <div class="lab-windows">
+      <div class="lab-window"></div>
+      <div class="lab-window" style="animation-delay:-20s"></div>
+      <div class="lab-window" style="animation-delay:-40s"></div>
+    </div>
+
+    <!-- Shelf 1 with items -->
+    <div class="lab-shelf lab-shelf-1">
+      <div class="shelf-items">
+        <!-- Small flask SVG -->
+        <svg width="22" height="32" viewBox="0 0 22 32">
+          <rect x="9" y="0" width="4" height="10" rx="1" fill="#a08060"/>
+          <polygon points="4,30 18,30 16,16 6,16" fill="#7dd3fc" opacity=".8"/>
+          <polygon points="4,30 18,30 16,16 6,16" fill="none" stroke="#5b9fb5" stroke-width="1.5"/>
+          <rect x="6" y="22" width="10" height="3" rx="1" fill="#38bdf8" opacity=".5"/>
+        </svg>
+        <!-- Book 1 -->
+        <svg width="14" height="26" viewBox="0 0 14 26">
+          <rect width="14" height="26" rx="2" fill="#f87171"/>
+          <rect x="2" y="4" width="10" height="1.5" rx="1" fill="#fff" opacity=".6"/>
+          <rect x="2" y="8" width="8" height="1.5" rx="1" fill="#fff" opacity=".6"/>
+          <rect x="0" y="0" width="2.5" height="26" rx="1" fill="#dc2626"/>
+        </svg>
+        <!-- Book 2 -->
+        <svg width="12" height="22" viewBox="0 0 12 22">
+          <rect width="12" height="22" rx="2" fill="#a78bfa"/>
+          <rect x="1.5" y="3" width="9" height="1.5" rx="1" fill="#fff" opacity=".6"/>
+          <rect x="0" y="0" width="2.5" height="22" rx="1" fill="#7c3aed"/>
+        </svg>
+        <!-- Erlenmeyer flask -->
+        <svg width="26" height="34" viewBox="0 0 26 34">
+          <rect x="10" y="0" width="6" height="10" rx="1" fill="#a08060"/>
+          <polygon points="2,32 24,32 18,14 8,14" fill="#86efac" opacity=".85"/>
+          <polygon points="2,32 24,32 18,14 8,14" fill="none" stroke="#4ade80" stroke-width="1.5"/>
+          <rect x="4" y="24" width="18" height="4" rx="2" fill="#4ade80" opacity=".4"/>
+          <animateTransform attributeName="transform" type="translate" values="0,0;0,-1;0,0" dur="1.8s" repeatCount="indefinite"/>
+        </svg>
+        <!-- Book 3 -->
+        <svg width="16" height="28" viewBox="0 0 16 28">
+          <rect width="16" height="28" rx="2" fill="#fb923c"/>
+          <rect x="2" y="5" width="12" height="1.5" rx="1" fill="#fff" opacity=".6"/>
+          <rect x="2" y="9" width="9" height="1.5" rx="1" fill="#fff" opacity=".6"/>
+          <rect x="0" y="0" width="2.5" height="28" rx="1" fill="#ea580c"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Shelf 2 with items -->
+    <div class="lab-shelf lab-shelf-2">
+      <div class="shelf-items">
+        <!-- Round-bottom flask -->
+        <svg width="24" height="30" viewBox="0 0 24 30">
+          <rect x="9" y="0" width="6" height="8" rx="1" fill="#a08060"/>
+          <ellipse cx="12" cy="21" rx="10" ry="9" fill="#fde68a" opacity=".85"/>
+          <ellipse cx="12" cy="21" rx="10" ry="9" fill="none" stroke="#f59e0b" stroke-width="1.5"/>
+          <ellipse cx="12" cy="24" rx="7" ry="3" fill="#fbbf24" opacity=".4"/>
+        </svg>
+        <!-- Test tube -->
+        <svg width="14" height="32" viewBox="0 0 14 32">
+          <rect x="3" y="0" width="8" height="26" rx="4" fill="#c4b5fd" opacity=".9"/>
+          <rect x="3" y="18" width="8" height="8" rx="4" fill="#8b5cf6" opacity=".7"/>
+          <rect x="3" y="0" width="8" height="26" rx="4" fill="none" stroke="#7c3aed" stroke-width="1.5"/>
+        </svg>
+        <!-- Book -->
+        <svg width="18" height="30" viewBox="0 0 18 30">
+          <rect width="18" height="30" rx="2" fill="#34d399"/>
+          <rect x="2" y="5" width="14" height="1.5" rx="1" fill="#fff" opacity=".6"/>
+          <rect x="2" y="9" width="10" height="1.5" rx="1" fill="#fff" opacity=".6"/>
+          <rect x="0" y="0" width="2.5" height="30" rx="1" fill="#059669"/>
+        </svg>
+        <!-- Beaker small -->
+        <svg width="20" height="28" viewBox="0 0 20 28">
+          <polygon points="2,26 18,26 16,8 4,8" fill="#f9a8d4" opacity=".85"/>
+          <polygon points="2,26 18,26 16,8 4,8" fill="none" stroke="#ec4899" stroke-width="1.5"/>
+          <rect x="3" y="8" width="14" height="4" fill="#a08060"/>
+          <rect x="4" y="18" width="12" height="4" rx="1" fill="#f472b6" opacity=".5"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Wall monitor -->
+    <div class="wall-monitor">
+      <div class="mon-label">Score</div>
+      <div class="mon-val" id="monitorScore">0 XP</div>
+      <div class="mon-label">Streak</div>
+      <div class="mon-val" id="monitorStreak">🔥 0</div>
+    </div>
+
+  </div><!-- /lab-wall -->
+
+  <!-- Floor -->
+  <div class="lab-floor">
+
+    <!-- Left bench -->
+    <div class="lab-bench left">
+      <div class="bench-top"></div>
+      <div class="bench-items">
+        <!-- Beaker 1 with steam -->
+        <div class="beaker-wrap">
+          <div class="steam">
+            <div class="steam-line"></div>
+            <div class="steam-line"></div>
+            <div class="steam-line"></div>
+          </div>
+          <svg width="38" height="52" viewBox="0 0 38 52">
+            <polygon points="4,50 34,50 30,10 8,10" fill="none" stroke="#7dd3fc" stroke-width="2"/>
+            <clipPath id="bk1clip"><polygon points="4,50 34,50 30,10 8,10"/></clipPath>
+            <rect x="4" y="10" width="30" height="40" clip-path="url(#bk1clip)" fill="#bae6fd" opacity=".4"/>
+            <rect x="4" y="10" width="30" height="40" clip-path="url(#bk1clip)">
+              <animate attributeName="y" values="28;26;28;30;28" dur="1.6s" repeatCount="indefinite"/>
+              <animate attributeName="height" values="22;24;22;20;22" dur="1.6s" repeatCount="indefinite"/>
+              <set attributeName="fill" to="#38bdf8"/>
+              <set attributeName="opacity" to="0.75"/>
+            </rect>
+            <rect x="6" y="8" width="26" height="5" rx="1" fill="#a08060"/>
+          </svg>
+        </div>
+        <!-- Beaker 2 (green liquid) -->
+        <div class="beaker-wrap">
+          <svg width="32" height="46" viewBox="0 0 32 46">
+            <ellipse cx="16" cy="42" rx="12" ry="4" fill="none" stroke="#4ade80" stroke-width="2"/>
+            <path d="M4,42 Q4,10 16,10 Q28,10 28,42" fill="none" stroke="#4ade80" stroke-width="2"/>
+            <clipPath id="bk2clip"><path d="M4,42 Q4,10 16,10 Q28,10 28,42 Z"/></clipPath>
+            <ellipse cx="16" cy="42" rx="12" ry="4" clip-path="url(#bk2clip)" fill="#86efac" opacity=".5"/>
+            <rect x="4" y="10" width="24" height="32" clip-path="url(#bk2clip)">
+              <animate attributeName="y" values="26;24;26;28;26" dur="2.1s" repeatCount="indefinite"/>
+              <animate attributeName="height" values="16;18;16;14;16" dur="2.1s" repeatCount="indefinite"/>
+              <set attributeName="fill" to="#4ade80"/>
+              <set attributeName="opacity" to="0.7"/>
+            </rect>
+            <rect x="5" y="6" width="22" height="5" rx="1" fill="#a08060"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right bench -->
+    <div class="lab-bench right">
+      <div class="bench-top"></div>
+      <div class="bench-items">
+        <!-- Beaker 3 (purple) -->
+        <div class="beaker-wrap">
+          <svg width="34" height="48" viewBox="0 0 34 48">
+            <polygon points="3,46 31,46 27,8 7,8" fill="none" stroke="#c084fc" stroke-width="2"/>
+            <clipPath id="bk3clip"><polygon points="3,46 31,46 27,8 7,8"/></clipPath>
+            <rect x="3" y="8" width="28" height="38" clip-path="url(#bk3clip)" fill="#e9d5ff" opacity=".4"/>
+            <rect x="3" y="8" width="28" height="38" clip-path="url(#bk3clip)">
+              <animate attributeName="y" values="28;26;30;27;28" dur="1.9s" repeatCount="indefinite"/>
+              <animate attributeName="height" values="18;20;16;19;18" dur="1.9s" repeatCount="indefinite"/>
+              <set attributeName="fill" to="#a855f7"/>
+              <set attributeName="opacity" to="0.65"/>
+            </rect>
+            <rect x="5" y="6" width="24" height="4" rx="1" fill="#a08060"/>
+          </svg>
+        </div>
+        <!-- Flask (orange) -->
+        <div class="beaker-wrap">
+          <svg width="36" height="50" viewBox="0 0 36 50">
+            <rect x="14" y="0" width="8" height="14" rx="2" fill="#a08060"/>
+            <ellipse cx="18" cy="38" rx="14" ry="12" fill="#fed7aa" opacity=".85"/>
+            <ellipse cx="18" cy="38" rx="14" ry="12" fill="none" stroke="#fb923c" stroke-width="2"/>
+            <rect x="6" y="14" width="24" height="24" clip-path="url(#flkclip)">
+              <animate attributeName="y" values="36;34;37;35;36" dur="2.4s" repeatCount="indefinite"/>
+              <animate attributeName="height" values="12;14;11;13;12" dur="2.4s" repeatCount="indefinite"/>
+              <set attributeName="fill" to="#f97316"/>
+              <set attributeName="opacity" to="0.6"/>
+            </rect>
+            <clipPath id="flkclip"><ellipse cx="18" cy="38" rx="14" ry="12"/></clipPath>
+            <ellipse cx="18" cy="44" rx="10" ry="4" fill="#fb923c" opacity=".35"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /lab-floor -->
+</div><!-- /lab-scene -->
+
+<!-- Floating particles container -->
+<div id="particles"></div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FIXED HEADER
+════════════════════════════════════════════════════════════════ -->
+<header class="site-header">
+  <div class="hdr-brand">
+    <div class="hdr-icon">⚡</div>
+    <div>
+      <div class="hdr-title">Prefix Power-Up</div>
+      <span class="hdr-sub">Word Lab · Mission Mode</span>
     </div>
   </div>
+  <span class="hud-pill streak" id="streakPill">🔥 Streak: 0</span>
+  <span class="hud-pill score"  id="scorePill">0 XP</span>
+  <span id="wlPillSlot"></span>
+  <button id="wlLoginBtn">👤 Log in</button>
+  <a href="landing.html" class="hdr-btn dark">🏠 Home</a>
+  <a href="scientist.html" class="hdr-btn indigo">🧬 My Scientist</a>
 </header>
-<div class="wrap">
-  <div class="panel"><div class="panelInner">
-    <div class="panelTitle">Energy level</div>
-    <div class="energyRow"><span></span><span id="fuelLabel">100%</span></div>
-    <div class="bar"><div class="barFill" id="fuelBar"></div></div>
-  </div></div>
-  <div class="panel"><div class="panelInner">
-    <div class="missionBadge">Active mission</div>
-    <div class="missionTitle">Prefix Power-Up</div>
-    <div class="missionSub">Choose the prefix that changes the base word to match the target meaning.</div>
-  </div></div>
-  <div class="panel"><div class="panelInner">
-    <div style="display:flex;justify-content:center;gap:8px;margin-bottom:20px;">
+
+<!-- ════════════════════════════════════════════════════════════════
+     SCIENTIST CHARACTER
+════════════════════════════════════════════════════════════════ -->
+<div class="scientist-stage">
+  <div id="sciCharWrap"></div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     GAME ZONE
+════════════════════════════════════════════════════════════════ -->
+<div class="game-zone">
+
+  <!-- Fuel bar -->
+  <div class="fuel-pill">
+    <div class="fuel-row"><span>⚡ Energy</span><span id="fuelLabel">100%</span></div>
+    <div class="fuel-bar-track"><div class="fuel-bar-fill" id="fuelBar"></div></div>
+  </div>
+
+  <!-- Main panel -->
+  <div class="game-panel">
+    <!-- Mode buttons -->
+    <div class="mode-row">
       <button class="modeSel active" id="modePrefix" onclick="setMorphemeMode('prefix')">Prefixes</button>
-      <button class="modeSel" id="modeSuffix" onclick="setMorphemeMode('suffix')">Suffixes</button>
-      <button class="modeSel" id="modeMixed" onclick="setMorphemeMode('mixed')">Mixed</button>
+      <button class="modeSel"        id="modeSuffix" onclick="setMorphemeMode('suffix')">Suffixes</button>
+      <button class="modeSel"        id="modeMixed"  onclick="setMorphemeMode('mixed')">Mixed</button>
     </div>
+
     <div class="challengeLabel" id="challengeLabel">Prefix challenge</div>
-    <div class="challengeSub" id="challengeSub">Pick the prefix that gives the base word the right meaning.</div>
+    <div class="challengeSub"   id="challengeSub">Pick the prefix that gives the base word the right meaning.</div>
+
     <div class="wordArea">
-      <div class="dropZone" id="prefixDropZone"><div class="dropZoneText" id="dropZoneText">____</div></div>
+      <div class="dropZone" id="prefixDropZone">
+        <div class="dropZoneText" id="dropZoneText">____</div>
+      </div>
       <div class="baseWord" id="word">BASE</div>
     </div>
+
     <div class="baseMeaning" id="baseMeaning">Loading...</div>
-    <div class="options" id="options"></div>
-    <div class="feedback" id="feedback"></div>
+    <div class="options"     id="options"></div>
+    <div class="feedback"    id="feedback"></div>
     <div class="subFeedback" id="subFeedback"></div>
+
     <div class="actionRow">
       <button class="secondaryBtn" id="recalibrateBtn" type="button">Restart</button>
-      <button class="primaryBtn" id="skipBtn" type="button">Skip →</button>
+      <button class="primaryBtn"   id="skipBtn"        type="button">Skip →</button>
     </div>
-  </div></div>
-</div>
+  </div><!-- /game-panel -->
+
+</div><!-- /game-zone -->
+
+<!-- ════════════════════════════════════════════════════════════════
+     SCRIPTS
+════════════════════════════════════════════════════════════════ -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="wordlab-data.js"></script>
 <script src="wordlab-scientist.js"></script>
@@ -216,6 +746,60 @@ document.addEventListener('DOMContentLoaded', function() {
   if (btn) {
     btn.onclick = function() { wlShowLogin(); };
     if (session) btn.textContent = '👤 ' + session.studentName;
+  }
+
+  // ADD THESE after the existing code:
+
+  // Scene scientist
+  (async function() {
+    if (typeof WLScientist === 'undefined') return;
+    const sd = typeof WordLabData !== 'undefined' ? await WordLabData.getStudentData() : null;
+    const wrap = document.getElementById('sciCharWrap');
+    if (wrap && typeof WLScientist !== 'undefined') {
+      wrap.innerHTML = WLScientist.buildSVG(sd ? sd.scientist : {}, 'neutral');
+    }
+  })();
+
+  // Floating particles
+  const container = document.getElementById('particles');
+  if (container) {
+    const colors = ['rgba(99,102,241,.5)','rgba(13,148,136,.5)','rgba(167,139,250,.5)','rgba(251,146,60,.4)'];
+    for (let i = 0; i < 18; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.cssText = `left:${Math.random()*100}%;animation-duration:${9+Math.random()*13}s;animation-delay:${-Math.random()*22}s;width:${2+Math.random()*3}px;height:${2+Math.random()*3}px;background:${colors[Math.floor(Math.random()*colors.length)]};`;
+      container.appendChild(p);
+    }
+  }
+
+  // Mirror score/streak to wall monitor
+  const monScore = document.getElementById('monitorScore');
+  const monStreak = document.getElementById('monitorStreak');
+  const scoreEl = document.getElementById('scorePill');
+  const streakEl = document.getElementById('streakPill');
+  if (scoreEl && monScore) {
+    new MutationObserver(() => { monScore.textContent = scoreEl.textContent; }).observe(scoreEl, {childList:true,subtree:true,characterData:true});
+    monScore.textContent = scoreEl.textContent;
+  }
+  if (streakEl && monStreak) {
+    new MutationObserver(() => { monStreak.textContent = streakEl.textContent.replace('🔥 Streak: ','🔥 '); }).observe(streakEl, {childList:true,subtree:true,characterData:true});
+  }
+
+  // Patch WLScientist.react to also animate scene character
+  if (typeof WLScientist !== 'undefined') {
+    const _origReact = WLScientist.react.bind(WLScientist);
+    WLScientist.react = function(type, extras) {
+      _origReact(type, extras);
+      const wrap = document.getElementById('sciCharWrap');
+      if (!wrap) return;
+      wrap.classList.remove('sci-correct','sci-wrong','sci-streak');
+      void wrap.offsetWidth;
+      if (type === 'correct') wrap.classList.add('sci-correct');
+      else if (type === 'wrong') wrap.classList.add('sci-wrong');
+      else if (type === 'streak') wrap.classList.add('sci-streak');
+      const dur = type === 'streak' ? 2400 : 900;
+      setTimeout(() => { wrap.classList.remove('sci-correct','sci-wrong','sci-streak'); }, dur);
+    };
   }
 });
 </script>
