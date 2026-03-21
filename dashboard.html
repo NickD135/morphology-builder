@@ -351,7 +351,11 @@ const COLUMNS = {
     'running','significant','happiness','unhelpful','rewrite','preheat',
     'forecast','foresee','multitask','hyperactive','malfunction','semicircle','semifinal',
     'microphone','megaphone','midpoint','midnight','extraordinary','enable','encourage',
-    'empower','construct','atypical','progress','export','observe','contradict','proactive'
+    'empower','construct','atypical','progress','export','observe','contradict','proactive',
+    'overpower','misplace','interact','underline','supermarket','discomfort',
+    'cheerful','kindness','hopeless','enjoyment','replacement','uncomfortable',
+    'underground','peaceful','friendship','misspell','unbreakable','misbehave',
+    'nonexistent','prepayment','overloaded'
   ],
   'meaning-mode': [
     'prefix:ad','prefix:anti','prefix:de','prefix:dis','prefix:in','prefix:inter','prefix:mis','prefix:non',
@@ -379,6 +383,12 @@ const THRESHOLD_ATTEMPTS = 3;
 
 let currentClass = null;
 let currentCrownLeaderId = null;
+const morphemeFilter = { 'mission-mode': 'prefix', 'meaning-mode': 'prefix' };
+
+function setMorphemeFilter(activity, value) {
+  morphemeFilter[activity] = value;
+  renderHeatmap(activity);
+}
 let _studentMap = {};
 
 // ── Login ────────────────────────────────────────────────────────
@@ -587,19 +597,39 @@ function renderHeatmap(activity){
   const container = document.getElementById(sectionMap[activity]);
   if(!container) return;
 
-  const columns = COLUMNS[activity] || [];
+  const allColumns = COLUMNS[activity] || [];
   const students = currentClass.students;
   const isTTR = (activity === 'meaning-mode' || activity === 'mission-mode');
+  const isMorpheme = isTTR;
+
+  // For mission/meaning mode, filter columns by selected type
+  const activeType = isMorpheme ? (morphemeFilter[activity] || 'prefix') : null;
+  const columns = isMorpheme
+    ? allColumns.filter(c => c.startsWith(activeType + ':'))
+    : allColumns;
+
+  // Strip "type:" prefix from label for morpheme mode
+  const colLabel = col => isMorpheme ? col.replace(/^[^:]+:/, '') : col;
 
   const titleMap = {
     'sound-sorter':      '🔤 Sound Sorter — accuracy by sound group',
     'phoneme-splitter':  '🔊 Phoneme Splitter — accuracy by difficulty',
     'syllable-splitter': '✂️ Syllable Splitter — accuracy by difficulty',
     'breakdown-blitz':   '🧩 Breakdown Blitz — accuracy by word',
-    'meaning-mode':      '🧠 Meaning Mode — accuracy by prefix',
-    'mission-mode':      '⚡ Mission Mode — accuracy by prefix',
+    'meaning-mode':      '🧠 Meaning Mode — accuracy by morpheme',
+    'mission-mode':      '⚡ Mission Mode — accuracy by morpheme',
     'root-lab':          '🧫 Root Lab — accuracy by difficulty',
   };
+
+  const morphemeFilterUI = isMorpheme ? `
+    <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+      <label style="font-weight:700;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Show:</label>
+      <select onchange="setMorphemeFilter('${activity}',this.value)"
+              style="padding:4px 10px;border-radius:6px;border:1.5px solid var(--line);font-size:13px;font-weight:700;background:#fff;cursor:pointer;">
+        <option value="prefix" ${activeType==='prefix'?'selected':''}>Prefixes</option>
+        <option value="suffix" ${activeType==='suffix'?'selected':''}>Suffixes</option>
+      </select>
+    </div>` : '';
 
   const legend = `
     <div class="legend">
@@ -615,7 +645,7 @@ function renderHeatmap(activity){
   `;
 
   const headerCols = columns.map(col =>
-    `<th class="rotate"><span>${col}</span></th>`
+    `<th class="rotate"><span>${colLabel(col)}</span></th>`
   ).join('');
 
   const rows = students.map(student => {
@@ -637,7 +667,7 @@ function renderHeatmap(activity){
       }
 
       const timeStr = avgMs ? `Avg: ${(avgMs/1000).toFixed(1)}s` : '';
-      const tooltip = `${student.name} — ${col}\n${pct}% (${result.correct}/${total})${timeStr ? '\n'+timeStr : ''}${flagged ? '\n⚠️ Needs support' : ''}`;
+      const tooltip = `${student.name} — ${colLabel(col)}\n${pct}% (${result.correct}/${total})${timeStr ? '\n'+timeStr : ''}${flagged ? '\n⚠️ Needs support' : ''}`;
 
       return `<td>
         <div class="cell ${ac} ${tc}" 
@@ -661,6 +691,7 @@ function renderHeatmap(activity){
   container.innerHTML = `
     <div class="panel"><div class="panelInner">
       <div class="panelTitle">${titleMap[activity] || activity}</div>
+      ${morphemeFilterUI}
       ${legend}
       <div class="heatmapWrap">
         <table class="heatmap">
