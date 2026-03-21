@@ -308,12 +308,6 @@
   <!-- ═══ CENTRE CANVAS ═══ -->
   <div class="canvasArea">
 
-    <!-- API key row -->
-    <div class="aiKeyRow">
-      <span style="font-size:11px;font-weight:800;color:var(--muted);white-space:nowrap;">Anthropic API key</span>
-      <input type="password" class="aiKeyInput" id="anthropicKey" placeholder="sk-ant-... (for AI Polish)" autocomplete="off">
-    </div>
-
     <div class="canvasWrapper" id="canvasWrapper">
       <canvas id="drawingCanvas"></canvas>
       <svg id="highlightSVG" viewBox="0 0 400 480" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -950,16 +944,9 @@ function updatePreview() {
 }
 
 // ── AI Polish ─────────────────────────────────────────────────
-async function aiPolish() {
-  let apiKey = document.getElementById('anthropicKey').value.trim() ||
-               sessionStorage.getItem('wl_anthropic_key') || '';
-  if (!apiKey) {
-    apiKey = prompt('Enter your Anthropic API key:') || '';
-    if (!apiKey) return;
-    sessionStorage.setItem('wl_anthropic_key', apiKey);
-    document.getElementById('anthropicKey').value = apiKey;
-  }
+const POLISH_EDGE_FN = 'https://qutsbcfkgiihcwaktsaz.supabase.co/functions/v1/polish-item';
 
+async function aiPolish() {
   const btn = document.getElementById('aiPolishBtn');
   btn.disabled = true;
   btn.textContent = '⏳ Polishing…';
@@ -968,34 +955,19 @@ async function aiPolish() {
     const dataURL = canvas.toDataURL({ format: 'png', multiplier: 1 });
     const base64  = dataURL.replace('data:image/png;base64,', '');
 
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch(POLISH_EDGE_FN, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: 'claude-opus-4-6',
-        max_tokens: 4096,
-        messages: [{
-          role: 'user',
-          content: [
-            { type:'image', source:{ type:'base64', media_type:'image/png', data:base64 } },
-            { type:'text', text:'This is a rough hand-drawn design for a cosmetic item in an educational game called Word Lab. The game has a friendly, cartoon science lab aesthetic with an indigo/teal/amber colour palette. Please redraw this design as a clean, polished, game-ready illustration in the style of the game — friendly, rounded shapes, solid colours, clear outlines, suitable for a primary school audience. Return the result as a description of what you see and then a clean SVG representation of the design.' }
-          ]
-        }]
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64 }),
     });
 
     if (!resp.ok) {
       const errData = await resp.json().catch(() => ({}));
-      throw new Error(errData.error?.message || 'API error ' + resp.status);
+      throw new Error(errData.error || 'Edge Function error ' + resp.status);
     }
 
     const data = await resp.json();
-    const text = data.content[0].text;
+    const text = data.text;
 
     const svgMatch = text.match(/<svg[\s\S]*?<\/svg>/i);
     aiSvgContent = svgMatch ? svgMatch[0] : '';
