@@ -123,11 +123,103 @@
 
     .classInfo{ font-size:14px; font-weight:700; color:var(--muted); margin-bottom:20px; }
     .classInfo strong{ color:#312e81; }
+
+    /* ── Student Profile Modal ── */
+    .profileModal{
+      position:fixed; inset:0; z-index:50;
+      background:rgba(15,23,42,.6); backdrop-filter:blur(4px);
+      display:flex; align-items:flex-start; justify-content:center;
+      padding:20px; overflow-y:auto;
+    }
+    .profileCard{
+      background:#fff; border-radius:24px; width:100%; max-width:1180px;
+      box-shadow:0 40px 80px rgba(0,0,0,.3); margin:auto;
+      border:4px solid var(--line);
+    }
+    .profileHeader{
+      padding:22px 28px 18px; border-bottom:2px solid var(--line);
+      display:flex; justify-content:space-between; align-items:center; gap:12px;
+    }
+    .profileName{ font-size:22px; font-weight:900; color:#312e81; margin:0; }
+    .profileCode{ font-size:12px; color:var(--muted); font-weight:700; margin-top:2px; }
+    .profileClose{
+      border:2px solid var(--line); background:#fff; border-radius:12px;
+      padding:8px 16px; font-weight:800; cursor:pointer; font-size:13px;
+      white-space:nowrap; flex-shrink:0;
+    }
+    .profileClose:hover{ background:var(--bg); }
+    .profileBody{ padding:20px 28px 28px; }
+    /* Stats strip */
+    .statsStrip{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
+    .statPill{
+      border:2px solid var(--line); border-radius:14px; padding:10px 16px;
+      flex:1; min-width:120px;
+    }
+    .statPillVal{ font-size:24px; font-weight:900; color:var(--indigo); line-height:1; }
+    .statPillLbl{ font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin-top:4px; }
+    /* Flags strip */
+    .flagStrip{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:18px; }
+    .flagChip{
+      background:#fef2f2; border:1.5px solid #fecaca; color:var(--bad);
+      border-radius:8px; padding:4px 10px; font-size:11px; font-weight:800;
+    }
+    /* Heatmap sections */
+    .sectionGroup{
+      font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.14em;
+      color:var(--indigo-2); border-top:2px solid var(--indigo-soft);
+      padding-top:10px; margin:14px 0 8px; display:flex; align-items:center; gap:8px;
+    }
+    .profileSection{ margin-bottom:10px; display:flex; align-items:flex-start; gap:10px; }
+    .profileSectionLabel{
+      font-size:9px; font-weight:900; text-transform:uppercase; letter-spacing:.1em;
+      color:#fff; background:var(--indigo-2); border-radius:7px; padding:4px 8px;
+      white-space:nowrap; flex-shrink:0; margin-top:2px; line-height:1.4;
+      max-width:110px; text-align:center;
+    }
+    .profileSectionLabel.grn{ background:#0d9488; }
+    .profileSectionLabel.pur{ background:#7c3aed; }
+    .profileSectionLabel.amb{ background:#b45309; }
+    .profileSectionLabel.red{ background:#dc2626; }
+    .profileSectionLabel.tl{ background:#0369a1; }
+    .profileSectionCells{ display:flex; flex-wrap:wrap; gap:3px; flex:1; }
+    .profileCell{
+      width:30px; height:26px; border-radius:5px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:8px; font-weight:900; cursor:default;
+      position:relative; transition:transform .1s; letter-spacing:-.02em;
+    }
+    .profileCell:hover{ transform:scale(1.25); z-index:5; }
+    /* Speed cells get a subtle time indicator bar at bottom */
+    .profileCell.has-time::after{
+      content:''; position:absolute; bottom:2px; left:2px; right:2px;
+      height:2px; border-radius:999px; background:rgba(255,255,255,.5);
+    }
+    .profileCell.fast-time::after{ background:rgba(100,220,120,.8); }
+    .profileCell.slow-time::after{ background:rgba(255,100,100,.6); }
+    /* clickable student names */
+    .heatmap td.student-name{ cursor:pointer; }
+    .heatmap td.student-name:hover{ background:var(--indigo-soft); color:var(--indigo); }
+    .student-name-link{ display:flex; align-items:center; gap:4px; }
+    .student-name-arrow{ font-size:9px; opacity:.5; }
   </style>
 </head>
 <body>
 
 <div class="tooltip" id="tooltip"></div>
+
+<!-- ── Student Profile Modal ── -->
+<div class="profileModal hidden" id="profileModal">
+  <div class="profileCard">
+    <div class="profileHeader">
+      <div>
+        <div class="profileName" id="profileName"></div>
+        <div class="profileCode" id="profileCode"></div>
+      </div>
+      <button class="profileClose" onclick="closeStudentProfile()">✕ Close</button>
+    </div>
+    <div class="profileBody" id="profileBody"></div>
+  </div>
+</div>
 
 <header class="header">
   <div class="headerInner">
@@ -240,6 +332,7 @@ const THRESHOLD_ATTEMPTS = 3;
 
 let currentClass = null;
 let currentCrownLeaderId = null;
+let _studentMap = {};
 
 // ── Login ────────────────────────────────────────────────────────
 async function populateClassSelect(){
@@ -291,6 +384,8 @@ async function renderDashboard(){
 
   const students = currentClass.students;
   const totalStudents = students.length;
+  _studentMap = {};
+  students.forEach(s => { _studentMap[s.id] = s; });
 
   // Summary row
   let totalAttempts = 0, totalCorrect = 0, flagCount = 0;
@@ -509,7 +604,9 @@ function renderHeatmap(activity){
 
     const isCrownHolder = currentCrownLeaderId && student.id === currentCrownLeaderId;
     return `<tr>
-      <td class="student-name" style="${isCrownHolder ? 'color:#7e22ce;' : ''}">${isCrownHolder ? '🍩 ' : ''}${student.name}</td>
+      <td class="student-name" onclick="showStudentProfile('${student.id}')" title="View ${student.name}'s profile" style="${isCrownHolder ? 'color:#7e22ce;' : ''}">
+        <span class="student-name-link">${isCrownHolder ? '🍩 ' : ''}${student.name}<span class="student-name-arrow">▶</span></span>
+      </td>
       ${cells}
     </tr>`;
   }).join('');
@@ -560,6 +657,145 @@ function exportData(){
   a.click();
   URL.revokeObjectURL(url);
 }
+
+// ── Student Profile ──────────────────────────────────────────────
+function formatTime(ms){
+  if(!ms || ms === 0) return '0s';
+  const s = Math.round(ms / 1000);
+  if(s < 60) return s + 's';
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  return rem > 0 ? `${m}m ${rem}s` : `${m}m`;
+}
+
+function shortLabel(col){
+  if(col.startsWith('prefix:')) return col.slice(7);
+  if(col.startsWith('suffix:')) return col.slice(7);
+  if(col === '2 syllables') return '2 syl';
+  if(col === '3 syllables') return '3 syl';
+  if(col === '4+ syllables') return '4+';
+  if(col === 'Level up') return 'Lvl up';
+  if(col === 'Level Up') return 'Lvl Up';
+  return col;
+}
+
+function makeProfileCell(result, hasTime){
+  if(!result || result.total === 0) return `<div class="profileCell no-data" title="No data">–</div>`;
+  const pct = WordLabData.getAccuracy(result);
+  const ac = accClass(pct);
+  const flagged = WordLabData.isIntervention(result, THRESHOLD_PCT, THRESHOLD_ATTEMPTS);
+  const avgMs = result.totalTime && result.total ? Math.round(result.totalTime / result.total) : null;
+  let timeCls = '';
+  if(hasTime && avgMs){
+    timeCls = ' has-time' + (avgMs < 4000 ? ' fast-time' : avgMs > 10000 ? ' slow-time' : '');
+  }
+  const flagStyle = flagged ? 'outline:2px solid var(--bad);outline-offset:-1px;' : '';
+  const title = `${pct}% (${result.correct}/${result.total})${avgMs ? ' · Avg '+Math.round(avgMs/1000)+'s' : ''}${flagged ? ' ⚠️ Needs support' : ''}`;
+  return `<div class="profileCell ${ac}${timeCls}" style="${flagStyle}" title="${title}">${pct}%</div>`;
+}
+
+function showStudentProfile(studentId){
+  const student = _studentMap[studentId];
+  if(!student) return;
+  const results = student.results || {};
+
+  document.getElementById('profileName').textContent = student.name;
+  document.getElementById('profileCode').textContent = 'Login code: ' + (student.student_code || '—');
+
+  // Overall stats
+  let totalTime = 0, totalCorrect = 0, totalAttempts = 0;
+  const profileFlags = [];
+  const actLabel = {
+    'sound-sorter':'Sound Sorter','phoneme-splitter':'Phoneme','syllable-splitter':'Syllable',
+    'meaning-mode':'Meaning','mission-mode':'Mission','breakdown-blitz':'Breakdown','root-lab':'Root Lab'
+  };
+  Object.entries(results).forEach(([activity, actData]) => {
+    Object.entries(actData).forEach(([category, r]) => {
+      totalTime     += r.totalTime || 0;
+      totalCorrect  += r.correct   || 0;
+      totalAttempts += r.total     || 0;
+      if(WordLabData.isIntervention(r, THRESHOLD_PCT, THRESHOLD_ATTEMPTS)){
+        profileFlags.push({ activity, category, r });
+      }
+    });
+  });
+  const overallAcc = totalAttempts > 0 ? Math.round((totalCorrect/totalAttempts)*100) : null;
+
+  const statsHtml = `
+    <div class="statsStrip">
+      <div class="statPill"><div class="statPillVal">${formatTime(totalTime)}</div><div class="statPillLbl">Time in activities</div></div>
+      <div class="statPill"><div class="statPillVal">${totalCorrect.toLocaleString()}</div><div class="statPillLbl">Correct answers</div></div>
+      <div class="statPill"><div class="statPillVal">${totalAttempts.toLocaleString()}</div><div class="statPillLbl">Total attempts</div></div>
+      <div class="statPill" style="${overallAcc !== null && overallAcc < THRESHOLD_PCT ? 'border-color:#fecaca;background:#fef2f2;' : ''}">
+        <div class="statPillVal" style="color:${overallAcc !== null && overallAcc < THRESHOLD_PCT ? 'var(--bad)' : 'var(--green)'}">${overallAcc !== null ? overallAcc+'%' : '—'}</div>
+        <div class="statPillLbl">Overall accuracy</div>
+      </div>
+    </div>`;
+
+  const flagsHtml = profileFlags.length > 0 ? `
+    <div style="font-size:10px;font-weight:900;color:var(--bad);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">⚠️ Intervention flags</div>
+    <div class="flagStrip">
+      ${profileFlags.map(f => `<div class="flagChip">${actLabel[f.activity]||f.activity}: ${shortLabel(f.category)} — ${WordLabData.getAccuracy(f.r)}% (${f.r.total} att)</div>`).join('')}
+    </div>` :
+    `<div style="font-size:12px;color:var(--green-text);font-weight:800;margin-bottom:12px;padding:8px 14px;background:var(--green-soft);border:1.5px solid var(--green-line);border-radius:10px;">✅ No intervention flags</div>`;
+
+  function profileSection(label, colorClass, activityKey, cols, hasTime){
+    const actData = results[activityKey] || {};
+    const cells = cols.map(col => {
+      const r = actData[col] || null;
+      const lbl = shortLabel(col);
+      return `<div title="${col}">${makeProfileCell(r, hasTime)}<div style="font-size:7px;color:var(--muted);font-weight:700;text-align:center;margin-top:1px;width:30px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${lbl}</div></div>`;
+    }).join('');
+    return `<div class="profileSection">
+      <div class="profileSectionLabel ${colorClass}">${label}</div>
+      <div class="profileSectionCells">${cells}</div>
+    </div>`;
+  }
+
+  const soundCols      = COLUMNS['sound-sorter'];
+  const vowelCols      = soundCols.slice(0, 18);
+  const consoCols      = soundCols.slice(18);
+  const meaningPfx     = COLUMNS['meaning-mode'].filter(c => c.startsWith('prefix:'));
+  const meaningSfx     = COLUMNS['meaning-mode'].filter(c => c.startsWith('suffix:'));
+  const missionPfx     = COLUMNS['mission-mode'].filter(c => c.startsWith('prefix:'));
+  const missionSfx     = COLUMNS['mission-mode'].filter(c => c.startsWith('suffix:'));
+
+  document.getElementById('profileBody').innerHTML = `
+    ${statsHtml}
+    ${flagsHtml}
+    <div class="sectionGroup">🔤 Sounds</div>
+    ${profileSection('Sound Sorter<br>Vowels',     'tl',  'sound-sorter',      vowelCols,                    false)}
+    ${profileSection('Sound Sorter<br>Consonants', 'tl',  'sound-sorter',      consoCols,                    false)}
+    <div class="sectionGroup">🔊 Phoneme &amp; Syllable</div>
+    ${profileSection('Phoneme<br>Speed',           'grn', 'phoneme-splitter',  COLUMNS['phoneme-splitter'],  true)}
+    ${profileSection('Syllable<br>Speed',          'grn', 'syllable-splitter', COLUMNS['syllable-splitter'], true)}
+    <div class="sectionGroup">🧠 Meaning &amp; Mission</div>
+    ${profileSection('Meaning<br>Prefixes',        'pur', 'meaning-mode',      meaningPfx,                   false)}
+    ${profileSection('Meaning<br>Suffixes',        'pur', 'meaning-mode',      meaningSfx,                   false)}
+    ${profileSection('Mission<br>Prefixes',        'amb', 'mission-mode',      missionPfx,                   false)}
+    ${profileSection('Mission<br>Suffixes',        'amb', 'mission-mode',      missionSfx,                   false)}
+    <div class="sectionGroup">🧩 Blitz &amp; Root Lab</div>
+    ${profileSection('Breakdown<br>Blitz',         'red', 'breakdown-blitz',   COLUMNS['breakdown-blitz'],   false)}
+    ${profileSection('Root Lab',                   'red', 'root-lab',          COLUMNS['root-lab'],          false)}
+    <div class="sectionGroup" style="color:var(--muted);">⚡ Speed Mode</div>
+    <div class="profileSection">
+      <div class="profileSectionLabel" style="background:var(--muted);">Speed<br>Mode</div>
+      <div class="profileSectionCells" style="align-items:center;">
+        <div style="font-size:12px;color:var(--muted);font-weight:700;padding:4px 0;">No data recorded yet — speed mode tracking coming soon.</div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('profileModal').classList.remove('hidden');
+}
+
+function closeStudentProfile(){
+  document.getElementById('profileModal').classList.add('hidden');
+}
+
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape') closeStudentProfile();
+});
 
 // ── Boot ─────────────────────────────────────────────────────────
 populateClassSelect();
