@@ -816,6 +816,10 @@ async function render() {
       ${renderShopSection('Coat Patterns',      SHOP.coatPatterns,    'coatPattern',  sd)}
       ${renderShopSection('Head Accessories',   SHOP.headAccessories, 'head',         sd)}
       ${renderShopSection('Face Accessories',   SHOP.faceAccessories, 'face',         sd)}
+      <div id="customItemsSection" class="shopSection" style="display:none;">
+        <div class="shopSectionTitle">✨ Custom Items</div>
+        <div class="shopGrid" id="customItemsGrid"></div>
+      </div>
     </div>
   `;
 }
@@ -862,6 +866,9 @@ function switchTab(id, btn) {
   document.querySelectorAll('.tabBtn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
   btn.classList.add('active');
+  if (id === 'shop') {
+    WordLabData.getStudentData().then(sd => { if (sd) loadCustomShopItems(sd); });
+  }
 }
 
 async function applyOption(field, value) {
@@ -887,6 +894,118 @@ async function shopEquip(field, itemId) {
   const updates = {};
   updates[field] = (itemId==='none' || itemId==='null') ? null : itemId;
   await WordLabData.saveScientist(updates);
+  await render();
+}
+
+// ── Custom shop items from Supabase ───────────────────────────
+const _SUPABASE_URL  = 'https://qutsbcfkgiihcwaktsaz.supabase.co';
+const _SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dHNiY2ZrZ2lpaGN3YWt0c2F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NDE1NDksImV4cCI6MjA4OTUxNzU0OX0.h1N26KCcyHDrW4FRk6iBNmJUMQcFCYi8eHpOC818B8E';
+let _sciSb = null;
+function getSciSb() {
+  if (!_sciSb) _sciSb = window.supabase.createClient(_SUPABASE_URL, _SUPABASE_ANON);
+  return _sciSb;
+}
+
+async function loadCustomShopItems(sd) {
+  const section = document.getElementById('customItemsSection');
+  const grid    = document.getElementById('customItemsGrid');
+  if (!section || !grid) return;
+
+  let items;
+  try {
+    const { data, error } = await getSciSb().from('shop_items').select('*').eq('is_active', true);
+    if (error) throw error;
+    items = data || [];
+  } catch(e) {
+    return; // silently fail — custom items are optional
+  }
+
+  const today   = new Date();
+  const dayOfWk = today.getDay(); // 0=Sun, 6=Sat
+  const isWeekend = (dayOfWk === 0 || dayOfWk === 6);
+
+  const visible = items.filter(item => {
+    const m = item.unlock_method;
+    if (m === 'purchase' || m === 'gifted' || m === 'milestone' || m === 'secret_code') return true;
+    if (m === 'seasonal') {
+      const from  = item.available_from  ? new Date(item.available_from)  : null;
+      const until = item.available_until ? new Date(item.available_until) : null;
+      return (!from || today >= from) && (!until || today <= until);
+    }
+    if (m === 'weekend') return isWeekend;
+    if (m === 'limited') {
+      const release = item.release_date ? new Date(item.release_date) : null;
+      if (!release) return false;
+      const days = item.limited_days || 30;
+      const expiry = new Date(release.getTime() + days * 86400000);
+      return today <= expiry;
+    }
+    return true;
+  });
+
+  if (!visible.length) return;
+  section.style.display = 'block';
+
+  const rarityBorder = { common:'#94a3b8', rare:'#3b82f6', epic:'#a855f7', legendary:'#f59e0b' };
+  const owned = (sd.scientist||{}).owned || [];
+
+  grid.innerHTML = visible.map(item => {
+    const border = rarityBorder[item.rarity] || '#e2e8f0';
+    const isOwned = owned.includes('custom_' + item.id);
+    const canAfford = sd.quarks >= (item.quark_cost || 0);
+
+    let preview = '';
+    if (item.image_data) {
+      preview = `<img src="${item.image_data}" style="width:60px;height:60px;object-fit:contain;border-radius:6px;" alt="${item.name}">`;
+    } else {
+      preview = `<div style="font-size:28px;">🎨</div>`;
+    }
+
+    let btn = '';
+    if (item.unlock_method === 'secret_code') {
+      btn = `<button class="shopBtn buy" onclick="enterSecretCode('${item.id}','${(item.secret_code||'').replace(/'/g,"\\'")}')">🔑 Enter Code</button>`;
+    } else if (item.unlock_method === 'gifted') {
+      btn = `<span class="shopBtn cantafford">🎁 Teacher gift</span>`;
+    } else if (item.unlock_method === 'milestone') {
+      btn = `<span class="shopBtn cantafford">🏅 Milestone ${item.milestone_threshold||'?'}</span>`;
+    } else if (isOwned) {
+      btn = `<span class="shopBtn equipped">✓ Owned</span>`;
+    } else if (canAfford && item.quark_cost > 0) {
+      btn = `<button class="shopBtn buy" onclick="buyCustomItem('${item.id}',${item.quark_cost},'${item.item_type}')">⚛️ ${item.quark_cost}</button>`;
+    } else if (item.quark_cost === 0) {
+      btn = `<button class="shopBtn equip" onclick="claimCustomItem('${item.id}','${item.item_type}')">Claim Free</button>`;
+    } else {
+      btn = `<span class="shopBtn cantafford">Need ${(item.quark_cost||0)-sd.quarks} more ⚛️</span>`;
+    }
+
+    return `<div class="shopItem" style="border:3px solid ${border};">
+      ${preview}
+      <div class="shopItemName">${item.name}</div>
+      <div class="shopItemCost" style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;">${item.rarity}</div>
+      ${btn}
+    </div>`;
+  }).join('');
+}
+
+async function enterSecretCode(itemId, correctCode) {
+  const entered = prompt('Enter the secret code:');
+  if (!entered) return;
+  if (entered.trim().toUpperCase() === correctCode.toUpperCase()) {
+    await claimCustomItem(itemId, 'custom');
+    alert('Correct! Item unlocked!');
+  } else {
+    alert('That\'s not quite right. Try again!');
+  }
+}
+
+async function buyCustomItem(itemId, cost, type) {
+  const result = await WordLabData.purchase('custom_' + itemId, cost);
+  if (!result.success) { alert('Not enough quarks!'); return; }
+  await render();
+}
+
+async function claimCustomItem(itemId, type) {
+  await WordLabData.saveScientist({ owned: [...((await WordLabData.getScientist()).owned || []), 'custom_' + itemId] });
   await render();
 }
 

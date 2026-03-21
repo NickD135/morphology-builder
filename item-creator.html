@@ -1,0 +1,1103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Lab – Item Creator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#f5f5f5; --panel:#fff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b;
+      --indigo:#4338ca; --indigo-2:#6366f1; --indigo-soft:#eef2ff; --indigo-line:#c7d2fe;
+      --teal:#0d9488; --teal-soft:#f0fdfa; --amber:#d97706; --amber-soft:#fffbeb;
+      --green:#16a34a; --green-soft:#f0fdf4; --green-line:#bbf7d0;
+      --bad:#dc2626;
+    }
+    *{ box-sizing:border-box; margin:0; padding:0; }
+    body{ font-family:'Lexend',sans-serif; background:var(--bg); color:var(--text); line-height:1.5; overflow-x:hidden; }
+    button,input,select,textarea{ font:inherit; }
+
+    /* Header */
+    .header{ position:sticky; top:0; z-index:20; background:var(--bg); border-bottom:1px solid var(--line); box-shadow:0 1px 2px rgba(15,23,42,.05); }
+    .headerInner{ max-width:100%; padding:14px 20px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .brand{ display:flex; align-items:center; gap:10px; }
+    .brandIcon{ width:44px; height:44px; border-radius:12px; background:var(--indigo); color:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow:0 8px 20px rgba(67,56,202,.22); }
+    .brandText h1{ margin:0; font-size:20px; font-weight:900; color:#312e81; }
+    .brandText .sub{ font-size:9px; text-transform:uppercase; letter-spacing:.25em; color:var(--indigo-2); font-weight:900; display:block; }
+    .topBtn{ border:none; background:#0f172a; color:#fff; font-weight:800; font-size:11px; text-transform:uppercase; letter-spacing:.1em; padding:9px 13px; border-radius:12px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:5px; }
+    .topBtn:hover{ background:#000; }
+
+    /* Three-column layout */
+    .creatorLayout{ display:flex; height:calc(100vh - 73px); overflow:hidden; }
+
+    /* Left tool panel */
+    .toolPanel{
+      width:260px; flex-shrink:0; background:var(--panel); border-right:2px solid var(--line);
+      display:flex; flex-direction:column; gap:0; overflow-y:auto;
+    }
+    .toolSection{ padding:14px; border-bottom:1px solid var(--line); }
+    .toolSectionTitle{ font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.2em; color:var(--muted); margin-bottom:10px; }
+
+    /* Tool buttons */
+    .toolBtns{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .toolBtn{
+      border:2px solid var(--line); background:#fff; border-radius:10px;
+      padding:8px 6px; cursor:pointer; font-size:11px; font-weight:800;
+      color:var(--muted); transition:all .15s; display:flex; flex-direction:column; align-items:center; gap:3px;
+    }
+    .toolBtn .icon{ font-size:18px; }
+    .toolBtn:hover{ border-color:var(--indigo-line); color:var(--indigo); background:var(--indigo-soft); }
+    .toolBtn.active{ border-color:var(--indigo); background:var(--indigo-soft); color:var(--indigo); }
+
+    /* Sliders */
+    .sliderRow{ display:flex; align-items:center; gap:8px; margin-top:8px; }
+    .sliderRow label{ font-size:10px; font-weight:800; color:var(--muted); white-space:nowrap; }
+    .sliderRow input[type=range]{ flex:1; accent-color:var(--indigo); }
+    .sliderRow span{ font-size:11px; font-weight:800; color:var(--text); min-width:28px; text-align:right; }
+
+    /* Fill/stroke toggle */
+    .toggleRow{ display:flex; gap:6px; margin-top:8px; }
+    .toggleBtn{ flex:1; border:2px solid var(--line); background:#fff; border-radius:8px; padding:6px; font-size:11px; font-weight:800; cursor:pointer; color:var(--muted); transition:all .15s; }
+    .toggleBtn.active{ border-color:var(--indigo); background:var(--indigo-soft); color:var(--indigo); }
+
+    /* Color picker */
+    .colorRow{ display:flex; align-items:center; gap:10px; margin-top:8px; }
+    .colorSwatch{ width:36px; height:36px; border-radius:8px; border:2px solid var(--line); cursor:pointer; flex-shrink:0; }
+    input[type=color]{ width:36px; height:36px; border:none; border-radius:8px; cursor:pointer; padding:0; background:none; }
+
+    /* Pattern grid */
+    .patternGrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:8px; }
+    .patternSwatch{
+      width:100%; aspect-ratio:1; border-radius:8px; border:2px solid var(--line);
+      cursor:pointer; transition:all .15s; overflow:hidden; position:relative;
+    }
+    .patternSwatch:hover{ border-color:var(--indigo); }
+    .patternSwatch.active{ border-color:var(--indigo); box-shadow:0 0 0 2px var(--indigo); }
+    .patternSwatch span{ position:absolute; bottom:1px; left:0; right:0; text-align:center; font-size:7px; font-weight:800; color:rgba(0,0,0,.5); }
+
+    /* Canvas action buttons */
+    .actionBtns{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .actionBtn{ border:2px solid var(--line); background:#fff; border-radius:8px; padding:7px; font-size:11px; font-weight:800; cursor:pointer; color:var(--muted); transition:all .15s; }
+    .actionBtn:hover{ border-color:var(--indigo-line); color:var(--indigo); background:var(--indigo-soft); }
+    .actionBtn.danger:hover{ border-color:#fecaca; color:var(--bad); background:#fef2f2; }
+
+    /* Centre canvas area */
+    .canvasArea{
+      flex:1; display:flex; flex-direction:column; align-items:center;
+      justify-content:flex-start; padding:20px; overflow-y:auto; gap:16px; background:#f0f4f8;
+    }
+    .canvasWrapper{
+      position:relative; width:400px; height:480px;
+      border-radius:14px; overflow:hidden;
+      box-shadow:0 20px 40px rgba(15,23,42,.15);
+      background:#fff; flex-shrink:0;
+    }
+    .canvasWrapper canvas{ border-radius:14px; }
+    #highlightSVG{ position:absolute; top:0; left:0; width:400px; height:480px; pointer-events:none; z-index:5; }
+
+    /* AI polish */
+    .aiBtn{
+      border:none; background:linear-gradient(135deg,var(--indigo),var(--indigo-2));
+      color:#fff; font-weight:900; font-size:14px; padding:13px 28px;
+      border-radius:14px; cursor:pointer; box-shadow:0 8px 20px rgba(67,56,202,.25);
+      transition:all .15s; display:flex; align-items:center; gap:8px;
+    }
+    .aiBtn:hover{ transform:translateY(-1px); box-shadow:0 12px 28px rgba(67,56,202,.35); }
+    .aiBtn:disabled{ opacity:.6; cursor:not-allowed; transform:none; }
+    .aiKeyRow{ display:flex; gap:8px; align-items:center; width:400px; }
+    .aiKeyInput{
+      flex:1; border:2px solid var(--line); border-radius:10px; padding:9px 12px;
+      font-size:12px; font-weight:700; outline:none; color:var(--text);
+    }
+    .aiKeyInput:focus{ border-color:var(--indigo-2); }
+    #aiResult{
+      width:400px; background:var(--panel); border:2px solid var(--indigo-line);
+      border-radius:14px; padding:16px; display:none;
+    }
+    .aiResultTitle{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.15em; color:var(--indigo); margin-bottom:10px; }
+    .aiSvgPreview{ width:100%; max-height:200px; overflow:hidden; border-radius:8px; background:#f8fafc; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; margin-bottom:10px; }
+    .aiSvgPreview svg{ max-width:100%; max-height:200px; }
+    .aiResultBtns{ display:flex; gap:8px; }
+    .aiResultBtns button{ flex:1; border:2px solid var(--line); background:#fff; border-radius:10px; padding:9px; font-size:12px; font-weight:800; cursor:pointer; color:var(--muted); transition:all .15s; }
+    .aiResultBtns .useBtn{ background:var(--indigo); color:#fff; border-color:var(--indigo); }
+    .aiResultBtns .useBtn:hover{ background:#3730a3; }
+    .aiResultBtns button:hover{ border-color:var(--indigo-line); color:var(--indigo); }
+    .aiResultText{ font-size:12px; font-weight:600; color:var(--muted); max-height:100px; overflow-y:auto; margin-bottom:10px; line-height:1.5; }
+
+    /* Right settings panel */
+    .settingsPanel{
+      width:300px; flex-shrink:0; background:var(--panel); border-left:2px solid var(--line);
+      display:flex; flex-direction:column; overflow-y:auto;
+    }
+    .settSection{ padding:14px; border-bottom:1px solid var(--line); }
+    .settLabel{ font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.2em; color:var(--muted); margin-bottom:8px; }
+    .settInput{
+      width:100%; border:2px solid var(--line); border-radius:10px;
+      padding:10px 12px; font-size:13px; font-weight:700; outline:none; color:var(--text);
+      transition:border-color .15s;
+    }
+    .settInput:focus{ border-color:var(--indigo-2); box-shadow:0 0 0 3px rgba(99,102,241,.1); }
+
+    /* Type buttons */
+    .typeBtns{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .typeBtn{
+      border:2px solid var(--line); background:#fff; border-radius:10px;
+      padding:8px 6px; cursor:pointer; font-size:11px; font-weight:800;
+      color:var(--muted); transition:all .15s; text-align:center;
+    }
+    .typeBtn:hover{ border-color:var(--indigo-line); color:var(--indigo); }
+    .typeBtn.active{ border-color:var(--indigo); background:var(--indigo-soft); color:var(--indigo); }
+
+    /* Unlock config */
+    .unlockConfig{ margin-top:10px; display:flex; flex-direction:column; gap:8px; }
+    .unlockConfig label{ font-size:11px; font-weight:800; color:var(--muted); display:block; margin-bottom:3px; }
+    .unlockConfig input, .unlockConfig select{ width:100%; border:2px solid var(--line); border-radius:8px; padding:8px 10px; font-size:12px; font-weight:700; outline:none; }
+    .unlockConfig input:focus, .unlockConfig select:focus{ border-color:var(--indigo-2); }
+    .unlockNote{ font-size:12px; font-weight:700; color:var(--muted); background:#f8fafc; border-radius:8px; padding:10px; border:1px solid var(--line); }
+    .switchRow{ display:flex; align-items:center; gap:8px; }
+    .miniSwitch{ position:relative; width:36px; height:20px; flex-shrink:0; }
+    .miniSwitch input{ opacity:0; width:0; height:0; position:absolute; }
+    .miniSlider{ position:absolute; inset:0; background:#cbd5e1; border-radius:999px; cursor:pointer; transition:background .2s; }
+    .miniSlider:before{ content:''; position:absolute; width:14px; height:14px; left:3px; top:3px; background:#fff; border-radius:50%; transition:transform .2s; }
+    .miniSwitch input:checked + .miniSlider{ background:var(--indigo); }
+    .miniSwitch input:checked + .miniSlider:before{ transform:translateX(16px); }
+    .switchLabel{ font-size:11px; font-weight:700; color:var(--text); }
+
+    /* Rarity */
+    .rarityBtns{ display:grid; grid-template-columns:repeat(4,1fr); gap:5px; }
+    .rarityBtn{
+      border:3px solid var(--line); background:#fff; border-radius:8px;
+      padding:7px 3px; cursor:pointer; font-size:10px; font-weight:800;
+      color:var(--muted); transition:all .15s; text-align:center; line-height:1.2;
+    }
+    .rarityBtn[data-rarity=common].active{ border-color:#94a3b8; background:#f8fafc; color:#475569; }
+    .rarityBtn[data-rarity=rare].active{ border-color:#3b82f6; background:#eff6ff; color:#1d4ed8; }
+    .rarityBtn[data-rarity=epic].active{ border-color:#a855f7; background:#faf5ff; color:#7e22ce; }
+    .rarityBtn[data-rarity=legendary].active{ border-color:#f59e0b; background:#fffbeb; color:#92400e; }
+
+    /* Preview */
+    .previewBox{
+      background:#f0f4f8; border-radius:12px; border:2px solid var(--line);
+      padding:12px; display:flex; flex-direction:column; align-items:center; gap:8px;
+    }
+    .previewSciWrap{ position:relative; width:80px; height:96px; }
+    .previewSciWrap svg{ width:80px; height:96px; }
+    .previewOverlay{ position:absolute; inset:0; width:80px; height:96px; object-fit:contain; }
+    .previewLabel{ font-size:10px; font-weight:800; color:var(--muted); text-align:center; }
+
+    /* Publish button */
+    .publishSection{ padding:14px; margin-top:auto; }
+    .publishBtn{
+      width:100%; border:none; background:linear-gradient(135deg,var(--green),#059669);
+      color:#fff; font-weight:900; font-size:15px; padding:15px;
+      border-radius:14px; cursor:pointer; box-shadow:0 8px 20px rgba(22,163,74,.25);
+      transition:all .15s; text-transform:uppercase; letter-spacing:.06em;
+    }
+    .publishBtn:hover{ transform:translateY(-1px); box-shadow:0 12px 28px rgba(22,163,74,.35); }
+    .publishSuccess{
+      background:var(--green-soft); border:2px solid var(--green-line);
+      border-radius:12px; padding:12px; text-align:center;
+      font-size:13px; font-weight:800; color:var(--green); display:none; margin-bottom:10px;
+    }
+    .publishSuccess a{ color:var(--indigo); text-decoration:underline; cursor:pointer; }
+  </style>
+</head>
+<body>
+
+<!-- ── Password gate ── -->
+<div id="teacherGate" style="position:fixed;inset:0;background:rgba(15,23,42,.65);z-index:9999;display:flex;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:28px;padding:36px 32px;max-width:420px;width:90vw;text-align:center;box-shadow:0 40px 80px rgba(15,23,42,.25);font-family:'Lexend',sans-serif;">
+    <div style="font-size:44px;margin-bottom:12px;">🎨</div>
+    <div style="font-size:22px;font-weight:900;color:#312e81;margin-bottom:6px;">Item Creator</div>
+    <div style="color:#64748b;font-size:14px;font-weight:700;margin-bottom:24px;">Enter the teacher password to create custom items.</div>
+    <input type="password" id="gatePassword" placeholder="Enter password"
+      style="width:100%;border:2px solid #e2e8f0;border-radius:14px;padding:13px 16px;font-size:15px;font-family:'Lexend',sans-serif;font-weight:700;outline:none;margin-bottom:10px;transition:border-color .15s;"
+      onkeydown="if(event.key==='Enter') checkGate()"
+      onfocus="this.style.borderColor='#4338ca'" onblur="this.style.borderColor='#e2e8f0'">
+    <div id="gateError" style="color:#dc2626;font-size:13px;font-weight:800;margin-bottom:10px;display:none;">Incorrect password. Try again.</div>
+    <button onclick="checkGate()" style="border:none;background:#4338ca;color:#fff;font-weight:900;font-size:15px;padding:14px;border-radius:16px;cursor:pointer;width:100%;font-family:'Lexend',sans-serif;letter-spacing:.06em;text-transform:uppercase;box-shadow:0 10px 20px rgba(67,56,202,.2);">Enter →</button>
+    <div style="margin-top:14px;"><a href="landing.html" style="color:#94a3b8;font-size:12px;font-weight:700;text-decoration:underline;">← Back to Word Lab</a></div>
+  </div>
+</div>
+
+<header class="header">
+  <div class="headerInner">
+    <div class="brand">
+      <div class="brandIcon">🎨</div>
+      <div class="brandText"><h1>Item Creator</h1><span class="sub">Word Lab · Teacher Tools</span></div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <a href="dashboard.html" class="topBtn">📊 Dashboard</a>
+      <a href="class-setup.html" class="topBtn">⚙️ Setup</a>
+      <a href="landing.html" class="topBtn">🏠 Home</a>
+    </div>
+  </div>
+</header>
+
+<div class="creatorLayout">
+
+  <!-- ═══ LEFT TOOL PANEL ═══ -->
+  <div class="toolPanel">
+
+    <div class="toolSection">
+      <div class="toolSectionTitle">Drawing Tools</div>
+      <div class="toolBtns">
+        <button class="toolBtn active" id="tool-brush" onclick="setTool('brush')"><span class="icon">🖌️</span>Brush</button>
+        <button class="toolBtn" id="tool-rect" onclick="setTool('rect')"><span class="icon">⬛</span>Rectangle</button>
+        <button class="toolBtn" id="tool-circle" onclick="setTool('circle')"><span class="icon">⭕</span>Circle</button>
+        <button class="toolBtn" id="tool-line" onclick="setTool('line')"><span class="icon">➖</span>Line</button>
+        <button class="toolBtn" id="tool-fill" onclick="setTool('fill')"><span class="icon">🪣</span>Fill</button>
+        <button class="toolBtn" id="tool-text" onclick="setTool('text')"><span class="icon">🔤</span>Text</button>
+        <button class="toolBtn" id="tool-eraser" onclick="setTool('eraser')"><span class="icon">🧹</span>Eraser</button>
+      </div>
+
+      <div class="sliderRow">
+        <label>Size</label>
+        <input type="range" id="brushSize" min="2" max="40" value="8" oninput="updateBrushSize(this.value)">
+        <span id="brushSizeVal">8</span>
+      </div>
+
+      <div id="fontSizeRow" class="sliderRow" style="display:none;">
+        <label>Font</label>
+        <input type="range" id="fontSize" min="10" max="60" value="20" oninput="updateFontSize(this.value)">
+        <span id="fontSizeVal">20</span>
+      </div>
+
+      <div id="fillStrokeRow" class="toggleRow">
+        <button class="toggleBtn active" id="fillMode" onclick="setFillMode('fill')">Filled</button>
+        <button class="toggleBtn" id="strokeMode" onclick="setFillMode('stroke')">Outline</button>
+      </div>
+    </div>
+
+    <div class="toolSection">
+      <div class="toolSectionTitle">Colour</div>
+      <div class="colorRow">
+        <input type="color" id="colorPicker" value="#4338ca" oninput="updateColor(this.value)">
+        <span style="font-size:12px;font-weight:700;color:var(--muted);">Opacity</span>
+        <input type="range" id="opacitySlider" min="0" max="100" value="100" oninput="updateOpacity(this.value)" style="flex:1;accent-color:var(--indigo);">
+        <span id="opacityVal" style="font-size:11px;font-weight:800;min-width:30px;text-align:right;">100%</span>
+      </div>
+    </div>
+
+    <div class="toolSection">
+      <div class="toolSectionTitle">Patterns (Fill mode)</div>
+      <div class="patternGrid" id="patternGrid">
+        <div class="patternSwatch" data-pattern="none" onclick="setPattern('none')" style="background:white;border:2px solid var(--indigo);" title="No pattern"><span>None</span></div>
+        <div class="patternSwatch" data-pattern="hstripes" onclick="setPattern('hstripes')" style="background:repeating-linear-gradient(180deg,#4338ca 0,#4338ca 4px,#fff 4px,#fff 10px);" title="H.Stripes"><span>H</span></div>
+        <div class="patternSwatch" data-pattern="vstripes" onclick="setPattern('vstripes')" style="background:repeating-linear-gradient(90deg,#4338ca 0,#4338ca 4px,#fff 4px,#fff 10px);" title="V.Stripes"><span>V</span></div>
+        <div class="patternSwatch" data-pattern="dstripes" onclick="setPattern('dstripes')" style="background:repeating-linear-gradient(45deg,#4338ca 0,#4338ca 4px,#fff 4px,#fff 10px);" title="Diagonal"><span>D</span></div>
+        <div class="patternSwatch" data-pattern="dots" onclick="setPattern('dots')" style="background:#fff;background-image:radial-gradient(#4338ca 2px,transparent 2px);background-size:10px 10px;" title="Polka Dots"><span>·</span></div>
+        <div class="patternSwatch" data-pattern="stars" onclick="setPattern('stars')" style="background:#fff;background-image:radial-gradient(#f59e0b 2px,transparent 2px);background-size:12px 12px;" title="Stars"><span>★</span></div>
+        <div class="patternSwatch" data-pattern="molecules" onclick="setPattern('molecules')" style="background:#fff;background-image:radial-gradient(#4338ca 2px,transparent 2px),radial-gradient(#a78bfa 1px,transparent 1px);background-size:14px 14px,7px 7px;" title="Molecules"><span>⬡</span></div>
+        <div class="patternSwatch" data-pattern="check" onclick="setPattern('check')" style="background:repeating-conic-gradient(#4338ca 0% 25%,#fff 0% 50%) 0 0/12px 12px;" title="Checker"><span>▦</span></div>
+      </div>
+    </div>
+
+    <div class="toolSection">
+      <div class="toolSectionTitle">Canvas Actions</div>
+      <div class="actionBtns">
+        <button class="actionBtn" onclick="undo()">↩ Undo</button>
+        <button class="actionBtn" onclick="redo()">↪ Redo</button>
+        <button class="actionBtn" onclick="zoomIn()">🔍 Zoom+</button>
+        <button class="actionBtn" onclick="zoomOut()">🔍 Zoom−</button>
+        <button class="actionBtn danger" onclick="clearCanvas()" style="grid-column:span 2;">🗑️ Clear Canvas</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CENTRE CANVAS ═══ -->
+  <div class="canvasArea">
+
+    <!-- API key row -->
+    <div class="aiKeyRow">
+      <span style="font-size:11px;font-weight:800;color:var(--muted);white-space:nowrap;">Anthropic API key</span>
+      <input type="password" class="aiKeyInput" id="anthropicKey" placeholder="sk-ant-... (for AI Polish)" autocomplete="off">
+    </div>
+
+    <div class="canvasWrapper" id="canvasWrapper">
+      <canvas id="drawingCanvas"></canvas>
+      <svg id="highlightSVG" viewBox="0 0 400 480" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect id="highlightRect" x="0" y="0" width="0" height="0" rx="8" fill="rgba(99,102,241,0.08)" stroke="#6366f1" stroke-width="2.5" stroke-dasharray="8 4"/>
+      </svg>
+    </div>
+
+    <button class="aiBtn" id="aiPolishBtn" onclick="aiPolish()">✨ AI Polish — Send to Claude</button>
+
+    <div id="aiResult">
+      <div class="aiResultTitle">✨ AI Polish Result</div>
+      <div class="aiSvgPreview" id="aiSvgPreview"></div>
+      <div class="aiResultText" id="aiResultText"></div>
+      <div class="aiResultBtns">
+        <button class="useBtn" onclick="useAIVersion()">Use this version</button>
+        <button onclick="dismissAI()">Keep my drawing</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ RIGHT SETTINGS PANEL ═══ -->
+  <div class="settingsPanel">
+
+    <div class="settSection">
+      <div class="settLabel">Item Name</div>
+      <input class="settInput" type="text" id="itemName" placeholder="e.g. Christmas Jumper 2025" oninput="updatePreview()">
+    </div>
+
+    <div class="settSection">
+      <div class="settLabel">Item Type</div>
+      <div class="typeBtns">
+        <button class="typeBtn active" data-type="coat" onclick="setType(this)">🥼 Lab Coat</button>
+        <button class="typeBtn" data-type="head" onclick="setType(this)">🎩 Head</button>
+        <button class="typeBtn" data-type="face" onclick="setType(this)">😎 Face</button>
+        <button class="typeBtn" data-type="background" onclick="setType(this)">🖼️ Background</button>
+      </div>
+    </div>
+
+    <div class="settSection">
+      <div class="settLabel">Unlock Method</div>
+      <select class="settInput" id="unlockMethod" onchange="showUnlockConfig()">
+        <option value="purchase">Purchase in Lab Shop</option>
+        <option value="seasonal">Seasonal</option>
+        <option value="weekend">Weekend Warrior</option>
+        <option value="milestone">Milestone</option>
+        <option value="secret_code">Secret Code</option>
+        <option value="gifted">Teacher Gifted</option>
+        <option value="limited">Limited Time</option>
+      </select>
+
+      <!-- Purchase config -->
+      <div class="unlockConfig" id="config-purchase">
+        <div>
+          <label>Quark cost</label>
+          <input type="number" id="quarkCost" value="100" min="0" step="10">
+        </div>
+        <div class="switchRow">
+          <label class="miniSwitch"><input type="checkbox" id="showInShop" checked><span class="miniSlider"></span></label>
+          <span class="switchLabel">Show in shop</span>
+        </div>
+      </div>
+
+      <!-- Seasonal config -->
+      <div class="unlockConfig" id="config-seasonal" style="display:none;">
+        <div>
+          <label>Available from</label>
+          <input type="date" id="seasonalFrom">
+        </div>
+        <div>
+          <label>Available until</label>
+          <input type="date" id="seasonalUntil">
+        </div>
+        <div>
+          <label>Quark cost (0 = free when active)</label>
+          <input type="number" id="seasonalCost" value="0" min="0" step="10">
+        </div>
+      </div>
+
+      <!-- Weekend config -->
+      <div class="unlockConfig" id="config-weekend" style="display:none;">
+        <div>
+          <label>How earned</label>
+          <select id="weekendHow">
+            <option value="purchase">Purchase for quarks</option>
+            <option value="auto">Automatically awarded for playing on weekend</option>
+          </select>
+        </div>
+        <div>
+          <label>Quark cost (if purchase)</label>
+          <input type="number" id="weekendCost" value="80" min="0" step="10">
+        </div>
+      </div>
+
+      <!-- Milestone config -->
+      <div class="unlockConfig" id="config-milestone" style="display:none;">
+        <div>
+          <label>Milestone type</label>
+          <select id="milestoneType">
+            <option value="correct_answers">Correct answers</option>
+            <option value="sessions_played">Sessions played</option>
+            <option value="quarks_earned">Quarks earned</option>
+            <option value="specific_badge">Specific badge earned</option>
+          </select>
+        </div>
+        <div>
+          <label>Threshold (e.g. 5000)</label>
+          <input type="number" id="milestoneThreshold" value="1000" min="1">
+        </div>
+        <div class="switchRow">
+          <label class="miniSwitch"><input type="checkbox" id="milestoneAuto" checked><span class="miniSlider"></span></label>
+          <span class="switchLabel">Auto-awarded when reached</span>
+        </div>
+      </div>
+
+      <!-- Secret code config -->
+      <div class="unlockConfig" id="config-secret_code" style="display:none;">
+        <div>
+          <label>Secret code (students type this)</label>
+          <input type="text" id="secretCode" placeholder="e.g. LABRATS2025">
+        </div>
+        <div>
+          <label>Hint (optional riddle shown to students)</label>
+          <input type="text" id="secretHint" placeholder="e.g. Ask your teacher...">
+        </div>
+      </div>
+
+      <!-- Teacher gifted config -->
+      <div class="unlockConfig" id="config-gifted" style="display:none;">
+        <div class="unlockNote">💝 You can award this item to individual students from the dashboard. No extra configuration needed.</div>
+      </div>
+
+      <!-- Limited time config -->
+      <div class="unlockConfig" id="config-limited" style="display:none;">
+        <div>
+          <label>Available for (days after release)</label>
+          <input type="number" id="limitedDays" value="30" min="1">
+        </div>
+        <div>
+          <label>Release date</label>
+          <input type="date" id="releaseDate">
+        </div>
+      </div>
+    </div>
+
+    <div class="settSection">
+      <div class="settLabel">Rarity</div>
+      <div class="rarityBtns">
+        <button class="rarityBtn active" data-rarity="common" onclick="setRarity(this)">⬜ Common</button>
+        <button class="rarityBtn" data-rarity="rare" onclick="setRarity(this)">🔵 Rare</button>
+        <button class="rarityBtn" data-rarity="epic" onclick="setRarity(this)">🟣 Epic</button>
+        <button class="rarityBtn" data-rarity="legendary" onclick="setRarity(this)">🌟 Legendary</button>
+      </div>
+    </div>
+
+    <div class="settSection">
+      <div class="settLabel">Live Preview</div>
+      <div class="previewBox">
+        <div class="previewSciWrap">
+          <div id="previewSci" style="width:80px;height:96px;"></div>
+          <img id="previewOverlay" class="previewOverlay" src="" style="display:none;">
+        </div>
+        <div class="previewLabel" id="previewItemName" style="font-size:11px;font-weight:800;color:#312e81;">New Item</div>
+      </div>
+    </div>
+
+    <div class="publishSection">
+      <div class="publishSuccess" id="publishSuccess"></div>
+      <button class="publishBtn" onclick="publishItem()">🚀 Publish Item</button>
+    </div>
+
+  </div><!-- /settingsPanel -->
+
+</div><!-- /creatorLayout -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="wordlab-scientist.js"></script>
+<script>
+
+// ── Password gate ─────────────────────────────────────────────
+(function() {
+  const TEACHER_PASSWORD = 'MorphemeLab';
+  const SESSION_KEY = 'wl_teacher_auth';
+  if (sessionStorage.getItem(SESSION_KEY) === '1') {
+    document.getElementById('teacherGate').style.display = 'none';
+  }
+  window.checkGate = function() {
+    const val = document.getElementById('gatePassword').value;
+    if (val === TEACHER_PASSWORD) {
+      sessionStorage.setItem(SESSION_KEY, '1');
+      document.getElementById('teacherGate').style.display = 'none';
+    } else {
+      document.getElementById('gateError').style.display = 'block';
+      document.getElementById('gatePassword').value = '';
+      document.getElementById('gatePassword').focus();
+    }
+  };
+})();
+
+// ── Supabase ──────────────────────────────────────────────────
+const SUPABASE_URL  = 'https://qutsbcfkgiihcwaktsaz.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dHNiY2ZrZ2lpaGN3YWt0c2F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NDE1NDksImV4cCI6MjA4OTUxNzU0OX0.h1N26KCcyHDrW4FRk6iBNmJUMQcFCYi8eHpOC818B8E';
+let _sbClient = null;
+function getSb() {
+  if (!_sbClient) _sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  return _sbClient;
+}
+
+// ── State ─────────────────────────────────────────────────────
+let canvas;
+let currentTool   = 'brush';
+let currentColor  = '#4338ca';
+let currentOpacity= 1;
+let currentSize   = 8;
+let currentFontSize = 20;
+let useFill       = true;   // true=filled, false=stroke only
+let currentPattern= 'none';
+let history       = [];
+let histIdx       = -1;
+let zoomLevel     = 1;
+let activeShape   = null;
+let shapeDown     = false;
+let shapeStartX   = 0;
+let shapeStartY   = 0;
+let aiSvgContent  = '';
+const MAX_HIST    = 20;
+
+// ── Canvas Init ───────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  canvas = new fabric.Canvas('drawingCanvas', {
+    width: 400,
+    height: 480,
+    isDrawingMode: true,
+    selection: false,
+  });
+
+  canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+  canvas.freeDrawingBrush.color = getRGBA(currentColor, currentOpacity);
+  canvas.freeDrawingBrush.width = currentSize;
+
+  loadScientistBackground();
+
+  canvas.on('mouse:down',  onMouseDown);
+  canvas.on('mouse:move',  onMouseMove);
+  canvas.on('mouse:up',    onMouseUp);
+  canvas.on('path:created', saveHistory);
+
+  saveHistory();
+  renderPreview();
+  setTool('brush');
+  showUnlockConfig();
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey||e.metaKey) && e.key==='z') { e.preventDefault(); undo(); }
+    if ((e.ctrlKey||e.metaKey) && e.key==='y') { e.preventDefault(); redo(); }
+  });
+
+  // Update preview periodically
+  setInterval(renderPreview, 3000);
+});
+
+function loadScientistBackground() {
+  if (typeof WLScientist === 'undefined') return;
+  let svgStr = WLScientist.buildSVG({}, 'neutral');
+  // Size the SVG to 320x480 for Fabric (fits inside 400x480 centered)
+  svgStr = svgStr.replace('<svg viewBox="0 0 80 120"', '<svg viewBox="0 0 80 120" width="320" height="480"');
+  const dataUrl = 'data:image/svg+xml;base64,' + btoa(svgStr);
+  fabric.Image.fromURL(dataUrl, function(img) {
+    img.set({ left: 40, top: 0, selectable: false, evented: false });
+    canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
+  });
+}
+
+// ── Tool switching ────────────────────────────────────────────
+function setTool(tool) {
+  currentTool = tool;
+  document.querySelectorAll('.toolBtn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('tool-' + tool);
+  if (btn) btn.classList.add('active');
+
+  document.getElementById('fontSizeRow').style.display  = tool === 'text'   ? 'flex' : 'none';
+  document.getElementById('fillStrokeRow').style.display= ['rect','circle'].includes(tool) ? 'flex' : 'none';
+
+  canvas.isDrawingMode = (tool === 'brush' || tool === 'eraser');
+  canvas.selection = false;
+  canvas.defaultCursor = tool === 'text' ? 'text' : tool === 'fill' ? 'crosshair' : 'default';
+
+  if (tool === 'brush') {
+    canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+    canvas.freeDrawingBrush.color = getRGBA(currentColor, currentOpacity);
+    canvas.freeDrawingBrush.width = currentSize;
+  } else if (tool === 'eraser') {
+    canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+    canvas.freeDrawingBrush.color = '#ffffff';
+    canvas.freeDrawingBrush.width = currentSize * 1.5;
+  }
+
+  // Update highlight overlay based on selected type
+  updateHighlight();
+}
+
+// ── Mouse events for shape tools ──────────────────────────────
+function onMouseDown(opt) {
+  const pointer = canvas.getPointer(opt.e);
+  if (currentTool === 'fill') {
+    doFloodFill(Math.round(pointer.x), Math.round(pointer.y));
+    return;
+  }
+  if (currentTool === 'text') {
+    const t = new fabric.IText('Text', {
+      left: pointer.x, top: pointer.y,
+      fontSize: currentFontSize,
+      fill: getRGBA(currentColor, currentOpacity),
+      fontFamily: 'Lexend, sans-serif',
+      fontWeight: '700',
+      selectable: true,
+    });
+    canvas.add(t);
+    canvas.setActiveObject(t);
+    t.enterEditing();
+    canvas.renderAll();
+    t.on('editing:exited', saveHistory);
+    return;
+  }
+  if (['rect','circle','line'].includes(currentTool)) {
+    shapeDown = true;
+    shapeStartX = pointer.x;
+    shapeStartY = pointer.y;
+    const fillVal  = useFill ? getRGBA(currentColor, currentOpacity) : 'transparent';
+    const strokeVal= getRGBA(currentColor, currentOpacity);
+    const strokeW  = useFill ? 0 : currentSize;
+
+    if (currentTool === 'rect') {
+      activeShape = new fabric.Rect({ left:pointer.x, top:pointer.y, width:0, height:0, fill:fillVal, stroke:strokeVal, strokeWidth:strokeW, selectable:false });
+    } else if (currentTool === 'circle') {
+      activeShape = new fabric.Ellipse({ left:pointer.x, top:pointer.y, rx:0, ry:0, fill:fillVal, stroke:strokeVal, strokeWidth:strokeW, selectable:false });
+    } else if (currentTool === 'line') {
+      activeShape = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], { stroke:strokeVal, strokeWidth:currentSize, selectable:false, strokeLineCap:'round' });
+    }
+    canvas.add(activeShape);
+  }
+}
+
+function onMouseMove(opt) {
+  if (!shapeDown || !activeShape) return;
+  const pointer = canvas.getPointer(opt.e);
+  const dx = pointer.x - shapeStartX;
+  const dy = pointer.y - shapeStartY;
+
+  if (currentTool === 'rect') {
+    activeShape.set({
+      left: Math.min(shapeStartX, pointer.x),
+      top:  Math.min(shapeStartY, pointer.y),
+      width:  Math.abs(dx),
+      height: Math.abs(dy),
+    });
+  } else if (currentTool === 'circle') {
+    activeShape.set({
+      left: Math.min(shapeStartX, pointer.x),
+      top:  Math.min(shapeStartY, pointer.y),
+      rx: Math.abs(dx) / 2,
+      ry: Math.abs(dy) / 2,
+    });
+  } else if (currentTool === 'line') {
+    activeShape.set({ x2: pointer.x, y2: pointer.y });
+  }
+  canvas.renderAll();
+}
+
+function onMouseUp() {
+  if (shapeDown && activeShape) {
+    shapeDown = false;
+    activeShape.set({ selectable: false });
+    activeShape = null;
+    saveHistory();
+  }
+}
+
+// ── Flood fill ────────────────────────────────────────────────
+function doFloodFill(x, y) {
+  const tmpCanvas = document.createElement('canvas');
+  tmpCanvas.width  = 400;
+  tmpCanvas.height = 480;
+  const ctx = tmpCanvas.getContext('2d');
+
+  // Render current fabric canvas to temp
+  const dataURL = canvas.toDataURL({ format: 'png', multiplier: 1 });
+  const img = new Image();
+  img.onload = function() {
+    ctx.drawImage(img, 0, 0);
+    const imgData = ctx.getImageData(0, 0, 400, 480);
+
+    if (currentPattern !== 'none') {
+      applyPatternAtPoint(x, y);
+      return;
+    }
+
+    const fillRGBA = hexToRGBA(currentColor, currentOpacity);
+    const targetColor = getPixelColor(imgData, x, y);
+    if (colorsMatch(targetColor, fillRGBA)) return;
+
+    bfsFill(imgData, x, y, targetColor, fillRGBA);
+    ctx.putImageData(imgData, 0, 0);
+
+    fabric.Image.fromURL(tmpCanvas.toDataURL(), function(fabricImg) {
+      fabricImg.set({ left: 0, top: 0, selectable: false, evented: false });
+      canvas.add(fabricImg);
+      canvas.renderAll();
+      saveHistory();
+    });
+  };
+  img.src = dataURL;
+}
+
+function bfsFill(imgData, x, y, target, fill) {
+  const data = imgData.data;
+  const w = imgData.width;
+  const h = imgData.height;
+  const stack = [[x, y]];
+  const visited = new Uint8Array(w * h);
+
+  while (stack.length) {
+    const [cx, cy] = stack.pop();
+    if (cx < 0 || cx >= w || cy < 0 || cy >= h) continue;
+    const idx = (cy * w + cx);
+    if (visited[idx]) continue;
+    visited[idx] = 1;
+    const p = idx * 4;
+    if (!colorsMatch([data[p],data[p+1],data[p+2],data[p+3]], target)) continue;
+    data[p]   = fill[0];
+    data[p+1] = fill[1];
+    data[p+2] = fill[2];
+    data[p+3] = fill[3];
+    stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
+  }
+}
+
+function applyPatternAtPoint(x, y) {
+  const patternCanvas = document.createElement('canvas');
+  patternCanvas.width = 20; patternCanvas.height = 20;
+  const pc = patternCanvas.getContext('2d');
+  drawPatternTile(pc, currentPattern);
+
+  const fabricPattern = new fabric.Pattern({ source: patternCanvas, repeat: 'repeat' });
+  const rect = new fabric.Rect({
+    left: 0, top: 0, width: 400, height: 480,
+    fill: fabricPattern, opacity: currentOpacity, selectable: false, evented: false
+  });
+  canvas.add(rect);
+  canvas.renderAll();
+  saveHistory();
+}
+
+function drawPatternTile(ctx, pattern) {
+  const c = hexToRGBA(currentColor, 1);
+  const col = `rgb(${c[0]},${c[1]},${c[2]})`;
+  ctx.clearRect(0, 0, 20, 20);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, 20, 20);
+  ctx.fillStyle = col;
+  ctx.strokeStyle = col;
+  ctx.lineWidth = 3;
+
+  if (pattern === 'hstripes') { ctx.fillRect(0,0,20,5); ctx.fillRect(0,12,20,5); }
+  else if (pattern === 'vstripes') { ctx.fillRect(0,0,5,20); ctx.fillRect(12,0,5,20); }
+  else if (pattern === 'dstripes') { ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(20,20); ctx.moveTo(-5,5); ctx.lineTo(15,25); ctx.moveTo(5,-5); ctx.lineTo(25,15); ctx.stroke(); }
+  else if (pattern === 'dots') { ctx.beginPath(); ctx.arc(5,5,2.5,0,Math.PI*2); ctx.arc(15,15,2.5,0,Math.PI*2); ctx.fill(); }
+  else if (pattern === 'stars') { ctx.font='12px serif'; ctx.fillText('★',2,15); }
+  else if (pattern === 'molecules') { ctx.beginPath(); ctx.arc(10,10,3,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(3,3,1.5,0,Math.PI*2); ctx.arc(17,17,1.5,0,Math.PI*2); ctx.fill(); }
+  else if (pattern === 'check') { ctx.fillRect(0,0,10,10); ctx.fillRect(10,10,10,10); }
+  else if (pattern === 'zigzag') { ctx.beginPath(); ctx.moveTo(0,10); ctx.lineTo(5,0); ctx.lineTo(10,10); ctx.lineTo(15,0); ctx.lineTo(20,10); ctx.stroke(); }
+}
+
+function getPixelColor(imgData, x, y) {
+  const p = (y * imgData.width + x) * 4;
+  return [imgData.data[p], imgData.data[p+1], imgData.data[p+2], imgData.data[p+3]];
+}
+
+function colorsMatch(a, b, tol = 30) {
+  return Math.abs(a[0]-b[0]) <= tol && Math.abs(a[1]-b[1]) <= tol &&
+         Math.abs(a[2]-b[2]) <= tol && Math.abs(a[3]-b[3]) <= tol;
+}
+
+function hexToRGBA(hex, opacity) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return [r, g, b, Math.round(opacity * 255)];
+}
+
+function getRGBA(hex, opacity) {
+  const [r,g,b] = hexToRGBA(hex, 1);
+  return `rgba(${r},${g},${b},${opacity})`;
+}
+
+// ── Tool options ──────────────────────────────────────────────
+function updateColor(val) {
+  currentColor = val;
+  updateBrushColor();
+}
+
+function updateOpacity(val) {
+  currentOpacity = val / 100;
+  document.getElementById('opacityVal').textContent = val + '%';
+  updateBrushColor();
+}
+
+function updateBrushColor() {
+  if (currentTool === 'brush' && canvas.freeDrawingBrush) {
+    canvas.freeDrawingBrush.color = getRGBA(currentColor, currentOpacity);
+  }
+}
+
+function updateBrushSize(val) {
+  currentSize = parseInt(val);
+  document.getElementById('brushSizeVal').textContent = val;
+  if (canvas.freeDrawingBrush) canvas.freeDrawingBrush.width = currentSize;
+}
+
+function updateFontSize(val) {
+  currentFontSize = parseInt(val);
+  document.getElementById('fontSizeVal').textContent = val;
+}
+
+function setFillMode(mode) {
+  useFill = (mode === 'fill');
+  document.getElementById('fillMode').classList.toggle('active', useFill);
+  document.getElementById('strokeMode').classList.toggle('active', !useFill);
+}
+
+function setPattern(p) {
+  currentPattern = p;
+  document.querySelectorAll('.patternSwatch').forEach(s => s.classList.remove('active'));
+  const el = document.querySelector(`[data-pattern="${p}"]`);
+  if (el) el.classList.add('active');
+}
+
+// ── History ───────────────────────────────────────────────────
+function saveHistory() {
+  history.splice(histIdx + 1);
+  history.push(JSON.stringify(canvas.toJSON()));
+  if (history.length > MAX_HIST) history.shift();
+  else histIdx++;
+}
+
+function undo() {
+  if (histIdx <= 0) return;
+  histIdx--;
+  canvas.loadFromJSON(JSON.parse(history[histIdx]), () => {
+    canvas.renderAll();
+    loadScientistBackground();
+  });
+}
+
+function redo() {
+  if (histIdx >= history.length - 1) return;
+  histIdx++;
+  canvas.loadFromJSON(JSON.parse(history[histIdx]), () => {
+    canvas.renderAll();
+    loadScientistBackground();
+  });
+}
+
+// ── Zoom ──────────────────────────────────────────────────────
+function zoomIn()  { zoomLevel = Math.min(3, zoomLevel + 0.25); canvas.setZoom(zoomLevel); }
+function zoomOut() { zoomLevel = Math.max(0.5, zoomLevel - 0.25); canvas.setZoom(zoomLevel); }
+
+function clearCanvas() {
+  if (!confirm('Clear the canvas? This cannot be undone.')) return;
+  canvas.clear();
+  loadScientistBackground();
+  saveHistory();
+}
+
+// ── Item type / highlight overlay ─────────────────────────────
+let currentItemType = 'coat';
+
+function setType(btn) {
+  document.querySelectorAll('.typeBtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentItemType = btn.dataset.type;
+  updateHighlight();
+}
+
+function updateHighlight() {
+  const rect = document.getElementById('highlightRect');
+  const areas = {
+    coat:       { x:96,  y:240, w:208, h:232 },
+    head:       { x:112, y:32,  w:176, h:216 },
+    face:       { x:144, y:112, w:112, h:120 },
+    background: { x:0,   y:0,   w:400, h:480 },
+  };
+  const a = areas[currentItemType] || areas.coat;
+  rect.setAttribute('x', a.x);
+  rect.setAttribute('y', a.y);
+  rect.setAttribute('width', a.w);
+  rect.setAttribute('height', a.h);
+}
+
+// ── Unlock config ─────────────────────────────────────────────
+function showUnlockConfig() {
+  const method = document.getElementById('unlockMethod').value;
+  ['purchase','seasonal','weekend','milestone','secret_code','gifted','limited'].forEach(m => {
+    const el = document.getElementById('config-' + m);
+    if (el) el.style.display = (m === method) ? 'flex' : 'none';
+  });
+}
+
+// ── Rarity ───────────────────────────────────────────────────
+function setRarity(btn) {
+  document.querySelectorAll('.rarityBtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ── Live preview ──────────────────────────────────────────────
+function renderPreview() {
+  if (typeof WLScientist === 'undefined') return;
+  const svgStr = WLScientist.buildSVG({}, 'neutral');
+  document.getElementById('previewSci').innerHTML = `<svg viewBox="0 0 80 120" width="80" height="96" xmlns="http://www.w3.org/2000/svg">${svgStr.replace(/<svg[^>]*>/,'').replace('</svg>','')}</svg>`;
+
+  const drawingDataUrl = canvas.toDataURL({ format: 'png', multiplier: 1 });
+  const overlay = document.getElementById('previewOverlay');
+  overlay.src = drawingDataUrl;
+  overlay.style.display = 'block';
+
+  const name = document.getElementById('itemName').value || 'New Item';
+  document.getElementById('previewItemName').textContent = name;
+}
+
+function updatePreview() {
+  const name = document.getElementById('itemName').value || 'New Item';
+  document.getElementById('previewItemName').textContent = name;
+}
+
+// ── AI Polish ─────────────────────────────────────────────────
+async function aiPolish() {
+  let apiKey = document.getElementById('anthropicKey').value.trim() ||
+               sessionStorage.getItem('wl_anthropic_key') || '';
+  if (!apiKey) {
+    apiKey = prompt('Enter your Anthropic API key:') || '';
+    if (!apiKey) return;
+    sessionStorage.setItem('wl_anthropic_key', apiKey);
+    document.getElementById('anthropicKey').value = apiKey;
+  }
+
+  const btn = document.getElementById('aiPolishBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Polishing…';
+
+  try {
+    const dataURL = canvas.toDataURL({ format: 'png', multiplier: 1 });
+    const base64  = dataURL.replace('data:image/png;base64,', '');
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-6',
+        max_tokens: 4096,
+        messages: [{
+          role: 'user',
+          content: [
+            { type:'image', source:{ type:'base64', media_type:'image/png', data:base64 } },
+            { type:'text', text:'This is a rough hand-drawn design for a cosmetic item in an educational game called Word Lab. The game has a friendly, cartoon science lab aesthetic with an indigo/teal/amber colour palette. Please redraw this design as a clean, polished, game-ready illustration in the style of the game — friendly, rounded shapes, solid colours, clear outlines, suitable for a primary school audience. Return the result as a description of what you see and then a clean SVG representation of the design.' }
+          ]
+        }]
+      })
+    });
+
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => ({}));
+      throw new Error(errData.error?.message || 'API error ' + resp.status);
+    }
+
+    const data = await resp.json();
+    const text = data.content[0].text;
+
+    const svgMatch = text.match(/<svg[\s\S]*?<\/svg>/i);
+    aiSvgContent = svgMatch ? svgMatch[0] : '';
+
+    document.getElementById('aiSvgPreview').innerHTML = aiSvgContent ||
+      '<div style="padding:20px;color:#94a3b8;font-size:12px;font-weight:700;text-align:center;">No SVG in response — see description below</div>';
+    document.getElementById('aiResultText').textContent = text.replace(/<svg[\s\S]*?<\/svg>/gi, '').trim().slice(0, 400);
+    document.getElementById('aiResult').style.display = 'block';
+
+  } catch(e) {
+    alert('AI polish unavailable — your drawing will be used as is.\n\n' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '✨ AI Polish — Send to Claude';
+  }
+}
+
+function useAIVersion() {
+  if (!aiSvgContent) { dismissAI(); return; }
+  const svgDataUrl = 'data:image/svg+xml;base64,' + btoa(aiSvgContent);
+  fabric.Image.fromURL(svgDataUrl, function(img) {
+    img.scaleToWidth(360);
+    img.set({ left: 20, top: 20, selectable: false, evented: false });
+    canvas.clear();
+    loadScientistBackground();
+    canvas.add(img);
+    canvas.renderAll();
+    saveHistory();
+  });
+  dismissAI();
+}
+
+function dismissAI() {
+  document.getElementById('aiResult').style.display = 'none';
+  aiSvgContent = '';
+}
+
+// ── Publish ───────────────────────────────────────────────────
+async function publishItem() {
+  const name = document.getElementById('itemName').value.trim();
+  if (!name) { alert('Please enter an item name.'); return; }
+
+  const typeBtn = document.querySelector('.typeBtn.active');
+  if (!typeBtn) { alert('Please select an item type.'); return; }
+  const itemType = typeBtn.dataset.type;
+
+  const unlockMethod = document.getElementById('unlockMethod').value;
+  const rarity = (document.querySelector('.rarityBtn.active') || {}).dataset?.rarity || 'common';
+
+  const imageData = canvas.toDataURL({ format: 'png', multiplier: 1 });
+
+  const record = {
+    name,
+    item_type: itemType,
+    image_data: imageData,
+    rarity,
+    unlock_method: unlockMethod,
+    quark_cost: 0,
+    is_active: true,
+  };
+
+  if (unlockMethod === 'purchase') {
+    record.quark_cost = parseInt(document.getElementById('quarkCost').value) || 100;
+  } else if (unlockMethod === 'seasonal') {
+    record.available_from  = document.getElementById('seasonalFrom').value  || null;
+    record.available_until = document.getElementById('seasonalUntil').value || null;
+    record.quark_cost = parseInt(document.getElementById('seasonalCost').value) || 0;
+  } else if (unlockMethod === 'weekend') {
+    record.quark_cost = document.getElementById('weekendHow').value === 'purchase'
+      ? (parseInt(document.getElementById('weekendCost').value) || 80) : 0;
+  } else if (unlockMethod === 'milestone') {
+    record.milestone_type      = document.getElementById('milestoneType').value;
+    record.milestone_threshold = parseInt(document.getElementById('milestoneThreshold').value) || 1000;
+  } else if (unlockMethod === 'secret_code') {
+    record.secret_code = document.getElementById('secretCode').value.trim();
+    if (!record.secret_code) { alert('Please enter a secret code.'); return; }
+  } else if (unlockMethod === 'limited') {
+    record.limited_days  = parseInt(document.getElementById('limitedDays').value) || 30;
+    record.release_date  = document.getElementById('releaseDate').value || new Date().toISOString();
+  }
+
+  try {
+    const { error } = await getSb().from('shop_items').insert(record);
+    if (error) throw error;
+
+    const successEl = document.getElementById('publishSuccess');
+    successEl.innerHTML = `✅ <strong>${name}</strong> is now live in the Lab Shop! <a onclick="resetForm()">Create another item</a>`;
+    successEl.style.display = 'block';
+    setTimeout(() => { successEl.style.display = 'none'; }, 8000);
+  } catch(e) {
+    alert('Error publishing item: ' + (e.message || JSON.stringify(e)));
+  }
+}
+
+function resetForm() {
+  document.getElementById('itemName').value = '';
+  canvas.clear();
+  loadScientistBackground();
+  saveHistory();
+  document.getElementById('publishSuccess').style.display = 'none';
+}
+
+</script>
+</body>
+</html>
