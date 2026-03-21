@@ -319,6 +319,7 @@
     <button class="navTab" onclick="showSection('meaning-mode',this)">🧠 Meaning Mode</button>
     <button class="navTab" onclick="showSection('mission-mode',this)">⚡ Mission Mode</button>
     <button class="navTab" onclick="showSection('root-lab',this)">🧫 Root Lab</button>
+    <button class="navTab" id="extModeTab" onclick="showSection('extension-mode',this)" style="display:none;">🔬 Extension Mode</button>
   </div>
 
   <div id="sectionFlags"></div>
@@ -329,6 +330,7 @@
   <div id="sectionMeaningMode" class="hidden"></div>
   <div id="sectionMissionMode" class="hidden"></div>
   <div id="sectionRootLab" class="hidden"></div>
+  <div id="sectionExtensionMode" class="hidden"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -531,6 +533,7 @@ async function renderDashboard(){
   renderHeatmap('meaning-mode');
   renderHeatmap('mission-mode');
   renderHeatmap('root-lab');
+  renderExtensionProgress();
 }
 
 function showSection(name, btn){
@@ -538,7 +541,7 @@ function showSection(name, btn){
   btn.classList.add('active');
   // Hide all sections dynamically
   ['sectionFlags','sectionSoundSorter','sectionPhonemeSplitter','sectionSyllableSplitter',
-   'sectionBreakdownBlitz','sectionMeaningMode','sectionMissionMode','sectionRootLab'].forEach(function(id){
+   'sectionBreakdownBlitz','sectionMeaningMode','sectionMissionMode','sectionRootLab','sectionExtensionMode'].forEach(function(id){
     var el = document.getElementById(id);
     if(el) el.classList.add('hidden');
   });
@@ -552,6 +555,7 @@ function showSection(name, btn){
     'meaning-mode':'sectionMeaningMode',
     'mission-mode':'sectionMissionMode',
     'root-lab':'sectionRootLab',
+    'extension-mode':'sectionExtensionMode',
   };
   const el = document.getElementById(map[name]);
   if(el) el.classList.remove('hidden');
@@ -594,7 +598,7 @@ function renderFlags(){
       <div class="flagGrid">
         ${flags.map(({ student, flags: sFlags }) => `
           <div class="flagCard">
-            <div class="flagStudent">${currentCrownLeaderId && student.id === currentCrownLeaderId ? '🍩 ' : ''}${student.name}</div>
+            <div class="flagStudent">${currentCrownLeaderId && student.id === currentCrownLeaderId ? '🍩 ' : ''}${student.name}${student.extension_mode ? '<span style="background:#4338ca;color:#e0e7ff;font-size:9px;font-weight:900;padding:2px 7px;border-radius:10px;letter-spacing:.08em;margin-left:6px;text-transform:uppercase;">EXT</span>' : ''}</div>
             <div class="flagDetail">
               ${sFlags.map(f => `
                 <span class="flagBadge">${activityLabel[f.activity] || f.activity}: ${f.category} — ${WordLabData.getAccuracy(f.result)}% (${f.result.total} attempts)</span>
@@ -727,7 +731,7 @@ function renderHeatmap(activity){
     const isCrownHolder = currentCrownLeaderId && student.id === currentCrownLeaderId;
     return `<tr>
       <td class="student-name" onclick="showStudentProfile('${student.id}')" title="View ${student.name}'s profile" style="${isCrownHolder ? 'color:#7e22ce;' : ''}">
-        <span class="student-name-link">${isCrownHolder ? '🍩 ' : ''}${student.name}<span class="student-name-arrow">▶</span></span>
+        <span class="student-name-link">${isCrownHolder ? '🍩 ' : ''}${student.name}${student.extension_mode ? '<span style="background:#4338ca;color:#e0e7ff;font-size:9px;font-weight:900;padding:2px 7px;border-radius:10px;letter-spacing:.08em;margin-left:6px;text-transform:uppercase;">EXT</span>' : ''}<span class="student-name-arrow">▶</span></span>
       </td>
       ${cells}
     </tr>`;
@@ -753,6 +757,124 @@ function renderHeatmap(activity){
         ⚠️ Red outline = below ${THRESHOLD_PCT}% after ${THRESHOLD_ATTEMPTS}+ attempts · "att" = fewer than ${THRESHOLD_ATTEMPTS} attempts so far
       </div>
     </div></div>
+  `;
+}
+
+// ── Extension Mode Progress ───────────────────────────────────────
+async function renderExtensionProgress(){
+  const container = document.getElementById('sectionExtensionMode');
+  if(!container) return;
+
+  const extStudents = (currentClass.students || []).filter(s => s.extension_mode);
+
+  // Show/hide tab
+  const tab = document.getElementById('extModeTab');
+  if(tab) tab.style.display = extStudents.length ? '' : 'none';
+
+  if(!extStudents.length){
+    container.innerHTML = '';
+    return;
+  }
+
+  const EXT_BADGE = '<span style="background:#4338ca;color:#e0e7ff;font-size:9px;font-weight:900;padding:2px 7px;border-radius:10px;letter-spacing:.08em;margin-left:6px;text-transform:uppercase;">EXT</span>';
+
+  // Fetch extension attempts for each student
+  const SUPABASE_URL  = 'https://qutsbcfkgiihcwaktsaz.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dHNiY2ZrZ2lpaGN3YWt0c2F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NDE1NDksImV4cCI6MjA4OTUxNzU0OX0.h1N26KCcyHDrW4FRk6iBNmJUMQcFCYi8eHpOC818B8E';
+  let _extSb = null;
+  function extSb(){ if(!_extSb) _extSb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON); return _extSb; }
+
+  const studentIds = extStudents.map(s => s.id);
+  let extRows = [];
+  try {
+    const { data } = await extSb()
+      .from('student_progress')
+      .select('student_id, activity, category, correct, total')
+      .in('student_id', studentIds)
+      .eq('is_extension', true);
+    extRows = data || [];
+  } catch(e) { console.warn('Extension progress fetch failed', e); }
+
+  // Group by student
+  const byStudent = {};
+  extRows.forEach(row => {
+    if(!byStudent[row.student_id]) byStudent[row.student_id] = {};
+    if(!byStudent[row.student_id][row.activity]) byStudent[row.student_id][row.activity] = [];
+    byStudent[row.student_id][row.activity].push(row);
+  });
+
+  const actLabel = {
+    'sound-sorter':'Sound Sorter','phoneme-splitter':'Phoneme Splitter',
+    'syllable-splitter':'Syllable Splitter','breakdown-blitz':'Breakdown Blitz',
+    'meaning-mode':'Meaning Mode','mission-mode':'Mission Mode','root-lab':'Root Lab'
+  };
+
+  function rowColour(pct){
+    if(pct >= 70) return 'background:#f0fdf4;border-left:3px solid #16a34a;';
+    if(pct >= 40) return 'background:#fffbeb;border-left:3px solid #d97706;';
+    return 'background:#fef2f2;border-left:3px solid #dc2626;';
+  }
+
+  const cards = extStudents.map(student => {
+    const studentData = byStudent[student.id] || {};
+    const activities = Object.keys(studentData);
+
+    if(!activities.length){
+      return `<div class="panel" style="border-color:#c7d2fe;">
+        <div class="panelInner">
+          <div style="font-size:16px;font-weight:900;color:#312e81;margin-bottom:8px;">
+            ${student.name}${EXT_BADGE}
+          </div>
+          <div style="color:#94a3b8;font-size:14px;font-weight:700;padding:12px 0;">No extension attempts recorded yet.</div>
+        </div>
+      </div>`;
+    }
+
+    const rows = activities.map(act => {
+      const cats = studentData[act];
+      return cats.map(cat => {
+        const pct = cat.total > 0 ? Math.round((cat.correct / cat.total) * 100) : 0;
+        return `<tr style="${rowColour(pct)}">
+          <td style="padding:6px 10px;font-size:12px;font-weight:700;">${actLabel[act]||act}</td>
+          <td style="padding:6px 10px;font-size:12px;color:#475569;">${cat.category}</td>
+          <td style="padding:6px 10px;font-size:12px;font-weight:800;">${cat.total}</td>
+          <td style="padding:6px 10px;font-size:12px;font-weight:800;color:#16a34a;">${cat.correct}</td>
+          <td style="padding:6px 10px;font-size:13px;font-weight:900;color:${pct>=70?'#16a34a':pct>=40?'#d97706':'#dc2626'};">${pct}%</td>
+        </tr>`;
+      }).join('');
+    }).join('');
+
+    return `<div class="panel" style="border-color:#c7d2fe;margin-bottom:16px;">
+      <div class="panelInner">
+        <div style="font-size:16px;font-weight:900;color:#312e81;margin-bottom:12px;">
+          ${student.name}${EXT_BADGE}
+        </div>
+        <div style="overflow-x:auto;">
+          <table style="border-collapse:collapse;width:100%;font-family:'Lexend',sans-serif;">
+            <thead>
+              <tr style="border-bottom:2px solid #e2e8f0;">
+                <th style="padding:6px 10px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#64748b;text-align:left;">Activity</th>
+                <th style="padding:6px 10px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#64748b;text-align:left;">Category</th>
+                <th style="padding:6px 10px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#64748b;text-align:left;">Attempts</th>
+                <th style="padding:6px 10px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#64748b;text-align:left;">Correct</th>
+                <th style="padding:6px 10px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#64748b;text-align:left;">Accuracy</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="panel">
+      <div class="panelInner">
+        <div class="panelTitle">🔬 Extension Mode Progress${EXT_BADGE}</div>
+        <p style="color:#64748b;font-size:13px;font-weight:700;margin:0 0 20px;">Showing attempts recorded while extension mode was active.</p>
+      </div>
+    </div>
+    ${cards}
   `;
 }
 

@@ -311,6 +311,15 @@
                 ${s.name}
                 <code style="background:#f1f5f9;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:900;font-family:monospace;color:#4338ca;margin:0 2px;">${s.student_code||'?'}</code>
                 <button id="teacherBtn_${s.id}" class="studentChipRemove teacherBtn" onclick="toggleTeacher('${cls.id}','${s.id}',this)" title="Make teacher" style="font-size:13px;opacity:0.35;">👩‍🏫</button>
+                <button
+                  onclick="toggleExtension('${s.id}', ${s.extension_mode})"
+                  class="ext-toggle-btn"
+                  id="ext-btn-${s.id}"
+                  title="${s.extension_mode ? 'Extension mode ON — click to disable' : 'Extension mode OFF — click to enable'}"
+                  style="background:${s.extension_mode ? 'rgba(99,102,241,.12)' : 'none'};border:2px solid ${s.extension_mode ? '#6366f1' : '#2d2450'};border-radius:8px;padding:4px 10px;cursor:pointer;font-size:13px;font-weight:800;color:${s.extension_mode ? '#6366f1' : '#94a3b8'};transition:all .2s;"
+                >
+                  🔬
+                </button>
                 <button class="studentChipRemove" onclick="regenerateCode('${cls.id}','${s.id}')" title="Regenerate code">↻</button>
                 <button class="studentChipRemove" onclick="removeStudent('${cls.id}','${s.id}')" title="Remove">×</button>
               </span>
@@ -471,6 +480,33 @@
       applyBtn.textContent = 'Apply changes';
     } finally {
       applyBtn.disabled = false;
+    }
+  }
+
+  // ── Extension mode toggle ──────────────────────────────────────
+  const SUPABASE_URL  = 'https://qutsbcfkgiihcwaktsaz.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dHNiY2ZrZ2lpaGN3YWt0c2F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NDE1NDksImV4cCI6MjA4OTUxNzU0OX0.h1N26KCcyHDrW4FRk6iBNmJUMQcFCYi8eHpOC818B8E';
+  const _csSb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  async function toggleExtension(studentId, current) {
+    const newVal = !current;
+    const btn = document.getElementById('ext-btn-' + studentId);
+    try {
+      const { error } = await _csSb
+        .from('students')
+        .update({ extension_mode: newVal })
+        .eq('id', studentId);
+      if (error) throw error;
+      if (btn) {
+        btn.style.color = newVal ? '#6366f1' : '#94a3b8';
+        btn.style.borderColor = newVal ? '#6366f1' : '#2d2450';
+        btn.style.background = newVal ? 'rgba(99,102,241,.12)' : 'none';
+        btn.onclick = () => toggleExtension(studentId, newVal);
+        btn.title = newVal ? 'Extension mode ON — click to disable' : 'Extension mode OFF — click to enable';
+      }
+    } catch(e) {
+      console.error('Extension toggle failed:', e);
+      alert('Could not update extension mode. Please try again.');
     }
   }
 

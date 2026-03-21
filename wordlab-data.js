@@ -65,7 +65,12 @@ const WordLabData = (() => {
   function saveSession(s) {
     try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch {}
   }
-  function getSession() { return loadSession(); }
+  function getSession() {
+    const s = loadSession();
+    if (!s) return null;
+    s.extensionMode = sessionStorage.getItem('wl_extension_mode') === 'true';
+    return s;
+  }
   function endSession() { try { sessionStorage.removeItem(SESSION_KEY); } catch {} }
 
   // ── Pure computation ──────────────────────────────────────────
@@ -173,7 +178,7 @@ const WordLabData = (() => {
   async function getClasses() {
     var { data, error } = await sb()
       .from('classes')
-      .select('id, name, class_code, created_at, students!students_class_id_fkey(id, name, student_code)')
+      .select('id, name, class_code, created_at, students!students_class_id_fkey(id, name, student_code, extension_mode)')
       .order('name');
     if (error) throw error;
     return (data || []).map(function(c) {
@@ -182,7 +187,7 @@ const WordLabData = (() => {
         name: c.name,
         class_code: c.class_code || '',
         created: new Date(c.created_at).getTime(),
-        students: (c.students || []).map(function(s) { return { id: s.id, name: s.name, student_code: s.student_code || '' }; })
+        students: (c.students || []).map(function(s) { return { id: s.id, name: s.name, student_code: s.student_code || '', extension_mode: !!s.extension_mode }; })
       };
     });
   }
@@ -197,7 +202,7 @@ const WordLabData = (() => {
 
     const { data: studs, error: stuErr } = await sb()
       .from('students')
-      .select('id, name, student_code')
+      .select('id, name, student_code, extension_mode')
       .eq('class_id', id)
       .order('name');
     if (stuErr) throw stuErr;
@@ -240,6 +245,7 @@ const WordLabData = (() => {
       id: s.id,
       name: s.name,
       student_code: s.student_code || '',
+      extension_mode: !!s.extension_mode,
       results: progressMap[s.id] || {}
     }));
 
@@ -349,6 +355,11 @@ const WordLabData = (() => {
     } catch(e) { console.warn('startSession character update failed', e); }
   }
 
+  // ── Extension mode ────────────────────────────────────────────
+  function isExtensionMode() {
+    return sessionStorage.getItem('wl_extension_mode') === 'true';
+  }
+
   // ── Record attempt ────────────────────────────────────────────
   async function recordAttempt(activity, category, correct, timeMs, streak) {
     streak = streak || 0;
@@ -373,10 +384,11 @@ const WordLabData = (() => {
       student_id: studentId,
       activity,
       category,
-      correct:    prevCorrect   + (correct ? 1 : 0),
-      total:      prevTotal     + 1,
-      total_time: prevTotalTime + (timeMs || 0),
-      updated_at: new Date().toISOString()
+      correct:      prevCorrect   + (correct ? 1 : 0),
+      total:        prevTotal     + 1,
+      total_time:   prevTotalTime + (timeMs || 0),
+      is_extension: isExtensionMode(),
+      updated_at:   new Date().toISOString()
     }, { onConflict: 'student_id,activity,category' });
 
     // Fetch and update character
@@ -421,11 +433,19 @@ const WordLabData = (() => {
     const session = loadSession();
     if (!session) return null;
     const { data } = await sb()
+      .from('students')
+      .select('extension_mode')
+      .eq('id', session.studentId)
+      .maybeSingle();
+    if (data && data.extension_mode !== undefined) {
+      sessionStorage.setItem('wl_extension_mode', data.extension_mode ? 'true' : 'false');
+    }
+    const { data: charData } = await sb()
       .from('student_character')
       .select('*')
       .eq('student_id', session.studentId)
       .maybeSingle();
-    const char = ensureCharFields(data ? { ...data } : {});
+    const char = ensureCharFields(charData ? { ...charData } : {});
     const isTeacher = await isStudentTeacher(session.classId, session.studentId);
     return {
       quarks: char.quarks, xp: char.xp, badges: char.badges,
@@ -832,7 +852,8 @@ const WordLabData = (() => {
     getStudentData, getLevel, ALL_BADGES, LEGENDARY_BADGES,
     getScientist, saveScientist, purchase,
     getClassLeader, getClassCrownEnabled, setClassCrownEnabled,
-    getClassTeacherIds, isStudentTeacher, setStudentTeacher, saveClassSettings
+    getClassTeacherIds, isStudentTeacher, setStudentTeacher, saveClassSettings,
+    isExtensionMode
   };
 
 })();
