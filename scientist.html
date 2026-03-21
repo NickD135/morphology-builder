@@ -631,6 +631,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="wordlab-data.js"></script>
 <script src="wordlab-scientist.js"></script>
+<script src="wordlab-effects.js"></script>
 <script>
 // ── Shop catalogue ────────────────────────────────────────────
 const SHOP = {
@@ -777,6 +778,10 @@ async function render() {
               return `<button class="optPill${a.id===cur?' active':''}${!isOwned?' locked':''}" onclick="${isOwned?`applyOption('face',${a.id==='none'?'null':"'"+a.id+"'"})`:'void(0)'}">${a.icon} ${a.name}</button>`;
             }).join('')}</div>
           </div>
+          <div class="custSection">
+            <div class="custLabel">Particle Effect</div>
+            ${renderCurrentEffect(sd)}
+          </div>
         </div>
       </div>
     </div>
@@ -816,8 +821,12 @@ async function render() {
       ${renderShopSection('Coat Patterns',      SHOP.coatPatterns,    'coatPattern',  sd)}
       ${renderShopSection('Head Accessories',   SHOP.headAccessories, 'head',         sd)}
       ${renderShopSection('Face Accessories',   SHOP.faceAccessories, 'face',         sd)}
+      <div class="shopSection">
+        <div class="shopSectionTitle">✨ Particle Effects</div>
+        <div class="shopGrid" id="effectsGrid">${renderEffectsSection(sd)}</div>
+      </div>
       <div id="customItemsSection" class="shopSection" style="display:none;">
-        <div class="shopSectionTitle">✨ Custom Items</div>
+        <div class="shopSectionTitle">🎨 Custom Items</div>
         <div class="shopGrid" id="customItemsGrid"></div>
       </div>
     </div>
@@ -859,6 +868,84 @@ function renderShopSection(title, items, field, sd) {
       </div>`;
     }).join('')}</div>
   </div>`;
+}
+
+function renderEffectsSection(sd) {
+  if (typeof WLEffects === 'undefined') return '<div style="color:#94a3b8;font-size:13px;">Effects loading...</div>';
+  const sci = sd.scientist || {};
+  const owned = sci.owned || [];
+  const curEffect = sci.effect || null;
+  const isTeacher = sd.is_teacher;
+  const rarityColors = { common:'#94a3b8', rare:'#3b82f6', epic:'#a855f7', legendary:'#f59e0b' };
+  const rarityBg    = { common:'#f8fafc',  rare:'#eff6ff',  epic:'#faf5ff',  legendary:'#fffbeb' };
+
+  return Object.entries(WLEffects.EFFECTS).map(([id, eff]) => {
+    const effectOwnId = 'effect_' + id;
+    const isOwned = isTeacher || eff.cost === 0 || owned.includes(effectOwnId);
+    const hasBadge = !eff.requiresBadge || sd.badges.includes(eff.requiresBadge);
+    const canAfford = sd.quarks >= eff.cost;
+    const isEquipped = curEffect === id;
+    const borderColor = rarityColors[eff.rarity] || '#e2e8f0';
+    const bgColor = rarityBg[eff.rarity] || '#fff';
+
+    let btn = '';
+    if (!hasBadge) {
+      btn = `<span class="shopBtn cantafford" title="Requires ${eff.requiresBadge} badge">🔒 Badge needed</span>`;
+    } else if (isOwned && isEquipped) {
+      btn = `<button class="shopBtn equipped" onclick="applyEffect(null)">✓ Equipped — Remove</button>`;
+    } else if (isOwned) {
+      btn = `<button class="shopBtn equip" onclick="applyEffect('${id}')">Equip</button>`;
+    } else if (canAfford) {
+      btn = `<button class="shopBtn buy" onclick="buyEffect('${id}',${eff.cost})">⚛️ ${eff.cost}</button>`;
+    } else {
+      btn = `<span class="shopBtn cantafford">Need ${eff.cost - sd.quarks} more ⚛️</span>`;
+    }
+
+    return `<div class="shopItem" id="effectCard_${id}" style="border:3px solid ${borderColor};background:${bgColor};position:relative;">
+      <div style="font-size:28px;">${eff.icon}</div>
+      <div class="shopItemName">${eff.name}</div>
+      <div style="font-size:10px;font-weight:700;color:${borderColor};text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">${eff.rarity}</div>
+      <div style="font-size:10px;color:#64748b;text-align:center;margin-bottom:4px;">${eff.desc}</div>
+      ${btn}
+    </div>`;
+  }).join('');
+}
+
+function renderCurrentEffect(sd) {
+  if (typeof WLEffects === 'undefined') return '';
+  const curEffect = (sd.scientist||{}).effect || null;
+  if (!curEffect || !WLEffects.EFFECTS[curEffect]) {
+    return `<div style="color:#94a3b8;font-size:13px;font-style:italic;">No effect equipped. Visit the shop to add one!</div>`;
+  }
+  const eff = WLEffects.EFFECTS[curEffect];
+  return `<div style="display:flex;align-items:center;gap:10px;background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:10px 14px;">
+    <span style="font-size:24px;">${eff.icon}</span>
+    <div>
+      <div style="font-size:13px;font-weight:900;color:#312e81;">${eff.name}</div>
+      <div style="font-size:11px;color:#64748b;">${eff.desc}</div>
+    </div>
+    <button style="margin-left:auto;border:none;background:#fee2e2;color:#dc2626;font-weight:800;font-size:11px;border-radius:8px;padding:4px 10px;cursor:pointer;" onclick="applyEffect(null)">Remove</button>
+  </div>`;
+}
+
+async function applyEffect(effectId) {
+  await WordLabData.saveScientist({ effect: effectId });
+  // Restart or stop effect on widget
+  if (typeof WLEffects !== 'undefined' && document.getElementById('wlScientistWidget')) {
+    if (effectId) WLEffects.start(effectId, document.getElementById('wlScientistWidget'));
+    else WLEffects.stop(document.getElementById('wlScientistWidget'));
+  }
+  await render();
+}
+
+async function buyEffect(effectId, cost) {
+  const result = await WordLabData.purchase('effect_' + effectId, cost);
+  if (!result.success) { alert('Not enough quarks!'); return; }
+  await WordLabData.saveScientist({ effect: effectId });
+  if (typeof WLEffects !== 'undefined' && document.getElementById('wlScientistWidget')) {
+    WLEffects.start(effectId, document.getElementById('wlScientistWidget'));
+  }
+  await render();
 }
 
 function switchTab(id, btn) {

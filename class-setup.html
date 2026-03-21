@@ -290,9 +290,10 @@
         <div class="studentList" id="students_${cls.id}">
           <div class="studentGrid" id="studentGrid_${cls.id}">
             ${cls.students.map(s => `
-              <span class="studentChip">
+              <span class="studentChip" id="chip_${s.id}">
                 ${s.name}
                 <code style="background:#f1f5f9;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:900;font-family:monospace;color:#4338ca;margin:0 2px;">${s.student_code||'?'}</code>
+                <button id="teacherBtn_${s.id}" class="studentChipRemove" onclick="toggleTeacher('${cls.id}','${s.id}',this)" title="Toggle teacher access" style="font-size:13px;opacity:0.4;">👩‍🏫</button>
                 <button class="studentChipRemove" onclick="regenerateCode('${cls.id}','${s.id}')" title="Regenerate code">↻</button>
                 <button class="studentChipRemove" onclick="removeStudent('${cls.id}','${s.id}')" title="Remove">×</button>
               </span>
@@ -311,6 +312,13 @@
       const enabled = await WordLabData.getClassCrownEnabled(cls.id);
       const chk = document.getElementById('crownCheck_' + cls.id);
       if (chk) chk.checked = !!enabled;
+
+      // Load teacher IDs and highlight teacher buttons
+      const teacherIds = await WordLabData.getClassTeacherIds(cls.id);
+      cls.students.forEach(s => {
+        const btn = document.getElementById('teacherBtn_' + s.id);
+        if (btn) btn.style.opacity = teacherIds.includes(s.id) ? '1' : '0.35';
+      });
     });
   }
 
@@ -399,6 +407,14 @@
 
   async function toggleCrown(classId, enabled) {
     await WordLabData.setClassCrownEnabled(classId, enabled);
+  }
+
+  async function toggleTeacher(classId, studentId, btn) {
+    const teacherIds = await WordLabData.getClassTeacherIds(classId);
+    const isCurrentlyTeacher = teacherIds.includes(studentId);
+    await WordLabData.setStudentTeacher(classId, studentId, !isCurrentlyTeacher);
+    btn.style.opacity = isCurrentlyTeacher ? '0.35' : '1';
+    btn.title = isCurrentlyTeacher ? 'Make teacher' : 'Remove teacher access';
   }
 
   document.getElementById('tabManage').classList.add('hidden');

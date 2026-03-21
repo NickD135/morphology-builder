@@ -101,8 +101,9 @@ const WordLabData = (() => {
     if (!char.badges) char.badges = [];
     if (!char.scientist) char.scientist = {
       skinTone:'#FDBCB4', coatColor:'#ffffff', coatPattern:'plain',
-      head:null, face:null, background:'lab', owned:[]
+      head:null, face:null, background:'lab', effect:null, owned:[]
     };
+    if (typeof char.scientist.effect === 'undefined') char.scientist.effect = null;
     if (!char.stats) char.stats = {
       totalCorrect:0, totalAnswered:0, sessions:0, activitiesPlayed:[], bestStreak:0
     };
@@ -424,10 +425,12 @@ const WordLabData = (() => {
       .eq('student_id', session.studentId)
       .maybeSingle();
     const char = ensureCharFields(data ? { ...data } : {});
+    const isTeacher = await isStudentTeacher(session.classId, session.studentId);
     return {
       quarks: char.quarks, xp: char.xp, badges: char.badges,
       scientist: char.scientist, stats: char.stats,
-      level: getLevel(char.xp), name: session.studentName
+      level: getLevel(char.xp), name: session.studentName,
+      is_teacher: isTeacher
     };
   }
 
@@ -769,6 +772,39 @@ const WordLabData = (() => {
     try { localStorage.setItem('wl_crown_' + classId, JSON.stringify(enabled)); } catch {}
   }
 
+  // ── Teacher IDs ───────────────────────────────────────────────
+  async function getClassTeacherIds(classId) {
+    try {
+      var { data, error } = await sb()
+        .from('classes').select('settings').eq('id', classId).maybeSingle();
+      if (!error && data && data.settings && data.settings.teacherIds) {
+        return data.settings.teacherIds;
+      }
+    } catch {}
+    return [];
+  }
+
+  async function isStudentTeacher(classId, studentId) {
+    if (!classId || !studentId) return false;
+    const ids = await getClassTeacherIds(classId);
+    return ids.includes(studentId);
+  }
+
+  async function setStudentTeacher(classId, studentId, isTeacher) {
+    try {
+      var { data: existing, error: fetchErr } = await sb()
+        .from('classes').select('settings').eq('id', classId).maybeSingle();
+      if (!fetchErr) {
+        var settings = (existing && existing.settings) ? Object.assign({}, existing.settings) : {};
+        var ids = settings.teacherIds || [];
+        if (isTeacher && !ids.includes(studentId)) ids = ids.concat([studentId]);
+        if (!isTeacher) ids = ids.filter(function(id){ return id !== studentId; });
+        settings.teacherIds = ids;
+        await sb().from('classes').update({ settings: settings }).eq('id', classId);
+      }
+    } catch(e) { console.warn('setStudentTeacher failed', e); }
+  }
+
   return {
     createClass, getClasses, getClass, verifyPassword,
     addStudent, removeStudent, deleteClass, regenerateStudentCode,
@@ -781,7 +817,8 @@ const WordLabData = (() => {
     _backToStep1, _backToStep2, _skip, _toggleAudio,
     getStudentData, getLevel, ALL_BADGES, LEGENDARY_BADGES,
     getScientist, saveScientist, purchase,
-    getClassLeader, getClassCrownEnabled, setClassCrownEnabled
+    getClassLeader, getClassCrownEnabled, setClassCrownEnabled,
+    getClassTeacherIds, isStudentTeacher, setStudentTeacher
   };
 
 })();

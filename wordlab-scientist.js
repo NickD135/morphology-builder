@@ -121,6 +121,17 @@ const WLScientist = (() => {
     return _crownActive;
   }
 
+  function _startEquippedEffect(sd) {
+    if (!_widgetEl) return;
+    if (typeof WLEffects === 'undefined') return;
+    const effectId = sd && sd.scientist && sd.scientist.effect;
+    if (effectId) {
+      WLEffects.start(effectId, _widgetEl);
+    } else {
+      WLEffects.stop(_widgetEl);
+    }
+  }
+
   async function inject() {
     if (_widgetEl) return;
     if (typeof WordLabData === 'undefined') return;
@@ -144,6 +155,21 @@ const WLScientist = (() => {
     } else {
       const hdr = document.querySelector('.headerInner, .hud, header');
       if (hdr) hdr.insertBefore(el, hdr.firstChild);
+    }
+
+    _startEquippedEffect(sd);
+
+    // Restart effect when student logs in during this session
+    if (typeof WordLabData !== 'undefined' && WordLabData._pick) {
+      const _origPick = WordLabData._pick.bind(WordLabData);
+      WordLabData._pick = async function(sid, sname, cid) {
+        _origPick(sid, sname, cid);
+        // After pick, re-fetch data and restart effect
+        setTimeout(async () => {
+          const newSd = await WordLabData.getStudentData();
+          _startEquippedEffect(newSd);
+        }, 500);
+      };
     }
   }
 
