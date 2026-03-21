@@ -696,6 +696,7 @@
     <div class="mode-row">
       <button class="modeSel active" id="modePrefix" onclick="setMorphemeMode('prefix')">Prefixes</button>
       <button class="modeSel"        id="modeSuffix" onclick="setMorphemeMode('suffix')">Suffixes</button>
+      <button class="modeSel"        id="modeBase"   onclick="setMorphemeMode('base')">Bases</button>
       <button class="modeSel"        id="modeMixed"  onclick="setMorphemeMode('mixed')">Mixed</button>
     </div>
 
@@ -757,10 +758,10 @@
     {id:"lead",  form:"lead",  meaning:"guide others",          pos:["verb","noun"], validSuffixes:["er","ing"]},
     {id:"farm",  form:"farm",  meaning:"grow crops or animals", pos:["noun","verb"], validSuffixes:["er","ing","ed"]}
   ];
-  let morphemeMode = 'prefix'; // 'prefix' | 'suffix' | 'mixed'
+  let morphemeMode = 'prefix'; // 'prefix' | 'suffix' | 'base' | 'mixed'
   function setMorphemeMode(mode){
     morphemeMode = mode;
-    ['prefix','suffix','mixed'].forEach(m => document.getElementById('mode'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('active', m===mode));
+    ['prefix','suffix','base','mixed'].forEach(m => document.getElementById('mode'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('active', m===mode));
     score=0; streak=0; fuel=100; updateHud(); loadQuestion();
   }
   function getActiveMorphemes(){
@@ -776,19 +777,63 @@
   function isRealWord(prefix,base){if(!dictWords||dictWords.size===0)return true;return dictWords.has((prefix.form+base.form).toLowerCase());}
   const wordEl=document.getElementById("word"),baseMeaningEl=document.getElementById("baseMeaning"),optionsEl=document.getElementById("options"),feedbackEl=document.getElementById("feedback"),subFeedbackEl=document.getElementById("subFeedback"),scorePillEl=document.getElementById("scorePill"),streakPillEl=document.getElementById("streakPill"),fuelBarEl=document.getElementById("fuelBar"),fuelLabelEl=document.getElementById("fuelLabel"),dropZoneEl=document.getElementById("prefixDropZone"),dropZoneTextEl=document.getElementById("dropZoneText");
   function shuffleArray(arr){return[...arr].sort(()=>Math.random()-.5);}
-  function getPrefixLabel(p){return currentQuestion&&!currentQuestion.isPrefix ? "-"+(p.form||"").toUpperCase() : (p.form||"").toUpperCase()+"-";}
+  function getPrefixLabel(p){if(currentQuestion&&currentQuestion.isBaseMode)return(p.form||"").toUpperCase();return currentQuestion&&!currentQuestion.isPrefix?"-"+(p.form||"").toUpperCase():(p.form||"").toUpperCase()+"-";}
+  function generateBaseQuestion(){const usePrefix=Math.random()>0.5;const morphemes=usePrefix?PREFIXES:SUFFIXES;const allBases=usePrefix?BASES:SUFFIX_BASES;for(let i=0;i<60;i++){const morpheme=morphemes[Math.floor(Math.random()*morphemes.length)];const compat=allBases.filter(b=>isCompatible(morpheme,b));const pool=compat.length>=3?compat:allBases;if(pool.length<3)continue;const correct=pool[Math.floor(Math.random()*pool.length)];const wrong=shuffleArray(pool.filter(b=>b.id!==correct.id)).slice(0,2);const targetMeaning=buildTargetMeaning(morpheme,correct,usePrefix);return{base:correct,morpheme,isPrefix:usePrefix,isBaseMode:true,targetMeaning,options:shuffleArray([correct,...wrong])};} const m0=PREFIXES[0],b0=BASES[0],w0=shuffleArray(BASES.filter(b=>b.id!==b0.id)).slice(0,2);return{base:b0,morpheme:m0,isPrefix:true,isBaseMode:true,targetMeaning:buildTargetMeaning(m0,b0,true),options:shuffleArray([b0,...w0])};}
   function getBaseLabel(b){return(b.form||"").toUpperCase();}
   function updateHud(){scorePillEl.textContent=`${score} XP`;streakPillEl.textContent=`🔥 Streak: ${streak}`;fuelBarEl.style.width=`${Math.max(fuel,0)}%`;fuelLabelEl.textContent=`${Math.max(Math.round(fuel),0)}%`;}
   function isCompatible(morpheme,base){if(!morpheme.allowedPos||!base.pos) return true; return base.pos.some(pos=>morpheme.allowedPos.includes(pos));}
   function buildTargetMeaning(morpheme,base,isPrefix){let pattern=morpheme.meaningPattern||(isPrefix?"{base} "+morpheme.meaning:base.meaning+" "+morpheme.meaning);const sub=isPrefix?base.meaning:base.form;let result=pattern.replace(/\{base\}/g,sub);if(!isPrefix&&base.form.endsWith('e'))result=result.replace(new RegExp(base.form+'ing','gi'),base.form.slice(0,-1)+'ing');return result;}
-  function generateQuestion(){const {morphemes,bases,isPrefix}=getActiveMorphemes();if(isPrefix){for(let i=0;i<50;i++){const base=bases[Math.floor(Math.random()*bases.length)];const compat=morphemes.filter(p=>isCompatible(p,base));const real=compat.filter(p=>isRealWord(p,base));if(!real.length)continue;const correct=real[Math.floor(Math.random()*real.length)];const wrong=shuffleArray(morphemes.filter(p=>p.id!==correct.id)).slice(0,2);return{base,correct,isPrefix,targetMeaning:buildTargetMeaning(correct,base,isPrefix),options:shuffleArray([correct,...wrong])};} const base=bases[Math.floor(Math.random()*bases.length)];const compat=morphemes.filter(p=>isCompatible(p,base));const correct=compat.length?compat[Math.floor(Math.random()*compat.length)]:morphemes[0];const wrong=shuffleArray(morphemes.filter(p=>p.id!==correct.id)).slice(0,2);return{base,correct,isPrefix,targetMeaning:buildTargetMeaning(correct,base,isPrefix),options:shuffleArray([correct,...wrong])};}else{const _vb=bases.filter(b=>b.validSuffixes&&b.validSuffixes.length);for(let i=0;i<50;i++){const base=_vb[Math.floor(Math.random()*_vb.length)];const compat=morphemes.filter(s=>base.validSuffixes.includes(s.id));if(!compat.length)continue;const correct=compat[Math.floor(Math.random()*compat.length)];const wrong=shuffleArray(morphemes.filter(s=>s.id!==correct.id)).slice(0,2);return{base,correct,isPrefix,targetMeaning:buildTargetMeaning(correct,base,isPrefix),options:shuffleArray([correct,...wrong])};} const _fb=_vb[0]||bases[0];const _fc=_fb.validSuffixes?morphemes.filter(s=>_fb.validSuffixes.includes(s.id)):[morphemes[0]];const correct=_fc[0]||morphemes[0];const wrong=shuffleArray(morphemes.filter(s=>s.id!==correct.id)).slice(0,2);return{base:_fb,correct,isPrefix,targetMeaning:buildTargetMeaning(correct,_fb,isPrefix),options:shuffleArray([correct,...wrong])};}}
+  function generateQuestion(){if(morphemeMode==='base')return generateBaseQuestion();const {morphemes,bases,isPrefix}=getActiveMorphemes();if(isPrefix){for(let i=0;i<50;i++){const base=bases[Math.floor(Math.random()*bases.length)];const compat=morphemes.filter(p=>isCompatible(p,base));const real=compat.filter(p=>isRealWord(p,base));if(!real.length)continue;const correct=real[Math.floor(Math.random()*real.length)];const wrong=shuffleArray(morphemes.filter(p=>p.id!==correct.id)).slice(0,2);return{base,correct,isPrefix,targetMeaning:buildTargetMeaning(correct,base,isPrefix),options:shuffleArray([correct,...wrong])};} const base=bases[Math.floor(Math.random()*bases.length)];const compat=morphemes.filter(p=>isCompatible(p,base));const correct=compat.length?compat[Math.floor(Math.random()*compat.length)]:morphemes[0];const wrong=shuffleArray(morphemes.filter(p=>p.id!==correct.id)).slice(0,2);return{base,correct,isPrefix,targetMeaning:buildTargetMeaning(correct,base,isPrefix),options:shuffleArray([correct,...wrong])};}else{const _vb=bases.filter(b=>b.validSuffixes&&b.validSuffixes.length);for(let i=0;i<50;i++){const base=_vb[Math.floor(Math.random()*_vb.length)];const compat=morphemes.filter(s=>base.validSuffixes.includes(s.id));if(!compat.length)continue;const correct=compat[Math.floor(Math.random()*compat.length)];const wrong=shuffleArray(morphemes.filter(s=>s.id!==correct.id)).slice(0,2);return{base,correct,isPrefix,targetMeaning:buildTargetMeaning(correct,base,isPrefix),options:shuffleArray([correct,...wrong])};} const _fb=_vb[0]||bases[0];const _fc=_fb.validSuffixes?morphemes.filter(s=>_fb.validSuffixes.includes(s.id)):[morphemes[0]];const correct=_fc[0]||morphemes[0];const wrong=shuffleArray(morphemes.filter(s=>s.id!==correct.id)).slice(0,2);return{base:_fb,correct,isPrefix,targetMeaning:buildTargetMeaning(correct,_fb,isPrefix),options:shuffleArray([correct,...wrong])};}}
 
   function resetDropZone(){dropZoneEl.classList.remove("flashSuccess","flashFail");dropZoneTextEl.textContent="____";dropZoneTextEl.style.color="#a5b4fc";}
-  function loadQuestion(){if(fuel<=0)return;buttonsLocked=false;currentQuestion=generateQuestion();const _lbl=document.getElementById('challengeLabel');const _sub=document.getElementById('challengeSub');if(_lbl)_lbl.textContent=currentQuestion.isPrefix?'Prefix challenge':'Suffix challenge';if(_sub)_sub.textContent=currentQuestion.isPrefix?'Pick the prefix that gives the base word the right meaning.':'Pick the suffix that completes the base word.';dropZoneEl.style.order=currentQuestion.isPrefix?'':'2';wordEl.textContent=getBaseLabel(currentQuestion.base);
-    // Show visual hint of where morpheme goes
-    baseMeaningEl.dataset.isPrefix = currentQuestion.isPrefix;baseMeaningEl.innerHTML=`<strong>Base meaning:</strong> ${currentQuestion.base.meaning}<br><strong>Target meaning:</strong> ${currentQuestion.targetMeaning}`;feedbackEl.textContent="";feedbackEl.className="feedback";subFeedbackEl.textContent="";resetDropZone();optionsEl.innerHTML="";currentQuestion.options.forEach((option,index)=>{const btn=document.createElement("button");btn.type="button";btn.className=`bubbleBtn ${["blue","green","purple","orange"][index%4]}`;btn.style.animationDelay=`${index*.18}s`;const inner=document.createElement("div");inner.className="bubbleInner";const main=document.createElement("span");main.textContent=getPrefixLabel(option);inner.appendChild(main);btn.appendChild(inner);btn.addEventListener("click",()=>checkAnswer(option));optionsEl.appendChild(btn);});}
+  function loadQuestion(){
+    if(fuel<=0)return;buttonsLocked=false;currentQuestion=generateQuestion();
+    const q=currentQuestion;
+    const _lbl=document.getElementById('challengeLabel');const _sub=document.getElementById('challengeSub');
+    if(q.isBaseMode){
+      if(_lbl)_lbl.textContent='Base word challenge';
+      if(_sub)_sub.textContent='Pick the base word that creates the target meaning with the given morpheme.';
+      // For prefix+BASE: [PREFIX given left] [BASE? right]; for BASE+suffix: [BASE? left] [-SUFFIX given right]
+      if(q.isPrefix){dropZoneEl.style.order='2';wordEl.textContent=(q.morpheme.form||'').toUpperCase()+'-';}
+      else{dropZoneEl.style.order='';wordEl.textContent='-'+(q.morpheme.form||'').toUpperCase();}
+      const mLabel=q.isPrefix?q.morpheme.form+'-':'-'+q.morpheme.form;
+      baseMeaningEl.innerHTML=`<strong>Morpheme:</strong> <em>${mLabel}</em> — ${q.morpheme.meaning}<br><strong>Target meaning:</strong> ${q.targetMeaning}`;
+    } else {
+      if(_lbl)_lbl.textContent=q.isPrefix?'Prefix challenge':'Suffix challenge';
+      if(_sub)_sub.textContent=q.isPrefix?'Pick the prefix that gives the base word the right meaning.':'Pick the suffix that completes the base word.';
+      dropZoneEl.style.order=q.isPrefix?'':'2';wordEl.textContent=getBaseLabel(q.base);
+      baseMeaningEl.innerHTML=`<strong>Base meaning:</strong> ${q.base.meaning}<br><strong>Target meaning:</strong> ${q.targetMeaning}`;
+    }
+    feedbackEl.textContent="";feedbackEl.className="feedback";subFeedbackEl.textContent="";
+    resetDropZone();optionsEl.innerHTML="";
+    q.options.forEach((option,index)=>{const btn=document.createElement("button");btn.type="button";btn.className=`bubbleBtn ${["blue","green","purple","orange"][index%4]}`;btn.style.animationDelay=`${index*.18}s`;const inner=document.createElement("div");inner.className="bubbleInner";const main=document.createElement("span");main.textContent=getPrefixLabel(option);inner.appendChild(main);btn.appendChild(inner);btn.addEventListener("click",()=>checkAnswer(option));optionsEl.appendChild(btn);});
+  }
   function lockButtons(){optionsEl.querySelectorAll("button").forEach(b=>b.disabled=true);}
-  function checkAnswer(choice){if(buttonsLocked||fuel<=0)return;buttonsLocked=true;lockButtons();dropZoneTextEl.textContent=getPrefixLabel(choice);if(choice.id===currentQuestion.correct.id){score+=50+(streak*10);streak++;fuel=Math.min(fuel+8,100);if(typeof WordLabData!=='undefined'&&WordLabData.getSession()){const _wlResult=WordLabData.recordAttempt('mission-mode',(currentQuestion.isPrefix?'prefix:':'suffix:')+currentQuestion.correct.id,true,0);if(typeof WLScientist!=='undefined') WLScientist.react('correct',_wlResult);}if(typeof WLAudio!=='undefined'){WLAudio.correct();if(streak>=3)WLAudio.streak(streak);}feedbackEl.textContent="✅ Correct!";feedbackEl.className="feedback ok";subFeedbackEl.textContent=`You built the idea: "${currentQuestion.targetMeaning}"`;dropZoneTextEl.style.color="var(--ok)";dropZoneEl.classList.add("flashSuccess");}else{streak=0;fuel=Math.max(fuel-12,0);if(typeof WordLabData!=='undefined'&&WordLabData.getSession()){WordLabData.recordAttempt('mission-mode',(currentQuestion.isPrefix?'prefix:':'suffix:')+currentQuestion.correct.id,false,0);}if(typeof WLScientist!=='undefined') WLScientist.react('wrong');if(typeof WLAudio!=='undefined') WLAudio.wrong();feedbackEl.textContent="❌ Not quite";feedbackEl.className="feedback bad";subFeedbackEl.textContent=`Better answer: ${getPrefixLabel(currentQuestion.correct)} — "${currentQuestion.targetMeaning}"`;dropZoneTextEl.style.color="var(--bad)";dropZoneEl.classList.add("flashFail");}updateHud();if(fuel<=0){setTimeout(endGame,800);return;}setTimeout(loadQuestion,1500);}
+  function checkAnswer(choice){
+    if(buttonsLocked||fuel<=0)return;buttonsLocked=true;lockButtons();
+    const q=currentQuestion;
+    dropZoneTextEl.textContent=getPrefixLabel(choice);
+    const isCorrect=choice.id===(q.isBaseMode?q.base.id:q.correct.id);
+    const _cat=q.isBaseMode?'base:'+q.base.id:(q.isPrefix?'prefix:':'suffix:')+q.correct.id;
+    const _correctLabel=q.isBaseMode?getBaseLabel(q.base):getPrefixLabel(q.correct);
+    if(isCorrect){
+      score+=50+(streak*10);streak++;fuel=Math.min(fuel+8,100);
+      if(typeof WordLabData!=='undefined'&&WordLabData.getSession()){const _wlResult=WordLabData.recordAttempt('mission-mode',_cat,true,0);if(typeof WLScientist!=='undefined') WLScientist.react('correct',_wlResult);}
+      if(typeof WLAudio!=='undefined'){WLAudio.correct();if(streak>=3)WLAudio.streak(streak);}
+      feedbackEl.textContent="✅ Correct!";feedbackEl.className="feedback ok";
+      subFeedbackEl.textContent=`You built the idea: "${q.targetMeaning}"`;
+      dropZoneTextEl.style.color="var(--ok)";dropZoneEl.classList.add("flashSuccess");
+    } else {
+      streak=0;fuel=Math.max(fuel-12,0);
+      if(typeof WordLabData!=='undefined'&&WordLabData.getSession()){WordLabData.recordAttempt('mission-mode',_cat,false,0);}
+      if(typeof WLScientist!=='undefined') WLScientist.react('wrong');
+      if(typeof WLAudio!=='undefined') WLAudio.wrong();
+      feedbackEl.textContent="❌ Not quite";feedbackEl.className="feedback bad";
+      subFeedbackEl.textContent=`Better answer: ${_correctLabel} — "${q.targetMeaning}"`;
+      dropZoneTextEl.style.color="var(--bad)";dropZoneEl.classList.add("flashFail");
+    }
+    updateHud();if(fuel<=0){setTimeout(endGame,800);return;}setTimeout(loadQuestion,1500);
+  }
   function startFuelDrain(){clearInterval(fuelInterval);fuelInterval=setInterval(()=>{fuel-=.25;if(fuel<=0){fuel=0;updateHud();endGame();clearInterval(fuelInterval);return;}updateHud();},220);}
   function endGame(){buttonsLocked=true;optionsEl.innerHTML="";feedbackEl.textContent="Mission over";feedbackEl.className="feedback bad";subFeedbackEl.textContent=`Final score: ${score} XP`;}
   document.getElementById("recalibrateBtn").addEventListener("click",()=>{score=0;streak=0;fuel=100;updateHud();startFuelDrain();loadQuestion();});

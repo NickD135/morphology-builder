@@ -253,6 +253,7 @@
     <div style="display:flex;justify-content:center;gap:8px;margin-bottom:14px;">
       <button class="modeSel active" id="modePrefix" onclick="setMorphemeMode('prefix')">Prefixes</button>
       <button class="modeSel" id="modeSuffix" onclick="setMorphemeMode('suffix')">Suffixes</button>
+      <button class="modeSel" id="modeBase"   onclick="setMorphemeMode('base')">Bases</button>
       <button class="modeSel" id="modeMixed" onclick="setMorphemeMode('mixed')">Mixed</button>
     </div>
     <div class="wordArea">
@@ -277,21 +278,24 @@
 <script>
   const PREFIXES=[{id:"ad",form:"ad",meaning:"towards or to"},{id:"anti",form:"anti",meaning:"against"},{id:"de",form:"de",meaning:"undo or remove"},{id:"dis",form:"dis",meaning:"not or opposite"},{id:"in",form:"in",meaning:"not or into"},{id:"inter",form:"inter",meaning:"between"},{id:"mis",form:"mis",meaning:"wrongly"},{id:"non",form:"non",meaning:"not"},{id:"over",form:"over",meaning:"too much"},{id:"post",form:"post",meaning:"after"},{id:"pre",form:"pre",meaning:"before"},{id:"re",form:"re",meaning:"again"},{id:"sub",form:"sub",meaning:"under or below"},{id:"super",form:"super",meaning:"above or beyond"},{id:"trans",form:"trans",meaning:"across"},{id:"un",form:"un",meaning:"not"},{id:"under",form:"under",meaning:"below"},{id:"con",form:"con",meaning:"with or together"},{id:"contra",form:"contra",meaning:"against or opposite"},{id:"en",form:"en",meaning:"cause to or make"},{id:"em",form:"em",meaning:"cause to or make"},{id:"ex",form:"ex",meaning:"out of or former"},{id:"e",form:"e",meaning:"out of"},{id:"extra",form:"extra",meaning:"beyond or outside"},{id:"fore",form:"fore",meaning:"before or in front"},{id:"hyper",form:"hyper",meaning:"over or excessive"},{id:"mal",form:"mal",meaning:"bad or badly"},{id:"mega",form:"mega",meaning:"large or great"},{id:"micro",form:"micro",meaning:"small or tiny"},{id:"mid",form:"mid",meaning:"middle"},{id:"multi",form:"multi",meaning:"many"},{id:"pro",form:"pro",meaning:"in favour of or forward"},{id:"semi",form:"semi",meaning:"half or partly"},{id:"ob",form:"ob",meaning:"against or towards"},{id:"a",form:"a",meaning:"not or without"}];
   const SUFFIXES=[{id:"er",form:"er",meaning:"person who; more"},{id:"or",form:"or",meaning:"person who"},{id:"ing",form:"ing",meaning:"happening now"},{id:"ed",form:"ed",meaning:"past tense"},{id:"ly",form:"ly",meaning:"in a way"},{id:"ful",form:"ful",meaning:"full of"},{id:"less",form:"less",meaning:"without"},{id:"ness",form:"ness",meaning:"state of being"},{id:"ment",form:"ment",meaning:"result of an action"},{id:"ion",form:"ion",meaning:"act or result of"},{id:"able",form:"able",meaning:"able to be"},{id:"ish",form:"ish",meaning:"somewhat or like"},{id:"ist",form:"ist",meaning:"person who"},{id:"ive",form:"ive",meaning:"having the quality of"},{id:"ous",form:"ous",meaning:"full of"},{id:"al",form:"al",meaning:"related to"},{id:"hood",form:"hood",meaning:"state of being"},{id:"ship",form:"ship",meaning:"state or skill"},{id:"ity",form:"ity",meaning:"state or quality"},{id:"ance",form:"ance",meaning:"state of"},{id:"ic",form:"ic",meaning:"related to"}];
+  const BASES=[{id:"act",form:"act",meaning:"do or perform"},{id:"build",form:"build",meaning:"construct or make"},{id:"care",form:"care",meaning:"look after"},{id:"child",form:"child",meaning:"a young person"},{id:"connect",form:"connect",meaning:"join together"},{id:"create",form:"create",meaning:"make something new"},{id:"dark",form:"dark",meaning:"without light"},{id:"direct",form:"direct",meaning:"guide or control"},{id:"farm",form:"farm",meaning:"grow crops or animals"},{id:"friend",form:"friend",meaning:"someone you like"},{id:"help",form:"help",meaning:"assist someone"},{id:"kind",form:"kind",meaning:"gentle and caring"},{id:"lead",form:"lead",meaning:"guide others"},{id:"manage",form:"manage",meaning:"be in control of"},{id:"measure",form:"measure",meaning:"find the size of"},{id:"move",form:"move",meaning:"go from one place to another"},{id:"place",form:"place",meaning:"put in a position"},{id:"play",form:"play",meaning:"take part in a game"},{id:"power",form:"power",meaning:"strength or energy"},{id:"protect",form:"protect",meaning:"keep safe"},{id:"quick",form:"quick",meaning:"fast"},{id:"read",form:"read",meaning:"understand written words"},{id:"respect",form:"respect",meaning:"treat with care and value"},{id:"return",form:"return",meaning:"go back"},{id:"slow",form:"slow",meaning:"not fast"},{id:"teach",form:"teach",meaning:"help others learn"},{id:"trust",form:"trust",meaning:"believe in"},{id:"view",form:"view",meaning:"look at something"},{id:"work",form:"work",meaning:"do a task"},{id:"write",form:"write",meaning:"put words on paper"},{id:"bright",form:"bright",meaning:"full of light or clever"},{id:"form",form:"form",meaning:"make or shape something"}];
   let morphemeMode = 'prefix';
   function setMorphemeMode(mode){
     morphemeMode = mode;
-    ['prefix','suffix','mixed'].forEach(m => document.getElementById('mode'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('active', m===mode));
+    ['prefix','suffix','base','mixed'].forEach(m => document.getElementById('mode'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('active', m===mode));
     score=0; streak=0; fuel=100; updateHud(); loadQuestion();
   }
   function getActiveMorphemePool(){
     if(morphemeMode==='prefix') return PREFIXES;
     if(morphemeMode==='suffix') return SUFFIXES;
+    if(morphemeMode==='base')   return BASES;
     return Math.random()>0.5 ? PREFIXES : SUFFIXES;
   }
   let score=0,streak=0,fuel=100,currentQuestion=null,buttonsLocked=false,fuelInterval=null;
   const wordEl=document.getElementById("word"),baseMeaningEl=document.getElementById("baseMeaning"),optionsEl=document.getElementById("options"),feedbackEl=document.getElementById("feedback"),subFeedbackEl=document.getElementById("subFeedback"),scorePillEl=document.getElementById("scorePill"),streakPillEl=document.getElementById("streakPill"),fuelBarEl=document.getElementById("fuelBar"),fuelLabelEl=document.getElementById("fuelLabel"),dropZoneEl=document.getElementById("prefixDropZone"),dropZoneTextEl=document.getElementById("dropZoneText");
   function shuffleArray(arr){return[...arr].sort(()=>Math.random()-.5);}
   function getPrefixLabel(p){
+    if(BASES.some(x=>x.id===p.id)) return (p.form||"").toUpperCase();
     const isPrefix = PREFIXES.some(x=>x.id===p.id);
     return isPrefix ? (p.form||"").toUpperCase()+"-" : "-"+(p.form||"").toUpperCase();
   }
@@ -303,9 +307,57 @@
     return{correct,options:shuffleArray([correct,...wrong])};
   }
   function resetDropZone(){dropZoneEl.classList.remove("flashSuccess","flashFail");dropZoneTextEl.textContent="?";dropZoneTextEl.style.color="#a5b4fc";}
-  function loadQuestion(){if(fuel<=0)return;buttonsLocked=false;currentQuestion=generateQuestion();wordEl.textContent="MEANING";baseMeaningEl.innerHTML=`<strong>Which ${PREFIXES.some(x=>x.id===currentQuestion.correct.id)?"prefix":"suffix"} means:</strong><br>"${currentQuestion.correct.meaning}"`;feedbackEl.textContent="";feedbackEl.className="feedback";subFeedbackEl.textContent="";resetDropZone();optionsEl.innerHTML="";currentQuestion.options.forEach((option,index)=>{const btn=document.createElement("button");btn.type="button";btn.className=`bubbleBtn ${["blue","green","purple","orange"][index%4]}`;btn.style.animationDelay=`${index*.18}s`;const inner=document.createElement("div");inner.className="bubbleInner";const main=document.createElement("span");main.textContent=getPrefixLabel(option);inner.appendChild(main);btn.appendChild(inner);btn.addEventListener("click",()=>checkAnswer(option));optionsEl.appendChild(btn);});}
+  function loadQuestion(){
+    if(fuel<=0)return;
+    buttonsLocked=false;
+    currentQuestion=generateQuestion();
+    const q=currentQuestion;
+    if(morphemeMode==='base'){
+      wordEl.textContent="BASE";
+      baseMeaningEl.innerHTML=`<strong>Which base word means:</strong><br>"${q.correct.meaning}"`;
+    } else {
+      wordEl.textContent="MEANING";
+      const typeLabel=PREFIXES.some(x=>x.id===q.correct.id)?'prefix':'suffix';
+      baseMeaningEl.innerHTML=`<strong>Which ${typeLabel} means:</strong><br>"${q.correct.meaning}"`;
+    }
+    feedbackEl.textContent="";feedbackEl.className="feedback";subFeedbackEl.textContent="";
+    resetDropZone();optionsEl.innerHTML="";
+    q.options.forEach((option,index)=>{
+      const btn=document.createElement("button");btn.type="button";
+      btn.className=`bubbleBtn ${["blue","green","purple","orange"][index%4]}`;
+      btn.style.animationDelay=`${index*.18}s`;
+      const inner=document.createElement("div");inner.className="bubbleInner";
+      const main=document.createElement("span");main.textContent=getPrefixLabel(option);
+      inner.appendChild(main);btn.appendChild(inner);
+      btn.addEventListener("click",()=>checkAnswer(option));optionsEl.appendChild(btn);
+    });
+  }
   function lockButtons(){optionsEl.querySelectorAll("button").forEach(b=>b.disabled=true);}
-  function checkAnswer(choice){if(buttonsLocked||fuel<=0)return;buttonsLocked=true;lockButtons();dropZoneTextEl.textContent=getPrefixLabel(choice);if(choice.id===currentQuestion.correct.id){score+=50+(streak*10);streak++;fuel=Math.min(fuel+8,100);if(typeof WordLabData!=='undefined'&&WordLabData.getSession()){const _isP=PREFIXES.some(x=>x.id===currentQuestion.correct.id);const _wlResult=WordLabData.recordAttempt('meaning-mode',(_isP?'prefix:':'suffix:')+currentQuestion.correct.id,true,0);if(typeof WLScientist!=='undefined') WLScientist.react('correct',_wlResult);}if(typeof WLAudio!=='undefined'){WLAudio.correct();if(streak>=3)WLAudio.streak(streak);}feedbackEl.textContent="✅ Correct!";feedbackEl.className="feedback ok";subFeedbackEl.textContent=`${getPrefixLabel(choice)} means "${choice.meaning}"`;dropZoneTextEl.style.color="var(--ok)";dropZoneEl.classList.add("flashSuccess");}else{streak=0;fuel=Math.max(fuel-12,0);if(typeof WordLabData!=='undefined'&&WordLabData.getSession()){const _isP2=PREFIXES.some(x=>x.id===currentQuestion.correct.id);WordLabData.recordAttempt('meaning-mode',(_isP2?'prefix:':'suffix:')+currentQuestion.correct.id,false,0);}if(typeof WLScientist!=='undefined') WLScientist.react('wrong');if(typeof WLAudio!=='undefined') WLAudio.wrong();feedbackEl.textContent="❌ Not quite";feedbackEl.className="feedback bad";subFeedbackEl.textContent=`Correct answer: ${getPrefixLabel(currentQuestion.correct)} — ${currentQuestion.correct.meaning}`;dropZoneTextEl.style.color="var(--bad)";dropZoneEl.classList.add("flashFail");}updateHud();if(fuel<=0){setTimeout(endGame,800);return;}setTimeout(loadQuestion,1400);}
+  function checkAnswer(choice){
+    if(buttonsLocked||fuel<=0)return;
+    buttonsLocked=true;lockButtons();
+    const q=currentQuestion;
+    dropZoneTextEl.textContent=getPrefixLabel(choice);
+    const isBase=morphemeMode==='base';
+    const _cat=isBase?'base:'+q.correct.id:(PREFIXES.some(x=>x.id===q.correct.id)?'prefix:':'suffix:')+q.correct.id;
+    if(choice.id===q.correct.id){
+      score+=50+(streak*10);streak++;fuel=Math.min(fuel+8,100);
+      if(typeof WordLabData!=='undefined'&&WordLabData.getSession()){const _wlResult=WordLabData.recordAttempt('meaning-mode',_cat,true,0);if(typeof WLScientist!=='undefined') WLScientist.react('correct',_wlResult);}
+      if(typeof WLAudio!=='undefined'){WLAudio.correct();if(streak>=3)WLAudio.streak(streak);}
+      feedbackEl.textContent="✅ Correct!";feedbackEl.className="feedback ok";
+      subFeedbackEl.textContent=isBase?`${getPrefixLabel(choice)} means "${choice.meaning}"`:`${getPrefixLabel(choice)} means "${choice.meaning}"`;
+      dropZoneTextEl.style.color="var(--ok)";dropZoneEl.classList.add("flashSuccess");
+    } else {
+      streak=0;fuel=Math.max(fuel-12,0);
+      if(typeof WordLabData!=='undefined'&&WordLabData.getSession()){WordLabData.recordAttempt('meaning-mode',_cat,false,0);}
+      if(typeof WLScientist!=='undefined') WLScientist.react('wrong');
+      if(typeof WLAudio!=='undefined') WLAudio.wrong();
+      feedbackEl.textContent="❌ Not quite";feedbackEl.className="feedback bad";
+      subFeedbackEl.textContent=`Correct answer: ${getPrefixLabel(q.correct)} — ${q.correct.meaning}`;
+      dropZoneTextEl.style.color="var(--bad)";dropZoneEl.classList.add("flashFail");
+    }
+    updateHud();if(fuel<=0){setTimeout(endGame,800);return;}setTimeout(loadQuestion,1400);
+  }
   function startFuelDrain(){clearInterval(fuelInterval);fuelInterval=setInterval(()=>{fuel-=.25;if(fuel<=0){fuel=0;updateHud();endGame();clearInterval(fuelInterval);return;}updateHud();},220);}
   function endGame(){buttonsLocked=true;optionsEl.innerHTML="";feedbackEl.textContent="Mission over";feedbackEl.className="feedback bad";subFeedbackEl.textContent=`Final score: ${score} XP`;}
   document.getElementById("recalibrateBtn").addEventListener("click",()=>{score=0;streak=0;fuel=100;updateHud();startFuelDrain();loadQuestion();});
