@@ -742,14 +742,14 @@ async function render() {
           <div class="custSection">
             <div class="custLabel">Coat Colour</div>
             <div class="swatchRow">${SHOP.coatColors.map(c=>{
-              const isOwned = c.free || owned.includes(c.id) || c.id===sci.coatColor;
+              const isOwned = sd.is_teacher || c.free || owned.includes(c.id) || c.id===sci.coatColor;
               return `<div class="swatch${c.id===sci.coatColor?' active':''}${!isOwned?' locked':''}" style="background:${c.id==='rainbow'?'linear-gradient(135deg,#f87171,#fb923c,#facc15,#4ade80,#60a5fa,#a78bfa)':c.id};" onclick="${isOwned?`applyOption('coatColor','${c.id}')`:'void(0)'}" title="${c.name}${!isOwned?' (buy in shop)':''}"></div>`;
             }).join('')}</div>
           </div>
           <div class="custSection">
             <div class="custLabel">Coat Pattern</div>
             <div class="optRow">${SHOP.coatPatterns.map(p=>{
-              const isOwned = p.free || owned.includes(p.id);
+              const isOwned = sd.is_teacher || p.free || owned.includes(p.id);
               return `<button class="optPill${p.id===sci.coatPattern?' active':''}${!isOwned?' locked':''}" onclick="${isOwned?`applyOption('coatPattern','${p.id}')`:'void(0)'}">${p.name}</button>`;
             }).join('')}</div>
           </div>
@@ -765,7 +765,7 @@ async function render() {
                 </div>`
               : `<div class="optRow">${SHOP.headAccessories.map(a=>{
                   const cur = sci.head||'none';
-                  const isOwned = a.free || owned.includes(a.id);
+                  const isOwned = sd.is_teacher || a.free || owned.includes(a.id);
                   return `<button class="optPill${a.id===cur?' active':''}${!isOwned?' locked':''}" onclick="${isOwned?`applyOption('head',${a.id==='none'?'null':"'"+a.id+"'"})`:'void(0)'}">${a.icon} ${a.name}</button>`;
                 }).join('')}</div>`
             }
@@ -774,7 +774,7 @@ async function render() {
             <div class="custLabel">Face Accessory</div>
             <div class="optRow">${SHOP.faceAccessories.map(a=>{
               const cur = sci.face||'none';
-              const isOwned = a.free || owned.includes(a.id);
+              const isOwned = sd.is_teacher || a.free || owned.includes(a.id);
               return `<button class="optPill${a.id===cur?' active':''}${!isOwned?' locked':''}" onclick="${isOwned?`applyOption('face',${a.id==='none'?'null':"'"+a.id+"'"})`:'void(0)'}">${a.icon} ${a.name}</button>`;
             }).join('')}</div>
           </div>
@@ -840,11 +840,11 @@ function renderShopSection(title, items, field, sd) {
   return `<div class="shopSection">
     <div class="shopSectionTitle">${title}</div>
     <div class="shopGrid">${items.map(item => {
-      const isOwned   = item.free || owned.includes(item.id) || item.id === '#ffffff' || item.id === 'plain' || item.id === 'none';
+      const isOwned   = sd.is_teacher || item.free || owned.includes(item.id) || item.id === '#ffffff' || item.id === 'plain' || item.id === 'none';
       const isEquipped= item.id === curVal || (item.id==='none' && !curVal);
       const canAfford = sd.quarks >= item.cost;
       const reqBadge  = item.requiresBadge;
-      const hasReqBadge = !reqBadge || sd.badges.includes(reqBadge);
+      const hasReqBadge = sd.is_teacher || !reqBadge || sd.badges.includes(reqBadge);
       const allBadges = [...(WordLabData.ALL_BADGES||[]), ...(WordLabData.LEGENDARY_BADGES||[])];
       const reqBadgeLabel = reqBadge ? (allBadges.find(b=>b.id===reqBadge)||{}).label : '';
       let btn = '';
@@ -882,7 +882,7 @@ function renderEffectsSection(sd) {
   return Object.entries(WLEffects.EFFECTS).map(([id, eff]) => {
     const effectOwnId = 'effect_' + id;
     const isOwned = isTeacher || eff.cost === 0 || owned.includes(effectOwnId);
-    const hasBadge = !eff.requiresBadge || sd.badges.includes(eff.requiresBadge);
+    const hasBadge = isTeacher || !eff.requiresBadge || sd.badges.includes(eff.requiresBadge);
     const canAfford = sd.quarks >= eff.cost;
     const isEquipped = curEffect === id;
     const borderColor = rarityColors[eff.rarity] || '#e2e8f0';
@@ -1035,11 +1035,12 @@ async function loadCustomShopItems(sd) {
 
   const rarityBorder = { common:'#94a3b8', rare:'#3b82f6', epic:'#a855f7', legendary:'#f59e0b' };
   const owned = (sd.scientist||{}).owned || [];
+  const isTeacher = sd.is_teacher;
 
   grid.innerHTML = visible.map(item => {
     const border = rarityBorder[item.rarity] || '#e2e8f0';
-    const isOwned = owned.includes('custom_' + item.id);
-    const canAfford = sd.quarks >= (item.quark_cost || 0);
+    const isOwned = isTeacher || owned.includes('custom_' + item.id);
+    const canAfford = isTeacher || sd.quarks >= (item.quark_cost || 0);
 
     let preview = '';
     if (item.image_data) {
@@ -1049,14 +1050,14 @@ async function loadCustomShopItems(sd) {
     }
 
     let btn = '';
-    if (item.unlock_method === 'secret_code') {
+    if (isTeacher || isOwned) {
+      btn = `<button class="shopBtn equip" onclick="claimCustomItem('${item.id}','${item.item_type}')">Equip</button>`;
+    } else if (item.unlock_method === 'secret_code') {
       btn = `<button class="shopBtn buy" onclick="enterSecretCode('${item.id}','${(item.secret_code||'').replace(/'/g,"\\'")}')">🔑 Enter Code</button>`;
     } else if (item.unlock_method === 'gifted') {
       btn = `<span class="shopBtn cantafford">🎁 Teacher gift</span>`;
     } else if (item.unlock_method === 'milestone') {
       btn = `<span class="shopBtn cantafford">🏅 Milestone ${item.milestone_threshold||'?'}</span>`;
-    } else if (isOwned) {
-      btn = `<span class="shopBtn equipped">✓ Owned</span>`;
     } else if (canAfford && item.quark_cost > 0) {
       btn = `<button class="shopBtn buy" onclick="buyCustomItem('${item.id}',${item.quark_cost},'${item.item_type}')">⚛️ ${item.quark_cost}</button>`;
     } else if (item.quark_cost === 0) {
