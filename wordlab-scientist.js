@@ -16,14 +16,35 @@ const WLScientist = (() => {
     const faceAcc    = scientist.face        || null;
     const customSlots = scientist.customSlots || {};
 
-    // Coat fill — plain or patterned
-    const patternDefs = {
-      stripes:   `<defs><pattern id="cp" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="${coat}"/><line x1="0" y1="0" x2="8" y2="8" stroke="rgba(0,0,0,0.12)" stroke-width="2"/></pattern></defs>`,
-      molecules: `<defs><pattern id="cp" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="${coat}"/><circle cx="7" cy="7" r="2" fill="rgba(0,0,0,0.1)"/><circle cx="2" cy="2" r="1.2" fill="rgba(0,0,0,0.08)"/><circle cx="12" cy="12" r="1.2" fill="rgba(0,0,0,0.08)"/></pattern></defs>`,
-      stars:     `<defs><pattern id="cp" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="${coat}"/><text x="2" y="10" font-size="8" opacity="0.18">★</text></pattern></defs>`,
-    };
-    const coatFillDef  = patternDefs[pattern] || '';
-    const coatFillRef  = patternDefs[pattern] ? 'url(#cp)' : coat;
+    // Coat fill — plain, rainbow gradient, or patterned
+    // 'rainbow' is not a valid SVG colour so we build a linearGradient instead
+    const isRainbow = coat === 'rainbow';
+    const coatBase  = isRainbow ? 'url(#coatRainbow)' : coat;
+
+    const defsContent = [
+      isRainbow
+        ? `<linearGradient id="coatRainbow" x1="0%" y1="0%" x2="100%" y2="100%">` +
+          `<stop offset="0%"   stop-color="#f87171"/>` +
+          `<stop offset="20%"  stop-color="#fb923c"/>` +
+          `<stop offset="40%"  stop-color="#facc15"/>` +
+          `<stop offset="60%"  stop-color="#4ade80"/>` +
+          `<stop offset="80%"  stop-color="#60a5fa"/>` +
+          `<stop offset="100%" stop-color="#a78bfa"/>` +
+          `</linearGradient>`
+        : '',
+      pattern === 'stripes'
+        ? `<pattern id="cp" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="${coatBase}"/><line x1="0" y1="0" x2="8" y2="8" stroke="rgba(0,0,0,0.12)" stroke-width="2"/></pattern>`
+        : '',
+      pattern === 'molecules'
+        ? `<pattern id="cp" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="${coatBase}"/><circle cx="7" cy="7" r="2" fill="rgba(0,0,0,0.1)"/><circle cx="2" cy="2" r="1.2" fill="rgba(0,0,0,0.08)"/><circle cx="12" cy="12" r="1.2" fill="rgba(0,0,0,0.08)"/></pattern>`
+        : '',
+      pattern === 'stars'
+        ? `<pattern id="cp" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="${coatBase}"/><text x="2" y="10" font-size="8" opacity="0.18">★</text></pattern>`
+        : '',
+    ].filter(Boolean).join('');
+
+    const coatFillDef = defsContent ? `<defs>${defsContent}</defs>` : '';
+    const coatFillRef = ['stripes','molecules','stars'].includes(pattern) ? 'url(#cp)' : coatBase;
 
     // Emotion layers
     const eyes = {
@@ -71,10 +92,16 @@ const WLScientist = (() => {
       mask:           `<rect x="28" y="42" width="24" height="12" rx="4" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.2"/><line x1="28" y1="46" x2="52" y2="46" stroke="#94a3b8" stroke-width="0.8"/><line x1="28" y1="50" x2="52" y2="50" stroke="#94a3b8" stroke-width="0.8"/>`,
     };
 
+    const customImg = t => customSlots['_img_'+t] && customSlots[t]
+      ? `<image href="${customSlots['_img_'+t]}" x="-10" y="0" width="100" height="120" preserveAspectRatio="none"/>`
+      : '';
+
     return `<svg viewBox="0 0 80 120" xmlns="http://www.w3.org/2000/svg" style="overflow:visible">
   ${coatFillDef}
   <!-- Body / Lab coat -->
   <rect x="14" y="60" width="52" height="58" rx="10" fill="${coatFillRef}" stroke="#e2e8f0" stroke-width="1"/>
+  <!-- Custom coat overlay: on top of coat colour, under collar/pocket/face details -->
+  ${customImg('coat')}
   <!-- Coat collar -->
   <polygon points="40,62 30,78 40,84" fill="white" opacity="0.35"/>
   <polygon points="40,62 50,78 40,84" fill="white" opacity="0.35"/>
@@ -98,8 +125,8 @@ const WLScientist = (() => {
   <!-- Face accessory -->
   ${faceAcc && faceAccSVG[faceAcc] ? faceAccSVG[faceAcc] : ''}
   ${sparkles}${dizzy}
-  <!-- Custom costume overlays: canvas 400x480, 40px margin, SVG x=-10,y=0 w=100,h=120 -->
-  ${['coat','head','face','background'].map(t => customSlots['_img_'+t] && customSlots[t] ? `<image href="${customSlots['_img_'+t]}" x="-10" y="0" width="100" height="120" preserveAspectRatio="none"/>` : '').join('')}
+  <!-- Custom head / face / background overlays -->
+  ${customImg('head')}${customImg('face')}${customImg('background')}
 </svg>`;
   }
 
