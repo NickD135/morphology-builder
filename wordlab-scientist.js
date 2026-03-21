@@ -284,6 +284,8 @@ const WLScientist = (() => {
       @keyframes wlPopUp   { 0%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-40px)} }
       @keyframes wlSlideUp { 0%{opacity:0;transform:translateX(-50%) translateY(20px)} 100%{opacity:1;transform:translateX(-50%) translateY(0)} }
       @keyframes wlShake   { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+      #sciCharWrap { position:relative; z-index:20; }
+      #wlSciAvatar { position:relative; z-index:20; }
     `;
     document.head.appendChild(s);
   }
