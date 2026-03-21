@@ -73,6 +73,10 @@ const WLEffects = (() => {
     el.style.boxShadow = '';
     el.style.filter = '';
     el.style.outline = '';
+    el.style.animation = '';
+    // Also clear styles applied to nested character wrap (shimmer, rainbow)
+    const wrap = el.querySelector && el.querySelector('#sciCharWrap');
+    if (wrap) { wrap.style.boxShadow = ''; wrap.style.animation = ''; }
     _active.delete(el);
   }
 
@@ -121,26 +125,27 @@ const WLEffects = (() => {
     _addInterval(el, spawn, intense ? 150 : 280);
   }
 
-  // shimmer — pulsing box-shadow glow cycling indigo→teal→purple
+  // shimmer — pulsing oval glow cycling indigo→teal→purple
   function fxShimmer(el, intense) {
+    _ensureRelative(el);
     _injectStyle('wlfx-shimmer', `
       @keyframes wlfxShimmer {
-        0%   { box-shadow: 0 0 16px 4px rgba(99,102,241,0.6),  0 0 32px 8px rgba(99,102,241,0.2); }
-        33%  { box-shadow: 0 0 16px 4px rgba(20,184,166,0.6),  0 0 32px 8px rgba(20,184,166,0.2); }
-        66%  { box-shadow: 0 0 16px 4px rgba(168,85,247,0.6),  0 0 32px 8px rgba(168,85,247,0.2); }
-        100% { box-shadow: 0 0 16px 4px rgba(99,102,241,0.6),  0 0 32px 8px rgba(99,102,241,0.2); }
+        0%   { box-shadow:0 0 22px 8px rgba(99,102,241,0.85),  0 0 48px 12px rgba(99,102,241,0.3); }
+        33%  { box-shadow:0 0 22px 8px rgba(20,184,166,0.85),  0 0 48px 12px rgba(20,184,166,0.3); }
+        66%  { box-shadow:0 0 22px 8px rgba(168,85,247,0.85),  0 0 48px 12px rgba(168,85,247,0.3); }
+        100% { box-shadow:0 0 22px 8px rgba(99,102,241,0.85),  0 0 48px 12px rgba(99,102,241,0.3); }
       }
     `);
-    const dur = intense ? '1.5s' : '3s';
-    el.style.animation = `wlfxShimmer ${dur} ease infinite`;
-    // Clean up on stop by storing ref
-    const cleanup = _makeParticle('display:none;');
-    _addNode(el, cleanup);
-    const origStop = stop;
-    _state(el).shimmerEl = el;
-    _addInterval(el, () => {}, 999999); // dummy to keep state alive
-    // Actually animate via direct style
-    el.style.cssText += `;animation:wlfxShimmer ${dur} ease infinite;`;
+    // Use an oval div so the glow is always circular regardless of container shape
+    const glow = _makeParticle(`
+      left:50%; top:50%;
+      width:148px; height:192px;
+      transform:translate(-50%,-50%);
+      border-radius:50%;
+      animation:wlfxShimmer ${intense ? '1.5s' : '3s'} ease infinite;
+      z-index:8;
+    `);
+    _addNode(el, glow);
   }
 
   // bubbles — semi-transparent circles float up
@@ -177,25 +182,26 @@ const WLEffects = (() => {
     _addInterval(el, spawnBubble, intense ? 350 : 600);
   }
 
-  // starfield — tiny dots drift from top to bottom
+  // starfield — glowing stars drift from top to bottom
   function fxStarfield(el, intense) {
     _ensureRelative(el);
     _injectStyle('wlfx-starfield', `
       @keyframes wlfxStarDrift {
-        0%   { transform:translateY(-10px); opacity:0; }
-        10%  { opacity:1; }
-        90%  { opacity:0.6; }
-        100% { transform:translateY(110%); opacity:0; }
+        0%   { transform:translateY(-12px); opacity:0; }
+        8%   { opacity:1; }
+        88%  { opacity:0.9; }
+        100% { transform:translateY(115%); opacity:0; }
       }
     `);
-    const count = intense ? 30 : (mobile() ? 12 : 22);
+    const count = intense ? 45 : (mobile() ? 18 : 32);
     for (let i = 0; i < count; i++) {
-      const sz = rndInt(2, 4);
+      const sz = rndInt(2, 5);
       const p = _makeParticle(`
-        left:${rnd(0,98)}%;top:0;
+        left:${rnd(0,97)}%;top:0;
         width:${sz}px;height:${sz}px;border-radius:50%;
-        background:rgba(${rndInt(180,255)},${rndInt(180,255)},255,${rnd(0.4,0.9).toFixed(2)});
-        animation:wlfxStarDrift ${rnd(4,10).toFixed(1)}s linear ${rnd(0,8).toFixed(1)}s infinite;
+        background:rgba(${rndInt(190,255)},${rndInt(200,255)},255,${rnd(0.8,1).toFixed(2)});
+        box-shadow:0 0 ${sz + 2}px 1px rgba(180,210,255,0.9);
+        animation:wlfxStarDrift ${rnd(3,8).toFixed(1)}s linear ${rnd(0,7).toFixed(1)}s infinite;
         z-index:10;
       `);
       _addNode(el, p);
@@ -204,24 +210,29 @@ const WLEffects = (() => {
 
   // ── RARE EFFECTS ──────────────────────────────────────────────
 
-  // aura — rotating colour ring around the container
+  // aura — colour-cycling oval energy ring around the character (not the stage rectangle)
   function fxAura(el, intense) {
     _ensureRelative(el);
     _injectStyle('wlfx-aura', `
-      @keyframes wlfxAuraRot { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
       @keyframes wlfxAuraColor {
-        0%   { border-color:#6366f1; box-shadow:0 0 12px #6366f1,0 0 24px rgba(99,102,241,0.3); }
-        25%  { border-color:#0d9488; box-shadow:0 0 12px #0d9488,0 0 24px rgba(13,148,136,0.3); }
-        50%  { border-color:#a855f7; box-shadow:0 0 12px #a855f7,0 0 24px rgba(168,85,247,0.3); }
-        75%  { border-color:#f59e0b; box-shadow:0 0 12px #f59e0b,0 0 24px rgba(245,158,11,0.3); }
-        100% { border-color:#6366f1; box-shadow:0 0 12px #6366f1,0 0 24px rgba(99,102,241,0.3); }
+        0%   { border-color:#6366f1; box-shadow:0 0 18px 5px rgba(99,102,241,0.8),0 0 36px rgba(99,102,241,0.35); }
+        25%  { border-color:#0d9488; box-shadow:0 0 18px 5px rgba(13,148,136,0.8),0 0 36px rgba(13,148,136,0.35); }
+        50%  { border-color:#a855f7; box-shadow:0 0 18px 5px rgba(168,85,247,0.8),0 0 36px rgba(168,85,247,0.35); }
+        75%  { border-color:#f59e0b; box-shadow:0 0 18px 5px rgba(245,158,11,0.8),0 0 36px rgba(245,158,11,0.35); }
+        100% { border-color:#6366f1; box-shadow:0 0 18px 5px rgba(99,102,241,0.8),0 0 36px rgba(99,102,241,0.35); }
       }
     `);
+    // Oval ring centred on the character.
+    // z-index:8 ensures it's above the SVG content (which sits at z-index:1 on scientist.html)
+    // but below #sciCharWrap (z-index:20) on game pages so the character stays on top.
     const ring = _makeParticle(`
-      inset:-6px;border-radius:inherit;
+      left:50%; top:50%;
+      width:152px; height:198px;
+      transform:translate(-50%,-50%);
+      border-radius:50%;
       border:3px solid #6366f1;
       animation:wlfxAuraColor ${intense ? '1.5s' : '3s'} linear infinite;
-      z-index:0;border-radius:20px;
+      z-index:8;
     `);
     _addNode(el, ring);
   }
@@ -282,48 +293,83 @@ const WLEffects = (() => {
     }
   }
 
-  // electric — lightning bolt SVGs flash at random positions
+  // electric — lightning bolts flash with sparks and electric glow
   function fxElectric(el, intense) {
     _ensureRelative(el);
     _injectStyle('wlfx-electric', `
-      @keyframes wlfxBolt { 0%{opacity:0} 5%{opacity:1} 15%{opacity:0.8} 25%{opacity:1} 100%{opacity:0} }
+      @keyframes wlfxBolt { 0%{opacity:0} 4%{opacity:1} 14%{opacity:0.9} 22%{opacity:1} 55%{opacity:0.5} 100%{opacity:0} }
+      @keyframes wlfxElecSpark { 0%{opacity:1;transform:scale(1)} 100%{opacity:0;transform:scale(0)} }
     `);
+
+    function spawnBolt() {
+      if (!_active.has(el)) return;
+      const x = rnd(5, 72), y = rnd(5, 55);
+      const size = rndInt(28, 58);
+      const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+      svg.setAttribute('width', size);
+      svg.setAttribute('height', size * 1.6);
+      svg.style.cssText = `position:absolute;left:${x}%;top:${y}%;z-index:12;pointer-events:none;` +
+        `animation:wlfxBolt 0.5s ease forwards;` +
+        `filter:drop-shadow(0 0 6px #bfdbfe) drop-shadow(0 0 2px #fff);`;
+      svg.innerHTML =
+        `<polyline points="14,0 4,${size*0.52} 12,${size*0.52} 2,${size*1.55}" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>` +
+        `<polyline points="14,0 4,${size*0.52} 12,${size*0.52} 2,${size*1.55}" fill="none" stroke="#93c5fd" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>`;
+      _addNode(el, svg);
+      setTimeout(() => { try { svg.parentNode && svg.parentNode.removeChild(svg); } catch {} }, 520);
+    }
 
     function flashLightning() {
       if (!_active.has(el)) return;
-      const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
-      const x = rnd(5,75), y = rnd(5,60);
-      const size = rndInt(20,40);
-      svg.setAttribute('width', size);
-      svg.setAttribute('height', size * 1.5);
-      svg.style.cssText = `position:absolute;left:${x}%;top:${y}%;z-index:12;pointer-events:none;animation:wlfxBolt 0.4s ease forwards;filter:drop-shadow(0 0 4px #93c5fd);`;
-      svg.innerHTML = `<polyline points="12,0 4,${size*0.5} 10,${size*0.5} 2,${size*1.4}" fill="none" stroke="#e0f2fe" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
-      _addNode(el, svg);
-      // Also flash container
+      const bolts = intense ? rndInt(2, 4) : rndInt(1, 3);
+      for (let i = 0; i < bolts; i++) setTimeout(() => spawnBolt(), i * 55);
+
+      // Electric spark dots
+      const sparks = rndInt(3, 7);
+      for (let i = 0; i < sparks; i++) {
+        const sp = _makeParticle(`
+          left:${rnd(15,78)}%;top:${rnd(10,72)}%;
+          width:${rndInt(3,6)}px;height:${rndInt(3,6)}px;border-radius:50%;
+          background:#e0f2fe;box-shadow:0 0 5px 1px #93c5fd;
+          animation:wlfxElecSpark ${rnd(0.2,0.45).toFixed(2)}s ease forwards;z-index:12;
+        `);
+        _addNode(el, sp);
+        setTimeout(() => { try { sp.parentNode && sp.parentNode.removeChild(sp); } catch {} }, 500);
+      }
+
+      // Flash glow
       const prev = el.style.boxShadow;
-      el.style.boxShadow = '0 0 20px #93c5fd, 0 0 40px rgba(147,197,253,0.4)';
-      setTimeout(() => { try { svg.parentNode && svg.parentNode.removeChild(svg); } catch {} el.style.boxShadow = prev || ''; }, 400);
+      el.style.boxShadow = '0 0 32px 8px rgba(147,197,253,0.85), 0 0 64px rgba(147,197,253,0.4)';
+      setTimeout(() => { if (_active.has(el)) el.style.boxShadow = prev || ''; }, 480);
     }
 
     flashLightning();
-    _addInterval(el, flashLightning, intense ? 800 : rndInt(1200, 2000));
+    _addInterval(el, flashLightning, intense ? 550 : rndInt(900, 1300));
   }
 
-  // rainbow — hue-rotate glow cycles all colours
+  // rainbow — hue-rotate glow cycles all colours using an oval div
   function fxRainbow(el, intense) {
+    _ensureRelative(el);
     _injectStyle('wlfx-rainbow', `
       @keyframes wlfxRainbowGlow {
-        0%   { box-shadow:0 0 18px 4px rgba(239,68,68,0.7),0 0 36px rgba(239,68,68,0.3); }
-        16%  { box-shadow:0 0 18px 4px rgba(249,115,22,0.7),0 0 36px rgba(249,115,22,0.3); }
-        33%  { box-shadow:0 0 18px 4px rgba(234,179,8,0.7),0 0 36px rgba(234,179,8,0.3); }
-        50%  { box-shadow:0 0 18px 4px rgba(34,197,94,0.7),0 0 36px rgba(34,197,94,0.3); }
-        66%  { box-shadow:0 0 18px 4px rgba(99,102,241,0.7),0 0 36px rgba(99,102,241,0.3); }
-        83%  { box-shadow:0 0 18px 4px rgba(168,85,247,0.7),0 0 36px rgba(168,85,247,0.3); }
-        100% { box-shadow:0 0 18px 4px rgba(239,68,68,0.7),0 0 36px rgba(239,68,68,0.3); }
+        0%   { box-shadow:0 0 26px 8px rgba(239,68,68,0.9),  0 0 56px rgba(239,68,68,0.45); }
+        16%  { box-shadow:0 0 26px 8px rgba(249,115,22,0.9), 0 0 56px rgba(249,115,22,0.45); }
+        33%  { box-shadow:0 0 26px 8px rgba(234,179,8,0.9),  0 0 56px rgba(234,179,8,0.45); }
+        50%  { box-shadow:0 0 26px 8px rgba(34,197,94,0.9),  0 0 56px rgba(34,197,94,0.45); }
+        66%  { box-shadow:0 0 26px 8px rgba(99,102,241,0.9), 0 0 56px rgba(99,102,241,0.45); }
+        83%  { box-shadow:0 0 26px 8px rgba(168,85,247,0.9), 0 0 56px rgba(168,85,247,0.45); }
+        100% { box-shadow:0 0 26px 8px rgba(239,68,68,0.9),  0 0 56px rgba(239,68,68,0.45); }
       }
     `);
-    el.style.animation = `wlfxRainbowGlow ${intense ? '2s' : '4s'} linear infinite`;
-    _addInterval(el, () => {}, 999999);
+    // Oval div so glow follows the character shape, not the container rectangle
+    const glow = _makeParticle(`
+      left:50%; top:50%;
+      width:148px; height:192px;
+      transform:translate(-50%,-50%);
+      border-radius:50%;
+      animation:wlfxRainbowGlow ${intense ? '2s' : '4s'} linear infinite;
+      z-index:8;
+    `);
+    _addNode(el, glow);
   }
 
   // ── EPIC EFFECTS ──────────────────────────────────────────────
@@ -372,31 +418,47 @@ const WLEffects = (() => {
       @keyframes wlfxOrbit1 { 0%{transform:rotate(0deg) translateX(var(--r)) rotate(0deg)} 100%{transform:rotate(360deg) translateX(var(--r)) rotate(-360deg)} }
       @keyframes wlfxOrbit2 { 0%{transform:rotate(0deg) translateX(var(--r)) rotate(0deg)} 100%{transform:rotate(-360deg) translateX(var(--r)) rotate(360deg)} }
       @keyframes wlfxOrbit3 { 0%{transform:rotate(120deg) translateX(var(--r)) rotate(-120deg)} 100%{transform:rotate(480deg) translateX(var(--r)) rotate(-480deg)} }
-      @keyframes wlfxStarTwinkle { 0%,100%{opacity:0.3} 50%{opacity:1} }
+      @keyframes wlfxStarTwinkle { 0%,100%{opacity:0.25} 50%{opacity:1} }
+      @keyframes wlfxNebula { 0%,100%{opacity:0.18} 50%{opacity:0.35} }
     `);
 
-    // Starfield background dots
-    for (let i = 0; i < 15; i++) {
+    // Nebula glow behind the character
+    const nebula = _makeParticle(`
+      left:50%; top:50%;
+      width:130px; height:160px;
+      transform:translate(-50%,-50%);
+      border-radius:50%;
+      background:radial-gradient(ellipse at center,
+        rgba(99,102,241,0.3) 0%,
+        rgba(168,85,247,0.18) 45%,
+        transparent 72%);
+      animation:wlfxNebula 3s ease infinite;
+      z-index:8;
+    `);
+    _addNode(el, nebula);
+
+    // More stars, brighter
+    for (let i = 0; i < 28; i++) {
+      const sz = rndInt(1, 3);
       const star = _makeParticle(`
         left:${rnd(5,95)}%;top:${rnd(5,95)}%;
-        width:2px;height:2px;border-radius:50%;
-        background:rgba(199,210,254,${rnd(0.4,0.9).toFixed(2)});
-        animation:wlfxStarTwinkle ${rnd(1.5,3.5).toFixed(1)}s ease ${rnd(0,2).toFixed(1)}s infinite;
+        width:${sz}px;height:${sz}px;border-radius:50%;
+        background:rgba(${rndInt(200,255)},${rndInt(200,255)},255,${rnd(0.6,1).toFixed(2)});
+        box-shadow:0 0 3px rgba(200,210,255,0.9);
+        animation:wlfxStarTwinkle ${rnd(1,3).toFixed(1)}s ease ${rnd(0,2.5).toFixed(1)}s infinite;
         z-index:8;
       `);
       _addNode(el, star);
     }
 
-    // Orbiting planets
+    // Planets use PIXEL radii — % on a zero-size element resolves to 0px
     const planets = [
-      { color:'#f97316', sz:8,  r:'42%', dur:intense?'2s':'4s',   anim:'wlfxOrbit1' },
-      { color:'#6366f1', sz:6,  r:'55%', dur:intense?'3s':'6s',   anim:'wlfxOrbit2' },
-      { color:'#14b8a6', sz:5,  r:'35%', dur:intense?'1.5s':'3s', anim:'wlfxOrbit3' },
-      { color:'#fbbf24', sz:4,  r:'65%', dur:intense?'4s':'8s',   anim:'wlfxOrbit1' },
+      { color:'#f97316', sz:10, r:'50px', dur:intense?'2.5s':'5s',   anim:'wlfxOrbit1' },
+      { color:'#6366f1', sz:7,  r:'68px', dur:intense?'3.5s':'7s',   anim:'wlfxOrbit2' },
+      { color:'#14b8a6', sz:6,  r:'38px', dur:intense?'1.8s':'3.5s', anim:'wlfxOrbit3' },
+      { color:'#fbbf24', sz:5,  r:'82px', dur:intense?'4.5s':'9s',   anim:'wlfxOrbit1' },
+      { color:'#f472b6', sz:4,  r:'56px', dur:intense?'2s':'4s',     anim:'wlfxOrbit2' },
     ];
-
-    const cx = _makeParticle(`left:50%;top:50%;width:0;height:0;z-index:9;`);
-    _addNode(el, cx);
 
     planets.forEach(p => {
       const orbit = _makeParticle(`
@@ -406,8 +468,8 @@ const WLEffects = (() => {
       `);
       const dot = _makeParticle(`
         width:${p.sz}px;height:${p.sz}px;border-radius:50%;
-        background:radial-gradient(circle at 35% 35%,white,${p.color});
-        box-shadow:0 0 6px ${p.color};
+        background:radial-gradient(circle at 30% 30%,rgba(255,255,255,0.9),${p.color});
+        box-shadow:0 0 8px 2px ${p.color};
         transform:translate(-50%,-50%);
       `);
       orbit.appendChild(dot);
@@ -555,38 +617,74 @@ const WLEffects = (() => {
     _addInterval(el, spawnSpark, intense ? 200 : 450);
   }
 
-  // quantum — flicker, chromatic aberration, portal rings
+  // quantum — dimensional phasing: chromatic aberration, glow, portal rings, particle bursts, flicker
   function fxQuantum(el, intense) {
     _ensureRelative(el);
     _injectStyle('wlfx-quantum', `
-      @keyframes wlfxFlicker { 0%{opacity:1} 10%{opacity:0} 20%{opacity:1} 30%{opacity:0.2} 40%{opacity:1} 50%{opacity:0} 60%{opacity:0.8} 70%{opacity:1} 100%{opacity:1} }
-      @keyframes wlfxPortal { 0%{transform:translate(-50%,-50%) scale(1.4);opacity:0} 30%{opacity:0.7} 100%{transform:translate(-50%,-50%) scale(0.2);opacity:0} }
+      @keyframes wlfxFlicker { 0%{opacity:1} 10%{opacity:0} 20%{opacity:1} 30%{opacity:0.15} 40%{opacity:1} 50%{opacity:0} 60%{opacity:0.85} 70%{opacity:1} 100%{opacity:1} }
+      @keyframes wlfxPortal { 0%{transform:translate(-50%,-50%) scale(1.5);opacity:0} 20%{opacity:0.9} 80%{opacity:0.6} 100%{transform:translate(-50%,-50%) scale(0.05);opacity:0} }
+      @keyframes wlfxDimension { 0%,100%{box-shadow:0 0 22px 8px rgba(167,139,250,0.75),0 0 44px rgba(167,139,250,0.3)} 50%{box-shadow:0 0 32px 12px rgba(99,102,241,0.9),0 0 64px rgba(99,102,241,0.45)} }
+      @keyframes wlfxQPart { 0%{opacity:0;transform:translate(-50%,-50%)} 15%{opacity:1} 100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy)))} }
     `);
 
-    // Chromatic aberration glow
-    el.style.filter = `drop-shadow(2px 0 2px rgba(239,68,68,0.4)) drop-shadow(-2px 0 2px rgba(99,102,241,0.4))`;
+    // Strong chromatic aberration filter
+    el.style.filter = `drop-shadow(3px 0 4px rgba(239,68,68,0.65)) drop-shadow(-3px 0 4px rgba(99,102,241,0.65)) drop-shadow(0 0 10px rgba(167,139,250,0.55))`;
 
-    // Occasional flicker
+    // Oval dimensional glow oval behind the character
+    const glow = _makeParticle(`
+      left:50%; top:50%;
+      width:152px; height:198px;
+      transform:translate(-50%,-50%);
+      border-radius:50%;
+      animation:wlfxDimension ${intense ? '1.5s' : '2.5s'} ease infinite;
+      z-index:8;
+    `);
+    _addNode(el, glow);
+
+    // Dimensional flicker
     _addInterval(el, () => {
       if (!_active.has(el)) return;
-      el.style.animation = 'wlfxFlicker 0.6s ease';
-      setTimeout(() => { if (_active.has(el)) el.style.animation = ''; }, 700);
-    }, intense ? 2500 : rndInt(4000, 6000));
+      el.style.animation = 'wlfxFlicker 0.55s ease';
+      setTimeout(() => { if (_active.has(el)) el.style.animation = ''; }, 650);
+    }, intense ? 1800 : rndInt(2800, 4500));
 
-    // Portal rings
+    // Portal rings — more frequent, more visible
     _addInterval(el, () => {
       if (!_active.has(el)) return;
+      const sz = rndInt(40, 75);
       const ring = _makeParticle(`
-        left:${rnd(20,70)}%;top:${rnd(20,70)}%;
-        width:${rndInt(30,60)}px;height:${rndInt(30,60)}px;
+        left:${rnd(25,65)}%;top:${rnd(25,65)}%;
+        width:${sz}px;height:${sz}px;
         border-radius:50%;
-        border:2px solid rgba(167,139,250,0.8);
-        box-shadow:0 0 10px rgba(167,139,250,0.5);
-        animation:wlfxPortal 1.2s ease forwards;z-index:12;
+        border:2px solid rgba(167,139,250,0.9);
+        box-shadow:0 0 14px 3px rgba(167,139,250,0.65);
+        animation:wlfxPortal 1.0s ease forwards;z-index:12;
       `);
       _addNode(el, ring);
-      setTimeout(() => { try { ring.parentNode && ring.parentNode.removeChild(ring); } catch {} }, 1300);
-    }, intense ? 800 : 2000);
+      setTimeout(() => { try { ring.parentNode && ring.parentNode.removeChild(ring); } catch {} }, 1100);
+    }, intense ? 550 : 1200);
+
+    // Dimensional particle burst
+    _addInterval(el, () => {
+      if (!_active.has(el)) return;
+      const n = rndInt(3, 5);
+      for (let i = 0; i < n; i++) {
+        const angle = rnd(0, 360) * Math.PI / 180;
+        const dist = rndInt(45, 85);
+        const colors = ['#a78bfa','#818cf8','#c4b5fd','#e0e7ff','#7c3aed'];
+        const p = _makeParticle(`
+          left:50%; top:50%;
+          width:${rndInt(3,6)}px; height:${rndInt(3,6)}px; border-radius:50%;
+          background:${colors[rndInt(0,colors.length)]};
+          box-shadow:0 0 6px 1px rgba(167,139,250,0.9);
+          --dx:${(Math.cos(angle)*dist).toFixed(0)}px;
+          --dy:${(Math.sin(angle)*dist).toFixed(0)}px;
+          animation:wlfxQPart ${rnd(0.7,1.4).toFixed(2)}s ease forwards;z-index:12;
+        `);
+        _addNode(el, p);
+        setTimeout(() => { try { p.parentNode && p.parentNode.removeChild(p); } catch {} }, 1500);
+      }
+    }, intense ? 280 : 550);
   }
 
   // ── Effect map ────────────────────────────────────────────────
