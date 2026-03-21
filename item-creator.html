@@ -200,6 +200,24 @@
       font-size:13px; font-weight:800; color:var(--green); display:none; margin-bottom:10px;
     }
     .publishSuccess a{ color:var(--indigo); text-decoration:underline; cursor:pointer; }
+
+    /* Published items manager */
+    .publishedSection{ padding:0 14px 14px; }
+    .publishedTitle{ font-size:11px; font-weight:900; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px; }
+    .publishedGrid{ display:flex; flex-direction:column; gap:6px; max-height:280px; overflow-y:auto; }
+    .publishedItem{
+      display:flex; align-items:center; gap:8px;
+      background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:10px; padding:6px 8px;
+    }
+    .publishedItem img{ width:40px; height:40px; object-fit:contain; border-radius:6px; background:#fff; flex-shrink:0; }
+    .publishedItemInfo{ flex:1; min-width:0; }
+    .publishedItemName{ font-size:12px; font-weight:800; color:#1e1b4b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .publishedItemMeta{ font-size:10px; color:var(--muted); }
+    .deleteBtn{
+      border:none; background:#fee2e2; color:#dc2626; font-size:11px; font-weight:800;
+      padding:5px 9px; border-radius:8px; cursor:pointer; flex-shrink:0; white-space:nowrap;
+    }
+    .deleteBtn:hover{ background:#fca5a5; }
   </style>
 </head>
 <body>
@@ -478,6 +496,11 @@
       <button class="publishBtn" onclick="publishItem()">🚀 Publish Item</button>
     </div>
 
+    <div class="publishedSection">
+      <div class="publishedTitle">Published Items</div>
+      <div class="publishedGrid" id="publishedGrid"><div style="font-size:12px;color:var(--muted);">Loading...</div></div>
+    </div>
+
   </div><!-- /settingsPanel -->
 
 </div><!-- /creatorLayout -->
@@ -568,6 +591,8 @@ window.addEventListener('DOMContentLoaded', function() {
 
   // Update preview periodically
   setInterval(renderPreview, 3000);
+
+  loadPublishedItems();
 });
 
 function loadScientistBackground() {
@@ -1063,6 +1088,7 @@ async function publishItem() {
     successEl.innerHTML = `✅ <strong>${name}</strong> is now live in the Lab Shop! <a onclick="resetForm()">Create another item</a>`;
     successEl.style.display = 'block';
     setTimeout(() => { successEl.style.display = 'none'; }, 8000);
+    loadPublishedItems();
   } catch(e) {
     alert('Error publishing item: ' + (e.message || JSON.stringify(e)));
   }
@@ -1074,6 +1100,49 @@ function resetForm() {
   loadScientistBackground();
   saveHistory();
   document.getElementById('publishSuccess').style.display = 'none';
+}
+
+// ── Published items manager ────────────────────────────────────
+async function loadPublishedItems() {
+  const grid = document.getElementById('publishedGrid');
+  if (!grid) return;
+  try {
+    const { data, error } = await getSb().from('shop_items').select('id,name,item_type,rarity,image_data').order('created_at', { ascending: false });
+    if (error) throw error;
+    if (!data || !data.length) {
+      grid.innerHTML = '<div style="font-size:12px;color:var(--muted);">No items published yet.</div>';
+      return;
+    }
+    const rarityColor = { common:'#94a3b8', rare:'#3b82f6', epic:'#a855f7', legendary:'#f59e0b' };
+    grid.innerHTML = data.map(item => `
+      <div class="publishedItem" id="pubItem_${item.id}">
+        ${item.image_data ? `<img src="${item.image_data}" alt="${item.name}">` : '<div style="width:40px;height:40px;background:#e2e8f0;border-radius:6px;"></div>'}
+        <div class="publishedItemInfo">
+          <div class="publishedItemName">${item.name}</div>
+          <div class="publishedItemMeta" style="color:${rarityColor[item.rarity]||'#94a3b8'}">${item.rarity} · ${item.item_type}</div>
+        </div>
+        <button class="deleteBtn" onclick="deleteItem('${item.id}','${item.name.replace(/'/g,"\\'")}')" title="Delete item">🗑 Delete</button>
+      </div>
+    `).join('');
+  } catch(e) {
+    grid.innerHTML = '<div style="font-size:12px;color:#dc2626;">Failed to load items.</div>';
+  }
+}
+
+async function deleteItem(itemId, itemName) {
+  if (!confirm(`Delete "${itemName}"? This cannot be undone.`)) return;
+  try {
+    const { error } = await getSb().from('shop_items').delete().eq('id', itemId);
+    if (error) throw error;
+    const el = document.getElementById('pubItem_' + itemId);
+    if (el) el.remove();
+    const grid = document.getElementById('publishedGrid');
+    if (grid && !grid.children.length) {
+      grid.innerHTML = '<div style="font-size:12px;color:var(--muted);">No items published yet.</div>';
+    }
+  } catch(e) {
+    alert('Failed to delete: ' + e.message);
+  }
 }
 
 </script>
