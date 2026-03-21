@@ -831,6 +831,9 @@ async function render() {
       </div>
     </div>
   `;
+
+  // Restart effect on the big scientist card now that #sciSVGBig exists
+  if (typeof WLScientist !== 'undefined') WLScientist._restartEffects(sd);
 }
 
 function renderShopSection(title, items, field, sd) {
@@ -930,12 +933,12 @@ function renderCurrentEffect(sd) {
 
 async function applyEffect(effectId) {
   await WordLabData.saveScientist({ effect: effectId });
-  // Restart or stop effect on widget
-  if (typeof WLEffects !== 'undefined' && document.getElementById('wlScientistWidget')) {
-    if (effectId) WLEffects.start(effectId, document.getElementById('wlScientistWidget'));
-    else WLEffects.stop(document.getElementById('wlScientistWidget'));
-  }
   await render();
+  // render() recreates #sciSVGBig so restart effect afterwards
+  if (typeof WLScientist !== 'undefined') {
+    const sd = await WordLabData.getStudentData();
+    WLScientist._restartEffects(sd);
+  }
 }
 
 async function buyEffect(effectId, cost) {

@@ -121,15 +121,25 @@ const WLScientist = (() => {
     return _crownActive;
   }
 
+  function _effectTargets() {
+    const targets = [];
+    if (_widgetEl) targets.push(_widgetEl);
+    // In-game scientist stage (present on all game pages)
+    const stage = document.querySelector('.scientist-stage');
+    if (stage) targets.push(stage);
+    // Big scientist card on scientist.html
+    const big = document.getElementById('sciSVGBig');
+    if (big) targets.push(big);
+    return targets;
+  }
+
   function _startEquippedEffect(sd) {
-    if (!_widgetEl) return;
     if (typeof WLEffects === 'undefined') return;
     const effectId = sd && sd.scientist && sd.scientist.effect;
-    if (effectId) {
-      WLEffects.start(effectId, _widgetEl);
-    } else {
-      WLEffects.stop(_widgetEl);
-    }
+    _effectTargets().forEach(el => {
+      if (effectId) WLEffects.start(effectId, el);
+      else WLEffects.stop(el);
+    });
   }
 
   async function inject() {
@@ -283,6 +293,6 @@ const WLScientist = (() => {
     inject();
   }
 
-  return { inject, react, refresh, buildSVG, openProfile };
+  return { inject, react, refresh, buildSVG, openProfile, _restartEffects: _startEquippedEffect };
 
 })();
