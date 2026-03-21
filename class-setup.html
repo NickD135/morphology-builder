@@ -324,15 +324,12 @@
       </div>
     `).join('');
 
-    // Load settings and seed _pending with current DB state
+    // Load settings from DB and update UI
     classes.forEach(async cls => {
       const [crownEnabled, teacherIds] = await Promise.all([
         WordLabData.getClassCrownEnabled(cls.id),
         WordLabData.getClassTeacherIds(cls.id),
       ]);
-
-      // Seed pending state with current DB values (no unsaved marker)
-      _pending.set(cls.id, { crownEnabled: !!crownEnabled, teacherIds: teacherIds.slice() });
 
       const chk = document.getElementById('crownCheck_' + cls.id);
       if (chk) chk.checked = !!crownEnabled;
@@ -431,63 +428,49 @@
     win.document.close();
   }
 
-  // ── Pending state: map of classId → { crownEnabled, teacherIds } ──
-  const _pending = new Map();
-
-  function _getPending(classId) {
-    if (!_pending.has(classId)) _pending.set(classId, { crownEnabled: false, teacherIds: [] });
-    return _pending.get(classId);
-  }
-
   function markPending(classId) {
     const card = document.getElementById('card_' + classId);
     if (card) card.classList.add('pending');
   }
 
   function toggleTeacher(classId, studentId, btn) {
-    const state = _getPending(classId);
-    const isTeacher = state.teacherIds.includes(studentId);
-    if (isTeacher) {
-      state.teacherIds = state.teacherIds.filter(id => id !== studentId);
-    } else {
-      state.teacherIds.push(studentId);
-    }
-    const nowTeacher = !isTeacher;
+    // Toggle purely by DOM class — no separate state map needed
+    const nowTeacher = !btn.classList.contains('is-teacher');
     btn.classList.toggle('is-teacher', nowTeacher);
     btn.title = nowTeacher ? 'Remove teacher access' : 'Make teacher';
     markPending(classId);
   }
 
   async function applySettings(classId) {
-    const btn = document.getElementById('applyBtn_' + classId);
-    const note = document.getElementById('pendingNote_' + classId);
+    const applyBtn = document.getElementById('applyBtn_' + classId);
     const card = document.getElementById('card_' + classId);
-    btn.disabled = true;
-    btn.textContent = 'Saving…';
+    applyBtn.disabled = true;
+    applyBtn.textContent = 'Saving…';
 
     try {
+      // Read crown state from checkbox
       const crownEnabled = document.getElementById('crownCheck_' + classId).checked;
-      const state = _getPending(classId);
-      state.crownEnabled = crownEnabled;
 
-      // Single read → merge → single write (no race condition)
-      await WordLabData.saveClassSettings(classId, {
-        crownEnabled: crownEnabled,
-        teacherIds: state.teacherIds,
-      });
+      // Read teacher IDs directly from DOM button classes — no stale state possible
+      const grid = document.getElementById('studentGrid_' + classId);
+      const teacherIds = grid
+        ? Array.from(grid.querySelectorAll('.teacherBtn.is-teacher')).map(b => b.id.replace('teacherBtn_', ''))
+        : [];
+
+      await WordLabData.saveClassSettings(classId, { crownEnabled, teacherIds });
 
       card.classList.remove('pending');
-      btn.textContent = '✓ Saved!';
-      btn.classList.add('saved');
+      applyBtn.textContent = '✓ Saved!';
+      applyBtn.classList.add('saved');
       setTimeout(() => {
-        btn.textContent = 'Apply changes';
-        btn.classList.remove('saved');
+        applyBtn.textContent = 'Apply changes';
+        applyBtn.classList.remove('saved');
       }, 2000);
     } catch(e) {
       alert('Failed to save: ' + (e.message || e));
-      btn.textContent = 'Apply changes';
+      applyBtn.textContent = 'Apply changes';
     } finally {
-      btn.disabled = false;
+      applyBtn.disabled = false;
     }
   }
 

@@ -809,12 +809,13 @@ const WordLabData = (() => {
   async function saveClassSettings(classId, updates) {
     var { data: existing, error: fetchErr } = await sb()
       .from('classes').select('settings').eq('id', classId).maybeSingle();
-    if (fetchErr) throw fetchErr;
+    if (fetchErr) throw new Error('Read failed: ' + fetchErr.message);
     var settings = (existing && existing.settings) ? Object.assign({}, existing.settings) : {};
     Object.assign(settings, updates);
-    var { error: updateErr } = await sb()
-      .from('classes').update({ settings: settings }).eq('id', classId);
-    if (updateErr) throw updateErr;
+    var { data: updated, error: updateErr } = await sb()
+      .from('classes').update({ settings: settings }).eq('id', classId).select('id');
+    if (updateErr) throw new Error('Save failed: ' + updateErr.message);
+    if (!updated || updated.length === 0) throw new Error('No rows updated — check Supabase RLS policies allow UPDATE on the classes table');
   }
 
   return {
