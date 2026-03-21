@@ -98,7 +98,7 @@ const WLScientist = (() => {
   <!-- Face accessory -->
   ${faceAcc && faceAccSVG[faceAcc] ? faceAccSVG[faceAcc] : ''}
   ${sparkles}${dizzy}
-  <!-- Custom costume overlays: canvas 400×480 centered (40px margin) on 320×480 scientist → SVG x=-10,y=0 w=100,h=120 -->
+  <!-- Custom costume overlays: canvas 400x480, 40px margin, SVG x=-10,y=0 w=100,h=120 -->
   ${['coat','head','face','background'].map(t => customSlots['_img_'+t] && customSlots[t] ? `<image href="${customSlots['_img_'+t]}" x="-10" y="0" width="100" height="120" preserveAspectRatio="none"/>` : '').join('')}
 </svg>`;
   }
