@@ -805,6 +805,18 @@ const WordLabData = (() => {
     } catch(e) { console.warn('setStudentTeacher failed', e); }
   }
 
+  // Single-write: merges all settings fields at once — no race condition
+  async function saveClassSettings(classId, updates) {
+    var { data: existing, error: fetchErr } = await sb()
+      .from('classes').select('settings').eq('id', classId).maybeSingle();
+    if (fetchErr) throw fetchErr;
+    var settings = (existing && existing.settings) ? Object.assign({}, existing.settings) : {};
+    Object.assign(settings, updates);
+    var { error: updateErr } = await sb()
+      .from('classes').update({ settings: settings }).eq('id', classId);
+    if (updateErr) throw updateErr;
+  }
+
   return {
     createClass, getClasses, getClass, verifyPassword,
     addStudent, removeStudent, deleteClass, regenerateStudentCode,
@@ -818,7 +830,7 @@ const WordLabData = (() => {
     getStudentData, getLevel, ALL_BADGES, LEGENDARY_BADGES,
     getScientist, saveScientist, purchase,
     getClassLeader, getClassCrownEnabled, setClassCrownEnabled,
-    getClassTeacherIds, isStudentTeacher, setStudentTeacher
+    getClassTeacherIds, isStudentTeacher, setStudentTeacher, saveClassSettings
   };
 
 })();

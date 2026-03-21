@@ -93,6 +93,19 @@
     .crownSwitch input:checked + .crownSlider:before{ transform:translateX(20px); }
     .crownLabel{ font-size:13px; font-weight:800; color:var(--text); }
     .crownDesc{ font-size:11px; font-weight:600; color:var(--muted); }
+
+    /* Apply button & pending state */
+    .applyRow{ display:flex; align-items:center; gap:10px; padding-top:12px; margin-top:12px; border-top:1px solid var(--line); }
+    .applyBtn{ background:var(--indigo); color:#fff; border:none; border-radius:12px; padding:9px 20px; font-family:'Lexend',sans-serif; font-size:13px; font-weight:800; cursor:pointer; transition:background .15s, opacity .15s; }
+    .applyBtn:hover{ background:#312e81; }
+    .applyBtn:disabled{ opacity:0.5; cursor:default; }
+    .applyBtn.saved{ background:#15803d; }
+    .pendingNote{ font-size:12px; font-weight:700; color:#b45309; display:none; }
+    .classCard.pending{ border-color:#fde68a; }
+    .classCard.pending .pendingNote{ display:inline; }
+    .teacherChip{ background:#eef2ff; border-color:#c7d2fe; }
+    .teacherBtn{ transition:opacity .15s, color .15s; }
+    .teacherBtn.is-teacher{ color:#4338ca !important; opacity:1 !important; }
   </style>
 </head>
 <body>
@@ -280,12 +293,16 @@
         <div class="crownRow">
           <label class="crownToggleWrap" style="cursor:pointer;">
             <span class="crownSwitch">
-              <input type="checkbox" id="crownCheck_${cls.id}" onchange="toggleCrown('${cls.id}', this.checked)">
+              <input type="checkbox" id="crownCheck_${cls.id}" onchange="markPending('${cls.id}')">
               <span class="crownSlider"></span>
             </span>
             <span class="crownLabel">🍩 Donut Crown</span>
           </label>
           <span class="crownDesc">Auto-awards a donut crown to the student with the most correct answers</span>
+        </div>
+        <div class="applyRow">
+          <button class="applyBtn" id="applyBtn_${cls.id}" onclick="applySettings('${cls.id}')">Apply changes</button>
+          <span class="pendingNote" id="pendingNote_${cls.id}">⚠ Unsaved changes</span>
         </div>
         <div class="studentList" id="students_${cls.id}">
           <div class="studentGrid" id="studentGrid_${cls.id}">
@@ -293,7 +310,7 @@
               <span class="studentChip" id="chip_${s.id}">
                 ${s.name}
                 <code style="background:#f1f5f9;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:900;font-family:monospace;color:#4338ca;margin:0 2px;">${s.student_code||'?'}</code>
-                <button id="teacherBtn_${s.id}" class="studentChipRemove" onclick="toggleTeacher('${cls.id}','${s.id}',this)" title="Toggle teacher access" style="font-size:13px;opacity:0.4;">👩‍🏫</button>
+                <button id="teacherBtn_${s.id}" class="studentChipRemove teacherBtn" onclick="toggleTeacher('${cls.id}','${s.id}',this)" title="Make teacher" style="font-size:13px;opacity:0.35;">👩‍🏫</button>
                 <button class="studentChipRemove" onclick="regenerateCode('${cls.id}','${s.id}')" title="Regenerate code">↻</button>
                 <button class="studentChipRemove" onclick="removeStudent('${cls.id}','${s.id}')" title="Remove">×</button>
               </span>
@@ -307,17 +324,26 @@
       </div>
     `).join('');
 
-    // Load crown toggle states asynchronously
+    // Load settings and seed _pending with current DB state
     classes.forEach(async cls => {
-      const enabled = await WordLabData.getClassCrownEnabled(cls.id);
-      const chk = document.getElementById('crownCheck_' + cls.id);
-      if (chk) chk.checked = !!enabled;
+      const [crownEnabled, teacherIds] = await Promise.all([
+        WordLabData.getClassCrownEnabled(cls.id),
+        WordLabData.getClassTeacherIds(cls.id),
+      ]);
 
-      // Load teacher IDs and highlight teacher buttons
-      const teacherIds = await WordLabData.getClassTeacherIds(cls.id);
+      // Seed pending state with current DB values (no unsaved marker)
+      _pending.set(cls.id, { crownEnabled: !!crownEnabled, teacherIds: teacherIds.slice() });
+
+      const chk = document.getElementById('crownCheck_' + cls.id);
+      if (chk) chk.checked = !!crownEnabled;
+
       cls.students.forEach(s => {
         const btn = document.getElementById('teacherBtn_' + s.id);
-        if (btn) btn.style.opacity = teacherIds.includes(s.id) ? '1' : '0.35';
+        if (btn) {
+          const isTeacher = teacherIds.includes(s.id);
+          btn.classList.toggle('is-teacher', isTeacher);
+          btn.title = isTeacher ? 'Remove teacher access' : 'Make teacher';
+        }
       });
     });
   }
@@ -405,16 +431,64 @@
     win.document.close();
   }
 
-  async function toggleCrown(classId, enabled) {
-    await WordLabData.setClassCrownEnabled(classId, enabled);
+  // ── Pending state: map of classId → { crownEnabled, teacherIds } ──
+  const _pending = new Map();
+
+  function _getPending(classId) {
+    if (!_pending.has(classId)) _pending.set(classId, { crownEnabled: false, teacherIds: [] });
+    return _pending.get(classId);
   }
 
-  async function toggleTeacher(classId, studentId, btn) {
-    const teacherIds = await WordLabData.getClassTeacherIds(classId);
-    const isCurrentlyTeacher = teacherIds.includes(studentId);
-    await WordLabData.setStudentTeacher(classId, studentId, !isCurrentlyTeacher);
-    btn.style.opacity = isCurrentlyTeacher ? '0.35' : '1';
-    btn.title = isCurrentlyTeacher ? 'Make teacher' : 'Remove teacher access';
+  function markPending(classId) {
+    const card = document.getElementById('card_' + classId);
+    if (card) card.classList.add('pending');
+  }
+
+  function toggleTeacher(classId, studentId, btn) {
+    const state = _getPending(classId);
+    const isTeacher = state.teacherIds.includes(studentId);
+    if (isTeacher) {
+      state.teacherIds = state.teacherIds.filter(id => id !== studentId);
+    } else {
+      state.teacherIds.push(studentId);
+    }
+    const nowTeacher = !isTeacher;
+    btn.classList.toggle('is-teacher', nowTeacher);
+    btn.title = nowTeacher ? 'Remove teacher access' : 'Make teacher';
+    markPending(classId);
+  }
+
+  async function applySettings(classId) {
+    const btn = document.getElementById('applyBtn_' + classId);
+    const note = document.getElementById('pendingNote_' + classId);
+    const card = document.getElementById('card_' + classId);
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    try {
+      const crownEnabled = document.getElementById('crownCheck_' + classId).checked;
+      const state = _getPending(classId);
+      state.crownEnabled = crownEnabled;
+
+      // Single read → merge → single write (no race condition)
+      await WordLabData.saveClassSettings(classId, {
+        crownEnabled: crownEnabled,
+        teacherIds: state.teacherIds,
+      });
+
+      card.classList.remove('pending');
+      btn.textContent = '✓ Saved!';
+      btn.classList.add('saved');
+      setTimeout(() => {
+        btn.textContent = 'Apply changes';
+        btn.classList.remove('saved');
+      }, 2000);
+    } catch(e) {
+      alert('Failed to save: ' + (e.message || e));
+      btn.textContent = 'Apply changes';
+    } finally {
+      btn.disabled = false;
+    }
   }
 
   document.getElementById('tabManage').classList.add('hidden');
