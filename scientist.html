@@ -996,6 +996,9 @@ function getSciSb() {
   return _sciSb;
 }
 
+// Cache of custom shop items: id → { item_type, image_data }
+let _customItemsData = {};
+
 async function loadCustomShopItems(sd) {
   const section = document.getElementById('customItemsSection');
   const grid    = document.getElementById('customItemsGrid');
@@ -1009,6 +1012,10 @@ async function loadCustomShopItems(sd) {
   } catch(e) {
     return; // silently fail — custom items are optional
   }
+
+  // Populate cache so equipCustomItem can find image_data without another DB call
+  _customItemsData = {};
+  items.forEach(item => { _customItemsData[item.id] = { item_type: item.item_type, image_data: item.image_data }; });
 
   const today   = new Date();
   const dayOfWk = today.getDay(); // 0=Sun, 6=Sat
@@ -1052,9 +1059,11 @@ async function loadCustomShopItems(sd) {
       preview = `<div style="font-size:28px;">🎨</div>`;
     }
 
+    const equippedSlot = ((sd.scientist||{}).customSlots||{})[item.item_type];
+    const isEquipped = equippedSlot === item.id;
     let btn = '';
     if (isTeacher || isOwned) {
-      btn = `<button class="shopBtn equip" onclick="claimCustomItem('${item.id}','${item.item_type}')">Equip</button>`;
+      btn = `<button class="shopBtn equip" onclick="equipCustomItem('${item.id}')">${isEquipped ? '✓ Equipped' : 'Equip'}</button>`;
     } else if (item.unlock_method === 'secret_code') {
       btn = `<button class="shopBtn buy" onclick="enterSecretCode('${item.id}','${(item.secret_code||'').replace(/'/g,"\\'")}')">🔑 Enter Code</button>`;
     } else if (item.unlock_method === 'gifted') {
@@ -1064,7 +1073,7 @@ async function loadCustomShopItems(sd) {
     } else if (canAfford && item.quark_cost > 0) {
       btn = `<button class="shopBtn buy" onclick="buyCustomItem('${item.id}',${item.quark_cost},'${item.item_type}')">⚛️ ${item.quark_cost}</button>`;
     } else if (item.quark_cost === 0) {
-      btn = `<button class="shopBtn equip" onclick="claimCustomItem('${item.id}','${item.item_type}')">Claim Free</button>`;
+      btn = `<button class="shopBtn equip" onclick="equipCustomItem('${item.id}')">Claim Free</button>`;
     } else {
       btn = `<span class="shopBtn cantafford">Need ${(item.quark_cost||0)-sd.quarks} more ⚛️</span>`;
     }
@@ -1096,7 +1105,41 @@ async function buyCustomItem(itemId, cost, type) {
 }
 
 async function claimCustomItem(itemId, type) {
-  await WordLabData.saveScientist({ owned: [...((await WordLabData.getScientist()).owned || []), 'custom_' + itemId] });
+  const current = await WordLabData.getScientist();
+  const owned = current.owned || [];
+  if (!owned.includes('custom_' + itemId)) {
+    await WordLabData.saveScientist({ owned: [...owned, 'custom_' + itemId] });
+  }
+  await render();
+}
+
+async function equipCustomItem(itemId) {
+  const cached = _customItemsData[itemId];
+  if (!cached) return;
+  const itemType = cached.item_type;
+  const imageData = cached.image_data;
+
+  // Ensure item is in owned list
+  const current = await WordLabData.getScientist();
+  const owned = current.owned || [];
+  const customSlots = Object.assign({}, current.customSlots || {});
+  const updates = {};
+
+  if (!owned.includes('custom_' + itemId)) {
+    updates.owned = [...owned, 'custom_' + itemId];
+  }
+
+  // Toggle: if already equipped in this slot, unequip; otherwise equip
+  if (customSlots[itemType] === itemId) {
+    customSlots[itemType] = null;
+  } else {
+    customSlots[itemType] = itemId;
+    // Store image_data in the slot so buildSVG can render it without a DB call
+    customSlots['_img_' + itemType] = imageData;
+  }
+  updates.customSlots = customSlots;
+
+  await WordLabData.saveScientist(updates);
   await render();
 }
 

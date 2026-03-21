@@ -9,11 +9,12 @@ const WLScientist = (() => {
   function buildSVG(scientist, reaction) {
     scientist = scientist || {};
     reaction  = reaction  || 'neutral';
-    const skin    = scientist.skinTone    || '#FDBCB4';
-    const coat    = scientist.coatColor   || '#ffffff';
-    const pattern = scientist.coatPattern || 'plain';
-    const headAcc = scientist.head        || null;
-    const faceAcc = scientist.face        || null;
+    const skin       = scientist.skinTone    || '#FDBCB4';
+    const coat       = scientist.coatColor   || '#ffffff';
+    const pattern    = scientist.coatPattern || 'plain';
+    const headAcc    = scientist.head        || null;
+    const faceAcc    = scientist.face        || null;
+    const customSlots = scientist.customSlots || {};
 
     // Coat fill — plain or patterned
     const patternDefs = {
@@ -97,6 +98,8 @@ const WLScientist = (() => {
   <!-- Face accessory -->
   ${faceAcc && faceAccSVG[faceAcc] ? faceAccSVG[faceAcc] : ''}
   ${sparkles}${dizzy}
+  <!-- Custom costume overlays: canvas 400×480 centered (40px margin) on 320×480 scientist → SVG x=-10,y=0 w=100,h=120 -->
+  ${['coat','head','face','background'].map(t => customSlots['_img_'+t] && customSlots[t] ? `<image href="${customSlots['_img_'+t]}" x="-10" y="0" width="100" height="120" preserveAspectRatio="none"/>` : '').join('')}
 </svg>`;
   }
 

@@ -101,9 +101,10 @@ const WordLabData = (() => {
     if (!char.badges) char.badges = [];
     if (!char.scientist) char.scientist = {
       skinTone:'#FDBCB4', coatColor:'#ffffff', coatPattern:'plain',
-      head:null, face:null, background:'lab', effect:null, owned:[]
+      head:null, face:null, background:'lab', effect:null, owned:[], customSlots:{}
     };
     if (typeof char.scientist.effect === 'undefined') char.scientist.effect = null;
+    if (!char.scientist.customSlots) char.scientist.customSlots = {};
     if (!char.stats) char.stats = {
       totalCorrect:0, totalAnswered:0, sessions:0, activitiesPlayed:[], bestStreak:0
     };
