@@ -267,6 +267,7 @@
         <button class="toolBtn" id="tool-fill" onclick="setTool('fill')"><span class="icon">🪣</span>Fill</button>
         <button class="toolBtn" id="tool-text" onclick="setTool('text')"><span class="icon">🔤</span>Text</button>
         <button class="toolBtn" id="tool-eraser" onclick="setTool('eraser')"><span class="icon">🧹</span>Eraser</button>
+        <button class="toolBtn" id="tool-select" onclick="setTool('select')" style="grid-column:span 2;"><span class="icon">↖️</span>Select / Move</button>
       </div>
 
       <div class="sliderRow">
@@ -649,8 +650,14 @@ function setTool(tool) {
   document.getElementById('fillStrokeRow').style.display= ['rect','circle'].includes(tool) ? 'flex' : 'none';
 
   canvas.isDrawingMode = (tool === 'brush' || tool === 'eraser');
-  canvas.selection = false;
-  canvas.defaultCursor = tool === 'text' ? 'text' : tool === 'fill' ? 'crosshair' : 'default';
+  canvas.selection = (tool === 'select');
+  if (tool === 'select') {
+    canvas.getObjects().forEach(function(obj) { if (obj !== canvas.backgroundImage) obj.set({ selectable: true, evented: true }); });
+    canvas.renderAll();
+  } else {
+    canvas.discardActiveObject();
+  }
+  canvas.defaultCursor = tool === 'text' ? 'text' : tool === 'fill' ? 'crosshair' : tool === 'select' ? 'default' : 'default';
 
   if (tool === 'brush') {
     canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
@@ -944,19 +951,25 @@ function handleImageUpload(input) {
 }
 
 function loadExternalImage(dataUrl) {
+  const zones = {
+    coat:       { x:96,  y:240, w:208, h:232 },
+    head:       { x:112, y:32,  w:176, h:216 },
+    face:       { x:144, y:112, w:112, h:120 },
+    background: { x:0,   y:0,   w:400, h:480 },
+  };
+  const zone = zones[currentItemType] || zones.coat;
   fabric.Image.fromURL(dataUrl, function(img) {
-    const maxW = 360, maxH = 450;
-    if (img.width > maxW || img.height > maxH) {
-      const scale = Math.min(maxW / img.width, maxH / img.height);
-      img.scale(scale);
-    }
+    const scale = Math.min(zone.w / img.width, zone.h / img.height);
+    img.scale(scale);
     img.set({
-      left: Math.round((400 - img.getScaledWidth()) / 2),
-      top:  Math.round((480 - img.getScaledHeight()) / 2),
+      left: zone.x + (zone.w - img.getScaledWidth())  / 2,
+      top:  zone.y + (zone.h - img.getScaledHeight()) / 2,
       selectable: true,
+      evented: true,
     });
     canvas.add(img);
     canvas.setActiveObject(img);
+    setTool('select');
     canvas.renderAll();
     saveHistory();
   });
@@ -1082,13 +1095,28 @@ async function aiPolish() {
 
 function useAIVersion() {
   if (!aiSvgContent) { dismissAI(); return; }
-  const svgDataUrl = 'data:image/svg+xml;base64,' + btoa(aiSvgContent);
+  const svgDataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(aiSvgContent)));
+  const zones = {
+    coat:       { x:96,  y:240, w:208, h:232 },
+    head:       { x:112, y:32,  w:176, h:216 },
+    face:       { x:144, y:112, w:112, h:120 },
+    background: { x:0,   y:0,   w:400, h:480 },
+  };
+  const zone = zones[currentItemType] || zones.coat;
   fabric.Image.fromURL(svgDataUrl, function(img) {
-    img.scaleToWidth(360);
-    img.set({ left: 20, top: 20, selectable: false, evented: false });
+    const scale = Math.min(zone.w / img.width, zone.h / img.height);
+    img.scale(scale);
+    img.set({
+      left: zone.x + (zone.w - img.getScaledWidth())  / 2,
+      top:  zone.y + (zone.h - img.getScaledHeight()) / 2,
+      selectable: true,
+      evented: true,
+    });
     canvas.clear();
     loadScientistBackground();
     canvas.add(img);
+    canvas.setActiveObject(img);
+    setTool('select');
     canvas.renderAll();
     saveHistory();
   });
