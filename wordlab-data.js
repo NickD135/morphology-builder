@@ -36,25 +36,47 @@ const WordLabData = (() => {
   const LEVEL_XP = [0,100,250,500,900,1400,2000,2800,3800,5000,6500,8500,11000,14000,18000,23000,29000,36000,45000,55000];
 
   const ALL_BADGES = [
-    {id:'first_correct',   label:'First Discovery',     icon:'⚗️',  desc:'Answer your first question correctly'},
+    // ── First steps ──
+    {id:'first_correct',   label:'First Discovery',      icon:'⚗️',  desc:'Answer your first question correctly'},
+    {id:'answered_10',     label:'First Steps',          icon:'👟',  desc:'Answer 10 questions'},
+    {id:'answered_25',     label:'Getting Started',      icon:'🔬',  desc:'Get 25 correct answers'},
+    {id:'answered_50',     label:'Lab Regular',          icon:'💯',  desc:'Answer 50 questions'},
+    {id:'answered_100',    label:'Century',              icon:'🧬',  desc:'100 correct answers'},
+    {id:'answered_200',    label:'Dedicated Scientist',  icon:'🔭',  desc:'200 correct answers'},
+    {id:'answered_500',    label:'Word Scientist',       icon:'🥈',  desc:'500 correct answers'},
+    {id:'answered_750',    label:'Elite Scientist',      icon:'🥇',  desc:'750 correct answers'},
+    // ── Streaks ──
+    {id:'streak_3',        label:'Warming Up',           icon:'🌡️', desc:'Get a streak of 3'},
     {id:'streak_5',        label:'On a Roll',            icon:'🔥',  desc:'Reach a streak of 5'},
     {id:'streak_10',       label:'Unstoppable',          icon:'⚡',  desc:'Reach a streak of 10'},
-    {id:'answered_50',     label:'Lab Regular',          icon:'🔬',  desc:'Answer 50 questions'},
-    {id:'answered_100',    label:'Century',              icon:'💯',  desc:'100 correct answers'},
-    {id:'answered_500',    label:'Word Scientist',       icon:'🧬',  desc:'500 correct answers'},
-    {id:'all_activities',  label:'Polymath',             icon:'🌟',  desc:'Play every activity'},
-    {id:'sessions_5',      label:'Dedicated Learner',    icon:'📅',  desc:'5 sessions'},
-    {id:'sessions_20',     label:'Word Lab Veteran',     icon:'🏆',  desc:'20 sessions'},
-    {id:'quarks_100',      label:'Quark Collector',      icon:'⚛️',  desc:'Earn 100 quarks'},
-    {id:'quarks_500',      label:'Quark Hoarder',        icon:'💎',  desc:'Earn 500 quarks'},
+    {id:'streak_15',       label:'On Fire',              icon:'🌋',  desc:'Reach a streak of 15'},
+    {id:'streak_20',       label:'Unstoppable Force',    icon:'🌪️', desc:'Reach a streak of 20'},
+    {id:'perfect_session', label:'Flawless',             icon:'✨',  desc:'10 correct in a row with no mistakes'},
+    // ── Sessions ──
+    {id:'sessions_5',      label:'Dedicated Learner',    icon:'📅',  desc:'Complete 5 sessions'},
+    {id:'sessions_10',     label:'Regular Visitor',      icon:'📆',  desc:'Complete 10 sessions'},
+    {id:'sessions_20',     label:'Word Lab Veteran',     icon:'🏆',  desc:'Complete 20 sessions'},
+    {id:'sessions_30',     label:'Committed Learner',    icon:'🗓️', desc:'Complete 30 sessions'},
+    // ── Exploration ──
+    {id:'all_activities',  label:'Polymath',             icon:'🌟',  desc:'Play every activity at least once'},
+    // ── Levels ──
+    {id:'xp_level3',       label:'Apprentice',           icon:'🧪',  desc:'Reach Level 3'},
     {id:'xp_level5',       label:'Rising Scientist',     icon:'📈',  desc:'Reach Level 5'},
     {id:'xp_level10',      label:'Senior Researcher',    icon:'🎓',  desc:'Reach Level 10'},
-    {id:'perfect_session', label:'Flawless',             icon:'✨',  desc:'10 correct in a row'},
+    {id:'xp_level15',      label:'Expert Researcher',    icon:'📡',  desc:'Reach Level 15'},
+    {id:'xp_level20',      label:'Master Scientist',     icon:'🎯',  desc:'Reach Level 20'},
+    // ── Quarks ──
+    {id:'quarks_100',      label:'Quark Collector',      icon:'⚛️',  desc:'Earn 100 quarks'},
+    {id:'quarks_250',      label:'Quark Accumulator',    icon:'💫',  desc:'Earn 250 quarks'},
+    {id:'quarks_500',      label:'Quark Hoarder',        icon:'💎',  desc:'Earn 500 quarks'},
+    {id:'quarks_1000',     label:'Quark Magnate',        icon:'💰',  desc:'Earn 1000 quarks'},
   ];
   const LEGENDARY_BADGES = [
-    {id:'legend_morpheme', label:'Morpheme Master',      icon:'👑',  desc:'1000 correct answers'},
-    {id:'legend_sessions', label:'Grand Etymologist',    icon:'🔱',  desc:'50 sessions'},
-    {id:'legend_polymath', label:'Word Lab Legend',      icon:'🌈',  desc:'Earn every other badge'},
+    {id:'legend_morpheme',  label:'Morpheme Master',   icon:'👑',  desc:'1000 correct answers'},
+    {id:'legend_sessions',  label:'Grand Etymologist', icon:'🔱',  desc:'50 sessions'},
+    {id:'legend_streak',    label:'Streak Legend',     icon:'🌩️', desc:'Achieve a streak of 30'},
+    {id:'legend_collector', label:'Master Collector',  icon:'💎',  desc:'Own 10 or more shop items'},
+    {id:'legend_polymath',  label:'Word Lab Legend',   icon:'🌈',  desc:'Earn every other badge'},
   ];
 
   // ── Session (sessionStorage) ──────────────────────────────────
@@ -123,23 +145,46 @@ const WordLabData = (() => {
     const lvl = getLevel(student.xp).level;
     const newBadges = [];
     const checks = [
+      // First steps
       {id:'first_correct',   ok: () => s.totalCorrect >= 1},
-      {id:'streak_5',        ok: () => (s.bestStreak||0) >= 5},
-      {id:'streak_10',       ok: () => (s.bestStreak||0) >= 10},
+      {id:'answered_10',     ok: () => s.totalAnswered >= 10},
+      {id:'answered_25',     ok: () => s.totalCorrect >= 25},
       {id:'answered_50',     ok: () => s.totalAnswered >= 50},
       {id:'answered_100',    ok: () => s.totalCorrect >= 100},
+      {id:'answered_200',    ok: () => s.totalCorrect >= 200},
       {id:'answered_500',    ok: () => s.totalCorrect >= 500},
-      {id:'all_activities',  ok: () => (s.activitiesPlayed||[]).length >= 6},
+      {id:'answered_750',    ok: () => s.totalCorrect >= 750},
+      // Streaks
+      {id:'streak_3',        ok: () => (s.bestStreak||0) >= 3},
+      {id:'streak_5',        ok: () => (s.bestStreak||0) >= 5},
+      {id:'streak_10',       ok: () => (s.bestStreak||0) >= 10},
+      {id:'streak_15',       ok: () => (s.bestStreak||0) >= 15},
+      {id:'streak_20',       ok: () => (s.bestStreak||0) >= 20},
+      {id:'perfect_session', ok: () => (s.bestStreak||0) >= 10},
+      // Sessions
       {id:'sessions_5',      ok: () => s.sessions >= 5},
+      {id:'sessions_10',     ok: () => s.sessions >= 10},
       {id:'sessions_20',     ok: () => s.sessions >= 20},
-      {id:'quarks_100',      ok: () => student.quarks >= 100},
-      {id:'quarks_500',      ok: () => student.quarks >= 500},
+      {id:'sessions_30',     ok: () => s.sessions >= 30},
+      // Exploration
+      {id:'all_activities',  ok: () => (s.activitiesPlayed||[]).length >= 6},
+      // Levels
+      {id:'xp_level3',       ok: () => lvl >= 3},
       {id:'xp_level5',       ok: () => lvl >= 5},
       {id:'xp_level10',      ok: () => lvl >= 10},
-      {id:'perfect_session', ok: () => (s.bestStreak||0) >= 10},
-      {id:'legend_morpheme', ok: () => s.totalCorrect >= 1000},
-      {id:'legend_sessions', ok: () => s.sessions >= 50},
-      {id:'legend_polymath', ok: () => ALL_BADGES.every(b => earned.includes(b.id))},
+      {id:'xp_level15',      ok: () => lvl >= 15},
+      {id:'xp_level20',      ok: () => lvl >= 20},
+      // Quarks
+      {id:'quarks_100',      ok: () => student.quarks >= 100},
+      {id:'quarks_250',      ok: () => student.quarks >= 250},
+      {id:'quarks_500',      ok: () => student.quarks >= 500},
+      {id:'quarks_1000',     ok: () => student.quarks >= 1000},
+      // Legendary
+      {id:'legend_morpheme',  ok: () => s.totalCorrect >= 1000},
+      {id:'legend_sessions',  ok: () => s.sessions >= 50},
+      {id:'legend_streak',    ok: () => (s.bestStreak||0) >= 30},
+      {id:'legend_collector', ok: () => ((student.scientist||{}).owned||[]).length >= 10},
+      {id:'legend_polymath',  ok: () => ALL_BADGES.every(b => earned.includes(b.id))},
     ];
     checks.forEach(c => { if (!earned.includes(c.id) && c.ok()) { earned.push(c.id); newBadges.push(c.id); } });
     return newBadges;

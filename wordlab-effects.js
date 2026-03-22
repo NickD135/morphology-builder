@@ -20,8 +20,11 @@ const WLEffects = (() => {
     galaxy:      { name:'Galaxy',       cost:1200, rarity:'epic',      icon:'🌌', desc:'Planets orbit your scientist',            color:'#818cf8', requiresBadge:null },
     pixel:       { name:'Pixel',        cost:1200, rarity:'epic',      icon:'🎮', desc:'You dissolve into pixels and reform',     color:'#f472b6', requiresBadge:null },
     radioactive: { name:'Radioactive',  cost:1500, rarity:'epic',      icon:'☢️', desc:'Radioactive energy radiates from you',    color:'#4ade80', requiresBadge:null },
+    confetti:    { name:'Confetti',     cost:350,  rarity:'common',    icon:'🎉', desc:'Colourful confetti rains down around you', color:'#f472b6', requiresBadge:null },
     divine:      { name:'Divine',       cost:0,    rarity:'legendary', icon:'✨', desc:'Golden light rays radiate behind you',    color:'#fbbf24', requiresBadge:'legend_morpheme' },
     quantum:     { name:'Quantum',      cost:0,    rarity:'legendary', icon:'🌀', desc:'You phase between dimensions',            color:'#a78bfa', requiresBadge:'legend_sessions' },
+    aurora:      { name:'Aurora',       cost:0,    rarity:'epic',      icon:'🌌', desc:'Northern lights shimmer around you',      color:'#34d399', requiresBadge:'all_activities' },
+    vortex:      { name:'Vortex',       cost:0,    rarity:'legendary', icon:'🌪️', desc:'A spinning vortex of energy surrounds you', color:'#818cf8', requiresBadge:'legend_streak' },
   };
 
   // ── State tracking ────────────────────────────────────────────
@@ -687,13 +690,172 @@ const WLEffects = (() => {
     }, intense ? 280 : 550);
   }
 
+  // confetti — coloured paper rectangles tumble down
+  function fxConfetti(el, intense) {
+    _ensureRelative(el);
+    _injectStyle('wlfx-confetti', `
+      @keyframes wlfxConfettiFall {
+        0%   { transform:translateY(-12px) rotate(0deg);   opacity:1; }
+        80%  { opacity:0.9; }
+        100% { transform:translateY(115%) rotate(720deg); opacity:0; }
+      }
+    `);
+    const colors = ['#f472b6','#fb923c','#facc15','#4ade80','#60a5fa','#a78bfa','#f87171','#34d399'];
+    const max = intense ? 30 : (mobile() ? 12 : 20);
+    for (let i = 0; i < max; i++) {
+      const w = rndInt(5, 10), h = rndInt(3, 6);
+      const p = _makeParticle(`
+        left:${rnd(2,92)}%;top:${rnd(-5,10)}%;
+        width:${w}px;height:${h}px;border-radius:1px;
+        background:${colors[rndInt(0,colors.length)]};
+        animation:wlfxConfettiFall ${rnd(2.5,5).toFixed(1)}s linear ${rnd(0,3).toFixed(1)}s infinite;
+        z-index:10;
+      `);
+      _addNode(el, p);
+    }
+  }
+
+  // aurora — undulating green/teal/blue waves behind the character
+  function fxAurora(el, intense) {
+    _ensureRelative(el);
+    _injectStyle('wlfx-aurora', `
+      @keyframes wlfxAuroraWave {
+        0%   { transform:translate(-50%,-50%) scaleX(1)   scaleY(1);   opacity:0.45; filter:hue-rotate(0deg); }
+        33%  { transform:translate(-50%,-50%) scaleX(1.1) scaleY(0.92); opacity:0.6;  filter:hue-rotate(40deg); }
+        66%  { transform:translate(-50%,-50%) scaleX(0.92) scaleY(1.1); opacity:0.5;  filter:hue-rotate(-30deg); }
+        100% { transform:translate(-50%,-50%) scaleX(1)   scaleY(1);   opacity:0.45; filter:hue-rotate(0deg); }
+      }
+      @keyframes wlfxAuroraWave2 {
+        0%   { transform:translate(-50%,-50%) scaleX(0.9)  scaleY(1.1);  opacity:0.35; filter:hue-rotate(60deg); }
+        50%  { transform:translate(-50%,-50%) scaleX(1.12) scaleY(0.88); opacity:0.55; filter:hue-rotate(120deg); }
+        100% { transform:translate(-50%,-50%) scaleX(0.9)  scaleY(1.1);  opacity:0.35; filter:hue-rotate(60deg); }
+      }
+    `);
+    // Outer aurora glow
+    const blob1 = _makeParticle(`
+      left:50%; top:50%;
+      width:180px; height:220px;
+      transform:translate(-50%,-50%);
+      border-radius:50%;
+      background:radial-gradient(ellipse at center,
+        rgba(52,211,153,0.55) 0%,
+        rgba(16,185,129,0.3) 35%,
+        rgba(56,189,248,0.2) 60%,
+        transparent 80%);
+      animation:wlfxAuroraWave ${intense?'2s':'4s'} ease infinite;
+      z-index:7;
+    `);
+    const blob2 = _makeParticle(`
+      left:50%; top:42%;
+      width:140px; height:170px;
+      transform:translate(-50%,-50%);
+      border-radius:50%;
+      background:radial-gradient(ellipse at center,
+        rgba(20,184,166,0.4) 0%,
+        rgba(99,102,241,0.25) 45%,
+        transparent 75%);
+      animation:wlfxAuroraWave2 ${intense?'2.5s':'5s'} ease infinite;
+      z-index:7;
+    `);
+    _addNode(el, blob1);
+    _addNode(el, blob2);
+    // Drifting light ribbons
+    _injectStyle('wlfx-aurora-ribbon', `
+      @keyframes wlfxRibbon { 0%{opacity:0;transform:translateY(0) scaleX(1)} 30%{opacity:0.7} 70%{opacity:0.5} 100%{opacity:0;transform:translateY(-80px) scaleX(1.4)} }
+    `);
+    function spawnRibbon() {
+      if (!_active.has(el)) return;
+      const p = _makeParticle(`
+        left:${rnd(10,70)}%;bottom:${rnd(10,40)}%;
+        width:${rndInt(20,45)}px;height:${rndInt(2,4)}px;
+        border-radius:999px;
+        background:linear-gradient(90deg,transparent,rgba(52,211,153,0.8),rgba(56,189,248,0.6),transparent);
+        animation:wlfxRibbon ${rnd(2,3.5).toFixed(1)}s ease forwards;z-index:9;
+      `);
+      _addNode(el, p);
+      setTimeout(() => { try { p.parentNode && p.parentNode.removeChild(p); } catch {} }, 3600);
+    }
+    for (let i = 0; i < 3; i++) setTimeout(() => spawnRibbon(), i * 600);
+    _addInterval(el, spawnRibbon, intense ? 600 : 1100);
+  }
+
+  // vortex — spinning orbital particles forming a vortex funnel
+  function fxVortex(el, intense) {
+    _ensureRelative(el);
+    _injectStyle('wlfx-vortex', `
+      @keyframes wlfxVortexSpin  { 0%{transform:rotate(0deg)   translateX(var(--r)) rotate(0deg)}   100%{transform:rotate(360deg)  translateX(var(--r)) rotate(-360deg)} }
+      @keyframes wlfxVortexSpinR { 0%{transform:rotate(0deg)   translateX(var(--r)) rotate(0deg)}   100%{transform:rotate(-360deg) translateX(var(--r)) rotate(360deg)} }
+      @keyframes wlfxVortexCore  { 0%,100%{box-shadow:0 0 14px 5px rgba(129,140,248,0.9),0 0 28px rgba(129,140,248,0.45)} 50%{box-shadow:0 0 22px 8px rgba(167,139,250,0.95),0 0 44px rgba(167,139,250,0.55)} }
+      @keyframes wlfxVortexPull  { 0%{opacity:0;transform:translate(var(--sx),var(--sy)) scale(1.5)} 20%{opacity:0.9} 100%{opacity:0;transform:translate(0,0) scale(0.2)} }
+    `);
+
+    // Core energy ball
+    const core = _makeParticle(`
+      left:50%; top:50%;
+      width:18px; height:18px;
+      transform:translate(-50%,-50%);
+      border-radius:50%;
+      background:radial-gradient(circle,#e0e7ff,#818cf8);
+      animation:wlfxVortexCore ${intense?'1s':'2s'} ease infinite;
+      z-index:13;
+    `);
+    _addNode(el, core);
+
+    // Orbital rings at 3 radii with different speeds/colours
+    const rings = [
+      {r:'30px', dur:intense?'0.9s':'1.8s',  anim:'wlfxVortexSpin',  color:'#818cf8', sz:5},
+      {r:'50px', dur:intense?'1.4s':'2.8s',  anim:'wlfxVortexSpinR', color:'#a78bfa', sz:4},
+      {r:'68px', dur:intense?'2s':'4s',       anim:'wlfxVortexSpin',  color:'#6366f1', sz:3},
+      {r:'40px', dur:intense?'1.1s':'2.2s',  anim:'wlfxVortexSpinR', color:'#c4b5fd', sz:3},
+      {r:'58px', dur:intense?'1.7s':'3.4s',  anim:'wlfxVortexSpin',  color:'#7c3aed', sz:4},
+    ];
+    const startAngles = [0, 72, 144, 216, 288];
+    rings.forEach((ring, i) => {
+      const orbit = _makeParticle(`
+        left:50%;top:50%;width:0;height:0;z-index:10;
+        --r:${ring.r};
+        animation:${ring.anim} ${ring.dur} linear infinite;
+        animation-delay:${(i*0.18).toFixed(2)}s;
+      `);
+      const dot = _makeParticle(`
+        width:${ring.sz}px;height:${ring.sz}px;border-radius:50%;
+        background:${ring.color};
+        box-shadow:0 0 6px 2px ${ring.color};
+        transform:translate(-50%,-50%);
+      `);
+      orbit.appendChild(dot);
+      _addNode(el, orbit);
+    });
+
+    // Occasional particle pull-in streaks
+    function spawnPull() {
+      if (!_active.has(el)) return;
+      const w = el.offsetWidth || 160, h = el.offsetHeight || 200;
+      const angle = rnd(0, 360) * Math.PI / 180;
+      const dist = rnd(55, 90);
+      const p = _makeParticle(`
+        left:50%;top:50%;
+        width:${rndInt(3,5)}px;height:${rndInt(3,5)}px;border-radius:50%;
+        background:#c4b5fd;box-shadow:0 0 6px 2px rgba(167,139,250,0.8);
+        --sx:${(Math.cos(angle)*dist).toFixed(0)}px;
+        --sy:${(Math.sin(angle)*dist).toFixed(0)}px;
+        animation:wlfxVortexPull ${rnd(0.6,1.1).toFixed(2)}s ease forwards;z-index:12;
+      `);
+      _addNode(el, p);
+      setTimeout(() => { try { p.parentNode && p.parentNode.removeChild(p); } catch {} }, 1200);
+    }
+    for (let i = 0; i < 4; i++) setTimeout(() => spawnPull(), i * 200);
+    _addInterval(el, spawnPull, intense ? 180 : 350);
+  }
+
   // ── Effect map ────────────────────────────────────────────────
   const _fns = {
     sparkle: fxSparkle, shimmer: fxShimmer, bubbles: fxBubbles,
     starfield: fxStarfield, aura: fxAura, fire: fxFire, frost: fxFrost,
     electric: fxElectric, rainbow: fxRainbow, matrix: fxMatrix,
     galaxy: fxGalaxy, pixel: fxPixel, radioactive: fxRadioactive,
-    divine: fxDivine, quantum: fxQuantum,
+    confetti: fxConfetti, divine: fxDivine, quantum: fxQuantum,
+    aurora: fxAurora, vortex: fxVortex,
   };
 
   // ── Public API ────────────────────────────────────────────────
