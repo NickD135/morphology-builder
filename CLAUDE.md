@@ -244,7 +244,7 @@ Check items off as they are completed.
 - [x] Nicholas: go to vercel.com → "Add New Project" → import `NickD135/morphology-builder`
 - [x] Vercel settings: Framework = Other, Build Command = (leave blank), Output = (leave blank)
 - [x] Click Deploy — live at https://morphology-builder.vercel.app
-- [ ] Confirm auto-deploy on push to `main` works (push something small to test)
+- [x] Confirm auto-deploy on push to `main` works ✅
 - [ ] Test all pages load on Vercel URL (especially check wordlab-data.js loads correctly)
 
 #### 0.2 Custom Domain
