@@ -317,8 +317,18 @@
         <button class="actionBtn" onclick="undo()">↩ Undo</button>
         <button class="actionBtn" onclick="redo()">↪ Redo</button>
         <button class="actionBtn" onclick="zoomIn()">🔍 Zoom+</button>
-        <button class="actionBtn" onclick="zoomOut()">🔍 Zoom−</button>
-        <button class="actionBtn danger" onclick="clearCanvas()" style="grid-column:span 2;">🗑️ Clear Canvas</button>
+        <button class="actionBtn" onclick="zoomOut()">🔎 Zoom−</button>
+        <button class="actionBtn" onclick="resetZoom()" title="Reset zoom to 100%">⊡ Reset Zoom</button>
+        <button class="actionBtn danger" onclick="clearCanvas()">🗑️ Clear</button>
+      </div>
+    </div>
+
+    <div class="toolSection">
+      <div class="toolSectionTitle">Import Image</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <button class="actionBtn" onclick="document.getElementById('imgUploadInput').click()" style="width:100%;grid-column:span 2;">📁 Upload PNG / JPG</button>
+        <input type="file" id="imgUploadInput" accept="image/*" style="display:none" onchange="handleImageUpload(this)">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-align:center;padding:2px 0;">or paste an image with Ctrl+V / ⌘V</div>
       </div>
     </div>
   </div>
@@ -352,6 +362,11 @@
     <div class="settSection">
       <div class="settLabel">Item Name</div>
       <input class="settInput" type="text" id="itemName" placeholder="e.g. Christmas Jumper 2025" oninput="updatePreview()">
+    </div>
+
+    <div class="settSection">
+      <div class="settLabel">Description <span style="font-weight:600;text-transform:none;letter-spacing:0;font-size:10px;color:var(--indigo);">— helps AI Polish</span></div>
+      <textarea class="settInput" id="itemDescription" rows="2" placeholder="e.g. A red lab coat with snowflakes and a star badge" style="resize:vertical;min-height:56px;line-height:1.5;"></textarea>
     </div>
 
     <div class="settSection">
@@ -587,6 +602,22 @@ window.addEventListener('DOMContentLoaded', function() {
   document.addEventListener('keydown', function(e) {
     if ((e.ctrlKey||e.metaKey) && e.key==='z') { e.preventDefault(); undo(); }
     if ((e.ctrlKey||e.metaKey) && e.key==='y') { e.preventDefault(); redo(); }
+  });
+
+  // Paste image from clipboard (Ctrl+V / ⌘V)
+  document.addEventListener('paste', function(e) {
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (!file) continue;
+        const reader = new FileReader();
+        reader.onload = function(ev) { loadExternalImage(ev.target.result); };
+        reader.readAsDataURL(file);
+        break;
+      }
+    }
   });
 
   // Update preview periodically
@@ -898,8 +929,38 @@ function redo() {
 }
 
 // ── Zoom ──────────────────────────────────────────────────────
-function zoomIn()  { zoomLevel = Math.min(3, zoomLevel + 0.25); canvas.setZoom(zoomLevel); }
-function zoomOut() { zoomLevel = Math.max(0.5, zoomLevel - 0.25); canvas.setZoom(zoomLevel); }
+function zoomIn()  { zoomLevel = Math.min(3, zoomLevel + 0.25); canvas.setZoom(zoomLevel); canvas.renderAll(); }
+function zoomOut() { zoomLevel = Math.max(0.5, zoomLevel - 0.25); canvas.setZoom(zoomLevel); canvas.viewportTransform[4] = 0; canvas.viewportTransform[5] = 0; canvas.renderAll(); }
+function resetZoom() { zoomLevel = 1; canvas.setZoom(1); canvas.viewportTransform[4] = 0; canvas.viewportTransform[5] = 0; canvas.renderAll(); }
+
+// ── Image upload & paste ───────────────────────────────────────
+function handleImageUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) { loadExternalImage(e.target.result); };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+function loadExternalImage(dataUrl) {
+  fabric.Image.fromURL(dataUrl, function(img) {
+    const maxW = 360, maxH = 450;
+    if (img.width > maxW || img.height > maxH) {
+      const scale = Math.min(maxW / img.width, maxH / img.height);
+      img.scale(scale);
+    }
+    img.set({
+      left: Math.round((400 - img.getScaledWidth()) / 2),
+      top:  Math.round((480 - img.getScaledHeight()) / 2),
+      selectable: true,
+    });
+    canvas.add(img);
+    canvas.setActiveObject(img);
+    canvas.renderAll();
+    saveHistory();
+  });
+}
 
 function clearCanvas() {
   if (!confirm('Clear the canvas? This cannot be undone.')) return;
@@ -974,16 +1035,25 @@ const POLISH_EDGE_FN = 'https://qutsbcfkgiihcwaktsaz.supabase.co/functions/v1/po
 async function aiPolish() {
   const btn = document.getElementById('aiPolishBtn');
   btn.disabled = true;
-  btn.textContent = '⏳ Polishing…';
+  btn.innerHTML = '⏳ Polishing…';
 
   try {
+    // Strip scientist background so AI only sees the drawn item
+    const savedBg = canvas.backgroundImage;
+    canvas.backgroundImage = null;
+    canvas.renderAll();
     const dataURL = canvas.toDataURL({ format: 'png', multiplier: 1 });
-    const base64  = dataURL.replace('data:image/png;base64,', '');
+    canvas.backgroundImage = savedBg;
+    canvas.renderAll();
+
+    const base64 = dataURL.replace('data:image/png;base64,', '');
+    const name   = document.getElementById('itemName').value.trim() || undefined;
+    const desc   = document.getElementById('itemDescription').value.trim() || undefined;
 
     const resp = await fetch(POLISH_EDGE_FN, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: base64 }),
+      body: JSON.stringify({ image: base64, name, itemType: currentItemType, description: desc }),
     });
 
     if (!resp.ok) {

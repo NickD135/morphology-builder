@@ -6,12 +6,27 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const POLISH_PROMPT =
-  'This is a rough hand-drawn design for a cosmetic item in an educational game called Word Lab. ' +
-  'The game has a friendly, cartoon science lab aesthetic with an indigo/teal/amber colour palette. ' +
-  'Please redraw this design as a clean, polished, game-ready illustration in the style of the game — ' +
-  'friendly, rounded shapes, solid colours, clear outlines, suitable for a primary school audience. ' +
-  'Return the result as a short description of what you see and then a clean SVG representation of the design.';
+function buildPrompt(name?: string, itemType?: string, description?: string): string {
+  const typeLabels: Record<string, string> = {
+    coat: 'lab coat overlay',
+    head: 'head accessory (hat/hair/crown)',
+    face: 'face accessory (glasses/mask/nose)',
+    background: 'background scene',
+  };
+  const typeLabel = (itemType && typeLabels[itemType]) || 'cosmetic item';
+  const namePart  = name        ? `The item is called "${name}". ` : '';
+  const descPart  = description ? `Teacher's description: "${description}". ` : '';
+
+  return (
+    `This image contains a rough hand-drawn design for a ${typeLabel} in an educational game called Word Lab. ` +
+    namePart + descPart +
+    'Word Lab has a friendly cartoon science-lab aesthetic (indigo/teal/amber palette, rounded shapes, clean outlines, primary-school audience). ' +
+    'IMPORTANT: Draw ONLY the item itself — do NOT draw the scientist character/person underneath. ' +
+    'The item will be layered on top of the scientist as a transparent PNG overlay, so only show the item design on a transparent background. ' +
+    'Return: (1) a one-sentence description of what you drew, then (2) the complete SVG code for the item only, ' +
+    'with a transparent background (no <rect fill="white"> backgrounds), viewBox="0 0 80 120", clean vector shapes.'
+  );
+}
 
 serve(async (req: Request) => {
   // Handle CORS preflight
@@ -34,7 +49,7 @@ serve(async (req: Request) => {
     });
   }
 
-  let body: { image: string };
+  let body: { image: string; name?: string; itemType?: string; description?: string };
   try {
     body = await req.json();
   } catch {
@@ -51,6 +66,11 @@ serve(async (req: Request) => {
     });
   }
 
+  const prompt = buildPrompt(body.name, body.itemType, body.description);
+
+  // Detect media type: images from canvas are PNG; uploaded/pasted images may be JPEG
+  const mediaType = body.image.startsWith('/9j') ? 'image/jpeg' : 'image/png';
+
   const anthropicResp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -59,13 +79,13 @@ serve(async (req: Request) => {
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20251101',
       max_tokens: 4096,
       messages: [{
         role: 'user',
         content: [
-          { type: 'image', source: { type: 'base64', media_type: 'image/png', data: body.image } },
-          { type: 'text', text: POLISH_PROMPT },
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: body.image } },
+          { type: 'text', text: prompt },
         ],
       }],
     }),
