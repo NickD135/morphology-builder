@@ -605,12 +605,250 @@ const EXT_SOUND_WORDS = [
   {word:"bough",     sound:"ow-sound", soundLabel:"OW sound",  grapheme:"ough", before:"b",    after:"",       clue:"a large branch of a tree",           level:"challenge", type:"vowel",     distractors:["ow","ou","aw"],      explain:"'ough' says /ow/ in 'bough' — same as in 'plough'."},
 ];
 
+// ── EXTRA BASES (dual-role combining forms for the morpheme builder) ──────────
+// These appear as BASE tiles in the morpheme builder when extension mode is on.
+// They are separate from EXT_PREFIXES so they don't duplicate prefix tiles.
+
+const EXT_EXTRA_BASES = [
+  // ── Original dual-role combining forms ───────────────────────────────────
+  { id:"tele",    form:"tele",    display:"tele",    meaning:"far; at a distance",      pos:["noun","adj"], group:"greek", examples:["<u>tele</u>scope","<u>tele</u>phone","<u>tele</u>gram"] },
+  { id:"mono",    form:"mono",    display:"mono",    meaning:"one; single",             pos:["noun","adj"], group:"greek", examples:["<u>mono</u>logue","<u>mono</u>chrome","<u>mono</u>gamy"] },
+  { id:"demo",    form:"demo",    display:"demo",    meaning:"people",                  pos:["noun"],       group:"greek", examples:["<u>demo</u>cracy","<u>demo</u>graphic"] },
+  { id:"astro",   form:"astro",   display:"astro",   meaning:"star; outer space",       pos:["noun","adj"], group:"greek", examples:["<u>astro</u>nomy","<u>astro</u>naut"] },
+  { id:"eco",     form:"eco",     display:"eco",     meaning:"environment; household",  pos:["noun"],       group:"greek", examples:["<u>eco</u>nomy","<u>eco</u>system"] },
+  { id:"micro",   form:"micro",   display:"micro",   meaning:"small; tiny",             pos:["noun","adj"], group:"greek", examples:["<u>micro</u>scope","<u>micro</u>phone"] },
+  { id:"peri",    form:"peri",    display:"peri",    meaning:"around; near",            pos:["noun","adj"], group:"greek", examples:["<u>peri</u>scope","<u>peri</u>meter"] },
+  { id:"omni",    form:"omni",    display:"omni",    meaning:"all; every",              pos:["adj"],        group:"latin", examples:["<u>omni</u>vore","<u>omni</u>present"] },
+  { id:"carni",   form:"carni",   display:"carni",   meaning:"flesh; meat",             pos:["adj"],        group:"latin", examples:["<u>carni</u>vore","<u>carni</u>val"] },
+  { id:"herbi",   form:"herbi",   display:"herbi",   meaning:"plant; vegetation",       pos:["adj"],        group:"latin", examples:["<u>herbi</u>vore","<u>herbi</u>cide"] },
+  { id:"pseudo",  form:"pseudo",  display:"pseudo",  meaning:"false; fake",             pos:["adj","noun"], group:"greek", examples:["<u>pseudo</u>nym","<u>pseudo</u>science"] },
+  { id:"proto",   form:"proto",   display:"proto",   meaning:"first; original",         pos:["noun","adj"], group:"greek", examples:["<u>proto</u>type","<u>proto</u>plasm"] },
+  { id:"tri",     form:"tri",     display:"tri",     meaning:"three",                   pos:["noun","adj"], group:"greek", examples:["<u>tri</u>pod","<u>tri</u>angle"] },
+  { id:"photo",   form:"photo",   display:"photo",   meaning:"light",                   pos:["noun","adj"], group:"greek", examples:["<u>photo</u>graph","<u>photo</u>genic"] },
+  // ── Additional combining forms ────────────────────────────────────────────
+  { id:"poly",    form:"poly",    display:"poly",    meaning:"many; much",              pos:["noun","adj"], group:"greek", examples:["<u>poly</u>graph","<u>poly</u>gamy","<u>poly</u>hedron"] },
+  { id:"dia",     form:"dia",     display:"dia",     meaning:"through; across",         pos:["noun","adj"], group:"greek", examples:["<u>dia</u>gram","<u>dia</u>logue","<u>dia</u>lysis"] },
+  { id:"mega",    form:"mega",    display:"mega",    meaning:"large; great",            pos:["noun","adj"], group:"greek", examples:["<u>mega</u>phone","<u>mega</u>byte"] },
+  { id:"homo",    form:"homo",    display:"homo",    meaning:"same",                    pos:["adj"],        group:"greek", examples:["<u>homo</u>nym","<u>homo</u>geneous"] },
+  { id:"acro",    form:"acro",    display:"acro",    meaning:"top; highest point",      pos:["noun","adj"], group:"greek", examples:["<u>acro</u>nym","<u>acro</u>bat"] },
+  { id:"litho",   form:"litho",   display:"litho",   meaning:"stone; rock",             pos:["noun"],       group:"greek", examples:["<u>litho</u>graph","<u>litho</u>sphere"] },
+  { id:"pyro",    form:"pyro",    display:"pyro",    meaning:"fire",                    pos:["noun"],       group:"greek", examples:["<u>pyro</u>mancy","<u>pyro</u>technics"] },
+  { id:"socio",   form:"socio",   display:"socio",   meaning:"society; social",         pos:["noun","adj"], group:"latin", examples:["<u>socio</u>pathy","<u>socio</u>logy"] },
+  { id:"hydro",   form:"hydro",   display:"hydro",   meaning:"water",                   pos:["noun","adj"], group:"greek", examples:["<u>hydro</u>lysis","<u>hydro</u>electric"] },
+  { id:"electro", form:"electro", display:"electro", meaning:"electricity; electric",   pos:["noun","adj"], group:"greek", examples:["<u>electro</u>lysis","<u>electro</u>magnetic"] },
+  { id:"ortho",   form:"ortho",   display:"ortho",   meaning:"straight; correct",       pos:["adj"],        group:"greek", examples:["<u>ortho</u>dox","<u>ortho</u>graphy"] },
+  { id:"gastro",  form:"gastro",  display:"gastro",  meaning:"stomach; food",           pos:["noun"],       group:"greek", examples:["<u>gastro</u>nomy","<u>gastro</u>pod"] },
+  { id:"para",    form:"para",    display:"para",    meaning:"beside; beyond; against", pos:["noun","adj"], group:"greek", examples:["<u>para</u>dox","<u>para</u>lysis"] },
+  { id:"soci",    form:"soci",    display:"soci",    meaning:"society; companion",      pos:["noun"],       group:"latin", examples:["<u>soci</u>ology","<u>soci</u>al"] },
+  { id:"neur",    form:"neur",    display:"neur",    meaning:"nerve; nervous system",   pos:["noun"],       group:"greek", examples:["<u>neur</u>ology","<u>neur</u>al"] },
+  { id:"entom",   form:"entom",   display:"entom",   meaning:"insect",                  pos:["noun"],       group:"greek", examples:["<u>entom</u>ology","<u>entom</u>ologist"] },
+  { id:"ornith",  form:"ornith",  display:"ornith",  meaning:"bird",                    pos:["noun"],       group:"greek", examples:["<u>ornith</u>ology","<u>ornith</u>ologist"] },
+  { id:"ana",     form:"ana",     display:"ana",     meaning:"up; back; again",         pos:["noun","verb"],group:"greek", examples:["<u>ana</u>lysis","<u>ana</u>tomy"] },
+  { id:"geno",    form:"geno",    display:"geno",    meaning:"origin; race; kind",      pos:["noun"],       group:"greek", examples:["<u>geno</u>type","<u>geno</u>me"] },
+  { id:"arthro",  form:"arthro",  display:"arthro",  meaning:"joint",                   pos:["noun"],       group:"greek", examples:["<u>arthro</u>pod","<u>arthro</u>scopy"] },
+  { id:"gyro",    form:"gyro",    display:"gyro",    meaning:"circle; rotation",        pos:["noun"],       group:"greek", examples:["<u>gyro</u>scope","<u>gyro</u>compass"] },
+  { id:"tetra",   form:"tetra",   display:"tetra",   meaning:"four",                    pos:["noun","adj"], group:"greek", examples:["<u>tetra</u>hedron","<u>tetra</u>gon"] },
+  { id:"oxy",     form:"oxy",     display:"oxy",     meaning:"sharp; acid; oxygen",     pos:["noun","adj"], group:"greek", examples:["<u>oxy</u>gen","<u>oxy</u>moron"] },
+  { id:"nitro",   form:"nitro",   display:"nitro",   meaning:"nitrogen; nitric",        pos:["noun"],       group:"greek", examples:["<u>nitro</u>gen","<u>nitro</u>glycerin"] },
+  { id:"techno",  form:"techno",  display:"techno",  meaning:"technology; skill",       pos:["noun","adj"], group:"greek", examples:["<u>techno</u>cracy","<u>techno</u>logy"] },
+  { id:"cata",    form:"cata",    display:"cata",    meaning:"down; against; completely",pos:["noun","verb"],group:"greek", examples:["<u>cata</u>lysis","<u>cata</u>logue"] },
+];
+
+const ALL_EXT_BASES = [...EXT_BASES, ...EXT_EXTRA_BASES];
+
+// ── VALID COMBOS (curated word list for the morpheme builder) ─────────────────
+// Each entry: { prefix, base, suffix1, suffix2, word }
+// prefix/suffix1/suffix2 are ids (strings) or null. base is an id (string).
+// "word" is the correct English spelling — overrides naive concatenation.
+
+const EXT_VALID_COMBOS = [
+
+  // ── -ology ────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"anthrop", suffix1:"ology",    suffix2:null, word:"anthropology"   },
+  { prefix:null,    base:"bio",     suffix1:"ology",    suffix2:null, word:"biology"        },
+  { prefix:null,    base:"cardi",   suffix1:"ology",    suffix2:null, word:"cardiology"     },
+  { prefix:null,    base:"chron",   suffix1:"ology",    suffix2:null, word:"chronology"     },
+  { prefix:null,    base:"cosm",    suffix1:"ology",    suffix2:null, word:"cosmology"      },
+  { prefix:null,    base:"geo",     suffix1:"ology",    suffix2:null, word:"geology"        },
+  { prefix:null,    base:"morph",   suffix1:"ology",    suffix2:null, word:"morphology"     },
+  { prefix:null,    base:"path",    suffix1:"ology",    suffix2:null, word:"pathology"      },
+  { prefix:null,    base:"psych",   suffix1:"ology",    suffix2:null, word:"psychology"     },
+  { prefix:null,    base:"theo",    suffix1:"ology",    suffix2:null, word:"theology"       },
+  { prefix:null,    base:"typ",     suffix1:"ology",    suffix2:null, word:"typology"       },
+  { prefix:null,    base:"zoo",     suffix1:"ology",    suffix2:null, word:"zoology"        },
+
+  // ── tele- ─────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"tele",    suffix1:"graph",    suffix2:null, word:"telegraph"      },
+  { prefix:null,    base:"tele",    suffix1:"scope",    suffix2:null, word:"telescope"      },
+  { prefix:null,    base:"tele",    suffix1:"phone",    suffix2:null, word:"telephone"      },
+  { prefix:null,    base:"tele",    suffix1:"gram",     suffix2:null, word:"telegram"       },
+
+  // ── micro- ────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"micro",   suffix1:"scope",    suffix2:null, word:"microscope"     },
+  { prefix:null,    base:"micro",   suffix1:"phone",    suffix2:null, word:"microphone"     },
+  { prefix:null,    base:"micro",   suffix1:"graph",    suffix2:null, word:"micrograph"     },
+
+  // ── auto- ─────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"auto",    suffix1:"graph",    suffix2:null, word:"autograph"      },
+  { prefix:null,    base:"auto",    suffix1:"nomy",     suffix2:null, word:"autonomy"       },
+  { prefix:null,    base:"auto",    suffix1:"cracy",    suffix2:null, word:"autocracy"      },
+
+  // ── peri- ─────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"peri",    suffix1:"scope",    suffix2:null, word:"periscope"      },
+
+  // ── photo- ────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"photo",   suffix1:"graph",    suffix2:null, word:"photograph"     },
+  { prefix:null,    base:"photo",   suffix1:"genic",    suffix2:null, word:"photogenic"     },
+
+  // ── governance / society ──────────────────────────────────────────────────
+  { prefix:null,    base:"demo",    suffix1:"cracy",    suffix2:null, word:"democracy"      },
+  { prefix:null,    base:"theo",    suffix1:"cracy",    suffix2:null, word:"theocracy"      },
+  { prefix:null,    base:"astro",   suffix1:"nomy",     suffix2:null, word:"astronomy"      },
+  { prefix:null,    base:"eco",     suffix1:"nomy",     suffix2:null, word:"economy"        },
+  { prefix:null,    base:"mono",    suffix1:"archy",    suffix2:null, word:"monarchy"       },
+  { prefix:null,    base:"mono",    suffix1:"logue",    suffix2:null, word:"monologue"      },
+
+  // ── -oid ─────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"anthrop", suffix1:"oid",      suffix2:null, word:"anthropoid"     },
+  { prefix:null,    base:"aster",   suffix1:"oid",      suffix2:null, word:"asteroid"       },
+
+  // ── -genesis ─────────────────────────────────────────────────────────────
+  { prefix:null,    base:"bio",     suffix1:"genesis",  suffix2:null, word:"biogenesis"     },
+  { prefix:null,    base:"path",    suffix1:"genesis",  suffix2:null, word:"pathogenesis"   },
+
+  // ── -vore ────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"omni",    suffix1:"vore",     suffix2:null, word:"omnivore"       },
+  { prefix:null,    base:"carni",   suffix1:"vore",     suffix2:null, word:"carnivore"      },
+  { prefix:null,    base:"herbi",   suffix1:"vore",     suffix2:null, word:"herbivore"      },
+
+  // ── other base + suffix ───────────────────────────────────────────────────
+  { prefix:null,    base:"phil",    suffix1:"sophy",    suffix2:null, word:"philosophy"     },
+  { prefix:null,    base:"sol",     suffix1:"tude",     suffix2:null, word:"solitude"       },
+  { prefix:null,    base:"magn",    suffix1:"tude",     suffix2:null, word:"magnitude"      },
+  { prefix:null,    base:"pseudo",  suffix1:"nym",      suffix2:null, word:"pseudonym"      },
+  { prefix:null,    base:"proto",   suffix1:"type",     suffix2:null, word:"prototype"      },
+  { prefix:null,    base:"tri",     suffix1:"pod",      suffix2:null, word:"tripod"         },
+
+  // ── prefix + base (no suffix) ─────────────────────────────────────────────
+  { prefix:"poly",  base:"morph",   suffix1:null,       suffix2:null, word:"polymorph"      },
+  { prefix:"micro", base:"cosm",    suffix1:null,       suffix2:null, word:"microcosm"      },
+  { prefix:"patho", base:"gen",     suffix1:null,       suffix2:null, word:"pathogen"       },
+  { prefix:"hydro", base:"gen",     suffix1:null,       suffix2:null, word:"hydrogen"       },
+
+  // ── -graph ────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"poly",    suffix1:"graph",    suffix2:null, word:"polygraph"      },
+  { prefix:null,    base:"litho",   suffix1:"graph",    suffix2:null, word:"lithograph"     },
+  { prefix:null,    base:"mono",    suffix1:"graph",    suffix2:null, word:"monograph"      },
+
+  // ── -gram ─────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"dia",     suffix1:"gram",     suffix2:null, word:"diagram"        },
+  { prefix:null,    base:"cardi",   suffix1:"gram",     suffix2:null, word:"cardiogram"     },
+
+  // ── -logue ────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"dia",     suffix1:"logue",    suffix2:null, word:"dialogue"       },
+
+  // ── -gamy ─────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"mono",    suffix1:"gamy",     suffix2:null, word:"monogamy"       },
+  { prefix:null,    base:"poly",    suffix1:"gamy",     suffix2:null, word:"polygamy"       },
+
+  // ── -chrome ───────────────────────────────────────────────────────────────
+  { prefix:null,    base:"mono",    suffix1:"chrome",   suffix2:null, word:"monochrome"     },
+  { prefix:null,    base:"poly",    suffix1:"chrome",   suffix2:null, word:"polychrome"     },
+
+  // ── -hedron ───────────────────────────────────────────────────────────────
+  { prefix:null,    base:"poly",    suffix1:"hedron",   suffix2:null, word:"polyhedron"     },
+  { prefix:null,    base:"tetra",   suffix1:"hedron",   suffix2:null, word:"tetrahedron"    },
+
+  // ── -phone (extra) ────────────────────────────────────────────────────────
+  { prefix:null,    base:"mega",    suffix1:"phone",    suffix2:null, word:"megaphone"      },
+
+  // ── -nym ──────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"homo",    suffix1:"nym",      suffix2:null, word:"homonym"        },
+  { prefix:null,    base:"acro",    suffix1:"nym",      suffix2:null, word:"acronym"        },
+
+  // ── -dox ──────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"ortho",   suffix1:"dox",      suffix2:null, word:"orthodox"       },
+  { prefix:null,    base:"para",    suffix1:"dox",      suffix2:null, word:"paradox"        },
+
+  // ── -lysis ────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"hydro",   suffix1:"lysis",    suffix2:null, word:"hydrolysis"     },
+  { prefix:null,    base:"electro", suffix1:"lysis",    suffix2:null, word:"electrolysis"   },
+  { prefix:null,    base:"ana",     suffix1:"lysis",    suffix2:null, word:"analysis"       },
+  { prefix:null,    base:"para",    suffix1:"lysis",    suffix2:null, word:"paralysis"      },
+  { prefix:null,    base:"dia",     suffix1:"lysis",    suffix2:null, word:"dialysis"       },
+  { prefix:null,    base:"cata",    suffix1:"lysis",    suffix2:null, word:"catalysis"      },
+
+  // ── -pathy ────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"tele",    suffix1:"pathy",    suffix2:null, word:"telepathy"      },
+  { prefix:null,    base:"socio",   suffix1:"pathy",    suffix2:null, word:"sociopathy"     },
+
+  // ── -mancy ────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"pyro",    suffix1:"mancy",    suffix2:null, word:"pyromancy"      },
+  { prefix:null,    base:"geo",     suffix1:"mancy",    suffix2:null, word:"geomancy"       },
+
+  // ── -pod ──────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"gastro",  suffix1:"pod",      suffix2:null, word:"gastropod"      },
+  { prefix:null,    base:"arthro",  suffix1:"pod",      suffix2:null, word:"arthropod"      },
+
+  // ── -nomy (extra) ─────────────────────────────────────────────────────────
+  { prefix:null,    base:"gastro",  suffix1:"nomy",     suffix2:null, word:"gastronomy"     },
+
+  // ── -kinesis ──────────────────────────────────────────────────────────────
+  { prefix:null,    base:"tele",    suffix1:"kinesis",  suffix2:null, word:"telekinesis"    },
+
+  // ── -scope (extra) ────────────────────────────────────────────────────────
+  { prefix:null,    base:"gyro",    suffix1:"scope",    suffix2:null, word:"gyroscope"      },
+
+  // ── -plasm ────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"proto",   suffix1:"plasm",    suffix2:null, word:"protoplasm"     },
+
+  // ── -sophy ────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"theo",    suffix1:"sophy",    suffix2:null, word:"theosophy"      },
+
+  // ── -ology (extra) ────────────────────────────────────────────────────────
+  { prefix:null,    base:"soci",    suffix1:"ology",    suffix2:null, word:"sociology"      },
+  { prefix:null,    base:"neur",    suffix1:"ology",    suffix2:null, word:"neurology"      },
+  { prefix:null,    base:"entom",   suffix1:"ology",    suffix2:null, word:"entomology"     },
+  { prefix:null,    base:"ornith",  suffix1:"ology",    suffix2:null, word:"ornithology"    },
+
+  // ── -cide ─────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"herbi",   suffix1:"cide",     suffix2:null, word:"herbicide"      },
+
+  // ── -type (extra) ─────────────────────────────────────────────────────────
+  { prefix:null,    base:"geno",    suffix1:"type",     suffix2:null, word:"genotype"       },
+  { prefix:null,    base:"arch",    suffix1:"type",     suffix2:null, word:"archetype"      },
+
+  // ── -tomy ─────────────────────────────────────────────────────────────────
+  { prefix:null,    base:"ana",     suffix1:"tomy",     suffix2:null, word:"anatomy"        },
+
+  // ── -cracy (extra) ────────────────────────────────────────────────────────
+  { prefix:null,    base:"techno",  suffix1:"cracy",    suffix2:null, word:"technocracy"    },
+
+  // ── -gen (used as suffix) ─────────────────────────────────────────────────
+  { prefix:null,    base:"oxy",     suffix1:"gen",      suffix2:null, word:"oxygen"         },
+  { prefix:null,    base:"nitro",   suffix1:"gen",      suffix2:null, word:"nitrogen"       },
+
+  // ── prefix + base (extra) ────────────────────────────────────────────────
+  { prefix:"psycho",base:"path",    suffix1:null,       suffix2:null, word:"psychopath"     },
+  { prefix:"pyro",  base:"gen",     suffix1:null,       suffix2:null, word:"pyrogen"        },
+
+  // ── prefix + base + suffix ────────────────────────────────────────────────
+  { prefix:"geo",   base:"morph",   suffix1:"ology",    suffix2:null, word:"geomorphology"  },
+  { prefix:"micro", base:"bio",     suffix1:"ology",    suffix2:null, word:"microbiology"   },
+  { prefix:"neuro", base:"path",    suffix1:"ology",    suffix2:null, word:"neuropathology" },
+  { prefix:"psycho",base:"path",    suffix1:"ology",    suffix2:null, word:"psychopathology"},
+  { prefix:"geo",   base:"chron",   suffix1:"ology",    suffix2:null, word:"geochronology"  },
+  { prefix:"neuro", base:"bio",     suffix1:"ology",    suffix2:null, word:"neurobiology"   },
+
+];
+
 // ── EXPORT ────────────────────────────────────────────────────────────────────
 
 window.WL_EXTENSION = {
   prefixes:        EXT_PREFIXES,
   suffixes:        EXT_SUFFIXES,
-  bases:           EXT_BASES,
+  bases:           ALL_EXT_BASES,
+  validCombos:     EXT_VALID_COMBOS,
   meaningPrefixes: EXT_MEANING_PREFIXES,
   meaningSuffixes: EXT_MEANING_SUFFIXES,
   missions:        EXT_MISSIONS,
@@ -622,7 +860,8 @@ window.WL_EXTENSION = {
 console.log("[Word Lab] Extension data loaded — " +
   EXT_PREFIXES.length        + " prefixes, " +
   EXT_SUFFIXES.length        + " suffixes, " +
-  EXT_BASES.length           + " bases, " +
+  ALL_EXT_BASES.length       + " bases, " +
+  EXT_VALID_COMBOS.length    + " valid combos, " +
   EXT_MISSIONS.length        + " missions, " +
   EXT_SYLLABLE_WORDS.length  + " syllable words, " +
   EXT_PHONEME_WORDS.length   + " phoneme words, " +
