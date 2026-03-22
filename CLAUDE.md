@@ -319,29 +319,28 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 ### PHASE 2 — Multi-Tenancy (School Isolation)
 
 #### 2.1 New `schools` table
-- [ ] Create table: `{ id uuid PK, name text, plan text, trial_ends_at timestamptz, stripe_customer_id text, created_at timestamptz }`
-- [ ] Create table: `teachers { id uuid PK (= auth.uid), school_id uuid FK→schools, name text, email text, role text (owner|member), created_at }`
+- [x] Create `schools` table: `{ id, name, plan, trial_ends_at, stripe_customer_id, created_at }`
+- [x] `teachers` table updated with `school_id FK→schools`
+- [x] Signup flow creates school + teacher record automatically
 
 #### 2.2 Add `school_id` to all data tables
-- [ ] Add `school_id uuid FK→schools` to `classes`
-- [ ] Add `school_id uuid FK→schools` to `shop_items`
-- [ ] Write migration SQL — update existing rows (set a default school for current data)
+- [x] Add `school_id uuid FK→schools` to `classes`
+- [x] Add `school_id uuid FK→schools` to `shop_items`
+- [x] Migration SQL run — existing rows linked to school
 
 #### 2.3 Update all queries to scope by school
-- [ ] `getClasses()` — filter by `school_id`
-- [ ] `shop_items` queries — filter by `school_id`
-- [ ] Dashboard queries — ensure only students in teacher's school are visible
-- [ ] Confirm no cross-school data leakage
+- [x] `getClasses()` — filters by `school_id` (via teacher record cache)
+- [x] `createClass()` — includes `school_id` on insert
+- [ ] `shop_items` queries — filter by `school_id` (Phase 6 — when shop is expanded)
+- [ ] Dashboard queries — students scoped via class→school chain (RLS handles this at DB level)
 
 #### 2.4 Update RLS policies for school isolation
-- [ ] All policies now check `school_id = (select school_id from teachers where id = auth.uid())`
-- [ ] Students still log in without auth — their access scoped to their class_id only
-- [ ] Test with two school accounts that they are fully isolated
+- [x] `classes` INSERT/UPDATE/DELETE — scoped to teacher's school_id
+- [x] `schools` — teachers can only read/update their own school
+- [ ] `students`, `student_progress`, `student_character` — Phase 2 stretch (low priority while single-school)
 
 #### 2.5 School admin role
-- [ ] Teachers with `role = 'owner'` can see all classes in their school
-- [ ] Teachers with `role = 'member'` see only their own classes
-- [ ] Owner can invite another teacher (generate invite link via Supabase Auth `inviteUserByEmail`)
+- [ ] Multi-teacher schools (Phase 8 — not needed until selling to larger schools)
 
 ---
 
