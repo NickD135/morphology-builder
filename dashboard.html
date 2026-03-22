@@ -339,6 +339,13 @@
           <button class="rewardActBtn" onclick="giveReward('item')">Unlock Item</button>
         </div>
       </div>
+      <div class="rewardSection" id="rewardCustomSection">
+        <div class="rewardSectionTitle">🖼️ Custom Items <span id="rewardCustomLoading" style="font-size:10px;color:var(--muted);font-weight:700;">(loading…)</span></div>
+        <div class="rewardRow">
+          <select id="rewardCustomId"><option value="">— Select custom item —</option></select>
+          <button class="rewardActBtn" onclick="giveReward('custom')">Unlock Item</button>
+        </div>
+      </div>
       <div id="rewardStatus" style="margin-top:4px;font-size:13px;font-weight:800;text-align:center;min-height:20px;"></div>
     </div>
   </div>
@@ -1319,7 +1326,7 @@ const _REWARD_ITEMS = [
   {id:'stars',         name:'Stars Pattern',           icon:'⭐'},
 ];
 
-function openRewardModal(studentId){
+async function openRewardModal(studentId){
   const student = _studentMap[studentId];
   if(!student) return;
   _rewardStudentId = studentId;
@@ -1339,7 +1346,32 @@ function openRewardModal(studentId){
   itmSel.innerHTML = '<option value="">— Select item —</option>' +
     _REWARD_ITEMS.map(i=>`<option value="${i.id}">${i.icon} ${i.name}</option>`).join('');
 
+  // Load custom shop items
+  const customSel = document.getElementById('rewardCustomId');
+  const customLoading = document.getElementById('rewardCustomLoading');
+  customSel.innerHTML = '<option value="">— Loading… —</option>';
+  customLoading.textContent = '(loading…)';
   document.getElementById('rewardModal').classList.remove('hidden');
+
+  try {
+    const { data, error } = await dbSb().from('shop_items').select('id,name,item_type,rarity,image_data').eq('is_active', true);
+    if(error) throw error;
+    const items = data || [];
+    if(items.length){
+      customSel.innerHTML = '<option value="">— Select custom item —</option>' +
+        items.map(i=>{
+          const rarityLabel = i.rarity ? ` (${i.rarity})` : '';
+          return `<option value="${i.id}">${i.name}${rarityLabel} — ${i.item_type||'item'}</option>`;
+        }).join('');
+      customLoading.textContent = `(${items.length} item${items.length!==1?'s':''})`;
+    } else {
+      customSel.innerHTML = '<option value="">— No custom items yet —</option>';
+      customLoading.textContent = '(none)';
+    }
+  } catch(e){
+    customSel.innerHTML = '<option value="">— Failed to load —</option>';
+    customLoading.textContent = '(error)';
+  }
 }
 
 function closeRewardModal(){
@@ -1395,6 +1427,13 @@ async function giveReward(type){
       if(!owned.includes(id)) owned.push(id);
       updates.scientist = Object.assign({}, sci, { owned });
       _setRewardStatus(`Item "${id}" unlocked ✓`);
+    } else if(type === 'custom'){
+      const id = document.getElementById('rewardCustomId').value;
+      if(!id) throw new Error('Please select a custom item');
+      const ownId = 'custom_' + id;
+      if(!owned.includes(ownId)) owned.push(ownId);
+      updates.scientist = Object.assign({}, sci, { owned });
+      _setRewardStatus(`Custom item unlocked ✓`);
     }
 
     if(Object.keys(updates).length){
