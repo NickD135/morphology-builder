@@ -121,8 +121,21 @@
     .exportBtn{ border:2px solid var(--green-line); background:var(--green-soft); color:var(--green-text); font-weight:800; font-size:13px; padding:10px 18px; border-radius:14px; cursor:pointer; transition:all .15s; }
     .exportBtn:hover{ background:var(--green-line); }
 
-    .classInfo{ font-size:14px; font-weight:700; color:var(--muted); margin-bottom:20px; }
+    .classInfo{ font-size:14px; font-weight:700; color:var(--muted); margin-bottom:12px; display:flex; align-items:center; flex-wrap:wrap; gap:12px; }
     .classInfo strong{ color:#312e81; }
+    /* Mode toggle */
+    .modeToggle{ display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none; margin-left:4px; }
+    .modeToggle .track{ width:40px; height:22px; border-radius:11px; background:#cbd5e1; position:relative; transition:background .2s; flex-shrink:0; }
+    .modeToggle .track.on{ background:var(--indigo); }
+    .modeToggle .thumb{ width:16px; height:16px; border-radius:50%; background:#fff; position:absolute; top:3px; left:3px; transition:left .2s; box-shadow:0 1px 3px rgba(0,0,0,.25); }
+    .modeToggle .track.on .thumb{ left:21px; }
+    .modeToggle .lbl{ font-size:12px; font-weight:800; }
+    .modeToggle .lbl.active{ color:var(--indigo); }
+    .modeToggle .lbl.inactive{ color:#94a3b8; }
+    /* Profile page tabs */
+    .profilePageTabs{ display:flex; gap:8px; margin-bottom:16px; border-bottom:2px solid var(--line); padding-bottom:12px; }
+    .profilePageTab{ border:2px solid var(--line); background:#fff; border-radius:10px; padding:8px 16px; font-weight:800; font-size:13px; cursor:pointer; color:var(--muted); transition:all .15s; }
+    .profilePageTab.active{ border-color:var(--indigo-2); background:var(--indigo-soft); color:var(--indigo); }
 
     /* ── Student Profile Modal ── */
     .profileModal{
@@ -319,7 +332,6 @@
     <button class="navTab" onclick="showSection('meaning-mode',this)">🧠 Meaning Mode</button>
     <button class="navTab" onclick="showSection('mission-mode',this)">⚡ Mission Mode</button>
     <button class="navTab" onclick="showSection('root-lab',this)">🧫 Root Lab</button>
-    <button class="navTab" id="extModeTab" onclick="showSection('extension-mode',this)" style="display:none;">🔬 Extension Mode</button>
   </div>
 
   <div id="sectionFlags"></div>
@@ -330,11 +342,11 @@
   <div id="sectionMeaningMode" class="hidden"></div>
   <div id="sectionMissionMode" class="hidden"></div>
   <div id="sectionRootLab" class="hidden"></div>
-  <div id="sectionExtensionMode" class="hidden"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="wordlab-data.js"></script>
+<script src="wordlab-extension-data.js"></script>
 <script>
 // ── Column definitions for each activity ────────────────────────
 const COLUMNS = {
@@ -437,6 +449,85 @@ function setMorphemeFilter(activity, value) {
 }
 let _studentMap = {};
 
+// ── Extension mode state ──────────────────────────────────────────
+let dashboardMode = 'base'; // 'base' | 'extension'
+let extensionData = {}; // { studentId: { activity: { category: {correct,total,totalTime} } } }
+let _extColumnsCache = null;
+
+function buildExtColumns(){
+  const ext = window.WL_EXTENSION;
+  if(!ext) return {};
+  return {
+    'phoneme-splitter':  ['Starter','Level up','Challenge'],
+    'syllable-splitter': ['2 syllables','3 syllables','4+ syllables'],
+    'breakdown-blitz':   (ext.missions||[]).map(m=>m.word),
+    'meaning-mode': [
+      ...(ext.meaningPrefixes||[]).map(p=>'prefix:'+p.id),
+      ...(ext.meaningSuffixes||[]).map(s=>'suffix:'+s.id),
+      ...(ext.meaningBases||[]).map(b=>'base:'+b.id),
+    ],
+    'mission-mode': [
+      ...(ext.meaningPrefixes||[]).map(p=>'prefix:'+p.id),
+      ...(ext.meaningSuffixes||[]).map(s=>'suffix:'+s.id),
+      ...(ext.missionBases||[]).map(b=>'base:'+b.id),
+    ],
+    'sound-sorter': [...new Set((ext.soundWords||[]).map(w=>w.sound))],
+    'root-lab': ['Starter','Level Up','Challenge'],
+  };
+}
+
+function getExtColumns(){
+  if(!_extColumnsCache) _extColumnsCache = buildExtColumns();
+  return _extColumnsCache;
+}
+
+function toggleDashboardMode(isExt){
+  dashboardMode = isExt ? 'extension' : 'base';
+  updateClassInfo();
+  const activities = ['sound-sorter','phoneme-splitter','syllable-splitter','breakdown-blitz','meaning-mode','mission-mode','root-lab'];
+  activities.forEach(a => renderHeatmap(a));
+}
+
+const SUPABASE_URL  = 'https://qutsbcfkgiihcwaktsaz.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dHNiY2ZrZ2lpaGN3YWt0c2F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NDE1NDksImV4cCI6MjA4OTUxNzU0OX0.h1N26KCcyHDrW4FRk6iBNmJUMQcFCYi8eHpOC818B8E';
+let _dbSb = null;
+function dbSb(){ if(!_dbSb) _dbSb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON); return _dbSb; }
+
+async function loadExtensionData(){
+  extensionData = {};
+  if(!currentClass) return;
+  const studentIds = currentClass.students.map(s=>s.id);
+  if(!studentIds.length) return;
+  try {
+    const { data } = await dbSb()
+      .from('student_progress')
+      .select('student_id,activity,category,correct,total,total_time')
+      .in('student_id', studentIds)
+      .eq('is_extension', true);
+    (data||[]).forEach(row => {
+      if(!extensionData[row.student_id]) extensionData[row.student_id]={};
+      if(!extensionData[row.student_id][row.activity]) extensionData[row.student_id][row.activity]={};
+      extensionData[row.student_id][row.activity][row.category] = {
+        correct: row.correct||0, total: row.total||0, totalTime: row.total_time||0
+      };
+    });
+  } catch(e){ console.warn('Extension data load failed', e); }
+}
+
+function updateClassInfo(){
+  if(!currentClass) return;
+  const totalStudents = currentClass.students.length;
+  const isExt = dashboardMode === 'extension';
+  document.getElementById('classInfo').innerHTML =
+    `<span>Showing data for <strong>${currentClass.name}</strong> · ${totalStudents} students · Last updated ${new Date().toLocaleTimeString()}</span>
+     <label class="modeToggle" onclick="toggleDashboardMode(!document.getElementById('extToggleInput').checked)">
+       <span class="lbl ${isExt?'inactive':'active'}">📚 Base</span>
+       <div class="track ${isExt?'on':''}"><div class="thumb"></div></div>
+       <input type="checkbox" id="extToggleInput" ${isExt?'checked':''} style="display:none;">
+       <span class="lbl ${isExt?'active':'inactive'}">🔬 Extension</span>
+     </label>`;
+}
+
 // ── Login ────────────────────────────────────────────────────────
 async function populateClassSelect(){
   const sel = document.getElementById('classSelect');
@@ -522,8 +613,8 @@ async function renderDashboard(){
     <button class="exportBtn" onclick="exportData()" style="align-self:center;">⬇ Export CSV</button>
   `;
 
-  document.getElementById('classInfo').innerHTML =
-    `Showing data for <strong>${currentClass.name}</strong> · ${totalStudents} students · Last updated ${new Date().toLocaleTimeString()}`;
+  updateClassInfo();
+  loadExtensionData(); // load in background — extension toggle will trigger re-render
 
   renderFlags();
   renderHeatmap('sound-sorter');
@@ -533,7 +624,6 @@ async function renderDashboard(){
   renderHeatmap('meaning-mode');
   renderHeatmap('mission-mode');
   renderHeatmap('root-lab');
-  renderExtensionProgress();
 }
 
 function showSection(name, btn){
@@ -541,7 +631,7 @@ function showSection(name, btn){
   btn.classList.add('active');
   // Hide all sections dynamically
   ['sectionFlags','sectionSoundSorter','sectionPhonemeSplitter','sectionSyllableSplitter',
-   'sectionBreakdownBlitz','sectionMeaningMode','sectionMissionMode','sectionRootLab','sectionExtensionMode'].forEach(function(id){
+   'sectionBreakdownBlitz','sectionMeaningMode','sectionMissionMode','sectionRootLab'].forEach(function(id){
     var el = document.getElementById(id);
     if(el) el.classList.add('hidden');
   });
@@ -555,7 +645,6 @@ function showSection(name, btn){
     'meaning-mode':'sectionMeaningMode',
     'mission-mode':'sectionMissionMode',
     'root-lab':'sectionRootLab',
-    'extension-mode':'sectionExtensionMode',
   };
   const el = document.getElementById(map[name]);
   if(el) el.classList.remove('hidden');
@@ -645,7 +734,8 @@ function renderHeatmap(activity){
   const container = document.getElementById(sectionMap[activity]);
   if(!container) return;
 
-  const allColumns = COLUMNS[activity] || [];
+  const isExt = dashboardMode === 'extension';
+  const allColumns = isExt ? (getExtColumns()[activity] || []) : (COLUMNS[activity] || []);
   const students = currentClass.students;
   const isTTR = (activity === 'meaning-mode' || activity === 'mission-mode');
   const isMorpheme = isTTR;
@@ -655,6 +745,11 @@ function renderHeatmap(activity){
   const columns = isMorpheme
     ? allColumns.filter(c => c.startsWith(activeType + ':'))
     : allColumns;
+
+  if(isExt && !columns.length){
+    container.innerHTML = `<div class="panel"><div class="panelInner"><div class="noFlags" style="background:#eef2ff;border-color:#c7d2fe;color:#4338ca;">🔬 No extension data recorded yet for ${titleMap[activity]||activity}.</div></div></div>`;
+    return;
+  }
 
   // Strip "type:" prefix from label for morpheme mode
   const colLabel = col => isMorpheme ? col.replace(/^[^:]+:/, '') : col;
@@ -698,7 +793,9 @@ function renderHeatmap(activity){
   ).join('');
 
   const rows = students.map(student => {
-    const actData = (student.results || {})[activity] || {};
+    const actData = isExt
+      ? ((extensionData[student.id]||{})[activity]||{})
+      : ((student.results||{})[activity]||{});
     const cells = columns.map(col => {
       const result = actData[col] || null;
       const pct = result ? WordLabData.getAccuracy(result) : null;
@@ -739,7 +836,7 @@ function renderHeatmap(activity){
 
   container.innerHTML = `
     <div class="panel"><div class="panelInner">
-      <div class="panelTitle">${titleMap[activity] || activity}</div>
+      <div class="panelTitle">${titleMap[activity] || activity}${isExt ? ' <span style="background:#4338ca;color:#e0e7ff;font-size:9px;font-weight:900;padding:2px 8px;border-radius:8px;letter-spacing:.08em;margin-left:8px;vertical-align:middle;">🔬 EXTENSION</span>' : ''}</div>
       ${morphemeFilterUI}
       ${legend}
       <div class="heatmapWrap">
@@ -760,123 +857,6 @@ function renderHeatmap(activity){
   `;
 }
 
-// ── Extension Mode Progress ───────────────────────────────────────
-async function renderExtensionProgress(){
-  const container = document.getElementById('sectionExtensionMode');
-  if(!container) return;
-
-  const extStudents = (currentClass.students || []).filter(s => s.extension_mode);
-
-  // Show/hide tab
-  const tab = document.getElementById('extModeTab');
-  if(tab) tab.style.display = extStudents.length ? '' : 'none';
-
-  if(!extStudents.length){
-    container.innerHTML = '';
-    return;
-  }
-
-  const EXT_BADGE = '<span style="background:#4338ca;color:#e0e7ff;font-size:9px;font-weight:900;padding:2px 7px;border-radius:10px;letter-spacing:.08em;margin-left:6px;text-transform:uppercase;">EXT</span>';
-
-  // Fetch extension attempts for each student
-  const SUPABASE_URL  = 'https://qutsbcfkgiihcwaktsaz.supabase.co';
-  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dHNiY2ZrZ2lpaGN3YWt0c2F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NDE1NDksImV4cCI6MjA4OTUxNzU0OX0.h1N26KCcyHDrW4FRk6iBNmJUMQcFCYi8eHpOC818B8E';
-  let _extSb = null;
-  function extSb(){ if(!_extSb) _extSb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON); return _extSb; }
-
-  const studentIds = extStudents.map(s => s.id);
-  let extRows = [];
-  try {
-    const { data } = await extSb()
-      .from('student_progress')
-      .select('student_id, activity, category, correct, total')
-      .in('student_id', studentIds)
-      .eq('is_extension', true);
-    extRows = data || [];
-  } catch(e) { console.warn('Extension progress fetch failed', e); }
-
-  // Group by student
-  const byStudent = {};
-  extRows.forEach(row => {
-    if(!byStudent[row.student_id]) byStudent[row.student_id] = {};
-    if(!byStudent[row.student_id][row.activity]) byStudent[row.student_id][row.activity] = [];
-    byStudent[row.student_id][row.activity].push(row);
-  });
-
-  const actLabel = {
-    'sound-sorter':'Sound Sorter','phoneme-splitter':'Phoneme Splitter',
-    'syllable-splitter':'Syllable Splitter','breakdown-blitz':'Breakdown Blitz',
-    'meaning-mode':'Meaning Mode','mission-mode':'Mission Mode','root-lab':'Root Lab'
-  };
-
-  function rowColour(pct){
-    if(pct >= 70) return 'background:#f0fdf4;border-left:3px solid #16a34a;';
-    if(pct >= 40) return 'background:#fffbeb;border-left:3px solid #d97706;';
-    return 'background:#fef2f2;border-left:3px solid #dc2626;';
-  }
-
-  const cards = extStudents.map(student => {
-    const studentData = byStudent[student.id] || {};
-    const activities = Object.keys(studentData);
-
-    if(!activities.length){
-      return `<div class="panel" style="border-color:#c7d2fe;">
-        <div class="panelInner">
-          <div style="font-size:16px;font-weight:900;color:#312e81;margin-bottom:8px;">
-            ${student.name}${EXT_BADGE}
-          </div>
-          <div style="color:#94a3b8;font-size:14px;font-weight:700;padding:12px 0;">No extension attempts recorded yet.</div>
-        </div>
-      </div>`;
-    }
-
-    const rows = activities.map(act => {
-      const cats = studentData[act];
-      return cats.map(cat => {
-        const pct = cat.total > 0 ? Math.round((cat.correct / cat.total) * 100) : 0;
-        return `<tr style="${rowColour(pct)}">
-          <td style="padding:6px 10px;font-size:12px;font-weight:700;">${actLabel[act]||act}</td>
-          <td style="padding:6px 10px;font-size:12px;color:#475569;">${cat.category}</td>
-          <td style="padding:6px 10px;font-size:12px;font-weight:800;">${cat.total}</td>
-          <td style="padding:6px 10px;font-size:12px;font-weight:800;color:#16a34a;">${cat.correct}</td>
-          <td style="padding:6px 10px;font-size:13px;font-weight:900;color:${pct>=70?'#16a34a':pct>=40?'#d97706':'#dc2626'};">${pct}%</td>
-        </tr>`;
-      }).join('');
-    }).join('');
-
-    return `<div class="panel" style="border-color:#c7d2fe;margin-bottom:16px;">
-      <div class="panelInner">
-        <div style="font-size:16px;font-weight:900;color:#312e81;margin-bottom:12px;">
-          ${student.name}${EXT_BADGE}
-        </div>
-        <div style="overflow-x:auto;">
-          <table style="border-collapse:collapse;width:100%;font-family:'Lexend',sans-serif;">
-            <thead>
-              <tr style="border-bottom:2px solid #e2e8f0;">
-                <th style="padding:6px 10px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#64748b;text-align:left;">Activity</th>
-                <th style="padding:6px 10px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#64748b;text-align:left;">Category</th>
-                <th style="padding:6px 10px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#64748b;text-align:left;">Attempts</th>
-                <th style="padding:6px 10px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#64748b;text-align:left;">Correct</th>
-                <th style="padding:6px 10px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#64748b;text-align:left;">Accuracy</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-
-  container.innerHTML = `
-    <div class="panel">
-      <div class="panelInner">
-        <div class="panelTitle">🔬 Extension Mode Progress${EXT_BADGE}</div>
-        <p style="color:#64748b;font-size:13px;font-weight:700;margin:0 0 20px;">Showing attempts recorded while extension mode was active.</p>
-      </div>
-    </div>
-    ${cards}
-  `;
-}
 
 // ── Tooltip ──────────────────────────────────────────────────────
 function showTip(event, html){
@@ -1007,35 +987,84 @@ function showStudentProfile(studentId){
   const missionSfx     = COLUMNS['mission-mode'].filter(c => c.startsWith('suffix:'));
   const missionBases   = COLUMNS['mission-mode'].filter(c => c.startsWith('base:'));
 
+  // Build extension profile content
+  const extCols = getExtColumns();
+  const extSd = extensionData[student.id] || {};
+  const hasExtData = Object.keys(extSd).length > 0;
+
+  function extProfileSection(label, colorClass, activityKey, cols){
+    const actData = extSd[activityKey] || {};
+    const cells = cols.map(col => {
+      const r = actData[col] || null;
+      const lbl = shortLabel(col);
+      return `<div title="${col}">${makeProfileCell(r, false)}<div style="font-size:7px;color:var(--muted);font-weight:700;text-align:center;margin-top:1px;width:30px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${lbl}</div></div>`;
+    }).join('');
+    return `<div class="profileSection">
+      <div class="profileSectionLabel ${colorClass}">${label}</div>
+      <div class="profileSectionCells">${cells}</div>
+    </div>`;
+  }
+
+  const extMeaningPfx   = (extCols['meaning-mode']||[]).filter(c=>c.startsWith('prefix:'));
+  const extMeaningSfx   = (extCols['meaning-mode']||[]).filter(c=>c.startsWith('suffix:'));
+  const extMeaningBases = (extCols['meaning-mode']||[]).filter(c=>c.startsWith('base:'));
+  const extMissionPfx   = (extCols['mission-mode']||[]).filter(c=>c.startsWith('prefix:'));
+  const extMissionSfx   = (extCols['mission-mode']||[]).filter(c=>c.startsWith('suffix:'));
+  const extMissionBases = (extCols['mission-mode']||[]).filter(c=>c.startsWith('base:'));
+
+  const extPageHtml = hasExtData ? `
+    <div class="sectionGroup">🔤 Extension — Sounds</div>
+    ${extProfileSection('Sound Sorter', 'tl', 'sound-sorter', extCols['sound-sorter']||[])}
+    <div class="sectionGroup">🔊 Extension — Phoneme &amp; Syllable</div>
+    ${extProfileSection('Phoneme', 'grn', 'phoneme-splitter', extCols['phoneme-splitter']||[])}
+    ${extProfileSection('Syllable', 'grn', 'syllable-splitter', extCols['syllable-splitter']||[])}
+    <div class="sectionGroup">🧠 Extension — Meaning &amp; Mission</div>
+    ${extProfileSection('Meaning<br>Prefixes', 'pur', 'meaning-mode', extMeaningPfx)}
+    ${extProfileSection('Meaning<br>Suffixes', 'pur', 'meaning-mode', extMeaningSfx)}
+    ${extProfileSection('Meaning<br>Bases',    'pur', 'meaning-mode', extMeaningBases)}
+    ${extProfileSection('Mission<br>Prefixes', 'amb', 'mission-mode', extMissionPfx)}
+    ${extProfileSection('Mission<br>Suffixes', 'amb', 'mission-mode', extMissionSfx)}
+    ${extProfileSection('Mission<br>Bases',    'amb', 'mission-mode', extMissionBases)}
+    <div class="sectionGroup">🧩 Extension — Breakdown Blitz</div>
+    ${extProfileSection('Breakdown<br>Blitz', 'red', 'breakdown-blitz', extCols['breakdown-blitz']||[])}
+  ` : `<div style="padding:24px;text-align:center;color:#94a3b8;font-size:14px;font-weight:700;">No extension mode data recorded yet for this student.</div>`;
+
   document.getElementById('profileBody').innerHTML = `
-    ${statsHtml}
-    ${flagsHtml}
-    <div class="sectionGroup">🔤 Sounds</div>
-    ${profileSection('Sound Sorter<br>Vowels',     'tl',  'sound-sorter',      vowelCols,                    false)}
-    ${profileSection('Sound Sorter<br>Consonants', 'tl',  'sound-sorter',      consoCols,                    false)}
-    <div class="sectionGroup">🔊 Phoneme &amp; Syllable</div>
-    ${profileSection('Phoneme<br>Speed',           'grn', 'phoneme-splitter',  COLUMNS['phoneme-splitter'],  true)}
-    ${profileSection('Syllable<br>Speed',          'grn', 'syllable-splitter', COLUMNS['syllable-splitter'], true)}
-    <div class="sectionGroup">🧠 Meaning &amp; Mission</div>
-    ${profileSection('Meaning<br>Prefixes',        'pur', 'meaning-mode',      meaningPfx,                   false)}
-    ${profileSection('Meaning<br>Suffixes',        'pur', 'meaning-mode',      meaningSfx,                   false)}
-    ${profileSection('Meaning<br>Bases',           'pur', 'meaning-mode',      meaningBases,                 false)}
-    ${profileSection('Mission<br>Prefixes',        'amb', 'mission-mode',      missionPfx,                   false)}
-    ${profileSection('Mission<br>Suffixes',        'amb', 'mission-mode',      missionSfx,                   false)}
-    ${profileSection('Mission<br>Bases',           'amb', 'mission-mode',      missionBases,                 false)}
-    <div class="sectionGroup">🧩 Blitz &amp; Root Lab</div>
-    ${profileSection('Breakdown<br>Blitz',         'red', 'breakdown-blitz',   COLUMNS['breakdown-blitz'],   false)}
-    ${profileSection('Root Lab',                   'red', 'root-lab',          COLUMNS['root-lab'],          false)}
-    <div class="sectionGroup" style="color:var(--muted);">⚡ Speed Mode</div>
-    <div class="profileSection">
-      <div class="profileSectionLabel" style="background:var(--muted);">Speed<br>Mode</div>
-      <div class="profileSectionCells" style="align-items:center;">
-        <div style="font-size:12px;color:var(--muted);font-weight:700;padding:4px 0;">No data recorded yet — speed mode tracking coming soon.</div>
-      </div>
+    <div class="profilePageTabs">
+      <button class="profilePageTab active" id="tabBase" onclick="setProfilePage('base')">📚 Base Mode</button>
+      <button class="profilePageTab" id="tabExt" onclick="setProfilePage('extension')">🔬 Extension${hasExtData ? '' : ' <span style=\'font-size:10px;color:#94a3b8;\'>(no data)</span>'}</button>
     </div>
+    <div id="profilePageBase">
+      ${statsHtml}
+      ${flagsHtml}
+      <div class="sectionGroup">🔤 Sounds</div>
+      ${profileSection('Sound Sorter<br>Vowels',     'tl',  'sound-sorter',      vowelCols,                    false)}
+      ${profileSection('Sound Sorter<br>Consonants', 'tl',  'sound-sorter',      consoCols,                    false)}
+      <div class="sectionGroup">🔊 Phoneme &amp; Syllable</div>
+      ${profileSection('Phoneme<br>Speed',           'grn', 'phoneme-splitter',  COLUMNS['phoneme-splitter'],  true)}
+      ${profileSection('Syllable<br>Speed',          'grn', 'syllable-splitter', COLUMNS['syllable-splitter'], true)}
+      <div class="sectionGroup">🧠 Meaning &amp; Mission</div>
+      ${profileSection('Meaning<br>Prefixes',        'pur', 'meaning-mode',      meaningPfx,                   false)}
+      ${profileSection('Meaning<br>Suffixes',        'pur', 'meaning-mode',      meaningSfx,                   false)}
+      ${profileSection('Meaning<br>Bases',           'pur', 'meaning-mode',      meaningBases,                 false)}
+      ${profileSection('Mission<br>Prefixes',        'amb', 'mission-mode',      missionPfx,                   false)}
+      ${profileSection('Mission<br>Suffixes',        'amb', 'mission-mode',      missionSfx,                   false)}
+      ${profileSection('Mission<br>Bases',           'amb', 'mission-mode',      missionBases,                 false)}
+      <div class="sectionGroup">🧩 Blitz &amp; Root Lab</div>
+      ${profileSection('Breakdown<br>Blitz',         'red', 'breakdown-blitz',   COLUMNS['breakdown-blitz'],   false)}
+      ${profileSection('Root Lab',                   'red', 'root-lab',          COLUMNS['root-lab'],          false)}
+    </div>
+    <div id="profilePageExt" class="hidden">${extPageHtml}</div>
   `;
 
   document.getElementById('profileModal').classList.remove('hidden');
+}
+
+function setProfilePage(page){
+  document.getElementById('profilePageBase').classList.toggle('hidden', page !== 'base');
+  document.getElementById('profilePageExt').classList.toggle('hidden', page !== 'extension');
+  document.getElementById('tabBase').classList.toggle('active', page === 'base');
+  document.getElementById('tabExt').classList.toggle('active', page === 'extension');
 }
 
 function closeStudentProfile(){
