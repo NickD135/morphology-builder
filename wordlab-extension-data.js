@@ -330,6 +330,96 @@ const EXT_MEANING_SUFFIXES = [
   {id:"ward",    form:"ward",    meaning:"direction or towards"},
 ];
 
+// ── MEANING-MODE: BASE POOL ───────────────────────────────────────────────────
+// Used for the "base" quiz mode in meaning-mode — student identifies which
+// root/combining form matches a given meaning.
+
+const EXT_MEANING_BASES = [
+  // Greek roots
+  {id:"anthrop", form:"anthrop", meaning:"human being"},
+  {id:"bio",     form:"bio",     meaning:"life"},
+  {id:"chron",   form:"chron",   meaning:"time"},
+  {id:"cosm",    form:"cosm",    meaning:"universe or order"},
+  {id:"dem",     form:"dem",     meaning:"people"},
+  {id:"derm",    form:"derm",    meaning:"skin"},
+  {id:"dyn",     form:"dyn",     meaning:"power or force"},
+  {id:"gen",     form:"gen",     meaning:"origin or birth"},
+  {id:"geo",     form:"geo",     meaning:"earth"},
+  {id:"morph",   form:"morph",   meaning:"form or shape"},
+  {id:"path",    form:"path",    meaning:"feeling or disease"},
+  {id:"phil",    form:"phil",    meaning:"love or fondness"},
+  {id:"phob",    form:"phob",    meaning:"fear"},
+  {id:"psych",   form:"psych",   meaning:"mind or soul"},
+  {id:"soph",    form:"soph",    meaning:"wisdom or knowledge"},
+  {id:"therm",   form:"therm",   meaning:"heat"},
+  {id:"tox",     form:"tox",     meaning:"poison"},
+  {id:"zoo",     form:"zoo",     meaning:"animal or living being"},
+  // Latin roots
+  {id:"aqu",     form:"aqu",     meaning:"water"},
+  {id:"capit",   form:"capit",   meaning:"head or chief"},
+  {id:"corp",    form:"corp",    meaning:"body"},
+  {id:"fin",     form:"fin",     meaning:"end or limit"},
+  {id:"flu",     form:"flu",     meaning:"flow"},
+  {id:"man",     form:"man",     meaning:"hand"},
+  {id:"mar",     form:"mar",     meaning:"sea"},
+  {id:"mort",    form:"mort",    meaning:"death"},
+  {id:"nov",     form:"nov",     meaning:"new"},
+  {id:"sol",     form:"sol",     meaning:"sun or alone"},
+  {id:"termin",  form:"termin",  meaning:"end or boundary"},
+  {id:"vita",    form:"vita",    meaning:"life"},
+  {id:"voc",     form:"voc",     meaning:"call or voice"},
+  // Combining forms
+  {id:"astro",   form:"astro",   meaning:"star or outer space"},
+  {id:"eco",     form:"eco",     meaning:"environment or household"},
+  {id:"hydro",   form:"hydro",   meaning:"water"},
+  {id:"photo",   form:"photo",   meaning:"light"},
+  {id:"poly",    form:"poly",    meaning:"many or much"},
+  {id:"pyro",    form:"pyro",    meaning:"fire"},
+  {id:"geno",    form:"geno",    meaning:"origin or race"},
+  {id:"oxy",     form:"oxy",     meaning:"sharp or acid"},
+  {id:"techno",  form:"techno",  meaning:"technology or skill"},
+];
+
+// ── MISSION-MODE: PREFIX BASES ────────────────────────────────────────────────
+// For the prefix drag-and-drop game — the base stays still, student drags
+// an extension prefix onto it. validPrefixes lists IDs from EXT_MEANING_PREFIXES.
+
+const EXT_MISSION_BASES = [
+  {id:"logy",   form:"logy",   meaning:"study or science of",         pos:["noun"], validPrefixes:["bio","geo","astro","psycho","neuro","cardio","zoo","eco","socio","cosmo","patho","hydro","techno","morpho","chrono","ethno"]},
+  {id:"graphy", form:"graphy", meaning:"writing or visual recording",  pos:["noun"], validPrefixes:["bio","auto","geo","photo","litho","tele","crypto","ethno"]},
+  {id:"scope",  form:"scope",  meaning:"instrument for viewing",       pos:["noun"], validPrefixes:["tele","micro","peri"]},
+  {id:"phone",  form:"phone",  meaning:"device for sound or voice",    pos:["noun"], validPrefixes:["tele","micro","mega"]},
+  {id:"naut",   form:"naut",   meaning:"voyager or traveller",         pos:["noun"], validPrefixes:["astro","cosmo"]},
+  {id:"cracy",  form:"cracy",  meaning:"system of rule or power",      pos:["noun"], validPrefixes:["demo","techno","auto"]},
+  {id:"gram",   form:"gram",   meaning:"written or drawn record",      pos:["noun"], validPrefixes:["tele","mono","electro"]},
+  {id:"pathy",  form:"pathy",  meaning:"feeling or disease",           pos:["noun"], validPrefixes:["tele","psycho"]},
+  {id:"nomy",   form:"nomy",   meaning:"system of rules or management",pos:["noun"], validPrefixes:["astro","eco","gastro"]},
+  {id:"meter",  form:"meter",  meaning:"instrument for measuring",     pos:["noun"], validPrefixes:["thermo","hydro","chrono"]},
+  {id:"phobia", form:"phobia", meaning:"extreme fear of something",    pos:["noun"], validPrefixes:["techno","hydro"]},
+];
+
+// ── MISSION-MODE: SUFFIX BASES ────────────────────────────────────────────────
+// For the suffix drag-and-drop game — the combining form stays still, student
+// drags an extension suffix onto it. validSuffixes lists IDs from EXT_MEANING_SUFFIXES.
+
+const EXT_MISSION_SUFFIX_BASES = [
+  {id:"bio",    form:"bio",    meaning:"life",                pos:["noun"], validSuffixes:["ology","graph","type","genesis","lysis"]},
+  {id:"geo",    form:"geo",    meaning:"earth",               pos:["noun"], validSuffixes:["ology","graph","nomy","morph"]},
+  {id:"astro",  form:"astro",  meaning:"star or outer space", pos:["noun"], validSuffixes:["ology","nomy","phile"]},
+  {id:"psycho", form:"psycho", meaning:"mind",                pos:["noun"], validSuffixes:["ology","pathy","sophy"]},
+  {id:"demo",   form:"demo",   meaning:"people",              pos:["noun"], validSuffixes:["cracy","graph"]},
+  {id:"techno", form:"techno", meaning:"technology",          pos:["noun"], validSuffixes:["cracy","ology","phobia","phile"]},
+  {id:"hydro",  form:"hydro",  meaning:"water",               pos:["noun"], validSuffixes:["ology","phobia","lysis","phone"]},
+  {id:"neuro",  form:"neuro",  meaning:"nerve system",        pos:["noun"], validSuffixes:["ology","pathy"]},
+  {id:"photo",  form:"photo",  meaning:"light",               pos:["noun"], validSuffixes:["graph","lysis","type","phone"]},
+  {id:"auto",   form:"auto",   meaning:"self",                pos:["noun"], validSuffixes:["cracy","graph","nomy"]},
+  {id:"tele",   form:"tele",   meaning:"far or at a distance",pos:["noun"], validSuffixes:["phone","scope","gram","graph","pathy"]},
+  {id:"eco",    form:"eco",    meaning:"environment",         pos:["noun"], validSuffixes:["ology","nomy","type"]},
+  {id:"zoo",    form:"zoo",    meaning:"animals",             pos:["noun"], validSuffixes:["ology","morph","phile","type"]},
+  {id:"poly",   form:"poly",   meaning:"many or much",        pos:["noun"], validSuffixes:["graph","gamy","morph"]},
+  {id:"electro",form:"electro",meaning:"electricity",         pos:["noun"], validSuffixes:["lysis","gram","scope","type"]},
+];
+
 // ── BREAKDOWN BLITZ ──────────────────────────────────────────────────────────
 
 const EXT_MISSIONS = [
@@ -849,8 +939,11 @@ window.WL_EXTENSION = {
   suffixes:        EXT_SUFFIXES,
   bases:           ALL_EXT_BASES,
   validCombos:     EXT_VALID_COMBOS,
-  meaningPrefixes: EXT_MEANING_PREFIXES,
-  meaningSuffixes: EXT_MEANING_SUFFIXES,
+  meaningPrefixes:    EXT_MEANING_PREFIXES,
+  meaningSuffixes:    EXT_MEANING_SUFFIXES,
+  meaningBases:       EXT_MEANING_BASES,
+  missionBases:       EXT_MISSION_BASES,
+  missionSuffixBases: EXT_MISSION_SUFFIX_BASES,
   missions:        EXT_MISSIONS,
   syllableWords:   EXT_SYLLABLE_WORDS,
   phonemeWords:    EXT_PHONEME_WORDS,
