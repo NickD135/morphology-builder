@@ -169,12 +169,15 @@
     const err = document.getElementById('upgradeErr');
     err.style.display = 'none';
 
-    // Refresh session to ensure token is valid
-    const { data: { session } } = await _sb.auth.refreshSession();
+    // Get session, refreshing if the access token is expired
+    let { data: { session } } = await _sb.auth.getSession();
     if (!session) {
       window.location.href = 'teacher-login?returnTo=/pricing';
       return;
     }
+    // Force a token refresh so the JWT sent to the edge function is fresh
+    const { data: refreshed } = await _sb.auth.refreshSession({ refresh_token: session.refresh_token });
+    if (refreshed?.session) session = refreshed.session;
 
     btn.disabled = true;
     btn.textContent = 'Loading...';
