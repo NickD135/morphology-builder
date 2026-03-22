@@ -190,6 +190,27 @@ const WordLabData = (() => {
     return newBadges;
   }
 
+  // ── Teacher Auth ──────────────────────────────────────────────
+  async function getTeacherSession() {
+    const { data: { session } } = await sb().auth.getSession();
+    return session ? session.user : null;
+  }
+
+  async function requireTeacherAuth(fallbackUrl) {
+    const { data: { session } } = await sb().auth.getSession();
+    if (!session) {
+      const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = (fallbackUrl || 'teacher-login') + '?returnTo=' + returnTo;
+      return null;
+    }
+    return session.user;
+  }
+
+  async function teacherSignOut() {
+    await sb().auth.signOut();
+    window.location.href = 'teacher-login';
+  }
+
   // ── Classes ───────────────────────────────────────────────────
   async function createClass(name, password, classCode, students) {
     // Check if class_code already taken (case-insensitive)
@@ -201,9 +222,10 @@ const WordLabData = (() => {
     if (existing) {
       throw { code: 'CLASS_CODE_TAKEN', message: 'That class code is already in use. Please choose a different one.' };
     }
+    const { data: { session: _authSess } } = await sb().auth.getSession();
     var { data: cls, error: clsErr } = await sb()
       .from('classes')
-      .insert({ name: name, teacher_password: password, class_code: classCode.toUpperCase() })
+      .insert({ name: name, teacher_password: password, class_code: classCode.toUpperCase(), auth_user_id: _authSess ? _authSess.user.id : null })
       .select('id')
       .single();
     if (clsErr) throw clsErr;
@@ -221,10 +243,13 @@ const WordLabData = (() => {
   }
 
   async function getClasses() {
-    var { data, error } = await sb()
+    const { data: { session: _sess } } = await sb().auth.getSession();
+    let query = sb()
       .from('classes')
       .select('id, name, class_code, created_at, students!students_class_id_fkey(id, name, student_code, extension_mode)')
       .order('name');
+    if (_sess) query = query.eq('auth_user_id', _sess.user.id);
+    var { data, error } = await query;
     if (error) throw error;
     return (data || []).map(function(c) {
       return {
@@ -897,6 +922,7 @@ const WordLabData = (() => {
   }
 
   return {
+    getTeacherSession, requireTeacherAuth, teacherSignOut,
     createClass, getClasses, getClass, verifyPassword,
     addStudent, removeStudent, deleteClass, regenerateStudentCode,
     lookupClassByCode, verifyStudentCode,

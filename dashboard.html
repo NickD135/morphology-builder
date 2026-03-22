@@ -376,30 +376,28 @@
     </div>
     <div style="display:flex;gap:10px;align-items:center;">
       <span id="classNameDisplay" style="font-weight:800;color:#312e81;font-size:14px;"></span>
-      <button class="topBtn" onclick="logout()" id="logoutBtn" style="display:none;">Log out</button>
-      <a href="class-setup.html" class="topBtn">⚙️ Setup</a>
-      <a href="landing.html" class="topBtn" style="background:#334155;">🏠 Home</a>
+      <span id="teacherEmailDisplay" style="font-size:12px;font-weight:700;color:#64748b;"></span>
+      <button class="topBtn" onclick="backToClassPicker()" id="logoutBtn" style="display:none;">← Classes</button>
+      <a href="class-setup" class="topBtn">⚙️ Setup</a>
+      <a href="landing" class="topBtn" style="background:#334155;">🏠 Home</a>
+      <button class="topBtn" style="background:#334155;" onclick="WordLabData.teacherSignOut()">Sign Out</button>
     </div>
   </div>
 </header>
 
-<!-- ── Login ── -->
+<!-- ── Class picker ── -->
 <div id="loginScreen">
   <div class="loginCard">
     <div class="loginIcon">📊</div>
     <div class="loginTitle">Teacher Dashboard</div>
-    <div class="loginSub">Select your class and enter your password to view student data.</div>
-    <div class="loginField">
+    <div class="loginSub" id="loginSub">Loading your classes...</div>
+    <div class="loginField" id="classSelectField" style="display:none;">
       <label>Class</label>
-      <select id="classSelect"><option value="">Loading...</option></select>
+      <select id="classSelect"><option value="">Select a class...</option></select>
     </div>
-    <div class="loginField">
-      <label>Password</label>
-      <input type="password" id="loginPassword" placeholder="Enter class password" onkeydown="if(event.key==='Enter') login()">
-    </div>
-    <div class="loginError" id="loginError">Incorrect password. Try again.</div>
-    <button class="loginBtn" onclick="login()">View Dashboard →</button>
-    <div style="margin-top:16px;font-size:12px;color:var(--muted);">Don't have a class yet? <a href="class-setup.html" style="color:var(--indigo);font-weight:800;">Set one up here →</a></div>
+    <div class="loginError" id="loginError" style="display:none;">Please select a class.</div>
+    <button class="loginBtn" id="loginBtn" onclick="login()" style="display:none;">View Dashboard →</button>
+    <div style="margin-top:16px;font-size:12px;color:var(--muted);">Don't have a class yet? <a href="class-setup" style="color:var(--indigo);font-weight:800;">Set one up here →</a></div>
   </div>
 </div>
 
@@ -619,29 +617,50 @@ function updateClassInfo(){
      </div>`;
 }
 
-// ── Login ────────────────────────────────────────────────────────
-async function populateClassSelect(){
-  const sel = document.getElementById('classSelect');
-  sel.innerHTML = '<option value="">Loading...</option>';
+// ── Auth + class picker ───────────────────────────────────────────
+async function initDashboard(){
+  const user = await WordLabData.requireTeacherAuth();
+  if (!user) return; // redirected
+
+  const emailEl = document.getElementById('teacherEmailDisplay');
+  if (emailEl) emailEl.textContent = user.email;
+
   const classes = await WordLabData.getClasses();
-  if(!classes.length){
-    sel.innerHTML = '<option value="">No classes found — set one up first</option>';
+  const sub = document.getElementById('loginSub');
+
+  if (!classes.length) {
+    sub.textContent = "You don't have any classes yet.";
     return;
   }
-  sel.innerHTML = classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+  // If only one class, load it directly
+  if (classes.length === 1) {
+    currentClass = await WordLabData.getClass(classes[0].id);
+    showDashboard();
+    return;
+  }
+
+  // Multiple classes — show picker
+  sub.textContent = 'Select a class to view student data.';
+  const sel = document.getElementById('classSelect');
+  sel.innerHTML = '<option value="">Select a class...</option>' +
+    classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  document.getElementById('classSelectField').style.display = '';
+  document.getElementById('loginBtn').style.display = '';
 }
 
 async function login(){
   const classId = document.getElementById('classSelect').value;
-  const pass = document.getElementById('loginPassword').value;
-  if(!classId){ alert('Please select a class.'); return; }
-  const ok = await WordLabData.verifyPassword(classId, pass);
-  if(!ok){
+  if (!classId) {
     document.getElementById('loginError').style.display = 'block';
     return;
   }
   document.getElementById('loginError').style.display = 'none';
   currentClass = await WordLabData.getClass(classId);
+  showDashboard();
+}
+
+function showDashboard(){
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('dashboardScreen').classList.remove('hidden');
   document.getElementById('logoutBtn').style.display = 'inline-flex';
@@ -649,13 +668,12 @@ async function login(){
   renderDashboard();
 }
 
-function logout(){
+function backToClassPicker(){
   currentClass = null;
   document.getElementById('loginScreen').classList.remove('hidden');
   document.getElementById('dashboardScreen').classList.add('hidden');
   document.getElementById('logoutBtn').style.display = 'none';
   document.getElementById('classNameDisplay').textContent = '';
-  document.getElementById('loginPassword').value = '';
 }
 
 // ── Render ───────────────────────────────────────────────────────
@@ -1486,7 +1504,7 @@ async function giveReward(type){
 }
 
 // ── Boot ─────────────────────────────────────────────────────────
-populateClassSelect();
+initDashboard();
 </script>
 </body>
 </html>
