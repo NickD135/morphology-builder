@@ -76,6 +76,10 @@
 
   <div id="formSection">
     <div class="field">
+      <label>School Name</label>
+      <input type="text" id="schoolInput" placeholder="e.g. Riverside Primary School" autocomplete="organization">
+    </div>
+    <div class="field">
       <label>Email</label>
       <input type="email" id="emailInput" placeholder="you@school.edu.au" autocomplete="email">
     </div>
@@ -123,6 +127,7 @@
   }
 
   async function signUp() {
+    const school   = document.getElementById('schoolInput').value.trim();
     const email    = document.getElementById('emailInput').value.trim();
     const password = document.getElementById('passwordInput').value;
     const confirm  = document.getElementById('confirmInput').value;
@@ -130,6 +135,7 @@
 
     document.getElementById('errMsg').style.display = 'none';
 
+    if (!school)   { showErr('Please enter your school name.'); return; }
     if (!email)    { showErr('Please enter your email address.'); return; }
     if (!password) { showErr('Please enter a password.'); return; }
     if (password.length < 8) { showErr('Password must be at least 8 characters.'); return; }
@@ -149,7 +155,7 @@
 
     // If session is returned immediately (email confirmation disabled), create school + teacher records
     if (data.session) {
-      await createSchoolAndTeacher(data.session.user.id, email);
+      await createSchoolAndTeacher(data.session.user.id, email, school);
       window.location.href = 'class-setup';
       return;
     }
@@ -160,7 +166,7 @@
     document.getElementById('successBox').style.display = 'block';
   }
 
-  async function createSchoolAndTeacher(authUserId, email) {
+  async function createSchoolAndTeacher(authUserId, email, schoolName) {
     // Check if teacher record already exists (idempotent)
     const { data: existing } = await _sb
       .from('teachers')
@@ -172,7 +178,7 @@
     // Create school
     const { data: school, error: schoolErr } = await _sb
       .from('schools')
-      .insert({ name: 'My School', plan: 'trial' })
+      .insert({ name: schoolName || 'My School', plan: 'trial' })
       .select('id')
       .single();
     if (schoolErr) { console.warn('School creation failed:', schoolErr); return; }
