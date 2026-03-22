@@ -1759,16 +1759,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const GLOBAL_VIABLE_DELAY = 1500; // start background scan after page is interactive
 
   // ─── EXTENSION MODE DATA INJECTION ──────────────────────────────────────────
-  if(typeof WordLabData !== 'undefined' && WordLabData.isExtensionMode && WordLabData.isExtensionMode()){
-    if(window.WL_EXTENSION && window.MORPHEMES){
-      window.MORPHEMES.prefixes.push(...WL_EXTENSION.prefixes);
-      window.MORPHEMES.suffixes.push(...WL_EXTENSION.suffixes);
-      window.MORPHEMES.bases.push(...WL_EXTENSION.bases);
-    } else if(window.WL_EXTENSION){
-      PREFIXES.push(...WL_EXTENSION.prefixes);
-      SUFFIXES.push(...WL_EXTENSION.suffixes);
-      BASES.push(...WL_EXTENSION.bases);
-    }
+  const EXT_MODE = typeof WordLabData !== 'undefined' && WordLabData.isExtensionMode && WordLabData.isExtensionMode();
+  if(EXT_MODE && window.WL_EXTENSION){
+    const target = window.MORPHEMES || { prefixes: PREFIXES, suffixes: SUFFIXES, bases: BASES };
+    target.prefixes.splice(0, target.prefixes.length, ...WL_EXTENSION.prefixes);
+    target.suffixes.splice(0, target.suffixes.length, ...WL_EXTENSION.suffixes);
+    target.bases.splice(0,    target.bases.length,    ...WL_EXTENSION.bases);
   }
 
   // ─── BUILD LOOKUP TABLES ─────────────────────────────────────────────────────
@@ -2077,8 +2073,21 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => computeGlobalViableSetsChunked(), GLOBAL_VIABLE_DELAY);
   }
 
+  function findExtCombo(prefixObj, baseObj, suffix1Obj, suffix2Obj){
+    if (!EXT_MODE || !window.WL_EXTENSION || !WL_EXTENSION.validCombos) return null;
+    const pid  = prefixObj  ? prefixObj.id  : null;
+    const bid  = baseObj    ? baseObj.id    : null;
+    const s1id = suffix1Obj ? suffix1Obj.id : null;
+    const s2id = suffix2Obj ? suffix2Obj.id : null;
+    return WL_EXTENSION.validCombos.find(c =>
+      c.prefix === pid && c.base === bid && c.suffix1 === s1id && c.suffix2 === s2id
+    ) || null;
+  }
+
   function isRealWord(word){
     if (!word) return false;
+    if (EXT_MODE && window.WL_EXTENSION && WL_EXTENSION.validCombos)
+      return WL_EXTENSION.validCombos.some(c => c.word === String(word).toLowerCase());
     return DICT_SET && DICT_SET.has(String(word).toLowerCase());
   }
 
@@ -2371,6 +2380,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!baseObj) return "";
     const key = getLockKey(prefixObj, baseObj, suffix1Obj, suffix2Obj);
     if (wordCache.has(key)) return wordCache.get(key);
+
+    // In extension mode, return the curated spelling if this combo is known
+    const extCombo = findExtCombo(prefixObj, baseObj, suffix1Obj, suffix2Obj);
+    if (extCombo) { wordCache.set(key, extCombo.word); return extCombo.word; }
 
     const base          = baseObj.form;
     const pRaw          = prefixObj ? prefixObj.form : "";
