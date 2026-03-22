@@ -328,11 +328,12 @@ const WordLabData = (() => {
   async function verifyStudentCode(studentId, code) {
     var { data } = await sb()
       .from('students')
-      .select('student_code')
+      .select('student_code, extension_mode')
       .eq('id', studentId)
       .maybeSingle();
-    if (!data || !data.student_code) return false;
-    return data.student_code.toUpperCase() === code.toUpperCase();
+    if (!data || !data.student_code) return { ok: false, extensionMode: false };
+    var ok = data.student_code.toUpperCase() === code.toUpperCase();
+    return { ok, extensionMode: ok ? !!data.extension_mode : false };
   }
 
   // ── Session ───────────────────────────────────────────────────
@@ -518,9 +519,11 @@ const WordLabData = (() => {
   var _loginClassId = null;
   var _loginStudentId = null;
   var _loginStudentName = null;
+  var _onLoginCallback = null;
 
   function initLoginUI(opts) {
     opts = opts || {};
+    _onLoginCallback = opts.onLogin || null;
     var accent     = opts.accentColor || '#4338ca';
     var accentSoft = opts.accentSoft  || '#eef2ff';
     var accentLine = opts.accentLine  || '#c7d2fe';
@@ -680,19 +683,23 @@ const WordLabData = (() => {
     if (inp) inp.disabled = true;
     (async function() {
       try {
-        var ok = await verifyStudentCode(_loginStudentId, code);
-        if (!ok) {
+        var result = await verifyStudentCode(_loginStudentId, code);
+        if (!result.ok) {
           if (err) err.textContent = 'Incorrect code \u2014 try again.';
           if (inp) { inp.disabled = false; inp.value = ''; inp.focus(); }
           return;
         }
+        // Store extension mode synchronously before session starts so pages can read it immediately
+        sessionStorage.setItem('wl_extension_mode', result.extensionMode ? 'true' : 'false');
         // Success
         startSession(_loginClassId, _loginStudentId, _loginStudentName);
         document.getElementById('wlOverlay').classList.add('wl-hide');
         _updatePill(_loginStudentName);
         var btn = document.getElementById('wlLoginBtn');
         if (btn) btn.style.display = 'none';
+        var cb = _onLoginCallback;
         _loginClassId = null; _loginStudentId = null; _loginStudentName = null;
+        if (cb) cb();
       } catch(e) {
         if (err) err.textContent = 'Error \u2014 try again.';
         if (inp) inp.disabled = false;
