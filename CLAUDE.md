@@ -347,44 +347,35 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 ### PHASE 3 — Subscription & Payments (Stripe)
 
 #### 3.1 Stripe setup
-- [ ] Create Stripe account
-- [ ] Create products in Stripe dashboard:
-  - `Word Labs — School (Annual)` — £199/year
-  - `Word Labs — Trial` — £0 (30 days, 1 class, max 35 students)
-- [ ] Note down product price IDs
+- [x] Create Stripe account (sandbox mode)
+- [x] Created product `Word Labs — School Annual` — AUD $299/year
+- [x] Price ID: `price_1TDhljPlhyP7eUplp5zTRIEj`
 
 #### 3.2 New Supabase Edge Function: `create-checkout`
-- [ ] Create `supabase/functions/create-checkout/index.ts`
-- [ ] Accepts: `{ priceId, schoolId, teacherEmail }`
-- [ ] Creates Stripe Checkout Session with `success_url` and `cancel_url`
-- [ ] Returns `{ checkoutUrl }` to redirect teacher to Stripe
+- [x] Created `supabase/functions/create-checkout/index.ts`
+- [x] Verifies teacher auth, creates/reuses Stripe customer, returns checkout URL
+- [x] Deployed with `--no-verify-jwt` (function handles auth internally)
 
 #### 3.3 New Supabase Edge Function: `stripe-webhook`
-- [ ] Create `supabase/functions/stripe-webhook/index.ts`
-- [ ] Handle `checkout.session.completed` → set `schools.plan = 'active'`, store `stripe_customer_id`
-- [ ] Handle `customer.subscription.deleted` → set `schools.plan = 'expired'`
-- [ ] Handle `invoice.payment_failed` → set `schools.plan = 'payment_failed'`, send warning email
-- [ ] Register webhook URL in Stripe dashboard
-- [ ] Store Stripe webhook secret in Supabase secrets
+- [x] Created `supabase/functions/stripe-webhook/index.ts`
+- [x] Handles `checkout.session.completed` → sets `plan = 'active'`, saves `stripe_customer_id`
+- [x] Handles `customer.subscription.deleted` → sets `plan = 'expired'`
+- [x] Handles `invoice.payment_failed` → sets `plan = 'payment_failed'`
+- [x] Webhook registered in Stripe dashboard, secret stored in Supabase
 
-#### 3.4 Pricing / upgrade page (`pricing.html`)
-- [ ] Create page showing trial vs. paid plan features
-- [ ] "Start free trial" button → calls sign-up flow
-- [ ] "Upgrade to full" button → calls `create-checkout` edge function → redirects to Stripe
-- [ ] Post-payment success page confirming activation
+#### 3.4 Pricing page (`pricing.html`)
+- [x] Created pricing page with trial vs paid plan comparison
+- [x] "Upgrade Now" redirects to dashboard where checkout runs (auth guaranteed)
+- [x] Trial/upgrade banner on dashboard with inline checkout button
 
 #### 3.5 Trial & plan gating
-- [ ] Add `checkPlanAccess()` to `wordlab-data.js` — returns `{ plan, daysLeft, isExpired }`
-- [ ] Trial limits: 1 class, 35 students max, no item creator
-- [ ] On trial expiry: show upgrade banner on dashboard, activities still work for existing students (grace period)
-- [ ] On paid plan: all features unlocked
-- [ ] Show "X days left on trial" banner in dashboard header when trial < 7 days
+- [x] Trial countdown banner shown when < 7 days remaining
+- [x] Expired banner shown when trial ends
+- [x] Payment failed banner shown on failed invoice
+- [ ] Enforce class/student limits during trial (Phase 4 — low priority for now)
 
 #### 3.6 Purchase order / invoice support
-- [ ] Add "Pay by invoice" option on pricing page (schools often can't use credit cards)
-- [ ] Form: school name, address, PO number, contact email
-- [ ] Sends notification email to Nicholas to manually process
-- [ ] Sets school to `plan = 'pending_invoice'` with 14-day grace
+- [ ] "Pay by invoice" option — email nick@wordlabs.app for now (noted on pricing page)
 
 ---
 
