@@ -139,6 +139,28 @@
 
     #wlPillSlot{ display:inline-flex; align-items:center; }
 
+    /* Extension mode toggle */
+    #extModeToggleWrap{
+      display:none; align-items:center; gap:7px;
+      background:#fff; border:2px solid #c7d2fe;
+      border-radius:12px; padding:6px 12px;
+      font-family:'Lexend',sans-serif;
+    }
+    #extModeToggleWrap .ext-track{
+      width:36px; height:20px; border-radius:10px; background:#cbd5e1;
+      position:relative; transition:background .2s; flex-shrink:0; cursor:pointer;
+    }
+    #extModeToggleWrap .ext-track.on{ background:#4338ca; }
+    #extModeToggleWrap .ext-thumb{
+      width:14px; height:14px; border-radius:50%; background:#fff;
+      position:absolute; top:3px; left:3px; transition:left .2s;
+      box-shadow:0 1px 3px rgba(0,0,0,.25);
+    }
+    #extModeToggleWrap .ext-track.on .ext-thumb{ left:19px; }
+    #extModeToggleWrap .ext-lbl{
+      font-size:11px; font-weight:800; color:#4338ca; white-space:nowrap;
+    }
+
     .menuBtn{
       width:36px; height:36px; border-radius:10px;
       background:var(--indigo); color:#fff;
@@ -481,6 +503,10 @@
     </a>
     <div class="headerRight">
       <span id="wlPillSlot"></span>
+      <div id="extModeToggleWrap" title="Toggle between Base and Extension mode">
+        <div class="ext-track" id="extModeTrack" onclick="toggleExtMode()"><div class="ext-thumb"></div></div>
+        <span class="ext-lbl" id="extModeLbl">📚 Base</span>
+      </div>
       <button class="loginBtn" id="wlLoginBtn" onclick="wlShowLogin()">👤 Log in</button>
       <button class="menuBtn" id="menuBtn" onclick="toggleMenu()" aria-label="Open menu">
         <span></span><span></span><span></span>
@@ -916,7 +942,50 @@ document.addEventListener('DOMContentLoaded',function(){
   }
   var pillName=document.getElementById('heroPillName');
   if(pillName && session) pillName.textContent=session.studentName;
+
+  // Show extension mode toggle if teacher has unlocked it for this student
+  if(session && session.studentId){
+    (async function(){
+      try {
+        var sb = WordLabData._sb ? WordLabData._sb() : null;
+        // Use the same Supabase client wordlab-data.js uses internally
+        // We check the DB value to know if extension is available for this student
+        var extAvail = false;
+        if(typeof supabase !== 'undefined'){
+          var SUPABASE_URL = 'https://qutsbcfkgiihcwaktsaz.supabase.co';
+          var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dHNiY2ZrZ2lpaGN3YWt0c2F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NDE1NDksImV4cCI6MjA4OTUxNzU0OX0.h1N26KCcyHDrW4FRk6iBNmJUMQcFCYi8eHpOC818B8E';
+          var _lsb = window._landingSb || (window._landingSb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON));
+          var res = await _lsb.from('students').select('extension_mode').eq('id', session.studentId).maybeSingle();
+          extAvail = !!(res.data && res.data.extension_mode);
+        }
+        if(extAvail) showExtToggle();
+      } catch(e){}
+    })();
+  }
 });
+
+function showExtToggle(){
+  var wrap = document.getElementById('extModeToggleWrap');
+  if(!wrap) return;
+  wrap.style.display = 'inline-flex';
+  updateExtToggleUI();
+}
+
+function updateExtToggleUI(){
+  var isExt = sessionStorage.getItem('wl_extension_mode') === 'true';
+  var track = document.getElementById('extModeTrack');
+  var lbl   = document.getElementById('extModeLbl');
+  if(!track || !lbl) return;
+  if(isExt){ track.classList.add('on'); lbl.textContent = '🔬 Extension'; }
+  else      { track.classList.remove('on'); lbl.textContent = '📚 Base'; }
+}
+
+function toggleExtMode(){
+  var isExt = sessionStorage.getItem('wl_extension_mode') === 'true';
+  sessionStorage.setItem('wl_extension_mode', isExt ? 'false' : 'true');
+  sessionStorage.setItem('wl_ext_pinned', 'true'); // prevent DB sync from overriding
+  updateExtToggleUI();
+}
 (async function(){var w=document.getElementById('sciCharWrap');if(!w||typeof WLScientist==='undefined')return;var sd=typeof WordLabData!=='undefined'?await WordLabData.getStudentData():null;w.innerHTML=WLScientist.buildSVG(sd?sd.scientist:{},'neutral');})();
 </script>
 </body>

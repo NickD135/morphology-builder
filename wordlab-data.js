@@ -439,7 +439,10 @@ const WordLabData = (() => {
       .eq('id', session.studentId)
       .maybeSingle();
     if (data && data.extension_mode !== undefined) {
-      sessionStorage.setItem('wl_extension_mode', data.extension_mode ? 'true' : 'false');
+      // Only sync from DB if the student hasn't made an explicit choice this session
+      if (!sessionStorage.getItem('wl_ext_pinned')) {
+        sessionStorage.setItem('wl_extension_mode', data.extension_mode ? 'true' : 'false');
+      }
     }
     const { data: charData } = await sb()
       .from('student_character')
@@ -690,6 +693,8 @@ const WordLabData = (() => {
           return;
         }
         // Store extension mode synchronously before session starts so pages can read it immediately
+        // Clear any previous student choice so the DB value is used as the fresh default on login
+        sessionStorage.removeItem('wl_ext_pinned');
         sessionStorage.setItem('wl_extension_mode', result.extensionMode ? 'true' : 'false');
         // Success
         startSession(_loginClassId, _loginStudentId, _loginStudentName);
