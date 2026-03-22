@@ -11,12 +11,23 @@
 classrooms (ages 9–12, UK Key Stage 2). It was built by Nicholas Deeney, a primary school teacher.
 
 The goal is to turn it into a **commercial SaaS product sold to schools** — subscription-based,
-GDPR-compliant, multi-tenant, with proper teacher auth and a payment layer.
+privacy-law-compliant, multi-tenant, with proper teacher auth and a payment layer.
+
+**Owner:** Nicholas Deeney — Australian primary school teacher
+**Target market:** Australian primary schools (and NZ/UK later)
+**Currency:** AUD
+**Legal jurisdiction:** Australian Privacy Act 1988 + Australian Consumer Law (not GDPR, though
+  similar principles apply — worth being GDPR-compatible for future UK/EU expansion)
+**Key compliance:** Australian Privacy Principles (APPs), notifiable data breaches scheme
+**School pricing:** ~AUD $299/school/year (adjust based on market feedback)
+**Supabase region:** Should be `ap-southeast-2` (Sydney) for data sovereignty —
+  current project may be in US; check and migrate if needed
 
 **GitHub repo:** `nicholasd-art/morphology-builder`
 **Supabase project ref:** `qutsbcfkgiihcwaktsaz`
 **Supabase URL:** `https://qutsbcfkgiihcwaktsaz.supabase.co`
 **Local dev:** `python3 -m http.server 8080 --bind 0.0.0.0`
+**Live URL:** TBD — Vercel deployment in progress (Phase 0)
 
 ---
 
@@ -228,23 +239,30 @@ Check items off as they are completed.
 ### PHASE 0 — Foundation (Do before any other phase)
 
 #### 0.1 Vercel Deployment
-- [ ] Create `vercel.json` at repo root (configure all `.html` files as routes)
-- [ ] Connect GitHub repo to Vercel
-- [ ] Confirm auto-deploy on push to `main` works
-- [ ] Test all pages load correctly on Vercel URL
+- [x] Create `vercel.json` at repo root — cleanUrls, root redirect to /landing, security headers
+- [x] Create `.gitignore` — excludes node_modules, screenshots, package-lock.json
+- [ ] Nicholas: go to vercel.com → "Add New Project" → import `nicholasd-art/morphology-builder`
+- [ ] Vercel settings: Framework = Other, Build Command = (leave blank), Output = (leave blank)
+- [ ] Click Deploy — should go live in ~30 seconds
+- [ ] Confirm auto-deploy on push to `main` works (push something small to test)
+- [ ] Test all pages load on Vercel URL (especially check wordlab-data.js loads correctly)
+- [ ] Note the Vercel URL (e.g. `morphology-builder-xxx.vercel.app`) — update CLAUDE.md
 
 #### 0.2 Custom Domain
-- [ ] Purchase domain (e.g. `wordlab.app` or `wordlab.co.uk`)
-- [ ] Add domain to Vercel project
-- [ ] Configure DNS records
+- [ ] Purchase domain — recommended: `wordlab.com.au` (needs ABN) or `wordlab.app` / `getwordlab.com`
+  — buy from Crazy Domains, VentraIP, or Cloudflare (Australian registrars)
+- [ ] Add domain in Vercel: Project Settings → Domains → Add
+- [ ] Add the DNS records Vercel shows you (usually an A record + CNAME) at your registrar
+- [ ] Wait for DNS propagation (5 min–48 hrs depending on registrar)
 - [ ] Confirm HTTPS works on custom domain
-- [ ] Update Supabase Auth `site_url` to custom domain
+- [ ] Update `site_url` in Supabase dashboard → Auth → URL Configuration
+- [ ] Update this file with the live URL
 
 #### 0.3 Environment variable strategy
-- [ ] Move Supabase anon key + URL out of HTML source into a Vercel-injected config
-- [ ] Create `config.js` that reads from a meta tag or window variable set by Vercel
-- [ ] Update all pages to load config from `config.js` rather than hardcoded strings
-- [ ] Confirm no secrets in committed source code
+- [ ] NOTE: Supabase ANON key is intentionally public (it's designed for client-side use)
+      Security comes from RLS policies, not hiding the key. This is fine for now.
+- [ ] Revisit this once Phase 1 (teacher auth) is complete — at that point we may want
+      a thin server layer to keep teacher-specific operations off the client
 
 ---
 
@@ -404,36 +422,41 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 
 ---
 
-### PHASE 5 — Legal & Compliance
+### PHASE 5 — Legal & Compliance (Australian context)
 
 #### 5.1 Privacy policy
 - [ ] Create `privacy.html`
-- [ ] Covers: what data is collected (student names, in-game progress), why, how long kept, right to delete
-- [ ] Specifically addresses children's data (ages 9–12)
-- [ ] Contact email for data requests
+- [ ] Must comply with Australian Privacy Act 1988 and the 13 Australian Privacy Principles (APPs)
+- [ ] Covers: what data is collected (student first names, in-game progress only), why, how long kept, right to access/correct/delete
+- [ ] Specifically addresses children's data (ages 9–12) — school is the data controller, Word Lab is the processor
+- [ ] Notifiable Data Breaches scheme — state how breaches will be reported (within 30 days to OAIC)
+- [ ] Contact email for privacy requests
 - [ ] Link in footer of every page
 
 #### 5.2 Terms of service
 - [ ] Create `terms.html`
-- [ ] Covers: what the service is, acceptable use, subscription terms, cancellation policy
+- [ ] Covers: what the service is, acceptable use, subscription terms, cancellation policy (Australian Consumer Law — 30 day refund right)
+- [ ] Governed by laws of [your state, e.g. Queensland]
 - [ ] Link in footer and on sign-up page
 
-#### 5.3 Cookie policy
-- [ ] List all storage used (sessionStorage, localStorage, Supabase cookies)
-- [ ] No third-party tracking cookies currently — note this
-- [ ] Add small cookie notice on first visit (sessionStorage flag so it only shows once)
+#### 5.3 Cookie / storage notice
+- [ ] List all storage used (sessionStorage, localStorage, Supabase session cookies)
+- [ ] No third-party tracking cookies currently — note this clearly (Australian schools are sensitive to this)
+- [ ] Add small banner on first visit (sessionStorage flag so it only shows once)
 
-#### 5.4 Data Processing Agreement (DPA)
-- [ ] Write DPA template (Word/PDF document, not a web page)
-- [ ] Schools legally need this signed before paying
-- [ ] Covers: data controller (school) vs processor (Word Lab), retention periods, sub-processors (Supabase, Anthropic for AI Polish)
-- [ ] Add "Request DPA" link on pricing page that triggers an email
+#### 5.4 Data Handling Agreement (equivalent to DPA)
+- [ ] Write school data agreement template (PDF/Word — not a web page)
+- [ ] Schools' IT/privacy officers will ask for this before approving purchase
+- [ ] Covers: what data is held, where it's stored (Australia — Supabase Sydney region), retention & deletion policy, sub-processors (Supabase AU, Anthropic API for AI Polish feature only)
+- [ ] Add "Request agreement" link on pricing page
 
-#### 5.5 GDPR compliance checks
-- [ ] Confirm no student surname stored (first names only is safer)
-- [ ] Add data deletion: teacher can delete a class → cascades to all student data
-- [ ] Add "export my data" function for completeness
-- [ ] Confirm Supabase (EU hosting option) — switch project region to EU if needed
+#### 5.5 Australian Privacy compliance checks
+- [ ] Store data in Australia (Supabase Sydney region `ap-southeast-2`) — critical for government schools
+- [ ] Confirm only student first names stored — no surnames, no DOB, no email, no photos
+- [ ] Add data deletion: teacher deletes class → all student data deleted (cascade already in DB schema)
+- [ ] Add "export class data" CSV function (teachers may need this)
+- [ ] Consider: do you need an ABN? For selling to schools yes — register as sole trader or company
+- [ ] Consider: Australian schools often pay via purchase order — build this into Stripe flow
 
 ---
 
@@ -529,3 +552,7 @@ At the start of each working session, do this:
 | Trial = 30 days, 1 class | Low friction to start, enough to run a real pilot, easy upsell |
 | Store teacher password per class (currently) | Legacy — being replaced by Supabase Auth in Phase 1 |
 | Fabric.js for item creator | Best canvas library for this use case, good SVG support |
+| AUD pricing | Owner is Australian, primary market is Australian schools |
+| Supabase Sydney region | Australian schools (especially government) require data stored in Australia |
+| Australian Privacy Act over GDPR | Primary legal framework; build GDPR-compatible anyway for future expansion |
+| .com.au or .app domain | .com.au signals Australian business; .app is clean global alternative |
