@@ -252,7 +252,8 @@ Check items off as they are completed.
 - [x] Added A record and CNAME in Cloudflare DNS (proxy off — grey cloud)
 - [x] Added domain in Vercel: Project Settings → Domains
 - [x] DNS propagated and verified ✅
-- [ ] Update `site_url` in Supabase dashboard → Auth → URL Configuration → set to https://wordlabs.app
+- [x] Updated `site_url` in Supabase → Auth → URL Configuration → https://wordlabs.app
+- [x] Supabase project transferred to personal account (away from school Google account)
 
 #### 0.3 Environment variable strategy
 - [ ] NOTE: Supabase ANON key is intentionally public (it's designed for client-side use)
