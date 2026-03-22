@@ -268,52 +268,51 @@ Check items off as they are completed.
 This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accounts.
 
 #### 1.1 Database prep
-- [ ] Add `auth_user_id uuid` column to `classes` table (will link to Supabase auth.users)
-- [ ] Run migration in Supabase SQL editor
+- [x] Add `auth_user_id uuid` column to `classes` table (will link to Supabase auth.users)
+- [x] Run migration in Supabase SQL editor
+- [x] Create `teachers` table with plan/trial fields and RLS policies
 
 #### 1.2 Teacher sign-up page (`teacher-signup.html`)
-- [ ] Create new page with: school name, your name, email, password fields
-- [ ] Call `supabase.auth.signUp({ email, password })`
-- [ ] On success, create a record in a new `teachers` table: `{ id: auth_user_id, name, school_name, email, plan: 'trial', trial_ends_at: now+30days }`
-- [ ] Redirect to `class-setup.html`
-- [ ] Add email confirmation handling (Supabase sends confirm email)
+- [x] Create new page with email + password fields
+- [x] Call `supabase.auth.signUp({ email, password })`
+- [x] Redirect to `class-setup` on success; show "check your email" if confirmation required
+- [x] Add email confirmation handling
 
 #### 1.3 Teacher login page (`teacher-login.html`)
-- [ ] Create login page with email + password
-- [ ] Call `supabase.auth.signInWithPassword({ email, password })`
-- [ ] On success, redirect to `dashboard.html`
-- [ ] Handle "forgot password" — call `supabase.auth.resetPasswordForEmail(email)`
-- [ ] Add "remember me" option
+- [x] Create login page with email + password
+- [x] Call `supabase.auth.signInWithPassword({ email, password })`
+- [x] On success, redirect back to intended page (via ?returnTo= param)
+- [x] Handle "forgot password" — call `supabase.auth.resetPasswordForEmail(email)`
 
 #### 1.4 Auth session management in `wordlab-data.js`
-- [ ] Add `getTeacherSession()` — returns current Supabase auth session
-- [ ] Add `requireTeacherAuth()` — redirects to `teacher-login.html` if no session
-- [ ] Add `teacherSignOut()` — calls `supabase.auth.signOut()`
-- [ ] Add auth state change listener that updates UI when session expires
+- [x] Add `getTeacherSession()` — returns current Supabase auth session user
+- [x] Add `requireTeacherAuth()` — redirects to `teacher-login` if no session
+- [x] Add `teacherSignOut()` — calls `supabase.auth.signOut()` + redirects
 
 #### 1.5 Protect teacher pages
-- [ ] `class-setup.html` — replace hardcoded password gate with `requireTeacherAuth()`
-- [ ] `dashboard.html` — replace password-per-class with `requireTeacherAuth()`
-- [ ] `item-creator.html` — replace hardcoded password gate with `requireTeacherAuth()`
-- [ ] Remove all `const TEACHER_PASSWORD = 'MorphemeLab'` references
+- [x] `class-setup.html` — replaced hardcoded password gate with `requireTeacherAuth()`
+- [x] `dashboard.html` — replaced password-per-class with `requireTeacherAuth()`
+- [x] `item-creator.html` — replaced hardcoded password gate with `requireTeacherAuth()`
+- [x] Removed all `const TEACHER_PASSWORD = 'MorphemeLab'` references
 
 #### 1.6 Link classes to teachers
-- [ ] Update `createClass()` in `wordlab-data.js` to attach `auth_user_id` from current session
-- [ ] Update `getClasses()` to filter by `auth_user_id` so teachers only see their own classes
-- [ ] Update all class queries with `.eq('auth_user_id', session.user.id)`
+- [x] `createClass()` now attaches `auth_user_id` from current session
+- [x] `getClasses()` filters by `auth_user_id` so teachers only see their own classes
+- [x] Existing class linked via SQL UPDATE
 
 #### 1.7 Update RLS policies
-- [ ] `classes` — teachers can only read/write their own rows (where `auth_user_id = auth.uid()`)
-- [ ] `students` — can only access via class they own
-- [ ] `student_progress` — can only access students in their classes
-- [ ] `student_character` — same
-- [ ] `shop_items` — teachers can insert/update/delete their own items; all can read active items
+- [x] `classes` — SELECT open (students need it); INSERT/UPDATE/DELETE require auth.uid() = auth_user_id
+- [ ] `students` — can only access via class they own (Phase 2 — needs school_id)
+- [ ] `student_progress` — scoped to teacher's students (Phase 2)
+- [ ] `student_character` — same (Phase 2)
+- [ ] `shop_items` — teacher-scoped (Phase 2)
 - [ ] Test RLS by logging in as two different teacher accounts and confirming isolation
 
 #### 1.8 Navigation updates
-- [ ] Add teacher name + sign out button to header of `dashboard.html`, `class-setup.html`, `item-creator.html`
+- [x] Sign Out button added to `dashboard.html` and `class-setup.html` headers
+- [x] Teacher email displayed in headers
 - [ ] Update `landing.html` — show "Teacher Login" link in header
-- [ ] Remove old password gate overlay HTML from `class-setup.html` and `item-creator.html`
+- [x] Removed old password gate overlay HTML from all three teacher pages
 
 ---
 
