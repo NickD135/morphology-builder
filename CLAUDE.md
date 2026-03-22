@@ -27,7 +27,7 @@ privacy-law-compliant, multi-tenant, with proper teacher auth and a payment laye
 **Supabase project ref:** `qutsbcfkgiihcwaktsaz`
 **Supabase URL:** `https://qutsbcfkgiihcwaktsaz.supabase.co`
 **Local dev:** `python3 -m http.server 8080 --bind 0.0.0.0`
-**Live URL:** https://morphology-builder.vercel.app
+**Live URL:** https://wordlabs.app (also https://morphology-builder.vercel.app)
 
 ---
 
@@ -248,14 +248,11 @@ Check items off as they are completed.
 - [ ] Test all pages load on Vercel URL (especially check wordlab-data.js loads correctly)
 
 #### 0.2 Custom Domain
-- [ ] Purchase domain — recommended: `wordlab.com.au` (needs ABN) or `wordlab.app` / `getwordlab.com`
-  — buy from Crazy Domains, VentraIP, or Cloudflare (Australian registrars)
-- [ ] Add domain in Vercel: Project Settings → Domains → Add
-- [ ] Add the DNS records Vercel shows you (usually an A record + CNAME) at your registrar
-- [ ] Wait for DNS propagation (5 min–48 hrs depending on registrar)
-- [ ] Confirm HTTPS works on custom domain
-- [ ] Update `site_url` in Supabase dashboard → Auth → URL Configuration
-- [ ] Update this file with the live URL
+- [x] Purchased `wordlabs.app` via Cloudflare Registrar
+- [x] Added A record and CNAME in Cloudflare DNS (proxy off — grey cloud)
+- [x] Added domain in Vercel: Project Settings → Domains
+- [x] DNS propagated and verified ✅
+- [ ] Update `site_url` in Supabase dashboard → Auth → URL Configuration → set to https://wordlabs.app
 
 #### 0.3 Environment variable strategy
 - [ ] NOTE: Supabase ANON key is intentionally public (it's designed for client-side use)
