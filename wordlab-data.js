@@ -952,7 +952,7 @@ const WordLabData = (() => {
   }
 
   return {
-    getTeacherSession, getTeacherRecord, requireTeacherAuth, teacherSignOut,
+    getTeacherSession, getTeacherRecord, requireTeacherAuth, teacherSignOut, _sb: sb,
     createClass, getClasses, getClass, verifyPassword,
     addStudent, removeStudent, deleteClass, regenerateStudentCode,
     lookupClassByCode, verifyStudentCode,

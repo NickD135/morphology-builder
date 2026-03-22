@@ -401,6 +401,9 @@
   </div>
 </div>
 
+<!-- ── Plan banner ── -->
+<div id="planBanner" style="display:none;"></div>
+
 <!-- ── Dashboard ── -->
 <div class="wrap hidden" id="dashboardScreen">
   <div class="classInfo" id="classInfo"></div>
@@ -617,6 +620,47 @@ function updateClassInfo(){
      </div>`;
 }
 
+// ── Plan banner ──────────────────────────────────────────────────
+async function showPlanBanner() {
+  const teacher = await WordLabData.getTeacherRecord();
+  if (!teacher?.school_id) return;
+
+  const { data: school } = await WordLabData._sb()
+    .from('schools')
+    .select('plan, trial_ends_at')
+    .eq('id', teacher.school_id)
+    .maybeSingle();
+
+  if (!school) return;
+
+  const banner = document.getElementById('planBanner');
+  if (!banner) return;
+
+  const plan = school.plan || 'trial';
+  const trialEnd = school.trial_ends_at ? new Date(school.trial_ends_at) : null;
+  const daysLeft = trialEnd ? Math.ceil((trialEnd - Date.now()) / 86400000) : 0;
+
+  let html = '';
+  const upgradeLink = '<a href="pricing" style="color:inherit;font-weight:900;text-decoration:underline;">Upgrade now →</a>';
+
+  if (plan === 'expired' || (plan === 'trial' && daysLeft <= 0)) {
+    html = `<div style="background:#fef2f2;border-bottom:2px solid #fecaca;padding:12px 20px;text-align:center;font-size:13px;font-weight:700;color:#dc2626;">
+      Your trial has ended. Students can still play but you can't add new classes. ${upgradeLink}
+    </div>`;
+  } else if (plan === 'payment_failed') {
+    html = `<div style="background:#fff7ed;border-bottom:2px solid #fed7aa;padding:12px 20px;text-align:center;font-size:13px;font-weight:700;color:#9a3412;">
+      Payment failed — please update your billing details to keep access. ${upgradeLink}
+    </div>`;
+  } else if (plan === 'trial' && daysLeft <= 7) {
+    html = `<div style="background:#fffbeb;border-bottom:2px solid #fde68a;padding:12px 20px;text-align:center;font-size:13px;font-weight:700;color:#92400e;">
+      ${daysLeft} day${daysLeft === 1 ? '' : 's'} left on your free trial. ${upgradeLink}
+    </div>`;
+  }
+
+  banner.innerHTML = html;
+  banner.style.display = html ? 'block' : 'none';
+}
+
 // ── Auth + class picker ───────────────────────────────────────────
 async function initDashboard(){
   const user = await WordLabData.requireTeacherAuth();
@@ -624,6 +668,9 @@ async function initDashboard(){
 
   const emailEl = document.getElementById('teacherEmailDisplay');
   if (emailEl) emailEl.textContent = user.email;
+
+  // Show plan banner if on trial or expired
+  await showPlanBanner();
 
   const classes = await WordLabData.getClasses();
   const sub = document.getElementById('loginSub');
