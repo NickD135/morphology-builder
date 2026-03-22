@@ -627,7 +627,7 @@ async function showPlanBanner() {
 
   const { data: school } = await WordLabData._sb()
     .from('schools')
-    .select('plan, trial_ends_at')
+    .select('plan, trial_ends_at, student_limit')
     .eq('id', teacher.school_id)
     .maybeSingle();
 
@@ -640,20 +640,26 @@ async function showPlanBanner() {
   const trialEnd = school.trial_ends_at ? new Date(school.trial_ends_at) : null;
   const daysLeft = trialEnd ? Math.ceil((trialEnd - Date.now()) / 86400000) : 0;
 
-  const upgradeBtn = `<button onclick="startCheckout()" style="margin-left:12px;border:none;background:rgba(0,0,0,.12);color:inherit;font-family:'Lexend',sans-serif;font-weight:900;font-size:12px;padding:6px 14px;border-radius:8px;cursor:pointer;" id="dashUpgradeBtn">Upgrade now →</button>`;
+  const upgradeSchoolBtn = `<button onclick="startCheckout()" style="margin-left:12px;border:none;background:rgba(0,0,0,.12);color:inherit;font-family:'Lexend',sans-serif;font-weight:900;font-size:12px;padding:6px 14px;border-radius:8px;cursor:pointer;" id="dashUpgradeBtn">Upgrade now →</button>`;
+  const pricingLink = `<a href="pricing" style="margin-left:12px;border:none;background:rgba(0,0,0,.12);color:inherit;font-family:'Lexend',sans-serif;font-weight:900;font-size:12px;padding:6px 14px;border-radius:8px;cursor:pointer;text-decoration:none;">View plans →</a>`;
 
   let html = '';
   if (plan === 'expired' || (plan === 'trial' && daysLeft <= 0)) {
     html = `<div style="background:#fef2f2;border-bottom:2px solid #fecaca;padding:12px 20px;text-align:center;font-size:13px;font-weight:700;color:#dc2626;">
-      Your trial has ended. Students can still play but you can't add new classes. ${upgradeBtn}
+      Your trial has ended. Students can still play but you can't add new classes. ${upgradeSchoolBtn}
     </div>`;
   } else if (plan === 'payment_failed') {
     html = `<div style="background:#fff7ed;border-bottom:2px solid #fed7aa;padding:12px 20px;text-align:center;font-size:13px;font-weight:700;color:#9a3412;">
-      Payment failed — please update your billing details to keep access. ${upgradeBtn}
+      Payment failed — please update your billing details to keep access. ${upgradeSchoolBtn}
     </div>`;
   } else if (plan === 'trial' && daysLeft <= 7) {
     html = `<div style="background:#fffbeb;border-bottom:2px solid #fde68a;padding:12px 20px;text-align:center;font-size:13px;font-weight:700;color:#92400e;">
-      ${daysLeft} day${daysLeft === 1 ? '' : 's'} left on your free trial. ${upgradeBtn}
+      ${daysLeft} day${daysLeft === 1 ? '' : 's'} left on your free trial. ${upgradeSchoolBtn}
+    </div>`;
+  } else if (plan === 'teacher') {
+    const limit = school.student_limit || 35;
+    html = `<div style="background:#f0fdf4;border-bottom:2px solid #bbf7d0;padding:12px 20px;text-align:center;font-size:13px;font-weight:700;color:#15803d;">
+      👩‍🏫 Teacher Plan · Up to ${limit} students · Need more? ${pricingLink}
     </div>`;
   }
 
@@ -677,7 +683,7 @@ async function startCheckout() {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${session.access_token}`,
     },
-    body: JSON.stringify({ priceId: PRICE_ID }),
+    body: JSON.stringify({ priceId: PRICE_ID, planType: 'school' }),
   });
 
   const data = await resp.json();

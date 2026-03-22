@@ -35,8 +35,11 @@ serve(async (req: Request) => {
   const { data: { user }, error: authErr } = await supabase.auth.getUser();
   if (authErr || !user) return json({ error: 'Unauthorized' }, 401);
 
-  const { priceId, successUrl, cancelUrl } = await req.json();
+  const { priceId, planType, extraPacks, successUrl, cancelUrl } = await req.json();
   if (!priceId) return json({ error: 'Missing priceId' }, 400);
+
+  const resolvedPlanType: string = planType || 'school';
+  const resolvedExtraPacks: number = Math.max(0, Math.min(10, parseInt(extraPacks) || 0));
 
   // Get teacher's school
   const { data: teacher } = await supabase
@@ -71,7 +74,6 @@ serve(async (req: Request) => {
     });
     customerId = customer.id;
 
-    // Save customer ID using service role
     const adminSb = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -79,14 +81,34 @@ serve(async (req: Request) => {
     await adminSb.from('schools').update({ stripe_customer_id: customerId }).eq('id', school.id);
   }
 
-  // Create checkout session
+  // Build line items — teacher plan can have extra student pack add-ons
+  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+    { price: priceId, quantity: 1 },
+  ];
+
+  if (resolvedPlanType === 'teacher' && resolvedExtraPacks > 0) {
+    const packPriceId = Deno.env.get('STRIPE_STUDENT_PACK_PRICE_ID');
+    if (packPriceId) {
+      lineItems.push({ price: packPriceId, quantity: resolvedExtraPacks });
+    }
+  }
+
+  // Student limit: 35 base + 10 per extra pack (null = unlimited for school plan)
+  const studentLimit = resolvedPlanType === 'teacher'
+    ? String(35 + resolvedExtraPacks * 10)
+    : '';
+
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
-    line_items: [{ price: priceId, quantity: 1 }],
+    line_items: lineItems,
     mode: 'subscription',
     success_url: successUrl || 'https://wordlabs.app/dashboard?upgraded=1',
     cancel_url: cancelUrl || 'https://wordlabs.app/pricing',
-    metadata: { school_id: school.id },
+    metadata: {
+      school_id: school.id,
+      plan_type: resolvedPlanType,
+      student_limit: studentLimit,
+    },
   });
 
   return json({ url: session.url });

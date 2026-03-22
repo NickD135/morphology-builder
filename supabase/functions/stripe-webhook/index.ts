@@ -34,11 +34,21 @@ serve(async (req: Request) => {
     case 'checkout.session.completed': {
       const session  = event.data.object as Stripe.CheckoutSession;
       const schoolId = session.metadata?.school_id;
+      const planType = session.metadata?.plan_type || 'school';
+      const studentLimitStr = session.metadata?.student_limit;
+
       if (schoolId) {
-        await adminSb.from('schools').update({
-          plan: 'active',
+        const update: Record<string, unknown> = {
+          plan: planType === 'teacher' ? 'teacher' : 'active',
           stripe_customer_id: session.customer as string,
-        }).eq('id', schoolId);
+        };
+        // Set student limit for teacher plans; clear it (null) for school plans
+        if (planType === 'teacher' && studentLimitStr) {
+          update.student_limit = parseInt(studentLimitStr, 10);
+        } else if (planType === 'school') {
+          update.student_limit = null;
+        }
+        await adminSb.from('schools').update(update).eq('id', schoolId);
       }
       break;
     }
