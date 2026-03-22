@@ -1770,6 +1770,18 @@ document.addEventListener("DOMContentLoaded", () => {
     target.bases.splice(0,    target.bases.length,    ...WL_EXTENSION.bases);
   }
 
+  // ─── EXTENSION MODE FAST LOOKUP STRUCTURES ───────────────────────────────────
+  // Pre-built O(1) structures so viability checks don't do O(n^4) nested loops
+  let extWordSet  = null;
+  let extComboMap = null;
+  if (EXT_MODE && window.WL_EXTENSION && WL_EXTENSION.validCombos) {
+    extWordSet = new Set(WL_EXTENSION.validCombos.map(c => c.word.toLowerCase()));
+    extComboMap = new Map();
+    WL_EXTENSION.validCombos.forEach(c => {
+      extComboMap.set(`${c.prefix}|${c.base}|${c.suffix1}|${c.suffix2}`, c.word);
+    });
+  }
+
   // ─── BUILD LOOKUP TABLES ─────────────────────────────────────────────────────
 
   function mkUid(type, id){ return `${type}:${id}`; }
@@ -2077,20 +2089,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function findExtCombo(prefixObj, baseObj, suffix1Obj, suffix2Obj){
-    if (!EXT_MODE || !window.WL_EXTENSION || !WL_EXTENSION.validCombos) return null;
-    const pid  = prefixObj  ? prefixObj.id  : null;
-    const bid  = baseObj    ? baseObj.id    : null;
-    const s1id = suffix1Obj ? suffix1Obj.id : null;
-    const s2id = suffix2Obj ? suffix2Obj.id : null;
-    return WL_EXTENSION.validCombos.find(c =>
-      c.prefix === pid && c.base === bid && c.suffix1 === s1id && c.suffix2 === s2id
-    ) || null;
+    if (!EXT_MODE || !extComboMap) return null;
+    const key = `${prefixObj ? prefixObj.id : null}|${baseObj ? baseObj.id : null}|${suffix1Obj ? suffix1Obj.id : null}|${suffix2Obj ? suffix2Obj.id : null}`;
+    const word = extComboMap.get(key);
+    return word !== undefined ? { word } : null;
   }
 
   function isRealWord(word){
     if (!word) return false;
-    if (EXT_MODE && window.WL_EXTENSION && WL_EXTENSION.validCombos)
-      return WL_EXTENSION.validCombos.some(c => c.word === String(word).toLowerCase());
+    if (EXT_MODE && extWordSet) return extWordSet.has(String(word).toLowerCase());
     return DICT_SET && DICT_SET.has(String(word).toLowerCase());
   }
 
@@ -2448,28 +2455,40 @@ document.addEventListener("DOMContentLoaded", () => {
     const key = getLockKey(prefixObj, baseObj, suffix1Obj, suffix2Obj);
     if (viabilityCache.has(key)) return viabilityCache.get(key);
 
-    const prefixCandidates  = prefixObj  ? [prefixObj]  : [null, ...ALL_PREFIXES];
-    const baseCandidates    = baseObj    ? [baseObj]    : ALL_BASES;
-    const suffix1Candidates = suffix1Obj ? [suffix1Obj] : [null, ...ALL_SUFFIXES];
-    const suffix2Candidates = suffix2Obj ? [suffix2Obj] : [null, ...ALL_SUFFIXES];
-
-    for (const b of baseCandidates){
-      for (const p of prefixCandidates){
-        if (p && redundantPrefix(p, b)) continue;
-        for (const s1 of suffix1Candidates){
-          for (const s2 of suffix2Candidates){
-            if (!s1 && s2) continue;
-            if (isRealWord(computeWord(p, b, s1, s2))){
-              viabilityCache.set(key, true);
-              return true;
+    let result;
+    if (EXT_MODE && window.WL_EXTENSION && WL_EXTENSION.validCombos) {
+      // Fast path: scan 101 curated combos directly (O(101)) instead of nested loops (O(n^4))
+      const pid  = prefixObj  ? prefixObj.id  : undefined;
+      const bid  = baseObj    ? baseObj.id    : undefined;
+      const s1id = suffix1Obj ? suffix1Obj.id : undefined;
+      const s2id = suffix2Obj ? suffix2Obj.id : undefined;
+      result = WL_EXTENSION.validCombos.some(c =>
+        (pid  === undefined || c.prefix  === pid)  &&
+        (bid  === undefined || c.base    === bid)  &&
+        (s1id === undefined || c.suffix1 === s1id) &&
+        (s2id === undefined || c.suffix2 === s2id)
+      );
+    } else {
+      const prefixCandidates  = prefixObj  ? [prefixObj]  : [null, ...ALL_PREFIXES];
+      const baseCandidates    = baseObj    ? [baseObj]    : ALL_BASES;
+      const suffix1Candidates = suffix1Obj ? [suffix1Obj] : [null, ...ALL_SUFFIXES];
+      const suffix2Candidates = suffix2Obj ? [suffix2Obj] : [null, ...ALL_SUFFIXES];
+      result = false;
+      outer: for (const b of baseCandidates){
+        for (const p of prefixCandidates){
+          if (p && redundantPrefix(p, b)) continue;
+          for (const s1 of suffix1Candidates){
+            for (const s2 of suffix2Candidates){
+              if (!s1 && s2) continue;
+              if (isRealWord(computeWord(p, b, s1, s2))){ result = true; break outer; }
             }
           }
         }
       }
     }
 
-    viabilityCache.set(key, false);
-    return false;
+    viabilityCache.set(key, result);
+    return result;
   }
 
   // Background scan — deferred and chunked so it never blocks the UI
