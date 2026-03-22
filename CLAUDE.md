@@ -411,35 +411,35 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 ### PHASE 5 — Legal & Compliance (Australian context)
 
 #### 5.1 Privacy policy
-- [ ] Create `privacy.html`
-- [ ] Must comply with Australian Privacy Act 1988 and the 13 Australian Privacy Principles (APPs)
-- [ ] Covers: what data is collected (student first names, in-game progress only), why, how long kept, right to access/correct/delete
-- [ ] Specifically addresses children's data (ages 9–12) — school is the data controller, Word Labs is the processor
-- [ ] Notifiable Data Breaches scheme — state how breaches will be reported (within 30 days to OAIC)
-- [ ] Contact email for privacy requests
-- [ ] Link in footer of every page
+- [x] Create `privacy.html`
+- [x] Must comply with Australian Privacy Act 1988 and the 13 Australian Privacy Principles (APPs)
+- [x] Covers: what data is collected (student first names, in-game progress only), why, how long kept, right to access/correct/delete
+- [x] Specifically addresses children's data (ages 9–12) — school is the data controller, Word Labs is the processor
+- [x] Notifiable Data Breaches scheme — state how breaches will be reported (within 30 days to OAIC)
+- [x] Contact email for privacy requests
+- [x] Link in footer of key pages (landing, pricing, signup, login)
 
 #### 5.2 Terms of service
-- [ ] Create `terms.html`
-- [ ] Covers: what the service is, acceptable use, subscription terms, cancellation policy (Australian Consumer Law — 30 day refund right)
-- [ ] Governed by laws of [your state, e.g. Queensland]
-- [ ] Link in footer and on sign-up page
+- [x] Create `terms.html`
+- [x] Covers: what the service is, acceptable use, subscription terms, cancellation policy (Australian Consumer Law — 30 day refund right)
+- [x] Governed by laws of Queensland
+- [x] Link in footer and on sign-up page
 
 #### 5.3 Cookie / storage notice
-- [ ] List all storage used (sessionStorage, localStorage, Supabase session cookies)
-- [ ] No third-party tracking cookies currently — note this clearly (Australian schools are sensitive to this)
-- [ ] Add small banner on first visit (sessionStorage flag so it only shows once)
+- [x] List all storage used (sessionStorage, localStorage, Supabase session cookies) — in privacy.html Section 12
+- [x] No third-party tracking cookies — noted clearly in privacy policy
+- [x] Add small banner on first visit (localStorage flag so it only shows once) — on landing.html
 
 #### 5.4 Data Handling Agreement (equivalent to DPA)
 - [ ] Write school data agreement template (PDF/Word — not a web page)
 - [ ] Schools' IT/privacy officers will ask for this before approving purchase
 - [ ] Covers: what data is held, where it's stored (Australia — Supabase Sydney region), retention & deletion policy, sub-processors (Supabase AU, Anthropic API for AI Polish feature only)
-- [ ] Add "Request agreement" link on pricing page
+- [x] Add "Request agreement" link on pricing page (FAQ item added)
 
 #### 5.5 Australian Privacy compliance checks
-- [ ] Store data in Australia (Supabase Sydney region `ap-southeast-2`) — critical for government schools
-- [ ] Confirm only student first names stored — no surnames, no DOB, no email, no photos
-- [ ] Add data deletion: teacher deletes class → all student data deleted (cascade already in DB schema)
+- [x] Store data in Australia (Supabase Sydney region `ap-southeast-2`) — critical for government schools
+- [x] Confirm only student first names stored — no surnames, no DOB, no email, no photos
+- [x] Add data deletion: teacher deletes class → all student data deleted (cascade already in DB schema)
 - [ ] Add "export class data" CSV function (teachers may need this)
 - [ ] Consider: do you need an ABN? For selling to schools yes — register as sole trader or company
 - [ ] Consider: Australian schools often pay via purchase order — build this into Stripe flow
