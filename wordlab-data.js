@@ -32,7 +32,7 @@ const WordLabData = (() => {
   }
 
   // ── Constants ─────────────────────────────────────────────────
-  const LEVEL_TITLES = ['Quark Cadet','Lab Apprentice','Lab Assistant','Junior Scientist','Morpheme Scientist','Word Chemist','Senior Researcher','Lead Scientist','Word Professor','Linguistic Expert','Etymology Scholar','Morpheme Master','Word Architect','Language Scientist','Quark Commander','Grand Researcher','Word Alchemist','Linguistic Professor','Grand Etymologist','Word Lab Legend'];
+  const LEVEL_TITLES = ['Quark Cadet','Lab Apprentice','Lab Assistant','Junior Scientist','Morpheme Scientist','Word Chemist','Senior Researcher','Lead Scientist','Word Professor','Linguistic Expert','Etymology Scholar','Morpheme Master','Word Architect','Language Scientist','Quark Commander','Grand Researcher','Word Alchemist','Linguistic Professor','Grand Etymologist','Word Labs Legend'];
   const LEVEL_XP = [0,100,250,500,900,1400,2000,2800,3800,5000,6500,8500,11000,14000,18000,23000,29000,36000,45000,55000];
 
   const ALL_BADGES = [
@@ -55,7 +55,7 @@ const WordLabData = (() => {
     // ── Sessions ──
     {id:'sessions_5',      label:'Dedicated Learner',    icon:'📅',  desc:'Complete 5 sessions'},
     {id:'sessions_10',     label:'Regular Visitor',      icon:'📆',  desc:'Complete 10 sessions'},
-    {id:'sessions_20',     label:'Word Lab Veteran',     icon:'🏆',  desc:'Complete 20 sessions'},
+    {id:'sessions_20',     label:'Word Labs Veteran',     icon:'🏆',  desc:'Complete 20 sessions'},
     {id:'sessions_30',     label:'Committed Learner',    icon:'🗓️', desc:'Complete 30 sessions'},
     // ── Exploration ──
     {id:'all_activities',  label:'Polymath',             icon:'🌟',  desc:'Play every activity at least once'},
@@ -76,7 +76,7 @@ const WordLabData = (() => {
     {id:'legend_sessions',  label:'Grand Etymologist', icon:'🔱',  desc:'50 sessions'},
     {id:'legend_streak',    label:'Streak Legend',     icon:'🌩️', desc:'Achieve a streak of 30'},
     {id:'legend_collector', label:'Master Collector',  icon:'💎',  desc:'Own 10 or more shop items'},
-    {id:'legend_polymath',  label:'Word Lab Legend',   icon:'🌈',  desc:'Earn every other badge'},
+    {id:'legend_polymath',  label:'Word Labs Legend',   icon:'🌈',  desc:'Earn every other badge'},
   ];
 
   // ── Session (sessionStorage) ──────────────────────────────────

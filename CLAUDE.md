@@ -1,4 +1,4 @@
-# Word Lab — Claude Working Document
+# Word Labs — Claude Working Document
 
 > Read this at the start of every session. It is the source of truth for what this project is,
 > where it is going, and exactly what needs to be done next.
@@ -7,7 +7,7 @@
 
 ## 1. What This Project Is
 
-**Word Lab** is a browser-based morphology and phonics educational tool built for upper primary
+**Word Labs** is a browser-based morphology and phonics educational tool built for upper primary
 classrooms (ages 9–12, UK Key Stage 2). It was built by Nicholas Deeney, a primary school teacher.
 
 The goal is to turn it into a **commercial SaaS product sold to schools** — subscription-based,
@@ -349,8 +349,8 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 #### 3.1 Stripe setup
 - [ ] Create Stripe account
 - [ ] Create products in Stripe dashboard:
-  - `Word Lab — School (Annual)` — £199/year
-  - `Word Lab — Trial` — £0 (30 days, 1 class, max 35 students)
+  - `Word Labs — School (Annual)` — £199/year
+  - `Word Labs — Trial` — £0 (30 days, 1 class, max 35 students)
 - [ ] Note down product price IDs
 
 #### 3.2 New Supabase Edge Function: `create-checkout`
@@ -423,7 +423,7 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 - [ ] Create `privacy.html`
 - [ ] Must comply with Australian Privacy Act 1988 and the 13 Australian Privacy Principles (APPs)
 - [ ] Covers: what data is collected (student first names, in-game progress only), why, how long kept, right to access/correct/delete
-- [ ] Specifically addresses children's data (ages 9–12) — school is the data controller, Word Lab is the processor
+- [ ] Specifically addresses children's data (ages 9–12) — school is the data controller, Word Labs is the processor
 - [ ] Notifiable Data Breaches scheme — state how breaches will be reported (within 30 days to OAIC)
 - [ ] Contact email for privacy requests
 - [ ] Link in footer of every page
@@ -513,7 +513,7 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 ### PHASE 8 — Growth & Integrations (Later)
 
 - [ ] Google Classroom integration (roster import via Google API)
-- [ ] SCORM export (lets schools plug Word Lab into their LMS)
+- [ ] SCORM export (lets schools plug Word Labs into their LMS)
 - [ ] Multi-Academy Trust (MAT) accounts — one billing account, many schools
 - [ ] Teacher-to-teacher sharing of custom item designs
 - [ ] White-labelling option for large MAT contracts
