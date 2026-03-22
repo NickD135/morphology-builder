@@ -27,7 +27,7 @@ privacy-law-compliant, multi-tenant, with proper teacher auth and a payment laye
 **Supabase project ref:** `qutsbcfkgiihcwaktsaz`
 **Supabase URL:** `https://qutsbcfkgiihcwaktsaz.supabase.co`
 **Local dev:** `python3 -m http.server 8080 --bind 0.0.0.0`
-**Live URL:** TBD — Vercel deployment in progress (Phase 0)
+**Live URL:** https://morphology-builder.vercel.app
 
 ---
 
@@ -241,12 +241,11 @@ Check items off as they are completed.
 #### 0.1 Vercel Deployment
 - [x] Create `vercel.json` at repo root — cleanUrls, root redirect to /landing, security headers
 - [x] Create `.gitignore` — excludes node_modules, screenshots, package-lock.json
-- [ ] Nicholas: go to vercel.com → "Add New Project" → import `nicholasd-art/morphology-builder`
-- [ ] Vercel settings: Framework = Other, Build Command = (leave blank), Output = (leave blank)
-- [ ] Click Deploy — should go live in ~30 seconds
+- [x] Nicholas: go to vercel.com → "Add New Project" → import `NickD135/morphology-builder`
+- [x] Vercel settings: Framework = Other, Build Command = (leave blank), Output = (leave blank)
+- [x] Click Deploy — live at https://morphology-builder.vercel.app
 - [ ] Confirm auto-deploy on push to `main` works (push something small to test)
 - [ ] Test all pages load on Vercel URL (especially check wordlab-data.js loads correctly)
-- [ ] Note the Vercel URL (e.g. `morphology-builder-xxx.vercel.app`) — update CLAUDE.md
 
 #### 0.2 Custom Domain
 - [ ] Purchase domain — recommended: `wordlab.com.au` (needs ABN) or `wordlab.app` / `getwordlab.com`
