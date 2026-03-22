@@ -23,7 +23,7 @@ privacy-law-compliant, multi-tenant, with proper teacher auth and a payment laye
 **Supabase region:** Should be `ap-southeast-2` (Sydney) for data sovereignty —
   current project may be in US; check and migrate if needed
 
-**GitHub repo:** `nicholasd-art/morphology-builder`
+**GitHub repo:** `NickD135/morphology-builder`
 **Supabase project ref:** `qutsbcfkgiihcwaktsaz`
 **Supabase URL:** `https://qutsbcfkgiihcwaktsaz.supabase.co`
 **Local dev:** `python3 -m http.server 8080 --bind 0.0.0.0`
