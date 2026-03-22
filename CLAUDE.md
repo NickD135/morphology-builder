@@ -311,7 +311,7 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 #### 1.8 Navigation updates
 - [x] Sign Out button added to `dashboard.html` and `class-setup.html` headers
 - [x] Teacher email displayed in headers
-- [ ] Update `landing.html` — show "Teacher Login" link in header
+- [x] Update `landing.html` — show "Teacher Login" link in header
 - [x] Removed old password gate overlay HTML from all three teacher pages
 
 ---
