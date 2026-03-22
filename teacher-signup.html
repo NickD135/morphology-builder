@@ -147,8 +147,9 @@
       return;
     }
 
-    // If session is returned immediately (email confirmation disabled), redirect
+    // If session is returned immediately (email confirmation disabled), create school + teacher records
     if (data.session) {
+      await createSchoolAndTeacher(data.session.user.id, email);
       window.location.href = 'class-setup';
       return;
     }
@@ -157,6 +158,31 @@
     document.getElementById('formSection').style.display = 'none';
     document.getElementById('confirmedEmail').textContent = email;
     document.getElementById('successBox').style.display = 'block';
+  }
+
+  async function createSchoolAndTeacher(authUserId, email) {
+    // Check if teacher record already exists (idempotent)
+    const { data: existing } = await _sb
+      .from('teachers')
+      .select('id, school_id')
+      .eq('auth_user_id', authUserId)
+      .maybeSingle();
+    if (existing?.school_id) return; // already set up
+
+    // Create school
+    const { data: school, error: schoolErr } = await _sb
+      .from('schools')
+      .insert({ name: 'My School', plan: 'trial' })
+      .select('id')
+      .single();
+    if (schoolErr) { console.warn('School creation failed:', schoolErr); return; }
+
+    // Create or update teacher record
+    if (existing) {
+      await _sb.from('teachers').update({ school_id: school.id, email }).eq('auth_user_id', authUserId);
+    } else {
+      await _sb.from('teachers').insert({ auth_user_id: authUserId, school_id: school.id, email });
+    }
   }
 </script>
 </body>
