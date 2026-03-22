@@ -575,6 +575,7 @@ async function toggleDashboardMode(isExt){
   if(isExt && Object.keys(extensionData).length === 0){
     await loadExtensionData();
   }
+  renderSummary();
   ['sound-sorter','phoneme-splitter','syllable-splitter','breakdown-blitz','meaning-mode','mission-mode','root-lab']
     .forEach(a => renderHeatmap(a));
 }
@@ -1182,8 +1183,12 @@ function renderSummary(){
     { key:'root-lab',          label:'🧫 Root Lab', short:'Root Lab' },
   ];
 
+  const isExt = dashboardMode === 'extension';
+
   function actAcc(student, actKey){
-    const actData = (student.results||{})[actKey]||{};
+    const actData = isExt
+      ? ((extensionData[student.id]||{})[actKey]||{})
+      : ((student.results||{})[actKey]||{});
     let c=0, t=0;
     Object.values(actData).forEach(r=>{ c+=r.correct||0; t+=r.total||0; });
     return t===0 ? null : { pct: Math.round(c/t*100), total: t };
@@ -1219,7 +1224,7 @@ function renderSummary(){
 
   container.innerHTML = `
     <div class="panel"><div class="panelInner">
-      <div class="panelTitle">📋 Class Summary</div>
+      <div class="panelTitle">📋 Class Summary${isExt?' <span style="background:#4338ca;color:#e0e7ff;font-size:9px;font-weight:900;padding:2px 8px;border-radius:8px;letter-spacing:.08em;margin-left:8px;vertical-align:middle;">🔬 EXTENSION</span>':''}</div>
       <p style="font-size:13px;color:var(--muted);font-weight:700;margin:0 0 16px;">Overall accuracy per activity for each student. Click a name for full detail. Toggle extension mode or give rewards from here.</p>
       <div class="heatmapWrap">
         <table class="sumTable">
