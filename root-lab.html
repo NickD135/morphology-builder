@@ -309,6 +309,37 @@
     }
 
     .hidden{ display:none !important; }
+
+    /* ── Cloze section ── */
+    .clozeSection{
+      background:#fff; border:2px solid #e2e8f0; border-radius:16px;
+      padding:20px 22px; margin-top:16px;
+    }
+    .clozeLabel{
+      font-size:11px; font-weight:900; text-transform:uppercase;
+      letter-spacing:.12em; color:#6366f1; margin-bottom:14px;
+    }
+    .clozeItem{ margin-bottom:16px; }
+    .clozeItem:last-child{ margin-bottom:0; }
+    .clozeSentence{
+      font-size:15px; font-weight:700; color:#1e293b; margin-bottom:8px; line-height:1.5;
+    }
+    .clozeSentence .blank{
+      display:inline-block; min-width:140px; border-bottom:2px solid #4338ca;
+      color:#4338ca; font-weight:900; text-align:center; padding:0 6px;
+    }
+    .clozeOptions{ display:flex; flex-wrap:wrap; gap:8px; }
+    .clozeBtn{
+      border:2px solid #e2e8f0; background:#f8fafc; color:#334155;
+      font-family:'Lexend',sans-serif; font-size:13px; font-weight:700;
+      padding:7px 14px; border-radius:10px; cursor:pointer;
+      transition:border-color .12s, background .12s;
+    }
+    .clozeBtn:hover:not(:disabled){ border-color:#4338ca; background:#eef2ff; color:#4338ca; }
+    .clozeBtn.selected{ border-color:#4338ca; background:#eef2ff; color:#312e81; font-weight:900; }
+    .clozeBtn.correct-answer{ border-color:#16a34a !important; background:#f0fdf4 !important; color:#166534 !important; }
+    .clozeBtn.wrong-answer  { border-color:#dc2626 !important; background:#fef2f2 !important; color:#dc2626 !important; }
+    .clozeBtn:disabled{ cursor:default; opacity:.85; }
   </style>
 
   <!-- ═══════════════════════════════════════════════════════════
@@ -821,6 +852,9 @@
             <div id="meaningArea"></div>
           </div>
 
+          <!-- Cloze sentences (challenge only) -->
+          <div id="clozeSection" style="display:none;"></div>
+
           <!-- Feedback -->
           <div class="feedbackBanner" id="feedbackBanner"></div>
 
@@ -1036,49 +1070,113 @@ const WORDS = [
    meanings:{prefix:'not',          base:'to manage',           suffix:'able to be'},
    fullMeaning:'not able to be managed',
    distractors:['easy to manage','managed well in the past','the act of managing'],
-   level:'challenge'},
+   level:'challenge',
+   cloze:[
+    {sentence:'The crowd became ___ after the concert was cancelled.',
+     options:['unmanageable','interconnected','overprotective','encouraging'], answer:'unmanageable'},
+    {sentence:'Without extra help, her workload had become completely ___.',
+     options:['unmanageable','unpredictable','disagreeable','misunderstood'], answer:'unmanageable'},
+    {sentence:'The teacher said the noise in the corridor was ___ and everyone had to wait.',
+     options:['unmanageable','reconstructed','interconnected','overprotective'], answer:'unmanageable'},
+   ]},
 
   {word:'interconnected',  parts:{prefix:'inter', base:'connect',  suffix:'ed'},
    meanings:{prefix:'between each', base:'to connect',          suffix:'past tense'},
    fullMeaning:'connected between each other',
    distractors:['not connected at all','connecting right now','able to be connected'],
-   level:'challenge'},
+   level:'challenge',
+   cloze:[
+    {sentence:'Scientists discovered that all the rainforest species were ___.',
+     options:['interconnected','unmanageable','overprotective','misunderstood'], answer:'interconnected'},
+    {sentence:'The world\'s computers are ___ through the internet.',
+     options:['interconnected','unpredictable','reconstructed','discouraged'], answer:'interconnected'},
+    {sentence:'Our problems are ___ — solving one will help solve the others.',
+     options:['interconnected','unmanageable','overprotective','disagreeable'], answer:'interconnected'},
+   ]},
 
   {word:'overprotective',  parts:{prefix:'over', base:'protect',   suffix:'ive'},
    meanings:{prefix:'too much',     base:'to protect',          suffix:'tending to'},
    fullMeaning:'tending to protect too much',
    distractors:['not able to protect','protected in the past','refusing to protect'],
-   level:'challenge'},
+   level:'challenge',
+   cloze:[
+    {sentence:'Some parents become ___ and never allow their children to take risks.',
+     options:['overprotective','interconnected','misunderstanding','disagreeable'], answer:'overprotective'},
+    {sentence:'The ___ guard refused to let anyone near the display.',
+     options:['overprotective','unpredictable','unmanageable','encouraging'], answer:'overprotective'},
+    {sentence:'Being too ___ can stop children from learning to be independent.',
+     options:['overprotective','reconstructing','misunderstanding','interconnected'], answer:'overprotective'},
+   ]},
 
   {word:'reconstructing',  parts:{prefix:'re',   base:'construct', suffix:'ing'},
    meanings:{prefix:'again',        base:'to build / construct', suffix:'ongoing action'},
    fullMeaning:'building again right now',
    distractors:['unable to build','built long ago','destroyed completely'],
-   level:'challenge'},
+   level:'challenge',
+   cloze:[
+    {sentence:'Workers were ___ the collapsed bridge using stronger steel.',
+     options:['reconstructing','misunderstanding','overprotecting','discouraging'], answer:'reconstructing'},
+    {sentence:'After the flood, the whole town began ___ its damaged homes.',
+     options:['reconstructing','unmanaging','interconnecting','disagreeing'], answer:'reconstructing'},
+    {sentence:'The museum is ___ a full-size replica of a Roman temple.',
+     options:['reconstructing','misunderstanding','overprotecting','unpredicting'], answer:'reconstructing'},
+   ]},
 
   {word:'unpredictable',   parts:{prefix:'un',   base:'predict',   suffix:'able'},
    meanings:{prefix:'not',          base:'to predict / forecast', suffix:'able to be'},
    fullMeaning:'not able to be predicted',
    distractors:['easy to predict','predicted in the past','the act of predicting'],
-   level:'challenge'},
+   level:'challenge',
+   cloze:[
+    {sentence:'Spring weather can be ___ — sunny one moment, stormy the next.',
+     options:['unpredictable','unmanageable','interconnected','reconstructed'], answer:'unpredictable'},
+    {sentence:'Her reactions were ___, which made the other players nervous.',
+     options:['unpredictable','overprotective','discouraged','disagreeable'], answer:'unpredictable'},
+    {sentence:'Wild animals are ___, so you should always keep a safe distance.',
+     options:['unpredictable','unmanageable','misunderstood','interconnected'], answer:'unpredictable'},
+   ]},
 
   {word:'disagreement',    parts:{prefix:'dis',  base:'agree',     suffix:'ment'},
    meanings:{prefix:'not / apart',  base:'to agree',            suffix:'the act / state of'},
    fullMeaning:'the state of not agreeing',
    distractors:['a strong agreement','agreeing quickly','the act of agreeing'],
-   level:'challenge'},
+   level:'challenge',
+   cloze:[
+    {sentence:'There was a heated ___ between the two teams over the rules.',
+     options:['disagreement','encouragement','misunderstanding','reconstruction'], answer:'disagreement'},
+    {sentence:'The ___ ended their friendship for several months.',
+     options:['disagreement','encouragement','overprotection','interconnection'], answer:'disagreement'},
+    {sentence:'After a long ___, they finally decided to compromise.',
+     options:['disagreement','encouragement','misunderstanding','reconstruction'], answer:'disagreement'},
+   ]},
 
   {word:'encouragement',   parts:{prefix:'en',   base:'courage',   suffix:'ment'},
    meanings:{prefix:'to put into',  base:'bravery / courage',   suffix:'the act / state of'},
    fullMeaning:'the act of putting courage into someone',
    distractors:['a lack of bravery','being very brave','afraid of something'],
-   level:'challenge'},
+   level:'challenge',
+   cloze:[
+    {sentence:'With a little ___ from her coach, she won the race.',
+     options:['encouragement','disagreement','misunderstanding','reconstruction'], answer:'encouragement'},
+    {sentence:'The crowd\'s ___ helped the team play their very best.',
+     options:['encouragement','disagreement','overprotection','unpredictability'], answer:'encouragement'},
+    {sentence:'He needed ___ before he was willing to try again.',
+     options:['encouragement','disagreement','misunderstanding','reconstruction'], answer:'encouragement'},
+   ]},
 
   {word:'misunderstanding', parts:{prefix:'mis', base:'understand', suffix:'ing'},
    meanings:{prefix:'wrongly',      base:'to understand',       suffix:'ongoing action'},
    fullMeaning:'understanding wrongly right now',
    distractors:['understanding very well','understood in the past','refusing to understand'],
-   level:'challenge'},
+   level:'challenge',
+   cloze:[
+    {sentence:'The whole argument started because of a simple ___.',
+     options:['misunderstanding','disagreement','encouragement','overprotection'], answer:'misunderstanding'},
+    {sentence:'There was a ___ about the time of the meeting, so nobody came.',
+     options:['misunderstanding','disagreement','encouragement','reconstruction'], answer:'misunderstanding'},
+    {sentence:'I think you are ___ what I said — let me explain again.',
+     options:['misunderstanding','overprotecting','discouraging','interconnecting'], answer:'misunderstanding'},
+   ]},
 ];
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -1100,6 +1198,7 @@ let selPrefix  = null;
 let selBase    = null;
 let selSuffix  = null;
 let selMeaning = null;
+let selCloze   = [null, null, null];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function shuffle(arr){
@@ -1154,6 +1253,7 @@ function loadWord(){
   usedWords.add(pick.word);
   currentWord = pick;
   selPrefix = selBase = selSuffix = selMeaning = null;
+  selCloze = [null, null, null];
   checked = false;
   roundStartMs = Date.now();
   renderGameScreen();
@@ -1166,6 +1266,7 @@ function renderGameScreen(){
   renderWordDisplay();
   renderZones();
   renderMeaning();
+  renderCloze();
   document.getElementById('feedbackBanner').className = 'feedbackBanner';
   document.getElementById('nextBtn').classList.remove('visible');
   document.getElementById('checkBtn').disabled = false;
@@ -1284,24 +1385,51 @@ function selectTile(zone, el){
 
 function renderMeaning(){
   const w   = currentWord;
-  const lvl = effectiveLevel(w);
+  const opts = shuffle([w.fullMeaning, ...w.distractors.slice(0, 3)]);
   const area = document.getElementById('meaningArea');
+  area.innerHTML = `<div class="meaningOptions">${opts.map(opt =>
+    `<button class="meaningBtn" data-val="${escHtml(opt)}" onclick="selectMeaning(this)">${escHtml(opt)}</button>`
+  ).join('')}</div>`;
+}
 
-  if(lvl === 'challenge'){
-    area.innerHTML = `<input type="text" class="meaningInput" id="meaningInput"
-      placeholder="Describe what the whole word means…" autocomplete="off">`;
-  } else {
-    const opts = shuffle([w.fullMeaning, ...w.distractors.slice(0, 3)]);
-    area.innerHTML = `<div class="meaningOptions">${opts.map(opt =>
-      `<button class="meaningBtn" data-val="${escHtml(opt)}" onclick="selectMeaning(this)">${escHtml(opt)}</button>`
-    ).join('')}</div>`;
+function renderCloze(){
+  const w   = currentWord;
+  const lvl = effectiveLevel(w);
+  const sec = document.getElementById('clozeSection');
+  if(lvl !== 'challenge' || !w.cloze || !w.cloze.length){
+    sec.style.display = 'none';
+    sec.innerHTML = '';
+    return;
   }
+  sec.style.display = 'block';
+  sec.innerHTML = `<div class="clozeSection">
+    <div class="clozeLabel">🔎 Use it in context — choose the correct word</div>
+    ${w.cloze.map((c, i) => {
+      const sentence = escHtml(c.sentence).replace('___',
+        '<span class="blank">___</span>');
+      const opts = shuffle([...c.options]);
+      return `<div class="clozeItem" id="clozeItem-${i}">
+        <div class="clozeSentence">${sentence}</div>
+        <div class="clozeOptions">${opts.map(opt =>
+          `<button class="clozeBtn" data-val="${escHtml(opt)}" data-idx="${i}"
+            onclick="selectCloze(${i},this)">${escHtml(opt)}</button>`
+        ).join('')}</div>
+      </div>`;
+    }).join('')}
+  </div>`;
 }
 
 function selectMeaning(el){
   if(checked) return;
   selMeaning = el.dataset.val;
   document.querySelectorAll('.meaningBtn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function selectCloze(idx, el){
+  if(checked) return;
+  selCloze[idx] = el.dataset.val;
+  document.querySelectorAll(`.clozeBtn[data-idx="${idx}"]`).forEach(b => b.classList.remove('selected'));
   el.classList.add('selected');
 }
 
@@ -1321,7 +1449,7 @@ function checkAnswer(){
     ansPrefix  = rawP === '' ? 'none' : rawP;
     ansBase    = rawB;
     ansSuffix  = rawS === '' ? 'none' : rawS;
-    ansMeaning = document.getElementById('meaningInput').value.trim().toLowerCase();
+    ansMeaning = selMeaning;
   } else {
     ansPrefix  = selPrefix;
     ansBase    = selBase;
@@ -1339,19 +1467,19 @@ function checkAnswer(){
   const baseOk    = ansBase    === corrBase;
   const suffixOk  = ansSuffix  === corrSuffix;
 
-  let meaningOk;
-  if(isChallenge){
-    const stopWords = new Set(['a','an','the','of','to','be','is','in','it','by','on','or','at','as','do','was','for','and','but','not','that','this','with','from','into']);
-    const keyWords  = w.fullMeaning.toLowerCase().split(/\W+/).filter(wd => wd.length > 2 && !stopWords.has(wd));
-    const ansWords  = ansMeaning.split(/\W+/);
-    const hits      = keyWords.filter(kw => ansWords.includes(kw) || ansWords.some(aw => aw.startsWith(kw.slice(0,5)) && kw.length > 4));
-    meaningOk = hits.length >= Math.min(2, keyWords.length);
-  } else {
-    meaningOk = ansMeaning === w.fullMeaning;
+  const meaningOk = ansMeaning === w.fullMeaning;
+
+  // Cloze scoring (challenge only)
+  const clozeResults = [];
+  if(isChallenge && w.cloze){
+    w.cloze.forEach((c, i) => {
+      clozeResults.push(selCloze[i] === c.answer);
+    });
   }
+  const allClozeOk = clozeResults.length === 0 || clozeResults.every(Boolean);
 
   checked = true;
-  const allCorrect = prefixOk && baseOk && suffixOk && meaningOk;
+  const allCorrect = prefixOk && baseOk && suffixOk && meaningOk && allClozeOk;
 
   // Scoring
   let pts = 0;
@@ -1359,6 +1487,7 @@ function checkAnswer(){
   if(baseOk)    pts += 10;
   if(suffixOk)  pts += 10;
   if(meaningOk) pts += 10;
+  clozeResults.forEach(ok => { if(ok) pts += 10; });
   if(allCorrect) pts += 50;
 
   if(allCorrect){
@@ -1387,14 +1516,23 @@ function checkAnswer(){
       const inp = document.getElementById('input-' + z);
       if(inp) inp.disabled = true;
     });
-    const mi = document.getElementById('meaningInput');
-    if(mi){ mi.classList.add(meaningOk ? 'correct' : 'wrong'); mi.disabled = true; }
   } else {
     document.querySelectorAll('.zoneTile').forEach(t => { t.disabled = true; });
-    document.querySelectorAll('.meaningBtn').forEach(btn => {
-      if(btn.dataset.val === w.fullMeaning) btn.classList.add('correct-answer');
-      else if(btn.classList.contains('selected') && !meaningOk) btn.classList.add('wrong-answer');
-      btn.disabled = true;
+  }
+  // Disable meaning MC (all levels)
+  document.querySelectorAll('.meaningBtn').forEach(btn => {
+    if(btn.dataset.val === w.fullMeaning) btn.classList.add('correct-answer');
+    else if(btn.classList.contains('selected') && !meaningOk) btn.classList.add('wrong-answer');
+    btn.disabled = true;
+  });
+  // Disable and mark cloze buttons
+  if(isChallenge && w.cloze){
+    w.cloze.forEach((c, i) => {
+      document.querySelectorAll(`.clozeBtn[data-idx="${i}"]`).forEach(btn => {
+        if(btn.dataset.val === c.answer) btn.classList.add('correct-answer');
+        else if(btn.classList.contains('selected') && selCloze[i] !== c.answer) btn.classList.add('wrong-answer');
+        btn.disabled = true;
+      });
     });
   }
 
@@ -1419,6 +1557,7 @@ function checkAnswer(){
     if(!baseOk)    wrongNames.push('Base');
     if(!suffixOk)  wrongNames.push('Suffix');
     if(!meaningOk) wrongNames.push('Meaning');
+    clozeResults.forEach((ok, i) => { if(!ok) wrongNames.push('Sentence ' + (i+1)); });
     banner.className = 'feedbackBanner wrong';
     banner.innerHTML = '❌ ' + wrongNames.join(', ') + ' — see breakdown &nbsp;·&nbsp; ' + breakdown;
     if(typeof WordLabData !== 'undefined' && WordLabData.getSession())
