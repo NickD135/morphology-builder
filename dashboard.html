@@ -481,11 +481,14 @@ function getExtColumns(){
   return _extColumnsCache;
 }
 
-function toggleDashboardMode(isExt){
+async function toggleDashboardMode(isExt){
   dashboardMode = isExt ? 'extension' : 'base';
   updateClassInfo();
-  const activities = ['sound-sorter','phoneme-splitter','syllable-splitter','breakdown-blitz','meaning-mode','mission-mode','root-lab'];
-  activities.forEach(a => renderHeatmap(a));
+  if(isExt && Object.keys(extensionData).length === 0){
+    await loadExtensionData();
+  }
+  ['sound-sorter','phoneme-splitter','syllable-splitter','breakdown-blitz','meaning-mode','mission-mode','root-lab']
+    .forEach(a => renderHeatmap(a));
 }
 
 const SUPABASE_URL  = 'https://qutsbcfkgiihcwaktsaz.supabase.co';
@@ -520,12 +523,11 @@ function updateClassInfo(){
   const isExt = dashboardMode === 'extension';
   document.getElementById('classInfo').innerHTML =
     `<span>Showing data for <strong>${currentClass.name}</strong> · ${totalStudents} students · Last updated ${new Date().toLocaleTimeString()}</span>
-     <label class="modeToggle" onclick="toggleDashboardMode(!document.getElementById('extToggleInput').checked)">
+     <div class="modeToggle" onclick="toggleDashboardMode(${isExt ? 'false' : 'true'})">
        <span class="lbl ${isExt?'inactive':'active'}">📚 Base</span>
        <div class="track ${isExt?'on':''}"><div class="thumb"></div></div>
-       <input type="checkbox" id="extToggleInput" ${isExt?'checked':''} style="display:none;">
        <span class="lbl ${isExt?'active':'inactive'}">🔬 Extension</span>
-     </label>`;
+     </div>`;
 }
 
 // ── Login ────────────────────────────────────────────────────────
