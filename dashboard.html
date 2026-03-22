@@ -640,25 +640,53 @@ async function showPlanBanner() {
   const trialEnd = school.trial_ends_at ? new Date(school.trial_ends_at) : null;
   const daysLeft = trialEnd ? Math.ceil((trialEnd - Date.now()) / 86400000) : 0;
 
-  let html = '';
-  const upgradeLink = '<a href="pricing" style="color:inherit;font-weight:900;text-decoration:underline;">Upgrade now →</a>';
+  const upgradeBtn = `<button onclick="startCheckout()" style="margin-left:12px;border:none;background:rgba(0,0,0,.12);color:inherit;font-family:'Lexend',sans-serif;font-weight:900;font-size:12px;padding:6px 14px;border-radius:8px;cursor:pointer;" id="dashUpgradeBtn">Upgrade now →</button>`;
 
+  let html = '';
   if (plan === 'expired' || (plan === 'trial' && daysLeft <= 0)) {
     html = `<div style="background:#fef2f2;border-bottom:2px solid #fecaca;padding:12px 20px;text-align:center;font-size:13px;font-weight:700;color:#dc2626;">
-      Your trial has ended. Students can still play but you can't add new classes. ${upgradeLink}
+      Your trial has ended. Students can still play but you can't add new classes. ${upgradeBtn}
     </div>`;
   } else if (plan === 'payment_failed') {
     html = `<div style="background:#fff7ed;border-bottom:2px solid #fed7aa;padding:12px 20px;text-align:center;font-size:13px;font-weight:700;color:#9a3412;">
-      Payment failed — please update your billing details to keep access. ${upgradeLink}
+      Payment failed — please update your billing details to keep access. ${upgradeBtn}
     </div>`;
   } else if (plan === 'trial' && daysLeft <= 7) {
     html = `<div style="background:#fffbeb;border-bottom:2px solid #fde68a;padding:12px 20px;text-align:center;font-size:13px;font-weight:700;color:#92400e;">
-      ${daysLeft} day${daysLeft === 1 ? '' : 's'} left on your free trial. ${upgradeLink}
+      ${daysLeft} day${daysLeft === 1 ? '' : 's'} left on your free trial. ${upgradeBtn}
     </div>`;
   }
 
   banner.innerHTML = html;
   banner.style.display = html ? 'block' : 'none';
+}
+
+// ── Stripe checkout ───────────────────────────────────────────────
+const PRICE_ID = 'price_1TDhljPlhyP7eUplp5zTRIEj';
+
+async function startCheckout() {
+  const btn = document.getElementById('dashUpgradeBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Loading...'; }
+
+  const { data: { session } } = await WordLabData._sb().auth.getSession();
+  if (!session) { window.location.href = 'teacher-login'; return; }
+
+  const resp = await fetch('https://qutsbcfkgiihcwaktsaz.supabase.co/functions/v1/create-checkout', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ priceId: PRICE_ID }),
+  });
+
+  const data = await resp.json();
+  if (data.url) {
+    window.location.href = data.url;
+  } else {
+    alert(data.error || data.message || 'Checkout failed. Please try again.');
+    if (btn) { btn.disabled = false; btn.textContent = 'Upgrade now →'; }
+  }
 }
 
 // ── Auth + class picker ───────────────────────────────────────────
