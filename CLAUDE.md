@@ -431,10 +431,10 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 - [x] Add small banner on first visit (localStorage flag so it only shows once) — on landing.html
 
 #### 5.4 Data Handling Agreement (equivalent to DPA)
-- [ ] Write school data agreement template (PDF/Word — not a web page)
-- [ ] Schools' IT/privacy officers will ask for this before approving purchase
-- [ ] Covers: what data is held, where it's stored (Australia — Supabase Sydney region), retention & deletion policy, sub-processors (Supabase AU, Anthropic API for AI Polish feature only)
-- [x] Add "Request agreement" link on pricing page (FAQ item added)
+- [x] Create `data-agreement.html` — printable/PDF-ready school data agreement
+- [x] Schools' IT/privacy officers will ask for this before approving purchase
+- [x] Covers: what data is held, where it's stored (Australia — Supabase Sydney region), retention & deletion policy, sub-processors (Supabase AU, Anthropic API for AI Polish feature only)
+- [x] Link on pricing page FAQ — "view and print our School Data Handling Agreement"
 
 #### 5.5 Australian Privacy compliance checks
 - [x] Store data in Australia (Supabase Sydney region `ap-southeast-2`) — critical for government schools
