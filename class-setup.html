@@ -177,7 +177,7 @@
       <div class="field" style="margin-bottom:20px;">
         <label>Student names</label>
         <textarea id="studentNames" placeholder="Enter one name per line:&#10;Aiden Smith&#10;Bella Jones&#10;Charlie Brown&#10;..."></textarea>
-        <span class="hint">One name per line. You can add or remove students later.</span>
+        <span class="hint">One name per line. You can add or remove students later. Or <label style="color:var(--indigo);font-weight:800;cursor:pointer;text-transform:none;letter-spacing:0;">import a CSV<input type="file" accept=".csv,.txt" style="display:none;" onchange="loadCSVToTextarea(this, 'studentNames')"></label></span>
       </div>
 
       <button class="primaryBtn" onclick="createClass()">Create class →</button>
@@ -327,6 +327,7 @@
           <div class="addStudentRow">
             <input type="text" id="addInput_${cls.id}" placeholder="Add student name..." onkeydown="if(event.key==='Enter') addStudent('${cls.id}')">
             <button class="secondaryBtn" onclick="addStudent('${cls.id}')">Add</button>
+            <label class="secondaryBtn" style="cursor:pointer;text-align:center;">CSV <input type="file" accept=".csv,.txt" style="display:none;" onchange="importCSVToClass('${cls.id}', this)"></label>
           </div>
         </div>
       </div>
@@ -394,6 +395,52 @@
     document.getElementById(`students_${classId}`).classList.add('open');
   }
 
+  // ── CSV helpers ──────────────────────────────────────────────
+  function parseCSVNames(text) {
+    var lines = text.split(/\r?\n/);
+    var names = [];
+    for (var i = 0; i < lines.length; i++) {
+      var cols = lines[i].split(',').map(function(c){ return c.trim().replace(/^["']|["']$/g, ''); });
+      var name = cols[0];
+      if (!name || /^(name|student|first|last|pupil|first.?name)$/i.test(name)) continue;
+      names.push(name);
+    }
+    return names;
+  }
+
+  function loadCSVToTextarea(input, textareaId) {
+    var file = input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var names = parseCSVNames(e.target.result);
+      document.getElementById(textareaId).value = names.join('\n');
+    };
+    reader.readAsText(file);
+    input.value = '';
+  }
+
+  async function importCSVToClass(classId, input) {
+    var file = input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = async function(e) {
+      var names = parseCSVNames(e.target.result);
+      if (!names.length) { alert('No student names found in CSV.'); return; }
+      if (!confirm('Import ' + names.length + ' student' + (names.length !== 1 ? 's' : '') + '?\n\n' + names.join(', '))) return;
+      try {
+        await WordLabData.addStudentsBulk(classId, names);
+        await renderClasses();
+        document.getElementById('students_' + classId).classList.add('open');
+      } catch(err) {
+        alert('Error importing: ' + (err.message || err));
+      }
+    };
+    reader.readAsText(file);
+    input.value = '';
+  }
+
+  // ── Print login cards (card layout, A4) ─────────────────────
   async function printClassCodes(classId) {
     const cls = await WordLabData.getClass(classId);
     if (!cls) { alert('Could not load class data.'); return; }
@@ -403,35 +450,49 @@
       return found ? found.class_code : '—';
     });
 
-    const rows = cls.students.map(s =>
-      `<tr><td>${s.name}</td><td class="code-cell">${s.student_code || '—'}</td></tr>`
+    let schoolName = '';
+    try {
+      const teacher = await WordLabData.getTeacherRecord();
+      if (teacher?.school_id) {
+        const { data: school } = await WordLabData._sb()
+          .from('schools').select('name').eq('id', teacher.school_id).maybeSingle();
+        if (school?.name && school.name !== 'My School') schoolName = school.name;
+      }
+    } catch(e) {}
+
+    const header = schoolName ? schoolName + ' — ' + cls.name : cls.name;
+    const cards = cls.students.map(s =>
+      `<div class="card">
+        <div class="site">wordlabs.app</div>
+        <div class="name">${s.name}</div>
+        <div class="label">Class code</div>
+        <div class="code">${classCode}</div>
+        <div class="label">Your code</div>
+        <div class="code">${s.student_code || '—'}</div>
+      </div>`
     ).join('');
 
     const win = window.open('', '_blank');
-    win.document.write(`<!doctype html><html><head><title>Class Codes — ${cls.name}</title>
+    win.document.write(`<!doctype html><html><head><title>Login Cards — ${cls.name}</title>
     <style>
-      body { font-family: Arial, sans-serif; padding: 32px; color: #000; }
-      h1 { font-size: 24px; margin-bottom: 4px; }
-      .meta { font-size: 16px; color: #555; margin-bottom: 24px; }
-      .class-code { font-size: 20px; font-weight: bold; background: #eef2ff; border: 2px solid #c7d2fe; border-radius: 8px; display: inline-block; padding: 8px 20px; margin-bottom: 24px; color: #3730a3; letter-spacing: .1em; }
-      table { width: 100%; border-collapse: collapse; }
-      th { text-align: left; border-bottom: 2px solid #000; padding: 8px 12px; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
-      td { padding: 10px 12px; border-bottom: 1px solid #ddd; font-size: 15px; }
-      .code-cell { font-family: monospace; font-size: 20px; font-weight: bold; color: #3730a3; letter-spacing: .15em; }
-      .instructions { margin-top: 28px; font-size: 13px; color: #555; border-top: 1px solid #ddd; padding-top: 16px; }
-      @media print { body { padding: 16px; } button { display: none; } }
+      @page{ size:A4; margin:12mm; }
+      body{ font-family:'Lexend',Arial,sans-serif; margin:0; }
+      .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8mm; }
+      .card{ border:2px solid #c7d2fe; border-radius:12px; padding:14px; text-align:center; background:#fff; page-break-inside:avoid; }
+      .site{ font-size:10px; font-weight:700; color:#6366f1; margin-bottom:8px; letter-spacing:.05em; }
+      .name{ font-size:18px; font-weight:900; color:#1e1b4b; margin-bottom:10px; }
+      .label{ font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:#94a3b8; margin-bottom:3px; }
+      .code{ font-size:22px; font-weight:900; color:#4338ca; background:#eef2ff; border-radius:8px; padding:5px 10px; display:inline-block; margin-bottom:8px; letter-spacing:.15em; }
+      @media print{ button{ display:none; } }
     </style></head><body>
-    <h1>Word Labs — ${cls.name}</h1>
-    <div class="meta">Student login codes · Print and keep safe</div>
-    <div>Class code: <span class="class-code">${classCode}</span></div>
-    <table>
-      <thead><tr><th>Student name</th><th>3-letter code</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-    <div class="instructions">
-      To log in: go to Word Labs → enter class code <strong>${classCode}</strong> → pick your name → enter your 3-letter code
+    <div style="text-align:center;margin-bottom:8mm;font-family:'Lexend',Arial,sans-serif;">
+      <div style="font-size:18px;font-weight:900;color:#312e81;">${header}</div>
+      <div style="font-size:12px;color:#64748b;font-weight:700;margin-top:4px;">Student login cards · wordlabs.app</div>
     </div>
-    <br><button onclick="window.print()" style="padding:10px 24px;background:#4338ca;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">🖨 Print this page</button>
+    <div class="grid">${cards}</div>
+    <div style="text-align:center;margin-top:8mm;">
+      <button onclick="window.print()" style="padding:10px 28px;background:#4338ca;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:'Lexend',Arial,sans-serif;font-weight:800;">Print</button>
+    </div>
     </body></html>`);
     win.document.close();
   }

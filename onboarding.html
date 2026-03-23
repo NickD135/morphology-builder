@@ -212,7 +212,7 @@ const steps = {
       <div class="errMsg" id="err"></div>
       <div class="field">
         <label>Student names</label>
-        <textarea id="namesInput" placeholder="Emma&#10;Liam&#10;Olivia&#10;Noah&#10;Ava"></textarea>
+        <textarea id="namesInput" placeholder="Emma&#10;Liam&#10;Olivia&#10;Noah&#10;Ava" oninput="updatePreview(this.value.split('\\n').map(n=>n.trim()).filter(Boolean))"></textarea>
         <div class="hint">Or <label style="color:#4338ca;font-weight:800;cursor:pointer;">import a CSV <input type="file" accept=".csv,.txt" id="csvFile" style="display:none;" onchange="loadCSV(this)"></label></div>
       </div>
       <div id="previewWrap" style="display:none;">
@@ -298,6 +298,7 @@ async function submitStep2() {
 }
 
 async function submitStep3() {
+  if (!classId) { showErr('You need to create a class first. Go back to Step 2.'); return; }
   const raw   = document.getElementById('namesInput').value;
   const names = raw.split('\n').map(n => n.trim()).filter(n => n.length > 0);
   if (!names.length) { renderStep(4); return; }
@@ -306,13 +307,7 @@ async function submitStep3() {
   btn.disabled = true; btn.textContent = 'Adding...';
 
   try {
-    // Add students one by one using existing addStudent
-    for (const name of names) {
-      await WordLabData.addStudent(classId, name);
-    }
-    // Reload class to get codes
-    const cls = await WordLabData.getClass(classId);
-    students = cls.students;
+    students = await WordLabData.addStudentsBulk(classId, names);
     renderStep(4);
   } catch(e) {
     showErr(e.message || 'Could not add students. Please try again.');
@@ -389,9 +384,10 @@ function printLoginCards() {
   const user = await WordLabData.requireTeacherAuth();
   if (!user) return;
 
-  // If teacher already has classes, skip to dashboard
+  // If teacher already has classes and didn't just sign up, skip to dashboard
+  const fromSignup = new URLSearchParams(window.location.search).has('from');
   const classes = await WordLabData.getClasses();
-  if (classes.length > 0) {
+  if (classes.length > 0 && !fromSignup) {
     window.location.href = 'dashboard';
     return;
   }

@@ -178,7 +178,17 @@ async function doLogin() {
   try {
     const { data, error } = await _sb.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    window.location.href = getReturnUrl();
+
+    // New teachers (no classes) go to onboarding instead of dashboard
+    const returnUrl = getReturnUrl();
+    if (returnUrl === 'dashboard') {
+      const { data: cls } = await _sb.from('classes').select('id').limit(1);
+      if (!cls || cls.length === 0) {
+        window.location.href = 'onboarding';
+        return;
+      }
+    }
+    window.location.href = returnUrl;
   } catch(e) {
     errEl.textContent = e.message || 'Login failed. Check your credentials.';
     btn.disabled = false; btn.textContent = 'Log In';
@@ -229,8 +239,8 @@ async function doRegister() {
       successEl.textContent = 'Account created! Check your email to confirm, then log in.';
       btn.textContent = 'Create Account'; btn.disabled = false;
     } else {
-      // Auto-logged in
-      window.location.href = getReturnUrl();
+      // Auto-logged in — new account, go to onboarding
+      window.location.href = 'onboarding?from=signup';
     }
   } catch(e) {
     errEl.textContent = e.message || 'Registration failed. Please try again.';
@@ -259,7 +269,15 @@ async function doForgotPassword() {
 (async function() {
   const { data: { session } } = await _sb.auth.getSession();
   if (session) {
-    window.location.href = getReturnUrl();
+    const returnUrl = getReturnUrl();
+    if (returnUrl === 'dashboard') {
+      const { data: cls } = await _sb.from('classes').select('id').limit(1);
+      if (!cls || cls.length === 0) {
+        window.location.href = 'onboarding';
+        return;
+      }
+    }
+    window.location.href = returnUrl;
   }
 })();
 

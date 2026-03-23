@@ -379,6 +379,22 @@ const WordLabData = (() => {
     return code;
   }
 
+  async function addStudentsBulk(classId, names) {
+    var { data: existing } = await sb()
+      .from('students')
+      .select('student_code')
+      .eq('class_id', classId);
+    var usedCodes = (existing || []).map(function(s){ return s.student_code || ''; });
+    var rows = names.map(function(n) {
+      var code = generateStudentCode(usedCodes);
+      usedCodes.push(code);
+      return { class_id: classId, name: n.trim(), student_code: code };
+    });
+    var { data, error } = await sb().from('students').insert(rows).select('id, name, student_code');
+    if (error) throw error;
+    return data;
+  }
+
   async function removeStudent(classId, studentId) {
     const { error } = await sb()
       .from('students')
@@ -1026,7 +1042,7 @@ const WordLabData = (() => {
   return {
     getTeacherSession, getTeacherRecord, requireTeacherAuth, teacherSignOut, _sb: sb,
     createClass, getClasses, getClass, verifyPassword,
-    addStudent, removeStudent, deleteClass, regenerateStudentCode,
+    addStudent, addStudentsBulk, removeStudent, deleteClass, regenerateStudentCode,
     lookupClassByCode, verifyStudentCode,
     startSession, getSession, endSession,
     recordAttempt,
