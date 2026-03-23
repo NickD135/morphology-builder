@@ -945,6 +945,80 @@ const WordLabData = (() => {
     } catch(e) { console.warn('setStudentTeacher failed', e); }
   }
 
+  // ── Teacher-as-Student helpers ──────────────────────────────
+  async function createTeacherStudent(classId, gameName) {
+    var { data: existing } = await sb()
+      .from('students').select('student_code').eq('class_id', classId);
+    var existingCodes = (existing || []).map(function(s){ return s.student_code; });
+    var code = generateStudentCode(existingCodes);
+    var { data: row, error: insErr } = await sb()
+      .from('students')
+      .insert({ class_id: classId, name: gameName, student_code: code, extension_mode: false })
+      .select('id')
+      .single();
+    if (insErr) throw insErr;
+    var newStudentId = row.id;
+    await setStudentTeacher(classId, newStudentId, true);
+    try {
+      localStorage.setItem('wl_teacher_student_' + classId, JSON.stringify({
+        studentId: newStudentId, studentName: gameName, studentCode: code
+      }));
+    } catch(e) {}
+    return { studentId: newStudentId, studentCode: code };
+  }
+
+  async function getTeacherStudent(classId) {
+    // 1. Check localStorage cache
+    try {
+      var cached = localStorage.getItem('wl_teacher_student_' + classId);
+      if (cached) {
+        var info = JSON.parse(cached);
+        var { data: row } = await sb()
+          .from('students').select('id, name, student_code')
+          .eq('id', info.studentId).maybeSingle();
+        if (row) {
+          return { studentId: row.id, studentName: row.name, studentCode: row.student_code };
+        }
+        // Cached student no longer exists — remove stale cache
+        localStorage.removeItem('wl_teacher_student_' + classId);
+      }
+    } catch(e) {}
+    // 2. Check if any student in class is in the teacherIds list
+    var teacherIds = await getClassTeacherIds(classId);
+    if (teacherIds.length === 0) return null;
+    var { data: students } = await sb()
+      .from('students').select('id, name, student_code').eq('class_id', classId);
+    if (!students) return null;
+    for (var i = 0; i < students.length; i++) {
+      if (teacherIds.includes(students[i].id)) {
+        var found = { studentId: students[i].id, studentName: students[i].name, studentCode: students[i].student_code };
+        try {
+          localStorage.setItem('wl_teacher_student_' + classId, JSON.stringify(found));
+        } catch(e) {}
+        return found;
+      }
+    }
+    return null;
+  }
+
+  async function enterStudentMode(classId) {
+    var ts = await getTeacherStudent(classId);
+    if (!ts) return false;
+    await startSession(classId, ts.studentId, ts.studentName);
+    try { sessionStorage.setItem('wl_teacher_preview', 'true'); } catch(e) {}
+    return true;
+  }
+
+  function exitStudentMode() {
+    endSession();
+    try { sessionStorage.removeItem('wl_teacher_preview'); } catch(e) {}
+    return true;
+  }
+
+  function isTeacherPreview() {
+    return sessionStorage.getItem('wl_teacher_preview') === 'true';
+  }
+
   // Single-write: merges all settings fields at once — no race condition
   async function saveClassSettings(classId, updates) {
     var { data: existing, error: fetchErr } = await sb()
@@ -1049,6 +1123,7 @@ const WordLabData = (() => {
     getScientist, saveScientist, purchase,
     getClassLeader, getClassCrownEnabled, setClassCrownEnabled,
     getClassTeacherIds, isStudentTeacher, setStudentTeacher, saveClassSettings,
+    createTeacherStudent, getTeacherStudent, enterStudentMode, exitStudentMode, isTeacherPreview,
     isExtensionMode, loadExtensionData,
     checkDailyLimit, incrementDailyUsage
   };

@@ -389,6 +389,7 @@
       <span id="classNameDisplay" style="font-weight:800;color:#312e81;font-size:14px;"></span>
       <span id="teacherEmailDisplay" style="font-size:12px;font-weight:700;color:#64748b;"></span>
       <button class="topBtn" onclick="backToClassPicker()" id="logoutBtn" style="display:none;">← Classes</button>
+      <button class="topBtn" id="studentModeBtn" style="background:#7c3aed;" onclick="toggleStudentMode()">👀 View as Student</button>
       <a href="class-setup" class="topBtn">⚙️ Setup</a>
       <a href="landing" class="topBtn" style="background:#334155;">🏠 Home</a>
       <button class="topBtn" style="background:#334155;" onclick="WordLabData.teacherSignOut()">Sign Out</button>
@@ -770,6 +771,40 @@ function backToClassPicker(){
   document.getElementById('dashboardScreen').classList.add('hidden');
   document.getElementById('logoutBtn').style.display = 'none';
   document.getElementById('classNameDisplay').textContent = '';
+}
+
+// ── View as Student toggle ────────────────────────────────────────
+async function toggleStudentMode() {
+  // Get the current class ID
+  if (!currentClass || !currentClass.id) {
+    alert('Please select a class first.');
+    return;
+  }
+
+  // Check if teacher has a student record in this class
+  var teacherStudent = await WordLabData.getTeacherStudent(currentClass.id);
+
+  if (!teacherStudent) {
+    // Prompt for game name
+    var gameName = prompt('Choose your game name for this class (e.g. Mr Smith, Coach D):');
+    if (!gameName || !gameName.trim()) return;
+
+    try {
+      await WordLabData.createTeacherStudent(currentClass.id, gameName.trim());
+      teacherStudent = await WordLabData.getTeacherStudent(currentClass.id);
+    } catch(e) {
+      alert('Error creating your student account: ' + (e.message || e));
+      return;
+    }
+  }
+
+  // Enter student mode
+  var success = await WordLabData.enterStudentMode(currentClass.id);
+  if (success) {
+    window.location.href = 'landing.html';
+  } else {
+    alert('Could not enter student mode. Please try again.');
+  }
 }
 
 // ── Render ───────────────────────────────────────────────────────
