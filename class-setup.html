@@ -154,6 +154,7 @@
     <div class="tabs">
       <button class="tab active" onclick="showTab('create',this)">Create new class</button>
       <button class="tab" onclick="showTab('manage',this)">Manage classes</button>
+      <button class="tab" onclick="showTab('wordlists',this)">Word Lists</button>
     </div>
 
     <!-- Create tab -->
@@ -188,6 +189,36 @@
         <div class="emptyState">No classes yet. Create one above.</div>
       </div>
     </div>
+
+    <!-- Word Lists tab -->
+    <div id="tabWordlists" class="hidden">
+      <p style="font-size:13px;color:var(--muted);font-weight:700;margin-bottom:16px;">Create custom word lists for Breakdown Blitz. Students in that class will see your words mixed in with the built-in ones.</p>
+
+      <div id="wordListClassSelect" style="margin-bottom:16px;">
+        <div class="field">
+          <label>Select class</label>
+          <select id="wlClassPicker" class="field input" style="border:2px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14px;width:100%;" onchange="loadWordLists()"></select>
+        </div>
+      </div>
+
+      <div id="wordListsContainer"></div>
+
+      <div style="border-top:2px solid var(--line);padding-top:16px;margin-top:16px;">
+        <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:10px;">Create new word list</div>
+        <div class="field" style="margin-bottom:10px;">
+          <label>List name</label>
+          <input type="text" id="newListName" placeholder="e.g. Week 5 Spelling Words" style="border:2px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14px;width:100%;">
+        </div>
+        <div class="field" style="margin-bottom:10px;">
+          <label>Words (one per line: word, clue, prefix, base, suffix)</label>
+          <textarea id="newListWords" rows="8" placeholder="unhappiness, not being happy, un, happy, ness&#10;rewriting, writing again, re, write, ing&#10;careful, full of care, , care, ful" style="border:2px solid var(--line);border-radius:14px;padding:12px 14px;font-size:13px;width:100%;font-family:'Lexend',sans-serif;resize:vertical;"></textarea>
+          <span class="hint">Format: word, clue, prefix, base, suffix — leave prefix or suffix blank if none</span>
+        </div>
+        <button class="primaryBtn" onclick="createWordList()">Create Word List →</button>
+        <div id="wlCreateError" style="display:none;background:#fef2f2;border:2px solid #fecaca;border-radius:14px;padding:12px 16px;color:#dc2626;font-size:13px;font-weight:800;margin-top:10px;"></div>
+        <div id="wlCreateSuccess" style="display:none;background:#f0fdf4;border:2px solid #bbf7d0;border-radius:14px;padding:12px 16px;color:#166534;font-size:13px;font-weight:800;margin-top:10px;"></div>
+      </div>
+    </div>
   </div></div>
 </div>
 
@@ -199,7 +230,9 @@
     btn.classList.add('active');
     document.getElementById('tabCreate').classList.toggle('hidden', tab !== 'create');
     document.getElementById('tabManage').classList.toggle('hidden', tab !== 'manage');
+    document.getElementById('tabWordlists').classList.toggle('hidden', tab !== 'wordlists');
     if(tab === 'manage') renderClasses();
+    if(tab === 'wordlists') initWordListsTab();
   }
 
   // ── Error / success helpers ──────────────────────────────────
@@ -576,7 +609,115 @@
   }
 
   document.getElementById('tabManage').classList.add('hidden');
-  Object.assign(HTMLElement.prototype, {});
+  document.getElementById('tabWordlists').classList.add('hidden');
+
+  // ── Word Lists ──────────────────────────────────────────────
+  let _wlClassesLoaded = false;
+
+  async function initWordListsTab() {
+    if (_wlClassesLoaded) return;
+    try {
+      const classes = await WordLabData.getClasses();
+      const picker = document.getElementById('wlClassPicker');
+      picker.innerHTML = classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      _wlClassesLoaded = true;
+      if (classes.length) loadWordLists();
+    } catch(e) {}
+  }
+
+  async function loadWordLists() {
+    const classId = document.getElementById('wlClassPicker').value;
+    const container = document.getElementById('wordListsContainer');
+    if (!classId) { container.innerHTML = '<div class="emptyState">Select a class above.</div>'; return; }
+
+    try {
+      const { data, error } = await _csSb.from('class_word_lists')
+        .select('id, name, words, created_at')
+        .eq('class_id', classId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+
+      if (!data || !data.length) {
+        container.innerHTML = '<div class="emptyState">No word lists yet. Create one below.</div>';
+        return;
+      }
+
+      container.innerHTML = data.map(list => {
+        const words = list.words || [];
+        return `<div class="classCard" style="margin-bottom:12px;">
+          <div class="classCardTop">
+            <div>
+              <div class="className">${list.name}</div>
+              <div class="classMeta">${words.length} word${words.length !== 1 ? 's' : ''} · Created ${new Date(list.created_at).toLocaleDateString()}</div>
+            </div>
+            <div class="classActions">
+              <button class="dangerBtn" onclick="deleteWordList('${list.id}','${list.name.replace(/'/g,"\\'")}')">Delete</button>
+            </div>
+          </div>
+          <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;">
+            ${words.map(w => `<span style="background:var(--indigo-soft);border:1px solid #c7d2fe;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:800;color:var(--indigo);">${w.word}</span>`).join('')}
+          </div>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      container.innerHTML = '<div class="emptyState" style="color:#dc2626;">Error loading word lists.</div>';
+    }
+  }
+
+  async function createWordList() {
+    const classId = document.getElementById('wlClassPicker').value;
+    const name = document.getElementById('newListName').value.trim();
+    const raw = document.getElementById('newListWords').value.trim();
+    const errEl = document.getElementById('wlCreateError');
+    const sucEl = document.getElementById('wlCreateSuccess');
+    errEl.style.display = 'none'; sucEl.style.display = 'none';
+
+    if (!classId) { errEl.textContent = 'Please select a class first.'; errEl.style.display = 'block'; return; }
+    if (!name) { errEl.textContent = 'Please enter a list name.'; errEl.style.display = 'block'; return; }
+    if (!raw) { errEl.textContent = 'Please enter at least one word.'; errEl.style.display = 'block'; return; }
+
+    const words = raw.split('\n').map(line => {
+      const parts = line.split(',').map(p => p.trim());
+      if (parts.length < 4) return null;
+      return {
+        word: parts[0],
+        clue: parts[1] || '',
+        prefix: parts[2] || '',
+        base: parts[3] || parts[0],
+        suffix1: parts[4] || '',
+        suffix2: parts[5] || ''
+      };
+    }).filter(Boolean);
+
+    if (!words.length) { errEl.textContent = 'No valid words found. Use format: word, clue, prefix, base, suffix'; errEl.style.display = 'block'; return; }
+
+    try {
+      const { error } = await _csSb.from('class_word_lists').insert({
+        class_id: classId,
+        name: name,
+        words: words
+      });
+      if (error) throw error;
+
+      document.getElementById('newListName').value = '';
+      document.getElementById('newListWords').value = '';
+      sucEl.textContent = `"${name}" created with ${words.length} words!`;
+      sucEl.style.display = 'block';
+      setTimeout(() => sucEl.style.display = 'none', 4000);
+      loadWordLists();
+    } catch(e) {
+      errEl.textContent = 'Error: ' + (e.message || e);
+      errEl.style.display = 'block';
+    }
+  }
+
+  async function deleteWordList(listId, listName) {
+    if (!confirm('Delete word list "' + listName + '"? This cannot be undone.')) return;
+    try {
+      await _csSb.from('class_word_lists').delete().eq('id', listId);
+      loadWordLists();
+    } catch(e) { alert('Error: ' + (e.message || e)); }
+  }
 </script>
 
 <script>
