@@ -513,10 +513,11 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 - [x] Home screen shows "Welcome back, [name]!" with quarks, level, badges, daily goal
 
 #### 7.4 Mobile polish
-- [ ] Full audit of all game pages on mobile (320px–480px)
-- [ ] Mission Mode drag-and-drop on touch devices
-- [ ] Breakdown Blitz keyboard handling on mobile
-- [ ] Ensure scientist page shop renders cleanly on small screens
+- [x] Full audit of all game pages on mobile (320px–480px)
+- [x] Added 480px breakpoints to all 8 game pages (grids collapse, touch targets 44px+)
+- [x] Ensure scientist page shop renders cleanly on small screens (grid minmax reduced)
+- [ ] Mission Mode drag-and-drop on touch devices (works via tap-to-select fallback)
+- [ ] Breakdown Blitz keyboard handling on mobile (needs testing)
 
 ---
 
