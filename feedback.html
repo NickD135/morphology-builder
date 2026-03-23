@@ -246,14 +246,9 @@
   </div>
 </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="wordlab-data.js"></script>
 <script>
 (function(){
   const SUPABASE_URL = 'https://qutsbcfkgiihcwaktsaz.supabase.co';
-  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dHNiY2ZrZ2lpaGN3YWt0c2F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NDE1NDksImV4cCI6MjA4OTUxNzU0OX0.h1N26KCcyHDrW4FRk6iBNmJUMQcFCYi8eHpOC818B8E';
-
-  const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : null;
 
   const form      = document.getElementById('feedbackForm');
   const errorMsg  = document.getElementById('errorMsg');
@@ -284,24 +279,17 @@
       return;
     }
 
-    if(!sb){
-      showError('Unable to connect to the server. Please try again later.');
-      return;
-    }
-
     submitBtn.disabled = true;
     submitBtn.textContent = 'Sending...';
 
     try {
-      const { error } = await sb.from('feedback').insert({
-        name:     name || null,
-        email:    email || null,
-        role:     role,
-        category: category,
-        message:  message
+      const res = await fetch(SUPABASE_URL + '/functions/v1/send-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, role, category, message })
       });
-
-      if(error) throw error;
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send');
 
       formPanel.style.display = 'none';
       successPanel.style.display = 'block';
