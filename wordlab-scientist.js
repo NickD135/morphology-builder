@@ -168,6 +168,9 @@ const WLScientist = (() => {
     // Big scientist card on scientist.html
     const big = document.getElementById('sciSVGBig');
     if (big) targets.push(big);
+    // Landing page student avatar in status strip
+    const hubAvatar = document.getElementById('hubSciAvatar');
+    if (hubAvatar) targets.push(hubAvatar);
     return targets;
   }
 
