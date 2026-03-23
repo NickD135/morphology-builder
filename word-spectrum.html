@@ -231,29 +231,30 @@
     .spectrumAnchor{ font-size:13px; font-weight:900; padding:6px 14px; border-radius:10px; color:#e0f2fe; }
     .spectrumAnchor.neg{ background:rgba(220,38,38,.25); border:1.5px solid rgba(220,38,38,.4); color:#fca5a5; }
     .spectrumAnchor.pos{ background:rgba(34,211,238,.15); border:1.5px solid rgba(34,211,238,.3); color:#a5f3fc; }
-    .spectrumTrack{
-      position:relative; height:14px; border-radius:7px;
+    .spectrumBar{
+      height:10px; border-radius:5px;
       background:linear-gradient(90deg, rgba(220,38,38,.4) 0%, rgba(251,146,60,.3) 25%, rgba(234,179,8,.2) 50%, rgba(34,211,238,.2) 75%, rgba(14,116,144,.4) 100%);
       border:1.5px solid rgba(14,116,144,.25);
-      margin-bottom:20px;
+      margin-bottom:10px;
     }
-    .spectrumTrack::after{
-      content:''; position:absolute; top:50%; left:0; right:0; height:1px;
-      background:rgba(255,255,255,.08); transform:translateY(-50%);
+    .spectrumTrack{
+      display:flex; gap:8px;
+      margin-bottom:16px;
     }
     .spectrumZone{
-      position:absolute; top:50%; transform:translateY(-50%);
-      width:12px; height:12px; border-radius:50%;
-      background:rgba(14,116,144,.2); border:1.5px dashed rgba(14,116,144,.5);
-      cursor:default; transition:all .2s;
+      flex:1; min-width:0; min-height:52px; border-radius:12px;
+      background:rgba(14,116,144,.1); border:2px dashed rgba(14,116,144,.4);
+      cursor:pointer; transition:all .2s;
+      display:flex; align-items:center; justify-content:center;
+      padding:6px 4px;
     }
-    .spectrumZone.filled{ background:rgba(14,116,144,.6); border-color:#22d3ee; }
-    .spectrumZone.correct{ background:rgba(22,163,74,.5)!important; border-color:#4ade80!important; box-shadow:0 0 8px rgba(74,222,128,.4); }
-    .spectrumZone.wrong{ background:rgba(220,38,38,.5)!important; border-color:#f87171!important; }
+    .spectrumZone:hover{ background:rgba(14,116,144,.2); border-color:rgba(14,116,144,.7); }
+    .spectrumZone.filled{ background:rgba(14,116,144,.5); border-color:#22d3ee; border-style:solid; }
+    .spectrumZone.correct{ background:rgba(22,163,74,.4)!important; border-color:#4ade80!important; box-shadow:0 0 8px rgba(74,222,128,.4); }
+    .spectrumZone.wrong{ background:rgba(220,38,38,.4)!important; border-color:#f87171!important; }
     .spectrumZone .zone-label{
-      position:absolute; top:18px; left:50%; transform:translateX(-50%);
-      font-size:11px; font-weight:800; color:#a5f3fc; white-space:nowrap;
-      pointer-events:none;
+      font-size:12px; font-weight:900; color:#a5f3fc; text-align:center;
+      word-break:break-word; line-height:1.2;
     }
 
     /* Spectrum word tiles to drag/click */
@@ -504,6 +505,7 @@
           <span class="spectrumAnchor neg" id="specAnchorLeft">COLD</span>
           <span class="spectrumAnchor pos" id="specAnchorRight">HOT</span>
         </div>
+        <div class="spectrumBar"></div>
         <div class="spectrumTrack" id="spectrumTrack"></div>
       </div>
       <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.15em;color:#4b8da8;text-align:center;margin-bottom:8px;">Arrange these words on the spectrum</div>
@@ -875,15 +877,13 @@ function loadSpectrum(){
     wordsEl.appendChild(tile);
   });
 
-  // Render track slots
+  // Render track slots as a flex row
   const track = document.getElementById('spectrumTrack');
   track.innerHTML = '';
   const n = q.words.length;
   q.words.forEach((word, i) => {
-    const pct = ((i + 0.5) / n) * 100;
     const slot = document.createElement('div');
     slot.className = 'spectrumZone';
-    slot.style.left = pct + '%';
     slot.dataset.index = i;
     const lbl = document.createElement('div');
     lbl.className = 'zone-label';
@@ -926,8 +926,8 @@ function placeWordInSlot(slotIndex){
   Object.keys(spectrumPlaced).forEach(idx => {
     if(spectrumPlaced[idx] === spectrumSelected){
       delete spectrumPlaced[idx];
-      document.querySelector(`.spectrumZone[data-index="${idx}"] .zone-label`).textContent = parseInt(idx)+1;
-      document.querySelector(`.spectrumZone[data-index="${idx}"]`).classList.remove('filled');
+      const oldSlot = document.querySelector(`.spectrumZone[data-index="${idx}"]`);
+      if(oldSlot){ oldSlot.querySelector('.zone-label').textContent = parseInt(idx)+1; oldSlot.classList.remove('filled'); }
     }
   });
 
@@ -937,7 +937,7 @@ function placeWordInSlot(slotIndex){
   const slot = document.querySelector(`.spectrumZone[data-index="${slotIndex}"]`);
   slot.classList.add('filled');
   const lbl = slot.querySelector('.zone-label');
-  lbl.textContent = spectrumSelected.toUpperCase().substring(0,5);
+  lbl.textContent = spectrumSelected.toUpperCase();
 
   // Mark tile as placed
   document.querySelectorAll('.spectrumWord').forEach(t => {
