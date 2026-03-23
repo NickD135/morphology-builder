@@ -667,7 +667,8 @@ const WordLabData = (() => {
     ov.id = 'wlOverlay';
     ov.className = 'wl-ov wl-hide';
     ov.innerHTML =
-      '<div class="wl-box">' +
+      '<div class="wl-box" style="position:relative;">' +
+        '<button id="wlCloseBtn" onclick="document.getElementById(\'wlOverlay\').classList.add(\'wl-hide\')" style="position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:10px;border:2px solid #e2e8f0;background:#fff;cursor:pointer;font-size:16px;color:#94a3b8;display:flex;align-items:center;justify-content:center;font-family:Lexend,sans-serif;transition:all .15s;z-index:1;" onmouseover="this.style.background=\'#f1f5f9\';this.style.color=\'#475569\'" onmouseout="this.style.background=\'#fff\';this.style.color=\'#94a3b8\'">&times;</button>' +
         // Step 1: class code
         '<div id="wlStep1">' +
           '<div class="wl-icon">🔑</div>' +
@@ -858,7 +859,10 @@ const WordLabData = (() => {
       (on ? '🔊' : '🔇') +
       '</button>';
     var studentPill = name
-      ? '<span style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:800;color:#4338ca;cursor:pointer;font-family:Lexend,sans-serif;" onclick="wlShowLogin()">👤 ' + name + '</span>'
+      ? '<span style="display:inline-flex;align-items:center;gap:0;background:#eef2ff;border:1px solid #c7d2fe;border-radius:999px;font-family:Lexend,sans-serif;">' +
+          '<span style="padding:6px 4px 6px 14px;font-size:12px;font-weight:800;color:#4338ca;cursor:pointer;" onclick="wlShowLogin()">👤 ' + name + '</span>' +
+          '<button onclick="WordLabData._logoutStudent()" title="Log out" style="background:none;border:none;cursor:pointer;padding:6px 10px 6px 4px;font-size:13px;color:#94a3b8;display:inline-flex;align-items:center;transition:color .15s;" onmouseover="this.style.color=\'#dc2626\'" onmouseout="this.style.color=\'#94a3b8\'">✕</button>' +
+        '</span>'
       : '';
     slot.style.display = 'inline-flex';
     slot.style.alignItems = 'center';
@@ -868,6 +872,17 @@ const WordLabData = (() => {
 
   function _skip() {
     document.getElementById('wlOverlay').classList.add('wl-hide');
+  }
+
+  function _logoutStudent() {
+    endSession();
+    sessionStorage.removeItem('wl_extension_mode');
+    sessionStorage.removeItem('wl_ext_pinned');
+    sessionStorage.removeItem('wl_teacher_preview');
+    _updatePill(null);
+    var btn = document.getElementById('wlLoginBtn');
+    if (btn) { btn.style.display = ''; btn.textContent = '👤 Log in'; }
+    window.location.reload();
   }
 
   // ── Crown Leader ──────────────────────────────────────────────
@@ -1118,7 +1133,7 @@ const WordLabData = (() => {
     getAccuracy, getAvgTime, isIntervention,
     exportCSV, initLoginUI,
     _loadStudents, _pick, _pickStudent, _stepClassCode, _stepStudentCode,
-    _backToStep1, _backToStep2, _skip, _toggleAudio,
+    _backToStep1, _backToStep2, _skip, _toggleAudio, _logoutStudent,
     getStudentData, getLevel, ALL_BADGES, LEGENDARY_BADGES,
     getScientist, saveScientist, purchase,
     getClassLeader, getClassCrownEnabled, setClassCrownEnabled,
