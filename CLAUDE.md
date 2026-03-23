@@ -398,29 +398,31 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 ### PHASE 4 — Onboarding
 
 #### 4.1 Teacher onboarding flow
-- [ ] After sign-up, redirect to `/onboarding.html` (not straight to dashboard)
-- [ ] Step 1: "What's your school called?" → creates school record
-- [ ] Step 2: "Create your first class" → inline class creation (name + class code)
-- [ ] Step 3: "Add your students" → either type names or upload CSV
-- [ ] Step 4: "Here's how students log in" → show class code + student codes, printable sheet
-- [ ] Step 5: "Try an activity yourself" → link to any game page
-- [ ] Progress indicator across all steps
-- [ ] Can skip any step and come back via dashboard
+- [x] After sign-up, redirect to `/onboarding.html` (not straight to dashboard)
+- [x] Step 1: "What's your school called?" → creates school record
+- [x] Step 2: "Create your first class" → inline class creation (name + class code)
+- [x] Step 3: "Add your students" → either type names or upload CSV
+- [x] Step 4: "Here's how students log in" → show class code + student codes, printable sheet
+- [x] Step 5: "Try an activity yourself" → link to any game page
+- [x] Progress indicator across all steps
+- [x] Can skip any step and come back via dashboard
+- [x] New teachers redirected to onboarding from login page (checks for zero classes)
+- [x] Bulk student insert via `addStudentsBulk()` (1 query instead of N)
 
 #### 4.2 CSV student import
-- [ ] Add "Import from CSV" button in `class-setup.html`
-- [ ] Accept CSV with one column: student first names (or first + last)
-- [ ] Preview parsed names before importing
-- [ ] Bulk insert via `students.insert(rows)`
-- [ ] Show success count + any errors
+- [x] Add "Import from CSV" button in `class-setup.html` (create tab + manage tab per-class)
+- [x] Accept CSV with one column: student first names (or first + last)
+- [x] Preview parsed names before importing (confirm dialog with name list)
+- [x] Bulk insert via `addStudentsBulk()` → `students.insert(rows)`
+- [x] Show success count + any errors
 
 #### 4.3 Printable login card
-- [ ] Generate a printable PDF/HTML sheet showing:
+- [x] Generate a printable HTML sheet showing:
   - School/class name
   - URL to the site
   - Each student's name + their unique student code
-- [ ] "Print login cards" button in `class-setup.html`
-- [ ] Formatted for A4, 6 cards per page
+- [x] "Print login cards" button in `class-setup.html` (upgraded from table to card grid)
+- [x] Formatted for A4, 3 columns per page with `@page` CSS
 
 ---
 
