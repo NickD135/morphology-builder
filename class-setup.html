@@ -70,10 +70,15 @@
     /* Student list */
     .studentList{ margin-top:14px; border-top:2px solid var(--line); padding-top:14px; display:none; }
     .studentList.open{ display:block; }
-    .studentGrid{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
-    .studentChip{ display:inline-flex; align-items:center; gap:8px; background:var(--panel); border:2px solid var(--line); border-radius:999px; padding:6px 14px; font-size:13px; font-weight:800; }
-    .studentChipRemove{ border:none; background:none; color:#94a3b8; cursor:pointer; font-size:14px; line-height:1; padding:0; }
-    .studentChipRemove:hover{ color:var(--bad); }
+    .studentGrid{ display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+    .studentRow{ display:flex; align-items:center; gap:10px; background:var(--panel); border:2px solid var(--line); border-radius:14px; padding:10px 14px; flex-wrap:wrap; }
+    .studentName{ font-size:14px; font-weight:800; color:var(--text); min-width:100px; }
+    .studentCode{ font-size:12px; font-weight:900; font-family:monospace; color:var(--indigo); background:var(--indigo-soft); border:1px solid #c7d2fe; border-radius:8px; padding:3px 10px; letter-spacing:.1em; }
+    .studentActions{ display:flex; gap:4px; margin-left:auto; }
+    .studentActionBtn{ border:1px solid var(--line); background:#fff; color:var(--muted); cursor:pointer; font-size:11px; font-weight:700; padding:4px 10px; border-radius:8px; font-family:'Lexend',sans-serif; transition:all .15s; display:inline-flex; align-items:center; gap:4px; }
+    .studentActionBtn:hover{ border-color:var(--indigo-2); color:var(--indigo); background:var(--indigo-soft); }
+    .studentActionBtn.danger:hover{ border-color:#fca5a5; color:var(--bad); background:#fef2f2; }
+    .studentActionBtn.active-flag{ border-color:#c7d2fe; color:var(--indigo); background:var(--indigo-soft); }
     .addStudentRow{ display:flex; gap:8px; }
     .addStudentRow input{ flex:1; border:2px solid var(--line); border-radius:12px; padding:10px 14px; font-size:13px; outline:none; }
     .addStudentRow input:focus{ border-color:var(--indigo-2); }
@@ -104,9 +109,7 @@
     .pendingNote{ font-size:12px; font-weight:700; color:#b45309; display:none; }
     .classCard.pending{ border-color:#fde68a; }
     .classCard.pending .pendingNote{ display:inline; }
-    .teacherChip{ background:#eef2ff; border-color:#c7d2fe; }
-    .teacherBtn{ transition:opacity .15s, color .15s; }
-    .teacherBtn.is-teacher{ color:#4338ca !important; opacity:1 !important; }
+    .teacherBtn.is-teacher{ border-color:#c7d2fe !important; color:var(--indigo) !important; background:var(--indigo-soft) !important; }
   </style>
 </head>
 <body>
@@ -161,16 +164,12 @@
         <div class="field">
           <label>Class name</label>
           <input type="text" id="className" placeholder="e.g. 3B Literacy" autocomplete="off">
+          <span class="hint">The name you use for this class</span>
         </div>
         <div class="field">
-          <label>Dashboard password</label>
-          <input type="password" id="classPassword" placeholder="Choose a password" autocomplete="off">
-          <span class="hint">You'll use this to view the dashboard</span>
-        </div>
-        <div class="field">
-          <label>Class code</label>
+          <label>Class code (student login)</label>
           <input type="text" id="classCodeInput" placeholder="e.g. 3B or SMITH2024" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase;" maxlength="20">
-          <span class="hint">Students use this to log in — keep it short and memorable</span>
+          <span class="hint">Students type this to find your class — keep it short and memorable</span>
         </div>
       </div>
 
@@ -223,13 +222,11 @@
   // ── Create class ─────────────────────────────────────────────
   async function createClass(){
     const name     = document.getElementById('className').value.trim();
-    const pass     = document.getElementById('classPassword').value.trim();
     const code     = document.getElementById('classCodeInput').value.trim().toUpperCase();
     const namesRaw = document.getElementById('studentNames').value.trim();
 
     hideCreateError();
     if(!name){ alert('Please enter a class name.'); return; }
-    if(!pass){ alert('Please enter a dashboard password.'); return; }
     if(!code){ alert('Please enter a class code.'); return; }
     if(!/^[A-Z0-9]{1,20}$/.test(code)){ alert('Class code can only contain letters and numbers (no spaces).'); return; }
     if(!namesRaw){ alert('Please enter at least one student name.'); return; }
@@ -238,9 +235,8 @@
     if(!students.length){ alert('Please enter at least one student name.'); return; }
 
     try {
-      const classId = await WordLabData.createClass(name, pass, code, students);
+      const classId = await WordLabData.createClass(name, '', code, students);
       document.getElementById('className').value = '';
-      document.getElementById('classPassword').value = '';
       document.getElementById('classCodeInput').value = '';
       document.getElementById('studentNames').value = '';
 
@@ -290,7 +286,7 @@
             <button class="dangerBtn" onclick="deleteClass('${cls.id}', '${cls.name.replace(/'/g,"\\'")}')">Delete</button>
           </div>
         </div>
-        <div class="classCode">🔑 Class code: <strong>${cls.class_code || '—'}</strong></div>
+        <div class="classCode">Student login code: <strong>${cls.class_code || '—'}</strong> <span style="font-weight:600;color:var(--muted);font-size:11px;margin-left:4px;">(students type this to find your class)</span></div>
         <div class="crownRow">
           <label class="crownToggleWrap" style="cursor:pointer;">
             <span class="crownSwitch">
@@ -306,22 +302,24 @@
           <span class="pendingNote" id="pendingNote_${cls.id}">⚠ Unsaved changes</span>
         </div>
         <div class="studentList" id="students_${cls.id}">
+          <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:10px;">Each student has a unique <strong style="color:var(--indigo);">login code</strong> — they'll need their class code + login code to sign in at wordlabs.app.</div>
           <div class="studentGrid" id="studentGrid_${cls.id}">
             ${cls.students.map(s => `
-              <span class="studentChip" id="chip_${s.id}">
-                ${s.name}
-                <code style="background:#f1f5f9;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:900;font-family:monospace;color:#4338ca;margin:0 2px;">${s.student_code||'?'}</code>
-                <button id="teacherBtn_${s.id}" class="studentChipRemove teacherBtn" onclick="toggleTeacher('${cls.id}','${s.id}',this)" title="Make teacher" style="font-size:13px;opacity:0.35;">👩‍🏫</button>
-                <button
-                  onclick="toggleExtension('${s.id}', ${s.extension_mode})"
-                  class="studentChipRemove ext-toggle-btn"
-                  id="ext-btn-${s.id}"
-                  title="${s.extension_mode ? 'Extension mode ON — click to disable' : 'Extension mode OFF — click to enable'}"
-                  style="color:${s.extension_mode ? '#6366f1' : '#94a3b8'};font-size:${s.extension_mode ? '16px' : '14px'};filter:${s.extension_mode ? 'drop-shadow(0 0 4px #818cf8)' : 'none'};"
-                >🔬</button>
-                <button class="studentChipRemove" onclick="regenerateCode('${cls.id}','${s.id}')" title="Regenerate code">↻</button>
-                <button class="studentChipRemove" onclick="removeStudent('${cls.id}','${s.id}')" title="Remove">×</button>
-              </span>
+              <div class="studentRow" id="chip_${s.id}">
+                <span class="studentName">${s.name}</span>
+                <span class="studentCode" title="Student login code">${s.student_code||'?'}</span>
+                <span class="studentActions">
+                  <button id="teacherBtn_${s.id}" class="studentActionBtn teacherBtn" onclick="toggleTeacher('${cls.id}','${s.id}',this)" title="Allow this student to view the dashboard">Teacher</button>
+                  <button
+                    onclick="toggleExtension('${s.id}', ${s.extension_mode})"
+                    class="studentActionBtn ext-toggle-btn ${s.extension_mode ? 'active-flag' : ''}"
+                    id="ext-btn-${s.id}"
+                    title="${s.extension_mode ? 'Extension mode ON — click to disable' : 'Extension mode OFF — click to enable'}"
+                  >Extension</button>
+                  <button class="studentActionBtn" onclick="regenerateCode('${cls.id}','${s.id}')" title="Generate a new login code for this student">New code</button>
+                  <button class="studentActionBtn danger" onclick="removeStudent('${cls.id}','${s.id}')" title="Remove this student from the class">Remove</button>
+                </span>
+              </div>
             `).join('')}
           </div>
           <div class="addStudentRow">
@@ -560,9 +558,7 @@
       if (error) throw error;
       if (!updated || updated.length === 0) throw new Error('No rows updated — the extension_mode column may be missing. Run: ALTER TABLE students ADD COLUMN IF NOT EXISTS extension_mode boolean NOT NULL DEFAULT false;');
       if (btn) {
-        btn.style.color = newVal ? '#6366f1' : '#94a3b8';
-        btn.style.fontSize = newVal ? '16px' : '14px';
-        btn.style.filter = newVal ? 'drop-shadow(0 0 4px #818cf8)' : 'none';
+        btn.classList.toggle('active-flag', newVal);
         btn.onclick = () => toggleExtension(studentId, newVal);
         btn.title = newVal ? 'Extension mode ON — click to disable' : 'Extension mode OFF — click to enable';
       }
