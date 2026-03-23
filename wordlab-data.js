@@ -611,7 +611,7 @@ const WordLabData = (() => {
   // ── Export ────────────────────────────────────────────────────
   function exportCSV(cls) {
     if (!cls) return '';
-    const activities = ['sound-sorter','phoneme-splitter','syllable-splitter','breakdown-blitz','meaning-mode','mission-mode','root-lab'];
+    const activities = ['sound-sorter','phoneme-splitter','syllable-splitter','breakdown-blitz','meaning-mode','mission-mode','root-lab','homophone-hunter'];
     const rows = [['Student','Activity','Category','Correct','Total','Accuracy %','Avg Time (ms)']];
     cls.students.forEach(student => {
       activities.forEach(activity => {

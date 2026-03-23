@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Labs – Homophone Hunter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#fdf2f8; --panel:#ffffff; --panel-soft:#fdf2f8; --line:#f9a8d4;
+      --text:#0f172a; --muted:#64748b;
+      --rose:#9d174d; --rose-2:#be185d; --rose-soft:#fdf2f8; --rose-line:#f9a8d4; --rose-text:#831843;
+      --green:#16a34a; --green-soft:#f0fdf4; --green-line:#bbf7d0; --green-text:#166534;
+      --orange:#ea580c; --orange-soft:#fff7ed; --orange-line:#fed7aa; --orange-text:#9a3412;
+      --bad:#dc2626;
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:'Lexend',sans-serif; background:var(--bg); color:var(--text); line-height:1.5; }
+    button,input,select{ font:inherit; }
+
+    /* ── Header ── */
+    .header{ position:sticky; top:0; z-index:20; background:var(--bg); border-bottom:1px solid var(--line); box-shadow:0 1px 2px rgba(157,23,77,.08); }
+    .headerInner{ max-width:900px; margin:0 auto; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+    .brand{ display:flex; align-items:center; gap:12px; }
+    .brandIcon{ width:50px; height:50px; border-radius:14px; background:var(--rose); color:#fff; display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 12px 24px rgba(157,23,77,.2); }
+    .brandText h1{ margin:0; font-size:22px; font-weight:900; color:var(--rose-text); }
+    .brandText .sub{ font-size:10px; text-transform:uppercase; letter-spacing:.25em; color:var(--rose-2); font-weight:900; display:block; }
+    .hud{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .pill{ display:inline-flex; align-items:center; justify-content:center; min-height:40px; border:1px solid var(--line); border-radius:999px; background:#fff; padding:8px 16px; font-size:13px; font-weight:800; color:#334155; }
+    .pill.score{ background:var(--rose); color:#fff; border-color:transparent; }
+    .pill.streak{ background:var(--orange-soft); color:var(--orange-text); border-color:var(--orange-line); }
+    .topBtn{ border:none; background:#0f172a; color:#fff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:.12em; padding:12px 16px; border-radius:14px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; }
+    .topBtn:hover{ background:#000; }
+
+    /* ── Layout ── */
+    .wrap{ max-width:900px; margin:0 auto; padding:20px; display:flex; flex-direction:column; gap:16px; }
+    .panel{ background:var(--panel); border:4px solid #fce7f3; border-radius:28px; box-shadow:0 20px 28px rgba(157,23,77,.06); overflow:hidden; }
+    .panelInner{ padding:24px; }
+
+    /* ── Setup screen ── */
+    .setupTitle{ text-align:center; font-size:32px; font-weight:900; color:var(--rose-text); margin-bottom:6px; }
+    .setupSub{ text-align:center; font-size:14px; color:var(--muted); font-weight:600; margin-bottom:28px; }
+    .modeGrid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:24px; }
+    @media(max-width:700px){ .modeGrid{ grid-template-columns:1fr; } }
+    .modeCard{ border:3px solid #fce7f3; border-radius:20px; padding:20px; cursor:pointer; transition:all .15s; text-align:center; background:#fff; }
+    .modeCard:hover{ border-color:var(--rose-line); background:var(--rose-soft); }
+    .modeCard.active{ border-color:var(--rose); background:var(--rose-soft); box-shadow:0 8px 20px rgba(157,23,77,.12); }
+    .modeEmoji{ font-size:36px; margin-bottom:8px; }
+    .modeName{ font-size:16px; font-weight:900; color:var(--rose-text); margin-bottom:4px; }
+    .modeDesc{ font-size:12px; font-weight:600; color:var(--muted); line-height:1.5; }
+    .startBtn{ border:none; background:var(--rose); color:#fff; font-weight:900; font-size:16px; letter-spacing:.08em; padding:18px 48px; border-radius:20px; cursor:pointer; text-transform:uppercase; box-shadow:0 16px 32px rgba(157,23,77,.24); transition:all .15s; display:block; margin:0 auto; }
+    .startBtn:hover{ background:var(--rose-2); transform:translateY(-2px); }
+    .startBtn:disabled{ opacity:.5; transform:none; cursor:default; }
+
+    /* ── Fuel bar ── */
+    .fuelWrap{ margin-bottom:20px; }
+    .fuelBar{ height:10px; background:#fce7f3; border-radius:999px; overflow:hidden; }
+    .fuelFill{ height:100%; background:linear-gradient(90deg,var(--rose),#f472b6); border-radius:999px; transition:width .4s; }
+    .fuelLabel{ font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.14em; color:var(--rose-2); text-align:center; margin-top:6px; }
+
+    /* ── Game: Mode 1 (Intercept) ── */
+    .sentenceBox{ background:#1e1b2e; border-radius:20px; padding:28px 24px; margin-bottom:20px; position:relative; overflow:hidden; }
+    .sentenceBox::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,transparent,var(--rose),transparent); }
+    .monitorLabel{ font-size:9px; font-weight:900; text-transform:uppercase; letter-spacing:.2em; color:#f472b6; margin-bottom:12px; }
+    .sentenceText{ font-size:20px; font-weight:700; color:#e0e7ff; line-height:1.7; }
+    .sentenceGap{ display:inline-block; min-width:100px; border-bottom:3px dashed #f472b6; color:#f472b6; font-weight:900; text-align:center; margin:0 4px; padding:0 8px; }
+    .sentenceGap.filled{ border-bottom-style:solid; color:#4ade80; }
+    .sentenceGap.wrong{ border-bottom-color:#ef4444; color:#ef4444; }
+
+    .optionsRow{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom:16px; }
+    .optionBtn{ border:3px solid #fce7f3; background:#fff; border-radius:16px; padding:14px 28px; font-size:18px; font-weight:900; color:var(--rose-text); cursor:pointer; transition:all .15s; min-width:120px; text-align:center; }
+    .optionBtn:hover{ border-color:var(--rose); background:var(--rose-soft); transform:translateY(-2px); }
+    .optionBtn.correct{ border-color:var(--green); background:var(--green-soft); color:var(--green-text); }
+    .optionBtn.wrong{ border-color:var(--bad); background:#fef2f2; color:var(--bad); opacity:.6; }
+    .optionBtn:disabled{ cursor:default; transform:none; }
+
+    /* ── Game: Mode 2 (Decode) — two monitors ── */
+    .dualMonitors{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+    @media(max-width:600px){ .dualMonitors{ grid-template-columns:1fr; } }
+    .monitor{ background:#1e1b2e; border-radius:20px; padding:24px 20px; position:relative; overflow:hidden; }
+    .monitor::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,transparent,var(--rose),transparent); }
+    .monitorSentence{ font-size:16px; font-weight:700; color:#e0e7ff; line-height:1.7; min-height:60px; }
+    .dropTarget{ display:inline-block; min-width:90px; min-height:32px; border:2px dashed #f472b6; border-radius:10px; padding:2px 10px; vertical-align:middle; transition:all .15s; margin:0 2px; text-align:center; font-weight:900; color:#f472b6; }
+    .dropTarget.filled{ border-style:solid; color:#4ade80; border-color:#4ade80; }
+    .dropTarget.wrong{ border-color:#ef4444; color:#ef4444; }
+    .dropTarget.dragover{ background:rgba(244,114,182,.15); border-color:#f472b6; }
+
+    .dragTiles{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom:16px; }
+    .dragTile{ border:3px solid #fce7f3; background:#fff; border-radius:14px; padding:12px 24px; font-size:18px; font-weight:900; color:var(--rose-text); cursor:grab; transition:all .15s; user-select:none; }
+    .dragTile:active{ cursor:grabbing; }
+    .dragTile.used{ opacity:.3; cursor:default; }
+
+    /* ── Game: Mode 3 (Transmission) ── */
+    .paragraphBox{ background:#1e1b2e; border-radius:20px; padding:28px 24px; margin-bottom:20px; position:relative; overflow:hidden; }
+    .paragraphBox::before{ content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,transparent,var(--rose),transparent); }
+    .paraText{ font-size:18px; font-weight:700; color:#e0e7ff; line-height:2; }
+    .paraWord{ cursor:pointer; padding:2px 6px; border-radius:6px; transition:all .15s; }
+    .paraWord:hover{ background:rgba(244,114,182,.15); }
+    .paraWord.wrong-word{ background:rgba(239,68,68,.2); text-decoration:underline wavy #ef4444; }
+    .paraWord.fixed{ background:rgba(74,222,128,.15); color:#4ade80; text-decoration:none; }
+
+    .fixModal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:999; align-items:center; justify-content:center; }
+    .fixModal.open{ display:flex; }
+    .fixPanel{ background:#fff; border-radius:24px; padding:28px; max-width:400px; width:90vw; text-align:center; }
+    .fixTitle{ font-size:18px; font-weight:900; color:var(--rose-text); margin-bottom:4px; }
+    .fixSub{ font-size:13px; color:var(--muted); font-weight:600; margin-bottom:16px; }
+
+    /* ── Feedback ── */
+    .feedback{ text-align:center; font-size:18px; font-weight:900; min-height:36px; margin-bottom:12px; transition:opacity .2s; }
+    .feedback.correct{ color:var(--green-text); }
+    .feedback.wrong{ color:var(--bad); }
+
+    /* ── Results ── */
+    .resultsPanel{ text-align:center; padding:40px 24px; }
+    .resultEmoji{ font-size:64px; margin-bottom:12px; }
+    .resultTitle{ font-size:28px; font-weight:900; color:var(--rose-text); margin-bottom:8px; }
+    .resultSub{ font-size:15px; color:var(--muted); font-weight:600; margin-bottom:24px; }
+    .resultStats{ display:flex; gap:16px; justify-content:center; flex-wrap:wrap; margin-bottom:28px; }
+    .resultStat{ background:var(--rose-soft); border:2px solid #fce7f3; border-radius:16px; padding:14px 20px; min-width:100px; }
+    .resultStatVal{ font-size:24px; font-weight:900; color:var(--rose); }
+    .resultStatLbl{ font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin-top:4px; }
+
+    @keyframes correctPop{ 0%{transform:scale(.9)} 60%{transform:scale(1.08)} 100%{transform:scale(1)} }
+    @keyframes wrongShake{ 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)} }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="headerInner">
+    <div class="brand">
+      <div class="brandIcon">📡</div>
+      <div class="brandText"><h1>Homophone Hunter</h1><span class="sub">Signal Interception Lab</span></div>
+    </div>
+    <div class="hud">
+      <div class="pill score" id="scoreDisplay">0 / 0</div>
+      <div class="pill streak" id="streakDisplay" style="display:none;">🔥 0</div>
+      <a href="landing" class="topBtn">🏠 Home</a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- Setup screen -->
+  <div id="setupScreen" class="panel"><div class="panelInner">
+    <div class="setupTitle">📡 Signal Interception Lab</div>
+    <div class="setupSub">Two signals, same frequency, different meaning. Can you decode the right one?</div>
+
+    <div class="modeGrid">
+      <div class="modeCard active" onclick="selectMode('mode1',this)">
+        <div class="modeEmoji">📡</div>
+        <div class="modeName">Intercept</div>
+        <div class="modeDesc">Pick the right homophone to complete the sentence.</div>
+      </div>
+      <div class="modeCard" onclick="selectMode('mode2',this)">
+        <div class="modeEmoji">🖥️</div>
+        <div class="modeName">Decode</div>
+        <div class="modeDesc">Drag homophones to their correct sentences on two monitors.</div>
+      </div>
+      <div class="modeCard" onclick="selectMode('mode3',this)" id="mode3Card">
+        <div class="modeEmoji">⚡</div>
+        <div class="modeName">Transmission</div>
+        <div class="modeDesc">Find and fix the wrong homophones in a paragraph.</div>
+      </div>
+    </div>
+
+    <button class="startBtn" id="startBtn" onclick="startGame()">Start Mission →</button>
+  </div></div>
+
+  <!-- Game screen -->
+  <div id="gameScreen" style="display:none;">
+    <div class="fuelWrap">
+      <div class="fuelBar"><div class="fuelFill" id="fuelFill" style="width:100%;"></div></div>
+      <div class="fuelLabel" id="fuelLabel">Question 1 of 10</div>
+    </div>
+    <div class="panel"><div class="panelInner" id="gameArea"></div></div>
+    <div class="feedback" id="feedback"></div>
+  </div>
+
+  <!-- Results screen -->
+  <div id="resultsScreen" style="display:none;" class="panel"><div class="panelInner resultsPanel" id="resultsArea"></div></div>
+</div>
+
+<!-- Fix modal for Mode 3 -->
+<div class="fixModal" id="fixModal">
+  <div class="fixPanel">
+    <div class="fixTitle" id="fixWord"></div>
+    <div class="fixSub">Choose the correct spelling:</div>
+    <div class="optionsRow" id="fixOptions"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="wordlab-data.js"></script>
+<script src="wordlab-scientist.js"></script>
+<script>
+
+// ── Homophone data ─────────────────────────────────────────────
+const HOMOPHONES = [
+  {group:['there','their','they\'re'], sentences:[
+    {sentence:'___ going to the park after school.',answer:'they\'re'},
+    {sentence:'The students left ___ bags in the classroom.',answer:'their'},
+    {sentence:'Put the books over ___.',answer:'there'},
+    {sentence:'___ is a new student joining our class.',answer:'there'},
+    {sentence:'___ always late to assembly.',answer:'they\'re'},
+  ]},
+  {group:['to','too','two'], sentences:[
+    {sentence:'She walked ___ the shops with her mum.',answer:'to'},
+    {sentence:'That bag is ___ heavy for me to carry.',answer:'too'},
+    {sentence:'I have ___ brothers and one sister.',answer:'two'},
+    {sentence:'Can I come ___?',answer:'too'},
+    {sentence:'We need ___ go home before dark.',answer:'to'},
+  ]},
+  {group:['wear','where','ware'], sentences:[
+    {sentence:'___ did you put my lunchbox?',answer:'where'},
+    {sentence:'I need to ___ my school uniform today.',answer:'wear'},
+    {sentence:'The market sold kitchen ___ and pottery.',answer:'ware'},
+    {sentence:'Do you know ___ the library is?',answer:'where'},
+  ]},
+  {group:['right','write'], sentences:[
+    {sentence:'Turn ___ at the traffic lights.',answer:'right'},
+    {sentence:'Please ___ your name on the top of the page.',answer:'write'},
+    {sentence:'That is the ___ answer — well done!',answer:'right'},
+    {sentence:'I need to ___ a letter to Grandma.',answer:'write'},
+  ]},
+  {group:['here','hear'], sentences:[
+    {sentence:'Come over ___ and sit down.',answer:'here'},
+    {sentence:'I can ___ the birds singing outside.',answer:'hear'},
+    {sentence:'Can you ___ what the teacher is saying?',answer:'hear'},
+    {sentence:'The treasure is buried right ___.',answer:'here'},
+  ]},
+  {group:['see','sea'], sentences:[
+    {sentence:'We went swimming in the ___ during the holidays.',answer:'sea'},
+    {sentence:'I can ___ the mountains from my window.',answer:'see'},
+    {sentence:'The ___ was rough and the waves were huge.',answer:'sea'},
+    {sentence:'Let me ___ if I can find it.',answer:'see'},
+  ]},
+  {group:['plain','plane'], sentences:[
+    {sentence:'The ___ flew over the clouds.',answer:'plane'},
+    {sentence:'She wore a ___ white shirt with no pattern.',answer:'plain'},
+    {sentence:'We watched the ___ take off from the runway.',answer:'plane'},
+    {sentence:'The food was very ___.',answer:'plain'},
+  ]},
+  {group:['knight','night'], sentences:[
+    {sentence:'The ___ wore shining armour and rode a horse.',answer:'knight'},
+    {sentence:'The stars come out at ___.',answer:'night'},
+    {sentence:'A brave ___ protected the castle.',answer:'knight'},
+    {sentence:'We stayed up late into the ___.',answer:'night'},
+  ]},
+  {group:['flower','flour'], sentences:[
+    {sentence:'She picked a beautiful ___ from the garden.',answer:'flower'},
+    {sentence:'We need ___ to bake a cake.',answer:'flour'},
+    {sentence:'The ___ smelled lovely.',answer:'flower'},
+    {sentence:'Sift the ___ into the mixing bowl.',answer:'flour'},
+  ]},
+  {group:['weather','whether'], sentences:[
+    {sentence:'The ___ forecast says it will rain tomorrow.',answer:'weather'},
+    {sentence:'I don\'t know ___ to bring a coat or not.',answer:'whether'},
+    {sentence:'The ___ has been lovely all week.',answer:'weather'},
+    {sentence:'She asked ___ we wanted pizza or pasta.',answer:'whether'},
+  ]},
+  {group:['mail','male'], sentences:[
+    {sentence:'The ___ arrived late this morning.',answer:'mail'},
+    {sentence:'A ___ lion has a big mane.',answer:'male'},
+    {sentence:'I sent the letter by ___.',answer:'mail'},
+  ]},
+  {group:['sail','sale'], sentences:[
+    {sentence:'The boat raised its ___ and set off.',answer:'sail'},
+    {sentence:'Everything in the shop was on ___.',answer:'sale'},
+    {sentence:'We went for a ___ around the harbour.',answer:'sail'},
+  ]},
+  {group:['tail','tale'], sentences:[
+    {sentence:'The dog wagged its ___ happily.',answer:'tail'},
+    {sentence:'Grandad told us a ___ about the old days.',answer:'tale'},
+    {sentence:'A fairy ___ always has a happy ending.',answer:'tale'},
+    {sentence:'The cat flicked its ___ back and forth.',answer:'tail'},
+  ]},
+  {group:['bare','bear'], sentences:[
+    {sentence:'A ___ lives in the forest and catches fish.',answer:'bear'},
+    {sentence:'The cupboard was completely ___.',answer:'bare'},
+    {sentence:'He walked across the grass in ___ feet.',answer:'bare'},
+    {sentence:'I couldn\'t ___ the loud noise.',answer:'bear'},
+  ]},
+  {group:['whole','hole'], sentences:[
+    {sentence:'The dog dug a big ___ in the garden.',answer:'hole'},
+    {sentence:'She ate the ___ pizza by herself!',answer:'whole'},
+    {sentence:'There was a ___ in my sock.',answer:'hole'},
+    {sentence:'The ___ class went on the excursion.',answer:'whole'},
+  ]},
+  {group:['peace','piece'], sentences:[
+    {sentence:'Can I have a ___ of cake, please?',answer:'piece'},
+    {sentence:'After the war, there was finally ___.',answer:'peace'},
+    {sentence:'She needed some ___ and quiet to study.',answer:'peace'},
+    {sentence:'A ___ of the puzzle is missing.',answer:'piece'},
+  ]},
+  {group:['wait','weight'], sentences:[
+    {sentence:'Please ___ here until I come back.',answer:'wait'},
+    {sentence:'The ___ of the bag was too heavy.',answer:'weight'},
+    {sentence:'I can\'t ___ for the holidays!',answer:'wait'},
+  ]},
+  {group:['pour','paw','poor'], sentences:[
+    {sentence:'Can you ___ me a glass of water?',answer:'pour'},
+    {sentence:'The dog hurt its front ___.',answer:'paw'},
+    {sentence:'The ___ kitten was lost in the rain.',answer:'poor'},
+  ]},
+  {group:['stationary','stationery'], sentences:[
+    {sentence:'The car was ___ at the traffic lights.',answer:'stationary'},
+    {sentence:'I need to buy some ___ for school — pens, pencils and rulers.',answer:'stationery'},
+  ]},
+  {group:['principal','principle'], sentences:[
+    {sentence:'The ___ spoke at assembly this morning.',answer:'principal'},
+    {sentence:'Honesty is an important ___.',answer:'principle'},
+  ]},
+  {group:['affect','effect'], sentences:[
+    {sentence:'The rain will ___ our sports day plans.',answer:'affect'},
+    {sentence:'The ___ of the medicine was immediate.',answer:'effect'},
+  ]},
+  {group:['practice','practise'], sentences:[
+    {sentence:'Football ___ is at 4pm on Wednesdays.',answer:'practice'},
+    {sentence:'You need to ___ your spelling every night.',answer:'practise'},
+  ]},
+  {group:['complement','compliment'], sentences:[
+    {sentence:'The scarf was a perfect ___ to her outfit.',answer:'complement'},
+    {sentence:'She gave me a lovely ___ about my drawing.',answer:'compliment'},
+  ]},
+  {group:['council','counsel'], sentences:[
+    {sentence:'The local ___ is responsible for collecting rubbish.',answer:'council'},
+    {sentence:'The teacher gave him wise ___.',answer:'counsel'},
+  ]},
+  {group:['cereal','serial'], sentences:[
+    {sentence:'I had ___ and milk for breakfast.',answer:'cereal'},
+    {sentence:'Each box has a ___ number printed on it.',answer:'serial'},
+  ]},
+  {group:['coarse','course'], sentences:[
+    {sentence:'The sandpaper felt very ___ and rough.',answer:'coarse'},
+    {sentence:'Of ___ you can come to the party!',answer:'course'},
+  ]},
+  {group:['altar','alter'], sentences:[
+    {sentence:'The flowers were placed on the ___ at the front of the church.',answer:'altar'},
+    {sentence:'We need to ___ the plan slightly.',answer:'alter'},
+  ]},
+  {group:['cite','site','sight'], sentences:[
+    {sentence:'The building ___ was fenced off.',answer:'site'},
+    {sentence:'The sunset was a beautiful ___.',answer:'sight'},
+    {sentence:'Remember to ___ your sources in your essay.',answer:'cite'},
+  ]},
+  {group:['manner','manor'], sentences:[
+    {sentence:'She spoke in a very polite ___.',answer:'manner'},
+    {sentence:'The old ___ house had twenty rooms.',answer:'manor'},
+  ]},
+];
+
+// Mode 3 — paragraphs with incorrect homophones
+const PARAGRAPHS = [
+  {text:'The {whether:weather} was {fare:fair} so we decided too {go:go} for a walk. We could {here:hear} the birds singing in the trees.',errors:{'whether':'weather','fare':'fair'}},
+  {text:'I went {to:to} the shops too buy {flour:flour} for the cake. {Their:There} was a big {sail:sale} on.',errors:{'Their':'There','sail':'sale'}},
+  {text:'The brave {night:knight} rode his horse threw the forest. He had too find the {piece:piece} of the puzzle.',errors:{'night':'knight','threw':'through'}},
+  {text:'She didn\'t know {weather:whether} to {where:wear} her coat. The {whether:weather} looked fine from {hear:here}.',errors:{'where':'wear','hear':'here'}},
+  {text:'{Hour:Our} class went on a trip to the {see:sea}. We could {sea:see} dolphins jumping in the waves.',errors:{'Hour':'Our','see':'sea','sea':'see'}},
+  {text:'The {mail:male} lion sat by the {whole:hole} in the fence. His {main:mane} was thick and golden.',errors:{'mail':'male','whole':'hole','main':'mane'}},
+  {text:'Please {weight:wait} here {wile:while} I get a {peace:piece} of cake for you.',errors:{'weight':'wait','wile':'while','peace':'piece'}},
+  {text:'The children {road:rode} {there:their} bikes along the path. They {new:knew} the {write:right} way home.',errors:{'road':'rode','new':'knew','write':'right'}},
+];
+
+// ── Game state ─────────────────────────────────────────────────
+let selectedMode = 'mode1';
+let questions = [];
+let currentQ = 0;
+let score = 0;
+let streak = 0;
+let totalQuestions = 10;
+let startTime = 0;
+
+// ── Mode selection ─────────────────────────────────────────────
+function selectMode(mode, el) {
+  selectedMode = mode;
+  document.querySelectorAll('.modeCard').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ── Start game ─────────────────────────────────────────────────
+function startGame() {
+  score = 0; streak = 0; currentQ = 0;
+  startTime = Date.now();
+  updateHUD();
+
+  if (selectedMode === 'mode1') {
+    questions = buildMode1Questions();
+  } else if (selectedMode === 'mode2') {
+    questions = buildMode2Questions();
+  } else {
+    questions = buildMode3Questions();
+  }
+  totalQuestions = questions.length;
+
+  document.getElementById('setupScreen').style.display = 'none';
+  document.getElementById('resultsScreen').style.display = 'none';
+  document.getElementById('gameScreen').style.display = '';
+  showQuestion();
+}
+
+function buildMode1Questions() {
+  const pool = [];
+  HOMOPHONES.forEach(h => {
+    h.sentences.forEach(s => {
+      pool.push({ group: h.group, sentence: s.sentence, answer: s.answer });
+    });
+  });
+  return shuffle(pool).slice(0, 10);
+}
+
+function buildMode2Questions() {
+  const pool = [];
+  HOMOPHONES.forEach(h => {
+    if (h.sentences.length >= 2) {
+      for (let i = 0; i < h.sentences.length - 1; i++) {
+        for (let j = i + 1; j < h.sentences.length; j++) {
+          if (h.sentences[i].answer !== h.sentences[j].answer) {
+            pool.push({
+              group: h.group,
+              s1: h.sentences[i], s2: h.sentences[j],
+              words: [h.sentences[i].answer, h.sentences[j].answer]
+            });
+          }
+        }
+      }
+    }
+  });
+  return shuffle(pool).slice(0, 8);
+}
+
+function buildMode3Questions() {
+  return shuffle([...PARAGRAPHS]).slice(0, 5);
+}
+
+// ── Show question ──────────────────────────────────────────────
+function showQuestion() {
+  if (currentQ >= totalQuestions) { showResults(); return; }
+  const pct = ((currentQ) / totalQuestions * 100);
+  document.getElementById('fuelFill').style.width = (100 - pct) + '%';
+  document.getElementById('fuelLabel').textContent = `Signal ${currentQ + 1} of ${totalQuestions}`;
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('feedback').className = 'feedback';
+
+  const area = document.getElementById('gameArea');
+  const q = questions[currentQ];
+
+  if (selectedMode === 'mode1') renderMode1(area, q);
+  else if (selectedMode === 'mode2') renderMode2(area, q);
+  else renderMode3(area, q);
+}
+
+// ── Mode 1: Intercept ──────────────────────────────────────────
+function renderMode1(area, q) {
+  const sentenceHtml = q.sentence.replace('___', '<span class="sentenceGap" id="gapSpan">___</span>');
+  area.innerHTML = `
+    <div class="sentenceBox">
+      <div class="monitorLabel">📡 Incoming signal</div>
+      <div class="sentenceText">${sentenceHtml}</div>
+    </div>
+    <div class="optionsRow" id="optionsRow">
+      ${q.group.map(w => `<button class="optionBtn" onclick="checkMode1('${w.replace(/'/g,"\\'")}',this)">${w}</button>`).join('')}
+    </div>`;
+}
+
+function checkMode1(chosen, btn) {
+  const q = questions[currentQ];
+  const correct = chosen === q.answer;
+  const gap = document.getElementById('gapSpan');
+  const timeMs = Date.now() - startTime;
+
+  document.querySelectorAll('.optionBtn').forEach(b => {
+    b.disabled = true;
+    if (b.textContent.trim() === q.answer) b.classList.add('correct');
+    else if (b === btn && !correct) b.classList.add('wrong');
+  });
+
+  gap.textContent = q.answer;
+  gap.classList.add(correct ? 'filled' : 'wrong');
+
+  if (correct) { score++; streak++; }
+  else streak = 0;
+  updateHUD();
+  showFeedback(correct, q.answer);
+  recordProgress(correct, timeMs);
+
+  setTimeout(() => { currentQ++; showQuestion(); }, correct ? 1200 : 2000);
+}
+
+// ── Mode 2: Decode ─────────────────────────────────────────────
+let mode2State = {};
+
+function renderMode2(area, q) {
+  mode2State = { placed: {}, q };
+  const words = shuffle([...q.words]);
+  area.innerHTML = `
+    <div class="dualMonitors">
+      <div class="monitor" id="mon1">
+        <div class="monitorLabel">🖥️ Monitor A</div>
+        <div class="monitorSentence">${q.s1.sentence.replace('___','<span class="dropTarget" id="drop1" data-answer="'+q.s1.answer+'">?</span>')}</div>
+      </div>
+      <div class="monitor" id="mon2">
+        <div class="monitorLabel">🖥️ Monitor B</div>
+        <div class="monitorSentence">${q.s2.sentence.replace('___','<span class="dropTarget" id="drop2" data-answer="'+q.s2.answer+'">?</span>')}</div>
+      </div>
+    </div>
+    <div class="dragTiles" id="dragTiles">
+      ${words.map((w,i) => `<div class="dragTile" draggable="true" id="tile_${i}" data-word="${w}" ondragstart="dragStart(event)">${w}</div>`).join('')}
+    </div>
+    <div style="text-align:center;font-size:12px;color:var(--muted);font-weight:700;">Drag each word to the correct monitor</div>`;
+
+  ['drop1','drop2'].forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('dragover'); });
+    el.addEventListener('dragleave', () => el.classList.remove('dragover'));
+    el.addEventListener('drop', e => { e.preventDefault(); el.classList.remove('dragover'); handleDrop(id, e); });
+    // Touch support
+    el.addEventListener('click', () => handleTapDrop(id));
+  });
+
+  // Touch: tap tile to select, tap drop zone to place
+  document.querySelectorAll('.dragTile').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.dragTile').forEach(x => x.style.outline='');
+      if (!t.classList.contains('used')) {
+        t.style.outline = '3px solid var(--rose)';
+        mode2State.selectedTile = t;
+      }
+    });
+  });
+}
+
+function dragStart(e) { e.dataTransfer.setData('text/plain', e.target.dataset.word); e.dataTransfer.setData('tileId', e.target.id); }
+
+function handleDrop(dropId, e) {
+  const word = e.dataTransfer.getData('text/plain');
+  const tileId = e.dataTransfer.getData('tileId');
+  placeWord(dropId, word, tileId);
+}
+
+function handleTapDrop(dropId) {
+  if (!mode2State.selectedTile) return;
+  const tile = mode2State.selectedTile;
+  placeWord(dropId, tile.dataset.word, tile.id);
+  mode2State.selectedTile = null;
+}
+
+function placeWord(dropId, word, tileId) {
+  const drop = document.getElementById(dropId);
+  const tile = document.getElementById(tileId);
+  if (!drop || !word || drop.classList.contains('filled')) return;
+
+  drop.textContent = word;
+  drop.classList.add('filled');
+  if (tile) tile.classList.add('used');
+  mode2State.placed[dropId] = word;
+
+  // Check if both placed
+  if (mode2State.placed.drop1 && mode2State.placed.drop2) {
+    const timeMs = Date.now() - startTime;
+    const q = mode2State.q;
+    const c1 = mode2State.placed.drop1 === q.s1.answer;
+    const c2 = mode2State.placed.drop2 === q.s2.answer;
+    const correct = c1 && c2;
+
+    document.getElementById('drop1').classList.add(c1 ? 'filled' : 'wrong');
+    document.getElementById('drop2').classList.add(c2 ? 'filled' : 'wrong');
+    if (!c1) document.getElementById('drop1').textContent = q.s1.answer;
+    if (!c2) document.getElementById('drop2').textContent = q.s2.answer;
+
+    if (correct) { score++; streak++; } else streak = 0;
+    updateHUD();
+    showFeedback(correct);
+    recordProgress(correct, timeMs);
+
+    setTimeout(() => { currentQ++; showQuestion(); }, correct ? 1200 : 2500);
+  }
+}
+
+// ── Mode 3: Transmission ───────────────────────────────────────
+let mode3State = {};
+
+function renderMode3(area, q) {
+  const errors = q.errors;
+  const errorWords = Object.keys(errors);
+  let fixCount = 0;
+  const totalErrors = errorWords.length;
+
+  // Parse text, wrapping words in spans
+  const parts = q.text.split(/(\{[^}]+\})/g);
+  let html = '';
+  parts.forEach(part => {
+    const m = part.match(/^\{([^:]+):([^}]+)\}$/);
+    if (m) {
+      const shown = m[1];
+      const correct = m[2];
+      const isError = shown !== correct;
+      html += `<span class="paraWord${isError?' wrong-word':''}" data-shown="${shown}" data-correct="${correct}" onclick="fixWord(this)">${shown}</span>`;
+    } else {
+      html += part;
+    }
+  });
+
+  mode3State = { totalErrors, fixed: 0, q };
+
+  area.innerHTML = `
+    <div class="paragraphBox">
+      <div class="monitorLabel">⚡ Intercepted transmission — find and fix the errors</div>
+      <div class="paraText" id="paraText">${html}</div>
+    </div>
+    <div style="text-align:center;font-size:13px;color:var(--muted);font-weight:800;">Click on words that look wrong · <span id="errorsLeft">${totalErrors}</span> error${totalErrors!==1?'s':''} to find</div>`;
+}
+
+function fixWord(el) {
+  if (el.classList.contains('fixed')) return;
+  const shown = el.dataset.shown;
+  const correct = el.dataset.correct;
+
+  if (shown === correct) {
+    // Not an error — penalise
+    el.style.animation = 'wrongShake .4s ease-out';
+    showFeedback(false, 'That word is correct!');
+    streak = 0;
+    updateHUD();
+    return;
+  }
+
+  // Show fix options
+  const group = HOMOPHONES.find(h => h.group.includes(correct));
+  const options = group ? group.group : [shown, correct];
+
+  const modal = document.getElementById('fixModal');
+  document.getElementById('fixWord').textContent = '"' + shown + '"';
+  document.getElementById('fixOptions').innerHTML = options.map(w =>
+    `<button class="optionBtn" onclick="applyFix(this,'${w.replace(/'/g,"\\'")}','${correct.replace(/'/g,"\\'")}')">${w}</button>`
+  ).join('');
+  modal.classList.add('open');
+
+  mode3State.currentEl = el;
+}
+
+function applyFix(btn, chosen, correct) {
+  const modal = document.getElementById('fixModal');
+  modal.classList.remove('open');
+  const el = mode3State.currentEl;
+  const timeMs = Date.now() - startTime;
+  const isCorrect = chosen === correct;
+
+  if (isCorrect) {
+    el.textContent = correct;
+    el.classList.remove('wrong-word');
+    el.classList.add('fixed');
+    mode3State.fixed++;
+    score++; streak++;
+    document.getElementById('errorsLeft').textContent = mode3State.totalErrors - mode3State.fixed;
+    recordProgress(true, timeMs);
+  } else {
+    streak = 0;
+    recordProgress(false, timeMs);
+  }
+
+  updateHUD();
+  showFeedback(isCorrect, isCorrect ? correct : 'It should be "' + correct + '"');
+
+  if (mode3State.fixed >= mode3State.totalErrors) {
+    setTimeout(() => { currentQ++; showQuestion(); }, 1500);
+  }
+}
+
+// ── Helpers ─────────────────────────────────────────────────────
+function updateHUD() {
+  document.getElementById('scoreDisplay').textContent = score + ' correct';
+  const streakEl = document.getElementById('streakDisplay');
+  if (streak >= 2) { streakEl.style.display = ''; streakEl.textContent = '🔥 ' + streak; }
+  else streakEl.style.display = 'none';
+}
+
+function showFeedback(correct, extra) {
+  const el = document.getElementById('feedback');
+  el.className = 'feedback ' + (correct ? 'correct' : 'wrong');
+  el.textContent = correct ? '✓ Correct!' + (extra ? ' ' + extra : '') : '✗ ' + (extra || 'Not quite!');
+}
+
+function recordProgress(correct, timeMs) {
+  if (typeof WordLabData !== 'undefined') {
+    WordLabData.recordAttempt('homophone-hunter', selectedMode, correct, timeMs, streak);
+  }
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function showResults() {
+  document.getElementById('gameScreen').style.display = 'none';
+  document.getElementById('resultsScreen').style.display = '';
+  const elapsed = Math.round((Date.now() - startTime) / 1000);
+  const mins = Math.floor(elapsed / 60);
+  const secs = elapsed % 60;
+  const accuracy = totalQuestions > 0 ? Math.round(score / totalQuestions * 100) : 0;
+  const emoji = accuracy >= 90 ? '🏆' : accuracy >= 70 ? '⭐' : accuracy >= 50 ? '📡' : '🔧';
+  const title = accuracy >= 90 ? 'Signal decoded!' : accuracy >= 70 ? 'Good work, agent!' : accuracy >= 50 ? 'Keep practising!' : 'Try again!';
+
+  document.getElementById('resultsArea').innerHTML = `
+    <div class="resultEmoji">${emoji}</div>
+    <div class="resultTitle">${title}</div>
+    <div class="resultSub">${score} out of ${totalQuestions} signals decoded correctly</div>
+    <div class="resultStats">
+      <div class="resultStat"><div class="resultStatVal">${accuracy}%</div><div class="resultStatLbl">Accuracy</div></div>
+      <div class="resultStat"><div class="resultStatVal">${mins}:${String(secs).padStart(2,'0')}</div><div class="resultStatLbl">Time</div></div>
+      <div class="resultStat"><div class="resultStatVal">🔥 ${streak}</div><div class="resultStatLbl">Best streak</div></div>
+    </div>
+    <button class="startBtn" onclick="startGame()">Play again →</button>
+    <button class="startBtn" style="background:#0f172a;margin-top:10px;box-shadow:none;" onclick="document.getElementById('resultsScreen').style.display='none';document.getElementById('setupScreen').style.display='';">Change mode</button>`;
+}
+
+// ── Init ────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof WordLabData !== 'undefined') {
+    WordLabData.initLoginUI({ accentColor:'#9d174d', accentSoft:'#fdf2f8', accentLine:'#f9a8d4', accentText:'#831843' });
+  }
+  // Hide Mode 3 for non-extension students
+  if (typeof WordLabData !== 'undefined' && WordLabData.isExtensionMode && !WordLabData.isExtensionMode()) {
+    var card = document.getElementById('mode3Card');
+    if (card) { card.style.opacity = '.4'; card.style.pointerEvents = 'none'; card.querySelector('.modeDesc').textContent = 'Extension mode only'; }
+  }
+});
+</script>
+</body>
+</html>
