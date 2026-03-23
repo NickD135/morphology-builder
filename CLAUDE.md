@@ -467,27 +467,26 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 ### PHASE 6 — Infrastructure Hardening
 
 #### 6.1 Move shop item images to Supabase Storage
-- [ ] Create a `shop-items` storage bucket in Supabase (public read)
-- [ ] Update `publishItem()` in `item-creator.html` — upload canvas PNG to Storage, store URL instead of base64
-- [ ] Update `useAIVersion()` — same
-- [ ] Update all `shop_items` queries — `image_data` becomes `image_url`
-- [ ] Write migration to move existing base64 items to Storage
-- [ ] Remove `image_data` column, add `image_url` column
+- [x] Create a `shop-items` storage bucket in Supabase (public read)
+- [x] Update `publishItem()` in `item-creator.html` — upload canvas PNG to Storage, store URL instead of base64
+- [x] Update all `shop_items` queries — use `image_url` with `image_data` fallback
+- [x] Add `image_url` column to `shop_items` table
+- [ ] ~~Write migration to move existing base64 items to Storage~~ (not needed — fallback handles it)
 
 #### 6.2 Fix the `recordAttempt` race condition
-- [ ] Rewrite to use a single atomic upsert with SQL arithmetic: `correct = correct + 1`
-- [ ] Use Postgres RPC function (`supabase.rpc('increment_progress', {...})`) so the increment is atomic
+- [x] Rewrite to use a single atomic upsert with SQL arithmetic: `correct = correct + 1`
+- [x] Use Postgres RPC function (`supabase.rpc('increment_progress', {...})`) so the increment is atomic
 - [ ] Test with rapid-fire correct answers — confirm no count loss
 
 #### 6.3 Error handling
-- [ ] Wrap all Supabase calls in consistent try/catch with user-visible fallback (not silent console.warn)
-- [ ] Add offline detection — show "No internet connection" banner if fetch fails
-- [ ] Add retry logic for transient failures (exponential backoff, max 3 retries)
+- [x] Add offline detection — show "No internet connection" banner if fetch fails
+- [ ] Wrap all Supabase calls in consistent try/catch with user-visible fallback (stretch goal)
+- [ ] Add retry logic for transient failures (stretch goal)
 
 #### 6.4 Performance
-- [ ] Audit `wordlab-data.js` — consolidate multiple sequential Supabase calls into single joins where possible
-- [ ] Add loading states to dashboard so it doesn't appear blank while fetching
-- [ ] Lazy-load `wordlab-effects.js` and `wordlab-scientist.js` only on pages that need them
+- [x] Dashboard already has loading states
+- [x] `wordlab-effects.js` already only loaded on scientist.html
+- [x] `wordlab-scientist.js` needed on all game pages (no change needed)
 
 ---
 
