@@ -312,19 +312,18 @@ const WordLabData = (() => {
     let charRows = [];
 
     if (studentIds.length) {
-      const { data: prog, error: progErr } = await sb()
-        .from('student_progress')
-        .select('student_id, activity, category, correct, total, total_time')
-        .in('student_id', studentIds);
-      if (progErr) throw progErr;
-      progressRows = prog || [];
-
-      const { data: chars, error: charErr } = await sb()
-        .from('student_character')
-        .select('student_id, quarks, xp, badges, scientist, stats')
-        .in('student_id', studentIds);
-      if (charErr) throw charErr;
-      charRows = chars || [];
+      const [progResult, charResult] = await Promise.all([
+        sb().from('student_progress')
+          .select('student_id, activity, category, correct, total, total_time')
+          .in('student_id', studentIds),
+        sb().from('student_character')
+          .select('student_id, quarks, xp, badges, scientist, stats')
+          .in('student_id', studentIds)
+      ]);
+      if (progResult.error) throw progResult.error;
+      if (charResult.error) throw charResult.error;
+      progressRows = progResult.data || [];
+      charRows = charResult.data || [];
     }
 
     const charMap = {};
@@ -468,14 +467,21 @@ const WordLabData = (() => {
     if (!session) return {};
     const studentId = session.studentId;
 
-    // Fetch existing progress row
-    const { data: existingProg } = await sb()
-      .from('student_progress')
-      .select('correct, total, total_time')
-      .eq('student_id', studentId)
-      .eq('activity', activity)
-      .eq('category', category)
-      .maybeSingle();
+    // Fetch existing progress and character in parallel
+    const [progResult, charResult] = await Promise.all([
+      sb().from('student_progress')
+        .select('correct, total, total_time')
+        .eq('student_id', studentId)
+        .eq('activity', activity)
+        .eq('category', category)
+        .maybeSingle(),
+      sb().from('student_character')
+        .select('*')
+        .eq('student_id', studentId)
+        .maybeSingle()
+    ]);
+    const existingProg = progResult.data;
+    const existingChar = charResult.data;
 
     const prevCorrect   = existingProg ? existingProg.correct   : 0;
     const prevTotal     = existingProg ? existingProg.total     : 0;
@@ -491,13 +497,6 @@ const WordLabData = (() => {
       is_extension: isExtensionMode(),
       updated_at:   new Date().toISOString()
     }, { onConflict: 'student_id,activity,category' });
-
-    // Fetch and update character
-    const { data: existingChar } = await sb()
-      .from('student_character')
-      .select('*')
-      .eq('student_id', studentId)
-      .maybeSingle();
     const char = ensureCharFields(existingChar ? { ...existingChar } : { student_id: studentId });
 
     char.stats.totalAnswered++;
@@ -536,24 +535,18 @@ const WordLabData = (() => {
   async function getStudentData() {
     const session = loadSession();
     if (!session) return null;
-    const { data } = await sb()
-      .from('students')
-      .select('extension_mode')
-      .eq('id', session.studentId)
-      .maybeSingle();
+    const [stuResult, charResult, isTeacher] = await Promise.all([
+      sb().from('students').select('extension_mode').eq('id', session.studentId).maybeSingle(),
+      sb().from('student_character').select('*').eq('student_id', session.studentId).maybeSingle(),
+      isStudentTeacher(session.classId, session.studentId)
+    ]);
+    const data = stuResult.data;
     if (data && data.extension_mode !== undefined) {
-      // Only sync from DB if the student hasn't made an explicit choice this session
       if (!sessionStorage.getItem('wl_ext_pinned')) {
         sessionStorage.setItem('wl_extension_mode', data.extension_mode ? 'true' : 'false');
       }
     }
-    const { data: charData } = await sb()
-      .from('student_character')
-      .select('*')
-      .eq('student_id', session.studentId)
-      .maybeSingle();
-    const char = ensureCharFields(charData ? { ...charData } : {});
-    const isTeacher = await isStudentTeacher(session.classId, session.studentId);
+    const char = ensureCharFields(charResult.data ? { ...charResult.data } : {});
     return {
       quarks: char.quarks, xp: char.xp, badges: char.badges,
       scientist: char.scientist, stats: char.stats,
@@ -962,20 +955,14 @@ const WordLabData = (() => {
     if (!session) return { blocked: false, count: 0 };
     try {
       const today = new Date().toISOString().slice(0, 10);
-      const { data } = await sb()
-        .from('daily_usage')
-        .select('question_count')
-        .eq('student_id', session.studentId)
-        .eq('usage_date', today)
-        .maybeSingle();
-      const count = (data && data.question_count) || 0;
-      // Check if this student's class teacher is on a paid plan
-      // For now, check teacher_accounts tier via class linkage
-      const { data: cls } = await sb()
-        .from('classes')
-        .select('teacher_account_id')
-        .eq('id', session.classId)
-        .maybeSingle();
+      const [usageResult, clsResult] = await Promise.all([
+        sb().from('daily_usage').select('question_count')
+          .eq('student_id', session.studentId).eq('usage_date', today).maybeSingle(),
+        sb().from('classes').select('teacher_account_id')
+          .eq('id', session.classId).maybeSingle()
+      ]);
+      const count = (usageResult.data && usageResult.data.question_count) || 0;
+      const cls = clsResult.data;
       if (cls && cls.teacher_account_id) {
         const { data: teacher } = await sb()
           .from('teacher_accounts')
@@ -1020,6 +1007,22 @@ const WordLabData = (() => {
     } catch(e) { console.warn('incrementDailyUsage error', e); }
   }
 
+  // ── Lazy-load extension data ────────────────────────────────
+  let _extLoaded = false;
+  let _extLoading = null;
+  function loadExtensionData() {
+    if (_extLoaded || window.WL_EXTENSION) { _extLoaded = true; return Promise.resolve(); }
+    if (_extLoading) return _extLoading;
+    _extLoading = new Promise(function(resolve) {
+      var s = document.createElement('script');
+      s.src = 'wordlab-extension-data.js';
+      s.onload = function() { _extLoaded = true; resolve(); };
+      s.onerror = function() { console.warn('Failed to load extension data'); resolve(); };
+      document.head.appendChild(s);
+    });
+    return _extLoading;
+  }
+
   return {
     getTeacherSession, getTeacherRecord, requireTeacherAuth, teacherSignOut, _sb: sb,
     createClass, getClasses, getClass, verifyPassword,
@@ -1035,8 +1038,15 @@ const WordLabData = (() => {
     getScientist, saveScientist, purchase,
     getClassLeader, getClassCrownEnabled, setClassCrownEnabled,
     getClassTeacherIds, isStudentTeacher, setStudentTeacher, saveClassSettings,
-    isExtensionMode,
+    isExtensionMode, loadExtensionData,
     checkDailyLimit, incrementDailyUsage
   };
 
 })();
+
+// Auto-load extension data if student is in extension mode.
+// Uses document.write during initial page parse so it loads synchronously
+// (same as the old static <script> tag, but only when needed).
+if (sessionStorage.getItem('wl_extension_mode') === 'true') {
+  document.write('<script src="wordlab-extension-data.js"><\/script>');
+}
