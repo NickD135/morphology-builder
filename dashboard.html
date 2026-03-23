@@ -1135,8 +1135,20 @@ function showStudentProfile(studentId){
   });
   const overallAcc = totalAttempts > 0 ? Math.round((totalCorrect/totalAttempts)*100) : null;
 
+  let lastActiveStr = 'Never';
+  if (student.lastActive) {
+    const d = new Date(student.lastActive);
+    const now = Date.now();
+    const diffDays = Math.floor((now - student.lastActive) / 86400000);
+    if (diffDays === 0) lastActiveStr = 'Today';
+    else if (diffDays === 1) lastActiveStr = 'Yesterday';
+    else if (diffDays < 7) lastActiveStr = diffDays + ' days ago';
+    else lastActiveStr = d.toLocaleDateString('en-AU', { day:'numeric', month:'short', year:'numeric' });
+  }
+
   const statsHtml = `
     <div class="statsStrip">
+      <div class="statPill"><div class="statPillVal">${lastActiveStr}</div><div class="statPillLbl">Last active</div></div>
       <div class="statPill"><div class="statPillVal">${formatTime(totalTime)}</div><div class="statPillLbl">Time in activities</div></div>
       <div class="statPill"><div class="statPillVal">${totalCorrect.toLocaleString()}</div><div class="statPillLbl">Correct answers</div></div>
       <div class="statPill"><div class="statPillVal">${totalAttempts.toLocaleString()}</div><div class="statPillLbl">Total attempts</div></div>
@@ -1292,6 +1304,42 @@ function renderSummary(){
 
   const headerRow = ACTS.map(a=>`<th>${a.label}</th>`).join('');
 
+  // ── Class-level stats ──────────────────────────────────────
+  let classCorrect = 0, classTotal = 0;
+  const actTotals = {};
+  const categoryMisses = {};
+  ACTS.forEach(a => { actTotals[a.key] = 0; });
+
+  currentClass.students.forEach(student => {
+    ACTS.forEach(a => {
+      const actData = isExt ? ((extensionData[student.id]||{})[a.key]||{}) : ((student.results||{})[a.key]||{});
+      Object.entries(actData).forEach(([cat, r]) => {
+        classCorrect += r.correct || 0;
+        classTotal += r.total || 0;
+        actTotals[a.key] += r.total || 0;
+        const acc = r.total >= 3 ? Math.round((r.correct / r.total) * 100) : null;
+        if (acc !== null && acc < 70) {
+          const key = a.key + ':' + cat;
+          categoryMisses[key] = (categoryMisses[key] || 0) + (r.total - r.correct);
+        }
+      });
+    });
+  });
+
+  const classAccuracy = classTotal > 0 ? Math.round(classCorrect / classTotal * 100) : null;
+  const mostPlayed = Object.entries(actTotals).sort((a,b) => b[1] - a[1])[0];
+  const mostPlayedLabel = mostPlayed && mostPlayed[1] > 0 ? (ACTS.find(a => a.key === mostPlayed[0]) || {}).label || mostPlayed[0] : null;
+  const mostMissedEntry = Object.entries(categoryMisses).sort((a,b) => b[1] - a[1])[0];
+  const mostMissedLabel = mostMissedEntry ? mostMissedEntry[0].split(':')[1] : null;
+
+  const classStatsHtml = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+    ${classAccuracy !== null ? `<div style="background:var(--indigo-soft);border:2px solid #c7d2fe;border-radius:14px;padding:10px 16px;flex:1;min-width:140px;"><div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);">Class accuracy</div><div style="font-size:22px;font-weight:900;color:var(--indigo);">${classAccuracy}%</div></div>` : ''}
+    ${mostPlayedLabel ? `<div style="background:#f0fdf4;border:2px solid #bbf7d0;border-radius:14px;padding:10px 16px;flex:1;min-width:140px;"><div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);">Most played</div><div style="font-size:14px;font-weight:900;color:#166534;">${mostPlayedLabel}</div></div>` : ''}
+    ${mostMissedLabel ? `<div style="background:#fef2f2;border:2px solid #fecaca;border-radius:14px;padding:10px 16px;flex:1;min-width:140px;"><div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);">Most missed</div><div style="font-size:14px;font-weight:900;color:#dc2626;">${mostMissedLabel}</div></div>` : ''}
+    <div style="background:#f8fafc;border:2px solid var(--line);border-radius:14px;padding:10px 16px;flex:1;min-width:140px;"><div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);">Total attempts</div><div style="font-size:22px;font-weight:900;color:var(--text);">${classTotal.toLocaleString()}</div></div>
+  </div>`;
+
+  // ── Student rows ───────────────────────────────────────────
   const rows = currentClass.students.map(student => {
     const extOn = !!student.extension_mode;
     const isCrown = currentCrownLeaderId && student.id === currentCrownLeaderId;
@@ -1301,10 +1349,22 @@ function renderSummary(){
       return `<td><div class="sumCell ${accClass(res.pct)}" title="${res.pct}% (${res.total} attempts)">${res.pct}%</div></td>`;
     }).join('');
 
+    let lastActiveStr = '–';
+    if (student.lastActive) {
+      const d = new Date(student.lastActive);
+      const now = Date.now();
+      const diffDays = Math.floor((now - student.lastActive) / 86400000);
+      if (diffDays === 0) lastActiveStr = 'Today';
+      else if (diffDays === 1) lastActiveStr = 'Yesterday';
+      else if (diffDays < 7) lastActiveStr = diffDays + 'd ago';
+      else lastActiveStr = d.toLocaleDateString('en-AU', { day:'numeric', month:'short' });
+    }
+
     return `<tr>
       <td class="sumNameCell" onclick="showStudentProfile('${student.id}')">
         ${isCrown?'🍩 ':''}${student.name}${extOn?'<span style="background:#4338ca;color:#e0e7ff;font-size:8px;font-weight:900;padding:1px 6px;border-radius:8px;letter-spacing:.08em;margin-left:5px;">EXT</span>':''}
       </td>
+      <td style="font-size:11px;font-weight:700;color:${student.lastActive ? 'var(--muted)' : '#cbd5e1'};text-align:center;white-space:nowrap;">${lastActiveStr}</td>
       ${cells}
       <td style="text-align:center;padding:6px;">
         <div class="extMiniToggle" onclick="toggleExtensionFromDashboard('${student.id}',${extOn})" title="${extOn?'Extension ON — click to disable':'Extension OFF — click to enable'}">
@@ -1321,11 +1381,13 @@ function renderSummary(){
   container.innerHTML = `
     <div class="panel"><div class="panelInner">
       <div class="panelTitle">📋 Class Summary${isExt?' <span style="background:#4338ca;color:#e0e7ff;font-size:9px;font-weight:900;padding:2px 8px;border-radius:8px;letter-spacing:.08em;margin-left:8px;vertical-align:middle;">🔬 EXTENSION</span>':''}</div>
-      <p style="font-size:13px;color:var(--muted);font-weight:700;margin:0 0 16px;">Overall accuracy per activity for each student. Click a name for full detail. Toggle extension mode or give rewards from here.</p>
+      ${classStatsHtml}
+      <p style="font-size:13px;color:var(--muted);font-weight:700;margin:0 0 16px;">Overall accuracy per activity for each student. Click a name for full detail.</p>
       <div class="heatmapWrap">
         <table class="sumTable">
           <thead><tr>
             <th style="text-align:left;min-width:140px;">Student</th>
+            <th>Last active</th>
             ${headerRow}
             <th>Extension</th>
             <th>Reward</th>

@@ -314,7 +314,7 @@ const WordLabData = (() => {
     if (studentIds.length) {
       const [progResult, charResult] = await Promise.all([
         sb().from('student_progress')
-          .select('student_id, activity, category, correct, total, total_time')
+          .select('student_id, activity, category, correct, total, total_time, updated_at')
           .in('student_id', studentIds),
         sb().from('student_character')
           .select('student_id, quarks, xp, badges, scientist, stats')
@@ -330,6 +330,7 @@ const WordLabData = (() => {
     charRows.forEach(c => { charMap[c.student_id] = c; });
 
     const progressMap = {};
+    const lastActiveMap = {};
     progressRows.forEach(row => {
       if (!progressMap[row.student_id]) progressMap[row.student_id] = {};
       if (!progressMap[row.student_id][row.activity]) progressMap[row.student_id][row.activity] = {};
@@ -338,6 +339,12 @@ const WordLabData = (() => {
         total: row.total,
         totalTime: row.total_time
       };
+      if (row.updated_at) {
+        var ts = new Date(row.updated_at).getTime();
+        if (!lastActiveMap[row.student_id] || ts > lastActiveMap[row.student_id]) {
+          lastActiveMap[row.student_id] = ts;
+        }
+      }
     });
 
     const students = (studs || []).map(s => ({
@@ -345,7 +352,8 @@ const WordLabData = (() => {
       name: s.name,
       student_code: s.student_code || '',
       extension_mode: !!s.extension_mode,
-      results: progressMap[s.id] || {}
+      results: progressMap[s.id] || {},
+      lastActive: lastActiveMap[s.id] || null
     }));
 
     return {
