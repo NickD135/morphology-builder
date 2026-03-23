@@ -10,6 +10,12 @@ ALTER TABLE shop_items ADD COLUMN IF NOT EXISTS image_url text;
 -- 6.2  Atomic increment_progress RPC function
 --      Replaces the SELECT-then-UPSERT pattern in recordAttempt
 -- ═══════════════════════════════════════════════════════════════
+
+-- Drop any existing versions to avoid ambiguity
+DROP FUNCTION IF EXISTS increment_progress(uuid, text, text, boolean, bigint, boolean);
+DROP FUNCTION IF EXISTS increment_progress(uuid, text, text, boolean, bigint);
+DROP FUNCTION IF EXISTS increment_progress(uuid, text, text, integer, bigint, boolean);
+
 CREATE OR REPLACE FUNCTION increment_progress(
   p_student_id uuid,
   p_activity text,
@@ -44,9 +50,9 @@ BEGIN
 END;
 $$;
 
--- Grant execute to anon and authenticated roles
-GRANT EXECUTE ON FUNCTION increment_progress TO anon;
-GRANT EXECUTE ON FUNCTION increment_progress TO authenticated;
+-- Grant execute with explicit argument list to avoid ambiguity
+GRANT EXECUTE ON FUNCTION increment_progress(uuid, text, text, boolean, bigint, boolean) TO anon;
+GRANT EXECUTE ON FUNCTION increment_progress(uuid, text, text, boolean, bigint, boolean) TO authenticated;
 
 -- ═══════════════════════════════════════════════════════════════
 -- 6.1  Create storage bucket for shop item images
