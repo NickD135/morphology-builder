@@ -502,13 +502,13 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 - [x] Add more words to Breakdown Blitz (63 → 122 words)
 - [x] Added Homophone Hunter (24 standard + 12 extension homophone groups)
 - [x] Added Word Spectrum (synonyms, antonyms, shades of meaning)
-- [ ] Add more prefixes/suffixes to Mission and Meaning modes
-- [ ] Add difficulty levels to Speed Builder and Mission Mode
+- [x] All prefixes/suffixes from data.js already in Mission and Meaning modes (44 suffixes, 35 prefixes)
+- [x] Add difficulty levels to Speed Builder (easy/medium/hard timer presets) and Mission Mode (adjustable fuel drain, penalties, options)
 - [ ] Teacher ability to add custom word lists per class
 
 #### 7.3 Student experience
 - [x] "Daily goal" system — 20 questions/day with progress bar on landing page
-- [ ] Weekly XP leaderboard (opt-in, per class only)
+- [x] Class XP leaderboard on landing page (top 5 in class, highlights current student)
 - [x] Notification when a badge is newly earned (popup/animation) — already in WLScientist.react
 - [x] Home screen shows "Welcome back, [name]!" with quarks, level, badges, daily goal
 
