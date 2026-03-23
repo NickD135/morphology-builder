@@ -102,6 +102,7 @@ serve(async (req: Request) => {
     customer: customerId,
     line_items: lineItems,
     mode: 'subscription',
+    allow_promotion_codes: true,
     success_url: successUrl || 'https://wordlabs.app/dashboard?upgraded=1',
     cancel_url: cancelUrl || 'https://wordlabs.app/pricing',
     metadata: {
