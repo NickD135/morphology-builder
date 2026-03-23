@@ -104,5 +104,45 @@ serve(async (req: Request) => {
     console.warn('GITHUB_PAT not set — skipping issue creation');
   }
 
+  // Send email notification via Resend
+  const resendKey = Deno.env.get('RESEND_API_KEY');
+  if (resendKey) {
+    try {
+      const subject = category === 'School quote'
+        ? `School Quote: ${name || 'Unknown'}`
+        : `[${category}] New feedback from ${name || 'Anonymous'}`;
+
+      const htmlBody = `
+        <h2 style="color:#312e81;">${category === 'School quote' ? 'New School Quote Request' : 'New Feedback'}</h2>
+        <table style="border-collapse:collapse;font-family:sans-serif;font-size:14px;">
+          ${name ? `<tr><td style="padding:6px 12px 6px 0;font-weight:bold;color:#334155;">From</td><td style="padding:6px 0;">${name}</td></tr>` : ''}
+          ${email ? `<tr><td style="padding:6px 12px 6px 0;font-weight:bold;color:#334155;">Email</td><td style="padding:6px 0;"><a href="mailto:${email}">${email}</a></td></tr>` : ''}
+          ${role ? `<tr><td style="padding:6px 12px 6px 0;font-weight:bold;color:#334155;">Role</td><td style="padding:6px 0;">${role}</td></tr>` : ''}
+          <tr><td style="padding:6px 12px 6px 0;font-weight:bold;color:#334155;">Category</td><td style="padding:6px 0;">${category}</td></tr>
+        </table>
+        <hr style="border:none;border-top:1px solid #e2e8f0;margin:16px 0;">
+        <pre style="white-space:pre-wrap;font-family:sans-serif;font-size:14px;color:#0f172a;line-height:1.6;">${message.trim()}</pre>
+        ${issueUrl ? `<p style="margin-top:16px;font-size:13px;color:#64748b;">GitHub issue: <a href="${issueUrl}">${issueUrl}</a></p>` : ''}
+      `;
+
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'Word Labs <notifications@wordlabs.app>',
+          to: 'nick@wordlabs.app',
+          reply_to: email || undefined,
+          subject,
+          html: htmlBody,
+        }),
+      });
+    } catch (err) {
+      console.error('Resend email error:', err);
+    }
+  }
+
   return json({ success: true, issueUrl });
 });
