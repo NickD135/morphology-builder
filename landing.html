@@ -853,6 +853,17 @@
   </div>
 </div>
 
+<!-- ── Class Leaderboard (logged-in students only) ── -->
+<div id="leaderboardWrap" style="display:none;max-width:1100px;margin:0 auto;padding:8px 20px 0;">
+  <div style="background:rgba(15,23,42,.04);border:2px solid #e2e8f0;border-radius:20px;padding:16px 20px;font-family:'Lexend',sans-serif;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div style="font-size:14px;font-weight:900;color:#312e81;">🏆 Class Leaderboard — This Week</div>
+      <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;" id="leaderClassName"></div>
+    </div>
+    <div id="leaderboardList" style="display:flex;flex-direction:column;gap:6px;"></div>
+  </div>
+</div>
+
 <!-- ── For Students ── -->
 <div class="section">
   <h2 class="section-heading">For Students</h2>
@@ -1118,6 +1129,40 @@ function toggleExtMode(){
     if(levelEl) levelEl.textContent=sd.level.level;
     var badgesEl=document.getElementById('welcomeBadges');
     if(badgesEl) badgesEl.textContent=(sd.badges||[]).length;
+
+    // Class leaderboard — top 5 by XP
+    try{
+      var session=WordLabData.getSession();
+      if(session && session.classId){
+        var SUPABASE_URL='https://qutsbcfkgiihcwaktsaz.supabase.co';
+        var SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dHNiY2ZrZ2lpaGN3YWt0c2F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NDE1NDksImV4cCI6MjA4OTUxNzU0OX0.h1N26KCcyHDrW4FRk6iBNmJUMQcFCYi8eHpOC818B8E';
+        var _lsb3=window._landingSb||(window._landingSb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON));
+        // Get class name
+        var clsRes=await _lsb3.from('classes').select('name').eq('id',session.classId).maybeSingle();
+        // Get all students in class with their XP
+        var stuRes=await _lsb3.from('students').select('id,name').eq('class_id',session.classId);
+        if(stuRes.data && stuRes.data.length > 1){
+          var studentIds=stuRes.data.map(function(s){return s.id;});
+          var charRes=await _lsb3.from('student_character').select('student_id,xp').in('student_id',studentIds);
+          var xpMap={};
+          (charRes.data||[]).forEach(function(c){xpMap[c.student_id]=c.xp||0;});
+          var ranked=stuRes.data.map(function(s){return{name:s.name,xp:xpMap[s.id]||0,isMe:s.id===session.studentId};}).sort(function(a,b){return b.xp-a.xp;}).slice(0,5);
+          if(ranked.length>1 && ranked[0].xp>0){
+            var medals=['🥇','🥈','🥉','4.','5.'];
+            var listEl=document.getElementById('leaderboardList');
+            listEl.innerHTML=ranked.map(function(r,i){
+              return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:12px;'+(r.isMe?'background:#eef2ff;border:2px solid #c7d2fe;':'background:#fff;border:2px solid #f1f5f9;')+'">'+
+                '<span style="font-size:16px;min-width:28px;text-align:center;">'+medals[i]+'</span>'+
+                '<span style="flex:1;font-size:13px;font-weight:'+(r.isMe?'900':'700')+';color:'+(r.isMe?'#4338ca':'#334155')+';">'+r.name+(r.isMe?' (you)':'')+'</span>'+
+                '<span style="font-size:13px;font-weight:900;color:#6366f1;">'+r.xp.toLocaleString()+' XP</span>'+
+              '</div>';
+            }).join('');
+            document.getElementById('leaderboardWrap').style.display='';
+            if(clsRes.data) document.getElementById('leaderClassName').textContent=clsRes.data.name;
+          }
+        }
+      }
+    }catch(e){}
 
     // Daily goal — count today's answers from stats
     var DAILY_TARGET=20;

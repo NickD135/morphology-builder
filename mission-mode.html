@@ -693,6 +693,12 @@
       <div style="font-size:11px;color:#047857;opacity:.75;margin-top:4px;text-align:center;letter-spacing:.03em;">Active Mission · Prefix Power-Up · Build words by adding the right morpheme</div>
     </div>
 
+    <!-- Difficulty -->
+    <div class="mode-row" style="margin-bottom:6px;">
+      <button class="modeSel" id="diffEasy" onclick="setDifficulty('easy')" style="font-size:11px;">🟢 Easy</button>
+      <button class="modeSel active" id="diffMedium" onclick="setDifficulty('medium')" style="font-size:11px;">🟡 Medium</button>
+      <button class="modeSel" id="diffHard" onclick="setDifficulty('hard')" style="font-size:11px;">🔴 Hard</button>
+    </div>
     <!-- Mode buttons -->
     <div class="mode-row">
       <button class="modeSel active" id="modePrefix" onclick="setMorphemeMode('prefix')">Prefixes</button>
@@ -796,6 +802,18 @@
   {id:"slow",   form:"slow",   meaning:"not fast",                   pos:["adj"],         validSuffixes:["ly","er","est","ness"]},
   ];
   if(_EXT_MISSION&&WL_EXTENSION.missionSuffixBases) SUFFIX_BASES.splice(0,SUFFIX_BASES.length,...WL_EXTENSION.missionSuffixBases);
+  let missionDifficulty = 'medium'; // easy | medium | hard
+  const DIFF_SETTINGS = {
+    easy:   { drainRate:0.15, wrongPenalty:8,  correctGain:12, skipPenalty:5, options:3 },
+    medium: { drainRate:0.25, wrongPenalty:12, correctGain:8,  skipPenalty:8, options:4 },
+    hard:   { drainRate:0.35, wrongPenalty:16, correctGain:6,  skipPenalty:10, options:5 },
+  };
+  function getDiff(){ return DIFF_SETTINGS[missionDifficulty]; }
+  function setDifficulty(level){
+    missionDifficulty = level;
+    ['Easy','Medium','Hard'].forEach(function(l){ document.getElementById('diff'+l).classList.toggle('active', l.toLowerCase()===level); });
+    score=0; streak=0; fuel=100; updateHud(); startFuelDrain(); loadQuestion();
+  }
   let morphemeMode = 'prefix'; // 'prefix' | 'suffix' | 'base' | 'mixed'
   function setMorphemeMode(mode){
     morphemeMode = mode;
@@ -1027,14 +1045,14 @@
     const _cat=q.isBaseMode?'base:'+q.base.id:(q.isPrefix?'prefix:':'suffix:')+q.correct.id;
     const _correctLabel=q.isBaseMode?getBaseLabel(q.base):getPrefixLabel(q.correct);
     if(isCorrect){
-      score+=50+(streak*10);streak++;fuel=Math.min(fuel+8,100);
+      score+=50+(streak*10);streak++;fuel=Math.min(fuel+getDiff().correctGain,100);
       if(typeof WordLabData!=='undefined'&&WordLabData.getSession()){const _wlResult=WordLabData.recordAttempt('mission-mode',_cat,true,0);if(typeof WLScientist!=='undefined') WLScientist.react('correct',_wlResult);}
       if(typeof WLAudio!=='undefined'){WLAudio.correct();if(streak>=3)WLAudio.streak(streak);}
       feedbackEl.textContent="✅ Correct!";feedbackEl.className="feedback ok";
       subFeedbackEl.textContent=`You built the idea: "${q.targetMeaning}"`;
       dropZoneTextEl.style.color="var(--ok)";dropZoneEl.classList.add("flashSuccess");
     } else {
-      streak=0;fuel=Math.max(fuel-12,0);
+      streak=0;fuel=Math.max(fuel-getDiff().wrongPenalty,0);
       if(typeof WordLabData!=='undefined'&&WordLabData.getSession()){WordLabData.recordAttempt('mission-mode',_cat,false,0);}
       if(typeof WLScientist!=='undefined') WLScientist.react('wrong');
       if(typeof WLAudio!=='undefined') WLAudio.wrong();
@@ -1044,10 +1062,10 @@
     }
     updateHud();if(fuel<=0){setTimeout(endGame,800);return;}setTimeout(loadQuestion,1500);
   }
-  function startFuelDrain(){clearInterval(fuelInterval);fuelInterval=setInterval(()=>{fuel-=.25;if(fuel<=0){fuel=0;updateHud();endGame();clearInterval(fuelInterval);return;}updateHud();},220);}
+  function startFuelDrain(){clearInterval(fuelInterval);fuelInterval=setInterval(()=>{fuel-=getDiff().drainRate;if(fuel<=0){fuel=0;updateHud();endGame();clearInterval(fuelInterval);return;}updateHud();},220);}
   function endGame(){buttonsLocked=true;optionsEl.innerHTML="";feedbackEl.textContent="Mission over";feedbackEl.className="feedback bad";subFeedbackEl.textContent=`Final score: ${score} XP`;}
   document.getElementById("recalibrateBtn").addEventListener("click",()=>{score=0;streak=0;fuel=100;updateHud();startFuelDrain();loadQuestion();});
-  document.getElementById("skipBtn").addEventListener("click",()=>{if(fuel<=0)return;streak=0;fuel=Math.max(fuel-8,0);updateHud();if(fuel<=0){endGame();return;}loadQuestion();});
+  document.getElementById("skipBtn").addEventListener("click",()=>{if(fuel<=0)return;streak=0;fuel=Math.max(fuel-getDiff().skipPenalty,0);updateHud();if(fuel<=0){endGame();return;}loadQuestion();});
   updateHud();loadDictionary().then(()=>{startFuelDrain();loadQuestion();});
 </script>
 <!-- wordlab-data loaded above -->
