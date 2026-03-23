@@ -1109,7 +1109,10 @@
         <div class="status-stat-pill" id="tchPillActive">📈 0 Active Today</div>
         <div class="status-stat-pill" id="tchPillClasses">📚 0 Classes</div>
       </div>
-      <a href="dashboard.html" class="tch-action">Open Dashboard →</a>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button class="tch-action" id="tchStudentModeBtn" style="background:#7c3aed;box-shadow:0 4px 20px rgba(124,58,237,.4);" onclick="tchToggleStudentMode()">👀 View as Student</button>
+        <a href="dashboard.html" class="tch-action">Open Dashboard →</a>
+      </div>
     </div>
   </div>
 
@@ -1266,8 +1269,15 @@ async function routeLayout() {
   try { teacherUser = await WordLabData.getTeacherSession(); } catch(e){}
 
   var studentSession = WordLabData.getSession();
+  var isPreview = typeof WordLabData !== 'undefined' && WordLabData.isTeacherPreview();
 
-  if (teacherUser) {
+  // If teacher is previewing as student, show student layout
+  if (isPreview && studentSession) {
+    document.getElementById('layoutLoggedOut').style.display = 'none';
+    document.getElementById('layoutStudent').style.display   = 'block';
+    document.getElementById('layoutTeacher').style.display   = 'none';
+    initStudentLayout(studentSession);
+  } else if (teacherUser) {
     document.getElementById('layoutLoggedOut').style.display = 'none';
     document.getElementById('layoutStudent').style.display   = 'none';
     document.getElementById('layoutTeacher').style.display   = 'block';
@@ -1284,12 +1294,42 @@ async function routeLayout() {
   }
 }
 
-/* ═══════════ TEACHER PREVIEW EXIT ═══════════ */
+/* ═══════════ TEACHER STUDENT MODE ═══════════ */
+async function tchToggleStudentMode() {
+  // Need at least one class
+  if (!_tchClasses || !_tchClasses.length) {
+    alert('Create a class first before previewing as a student.');
+    return;
+  }
+  var cls = _tchClasses[_tchCurrentIdx];
+  if (!cls || !cls.id) return;
+
+  var teacherStudent = await WordLabData.getTeacherStudent(cls.id);
+
+  if (!teacherStudent) {
+    var gameName = prompt('Choose your game name for this class (e.g. Mr Smith, Coach D):');
+    if (!gameName || !gameName.trim()) return;
+    try {
+      await WordLabData.createTeacherStudent(cls.id, gameName.trim());
+    } catch(e) {
+      alert('Error creating your student account: ' + (e.message || e));
+      return;
+    }
+  }
+
+  var success = await WordLabData.enterStudentMode(cls.id);
+  if (success) {
+    window.location.reload();
+  } else {
+    alert('Could not enter student mode. Please try again.');
+  }
+}
+
 async function exitStudentPreview() {
   if (typeof WordLabData !== 'undefined') {
     WordLabData.exitStudentMode();
   }
-  window.location.href = 'dashboard.html';
+  window.location.reload();
 }
 
 /* ═══════════ STUDENT LAYOUT INIT ═══════════ */
