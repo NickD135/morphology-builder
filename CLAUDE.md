@@ -458,9 +458,9 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 - [x] Store data in Australia (Supabase Sydney region `ap-southeast-2`) — critical for government schools
 - [x] Confirm only student first names stored — no surnames, no DOB, no email, no photos
 - [x] Add data deletion: teacher deletes class → all student data deleted (cascade already in DB schema)
-- [ ] Add "export class data" CSV function (teachers may need this)
-- [ ] Consider: do you need an ABN? For selling to schools yes — register as sole trader or company
-- [ ] Consider: Australian schools often pay via purchase order — build this into Stripe flow
+- [x] Add "export class data" CSV function — Export CSV button on dashboard
+- [x] ABN registered as sole trader "Word Labs Education"
+- [x] Purchase order support — noted on pricing page FAQ, directs to nick@wordlabs.app
 
 ---
 
