@@ -504,7 +504,7 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 - [x] Added Word Spectrum (synonyms, antonyms, shades of meaning)
 - [x] All prefixes/suffixes from data.js already in Mission and Meaning modes (44 suffixes, 35 prefixes)
 - [x] Add difficulty levels to Speed Builder (easy/medium/hard timer presets) and Mission Mode (adjustable fuel drain, penalties, options)
-- [ ] Teacher ability to add custom word lists per class
+- [x] Teacher ability to add custom word lists per class (Word Lists tab in class-setup, auto-loads in Breakdown Blitz)
 
 #### 7.3 Student experience
 - [x] "Daily goal" system — 20 questions/day with progress bar on landing page
