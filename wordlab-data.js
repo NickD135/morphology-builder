@@ -483,36 +483,23 @@ const WordLabData = (() => {
     if (!session) return {};
     const studentId = session.studentId;
 
-    // Fetch existing progress and character in parallel
-    const [progResult, charResult] = await Promise.all([
-      sb().from('student_progress')
-        .select('correct, total, total_time')
-        .eq('student_id', studentId)
-        .eq('activity', activity)
-        .eq('category', category)
-        .maybeSingle(),
+    // Atomic progress increment via Postgres RPC (no race condition)
+    // and fetch character data in parallel
+    const [_rpcResult, charResult] = await Promise.all([
+      sb().rpc('increment_progress', {
+        p_student_id: studentId,
+        p_activity: activity,
+        p_category: category,
+        p_correct: !!correct,
+        p_time_ms: timeMs || 0,
+        p_is_extension: isExtensionMode()
+      }),
       sb().from('student_character')
         .select('*')
         .eq('student_id', studentId)
         .maybeSingle()
     ]);
-    const existingProg = progResult.data;
     const existingChar = charResult.data;
-
-    const prevCorrect   = existingProg ? existingProg.correct   : 0;
-    const prevTotal     = existingProg ? existingProg.total     : 0;
-    const prevTotalTime = existingProg ? existingProg.total_time : 0;
-
-    await sb().from('student_progress').upsert({
-      student_id: studentId,
-      activity,
-      category,
-      correct:      prevCorrect   + (correct ? 1 : 0),
-      total:        prevTotal     + 1,
-      total_time:   prevTotalTime + (timeMs || 0),
-      is_extension: isExtensionMode(),
-      updated_at:   new Date().toISOString()
-    }, { onConflict: 'student_id,activity,category' });
     const char = ensureCharFields(existingChar ? { ...existingChar } : { student_id: studentId });
 
     char.stats.totalAnswered++;
@@ -1058,6 +1045,25 @@ const WordLabData = (() => {
     checkDailyLimit, incrementDailyUsage
   };
 
+})();
+
+// ── Offline / connection detection ────────────────────────────
+(function() {
+  var banner = null;
+  function showOffline() {
+    if (banner) return;
+    banner = document.createElement('div');
+    banner.id = 'wlOfflineBanner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;text-align:center;padding:10px 16px;font-family:Lexend,sans-serif;font-size:13px;font-weight:700;';
+    banner.textContent = 'No internet connection — some features may not work until you reconnect.';
+    document.body.appendChild(banner);
+  }
+  function hideOffline() {
+    if (banner) { banner.remove(); banner = null; }
+  }
+  window.addEventListener('offline', showOffline);
+  window.addEventListener('online', hideOffline);
+  if (!navigator.onLine) showOffline();
 })();
 
 // Auto-load extension data if student is in extension mode.

@@ -1133,10 +1133,26 @@ async function publishItem() {
   canvas.backgroundColor = savedBgColor;
   canvas.renderAll();
 
+  // Upload image to Supabase Storage instead of storing base64 in DB
+  let imageUrl = null;
+  try {
+    const blob = await (await fetch(imageData)).blob();
+    const fileName = `${Date.now()}_${crypto.randomUUID().slice(0,8)}.png`;
+    const { data: uploadData, error: uploadErr } = await getSb().storage
+      .from('shop-items')
+      .upload(fileName, blob, { contentType: 'image/png', upsert: false });
+    if (uploadErr) throw uploadErr;
+    const { data: urlData } = getSb().storage.from('shop-items').getPublicUrl(fileName);
+    imageUrl = urlData.publicUrl;
+  } catch(e) {
+    console.warn('Storage upload failed, falling back to base64:', e.message);
+  }
+
   const record = {
     name,
     item_type: itemType,
-    image_data: imageData,
+    image_url: imageUrl,
+    image_data: imageUrl ? null : imageData,
     rarity,
     unlock_method: unlockMethod,
     quark_cost: 0,
@@ -1190,7 +1206,7 @@ async function loadPublishedItems() {
   const grid = document.getElementById('publishedGrid');
   if (!grid) return;
   try {
-    const { data, error } = await getSb().from('shop_items').select('id,name,item_type,rarity,image_data').order('created_at', { ascending: false });
+    const { data, error } = await getSb().from('shop_items').select('id,name,item_type,rarity,image_url,image_data').order('created_at', { ascending: false });
     if (error) throw error;
     if (!data || !data.length) {
       grid.innerHTML = '<div style="font-size:12px;color:var(--muted);">No items published yet.</div>';
@@ -1199,7 +1215,7 @@ async function loadPublishedItems() {
     const rarityColor = { common:'#94a3b8', rare:'#3b82f6', epic:'#a855f7', legendary:'#f59e0b' };
     grid.innerHTML = data.map(item => `
       <div class="publishedItem" id="pubItem_${item.id}">
-        ${item.image_data ? `<img src="${item.image_data}" alt="${item.name}">` : '<div style="width:40px;height:40px;background:#e2e8f0;border-radius:6px;"></div>'}
+        ${(item.image_url || item.image_data) ? `<img src="${item.image_url || item.image_data}" alt="${item.name}">` : '<div style="width:40px;height:40px;background:#e2e8f0;border-radius:6px;"></div>'}
         <div class="publishedItemInfo">
           <div class="publishedItemName">${item.name}</div>
           <div class="publishedItemMeta" style="color:${rarityColor[item.rarity]||'#94a3b8'}">${item.rarity} · ${item.item_type}</div>
