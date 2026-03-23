@@ -350,6 +350,8 @@
     z-index:0;
   }
   .sciSVGWrap > *{ position:relative; z-index:1; }
+  /* Ensure the SVG character renders ABOVE particle effects (which use z-index 8-13) */
+  .sciSVGWrap > svg, .sciSVGWrap > div > svg, #sciSVGBig svg { position:relative; z-index:15!important; }
   /* Idle bob */
   #sciSVGBig svg{ animation:sciIdleBob 3s ease-in-out infinite; display:block; }
   @keyframes sciIdleBob{
@@ -694,6 +696,9 @@ const SHOP = {
 };
 const SKIN_TONES = ['#FDBCB4','#F1C27D','#E0AC69','#C68642','#8D5524','#FFCBA4'];
 
+// ── Active tab tracking ───────────────────────────────────────
+let _activeTab = 'scientist';
+
 // ── Render ────────────────────────────────────────────────────
 async function render() {
   const sd = (typeof WordLabData !== 'undefined') ? await WordLabData.getStudentData() : null;
@@ -731,9 +736,11 @@ async function render() {
 
   wrap.innerHTML = `
     <div class="tabRow">
-      <button class="tabBtn active" onclick="switchTab('scientist',this)">🧬 My Scientist</button>
-      <button class="tabBtn" onclick="switchTab('badges',this)">🏅 Badges</button>
-      <button class="tabBtn" onclick="switchTab('shop',this)">🛍️ Lab Shop</button>
+      <button class="tabBtn active" data-tab="scientist" onclick="switchTab('scientist',this)">🧬 My Scientist</button>
+      <button class="tabBtn" data-tab="badges" onclick="switchTab('badges',this)">🏅 Badges</button>
+      <button class="tabBtn" data-tab="shop" onclick="switchTab('shop',this)">🛍️ Lab Shop</button>
+      <button class="tabBtn" data-tab="effects" onclick="switchTab('effects',this)">✨ Particle Effects</button>
+      <button class="tabBtn" data-tab="custom" onclick="switchTab('custom',this)">🎨 Custom</button>
     </div>
 
     <!-- TAB 1: My Scientist -->
@@ -763,16 +770,14 @@ async function render() {
           </div>
           <div class="custSection">
             <div class="custLabel">Coat Colour</div>
-            <div class="swatchRow">${SHOP.coatColors.map(c=>{
-              const isOwned = sd.is_teacher || c.free || owned.includes(c.id) || c.id===sci.coatColor;
-              return `<div class="swatch${c.id===sci.coatColor?' active':''}${!isOwned?' locked':''}" style="background:${c.id==='rainbow'?'linear-gradient(135deg,#f87171,#fb923c,#facc15,#4ade80,#60a5fa,#a78bfa)':c.id};" onclick="${isOwned?`applyOption('coatColor','${c.id}')`:'void(0)'}" title="${c.name}${!isOwned?' (buy in shop)':''}"></div>`;
+            <div class="swatchRow">${SHOP.coatColors.filter(c=> sd.is_teacher || c.free || owned.includes(c.id) || c.id===sci.coatColor).map(c=>{
+              return `<div class="swatch${c.id===sci.coatColor?' active':''}" style="background:${c.id==='rainbow'?'linear-gradient(135deg,#f87171,#fb923c,#facc15,#4ade80,#60a5fa,#a78bfa)':c.id};" onclick="applyOption('coatColor','${c.id}')" title="${c.name}"></div>`;
             }).join('')}</div>
           </div>
           <div class="custSection">
             <div class="custLabel">Coat Pattern</div>
-            <div class="optRow">${SHOP.coatPatterns.map(p=>{
-              const isOwned = sd.is_teacher || p.free || owned.includes(p.id);
-              return `<button class="optPill${p.id===sci.coatPattern?' active':''}${!isOwned?' locked':''}" onclick="${isOwned?`applyOption('coatPattern','${p.id}')`:'void(0)'}">${p.name}</button>`;
+            <div class="optRow">${SHOP.coatPatterns.filter(p=> sd.is_teacher || p.free || owned.includes(p.id)).map(p=>{
+              return `<button class="optPill${p.id===sci.coatPattern?' active':''}" onclick="applyOption('coatPattern','${p.id}')">${p.name}</button>`;
             }).join('')}</div>
           </div>
           <div class="custSection">
@@ -785,19 +790,17 @@ async function render() {
                     <div style="font-size:11px;font-weight:700;color:#a21caf;">You have the most correct answers in your class. Keep it up!</div>
                   </div>
                 </div>`
-              : `<div class="optRow">${SHOP.headAccessories.map(a=>{
+              : `<div class="optRow">${SHOP.headAccessories.filter(a=> sd.is_teacher || a.free || owned.includes(a.id)).map(a=>{
                   const cur = sci.head||'none';
-                  const isOwned = sd.is_teacher || a.free || owned.includes(a.id);
-                  return `<button class="optPill${a.id===cur?' active':''}${!isOwned?' locked':''}" onclick="${isOwned?`applyOption('head',${a.id==='none'?'null':"'"+a.id+"'"})`:'void(0)'}">${a.icon} ${a.name}</button>`;
+                  return `<button class="optPill${a.id===cur?' active':''}" onclick="applyOption('head',${a.id==='none'?'null':"'"+a.id+"'"})">${a.icon} ${a.name}</button>`;
                 }).join('')}</div>`
             }
           </div>
           <div class="custSection">
             <div class="custLabel">Face Accessory</div>
-            <div class="optRow">${SHOP.faceAccessories.map(a=>{
+            <div class="optRow">${SHOP.faceAccessories.filter(a=> sd.is_teacher || a.free || owned.includes(a.id)).map(a=>{
               const cur = sci.face||'none';
-              const isOwned = sd.is_teacher || a.free || owned.includes(a.id);
-              return `<button class="optPill${a.id===cur?' active':''}${!isOwned?' locked':''}" onclick="${isOwned?`applyOption('face',${a.id==='none'?'null':"'"+a.id+"'"})`:'void(0)'}">${a.icon} ${a.name}</button>`;
+              return `<button class="optPill${a.id===cur?' active':''}" onclick="applyOption('face',${a.id==='none'?'null':"'"+a.id+"'"})">${a.icon} ${a.name}</button>`;
             }).join('')}</div>
           </div>
           <div class="custSection">
@@ -852,7 +855,49 @@ async function render() {
         <div class="shopGrid" id="customItemsGrid"></div>
       </div>
     </div>
+
+    <!-- TAB 4: Particle Effects -->
+    <div id="tab-effects" class="tabPanel">
+      <div class="shopBalance">
+        <span style="font-size:28px;">⚛️</span>
+        <div><div class="shopBalanceAmt">${sd.quarks}</div><div class="shopBalanceLbl">quarks available</div></div>
+      </div>
+      ${renderCurrentEffect(sd)}
+      <div style="margin-top:20px;">
+        <div class="shopSectionTitle">✨ All Particle Effects</div>
+        <div class="shopGrid">${renderEffectsSection(sd)}</div>
+      </div>
+    </div>
+
+    <!-- TAB 5: Custom Items -->
+    <div id="tab-custom" class="tabPanel">
+      <div class="shopBalance">
+        <span style="font-size:28px;">⚛️</span>
+        <div><div class="shopBalanceAmt">${sd.quarks}</div><div class="shopBalanceLbl">quarks available</div></div>
+      </div>
+      <div class="shopSection">
+        <div class="shopSectionTitle">🎨 Custom Items from Your Teacher</div>
+        <div class="shopGrid" id="customItemsGridTab"></div>
+        <div id="customItemsTabEmpty" style="color:#94a3b8;font-size:13px;font-style:italic;padding:16px;">Loading custom items...</div>
+      </div>
+    </div>
   `;
+
+  // Restore active tab after re-render
+  if (_activeTab !== 'scientist') {
+    const tabPanel = document.getElementById('tab-' + _activeTab);
+    const tabBtns = document.querySelectorAll('.tabBtn');
+    if (tabPanel) {
+      document.querySelectorAll('.tabPanel').forEach(p => p.classList.remove('active'));
+      tabBtns.forEach(b => b.classList.remove('active'));
+      tabPanel.classList.add('active');
+      tabBtns.forEach(b => { if (b.getAttribute('data-tab') === _activeTab) b.classList.add('active'); });
+    }
+  }
+  // Load custom items if on shop or custom tab
+  if (_activeTab === 'shop' || _activeTab === 'custom') {
+    loadCustomShopItems(sd);
+  }
 
   // Restart effect on the big scientist card now that #sciSVGBig exists
   if (typeof WLScientist !== 'undefined') WLScientist._restartEffects(sd);
@@ -976,11 +1021,12 @@ async function buyEffect(effectId, cost) {
 }
 
 function switchTab(id, btn) {
+  _activeTab = id;
   document.querySelectorAll('.tabPanel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tabBtn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
   btn.classList.add('active');
-  if (id === 'shop') {
+  if (id === 'shop' || id === 'custom') {
     WordLabData.getStudentData().then(sd => { if (sd) loadCustomShopItems(sd); });
   }
 }
@@ -1026,7 +1072,9 @@ let _customItemsData = {};
 async function loadCustomShopItems(sd) {
   const section = document.getElementById('customItemsSection');
   const grid    = document.getElementById('customItemsGrid');
-  if (!section || !grid) return;
+  const tabGrid = document.getElementById('customItemsGridTab');
+  const tabEmpty = document.getElementById('customItemsTabEmpty');
+  if (!section && !grid && !tabGrid) return;
 
   let items;
   try {
@@ -1064,14 +1112,17 @@ async function loadCustomShopItems(sd) {
     return true;
   });
 
-  if (!visible.length) return;
-  section.style.display = 'block';
+  if (!visible.length) {
+    if (tabEmpty) tabEmpty.textContent = 'No custom items available yet. Your teacher can create items in the Item Creator!';
+    return;
+  }
+  if (section) section.style.display = 'block';
 
   const rarityBorder = { common:'#94a3b8', rare:'#3b82f6', epic:'#a855f7', legendary:'#f59e0b' };
   const owned = (sd.scientist||{}).owned || [];
   const isTeacher = sd.is_teacher;
 
-  grid.innerHTML = visible.map(item => {
+  const itemsHtml = visible.map(item => {
     const border = rarityBorder[item.rarity] || '#e2e8f0';
     const isOwned = isTeacher || owned.includes('custom_' + item.id);
     const canAfford = isTeacher || sd.quarks >= (item.quark_cost || 0);
@@ -1110,6 +1161,11 @@ async function loadCustomShopItems(sd) {
       ${btn}
     </div>`;
   }).join('');
+
+  if (grid) grid.innerHTML = itemsHtml;
+  // Also populate the dedicated Custom tab grid
+  if (tabGrid) { tabGrid.innerHTML = itemsHtml; }
+  if (tabEmpty) { tabEmpty.style.display = 'none'; }
 }
 
 async function enterSecretCode(itemId, correctCode) {
