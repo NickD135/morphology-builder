@@ -872,6 +872,11 @@ const WordLabData = (() => {
 
   function _skip() {
     document.getElementById('wlOverlay').classList.add('wl-hide');
+    // On the landing page, scroll to the activities section so the guest can find games
+    var trySection = document.querySelector('.play-hub-container');
+    if (trySection) {
+      setTimeout(function(){ trySection.scrollIntoView({behavior:'smooth', block:'center'}); }, 300);
+    }
   }
 
   function _logoutStudent() {
