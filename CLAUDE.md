@@ -43,7 +43,8 @@ privacy-law-compliant, multi-tenant, with proper teacher auth and a payment laye
 | Hosting | Currently Codespaces only | Needs Vercel deployment |
 | Edge functions | Supabase Edge (Deno) | One function: `polish-item` (AI item polish) |
 | Canvas | Fabric.js 5.3.1 | Used in `item-creator.html` only |
-| Payments | ❌ Not yet | Stripe planned |
+| Payments | Stripe (live) | ABN + "Word Labs Education" sole trader |
+| Transactional email | Resend | Free tier, domain verified, sends from notifications@wordlabs.app |
 
 ---
 
@@ -350,6 +351,11 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 - [x] Create Stripe account (sandbox mode)
 - [x] Created product `Word Labs — School Annual` — AUD $299/year
 - [x] Price ID: `price_1TDhljPlhyP7eUplp5zTRIEj`
+- [x] ABN registered, business name "Word Labs Education" registered with ASIC
+- [x] Stripe account activated for live payments
+- [x] Live price IDs configured: School (`price_1TE0xlBMsuz4ocNGz0tNktiE`), Teacher (`price_1TE0xpBMsuz4ocNGywDADyqi`), Student Pack (`price_1TE0xpBMsuz4ocNGan0ITQVh`)
+- [x] Live secret key, webhook secret, and student pack price ID set in Supabase secrets
+- [x] Promo codes enabled at checkout (`allow_promotion_codes: true`)
 
 #### 3.2 New Supabase Edge Function: `create-checkout`
 - [x] Created `supabase/functions/create-checkout/index.ts`
@@ -367,6 +373,9 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 - [x] Created pricing page with trial vs paid plan comparison
 - [x] "Upgrade Now" redirects to dashboard where checkout runs (auth guaranteed)
 - [x] Trial/upgrade banner on dashboard with inline checkout button
+- [x] School Annual plan changed to "Custom pricing" with quote request form (modal)
+- [x] Student pack stepper removed from Teacher plan for cleaner UX
+- [x] Quote form submissions create GitHub issues + send email via Resend
 
 #### 3.5 Trial & plan gating
 - [x] Trial countdown banner shown when < 7 days remaining
@@ -375,7 +384,14 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 - [ ] Enforce class/student limits during trial (Phase 4 — low priority for now)
 
 #### 3.6 Purchase order / invoice support
-- [ ] "Pay by invoice" option — email nick@wordlabs.app for now (noted on pricing page)
+- [x] "Pay by invoice" option — noted on pricing page FAQ, directs to nick@wordlabs.app
+
+#### 3.7 Email notifications
+- [x] Resend account set up, domain `wordlabs.app` verified
+- [x] `send-feedback` edge function sends email to nick@wordlabs.app via Resend
+- [x] Feedback form and school quote form both trigger email notifications
+- [x] `feedback` table created in Supabase with RLS policies
+- [ ] Set up Cloudflare Email Routing for incoming mail to nick@wordlabs.app
 
 ---
 
