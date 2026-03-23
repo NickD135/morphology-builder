@@ -136,6 +136,17 @@
 </header>
 
 <div class="wrap">
+  <!-- Upgrade banner for free tier -->
+  <div id="upgradeBanner" style="display:none;background:linear-gradient(135deg,#312e81,#4338ca);border-radius:20px;padding:18px 24px;color:#e0e7ff;font-family:'Lexend',sans-serif;margin-bottom:4px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:14px;font-weight:900;">Free plan: <span id="studentCapDisplay">5</span> students · 30 questions/day</div>
+        <div style="font-size:12px;color:#a5b4fc;font-weight:600;margin-top:4px;">Upgrade to Standard (35 students) or Pro (unlimited)</div>
+      </div>
+      <a href="upgrade.html" style="background:#fff;color:#312e81;font-weight:900;font-size:12px;padding:10px 18px;border-radius:12px;text-decoration:none;white-space:nowrap;">Upgrade →</a>
+    </div>
+  </div>
+
   <div class="panel"><div class="panelInner">
     <div class="tabs">
       <button class="tab active" onclick="showTab('create',this)">Create new class</button>
@@ -511,6 +522,15 @@
       document.getElementById('teacherGate').style.display = 'none';
       const emailEl = document.getElementById('teacherEmail');
       if (emailEl) emailEl.textContent = user.email;
+
+      // Check tier and show upgrade banner
+      try {
+        const { data: ta } = await _csSb.from('teacher_accounts').select('tier, student_cap').eq('email', user.email).maybeSingle();
+        if (ta && ta.tier === 'free') {
+          document.getElementById('upgradeBanner').style.display = 'block';
+          document.getElementById('studentCapDisplay').textContent = ta.student_cap || 5;
+        }
+      } catch(e) { /* teacher_accounts table may not exist yet */ }
     }
   })();
 </script>

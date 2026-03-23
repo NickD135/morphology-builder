@@ -1323,7 +1323,21 @@ buildSoundPills();
 (async function(){var w=document.getElementById('sciCharWrap');if(!w||typeof WLScientist==='undefined')return;var sd=typeof WordLabData!=='undefined'?await WordLabData.getStudentData():null;w.innerHTML=WLScientist.buildSVG(sd?sd.scientist:{},'neutral');})();
 
 // ── Word Labs login (shared) ──────────────────────────────────────
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+  // Daily limit check
+  if(typeof WordLabData !== 'undefined' && WordLabData.getSession()){
+    try {
+      const limit = await WordLabData.checkDailyLimit();
+      if(limit && limit.blocked){
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(13,11,26,.92);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = '<div style="background:#1a1630;border:2px solid #4338ca;border-radius:24px;padding:40px;max-width:440px;text-align:center;color:#e0e7ff;font-family:Lexend,sans-serif;"><div style="font-size:48px;margin-bottom:16px;">🧪</div><h2 style="font-size:22px;font-weight:900;margin-bottom:12px;">Daily limit reached</h2><p style="color:#94a3b8;font-size:14px;margin-bottom:24px;">You\\\'ve completed 30 questions today on the free plan. Come back tomorrow or ask your teacher about upgrading.</p><a href="landing.html" style="background:#4338ca;color:#fff;padding:12px 24px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px;">Back to Home</a></div>';
+        document.body.appendChild(overlay);
+        return;
+      }
+    } catch(e) { console.warn('Daily limit check failed', e); }
+  }
+
   if(typeof WordLabData !== 'undefined') {
     WordLabData.initLoginUI({
       accentColor: '#0d9488',

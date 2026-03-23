@@ -526,6 +526,9 @@ const WordLabData = (() => {
       { onConflict: 'student_id' }
     );
 
+    // Track daily usage for free tier limits
+    try { incrementDailyUsage(); } catch(e) {}
+
     return { quarks: char.quarks, xp: char.xp, quarksEarned, xpEarned, newBadges, level: getLevel(char.xp) };
   }
 
@@ -951,6 +954,72 @@ const WordLabData = (() => {
     if (!updated || updated.length === 0) throw new Error('No rows updated — check Supabase RLS policies allow UPDATE on the classes table');
   }
 
+  // ── Daily usage limits (free tier) ───────────────────────────
+  const FREE_DAILY_LIMIT = 30;
+
+  async function checkDailyLimit() {
+    const session = loadSession();
+    if (!session) return { blocked: false, count: 0 };
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data } = await sb()
+        .from('daily_usage')
+        .select('question_count')
+        .eq('student_id', session.studentId)
+        .eq('usage_date', today)
+        .maybeSingle();
+      const count = (data && data.question_count) || 0;
+      // Check if this student's class teacher is on a paid plan
+      // For now, check teacher_accounts tier via class linkage
+      const { data: cls } = await sb()
+        .from('classes')
+        .select('teacher_account_id')
+        .eq('id', session.classId)
+        .maybeSingle();
+      if (cls && cls.teacher_account_id) {
+        const { data: teacher } = await sb()
+          .from('teacher_accounts')
+          .select('tier')
+          .eq('id', cls.teacher_account_id)
+          .maybeSingle();
+        if (teacher && teacher.tier !== 'free') {
+          return { blocked: false, count: count };
+        }
+      }
+      return { blocked: count >= FREE_DAILY_LIMIT, count: count };
+    } catch(e) {
+      console.warn('checkDailyLimit error', e);
+      return { blocked: false, count: 0 };
+    }
+  }
+
+  async function incrementDailyUsage() {
+    const session = loadSession();
+    if (!session) return;
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data: existing } = await sb()
+        .from('daily_usage')
+        .select('id, question_count')
+        .eq('student_id', session.studentId)
+        .eq('usage_date', today)
+        .maybeSingle();
+      if (existing) {
+        await sb().from('daily_usage').update({
+          question_count: (existing.question_count || 0) + 1,
+          updated_at: new Date().toISOString()
+        }).eq('id', existing.id);
+      } else {
+        await sb().from('daily_usage').insert({
+          student_id: session.studentId,
+          usage_date: today,
+          question_count: 1,
+          activity_count: 1
+        });
+      }
+    } catch(e) { console.warn('incrementDailyUsage error', e); }
+  }
+
   return {
     getTeacherSession, getTeacherRecord, requireTeacherAuth, teacherSignOut, _sb: sb,
     createClass, getClasses, getClass, verifyPassword,
@@ -966,7 +1035,8 @@ const WordLabData = (() => {
     getScientist, saveScientist, purchase,
     getClassLeader, getClassCrownEnabled, setClassCrownEnabled,
     getClassTeacherIds, isStudentTeacher, setStudentTeacher, saveClassSettings,
-    isExtensionMode
+    isExtensionMode,
+    checkDailyLimit, incrementDailyUsage
   };
 
 })();

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Login — Word Labs</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧪</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Lexend', sans-serif;
+      background: #0d0b1a;
+      color: #e0e7ff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 24px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+
+    .header a {
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header .brand-icon {
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .header .brand-text {
+      font-size: 20px;
+      font-weight: 800;
+      color: #e0e7ff;
+    }
+
+    /* Main content */
+    .main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    /* Form view */
+    .form-view, .qr-view {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      max-width: 480px;
+      width: 100%;
+    }
+
+    .form-view h1, .qr-view h2 {
+      font-size: 28px;
+      font-weight: 800;
+      color: #e0e7ff;
+      text-align: center;
+    }
+
+    .form-view p {
+      color: #94a3b8;
+      font-size: 15px;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .code-input {
+      width: 100%;
+      max-width: 360px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
+      color: #e0e7ff;
+      text-transform: uppercase;
+      font-size: 24px;
+      text-align: center;
+      padding: 16px;
+      border-radius: 14px;
+      font-family: 'Lexend', sans-serif;
+      font-weight: 700;
+      letter-spacing: .08em;
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    .code-input::placeholder {
+      color: #475569;
+      text-transform: none;
+      font-weight: 400;
+      letter-spacing: 0;
+    }
+
+    .code-input:focus {
+      border-color: #6366f1;
+    }
+
+    .btn-primary {
+      background: #4338ca;
+      color: #fff;
+      padding: 14px 28px;
+      border-radius: 14px;
+      font-weight: 900;
+      font-size: 16px;
+      font-family: 'Lexend', sans-serif;
+      border: none;
+      cursor: pointer;
+      transition: background .2s, transform .1s;
+    }
+
+    .btn-primary:hover { background: #4f46e5; }
+    .btn-primary:active { transform: scale(.97); }
+
+    .btn-secondary {
+      background: rgba(255,255,255,.06);
+      color: #94a3b8;
+      padding: 12px 24px;
+      border-radius: 14px;
+      font-weight: 600;
+      font-size: 14px;
+      font-family: 'Lexend', sans-serif;
+      border: 1px solid rgba(255,255,255,.1);
+      cursor: pointer;
+      transition: background .2s, color .2s;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255,255,255,.1);
+      color: #e0e7ff;
+    }
+
+    .error-msg {
+      color: #f87171;
+      font-size: 14px;
+      font-weight: 500;
+      display: none;
+    }
+
+    /* QR view */
+    .qr-container {
+      background: #fff;
+      padding: 16px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .class-code-display {
+      font-size: 48px;
+      font-weight: 900;
+      color: #e0e7ff;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .qr-instruction {
+      color: #94a3b8;
+      font-size: 16px;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    /* Hidden state */
+    .hidden { display: none !important; }
+
+    /* Fullscreen mode */
+    body.fullscreen .header { display: none; }
+
+    body.fullscreen .main {
+      padding: 0;
+    }
+
+    body.fullscreen .qr-view {
+      gap: 32px;
+      max-width: none;
+    }
+
+    body.fullscreen .class-code-display {
+      font-size: 64px;
+    }
+
+    body.fullscreen .qr-instruction {
+      font-size: 20px;
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .form-view h1 { font-size: 22px; }
+      .code-input { font-size: 20px; padding: 14px; }
+      .class-code-display { font-size: 36px; }
+      body.fullscreen .class-code-display { font-size: 44px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header" id="header">
+    <a href="landing.html">
+      <span class="brand-icon">🧪</span>
+      <span class="brand-text">Word Labs</span>
+    </a>
+  </div>
+
+  <div class="main">
+
+    <!-- Step 1: Enter class code -->
+    <div class="form-view" id="formView">
+      <h1>Classroom QR Login</h1>
+      <p>Enter your class code to generate a QR code your students can scan to log in.</p>
+      <input
+        type="text"
+        class="code-input"
+        id="codeInput"
+        placeholder="Class code"
+        maxlength="20"
+        autocomplete="off"
+        spellcheck="false"
+      >
+      <span class="error-msg" id="errorMsg">Please enter a class code</span>
+      <button class="btn-primary" id="generateBtn">Generate QR Code</button>
+    </div>
+
+    <!-- Step 2: QR display -->
+    <div class="qr-view hidden" id="qrView">
+      <h2 id="qrHeading">Scan to Join</h2>
+      <div class="qr-container" id="qrContainer"></div>
+      <div class="class-code-display" id="classCodeDisplay"></div>
+      <p class="qr-instruction">Scan with your camera to log in to Word Labs</p>
+      <div class="btn-row">
+        <button class="btn-primary" id="fullscreenBtn">Full Screen</button>
+        <button class="btn-secondary" id="changeCodeBtn">Change Code</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const formView       = document.getElementById('formView');
+    const qrView         = document.getElementById('qrView');
+    const codeInput      = document.getElementById('codeInput');
+    const errorMsg       = document.getElementById('errorMsg');
+    const generateBtn    = document.getElementById('generateBtn');
+    const qrContainer    = document.getElementById('qrContainer');
+    const classCodeDisp  = document.getElementById('classCodeDisplay');
+    const fullscreenBtn  = document.getElementById('fullscreenBtn');
+    const changeCodeBtn  = document.getElementById('changeCodeBtn');
+
+    let currentQR = null;
+    let isFullscreen = false;
+
+    function generate() {
+      const code = codeInput.value.trim().toUpperCase();
+      if (!code) {
+        errorMsg.style.display = 'block';
+        codeInput.focus();
+        return;
+      }
+      errorMsg.style.display = 'none';
+
+      const url = 'https://wordlabs.app/landing?class=' + encodeURIComponent(code);
+
+      // Clear previous QR
+      qrContainer.innerHTML = '';
+      currentQR = new QRCode(qrContainer, {
+        text: url,
+        width: 300,
+        height: 300,
+        colorDark: '#0d0b1a',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+
+      classCodeDisp.textContent = code;
+
+      formView.classList.add('hidden');
+      qrView.classList.remove('hidden');
+    }
+
+    function changeCode() {
+      exitFullscreen();
+      qrView.classList.add('hidden');
+      formView.classList.remove('hidden');
+      codeInput.value = '';
+      codeInput.focus();
+    }
+
+    function enterFullscreen() {
+      isFullscreen = true;
+      document.body.classList.add('fullscreen');
+      fullscreenBtn.textContent = 'Exit Full Screen';
+
+      // Regenerate QR at larger size
+      const code = classCodeDisp.textContent;
+      const url = 'https://wordlabs.app/landing?class=' + encodeURIComponent(code);
+      qrContainer.innerHTML = '';
+      currentQR = new QRCode(qrContainer, {
+        text: url,
+        width: 400,
+        height: 400,
+        colorDark: '#0d0b1a',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+
+    function exitFullscreen() {
+      if (!isFullscreen) return;
+      isFullscreen = false;
+      document.body.classList.remove('fullscreen');
+      fullscreenBtn.textContent = 'Full Screen';
+
+      // Regenerate QR at normal size
+      const code = classCodeDisp.textContent;
+      const url = 'https://wordlabs.app/landing?class=' + encodeURIComponent(code);
+      qrContainer.innerHTML = '';
+      currentQR = new QRCode(qrContainer, {
+        text: url,
+        width: 300,
+        height: 300,
+        colorDark: '#0d0b1a',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+
+    function toggleFullscreen() {
+      if (isFullscreen) {
+        exitFullscreen();
+      } else {
+        enterFullscreen();
+      }
+    }
+
+    // Events
+    generateBtn.addEventListener('click', generate);
+    codeInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') generate();
+      errorMsg.style.display = 'none';
+    });
+    fullscreenBtn.addEventListener('click', toggleFullscreen);
+    changeCodeBtn.addEventListener('click', changeCode);
+
+    // ESC exits fullscreen
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && isFullscreen) exitFullscreen();
+    });
+
+    // Focus input on load
+    codeInput.focus();
+  </script>
+
+</body>
+</html>
