@@ -261,30 +261,36 @@
     const err = document.getElementById('teacherErr');
     err.style.display = 'none';
 
-    const session = await getSession();
-    if (!session) {
-      window.location.href = 'teacher-login?returnTo=/pricing';
-      return;
-    }
+    try {
+      const session = await getSession();
+      if (!session) {
+        window.location.href = 'teacher-login?returnTo=/pricing';
+        return;
+      }
 
-    btn.disabled = true;
-    btn.textContent = 'Loading...';
+      btn.disabled = true;
+      btn.textContent = 'Loading...';
 
-    const resp = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-      body: JSON.stringify({ priceId: TEACHER_PRICE_ID, planType: 'teacher' }),
-    });
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ priceId: TEACHER_PRICE_ID, planType: 'teacher' }),
+      });
 
-    const data = await resp.json();
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      err.textContent = data.error || data.message || `Error ${resp.status}: ${JSON.stringify(data)}`;
+      const data = await resp.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        err.textContent = data.error || data.message || `Error ${resp.status}: ${JSON.stringify(data)}`;
+        err.style.display = 'block';
+      }
+    } catch (e) {
+      err.textContent = 'Something went wrong. Please try again or email nick@wordlabs.app.';
       err.style.display = 'block';
-      btn.disabled = false;
-      btn.textContent = 'Get Teacher Plan →';
     }
+
+    btn.disabled = false;
+    btn.textContent = 'Get Teacher Plan →';
   }
 
   // ── School quote form ─────────────────────────────────────────────
