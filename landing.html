@@ -830,6 +830,29 @@
 </section>
 
 <div class="sections-bg">
+<!-- ── Welcome Banner (logged-in students only) ── -->
+<div id="welcomeBanner" style="display:none;max-width:1100px;margin:0 auto 0;padding:0 20px;">
+  <div style="background:linear-gradient(135deg,#312e81,#4338ca);border-radius:24px;padding:20px 24px;color:#e0e7ff;font-family:'Lexend',sans-serif;">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;">
+        <div style="font-size:20px;font-weight:900;color:#fff;" id="welcomeName">Welcome back!</div>
+        <div style="display:flex;gap:14px;margin-top:8px;flex-wrap:wrap;">
+          <span style="font-size:13px;font-weight:800;">⚛️ <span id="welcomeQuarks">0</span> quarks</span>
+          <span style="font-size:13px;font-weight:800;">⭐ Level <span id="welcomeLevel">1</span></span>
+          <span style="font-size:13px;font-weight:800;">🏅 <span id="welcomeBadges">0</span> badges</span>
+        </div>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:#a5b4fc;margin-bottom:6px;">🎯 Daily goal · <span id="goalProgress">0</span> / <span id="goalTarget">20</span> questions</div>
+        <div style="height:10px;background:rgba(255,255,255,.15);border-radius:999px;overflow:hidden;">
+          <div id="goalBar" style="height:100%;background:linear-gradient(90deg,#4ade80,#22d3ee);border-radius:999px;transition:width .4s;width:0%;"></div>
+        </div>
+        <div id="goalComplete" style="display:none;font-size:12px;font-weight:800;color:#4ade80;margin-top:4px;">✅ Daily goal complete! Great work!</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ── For Students ── -->
 <div class="section">
   <h2 class="section-heading">For Students</h2>
@@ -1077,7 +1100,45 @@ function toggleExtMode(){
   sessionStorage.setItem('wl_ext_pinned', 'true'); // prevent DB sync from overriding
   updateExtToggleUI();
 }
-(async function(){var w=document.getElementById('sciCharWrap');if(!w||typeof WLScientist==='undefined')return;var sd=typeof WordLabData!=='undefined'?await WordLabData.getStudentData():null;w.innerHTML=WLScientist.buildSVG(sd?sd.scientist:{},'neutral');})();
+(async function(){
+  var w=document.getElementById('sciCharWrap');
+  if(!w||typeof WLScientist==='undefined')return;
+  var sd=typeof WordLabData!=='undefined'?await WordLabData.getStudentData():null;
+  w.innerHTML=WLScientist.buildSVG(sd?sd.scientist:{},'neutral');
+
+  // Populate welcome banner if logged in
+  if(sd){
+    var banner=document.getElementById('welcomeBanner');
+    if(banner) banner.style.display='';
+    var nameEl=document.getElementById('welcomeName');
+    if(nameEl) nameEl.textContent='Welcome back, '+sd.name+'!';
+    var quarksEl=document.getElementById('welcomeQuarks');
+    if(quarksEl) quarksEl.textContent=sd.quarks.toLocaleString();
+    var levelEl=document.getElementById('welcomeLevel');
+    if(levelEl) levelEl.textContent=sd.level.level;
+    var badgesEl=document.getElementById('welcomeBadges');
+    if(badgesEl) badgesEl.textContent=(sd.badges||[]).length;
+
+    // Daily goal — count today's answers from stats
+    var DAILY_TARGET=20;
+    try{
+      var today=new Date().toISOString().slice(0,10);
+      var SUPABASE_URL='https://qutsbcfkgiihcwaktsaz.supabase.co';
+      var SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dHNiY2ZrZ2lpaGN3YWt0c2F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NDE1NDksImV4cCI6MjA4OTUxNzU0OX0.h1N26KCcyHDrW4FRk6iBNmJUMQcFCYi8eHpOC818B8E';
+      var _lsb2=window._landingSb||(window._landingSb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON));
+      var session=WordLabData.getSession();
+      if(session){
+        var res=await _lsb2.from('daily_usage').select('question_count').eq('student_id',session.studentId).eq('usage_date',today).maybeSingle();
+        var count=(res.data&&res.data.question_count)||0;
+        var pct=Math.min(Math.round(count/DAILY_TARGET*100),100);
+        document.getElementById('goalProgress').textContent=count;
+        document.getElementById('goalTarget').textContent=DAILY_TARGET;
+        document.getElementById('goalBar').style.width=pct+'%';
+        if(count>=DAILY_TARGET) document.getElementById('goalComplete').style.display='';
+      }
+    }catch(e){}
+  }
+})();
 </script>
 
 <!-- Storage notice (shown once, dismissed to localStorage) -->

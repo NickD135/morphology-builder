@@ -493,22 +493,24 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 ### PHASE 7 — Product Improvements (do alongside sales)
 
 #### 7.1 Teacher dashboard upgrades
-- [ ] Add "Last active" column showing when each student last played
-- [ ] Add per-student "activity breakdown" modal — click a student to see all their scores
-- [ ] Add class-level summary: average accuracy, most-played activity, most-missed morpheme
-- [ ] Export to CSV for parents evening / reports
+- [x] Add "Last active" column showing when each student last played
+- [x] Add per-student "activity breakdown" modal — click a student to see all their scores
+- [x] Add class-level summary: average accuracy, most-played activity, most-missed morpheme
+- [x] Export to CSV for parents evening / reports
 
 #### 7.2 Content expansion
-- [ ] Add more words to Breakdown Blitz (currently 42 — aim for 100+)
+- [x] Add more words to Breakdown Blitz (63 → 122 words)
+- [x] Added Homophone Hunter (24 standard + 12 extension homophone groups)
+- [x] Added Word Spectrum (synonyms, antonyms, shades of meaning)
 - [ ] Add more prefixes/suffixes to Mission and Meaning modes
 - [ ] Add difficulty levels to Speed Builder and Mission Mode
 - [ ] Teacher ability to add custom word lists per class
 
 #### 7.3 Student experience
-- [ ] "Daily goal" system — e.g. "Answer 20 questions today" with streak tracker
+- [x] "Daily goal" system — 20 questions/day with progress bar on landing page
 - [ ] Weekly XP leaderboard (opt-in, per class only)
-- [ ] Notification when a badge is newly earned (popup/animation)
-- [ ] Home screen shows "Welcome back, [name]! You have X quarks"
+- [x] Notification when a badge is newly earned (popup/animation) — already in WLScientist.react
+- [x] Home screen shows "Welcome back, [name]!" with quarks, level, badges, daily goal
 
 #### 7.4 Mobile polish
 - [ ] Full audit of all game pages on mobile (320px–480px)
