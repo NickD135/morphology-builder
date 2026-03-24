@@ -455,26 +455,11 @@ const WLScientist = (() => {
 
   // ── Pet stage injection ─────────────────────────────────────
   function _injectPetStage(sd) {
-    const petId = sd && sd.scientist && sd.scientist.pet;
-    // Wrap petCharWrap in a tank if not already
+    // Pets hidden for now — keeping code for future use
     document.querySelectorAll('#petCharWrap').forEach(el => {
-      el.innerHTML = petId ? buildPetSVG(petId) : '';
+      el.style.display = 'none';
       const tank = el.closest('.pet-tank');
-      if (petId) {
-        if (!tank) {
-          // Wrap in tank
-          const wrapper = document.createElement('div');
-          wrapper.className = 'pet-tank';
-          wrapper.innerHTML = '<div class="pet-tank-label">Pet Lab</div>';
-          el.parentNode.insertBefore(wrapper, el);
-          wrapper.insertBefore(el, wrapper.querySelector('.pet-tank-label'));
-        }
-        el.style.display = '';
-        if (tank) tank.style.display = '';
-      } else {
-        el.style.display = 'none';
-        if (tank) tank.style.display = 'none';
-      }
+      if (tank) tank.style.display = 'none';
     });
   }
 
