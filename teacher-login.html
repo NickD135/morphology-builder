@@ -164,6 +164,30 @@ function getReturnUrl() {
   return params.get('returnTo') || 'dashboard';
 }
 
+async function ensureSchoolAndTeacher(authUserId, email) {
+  const { data: existing } = await _sb
+    .from('teachers')
+    .select('id, school_id')
+    .eq('auth_user_id', authUserId)
+    .maybeSingle();
+  if (existing?.school_id) return; // already set up
+
+  // Create school
+  const { data: school, error: schoolErr } = await _sb
+    .from('schools')
+    .insert({ name: 'My School', plan: 'trial', trial_ends_at: new Date(Date.now() + 30 * 86400000).toISOString() })
+    .select('id')
+    .single();
+  if (schoolErr) { console.warn('School creation failed:', schoolErr); return; }
+
+  // Create or update teacher record
+  if (existing) {
+    await _sb.from('teachers').update({ school_id: school.id, email }).eq('auth_user_id', authUserId);
+  } else {
+    await _sb.from('teachers').insert({ auth_user_id: authUserId, school_id: school.id, email });
+  }
+}
+
 async function doLogin() {
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
@@ -178,6 +202,9 @@ async function doLogin() {
   try {
     const { data, error } = await _sb.auth.signInWithPassword({ email, password });
     if (error) throw error;
+
+    // Ensure school + teacher records exist (handles email-confirmed signups)
+    await ensureSchoolAndTeacher(data.user.id, email);
 
     // New teachers (no classes) go to onboarding instead of dashboard
     const returnUrl = getReturnUrl();
