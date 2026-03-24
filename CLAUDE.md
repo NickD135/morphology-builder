@@ -41,7 +41,7 @@ privacy-law-compliant, multi-tenant, with proper teacher auth and a payment laye
 | Database | Supabase (PostgreSQL) | Anon key used client-side |
 | Auth | ❌ None yet | Hardcoded password `MorphemeLab` in HTML |
 | Hosting | Currently Codespaces only | Needs Vercel deployment |
-| Edge functions | Supabase Edge (Deno) | One function: `polish-item` (AI item polish) |
+| Edge functions | Supabase Edge (Deno) | `polish-item`, `create-checkout`, `stripe-webhook`, `send-feedback`, `create-portal-session`, `get-subscription`, `analyze-words` |
 | Canvas | Fabric.js 5.3.1 | Used in `item-creator.html` only |
 | Payments | Stripe (live) | ABN + "Word Labs Education" sole trader |
 | Transactional email | Resend | Free tier, domain verified, sends from notifications@wordlabs.app |
@@ -67,6 +67,9 @@ privacy-law-compliant, multi-tenant, with proper teacher auth and a payment laye
 | `dashboard.html` | Teachers | Heatmaps per student/activity, intervention flags, reward system |
 | `class-setup.html` | Teachers | Create classes, add/remove students, manage codes |
 | `item-creator.html` | Teachers | Draw or AI-generate custom shop items (lab coats, hats, etc.) |
+| `account.html` | Teachers | Account settings — plan status, change password, school name, subscription management, delete account |
+| `teacher-login.html` | Teachers | Email/password login with forgot-password flow |
+| `teacher-signup.html` | Teachers | Email/password signup, creates school + teacher records |
 
 ---
 
@@ -145,7 +148,44 @@ shop_items (
 )
 ```
 
-**⚠️ No `school_id` on any table yet — all schools share one flat namespace. This MUST be added before going multi-tenant.**
+schools (
+  id uuid PK,
+  name text,
+  plan text,                   -- 'trial' | 'active' | 'expired' | 'payment_failed' | 'teacher'
+  trial_ends_at timestamptz,
+  stripe_customer_id text,
+  student_limit integer,
+  created_at timestamptz
+)
+
+teachers (
+  id uuid PK,
+  auth_user_id uuid,           -- FK to Supabase auth.users
+  school_id uuid FK→schools,
+  email text,
+  plan text,
+  created_at timestamptz
+)
+
+class_word_lists (
+  id uuid PK,
+  class_id uuid FK→classes,
+  name text,
+  words jsonb,                 -- array of word objects with breakdown data
+  games jsonb DEFAULT '["breakdown"]',  -- which games: breakdown, syllable, phoneme
+  created_at timestamptz,
+  updated_at timestamptz
+)
+
+word_list_assignments (
+  id uuid PK,
+  word_list_id uuid FK→class_word_lists ON DELETE CASCADE,
+  student_id uuid FK→students ON DELETE CASCADE,
+  assigned_at timestamptz,
+  UNIQUE(word_list_id, student_id)
+)
+
+-- Note: school_id has been added to classes and shop_items tables
 
 ---
 
@@ -504,7 +544,11 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 - [x] Added Word Spectrum (synonyms, antonyms, shades of meaning)
 - [x] All prefixes/suffixes from data.js already in Mission and Meaning modes (44 suffixes, 35 prefixes)
 - [x] Add difficulty levels to Speed Builder (easy/medium/hard timer presets) and Mission Mode (adjustable fuel drain, penalties, options)
-- [x] Teacher ability to add custom word lists per class (Word Lists tab in class-setup, auto-loads in Breakdown Blitz)
+- [x] Teacher ability to add custom word lists per class (Word Lists tab in dashboard, auto-loads in games)
+- [x] Custom word lists expanded to work across Breakdown Blitz, Syllable Splitter, and Phoneme Splitter
+- [x] AI-powered word analysis: teacher types words, AI generates clues, morpheme breakdowns, syllable splits, phoneme splits
+- [x] Student assignment: word lists can be assigned to specific students for differentiation
+- [x] Edge function `analyze-words` uses Claude API to analyze up to 30 words at once
 
 #### 7.3 Student experience
 - [x] "Daily goal" system — 20 questions/day with progress bar on landing page
@@ -518,6 +562,47 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 - [x] Ensure scientist page shop renders cleanly on small screens (grid minmax reduced)
 - [ ] Mission Mode drag-and-drop on touch devices (works via tap-to-select fallback)
 - [ ] Breakdown Blitz keyboard handling on mobile (needs testing)
+
+---
+
+### PHASE 7.5 — Session 2026-03-24 Work
+
+#### Dynamic URLs
+- [x] All hardcoded `wordlabs.app` URLs replaced with `window.location.origin` / `window.location.host`
+- [x] QR codes, login cards, printed sheets all use current domain
+- [x] Stripe checkout success/cancel URLs use current domain
+- [x] App works on GitHub Pages (`nickd135.github.io/morphology-builder/`)
+
+#### Trial banner & auth fixes
+- [x] `getTeacherRecord()` now auto-creates school + teacher records if missing
+- [x] Trial banner shows on dashboard for trial accounts
+- [x] RLS policies added for schools (INSERT, SELECT with just-created workaround)
+
+#### Account settings (`account.html`)
+- [x] Email, school name (editable), plan status with badge
+- [x] Subscription renewal countdown (fetched from Stripe via `get-subscription` edge function)
+- [x] Change password
+- [x] Manage Subscription button → Stripe Customer Portal (`create-portal-session` edge function)
+- [x] Delete account (double confirmation)
+
+#### Dashboard improvements
+- [x] Compact nav tabs — all fit without scrolling
+- [x] Word Lists moved from tab bar to standalone button
+- [x] Send XP added to existing reward modal (alongside quarks, effects, badges, items)
+- [x] Pricing/upgrade links hidden for active subscribers on landing page
+- [x] Account link added to dashboard and class-setup nav
+
+#### Custom word lists expansion
+- [x] Shared `getCustomWords(gameName)` loader in `wordlab-data.js`
+- [x] Works across Breakdown Blitz, Syllable Splitter, Phoneme Splitter
+- [x] Student assignment via `word_list_assignments` table
+- [x] AI-powered word analysis via `analyze-words` edge function (Claude API)
+- [x] Teacher types words → AI generates clues, morphemes, syllables, phonemes
+- [x] Preview table before saving
+- [x] Phonemes use actual graphemes (letters) from the word, not sound representations
+- [x] AI auto-corrects misspelled words
+- [ ] TODO: Expand to Sound Sorter, Mission Mode, Meaning Mode (needs more data per word)
+- [ ] TODO: Test phoneme/syllable integration end-to-end with student accounts
 
 ---
 
@@ -562,3 +647,8 @@ At the start of each working session, do this:
 | Supabase Sydney region | Australian schools (especially government) require data stored in Australia |
 | Australian Privacy Act over GDPR | Primary legal framework; build GDPR-compatible anyway for future expansion |
 | .com.au or .app domain | .com.au signals Australian business; .app is clean global alternative |
+| GitHub Pages as temp deployment | School blocks wordlabs.app and Vercel — GitHub Pages works on school network |
+| Dynamic URLs over hardcoded | All URLs use `window.location.origin` so the app works on any domain |
+| AI for word analysis | Teachers shouldn't need linguistics knowledge to create word lists |
+| Claude API model: `claude-sonnet-4-6` | Only model available on Nick's Anthropic workspace (no date suffix) |
+| Grapheme-based phonemes | Phoneme splits use actual letters from the word, not IPA sounds, to match the game |
