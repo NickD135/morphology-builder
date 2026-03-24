@@ -255,11 +255,39 @@ const WordLabData = (() => {
     if (_teacherRecord) return _teacherRecord;
     const { data: { session } } = await sb().auth.getSession();
     if (!session) return null;
-    const { data } = await sb()
+    var { data } = await sb()
       .from('teachers')
       .select('id, school_id, email, plan')
       .eq('auth_user_id', session.user.id)
       .maybeSingle();
+
+    // Auto-create school + teacher record if missing (handles edge cases
+    // where signup created the auth user but records weren't created yet)
+    if (!data) {
+      try {
+        var { data: school } = await sb()
+          .from('schools')
+          .insert({ name: 'My School', plan: 'trial', trial_ends_at: new Date(Date.now() + 30 * 86400000).toISOString() })
+          .select('id')
+          .single();
+        if (school) {
+          await sb().from('teachers').insert({
+            auth_user_id: session.user.id,
+            school_id: school.id,
+            email: session.user.email
+          });
+          var { data: newTeacher } = await sb()
+            .from('teachers')
+            .select('id, school_id, email, plan')
+            .eq('auth_user_id', session.user.id)
+            .maybeSingle();
+          data = newTeacher;
+        }
+      } catch (e) {
+        console.warn('Auto-create school/teacher failed:', e);
+      }
+    }
+
     _teacherRecord = data || null;
     return _teacherRecord;
   }
