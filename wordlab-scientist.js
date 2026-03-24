@@ -276,10 +276,25 @@ const WLScientist = (() => {
   // ── Pet stage injection ─────────────────────────────────────
   function _injectPetStage(sd) {
     const petId = sd && sd.scientist && sd.scientist.pet;
-    // Update all pet wraps on the page
+    // Wrap petCharWrap in a tank if not already
     document.querySelectorAll('#petCharWrap').forEach(el => {
       el.innerHTML = petId ? buildPetSVG(petId) : '';
-      el.style.display = petId ? '' : 'none';
+      const tank = el.closest('.pet-tank');
+      if (petId) {
+        if (!tank) {
+          // Wrap in tank
+          const wrapper = document.createElement('div');
+          wrapper.className = 'pet-tank';
+          wrapper.innerHTML = '<div class="pet-tank-label">Pet Lab</div>';
+          el.parentNode.insertBefore(wrapper, el);
+          wrapper.insertBefore(el, wrapper.querySelector('.pet-tank-label'));
+        }
+        el.style.display = '';
+        if (tank) tank.style.display = '';
+      } else {
+        el.style.display = 'none';
+        if (tank) tank.style.display = 'none';
+      }
     });
   }
 
@@ -487,7 +502,32 @@ const WLScientist = (() => {
       @keyframes wlShake   { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
       #sciCharWrap { position:relative; z-index:20; }
       #wlSciAvatar { position:relative; z-index:20; }
-      #petCharWrap { width:80px; height:80px; transition:transform .2s; }
+      .pet-tank {
+        background:rgba(200,230,255,.12);
+        border:2px solid rgba(100,180,255,.3);
+        border-radius:16px;
+        padding:8px;
+        box-shadow:inset 0 0 20px rgba(100,180,255,.08), 0 4px 12px rgba(0,0,0,.1);
+        backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
+        display:flex; align-items:center; justify-content:center;
+        position:relative; overflow:hidden;
+        margin-bottom:8px;
+      }
+      .pet-tank::before {
+        content:''; position:absolute; top:4px; left:10%; right:10%; height:3px;
+        background:rgba(255,255,255,.25); border-radius:2px;
+      }
+      .pet-tank::after {
+        content:''; position:absolute; bottom:0; left:0; right:0; height:30%;
+        background:linear-gradient(0deg, rgba(100,180,255,.06) 0%, transparent 100%);
+        border-radius:0 0 14px 14px;
+      }
+      .pet-tank-label {
+        position:absolute; bottom:4px; left:0; right:0; text-align:center;
+        font-size:7px; font-weight:900; letter-spacing:.12em; text-transform:uppercase;
+        color:rgba(100,180,255,.5); z-index:1;
+      }
+      #petCharWrap { width:70px; height:70px; transition:transform .2s; z-index:1; }
       #petCharWrap svg { width:100%; height:100%; }
       #petCharWrap.pet-idle { animation:petIdle 2.5s ease-in-out infinite; }
       #petCharWrap.pet-correct { animation:petJump .6s ease-out; }
