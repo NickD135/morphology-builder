@@ -96,12 +96,8 @@ ${words.map((w, i) => `${i + 1}. ${w}`).join('\n')}`;
 
     if (!anthropicResp.ok) {
       const errText = await anthropicResp.text().catch(() => '');
-      let errMsg = 'AI API error (HTTP ' + anthropicResp.status + ')';
-      try {
-        const errObj = JSON.parse(errText);
-        errMsg = errObj?.error?.message || errMsg;
-      } catch { errMsg += ': ' + errText.slice(0, 200); }
-      return json({ error: errMsg }, 502);
+      console.error('Anthropic API error:', anthropicResp.status, errText);
+      return json({ error: 'AI API error (HTTP ' + anthropicResp.status + '): ' + errText.slice(0, 500) }, 502);
     }
 
     const data = await anthropicResp.json();
