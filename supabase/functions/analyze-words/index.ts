@@ -18,7 +18,8 @@ Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-  if (!apiKey) return json({ error: 'AI not configured' }, 500);
+  if (!apiKey) return json({ error: 'AI not configured — ANTHROPIC_API_KEY not found in env' }, 500);
+  console.log('API key prefix:', apiKey.slice(0, 12) + '...');
 
   // Verify teacher auth
   const authHeader = req.headers.get('Authorization');
@@ -88,7 +89,7 @@ ${words.map((w, i) => `${i + 1}. ${w}`).join('\n')}`;
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-3-5-haiku-20241022',
+        model: 'claude-sonnet-4-6-20250514',
         max_tokens: 4096,
         messages: [{ role: 'user', content: prompt }],
       }),
