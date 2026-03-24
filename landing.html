@@ -774,9 +774,13 @@
         <div class="ext-track" id="extModeTrack" onclick="toggleExtMode()"><div class="ext-thumb"></div></div>
         <span class="ext-lbl" id="extModeLbl">📚 Base</span>
       </div>
-      <a href="pricing" class="loginBtn" style="text-decoration:none;">💳 Pricing</a>
-      <a href="teacher-login" class="loginBtn" style="text-decoration:none;">🔬 Teachers</a>
+      <a href="pricing" class="loginBtn" id="hdrPricingLink" style="text-decoration:none;">💳 Pricing</a>
+      <a href="teacher-login" class="loginBtn" id="hdrTeachersLink" style="text-decoration:none;">🔬 Teachers</a>
       <button class="loginBtn" id="wlLoginBtn" onclick="wlShowLogin()">👤 Log in</button>
+      <span id="hdrTeacherInfo" style="display:none;align-items:center;gap:8px;">
+        <span id="hdrTeacherName" style="font-size:12px;font-weight:800;color:#312e81;">Teacher</span>
+        <button class="loginBtn" onclick="teacherSignOut()" style="background:#4338ca;color:#fff;border-color:#4338ca;">🚪 Sign Out</button>
+      </span>
       <button class="menuBtn" id="menuBtn" onclick="toggleMenu()" aria-label="Open menu">
         <span></span><span></span><span></span>
       </button>
@@ -1609,6 +1613,13 @@ var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 function _lsb(){ return window._landingSb || (window._landingSb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON)); }
 
 /* ═══════════ LAYOUT ROUTING ═══════════ */
+async function teacherSignOut() {
+  if (typeof WordLabData !== 'undefined') {
+    await WordLabData._sb().auth.signOut();
+    window.location.reload();
+  }
+}
+
 async function routeLayout() {
   if (typeof WordLabData === 'undefined') return;
 
@@ -1790,6 +1801,16 @@ async function initTeacherLayout(teacherUser) {
   var email = teacherUser.email || '';
   var displayName = email.split('@')[0] || 'Teacher';
   document.getElementById('tchStripName').textContent = displayName;
+
+  // Update header: hide login/teachers buttons, show teacher info + sign out
+  var loginBtn = document.getElementById('wlLoginBtn');
+  var teachersLink = document.getElementById('hdrTeachersLink');
+  var teacherInfo = document.getElementById('hdrTeacherInfo');
+  var teacherName = document.getElementById('hdrTeacherName');
+  if (loginBtn) loginBtn.style.display = 'none';
+  if (teachersLink) teachersLink.style.display = 'none';
+  if (teacherInfo) teacherInfo.style.display = 'inline-flex';
+  if (teacherName) teacherName.textContent = '🔬 ' + displayName;
 
   // Fetch classes
   try {
