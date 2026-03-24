@@ -99,7 +99,10 @@
         </div>
         <div class="row">
           <div class="rowLabel">School</div>
-          <div class="rowValue" id="acctSchool">—</div>
+          <div class="rowValue" id="acctSchoolRow">
+            <span id="acctSchool">—</span>
+            <button onclick="editSchoolName()" style="margin-left:8px;border:none;background:var(--indigo-soft);color:var(--indigo);font-weight:800;font-size:11px;padding:5px 10px;border-radius:8px;cursor:pointer;">Edit</button>
+          </div>
         </div>
       </div>
     </div>
@@ -127,10 +130,29 @@
       </div>
     </div>
 
-    <!-- Actions -->
+    <!-- Change password -->
+    <div class="panel">
+      <div class="panelInner">
+        <div class="panelTitle">Change Password</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div>
+            <label style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);display:block;margin-bottom:6px;">New password</label>
+            <input type="password" id="newPassword" placeholder="Enter new password" style="width:100%;border:2px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14px;outline:none;">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);display:block;margin-bottom:6px;">Confirm new password</label>
+            <input type="password" id="confirmPassword" placeholder="Confirm new password" style="width:100%;border:2px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14px;outline:none;">
+          </div>
+          <div id="passwordMsg" style="font-size:13px;font-weight:700;display:none;"></div>
+          <button class="actionBtn secondary" onclick="changePassword()" id="changePwBtn" style="margin-top:4px;">Update Password</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subscription actions -->
     <div class="panel" id="actionsPanel">
       <div class="panelInner">
-        <div class="panelTitle">Manage</div>
+        <div class="panelTitle">Subscription</div>
         <div id="portalBtnWrap" style="display:none;margin-bottom:12px;">
           <button class="actionBtn" onclick="openPortal()" id="portalBtn">Manage Subscription</button>
           <div style="font-size:12px;color:var(--muted);font-weight:600;text-align:center;margin-top:8px;">
@@ -140,6 +162,17 @@
         <div id="upgradeBtnWrap" style="display:none;margin-bottom:12px;">
           <a href="pricing.html" class="actionBtn secondary" style="display:block;text-align:center;text-decoration:none;">View Plans & Upgrade</a>
         </div>
+      </div>
+    </div>
+
+    <!-- Danger zone -->
+    <div class="panel" style="border-color:#fecaca;">
+      <div class="panelInner">
+        <div class="panelTitle" style="color:var(--bad);">Danger Zone</div>
+        <div style="font-size:13px;color:var(--muted);font-weight:600;margin-bottom:14px;">
+          Deleting your account will permanently remove all your classes, student data, and progress records. This cannot be undone.
+        </div>
+        <button class="actionBtn" style="background:var(--bad);box-shadow:0 10px 20px rgba(220,38,38,.2);" onclick="deleteAccount()" id="deleteBtn">Delete My Account</button>
       </div>
     </div>
 
@@ -162,6 +195,7 @@ async function initAccount() {
   }
 
   // Fetch school details
+  _schoolId = teacher.school_id;
   const { data: school } = await WordLabData._sb()
     .from('schools')
     .select('name, plan, trial_ends_at, student_limit, stripe_customer_id')
@@ -289,6 +323,101 @@ async function openPortal() {
     alert('Something went wrong: ' + e.message);
     btn.disabled = false;
     btn.textContent = 'Manage Subscription';
+  }
+}
+
+// Store school_id for use in other functions
+let _schoolId = null;
+
+async function changePassword() {
+  const pw = document.getElementById('newPassword').value;
+  const confirm = document.getElementById('confirmPassword').value;
+  const msg = document.getElementById('passwordMsg');
+  const btn = document.getElementById('changePwBtn');
+
+  msg.style.display = 'none';
+
+  if (!pw || pw.length < 6) {
+    msg.textContent = 'Password must be at least 6 characters.';
+    msg.style.color = 'var(--bad)';
+    msg.style.display = 'block';
+    return;
+  }
+  if (pw !== confirm) {
+    msg.textContent = 'Passwords do not match.';
+    msg.style.color = 'var(--bad)';
+    msg.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Updating...';
+
+  const { error } = await WordLabData._sb().auth.updateUser({ password: pw });
+
+  if (error) {
+    msg.textContent = error.message || 'Failed to update password.';
+    msg.style.color = 'var(--bad)';
+  } else {
+    msg.textContent = 'Password updated successfully.';
+    msg.style.color = 'var(--green)';
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmPassword').value = '';
+  }
+  msg.style.display = 'block';
+  btn.disabled = false;
+  btn.textContent = 'Update Password';
+}
+
+async function editSchoolName() {
+  const current = document.getElementById('acctSchool').textContent;
+  const newName = prompt('Enter new school name:', current);
+  if (!newName || !newName.trim() || newName.trim() === current) return;
+
+  if (!_schoolId) return;
+
+  const { error } = await WordLabData._sb()
+    .from('schools')
+    .update({ name: newName.trim() })
+    .eq('id', _schoolId);
+
+  if (error) {
+    alert('Failed to update school name: ' + (error.message || error));
+  } else {
+    document.getElementById('acctSchool').textContent = newName.trim();
+  }
+}
+
+async function deleteAccount() {
+  const confirm1 = confirm('Are you sure you want to delete your account? This will permanently remove all your classes, students, and progress data.');
+  if (!confirm1) return;
+
+  const confirm2 = prompt('Type DELETE to confirm account deletion:');
+  if (confirm2 !== 'DELETE') {
+    alert('Account deletion cancelled.');
+    return;
+  }
+
+  const btn = document.getElementById('deleteBtn');
+  btn.disabled = true;
+  btn.textContent = 'Deleting...';
+
+  try {
+    // Delete all classes (cascades to students, progress, characters)
+    if (_schoolId) {
+      await WordLabData._sb().from('classes').delete().eq('school_id', _schoolId);
+      await WordLabData._sb().from('teachers').delete().eq('school_id', _schoolId);
+      await WordLabData._sb().from('schools').delete().eq('id', _schoolId);
+    }
+
+    // Note: Supabase auth user deletion requires admin/service role,
+    // so we sign out and leave the auth record (it's just an email, no personal data)
+    await WordLabData._sb().auth.signOut();
+    window.location.href = 'landing.html';
+  } catch (e) {
+    alert('Error deleting account: ' + (e.message || e));
+    btn.disabled = false;
+    btn.textContent = 'Delete My Account';
   }
 }
 
