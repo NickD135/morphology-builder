@@ -88,7 +88,7 @@ ${words.map((w, i) => `${i + 1}. ${w}`).join('\n')}`;
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5-20251101',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 4096,
         messages: [{ role: 'user', content: prompt }],
       }),
