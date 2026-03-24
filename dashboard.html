@@ -1750,29 +1750,80 @@ function renderWordListsTab(){
 
   container.innerHTML = `
     <div class="panel"><div class="panelInner">
-      <div class="panelTitle">📝 Custom Word Lists — Breakdown Blitz</div>
-      <p style="font-size:13px;color:var(--muted);font-weight:700;margin:0 0 16px;">Create custom word lists for Breakdown Blitz. Students in this class will see your words mixed in with the built-in ones.</p>
+      <div class="panelTitle">📝 Custom Word Lists</div>
+      <p style="font-size:13px;color:var(--muted);font-weight:700;margin:0 0 16px;">Create word lists that appear in student activities. Choose which games each list applies to, and optionally assign to specific students for differentiation.</p>
 
       <div id="wlExistingLists"><div style="text-align:center;color:var(--muted);font-weight:700;font-size:13px;padding:20px;">Loading word lists...</div></div>
 
       <div style="border-top:2px solid var(--line);padding-top:16px;margin-top:16px;">
         <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:10px;">Create new word list</div>
+
         <div style="margin-bottom:10px;">
           <label style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);display:block;margin-bottom:6px;">List name</label>
           <input type="text" id="wlNewName" placeholder="e.g. Week 5 Spelling Words" style="border:2px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14px;width:100%;font-family:'Lexend',sans-serif;outline:none;">
         </div>
-        <div style="margin-bottom:10px;">
-          <label style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);display:block;margin-bottom:6px;">Words (one per line: word, clue, prefix, base, suffix)</label>
-          <textarea id="wlNewWords" rows="8" placeholder="unhappiness, not being happy, un, happy, ness&#10;rewriting, writing again, re, write, ing&#10;careful, full of care, , care, ful" style="border:2px solid var(--line);border-radius:14px;padding:12px 14px;font-size:13px;width:100%;font-family:'Lexend',sans-serif;resize:vertical;outline:none;"></textarea>
-          <div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:4px;">Format: word, clue, prefix, base, suffix — leave prefix or suffix blank if none</div>
+
+        <div style="margin-bottom:12px;">
+          <label style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);display:block;margin-bottom:6px;">Target games</label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            <label style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#334155;cursor:pointer;background:#f8fafc;border:2px solid var(--line);border-radius:10px;padding:6px 12px;">
+              <input type="checkbox" id="wlGameBreakdown" checked> 🧩 Breakdown Blitz
+            </label>
+            <label style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#334155;cursor:pointer;background:#f8fafc;border:2px solid var(--line);border-radius:10px;padding:6px 12px;">
+              <input type="checkbox" id="wlGameSyllable"> ✂️ Syllable Splitter
+            </label>
+            <label style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#334155;cursor:pointer;background:#f8fafc;border:2px solid var(--line);border-radius:10px;padding:6px 12px;">
+              <input type="checkbox" id="wlGamePhoneme"> 🔊 Phoneme Splitter
+            </label>
+          </div>
         </div>
+
+        <div style="margin-bottom:12px;">
+          <label style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);display:block;margin-bottom:6px;">Assign to</label>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <select id="wlAssignMode" onchange="wlToggleStudentPicker()" style="border:2px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;font-weight:700;font-family:'Lexend',sans-serif;outline:none;">
+              <option value="all">All students in class</option>
+              <option value="selected">Selected students only</option>
+            </select>
+          </div>
+          <div id="wlStudentPicker" style="display:none;margin-top:8px;max-height:200px;overflow-y:auto;border:2px solid var(--line);border-radius:14px;padding:10px;">
+          </div>
+        </div>
+
+        <div style="margin-bottom:10px;">
+          <label style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);display:block;margin-bottom:6px;">Words (one per line — see format below)</label>
+          <textarea id="wlNewWords" rows="8" placeholder="unhappiness, not being happy, un, happy, ness, un·hap·pi·ness, u·n·h·a·p·i·n·e·s&#10;careful, full of care, , care, ful, care·ful, c·air·f·u·l" style="border:2px solid var(--line);border-radius:14px;padding:12px 14px;font-size:13px;width:100%;font-family:'Lexend',sans-serif;resize:vertical;outline:none;"></textarea>
+          <div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:4px;line-height:1.7;">
+            <strong>Format:</strong> word, clue, prefix, base, suffix, syllables, phonemes<br>
+            <strong>Breakdown Blitz:</strong> needs word + clue + prefix + base + suffix (leave prefix/suffix blank if none)<br>
+            <strong>Syllable Splitter:</strong> add syllables separated by · (e.g. <code>un·hap·pi·ness</code>)<br>
+            <strong>Phoneme Splitter:</strong> add phonemes separated by · (e.g. <code>u·n·h·a·p·i·n·e·s</code>)
+          </div>
+        </div>
+
         <button onclick="dashCreateWordList()" style="border:none;background:var(--indigo);color:#fff;font-weight:900;font-size:14px;padding:12px 24px;border-radius:14px;cursor:pointer;font-family:'Lexend',sans-serif;">Create Word List &rarr;</button>
         <div id="wlStatus" style="display:none;border-radius:14px;padding:12px 16px;font-size:13px;font-weight:800;margin-top:10px;"></div>
       </div>
     </div></div>
   `;
 
+  wlPopulateStudentPicker();
   dashLoadWordLists();
+}
+
+function wlToggleStudentPicker(){
+  var mode = document.getElementById('wlAssignMode').value;
+  document.getElementById('wlStudentPicker').style.display = mode === 'selected' ? 'block' : 'none';
+}
+
+function wlPopulateStudentPicker(){
+  var picker = document.getElementById('wlStudentPicker');
+  if(!picker || !currentClass || !currentClass.students) return;
+  var students = currentClass.students.slice().sort(function(a,b){ return a.name.localeCompare(b.name); });
+  picker.innerHTML = students.map(function(s){
+    return '<label style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:13px;font-weight:700;color:#334155;cursor:pointer;">' +
+      '<input type="checkbox" class="wlStudentCb" value="' + s.id + '"> ' + s.name + '</label>';
+  }).join('');
 }
 
 async function dashLoadWordLists(){
@@ -1782,7 +1833,7 @@ async function dashLoadWordLists(){
 
   try {
     const { data, error } = await dbSb().from('class_word_lists')
-      .select('id, name, words, created_at')
+      .select('id, name, words, games, created_at')
       .eq('class_id', currentClass.id)
       .order('created_at', { ascending: false });
     if(error) throw error;
@@ -1792,18 +1843,50 @@ async function dashLoadWordLists(){
       return;
     }
 
+    // Fetch assignments for all lists
+    var listIds = data.map(function(l){ return l.id; });
+    var { data: allAssigns } = await dbSb().from('word_list_assignments')
+      .select('word_list_id, student_id')
+      .in('word_list_id', listIds);
+    var assignMap = {};
+    (allAssigns || []).forEach(function(a){
+      if(!assignMap[a.word_list_id]) assignMap[a.word_list_id] = [];
+      assignMap[a.word_list_id].push(a.student_id);
+    });
+
+    var gameLabels = { breakdown:'🧩 Breakdown', syllable:'✂️ Syllable', phoneme:'🔊 Phoneme' };
+
     container.innerHTML = data.map(list => {
       const words = list.words || [];
+      const games = list.games || ['breakdown'];
+      const assigns = assignMap[list.id] || [];
+      const assignLabel = assigns.length === 0 ? 'All students' :
+        assigns.length + ' student' + (assigns.length !== 1 ? 's' : '');
+
+      // Find student names for assigned students
+      var assignNames = '';
+      if(assigns.length > 0 && currentClass.students){
+        var nameMap = {};
+        currentClass.students.forEach(function(s){ nameMap[s.id] = s.name; });
+        assignNames = assigns.map(function(id){ return nameMap[id] || '?'; }).sort().join(', ');
+      }
+
       return `<div style="background:#f8fafc;border:2px solid var(--line);border-radius:16px;padding:14px 18px;margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
           <div>
             <div style="font-size:15px;font-weight:900;color:#312e81;">${list.name}</div>
-            <div style="font-size:12px;color:var(--muted);font-weight:700;">${words.length} word${words.length !== 1 ? 's' : ''} &middot; Created ${new Date(list.created_at).toLocaleDateString()}</div>
+            <div style="font-size:12px;color:var(--muted);font-weight:700;">${words.length} word${words.length !== 1 ? 's' : ''} &middot; ${assignLabel}${assignNames ? ' (' + assignNames + ')' : ''}</div>
           </div>
-          <button onclick="dashDeleteWordList('${list.id}','${list.name.replace(/'/g,"\\'")}')" style="border:2px solid #fecaca;background:#fef2f2;color:#dc2626;font-weight:800;font-size:12px;border-radius:10px;padding:6px 14px;cursor:pointer;white-space:nowrap;font-family:'Lexend',sans-serif;">Delete</button>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button onclick="dashAssignWordList('${list.id}')" style="border:2px solid #c7d2fe;background:var(--indigo-soft);color:var(--indigo);font-weight:800;font-size:12px;border-radius:10px;padding:6px 14px;cursor:pointer;white-space:nowrap;font-family:'Lexend',sans-serif;">👥 Assign</button>
+            <button onclick="dashDeleteWordList('${list.id}','${list.name.replace(/'/g,"\\'")}')" style="border:2px solid #fecaca;background:#fef2f2;color:#dc2626;font-weight:800;font-size:12px;border-radius:10px;padding:6px 14px;cursor:pointer;white-space:nowrap;font-family:'Lexend',sans-serif;">Delete</button>
+          </div>
         </div>
-        <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;">
-          ${words.map(w => `<span style="background:var(--indigo-soft);border:1px solid #c7d2fe;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:800;color:var(--indigo);">${w.word}</span>`).join('')}
+        <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;">
+          ${games.map(g => '<span style="background:#e0e7ff;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:800;color:var(--indigo);">' + (gameLabels[g]||g) + '</span>').join('')}
+        </div>
+        <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">
+          ${words.map(w => '<span style="background:var(--indigo-soft);border:1px solid #c7d2fe;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:800;color:var(--indigo);">' + w.word + '</span>').join('')}
         </div>
       </div>`;
     }).join('');
@@ -1817,6 +1900,19 @@ async function dashCreateWordList(){
   const raw = document.getElementById('wlNewWords').value.trim();
   const statusEl = document.getElementById('wlStatus');
 
+  // Determine selected games
+  var games = [];
+  if(document.getElementById('wlGameBreakdown').checked) games.push('breakdown');
+  if(document.getElementById('wlGameSyllable').checked) games.push('syllable');
+  if(document.getElementById('wlGamePhoneme').checked) games.push('phoneme');
+
+  // Determine selected students
+  var assignMode = document.getElementById('wlAssignMode').value;
+  var selectedStudents = [];
+  if(assignMode === 'selected'){
+    document.querySelectorAll('.wlStudentCb:checked').forEach(function(cb){ selectedStudents.push(cb.value); });
+  }
+
   function showStatus(msg, isError){
     statusEl.textContent = msg;
     statusEl.style.display = 'block';
@@ -1829,37 +1925,128 @@ async function dashCreateWordList(){
   if(!currentClass){ showStatus('No class selected.', true); return; }
   if(!name){ showStatus('Please enter a list name.', true); return; }
   if(!raw){ showStatus('Please enter at least one word.', true); return; }
+  if(!games.length){ showStatus('Please select at least one target game.', true); return; }
+  if(assignMode === 'selected' && !selectedStudents.length){ showStatus('Please select at least one student.', true); return; }
 
   const words = raw.split('\n').map(line => {
     const parts = line.split(',').map(p => p.trim());
-    if(parts.length < 4) return null;
-    return {
-      word: parts[0],
-      clue: parts[1] || '',
-      prefix: parts[2] || '',
-      base: parts[3] || parts[0],
-      suffix1: parts[4] || '',
-      suffix2: parts[5] || ''
-    };
+    if(parts.length < 2) return null;
+    var w = { word: parts[0] };
+    // Breakdown fields
+    if(parts.length >= 4){
+      w.clue = parts[1] || '';
+      w.prefix = parts[2] || '';
+      w.base = parts[3] || parts[0];
+      w.suffix1 = parts[4] || '';
+      w.suffix2 = parts[5] || '';
+    }
+    // Syllables (field 6 or after suffix2)
+    var syllField = parts.length >= 7 ? parts[6] : (parts.length === 6 ? parts[5] : '');
+    // If breakdown used 6 fields (suffix2), syllables is field 7
+    if(parts.length >= 5){
+      syllField = parts[5] || '';
+      if(parts.length >= 7) syllField = parts[6] || '';
+    }
+    // Phonemes
+    var phonField = '';
+    if(parts.length >= 8) phonField = parts[7] || '';
+    else if(parts.length === 7) phonField = parts[6] || '';
+
+    // Parse syllables (dot-separated)
+    if(syllField && syllField.indexOf('·') !== -1){
+      w.syllables = syllField.split('·').map(function(s){ return s.trim(); }).filter(Boolean);
+    } else if(syllField && syllField.indexOf('.') !== -1){
+      w.syllables = syllField.split('.').map(function(s){ return s.trim(); }).filter(Boolean);
+    }
+
+    // Parse phonemes (dot-separated)
+    if(phonField && phonField.indexOf('·') !== -1){
+      w.phonemes = phonField.split('·').map(function(s){ return s.trim(); }).filter(Boolean);
+    } else if(phonField && phonField.indexOf('.') !== -1){
+      w.phonemes = phonField.split('.').map(function(s){ return s.trim(); }).filter(Boolean);
+    }
+
+    return w;
   }).filter(Boolean);
 
-  if(!words.length){ showStatus('No valid words found. Use format: word, clue, prefix, base, suffix', true); return; }
+  if(!words.length){ showStatus('No valid words found.', true); return; }
 
   try {
-    const { error } = await dbSb().from('class_word_lists').insert({
+    const { data: inserted, error } = await dbSb().from('class_word_lists').insert({
       class_id: currentClass.id,
       name: name,
-      words: words
-    });
+      words: words,
+      games: games
+    }).select('id').single();
     if(error) throw error;
+
+    // Save student assignments if any
+    if(selectedStudents.length > 0 && inserted){
+      var assignRows = selectedStudents.map(function(sid){
+        return { word_list_id: inserted.id, student_id: sid };
+      });
+      await dbSb().from('word_list_assignments').insert(assignRows);
+    }
 
     document.getElementById('wlNewName').value = '';
     document.getElementById('wlNewWords').value = '';
-    showStatus(`"${name}" created with ${words.length} words!`, false);
+    showStatus('"' + name + '" created with ' + words.length + ' words for ' + games.length + ' game' + (games.length !== 1 ? 's' : '') + '!', false);
     dashLoadWordLists();
   } catch(e){
     showStatus('Error: ' + (e.message || e), true);
   }
+}
+
+async function dashAssignWordList(listId){
+  if(!currentClass || !currentClass.students) return;
+  var students = currentClass.students.slice().sort(function(a,b){ return a.name.localeCompare(b.name); });
+
+  // Fetch current assignments
+  var { data: current } = await dbSb().from('word_list_assignments')
+    .select('student_id')
+    .eq('word_list_id', listId);
+  var assigned = (current || []).map(function(a){ return a.student_id; });
+
+  var checkboxes = students.map(function(s){
+    var checked = assigned.indexOf(s.id) !== -1 ? 'checked' : '';
+    return '<label style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:13px;font-weight:700;color:#334155;cursor:pointer;">' +
+      '<input type="checkbox" class="assignCb" value="' + s.id + '" ' + checked + '> ' + s.name + '</label>';
+  }).join('');
+
+  var html = '<div style="max-height:300px;overflow-y:auto;margin-bottom:12px;">' +
+    '<label style="display:flex;align-items:center;gap:6px;padding:6px 0;font-size:13px;font-weight:800;color:var(--indigo);cursor:pointer;border-bottom:1px solid var(--line);margin-bottom:6px;">' +
+    '<input type="checkbox" id="assignAll" ' + (assigned.length === 0 ? 'checked' : '') + ' onchange="document.querySelectorAll(\'.assignCb\').forEach(function(c){c.checked=false;c.disabled=this.checked;}.bind(this))"> All students (no specific assignment)</label>' +
+    checkboxes + '</div>' +
+    '<button onclick="saveAssignments(\'' + listId + '\')" style="border:none;background:var(--indigo);color:#fff;font-weight:900;font-size:13px;padding:10px 20px;border-radius:12px;cursor:pointer;font-family:\'Lexend\',sans-serif;">Save Assignments</button>';
+
+  // Show in a simple overlay
+  var overlay = document.createElement('div');
+  overlay.id = 'assignOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:60;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = '<div style="background:#fff;border-radius:24px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,.3);border:4px solid var(--line);padding:24px;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><div style="font-size:16px;font-weight:900;color:#312e81;">👥 Assign Word List</div>' +
+    '<button onclick="document.getElementById(\'assignOverlay\').remove()" style="border:none;background:var(--line);border-radius:8px;padding:6px 12px;font-weight:800;cursor:pointer;font-family:\'Lexend\',sans-serif;">✕</button></div>' +
+    html + '</div>';
+  document.body.appendChild(overlay);
+}
+
+async function saveAssignments(listId){
+  var allStudents = document.getElementById('assignAll').checked;
+
+  // Delete existing assignments
+  await dbSb().from('word_list_assignments').delete().eq('word_list_id', listId);
+
+  if(!allStudents){
+    var selected = [];
+    document.querySelectorAll('.assignCb:checked').forEach(function(cb){ selected.push(cb.value); });
+    if(selected.length > 0){
+      var rows = selected.map(function(sid){ return { word_list_id: listId, student_id: sid }; });
+      await dbSb().from('word_list_assignments').insert(rows);
+    }
+  }
+
+  document.getElementById('assignOverlay').remove();
+  dashLoadWordLists();
 }
 
 async function dashDeleteWordList(listId, listName){

@@ -1140,6 +1140,55 @@ const WordLabData = (() => {
     } catch(e) { console.warn('incrementDailyUsage error', e); }
   }
 
+  // ── Custom word lists loader ────────────────────────────────
+  // Returns words from teacher-created lists filtered by game and student assignment
+  let _customWordsCache = null;
+  async function getCustomWords(gameName) {
+    var session = getSession();
+    if (!session) return [];
+    try {
+      // Cache all lists for this class on first call
+      if (!_customWordsCache) {
+        var { data: lists } = await sb().from('class_word_lists')
+          .select('id, words, games')
+          .eq('class_id', session.classId);
+        if (!lists || lists.length === 0) { _customWordsCache = []; return []; }
+
+        // Check assignments for each list
+        var listIds = lists.map(function(l) { return l.id; });
+        var { data: assignments } = await sb().from('word_list_assignments')
+          .select('word_list_id, student_id')
+          .in('word_list_id', listIds);
+        var assignMap = {};
+        (assignments || []).forEach(function(a) {
+          if (!assignMap[a.word_list_id]) assignMap[a.word_list_id] = [];
+          assignMap[a.word_list_id].push(a.student_id);
+        });
+
+        // Flatten all words with their game tags, filtering by student assignment
+        _customWordsCache = [];
+        lists.forEach(function(list) {
+          var assigned = assignMap[list.id];
+          // If list has specific assignments and this student isn't in them, skip
+          if (assigned && assigned.length > 0 && assigned.indexOf(session.studentId) === -1) return;
+          var games = list.games || ['breakdown'];
+          (list.words || []).forEach(function(w) {
+            w._games = games;
+            _customWordsCache.push(w);
+          });
+        });
+      }
+
+      // Filter for requested game
+      return _customWordsCache.filter(function(w) {
+        return w._games && w._games.indexOf(gameName) !== -1;
+      });
+    } catch(e) {
+      console.warn('getCustomWords error:', e);
+      return [];
+    }
+  }
+
   // ── Lazy-load extension data ────────────────────────────────
   let _extLoaded = false;
   let _extLoading = null;
@@ -1173,7 +1222,8 @@ const WordLabData = (() => {
     getClassTeacherIds, isStudentTeacher, setStudentTeacher, saveClassSettings,
     createTeacherStudent, getTeacherStudent, enterStudentMode, exitStudentMode, isTeacherPreview,
     isExtensionMode, loadExtensionData,
-    checkDailyLimit, incrementDailyUsage
+    checkDailyLimit, incrementDailyUsage,
+    getCustomWords
   };
 
 })();
