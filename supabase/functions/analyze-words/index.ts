@@ -52,16 +52,28 @@ Deno.serve(async (req: Request) => {
 For each word below, provide:
 1. A short clue/definition (child-friendly, max 8 words)
 2. Morpheme breakdown: prefix (if any), base word, suffix (if any), suffix2 (if any)
-3. Syllable breakdown (separated by ·)
-4. Phoneme breakdown (individual sounds separated by ·, use digraphs like sh, ch, th, ai, ee, oo, etc.)
+3. Syllable breakdown
+4. Grapheme-phoneme breakdown: split the word into its sound units using the ACTUAL LETTERS from the word
 
-IMPORTANT RULES:
-- Use Australian/British English spelling and pronunciation
-- For phonemes, represent sounds not letters. "sh" is one sound, "th" is one sound, "igh" is one sound
-- Common digraphs: sh, ch, th, wh, ck, ng, ai, ee, oo, ar, or, er, ir, ur, ow, oi, ea, igh, oa
-- If there is no prefix, leave it empty
-- If there is no suffix, leave it empty
-- The base is the root/stem word
+CRITICAL RULES:
+- If a word is misspelled, CORRECT IT. Use the correctly spelled version in your response.
+- If a word is not a real English word, replace it with the closest real word.
+- Use Australian/British English spelling (e.g. colour not color)
+- If there is no prefix, use empty string ""
+- If there is no suffix, use empty string ""
+
+PHONEME RULES (VERY IMPORTANT):
+- The phonemes array must use the ACTUAL LETTERS from the word, grouped by sound
+- When you join all phonemes together, they MUST exactly spell the original word
+- Examples:
+  - "ship" → ["sh","i","p"] (joins to "ship" ✓)
+  - "rain" → ["r","ai","n"] (joins to "rain" ✓)
+  - "night" → ["n","igh","t"] (joins to "night" ✓)
+  - "happy" → ["h","a","pp","y"] (joins to "happy" ✓)
+  - "cheese" → ["ch","ee","se"] (joins to "cheese" ✓)
+  - "unhappiness" → ["u","n","h","a","pp","i","n","e","ss"] (joins to "unhappiness" ✓)
+- WRONG: "happy" → ["h","a","p","ee"] — this does NOT spell "happy"
+- Common graphemes: sh, ch, th, wh, ck, ng, ai, ee, oo, ar, or, er, ir, ur, ow, oi, ea, igh, oa, ay, ey, ou, ph, kn, wr, mb, pp, tt, ll, ss, ff, zz
 
 Return ONLY valid JSON — an array of objects with this exact structure:
 [
@@ -73,7 +85,7 @@ Return ONLY valid JSON — an array of objects with this exact structure:
     "suffix1": "ness",
     "suffix2": "",
     "syllables": ["un", "hap", "pi", "ness"],
-    "phonemes": ["u", "n", "h", "a", "p", "ee", "n", "e", "s"]
+    "phonemes": ["u", "n", "h", "a", "pp", "i", "n", "e", "ss"]
   }
 ]
 
