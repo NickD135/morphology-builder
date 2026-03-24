@@ -188,16 +188,11 @@ const steps = {
     <div class="card">
       <div class="stepIcon">📋</div>
       <div class="stepTitle">Create your first class</div>
-      <div class="stepSub">Students will use the class code to log in. Keep it short and easy to remember.</div>
+      <div class="stepSub">A unique login code will be generated automatically for your class.</div>
       <div class="errMsg" id="err"></div>
       <div class="field">
         <label>Class name</label>
         <input type="text" id="classNameInput" placeholder="e.g. 6D" autocomplete="off">
-      </div>
-      <div class="field">
-        <label>Class code <span style="font-weight:600;text-transform:none;">(students type this to log in)</span></label>
-        <input type="text" id="classCodeInput" placeholder="e.g. 6D or YEAR5" autocomplete="off" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
-        <div class="hint">Letters and numbers only, 2–8 characters. No spaces.</div>
       </div>
       <div class="field">
         <label>Your game name</label>
@@ -281,20 +276,20 @@ async function submitStep1() {
 
 async function submitStep2() {
   const name = document.getElementById('classNameInput').value.trim();
-  const code = document.getElementById('classCodeInput').value.trim().toUpperCase();
   const err  = document.getElementById('err');
 
   if (!name) { showErr('Please enter a class name.'); return; }
-  if (!code || code.length < 2) { showErr('Please enter a class code (at least 2 characters).'); return; }
-  if (!/^[A-Z0-9]+$/.test(code)) { showErr('Class code can only contain letters and numbers.'); return; }
 
   const btn = document.querySelector('.primaryBtn');
   btn.disabled = true; btn.textContent = 'Creating...';
 
   try {
-    classId   = await WordLabData.createClass(name, '', code, []);
+    classId   = await WordLabData.createClass(name, '', '', []);
     className = name;
-    classCode = code;
+    // Fetch the auto-generated code
+    var classes = await WordLabData.getClasses();
+    var created = classes.find(function(c){ return c.id === classId; });
+    classCode = created ? created.class_code : '';
 
     var gameName = document.getElementById('gameNameInput').value.trim();
     if (gameName) {

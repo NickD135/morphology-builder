@@ -212,7 +212,22 @@ const WordLabData = (() => {
   }
 
   // ── Classes ───────────────────────────────────────────────────
+  function _generateClassCode() {
+    var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 to avoid confusion
+    var code = '';
+    for (var i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    return code;
+  }
+
   async function createClass(name, password, classCode, students) {
+    // Auto-generate a unique class code if not provided
+    if (!classCode) {
+      for (var attempts = 0; attempts < 10; attempts++) {
+        classCode = _generateClassCode();
+        var { data: dup } = await sb().from('classes').select('id').ilike('class_code', classCode).maybeSingle();
+        if (!dup) break;
+      }
+    }
     // Check if class_code already taken (case-insensitive)
     var { data: existing } = await sb()
       .from('classes')
@@ -220,7 +235,7 @@ const WordLabData = (() => {
       .ilike('class_code', classCode)
       .maybeSingle();
     if (existing) {
-      throw { code: 'CLASS_CODE_TAKEN', message: 'That class code is already in use. Please choose a different one.' };
+      throw { code: 'CLASS_CODE_TAKEN', message: 'That class code is already in use. Please try again.' };
     }
     const { data: { session: _authSess } } = await sb().auth.getSession();
     const _teacher = _authSess ? await getTeacherRecord() : null;

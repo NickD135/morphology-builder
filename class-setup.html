@@ -161,17 +161,10 @@
     <div id="tabCreate" class="hidden">
       <div class="successBanner" id="successBanner">✅ Class created! Students can now log in and start activities.</div>
 
-      <div class="formGrid" style="margin-bottom:16px;">
-        <div class="field">
-          <label>Class name</label>
-          <input type="text" id="className" placeholder="e.g. 3B Literacy" autocomplete="off">
-          <span class="hint">The name you use for this class</span>
-        </div>
-        <div class="field">
-          <label>Class code (student login)</label>
-          <input type="text" id="classCodeInput" placeholder="e.g. 3B or SMITH2024" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase;" maxlength="20">
-          <span class="hint">Students type this to find your class — keep it short and memorable</span>
-        </div>
+      <div class="field" style="margin-bottom:16px;">
+        <label>Class name</label>
+        <input type="text" id="className" placeholder="e.g. 3B Literacy" autocomplete="off">
+        <span class="hint">The name you use for this class. A unique login code will be generated automatically.</span>
       </div>
 
       <div class="field" style="margin-bottom:16px;">
@@ -230,39 +223,40 @@
   // ── Create class ─────────────────────────────────────────────
   async function createClass(){
     const name     = document.getElementById('className').value.trim();
-    const code     = document.getElementById('classCodeInput').value.trim().toUpperCase();
     const namesRaw = document.getElementById('studentNames').value.trim();
 
     hideCreateError();
     if(!name){ alert('Please enter a class name.'); return; }
-    if(!code){ alert('Please enter a class code.'); return; }
-    if(!/^[A-Z0-9]{1,20}$/.test(code)){ alert('Class code can only contain letters and numbers (no spaces).'); return; }
     if(!namesRaw){ alert('Please enter at least one student name.'); return; }
 
     const students = namesRaw.split('\n').map(n => n.trim()).filter(Boolean);
     if(!students.length){ alert('Please enter at least one student name.'); return; }
 
     try {
-      const classId = await WordLabData.createClass(name, '', code, students);
+      const classId = await WordLabData.createClass(name, '', '', students);
 
       const gameName = document.getElementById('teacherGameName').value.trim();
       if (gameName) {
         await WordLabData.createTeacherStudent(classId, gameName);
       }
 
+      // Fetch the auto-generated class code
+      var classes = await WordLabData.getClasses();
+      var created = classes.find(function(c){ return c.id === classId; });
+      var generatedCode = created ? created.class_code : '';
+
       document.getElementById('className').value = '';
-      document.getElementById('classCodeInput').value = '';
       document.getElementById('studentNames').value = '';
       document.getElementById('teacherGameName').value = '';
 
       const banner = document.getElementById('successBanner');
       const gameNameMsg = gameName ? ` You've been added as "<strong>${gameName}</strong>".` : '';
-      banner.innerHTML = `✅ Class "<strong>${name}</strong>" created with ${students.length} students! Class code: <strong>${code}</strong>.${gameNameMsg}`;
+      banner.innerHTML = `✅ Class "<strong>${name}</strong>" created with ${students.length} students!${generatedCode ? ' Class code: <strong>' + generatedCode + '</strong>.' : ''}${gameNameMsg}`;
       banner.classList.add('show');
-      setTimeout(() => banner.classList.remove('show'), 6000);
+      setTimeout(() => banner.classList.remove('show'), 8000);
     } catch(e) {
       if (e && e.code === 'CLASS_CODE_TAKEN') {
-        showCreateError('❌ That class code is already in use. Please choose a different one.');
+        showCreateError('❌ Code collision — please try again.');
       } else {
         const detail = (e && (e.message || (e.error_description) || JSON.stringify(e))) || 'Unknown error';
         showCreateError('❌ Error creating class: ' + detail);
