@@ -200,7 +200,7 @@ const WordLabData = (() => {
     const { data: { session } } = await sb().auth.getSession();
     if (!session) {
       const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
-      window.location.href = (fallbackUrl || 'teacher-login') + '?returnTo=' + returnTo;
+      window.location.href = (fallbackUrl || 'teacher-login.html') + '?returnTo=' + returnTo;
       return null;
     }
     return session.user;
@@ -208,7 +208,7 @@ const WordLabData = (() => {
 
   async function teacherSignOut() {
     await sb().auth.signOut();
-    window.location.href = 'teacher-login';
+    window.location.href = 'teacher-login.html';
   }
 
   // ── Classes ───────────────────────────────────────────────────
