@@ -63,13 +63,15 @@ privacy-law-compliant, multi-tenant, with proper teacher auth and a payment laye
 | `speed-mode.html` | Students | Build words against the clock |
 | `flashcard-mode.html` | Students | Flip through morpheme meaning flashcards |
 | `root-lab.html` | Students | Explore word roots and etymology |
+| `word-refinery.html` | Students | Arrange words along a cline from Tier 1 everyday to Tier 3 specialist |
 | `scientist.html` | Students | Dress their scientist character, view badges, spend quarks in shop |
 | `dashboard.html` | Teachers | Heatmaps per student/activity, intervention flags, reward system |
 | `class-setup.html` | Teachers | Create classes, add/remove students, manage codes |
 | `item-creator.html` | Teachers | Draw or AI-generate custom shop items (lab coats, hats, etc.) |
 | `account.html` | Teachers | Account settings — plan status, change password, school name, subscription management, delete account |
-| `teacher-login.html` | Teachers | Email/password login with forgot-password flow |
+| `teacher-login.html` | Teachers | Email/password login + create account (with school name), forgot-password flow |
 | `teacher-signup.html` | Teachers | Email/password signup, creates school + teacher records |
+| `about.html` | Everyone | Research base, syllabus alignment, activities overview, references |
 
 ---
 
@@ -606,6 +608,64 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 
 ---
 
+### PHASE 7.6 — Session 2026-03-24 (continued)
+
+#### New activity: The Refinery (`word-refinery.html`)
+- [x] Cline-based vocabulary game — arrange words from Tier 1 (everyday) → Tier 3 (specialist)
+- [x] Two modes: Fill the Gap (supported) and Full Cline (independent/harder)
+- [x] 30 base clines, 8 extension clines, 5 order-only clines
+- [x] Draggable words with HTML5 drag-and-drop + touch support, tap-to-select fallback
+- [x] Larger slot targets (48px track, pill-shaped drop zones)
+- [x] XP/quarks via `recordAttempt('word-refinery', 'cline:category', ...)`, scientist reactions, audio
+- [x] Extension mode: harder clines auto-loaded for extension students
+- [x] Integrated: landing page card, dashboard heatmap tab, student profile, flags
+
+#### Custom word list priority
+- [x] New `priority` column on `class_word_lists` (DB migration: `add_word_list_priority.sql`)
+- [x] Three modes: Mixed (shuffle with built-in), Custom first (list words then built-in), Custom only (replace built-in)
+- [x] Priority selector on create form + colour-coded button on each list card to change
+- [x] All three games (Breakdown, Syllable, Phoneme) respect priority setting
+
+#### Dashboard improvements
+- [x] Removed "Total Attempts" from summary row, student profile, and class summary
+- [x] Moved accuracy & intervention flags from Summary tab into each individual activity tab
+- [x] Added "Activity Data" header label above each heatmap table
+- [x] Added Root Lab, Homophones, Word Spectrum to extension student profile
+- [x] Compact student count + donut crown as small inline pills (right-aligned)
+- [x] "← Classes" renamed to "← Switch Class"
+
+#### Class setup improvements
+- [x] Auto-generate 6-char alphanumeric class codes (no I/O/0/1 to avoid confusion)
+- [x] Removed class code input field from class-setup and onboarding
+- [x] Students expanded by default in Manage tab
+- [x] Auto-switch to Create tab when no classes exist
+- [x] Added `.hidden` CSS class (was missing, both tabs showed at once)
+- [x] Class code shown in card metadata
+
+#### Teacher auth & signup
+- [x] School name field added to teacher-login.html Create Account form
+- [x] ⚠️ TEMPORARY: New signups get `plan: 'active'` (for PL demo 2026-03-25) — revert to `plan: 'trial'` with 30-day window after
+
+#### Fixes
+- [x] Shop item publish: always include base64 `image_data` (fixes NOT NULL constraint)
+- [x] Active Today pill: improved error handling, always updates display
+- [x] Teacher guide: Extension Mode emoji 🧬→🔬, rewritten description
+
+#### Pet system (built but hidden)
+- [x] 9 SVG pets (cat, ginger cat, puppy, bird, frog, owl, dragon, horse, hamster)
+- [x] Pet tank "glass terrarium" display, reactions (jump/shake/dance)
+- [x] Shop section, equip/unequip, `pet` field in scientist data
+- [x] **Currently hidden from all UI** — code preserved for future reactivation
+- [ ] TODO: Redesign pets for better visual quality before re-enabling
+
+#### About page (`about.html`)
+- [x] Research base, three domains of spelling, NSW syllabus alignment, Australian Curriculum v9.0
+- [x] Differentiation, HPGE, intervention documentation
+- [x] Activities at a glance grid, references section
+- [x] About link added to footers across 12+ pages
+
+---
+
 ### PHASE 8 — Growth & Integrations (Later)
 
 - [ ] Google Classroom integration (roster import via Google API)
@@ -652,3 +712,7 @@ At the start of each working session, do this:
 | AI for word analysis | Teachers shouldn't need linguistics knowledge to create word lists |
 | Claude API model: `claude-sonnet-4-6` | Only model available on Nick's Anthropic workspace (no date suffix) |
 | Grapheme-based phonemes | Phoneme splits use actual letters from the word, not IPA sounds, to match the game |
+| Auto-generated class codes | 6-char random codes prevent collisions as platform scales; teachers don't choose codes |
+| Word list priority system | Teachers control whether custom words replace, precede, or mix with built-in words |
+| Pet system hidden | Built full pet companion system but visual quality needs work; code preserved for later |
+| Active plan for PL demo | Temporary: new signups get `active` plan so teachers don't see trial banners during PL session |
