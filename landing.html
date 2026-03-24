@@ -822,7 +822,7 @@
       <a class="drawerBtn" href="faq.html"><span class="dIcon">❓</span><span class="dLabel"><span>FAQ</span><span class="dSub">Frequently asked questions</span></span></a>
       <a class="drawerBtn" href="about.html"><span class="dIcon">ℹ️</span><span class="dLabel"><span>About Word Lab</span><span class="dSub">Research base &amp; approach</span></span></a>
       <a class="drawerBtn" href="feedback.html"><span class="dIcon">💬</span><span class="dLabel"><span>Feedback</span><span class="dSub">Report bugs or suggest features</span></span></a>
-      <a class="drawerBtn" href="upgrade.html"><span class="dIcon">💎</span><span class="dLabel"><span>Upgrade</span><span class="dSub">Compare plans &amp; pricing</span></span></a>
+      <a class="drawerBtn" href="upgrade.html" id="drawerUpgradeLink"><span class="dIcon">💎</span><span class="dLabel"><span>Upgrade</span><span class="dSub">Compare plans &amp; pricing</span></span></a>
     </div>
   </div>
 </div>
@@ -1543,7 +1543,7 @@
         <span class="info-card-emoji">💬</span>
         <span class="info-card-name">Feedback</span>
       </a>
-      <a class="info-card" href="pricing.html">
+      <a class="info-card" href="pricing.html" id="infoCardPricing">
         <span class="info-card-emoji">💳</span>
         <span class="info-card-name">Pricing</span>
       </a>
@@ -1811,6 +1811,26 @@ async function initTeacherLayout(teacherUser) {
   if (teachersLink) teachersLink.style.display = 'none';
   if (teacherInfo) teacherInfo.style.display = 'inline-flex';
   if (teacherName) teacherName.textContent = '🔬 ' + displayName;
+
+  // Hide pricing link for active subscribers
+  try {
+    var teacher = await WordLabData.getTeacherRecord();
+    if (teacher && teacher.school_id) {
+      var { data: _school } = await WordLabData._sb()
+        .from('schools')
+        .select('plan')
+        .eq('id', teacher.school_id)
+        .maybeSingle();
+      if (_school && _school.plan === 'active') {
+        var pricingLink = document.getElementById('hdrPricingLink');
+        if (pricingLink) pricingLink.style.display = 'none';
+        var drawerUpgrade = document.getElementById('drawerUpgradeLink');
+        if (drawerUpgrade) drawerUpgrade.style.display = 'none';
+        var infoCardPricing = document.getElementById('infoCardPricing');
+        if (infoCardPricing) infoCardPricing.style.display = 'none';
+      }
+    }
+  } catch(e) {}
 
   // Fetch classes
   try {
