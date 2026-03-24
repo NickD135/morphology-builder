@@ -319,6 +319,13 @@
     </div>
     <div class="rewardBody">
       <div class="rewardSection">
+        <div class="rewardSectionTitle">⚡ XP</div>
+        <div class="rewardRow">
+          <input type="number" id="rewardXpAmt" min="1" max="99999" value="50">
+          <button class="rewardActBtn" onclick="giveReward('xp')">Add XP</button>
+        </div>
+      </div>
+      <div class="rewardSection">
         <div class="rewardSectionTitle">⚛️ Quarks</div>
         <div class="rewardRow">
           <input type="number" id="rewardQuarksAmt" min="1" max="9999" value="100">
@@ -366,12 +373,9 @@
         <div class="profileName" id="profileName"></div>
         <div class="profileCode" id="profileCode"></div>
       </div>
-      <div style="display:flex;gap:8px;flex-shrink:0;align-items:center;">
-        <span id="profileXpDisplay" style="font-size:12px;font-weight:800;color:var(--indigo);background:var(--indigo-soft);padding:5px 10px;border-radius:10px;"></span>
-        <button class="profilePrint" onclick="sendXP()" style="background:#4338ca;color:#fff;border-color:#4338ca;">⚡ Send XP</button>
-        <button class="profilePrint" onclick="sendQuarks()" style="background:#d97706;color:#fff;border-color:#d97706;">⚛️ Send Quarks</button>
-        <button class="profilePrint" onclick="window.print()">🖨️ Print</button>
-        <button class="profileClose" onclick="closeStudentProfile()">✕</button>
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        <button class="profilePrint" onclick="window.print()">🖨️ Print / Save PDF</button>
+        <button class="profileClose" onclick="closeStudentProfile()">✕ Close</button>
       </div>
     </div>
     <div class="profileBody" id="profileBody"></div>
@@ -1193,19 +1197,13 @@ function makeProfileCell(result, hasTime){
   return `<div class="profileCell ${ac}${timeCls}" style="${flagStyle}" title="${title}">${pct}%</div>`;
 }
 
-var _profileStudentId = null;
-
 function showStudentProfile(studentId){
-  _profileStudentId = studentId;
   const student = _studentMap[studentId];
   if(!student) return;
   const results = student.results || {};
 
   document.getElementById('profileName').textContent = student.name;
   document.getElementById('profileCode').textContent = 'Login code: ' + (student.student_code || '—');
-
-  // Show current XP and quarks
-  loadProfileXP(studentId);
 
   // Overall stats
   let totalTime = 0, totalCorrect = 0, totalAttempts = 0;
@@ -1363,75 +1361,6 @@ function setProfilePage(page){
 
 function closeStudentProfile(){
   document.getElementById('profileModal').classList.add('hidden');
-  _profileStudentId = null;
-}
-
-async function loadProfileXP(studentId) {
-  const el = document.getElementById('profileXpDisplay');
-  if (!el) return;
-  el.textContent = '...';
-  const { data } = await dbSb().from('student_character')
-    .select('xp, quarks')
-    .eq('student_id', studentId)
-    .maybeSingle();
-  if (data) {
-    el.textContent = '⚡ ' + (data.xp || 0) + ' XP  ·  ⚛️ ' + (data.quarks || 0) + ' Quarks';
-  } else {
-    el.textContent = '⚡ 0 XP  ·  ⚛️ 0 Quarks';
-  }
-}
-
-async function sendXP() {
-  if (!_profileStudentId) return;
-  const student = _studentMap[_profileStudentId];
-  const amount = prompt('How much XP to send to ' + (student?.name || 'this student') + '?', '50');
-  if (!amount) return;
-  const xp = parseInt(amount, 10);
-  if (isNaN(xp) || xp <= 0) { alert('Please enter a positive number.'); return; }
-
-  // Get current character data
-  const { data: char } = await dbSb().from('student_character')
-    .select('*')
-    .eq('student_id', _profileStudentId)
-    .maybeSingle();
-
-  if (char) {
-    await dbSb().from('student_character')
-      .update({ xp: (char.xp || 0) + xp, updated_at: new Date().toISOString() })
-      .eq('student_id', _profileStudentId);
-  } else {
-    await dbSb().from('student_character')
-      .insert({ student_id: _profileStudentId, xp: xp, quarks: 0, badges: [], scientist: {}, stats: { sessions: 0, totalAnswered: 0, totalCorrect: 0, bestStreak: 0, activitiesPlayed: [] } });
-  }
-
-  loadProfileXP(_profileStudentId);
-  alert('Sent ' + xp + ' XP to ' + (student?.name || 'student') + '!');
-}
-
-async function sendQuarks() {
-  if (!_profileStudentId) return;
-  const student = _studentMap[_profileStudentId];
-  const amount = prompt('How many Quarks to send to ' + (student?.name || 'this student') + '?', '50');
-  if (!amount) return;
-  const quarks = parseInt(amount, 10);
-  if (isNaN(quarks) || quarks <= 0) { alert('Please enter a positive number.'); return; }
-
-  const { data: char } = await dbSb().from('student_character')
-    .select('*')
-    .eq('student_id', _profileStudentId)
-    .maybeSingle();
-
-  if (char) {
-    await dbSb().from('student_character')
-      .update({ quarks: (char.quarks || 0) + quarks, updated_at: new Date().toISOString() })
-      .eq('student_id', _profileStudentId);
-  } else {
-    await dbSb().from('student_character')
-      .insert({ student_id: _profileStudentId, xp: 0, quarks: quarks, badges: [], scientist: {}, stats: { sessions: 0, totalAnswered: 0, totalCorrect: 0, bestStreak: 0, activitiesPlayed: [] } });
-  }
-
-  loadProfileXP(_profileStudentId);
-  alert('Sent ' + quarks + ' Quarks to ' + (student?.name || 'student') + '!');
 }
 
 document.addEventListener('keydown', function(e){
@@ -1767,6 +1696,11 @@ async function giveReward(type){
       if(amt < 1) throw new Error('Enter a valid quarks amount');
       updates.quarks = (char.quarks||0) + amt;
       _setRewardStatus(`+${amt} quarks added ✓`);
+    } else if(type === 'xp'){
+      const amt = parseInt(document.getElementById('rewardXpAmt').value)||0;
+      if(amt < 1) throw new Error('Enter a valid XP amount');
+      updates.xp = (char.xp||0) + amt;
+      _setRewardStatus(`+${amt} XP added ✓`);
     } else if(type === 'effect'){
       const id = document.getElementById('rewardEffectId').value;
       if(!id) throw new Error('Please select an effect');
