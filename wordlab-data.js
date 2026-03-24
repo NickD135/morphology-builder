@@ -267,7 +267,7 @@ const WordLabData = (() => {
       try {
         var { data: school } = await sb()
           .from('schools')
-          .insert({ name: 'My School', plan: 'trial', trial_ends_at: new Date(Date.now() + 30 * 86400000).toISOString() })
+          .insert({ name: 'My School', plan: 'active', trial_ends_at: new Date(Date.now() + 365 * 86400000).toISOString() })
           .select('id')
           .single();
         if (school) {

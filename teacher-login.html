@@ -102,6 +102,10 @@
     <!-- Register Form -->
     <div id="registerTab" style="display:none;">
       <div class="field">
+        <label>School name</label>
+        <input type="text" id="regSchool" placeholder="e.g. Riverside Primary School" autocomplete="organization">
+      </div>
+      <div class="field">
         <label>Full name</label>
         <input type="text" id="regName" placeholder="Ms Smith" autocomplete="name">
       </div>
@@ -223,6 +227,7 @@ async function doLogin() {
 }
 
 async function doRegister() {
+  const schoolName = document.getElementById('regSchool').value.trim();
   const name = document.getElementById('regName').value.trim();
   const email = document.getElementById('regEmail').value.trim();
   const password = document.getElementById('regPassword').value;
@@ -231,6 +236,7 @@ async function doRegister() {
   const successEl = document.getElementById('regSuccess');
   errEl.textContent = ''; successEl.textContent = '';
 
+  if (!schoolName) { errEl.textContent = 'Please enter your school name.'; return; }
   if (!name) { errEl.textContent = 'Please enter your name.'; return; }
   if (!email) { errEl.textContent = 'Please enter your email.'; return; }
   if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; return; }
@@ -244,7 +250,7 @@ async function doRegister() {
     const { data, error } = await _sb.auth.signUp({
       email,
       password,
-      options: { data: { full_name: name } }
+      options: { data: { full_name: name, school_name: schoolName } }
     });
     if (error) throw error;
 
@@ -255,6 +261,7 @@ async function doRegister() {
     await _sb.from('teacher_accounts').insert({
       email: email,
       name: name,
+      school_name: schoolName,
       password_hash: '(supabase_auth)',
       tier: 'free',
       student_cap: 5,
