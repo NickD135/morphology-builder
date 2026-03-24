@@ -566,16 +566,24 @@ const WORDS = [
   }
 })();
 
-// Load custom word lists for phoneme mode
+// Load custom word lists for phoneme mode (respects priority setting)
+var _originalPhonWords = WORDS.slice();
 (async function(){
   try {
     if (typeof WordLabData === 'undefined') return;
     var custom = await WordLabData.getCustomWords('phoneme');
-    custom.forEach(function(w) {
-      if (w.word && w.phonemes && w.phonemes.length > 0) {
-        WORDS.push({ word: w.word, phonemes: w.phonemes, diff: w.phoneme_diff || 'Challenge' });
-      }
-    });
+    if (!custom.length) return;
+    var customWords = custom.filter(function(w) { return w.word && w.phonemes && w.phonemes.length > 0; })
+      .map(function(w) { return { word: w.word, phonemes: w.phonemes, diff: w.phoneme_diff || 'Challenge' }; });
+    if (!customWords.length) return;
+    var priority = WordLabData.getCustomWordPriority('phoneme');
+    if (priority === 'custom_only') {
+      WORDS.splice(0, WORDS.length, ...customWords);
+    } else if (priority === 'custom_first') {
+      WORDS.splice(0, WORDS.length, ...customWords, ..._originalPhonWords);
+    } else {
+      customWords.forEach(function(w) { WORDS.push(w); });
+    }
   } catch(e) {}
 })();
 

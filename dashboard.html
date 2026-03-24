@@ -857,9 +857,6 @@ async function renderDashboard(){
 
   document.getElementById('summaryRow').innerHTML = `
     <div class="summaryCard"><div class="summaryVal">${totalStudents}</div><div class="summaryLbl">Students</div></div>
-    <div class="summaryCard"><div class="summaryVal">${totalAttempts.toLocaleString()}</div><div class="summaryLbl">Total attempts</div></div>
-    <div class="summaryCard"><div class="summaryVal">${overallAcc}${totalAttempts>0?'%':''}</div><div class="summaryLbl">Overall accuracy</div></div>
-    <div class="summaryCard"><div class="summaryVal" style="color:${flagCount>0?'var(--bad)':'var(--green)'}">${flagCount}</div><div class="summaryLbl">Intervention flags</div></div>
     ${crownCard}
     <div style="align-self:center;display:flex;flex-direction:column;gap:6px;">
       <button class="exportBtn" onclick="showWordLists()" style="border-color:#c7d2fe;background:var(--indigo-soft);color:var(--indigo);" title="Create custom word lists for Breakdown Blitz">📝 Custom Word Lists</button>
@@ -1112,11 +1109,51 @@ function renderHeatmap(activity){
     </tr>`;
   }).join('');
 
+  // ── Per-activity accuracy & intervention flags ──────────────
+  let actCorrect = 0, actTotal = 0;
+  const actFlags = [];
+  const actNameMap = {
+    'sound-sorter':'Sound Sorter','phoneme-splitter':'Phoneme Splitter','syllable-splitter':'Syllable Splitter',
+    'breakdown-blitz':'Breakdown Blitz','meaning-mode':'Meaning Mode','mission-mode':'Mission Mode',
+    'root-lab':'Root Lab','homophone-hunter':'Homophone Hunter','word-spectrum':'Word Spectrum'
+  };
+  students.forEach(student => {
+    const actData = isExt
+      ? ((extensionData[student.id]||{})[activity]||{})
+      : ((student.results||{})[activity]||{});
+    Object.entries(actData).forEach(([cat, r]) => {
+      actCorrect += r.correct || 0;
+      actTotal += r.total || 0;
+      if(WordLabData.isIntervention(r, THRESHOLD_PCT, THRESHOLD_ATTEMPTS)){
+        actFlags.push({ student, category: cat, result: r });
+      }
+    });
+  });
+  const actAccuracy = actTotal > 0 ? Math.round(actCorrect / actTotal * 100) : null;
+
+  const actStatsHtml = `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+    ${actAccuracy !== null ? `<div style="background:var(--indigo-soft);border:2px solid #c7d2fe;border-radius:12px;padding:8px 14px;"><div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);">Activity accuracy</div><div style="font-size:20px;font-weight:900;color:var(--indigo);">${actAccuracy}%</div></div>` : ''}
+    <div style="background:${actFlags.length > 0 ? '#fef2f2;border:2px solid #fecaca' : '#f0fdf4;border:2px solid #bbf7d0'};border-radius:12px;padding:8px 14px;">
+      <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);">Intervention flags</div>
+      <div style="font-size:20px;font-weight:900;color:${actFlags.length > 0 ? 'var(--bad)' : 'var(--green)'};">${actFlags.length}</div>
+    </div>
+  </div>`;
+
+  const actFlagsHtml = actFlags.length > 0 ? `<div style="margin-bottom:14px;">
+    <div style="font-size:10px;font-weight:900;color:var(--bad);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">⚠️ Students needing support</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      ${actFlags.map(f => `<span style="background:#fef2f2;border:1.5px solid #fecaca;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:800;color:#dc2626;">${f.student.name}: ${isMorpheme ? f.category.replace(/^[^:]+:/,'') : f.category} — ${WordLabData.getAccuracy(f.result)}%</span>`).join('')}
+    </div>
+  </div>` : '';
+
   container.innerHTML = `
     <div class="panel"><div class="panelInner">
       <div class="panelTitle">${titleMap[activity] || activity}${isExt ? ' <span style="background:#4338ca;color:#e0e7ff;font-size:9px;font-weight:900;padding:2px 8px;border-radius:8px;letter-spacing:.08em;margin-left:8px;vertical-align:middle;">🔬 EXTENSION</span>' : ''}</div>
+      ${actStatsHtml}
+      ${actFlagsHtml}
       ${morphemeFilterUI}
       ${legend}
+      <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:8px;">${actNameMap[activity] || activity} — Activity Data</div>
       <div class="heatmapWrap">
         <table class="heatmap">
           <thead>
@@ -1240,7 +1277,6 @@ function showStudentProfile(studentId){
       <div class="statPill"><div class="statPillVal">${lastActiveStr}</div><div class="statPillLbl">Last active</div></div>
       <div class="statPill"><div class="statPillVal">${formatTime(totalTime)}</div><div class="statPillLbl">Time in activities</div></div>
       <div class="statPill"><div class="statPillVal">${totalCorrect.toLocaleString()}</div><div class="statPillLbl">Correct answers</div></div>
-      <div class="statPill"><div class="statPillVal">${totalAttempts.toLocaleString()}</div><div class="statPillLbl">Total attempts</div></div>
       <div class="statPill" style="${overallAcc !== null && overallAcc < THRESHOLD_PCT ? 'border-color:#fecaca;background:#fef2f2;' : ''}">
         <div class="statPillVal" style="color:${overallAcc !== null && overallAcc < THRESHOLD_PCT ? 'var(--bad)' : 'var(--green)'}">${overallAcc !== null ? overallAcc+'%' : '—'}</div>
         <div class="statPillLbl">Overall accuracy</div>
@@ -1317,6 +1353,10 @@ function showStudentProfile(studentId){
     ${extProfileSection('Mission<br>Bases',    'amb', 'mission-mode', extMissionBases)}
     <div class="sectionGroup">🧩 Extension — Breakdown Blitz</div>
     ${extProfileSection('Breakdown<br>Blitz', 'red', 'breakdown-blitz', extCols['breakdown-blitz']||[])}
+    <div class="sectionGroup">🧫 Extension — Root Lab, Homophones &amp; Spectrum</div>
+    ${extProfileSection('Root Lab', 'red', 'root-lab', extCols['root-lab']||[])}
+    ${extProfileSection('Homophones', 'red', 'homophone-hunter', extCols['homophone-hunter']||[])}
+    ${extProfileSection('Word Spectrum', 'red', 'word-spectrum', extCols['word-spectrum']||[])}
   ` : `<div style="padding:24px;text-align:center;color:#94a3b8;font-size:14px;font-weight:700;">No extension mode data recorded yet for this student.</div>`;
 
   document.getElementById('profileBody').innerHTML = `
@@ -1429,7 +1469,6 @@ function renderSummary(){
     ${classAccuracy !== null ? `<div style="background:var(--indigo-soft);border:2px solid #c7d2fe;border-radius:14px;padding:10px 16px;flex:1;min-width:140px;"><div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);">Class accuracy</div><div style="font-size:22px;font-weight:900;color:var(--indigo);">${classAccuracy}%</div></div>` : ''}
     ${mostPlayedLabel ? `<div style="background:#f0fdf4;border:2px solid #bbf7d0;border-radius:14px;padding:10px 16px;flex:1;min-width:140px;"><div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);">Most played</div><div style="font-size:14px;font-weight:900;color:#166534;">${mostPlayedLabel}</div></div>` : ''}
     ${mostMissedLabel ? `<div style="background:#fef2f2;border:2px solid #fecaca;border-radius:14px;padding:10px 16px;flex:1;min-width:140px;"><div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);">Most missed</div><div style="font-size:14px;font-weight:900;color:#dc2626;">${mostMissedLabel}</div></div>` : ''}
-    <div style="background:#f8fafc;border:2px solid var(--line);border-radius:14px;padding:10px 16px;flex:1;min-width:140px;"><div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);">Total attempts</div><div style="font-size:22px;font-weight:900;color:var(--text);">${classTotal.toLocaleString()}</div></div>
   </div>`;
 
   // ── Student rows ───────────────────────────────────────────
@@ -1779,6 +1818,16 @@ function renderWordListsTab(){
         </div>
 
         <div style="margin-bottom:12px;">
+          <label style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);display:block;margin-bottom:6px;">Word priority</label>
+          <select id="wlPriority" style="border:2px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;font-weight:700;font-family:'Lexend',sans-serif;outline:none;">
+            <option value="mixed">Mixed — shuffle with built-in words</option>
+            <option value="custom_first">Custom first — your words first, then built-in</option>
+            <option value="custom_only">Custom only — only use these words</option>
+          </select>
+          <div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:4px;">Controls whether these words replace, precede, or mix with the game's built-in words.</div>
+        </div>
+
+        <div style="margin-bottom:12px;">
           <label style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);display:block;margin-bottom:6px;">Assign to</label>
           <div style="display:flex;align-items:center;gap:8px;">
             <select id="wlAssignMode" onchange="wlToggleStudentPicker()" style="border:2px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;font-weight:700;font-family:'Lexend',sans-serif;outline:none;">
@@ -1833,7 +1882,7 @@ async function dashLoadWordLists(){
 
   try {
     const { data, error } = await dbSb().from('class_word_lists')
-      .select('id, name, words, games, created_at')
+      .select('id, name, words, games, priority, created_at')
       .eq('class_id', currentClass.id)
       .order('created_at', { ascending: false });
     if(error) throw error;
@@ -1855,10 +1904,15 @@ async function dashLoadWordLists(){
     });
 
     var gameLabels = { breakdown:'🧩 Breakdown', syllable:'✂️ Syllable', phoneme:'🔊 Phoneme' };
+    var priorityLabels = { custom_only:'Custom only', custom_first:'Custom first', mixed:'Mixed' };
+    var priorityColors = { custom_only:'#dc2626', custom_first:'#d97706', mixed:'#6366f1' };
+    var priorityBg = { custom_only:'#fef2f2', custom_first:'#fffbeb', mixed:'#eef2ff' };
+    var priorityBorder = { custom_only:'#fecaca', custom_first:'#fde68a', mixed:'#c7d2fe' };
 
     container.innerHTML = data.map(list => {
       const words = list.words || [];
       const games = list.games || ['breakdown'];
+      const listPriority = list.priority || 'mixed';
       const assigns = assignMap[list.id] || [];
       const assignLabel = assigns.length === 0 ? 'All students' :
         assigns.length + ' student' + (assigns.length !== 1 ? 's' : '');
@@ -1878,6 +1932,7 @@ async function dashLoadWordLists(){
             <div style="font-size:12px;color:var(--muted);font-weight:700;">${words.length} word${words.length !== 1 ? 's' : ''} &middot; ${assignLabel}${assignNames ? ' (' + assignNames + ')' : ''}</div>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button onclick="dashChangePriority('${list.id}')" style="border:2px solid ${priorityBorder[listPriority]};background:${priorityBg[listPriority]};color:${priorityColors[listPriority]};font-weight:800;font-size:12px;border-radius:10px;padding:6px 14px;cursor:pointer;white-space:nowrap;font-family:'Lexend',sans-serif;">⚡ ${priorityLabels[listPriority]}</button>
             <button onclick="dashAssignWordList('${list.id}')" style="border:2px solid #c7d2fe;background:var(--indigo-soft);color:var(--indigo);font-weight:800;font-size:12px;border-radius:10px;padding:6px 14px;cursor:pointer;white-space:nowrap;font-family:'Lexend',sans-serif;">👥 Assign</button>
             <button onclick="dashDeleteWordList('${list.id}','${list.name.replace(/'/g,"\\'")}')" style="border:2px solid #fecaca;background:#fef2f2;color:#dc2626;font-weight:800;font-size:12px;border-radius:10px;padding:6px 14px;cursor:pointer;white-space:nowrap;font-family:'Lexend',sans-serif;">Delete</button>
           </div>
@@ -1981,11 +2036,12 @@ async function dashCreateWordList(){
   const name = document.getElementById('wlNewName').value.trim();
   const statusEl = document.getElementById('wlStatus');
 
-  // Determine selected games
+  // Determine selected games and priority
   var games = [];
   if(document.getElementById('wlGameBreakdown').checked) games.push('breakdown');
   if(document.getElementById('wlGameSyllable').checked) games.push('syllable');
   if(document.getElementById('wlGamePhoneme').checked) games.push('phoneme');
+  var priority = document.getElementById('wlPriority').value || 'mixed';
 
   // Determine selected students
   var assignMode = document.getElementById('wlAssignMode').value;
@@ -2027,7 +2083,8 @@ async function dashCreateWordList(){
       class_id: currentClass.id,
       name: name,
       words: words,
-      games: games
+      games: games,
+      priority: priority
     }).select('id').single();
     if(error) throw error;
 
@@ -2104,6 +2161,51 @@ async function dashDeleteWordList(listId, listName){
   if(!confirm('Delete word list "' + listName + '"? This cannot be undone.')) return;
   try {
     await dbSb().from('class_word_lists').delete().eq('id', listId);
+    dashLoadWordLists();
+  } catch(e){ alert('Error: ' + (e.message || e)); }
+}
+
+async function dashChangePriority(listId){
+  var options = [
+    { value:'mixed', label:'Mixed — shuffle with built-in words' },
+    { value:'custom_first', label:'Custom first — your words first, then built-in' },
+    { value:'custom_only', label:'Custom only — only use these words' }
+  ];
+  // Fetch current priority
+  var { data: current } = await dbSb().from('class_word_lists').select('priority').eq('id', listId).single();
+  var currentVal = (current && current.priority) || 'mixed';
+
+  var html = '<div style="font-size:14px;font-weight:900;color:#312e81;margin-bottom:12px;">Change Word Priority</div>' +
+    '<div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:12px;">Controls how these words interact with the game\'s built-in words.</div>' +
+    options.map(function(o){
+      var checked = o.value === currentVal ? 'checked' : '';
+      return '<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin-bottom:6px;background:#f8fafc;border:2px solid var(--line);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;color:#334155;">' +
+        '<input type="radio" name="wlPriorityChange" value="' + o.value + '" ' + checked + '> ' + o.label + '</label>';
+    }).join('') +
+    '<div style="display:flex;gap:8px;margin-top:12px;">' +
+    '<button onclick="dashSavePriority(\'' + listId + '\')" style="border:none;background:var(--indigo);color:#fff;font-weight:900;font-size:13px;padding:10px 20px;border-radius:10px;cursor:pointer;font-family:\'Lexend\',sans-serif;">Save</button>' +
+    '<button onclick="document.getElementById(\'wlPriorityModal\').remove()" style="border:2px solid var(--line);background:#f8fafc;color:var(--muted);font-weight:900;font-size:13px;padding:10px 20px;border-radius:10px;cursor:pointer;font-family:\'Lexend\',sans-serif;">Cancel</button>' +
+    '</div>';
+
+  // Remove existing modal if any
+  var existing = document.getElementById('wlPriorityModal');
+  if(existing) existing.remove();
+
+  var modal = document.createElement('div');
+  modal.id = 'wlPriorityModal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.4);';
+  modal.innerHTML = '<div style="background:#fff;border-radius:20px;padding:24px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2);">' + html + '</div>';
+  modal.addEventListener('click', function(e){ if(e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+async function dashSavePriority(listId){
+  var selected = document.querySelector('input[name="wlPriorityChange"]:checked');
+  if(!selected) return;
+  try {
+    await dbSb().from('class_word_lists').update({ priority: selected.value }).eq('id', listId);
+    var modal = document.getElementById('wlPriorityModal');
+    if(modal) modal.remove();
     dashLoadWordLists();
   } catch(e){ alert('Error: ' + (e.message || e)); }
 }

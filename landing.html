@@ -1877,14 +1877,21 @@ async function renderTeacherStats(idx) {
 
   // Active today
   try {
-    var today = new Date().toISOString().slice(0, 10);
+    var today = new Date().toISOString().split('T')[0];
+    var activeCount = 0;
     if (cls.students && cls.students.length > 0) {
       var ids = cls.students.map(function(s){ return s.id; });
       var activeRes = await _lsb().from('daily_usage').select('student_id').eq('usage_date', today).in('student_id', ids);
-      var uniqueActive = new Set((activeRes.data || []).map(function(r){ return r.student_id; }));
-      document.getElementById('tchPillActive').textContent = '📈 ' + uniqueActive.size + ' Active Today';
+      if (activeRes.data) {
+        var uniqueActive = new Set(activeRes.data.map(function(r){ return r.student_id; }));
+        activeCount = uniqueActive.size;
+      }
     }
-  } catch(e){}
+    document.getElementById('tchPillActive').textContent = '📈 ' + activeCount + ' Active Today';
+  } catch(e){
+    console.warn('Active today query error:', e);
+    document.getElementById('tchPillActive').textContent = '📈 0 Active Today';
+  }
 }
 
 /* ═══════════ MAIN INIT ═══════════ */

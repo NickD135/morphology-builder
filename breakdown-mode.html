@@ -323,16 +323,26 @@
       if(window.WL_EXTENSION) MISSIONS.splice(0, MISSIONS.length, ...WL_EXTENSION.missions);
     }
   })();
-  // Load custom word lists from teacher
+  // Load custom word lists from teacher (respects priority setting)
+  var _originalMissions = MISSIONS.slice();
   (async function(){
     try{
       if(typeof WordLabData==='undefined') return;
       var custom = await WordLabData.getCustomWords('breakdown');
-      custom.forEach(function(w){
-        if(w.word && w.base){
-          MISSIONS.push({word:w.word, clue:w.clue||'', answers:{prefix:w.prefix||'', base:w.base, suffix1:w.suffix1||'', suffix2:w.suffix2||''}});
-        }
+      if(!custom.length) return;
+      var customMissions = custom.filter(function(w){ return w.word && w.base; }).map(function(w){
+        return {word:w.word, clue:w.clue||'', answers:{prefix:w.prefix||'', base:w.base, suffix1:w.suffix1||'', suffix2:w.suffix2||''}};
       });
+      if(!customMissions.length) return;
+      var priority = WordLabData.getCustomWordPriority('breakdown');
+      if(priority === 'custom_only'){
+        MISSIONS.splice(0, MISSIONS.length, ...customMissions);
+      } else if(priority === 'custom_first'){
+        MISSIONS.splice(0, MISSIONS.length, ...customMissions, ..._originalMissions);
+      } else {
+        // mixed — shuffle custom into original
+        customMissions.forEach(function(m){ MISSIONS.push(m); });
+      }
     }catch(e){}
   })();
   let score=0,streak=0,fuel=100,currentQuestion=null,fuelInterval=null,locked=false,nextTimer=null;

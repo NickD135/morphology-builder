@@ -1143,6 +1143,8 @@ const WordLabData = (() => {
   // ── Custom word lists loader ────────────────────────────────
   // Returns words from teacher-created lists filtered by game and student assignment
   let _customWordsCache = null;
+  var _customWordsPriorityCache = null; // { gameName: 'mixed'|'custom_first'|'custom_only' }
+
   async function getCustomWords(gameName) {
     var session = getSession();
     if (!session) return [];
@@ -1150,9 +1152,9 @@ const WordLabData = (() => {
       // Cache all lists for this class on first call
       if (!_customWordsCache) {
         var { data: lists } = await sb().from('class_word_lists')
-          .select('id, words, games')
+          .select('id, words, games, priority')
           .eq('class_id', session.classId);
-        if (!lists || lists.length === 0) { _customWordsCache = []; return []; }
+        if (!lists || lists.length === 0) { _customWordsCache = []; _customWordsPriorityCache = {}; return []; }
 
         // Check assignments for each list
         var listIds = lists.map(function(l) { return l.id; });
@@ -1166,12 +1168,23 @@ const WordLabData = (() => {
         });
 
         // Flatten all words with their game tags, filtering by student assignment
+        // Also track highest priority per game
         _customWordsCache = [];
+        _customWordsPriorityCache = {};
+        var priorityRank = { custom_only: 3, custom_first: 2, mixed: 1 };
         lists.forEach(function(list) {
           var assigned = assignMap[list.id];
           // If list has specific assignments and this student isn't in them, skip
           if (assigned && assigned.length > 0 && assigned.indexOf(session.studentId) === -1) return;
           var games = list.games || ['breakdown'];
+          var listPriority = list.priority || 'mixed';
+          // Track highest priority per game
+          games.forEach(function(g) {
+            var current = _customWordsPriorityCache[g] || 'mixed';
+            if ((priorityRank[listPriority] || 1) > (priorityRank[current] || 1)) {
+              _customWordsPriorityCache[g] = listPriority;
+            }
+          });
           (list.words || []).forEach(function(w) {
             w._games = games;
             _customWordsCache.push(w);
@@ -1187,6 +1200,12 @@ const WordLabData = (() => {
       console.warn('getCustomWords error:', e);
       return [];
     }
+  }
+
+  // Returns the effective priority for a game: 'custom_only', 'custom_first', or 'mixed'
+  function getCustomWordPriority(gameName) {
+    if (!_customWordsPriorityCache) return 'mixed';
+    return _customWordsPriorityCache[gameName] || 'mixed';
   }
 
   // ── Lazy-load extension data ────────────────────────────────
@@ -1223,7 +1242,7 @@ const WordLabData = (() => {
     createTeacherStudent, getTeacherStudent, enterStudentMode, exitStudentMode, isTeacherPreview,
     isExtensionMode, loadExtensionData,
     checkDailyLimit, incrementDailyUsage,
-    getCustomWords
+    getCustomWords, getCustomWordPriority
   };
 
 })();
