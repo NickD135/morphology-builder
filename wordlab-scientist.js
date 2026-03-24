@@ -140,131 +140,311 @@ const WLScientist = (() => {
 
   // ── Pet SVG builder (larger standalone pets) ─────────────────
   const PET_SVGS = {
-    cat: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="30" cy="40" rx="14" ry="12" fill="#6b7280"/>
-      <circle cx="30" cy="22" r="12" fill="#6b7280"/>
-      <polygon points="22,14 18,2 26,11" fill="#6b7280"/><polygon points="22,14 19,4 26,11" fill="#9ca3af" opacity=".4"/>
-      <polygon points="38,14 42,2 34,11" fill="#6b7280"/><polygon points="38,14 41,4 34,11" fill="#9ca3af" opacity=".4"/>
-      <circle cx="25" cy="20" r="3" fill="#fbbf24"/><circle cx="25" cy="20" r="1.2" fill="#1e1b4b"/>
-      <circle cx="35" cy="20" r="3" fill="#fbbf24"/><circle cx="35" cy="20" r="1.2" fill="#1e1b4b"/>
-      <ellipse cx="30" cy="26" rx="2" ry="1.2" fill="#f9a8d4"/>
-      <line x1="18" y1="24" x2="8" y2="22" stroke="#9ca3af" stroke-width=".8"/>
-      <line x1="18" y1="26" x2="8" y2="27" stroke="#9ca3af" stroke-width=".8"/>
-      <line x1="42" y1="24" x2="52" y2="22" stroke="#9ca3af" stroke-width=".8"/>
-      <line x1="42" y1="26" x2="52" y2="27" stroke="#9ca3af" stroke-width=".8"/>
-      <path d="M16,48 Q10,38 14,42" stroke="#6b7280" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    cat: `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <!-- Body -->
+      <ellipse cx="40" cy="54" rx="18" ry="14" fill="#6b7280"/>
+      <!-- Front paws -->
+      <ellipse cx="28" cy="66" rx="5" ry="3" fill="#9ca3af"/>
+      <ellipse cx="52" cy="66" rx="5" ry="3" fill="#9ca3af"/>
+      <!-- Head -->
+      <circle cx="40" cy="30" r="16" fill="#6b7280"/>
+      <!-- Ears -->
+      <polygon points="28,18 22,2 34,14" fill="#6b7280"/>
+      <polygon points="52,18 58,2 46,14" fill="#6b7280"/>
+      <polygon points="29,17 24,5 33,14" fill="#f9a8d4" opacity=".35"/>
+      <polygon points="51,17 56,5 47,14" fill="#f9a8d4" opacity=".35"/>
+      <!-- Eyes -->
+      <ellipse cx="33" cy="28" rx="4" ry="4.5" fill="#fbbf24"/>
+      <ellipse cx="47" cy="28" rx="4" ry="4.5" fill="#fbbf24"/>
+      <ellipse cx="33" cy="28" rx="2" ry="3.5" fill="#1e1b4b"/>
+      <ellipse cx="47" cy="28" rx="2" ry="3.5" fill="#1e1b4b"/>
+      <ellipse cx="32" cy="26" rx="1" ry="1.5" fill="#fff" opacity=".7"/>
+      <ellipse cx="46" cy="26" rx="1" ry="1.5" fill="#fff" opacity=".7"/>
+      <!-- Nose -->
+      <path d="M38,34 L40,36 L42,34 Z" fill="#f9a8d4"/>
+      <!-- Mouth -->
+      <path d="M40,36 L40,38" stroke="#4b5563" stroke-width=".8"/>
+      <path d="M37,39 Q40,41 43,39" stroke="#4b5563" stroke-width=".8" fill="none"/>
+      <!-- Whiskers -->
+      <line x1="24" y1="32" x2="10" y2="29" stroke="#9ca3af" stroke-width=".7"/>
+      <line x1="24" y1="35" x2="10" y2="36" stroke="#9ca3af" stroke-width=".7"/>
+      <line x1="56" y1="32" x2="70" y2="29" stroke="#9ca3af" stroke-width=".7"/>
+      <line x1="56" y1="35" x2="70" y2="36" stroke="#9ca3af" stroke-width=".7"/>
+      <!-- Tail -->
+      <path d="M22,52 Q10,40 14,30 Q16,26 18,30" stroke="#6b7280" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <!-- Chest marking -->
+      <ellipse cx="40" cy="50" rx="8" ry="6" fill="#9ca3af" opacity=".3"/>
     </svg>`,
-    ginger_cat: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="30" cy="40" rx="14" ry="12" fill="#f97316"/>
-      <circle cx="30" cy="22" r="12" fill="#f97316"/>
-      <polygon points="22,14 18,2 26,11" fill="#f97316"/><polygon points="22,14 19,4 26,11" fill="#fb923c" opacity=".5"/>
-      <polygon points="38,14 42,2 34,11" fill="#f97316"/><polygon points="38,14 41,4 34,11" fill="#fb923c" opacity=".5"/>
-      <circle cx="25" cy="20" r="3" fill="#16a34a"/><circle cx="25" cy="20" r="1.2" fill="#1e1b4b"/>
-      <circle cx="35" cy="20" r="3" fill="#16a34a"/><circle cx="35" cy="20" r="1.2" fill="#1e1b4b"/>
-      <ellipse cx="30" cy="26" rx="2" ry="1.2" fill="#f9a8d4"/>
-      <line x1="18" y1="24" x2="8" y2="22" stroke="#ea580c" stroke-width=".8"/>
-      <line x1="18" y1="26" x2="8" y2="27" stroke="#ea580c" stroke-width=".8"/>
-      <line x1="42" y1="24" x2="52" y2="22" stroke="#ea580c" stroke-width=".8"/>
-      <line x1="42" y1="26" x2="52" y2="27" stroke="#ea580c" stroke-width=".8"/>
-      <path d="M25,35 L28,40 L32,40 L35,35" stroke="#ea580c" stroke-width="1.2" fill="none"/>
-      <path d="M16,48 Q10,38 14,42" stroke="#f97316" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    ginger_cat: `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="40" cy="54" rx="18" ry="14" fill="#f97316"/>
+      <ellipse cx="28" cy="66" rx="5" ry="3" fill="#fb923c"/>
+      <ellipse cx="52" cy="66" rx="5" ry="3" fill="#fb923c"/>
+      <circle cx="40" cy="30" r="16" fill="#f97316"/>
+      <polygon points="28,18 22,2 34,14" fill="#f97316"/>
+      <polygon points="52,18 58,2 46,14" fill="#f97316"/>
+      <polygon points="29,17 24,5 33,14" fill="#fbbf24" opacity=".2"/>
+      <polygon points="51,17 56,5 47,14" fill="#fbbf24" opacity=".2"/>
+      <!-- Tabby stripes -->
+      <path d="M32,22 L36,18" stroke="#ea580c" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M48,22 L44,18" stroke="#ea580c" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M40,20 L40,16" stroke="#ea580c" stroke-width="1.5" stroke-linecap="round"/>
+      <ellipse cx="33" cy="28" rx="4" ry="4.5" fill="#22c55e"/>
+      <ellipse cx="47" cy="28" rx="4" ry="4.5" fill="#22c55e"/>
+      <ellipse cx="33" cy="28" rx="2" ry="3.5" fill="#1e1b4b"/>
+      <ellipse cx="47" cy="28" rx="2" ry="3.5" fill="#1e1b4b"/>
+      <ellipse cx="32" cy="26" rx="1" ry="1.5" fill="#fff" opacity=".7"/>
+      <ellipse cx="46" cy="26" rx="1" ry="1.5" fill="#fff" opacity=".7"/>
+      <path d="M38,34 L40,36 L42,34 Z" fill="#f9a8d4"/>
+      <path d="M40,36 L40,38" stroke="#9a3412" stroke-width=".8"/>
+      <path d="M37,39 Q40,41 43,39" stroke="#9a3412" stroke-width=".8" fill="none"/>
+      <line x1="24" y1="32" x2="10" y2="29" stroke="#fb923c" stroke-width=".7"/>
+      <line x1="24" y1="35" x2="10" y2="36" stroke="#fb923c" stroke-width=".7"/>
+      <line x1="56" y1="32" x2="70" y2="29" stroke="#fb923c" stroke-width=".7"/>
+      <line x1="56" y1="35" x2="70" y2="36" stroke="#fb923c" stroke-width=".7"/>
+      <path d="M22,52 Q10,40 14,30 Q16,26 18,30" stroke="#f97316" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <ellipse cx="40" cy="50" rx="8" ry="6" fill="#fbbf24" opacity=".15"/>
     </svg>`,
-    puppy: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="30" cy="40" rx="15" ry="12" fill="#a16207"/>
-      <circle cx="30" cy="22" r="13" fill="#a16207"/>
-      <ellipse cx="18" cy="16" rx="7" ry="10" fill="#92400e" transform="rotate(-15,18,16)"/>
-      <ellipse cx="42" cy="16" rx="7" ry="10" fill="#92400e" transform="rotate(15,42,16)"/>
-      <circle cx="24" cy="20" r="3.5" fill="#fff"/><circle cx="24" cy="20" r="1.5" fill="#1e1b4b"/>
-      <circle cx="36" cy="20" r="3.5" fill="#fff"/><circle cx="36" cy="20" r="1.5" fill="#1e1b4b"/>
-      <ellipse cx="30" cy="27" rx="4" ry="2.5" fill="#1e1b4b"/>
-      <path d="M26,31 Q30,37 34,31" stroke="#dc2626" stroke-width="1.5" fill="#ef4444" opacity=".7"/>
-      <path d="M44,48 Q52,42 48,38" stroke="#a16207" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    puppy: `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="40" cy="54" rx="20" ry="15" fill="#a16207"/>
+      <ellipse cx="28" cy="68" rx="5" ry="3" fill="#92400e"/>
+      <ellipse cx="52" cy="68" rx="5" ry="3" fill="#92400e"/>
+      <circle cx="40" cy="30" r="17" fill="#a16207"/>
+      <!-- Floppy ears -->
+      <ellipse cx="20" cy="26" rx="8" ry="14" fill="#92400e" transform="rotate(-15,20,26)"/>
+      <ellipse cx="60" cy="26" rx="8" ry="14" fill="#92400e" transform="rotate(15,60,26)"/>
+      <!-- Eye patches -->
+      <circle cx="33" cy="28" r="6" fill="#92400e" opacity=".3"/>
+      <circle cx="47" cy="28" r="6" fill="#fff" opacity=".2"/>
+      <!-- Eyes -->
+      <circle cx="33" cy="28" r="4.5" fill="#fff"/>
+      <circle cx="47" cy="28" r="4.5" fill="#fff"/>
+      <circle cx="34" cy="28" r="2.5" fill="#1e1b4b"/>
+      <circle cx="48" cy="28" r="2.5" fill="#1e1b4b"/>
+      <circle cx="34.5" cy="27" r=".8" fill="#fff"/>
+      <circle cx="48.5" cy="27" r=".8" fill="#fff"/>
+      <!-- Nose -->
+      <ellipse cx="40" cy="36" rx="4" ry="3" fill="#1e1b4b"/>
+      <ellipse cx="40" cy="35" rx="1.5" ry="1" fill="#fff" opacity=".3"/>
+      <!-- Mouth -->
+      <path d="M40,39 L40,42" stroke="#78350f" stroke-width="1"/>
+      <path d="M36,43 Q40,47 44,43" stroke="#78350f" stroke-width="1" fill="none"/>
+      <!-- Tongue -->
+      <path d="M38,43 Q40,48 42,43" fill="#ef4444" opacity=".7"/>
+      <!-- Tail -->
+      <path d="M58,50 Q68,42 64,34 Q62,30 60,34" stroke="#a16207" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <!-- Belly -->
+      <ellipse cx="40" cy="56" rx="10" ry="6" fill="#d2b48c" opacity=".25"/>
     </svg>`,
-    bird: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="30" cy="36" rx="12" ry="10" fill="#3b82f6"/>
-      <circle cx="30" cy="20" r="10" fill="#3b82f6"/>
-      <circle cx="35" cy="17" r="3" fill="#fff"/><circle cx="35" cy="17" r="1.2" fill="#1e1b4b"/>
-      <polygon points="40,20 50,17 40,24" fill="#f59e0b"/>
-      <path d="M18,32 Q8,24 12,36" stroke="#2563eb" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-      <path d="M18,36 Q10,30 14,40" stroke="#2563eb" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <line x1="25" y1="46" x2="25" y2="54" stroke="#f59e0b" stroke-width="2"/>
-      <line x1="35" y1="46" x2="35" y2="54" stroke="#f59e0b" stroke-width="2"/>
-      <path d="M23,54 L25,54 L27,54" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/>
-      <path d="M33,54 L35,54 L37,54" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/>
-      <ellipse cx="30" cy="34" rx="6" ry="4" fill="#93c5fd" opacity=".3"/>
+    bird: `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <!-- Body -->
+      <ellipse cx="40" cy="46" rx="14" ry="16" fill="#3b82f6"/>
+      <!-- Belly -->
+      <ellipse cx="40" cy="50" rx="9" ry="12" fill="#93c5fd" opacity=".4"/>
+      <!-- Head -->
+      <circle cx="40" cy="24" r="13" fill="#3b82f6"/>
+      <!-- Eye -->
+      <circle cx="46" cy="22" r="4" fill="#fff"/>
+      <circle cx="47" cy="22" r="2" fill="#1e1b4b"/>
+      <circle cx="47.5" cy="21" r=".7" fill="#fff"/>
+      <!-- Beak -->
+      <polygon points="52,26 62,22 52,30" fill="#f59e0b"/>
+      <line x1="52" y1="26" x2="60" y2="26" stroke="#d97706" stroke-width=".5"/>
+      <!-- Wings -->
+      <path d="M26,40 Q10,30 14,46 Q16,52 26,50" fill="#2563eb" opacity=".8"/>
+      <path d="M54,40 Q70,30 66,46 Q64,52 54,50" fill="#2563eb" opacity=".8"/>
+      <!-- Wing detail -->
+      <path d="M16,38 Q20,42 18,46" stroke="#1d4ed8" stroke-width=".8" fill="none"/>
+      <path d="M64,38 Q60,42 62,46" stroke="#1d4ed8" stroke-width=".8" fill="none"/>
+      <!-- Legs -->
+      <line x1="34" y1="60" x2="34" y2="72" stroke="#f59e0b" stroke-width="2.5"/>
+      <line x1="46" y1="60" x2="46" y2="72" stroke="#f59e0b" stroke-width="2.5"/>
+      <path d="M30,72 L34,72 L38,72" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+      <path d="M42,72 L46,72 L50,72" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+      <!-- Crown feathers -->
+      <circle cx="36" cy="12" r="2" fill="#60a5fa"/>
+      <circle cx="40" cy="10" r="2.5" fill="#3b82f6"/>
+      <circle cx="44" cy="12" r="2" fill="#60a5fa"/>
     </svg>`,
-    frog: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="30" cy="38" rx="16" ry="12" fill="#16a34a"/>
-      <ellipse cx="30" cy="24" rx="16" ry="12" fill="#22c55e"/>
-      <circle cx="22" cy="14" r="6" fill="#22c55e"/><circle cx="38" cy="14" r="6" fill="#22c55e"/>
-      <circle cx="22" cy="14" r="3.5" fill="#fff"/><circle cx="38" cy="14" r="3.5" fill="#fff"/>
-      <circle cx="22" cy="14" r="1.5" fill="#1e1b4b"/><circle cx="38" cy="14" r="1.5" fill="#1e1b4b"/>
-      <path d="M24,28 Q30,32 36,28" stroke="#15803d" stroke-width="1.5" fill="none"/>
-      <ellipse cx="22" cy="30" rx="2" ry="1" fill="#f87171" opacity=".3"/>
-      <ellipse cx="38" cy="30" rx="2" ry="1" fill="#f87171" opacity=".3"/>
-      <ellipse cx="16" cy="46" rx="6" ry="2.5" fill="#15803d" transform="rotate(-10,16,46)"/>
-      <ellipse cx="44" cy="46" rx="6" ry="2.5" fill="#15803d" transform="rotate(10,44,46)"/>
+    frog: `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <!-- Body -->
+      <ellipse cx="40" cy="48" rx="22" ry="16" fill="#16a34a"/>
+      <!-- Belly -->
+      <ellipse cx="40" cy="52" rx="14" ry="10" fill="#86efac" opacity=".3"/>
+      <!-- Head -->
+      <ellipse cx="40" cy="32" rx="20" ry="14" fill="#22c55e"/>
+      <!-- Bulging eyes -->
+      <circle cx="26" cy="20" r="8" fill="#22c55e"/>
+      <circle cx="54" cy="20" r="8" fill="#22c55e"/>
+      <circle cx="26" cy="20" r="5.5" fill="#fff"/>
+      <circle cx="54" cy="20" r="5.5" fill="#fff"/>
+      <circle cx="27" cy="19" r="2.5" fill="#1e1b4b"/>
+      <circle cx="55" cy="19" r="2.5" fill="#1e1b4b"/>
+      <circle cx="27.5" cy="18" r=".8" fill="#fff"/>
+      <circle cx="55.5" cy="18" r=".8" fill="#fff"/>
+      <!-- Wide smile -->
+      <path d="M26,38 Q40,46 54,38" stroke="#15803d" stroke-width="2" fill="none"/>
+      <!-- Blush -->
+      <ellipse cx="24" cy="36" rx="3.5" ry="2" fill="#f87171" opacity=".2"/>
+      <ellipse cx="56" cy="36" rx="3.5" ry="2" fill="#f87171" opacity=".2"/>
+      <!-- Nostrils -->
+      <circle cx="36" cy="30" r="1.2" fill="#15803d"/>
+      <circle cx="44" cy="30" r="1.2" fill="#15803d"/>
+      <!-- Front legs -->
+      <ellipse cx="22" cy="60" rx="7" ry="3.5" fill="#16a34a"/>
+      <ellipse cx="58" cy="60" rx="7" ry="3.5" fill="#16a34a"/>
+      <!-- Toes -->
+      <circle cx="17" cy="60" r="1.5" fill="#15803d"/>
+      <circle cx="20" cy="62" r="1.5" fill="#15803d"/>
+      <circle cx="60" cy="62" r="1.5" fill="#15803d"/>
+      <circle cx="63" cy="60" r="1.5" fill="#15803d"/>
+      <!-- Back leg hint -->
+      <ellipse cx="18" cy="52" rx="6" ry="10" fill="#15803d" opacity=".3" transform="rotate(-20,18,52)"/>
+      <ellipse cx="62" cy="52" rx="6" ry="10" fill="#15803d" opacity=".3" transform="rotate(20,62,52)"/>
     </svg>`,
-    owl: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="30" cy="38" rx="14" ry="13" fill="#78350f"/>
-      <ellipse cx="30" cy="22" rx="15" ry="14" fill="#92400e"/>
-      <circle cx="22" cy="20" r="7" fill="#fef3c7"/><circle cx="38" cy="20" r="7" fill="#fef3c7"/>
-      <circle cx="22" cy="20" r="3.5" fill="#f59e0b"/><circle cx="38" cy="20" r="3.5" fill="#f59e0b"/>
-      <circle cx="22" cy="20" r="1.5" fill="#1e1b4b"/><circle cx="38" cy="20" r="1.5" fill="#1e1b4b"/>
-      <polygon points="30,26 27,32 33,32" fill="#f59e0b"/>
-      <polygon points="18,10 14,2 24,10" fill="#92400e"/>
-      <polygon points="42,10 46,2 36,10" fill="#92400e"/>
-      <path d="M16,32 Q8,26 12,38" stroke="#78350f" stroke-width="2.5" fill="none"/>
-      <path d="M44,32 Q52,26 48,38" stroke="#78350f" stroke-width="2.5" fill="none"/>
-      <ellipse cx="30" cy="40" rx="8" ry="5" fill="#d2b48c" opacity=".35"/>
-      <line x1="24" y1="50" x2="24" y2="56" stroke="#f59e0b" stroke-width="2"/>
-      <line x1="36" y1="50" x2="36" y2="56" stroke="#f59e0b" stroke-width="2"/>
+    owl: `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <!-- Body -->
+      <ellipse cx="40" cy="52" rx="18" ry="18" fill="#78350f"/>
+      <!-- Belly feathers -->
+      <ellipse cx="40" cy="56" rx="12" ry="12" fill="#d2b48c" opacity=".3"/>
+      <path d="M34,48 Q40,44 46,48" stroke="#92400e" stroke-width=".8" fill="none" opacity=".4"/>
+      <path d="M32,54 Q40,50 48,54" stroke="#92400e" stroke-width=".8" fill="none" opacity=".4"/>
+      <path d="M34,60 Q40,56 46,60" stroke="#92400e" stroke-width=".8" fill="none" opacity=".4"/>
+      <!-- Head -->
+      <ellipse cx="40" cy="28" rx="20" ry="18" fill="#92400e"/>
+      <!-- Ear tufts -->
+      <polygon points="22,14 16,0 30,12" fill="#92400e"/>
+      <polygon points="58,14 64,0 50,12" fill="#92400e"/>
+      <polygon points="23,14 18,3 29,12" fill="#b45309" opacity=".3"/>
+      <polygon points="57,14 62,3 51,12" fill="#b45309" opacity=".3"/>
+      <!-- Facial disc -->
+      <circle cx="30" cy="26" r="9" fill="#fef3c7" opacity=".6"/>
+      <circle cx="50" cy="26" r="9" fill="#fef3c7" opacity=".6"/>
+      <!-- Eyes -->
+      <circle cx="30" cy="26" r="6" fill="#f59e0b"/>
+      <circle cx="50" cy="26" r="6" fill="#f59e0b"/>
+      <circle cx="30" cy="26" r="3" fill="#1e1b4b"/>
+      <circle cx="50" cy="26" r="3" fill="#1e1b4b"/>
+      <circle cx="31" cy="24.5" r="1" fill="#fff" opacity=".7"/>
+      <circle cx="51" cy="24.5" r="1" fill="#fff" opacity=".7"/>
+      <!-- Beak -->
+      <polygon points="40,32 37,38 43,38" fill="#f59e0b"/>
+      <!-- Wings -->
+      <path d="M22,44 Q12,36 16,54 Q18,60 24,58" fill="#78350f"/>
+      <path d="M58,44 Q68,36 64,54 Q62,60 56,58" fill="#78350f"/>
+      <!-- Feet -->
+      <path d="M32,68 L30,74 M32,68 L32,74 M32,68 L34,74" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+      <path d="M48,68 L46,74 M48,68 L48,74 M48,68 L50,74" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
     </svg>`,
-    dragon: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="30" cy="40" rx="13" ry="10" fill="#7c3aed"/>
-      <circle cx="30" cy="22" r="12" fill="#7c3aed"/>
-      <polygon points="22,12 18,0 26,10" fill="#8b5cf6"/>
-      <polygon points="38,12 42,0 34,10" fill="#8b5cf6"/>
-      <circle cx="24" cy="20" r="3" fill="#fbbf24"/><circle cx="24" cy="20" r="1.2" fill="#1e1b4b"/>
-      <circle cx="36" cy="20" r="3" fill="#fbbf24"/><circle cx="36" cy="20" r="1.2" fill="#1e1b4b"/>
-      <path d="M26,28 Q30,31 34,28" stroke="#5b21b6" stroke-width="1.5" fill="none"/>
-      <path d="M16,30 Q6,22 10,36" stroke="#7c3aed" stroke-width="3" fill="none" stroke-linecap="round"/>
-      <path d="M44,30 Q54,22 50,36" stroke="#7c3aed" stroke-width="3" fill="none" stroke-linecap="round"/>
-      <polygon points="30,10 28,16 32,16" fill="#ef4444" opacity=".7"/>
-      <path d="M44,48 Q52,44 50,38" stroke="#7c3aed" stroke-width="3" fill="none" stroke-linecap="round"/>
-      <polygon points="50,36 54,34 50,40" fill="#8b5cf6"/>
-      <ellipse cx="22" cy="40" rx="3" ry="1.5" fill="#5b21b6" opacity=".3"/>
-      <ellipse cx="38" cy="40" rx="3" ry="1.5" fill="#5b21b6" opacity=".3"/>
+    dragon: `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <!-- Body -->
+      <ellipse cx="38" cy="52" rx="18" ry="14" fill="#7c3aed"/>
+      <!-- Belly -->
+      <ellipse cx="38" cy="54" rx="10" ry="8" fill="#a78bfa" opacity=".25"/>
+      <!-- Belly scales -->
+      <path d="M32,50 Q38,48 44,50" stroke="#6d28d9" stroke-width=".6" fill="none" opacity=".4"/>
+      <path d="M33,54 Q38,52 43,54" stroke="#6d28d9" stroke-width=".6" fill="none" opacity=".4"/>
+      <!-- Head -->
+      <circle cx="40" cy="28" r="15" fill="#7c3aed"/>
+      <!-- Horns -->
+      <polygon points="28,16 22,0 34,14" fill="#8b5cf6"/>
+      <polygon points="52,16 58,0 46,14" fill="#8b5cf6"/>
+      <!-- Eyes -->
+      <ellipse cx="33" cy="26" rx="4" ry="4.5" fill="#fbbf24"/>
+      <ellipse cx="47" cy="26" rx="4" ry="4.5" fill="#fbbf24"/>
+      <ellipse cx="33" cy="26" rx="2" ry="3.5" fill="#1e1b4b"/>
+      <ellipse cx="47" cy="26" rx="2" ry="3.5" fill="#1e1b4b"/>
+      <ellipse cx="32" cy="24.5" rx=".8" ry="1.2" fill="#fff" opacity=".6"/>
+      <ellipse cx="46" cy="24.5" rx=".8" ry="1.2" fill="#fff" opacity=".6"/>
+      <!-- Nostrils -->
+      <ellipse cx="36" cy="34" rx="1.5" ry="1" fill="#5b21b6"/>
+      <ellipse cx="44" cy="34" rx="1.5" ry="1" fill="#5b21b6"/>
+      <!-- Mouth -->
+      <path d="M34,38 Q40,41 46,38" stroke="#5b21b6" stroke-width="1.2" fill="none"/>
+      <!-- Little flame -->
+      <path d="M40,14 Q38,8 40,4 Q42,8 40,14" fill="#ef4444" opacity=".6"/>
+      <path d="M40,14 Q39,10 40,7 Q41,10 40,14" fill="#fbbf24" opacity=".5"/>
+      <!-- Wings -->
+      <path d="M20,38 Q6,24 10,42 Q12,48 22,46" fill="#8b5cf6" opacity=".8"/>
+      <path d="M56,38 Q70,24 66,42 Q64,48 54,46" fill="#8b5cf6" opacity=".8"/>
+      <path d="M10,30 L16,38" stroke="#7c3aed" stroke-width=".8"/><path d="M10,36 L16,42" stroke="#7c3aed" stroke-width=".8"/>
+      <path d="M66,30 L60,38" stroke="#7c3aed" stroke-width=".8"/><path d="M66,36 L60,42" stroke="#7c3aed" stroke-width=".8"/>
+      <!-- Spines -->
+      <circle cx="40" cy="42" r="2" fill="#8b5cf6"/><circle cx="40" cy="47" r="1.8" fill="#8b5cf6"/><circle cx="40" cy="51" r="1.5" fill="#8b5cf6"/>
+      <!-- Tail -->
+      <path d="M56,54 Q66,48 64,40 Q62,36 58,40" stroke="#7c3aed" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <polygon points="58,38 62,34 56,42" fill="#8b5cf6"/>
+      <!-- Feet -->
+      <ellipse cx="28" cy="64" rx="5" ry="3" fill="#6d28d9"/>
+      <ellipse cx="48" cy="64" rx="5" ry="3" fill="#6d28d9"/>
     </svg>`,
-    horse: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="28" cy="38" rx="16" ry="12" fill="#92400e"/>
-      <ellipse cx="38" cy="20" rx="10" ry="14" fill="#92400e" transform="rotate(15,38,20)"/>
-      <polygon points="40,8 38,0 44,6" fill="#78350f"/>
-      <polygon points="44,8 42,0 48,6" fill="#78350f"/>
-      <circle cx="42" cy="16" r="2.5" fill="#1e1b4b"/><circle cx="42" cy="16" r=".8" fill="#fff"/>
-      <ellipse cx="46" cy="22" rx="4" ry="2.5" fill="#78350f"/>
-      <circle cx="47" cy="21" r="1" fill="#1e1b4b"/>
-      <path d="M34,6 Q30,0 26,6 Q24,10 28,8 Q30,4 32,8 Q34,10 36,6" stroke="#4a2c0a" stroke-width="1.8" fill="none"/>
-      <line x1="18" y1="48" x2="18" y2="56" stroke="#78350f" stroke-width="3" stroke-linecap="round"/>
-      <line x1="26" y1="50" x2="26" y2="56" stroke="#78350f" stroke-width="3" stroke-linecap="round"/>
-      <line x1="32" y1="50" x2="32" y2="56" stroke="#78350f" stroke-width="3" stroke-linecap="round"/>
-      <line x1="38" y1="48" x2="38" y2="56" stroke="#78350f" stroke-width="3" stroke-linecap="round"/>
-      <path d="M14,38 Q6,34 8,42" stroke="#4a2c0a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    horse: `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <!-- Body -->
+      <ellipse cx="36" cy="50" rx="22" ry="14" fill="#92400e"/>
+      <!-- Head + neck -->
+      <path d="M50,44 Q54,34 52,22 Q50,14 46,12 Q40,10 38,14 Q36,18 38,24 Q40,30 44,34 Q48,38 50,44" fill="#92400e"/>
+      <!-- Muzzle -->
+      <ellipse cx="42" cy="22" rx="6" ry="4" fill="#a16207"/>
+      <!-- Nostril -->
+      <circle cx="40" cy="22" r="1.2" fill="#78350f"/>
+      <!-- Eye -->
+      <circle cx="48" cy="18" r="3" fill="#1e1b4b"/>
+      <circle cx="48.5" cy="17" r="1" fill="#fff"/>
+      <!-- Ears -->
+      <polygon points="46,10 44,2 50,8" fill="#92400e"/>
+      <polygon points="50,10 52,2 54,8" fill="#92400e"/>
+      <polygon points="47,10 45,4 49,8" fill="#b45309" opacity=".3"/>
+      <!-- Mane -->
+      <path d="M48,8 Q44,4 42,10 Q40,14 38,10 Q36,6 34,12 Q32,16 30,12 Q28,8 28,16 Q28,20 32,22" stroke="#4a2c0a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <!-- Legs -->
+      <line x1="22" y1="60" x2="22" y2="74" stroke="#78350f" stroke-width="4" stroke-linecap="round"/>
+      <line x1="32" y1="62" x2="32" y2="74" stroke="#78350f" stroke-width="4" stroke-linecap="round"/>
+      <line x1="42" y1="62" x2="42" y2="74" stroke="#78350f" stroke-width="4" stroke-linecap="round"/>
+      <line x1="50" y1="60" x2="50" y2="74" stroke="#78350f" stroke-width="4" stroke-linecap="round"/>
+      <!-- Hooves -->
+      <rect x="19" y="72" width="6" height="3" rx="1.5" fill="#4a2c0a"/>
+      <rect x="29" y="72" width="6" height="3" rx="1.5" fill="#4a2c0a"/>
+      <rect x="39" y="72" width="6" height="3" rx="1.5" fill="#4a2c0a"/>
+      <rect x="47" y="72" width="6" height="3" rx="1.5" fill="#4a2c0a"/>
+      <!-- Tail -->
+      <path d="M14,48 Q6,42 8,34 Q10,28 12,32 Q14,36 12,40" stroke="#4a2c0a" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M14,48 Q8,44 10,38" stroke="#4a2c0a" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <!-- Belly -->
+      <ellipse cx="36" cy="52" rx="12" ry="6" fill="#b45309" opacity=".15"/>
     </svg>`,
-    hamster: `<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="30" cy="38" rx="15" ry="11" fill="#f5d0a9"/>
-      <circle cx="30" cy="22" r="13" fill="#f5d0a9"/>
-      <ellipse cx="19" cy="14" rx="5" ry="7" fill="#f5d0a9"/>
-      <ellipse cx="41" cy="14" rx="5" ry="7" fill="#f5d0a9"/>
-      <ellipse cx="19" cy="14" rx="3" ry="4.5" fill="#fce7f3"/>
-      <ellipse cx="41" cy="14" rx="3" ry="4.5" fill="#fce7f3"/>
-      <circle cx="24" cy="20" r="2.8" fill="#1e1b4b"/><circle cx="24" cy="19" r=".9" fill="#fff"/>
-      <circle cx="36" cy="20" r="2.8" fill="#1e1b4b"/><circle cx="36" cy="19" r=".9" fill="#fff"/>
-      <ellipse cx="30" cy="26" rx="2" ry="1.2" fill="#f9a8d4"/>
-      <ellipse cx="22" cy="28" rx="6" ry="4" fill="#fde68a" opacity=".25"/>
-      <ellipse cx="38" cy="28" rx="6" ry="4" fill="#fde68a" opacity=".25"/>
-      <line x1="20" y1="24" x2="10" y2="22" stroke="#e7c9a5" stroke-width=".8"/>
-      <line x1="40" y1="24" x2="50" y2="22" stroke="#e7c9a5" stroke-width=".8"/>
+    hamster: `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <!-- Body -->
+      <ellipse cx="40" cy="52" rx="20" ry="16" fill="#f5d0a9"/>
+      <!-- Head -->
+      <circle cx="40" cy="30" r="18" fill="#f5d0a9"/>
+      <!-- Ears -->
+      <ellipse cx="24" cy="18" rx="7" ry="9" fill="#f5d0a9"/>
+      <ellipse cx="56" cy="18" rx="7" ry="9" fill="#f5d0a9"/>
+      <ellipse cx="24" cy="18" rx="4.5" ry="6" fill="#fce7f3"/>
+      <ellipse cx="56" cy="18" rx="4.5" ry="6" fill="#fce7f3"/>
+      <!-- Cheek pouches -->
+      <ellipse cx="24" cy="36" rx="8" ry="6" fill="#fde68a" opacity=".3"/>
+      <ellipse cx="56" cy="36" rx="8" ry="6" fill="#fde68a" opacity=".3"/>
+      <!-- Eyes -->
+      <circle cx="32" cy="28" r="4" fill="#1e1b4b"/>
+      <circle cx="48" cy="28" r="4" fill="#1e1b4b"/>
+      <circle cx="33" cy="26.5" r="1.3" fill="#fff"/>
+      <circle cx="49" cy="26.5" r="1.3" fill="#fff"/>
+      <!-- Nose -->
+      <ellipse cx="40" cy="34" rx="2" ry="1.5" fill="#f9a8d4"/>
+      <!-- Mouth -->
+      <path d="M38,36 Q40,38 42,36" stroke="#d4a373" stroke-width=".8" fill="none"/>
+      <!-- Whiskers -->
+      <line x1="26" y1="34" x2="14" y2="32" stroke="#e7c9a5" stroke-width=".6"/>
+      <line x1="26" y1="36" x2="14" y2="37" stroke="#e7c9a5" stroke-width=".6"/>
+      <line x1="54" y1="34" x2="66" y2="32" stroke="#e7c9a5" stroke-width=".6"/>
+      <line x1="54" y1="36" x2="66" y2="37" stroke="#e7c9a5" stroke-width=".6"/>
+      <!-- Front paws -->
+      <ellipse cx="30" cy="64" rx="5" ry="3" fill="#e7c9a5"/>
+      <ellipse cx="50" cy="64" rx="5" ry="3" fill="#e7c9a5"/>
+      <!-- Belly -->
+      <ellipse cx="40" cy="54" rx="12" ry="8" fill="#fff" opacity=".15"/>
+      <!-- Back marking -->
+      <path d="M30,20 Q40,16 50,20" stroke="#d4a373" stroke-width="2" fill="none" opacity=".3"/>
     </svg>`,
   };
 
@@ -506,12 +686,13 @@ const WLScientist = (() => {
         background:rgba(200,230,255,.12);
         border:2px solid rgba(100,180,255,.3);
         border-radius:16px;
-        padding:8px;
+        padding:10px;
         box-shadow:inset 0 0 20px rgba(100,180,255,.08), 0 4px 12px rgba(0,0,0,.1);
         backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
         display:flex; align-items:center; justify-content:center;
         position:relative; overflow:hidden;
         margin-bottom:8px;
+        z-index:25;
       }
       .pet-tank::before {
         content:''; position:absolute; top:4px; left:10%; right:10%; height:3px;
@@ -527,7 +708,7 @@ const WLScientist = (() => {
         font-size:7px; font-weight:900; letter-spacing:.12em; text-transform:uppercase;
         color:rgba(100,180,255,.5); z-index:1;
       }
-      #petCharWrap { width:70px; height:70px; transition:transform .2s; z-index:1; }
+      #petCharWrap { width:160px; height:160px; transition:transform .2s; z-index:26; }
       #petCharWrap svg { width:100%; height:100%; }
       #petCharWrap.pet-idle { animation:petIdle 2.5s ease-in-out infinite; }
       #petCharWrap.pet-correct { animation:petJump .6s ease-out; }
