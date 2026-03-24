@@ -210,8 +210,40 @@ async function initAccount() {
   if (school.stripe_customer_id) {
     document.getElementById('portalBtnWrap').style.display = '';
 
-    // Fetch next billing date from Stripe via subscription metadata
-    // We'll get this from the portal instead to keep it simple
+    // Fetch subscription details from Stripe
+    try {
+      const { data: { session: authSession } } = await WordLabData._sb().auth.getSession();
+      if (authSession) {
+        const subResp = await fetch(SUPABASE_URL + '/functions/v1/get-subscription', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + authSession.access_token,
+          },
+          body: '{}',
+        });
+        const subData = await subResp.json();
+        if (subData.subscription) {
+          const sub = subData.subscription;
+          const renewDate = new Date(sub.current_period_end * 1000);
+          const daysUntilRenew = Math.ceil((renewDate - Date.now()) / 86400000);
+          const renewEl = document.getElementById('acctRenew');
+
+          if (sub.cancel_at_period_end) {
+            renewEl.innerHTML = '<span style="color:var(--orange);">Cancels on ' +
+              renewDate.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }) +
+              ' (' + daysUntilRenew + ' day' + (daysUntilRenew === 1 ? '' : 's') + ' left)</span>';
+          } else {
+            renewEl.textContent = renewDate.toLocaleDateString('en-AU', {
+              day: 'numeric', month: 'long', year: 'numeric'
+            }) + ' (' + daysUntilRenew + ' day' + (daysUntilRenew === 1 ? '' : 's') + ')';
+          }
+          document.getElementById('renewRow').style.display = '';
+        }
+      }
+    } catch (e) {
+      console.warn('Could not fetch subscription details:', e);
+    }
   }
 
   // Show upgrade button if on trial or expired
