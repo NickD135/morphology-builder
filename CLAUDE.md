@@ -345,10 +345,10 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 
 #### 1.7 Update RLS policies
 - [x] `classes` — SELECT open (students need it); INSERT/UPDATE/DELETE require auth.uid() = auth_user_id
-- [ ] `students` — can only access via class they own (Phase 2 — needs school_id)
-- [ ] `student_progress` — scoped to teacher's students (Phase 2)
-- [ ] `student_character` — same (Phase 2)
-- [ ] `shop_items` — teacher-scoped (Phase 2)
+- [x] `students` — SELECT open (anon login), INSERT/UPDATE/DELETE scoped to teacher's school
+- [x] `student_progress` — SELECT open, writes via RPC only, DELETE scoped to teacher's school
+- [x] `student_character` — SELECT/INSERT/UPDATE open (anon students), DELETE scoped to teacher's school
+- [x] `shop_items` — SELECT open, INSERT/UPDATE/DELETE scoped to teacher's school
 - [ ] Test RLS by logging in as two different teacher accounts and confirming isolation
 
 #### 1.8 Navigation updates
@@ -375,7 +375,7 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 - [x] `getClasses()` — filters by `school_id` (via teacher record cache)
 - [x] `createClass()` — includes `school_id` on insert
 - [ ] `shop_items` queries — filter by `school_id` (Phase 6 — when shop is expanded)
-- [ ] Dashboard queries — students scoped via class→school chain (RLS handles this at DB level)
+- [x] Dashboard queries — students scoped via class→school chain (RLS handles this at DB level)
 
 #### 2.4 Update RLS policies for school isolation
 - [x] `classes` INSERT/UPDATE/DELETE — scoped to teacher's school_id
