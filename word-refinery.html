@@ -219,7 +219,7 @@
 
     /* The actual cline track */
     .cline-track{
-      position:relative; height:16px; border-radius:8px;
+      position:relative; height:48px; border-radius:12px;
       background:linear-gradient(90deg,
         rgba(100,116,139,.3) 0%,
         rgba(100,116,139,.3) 33%,
@@ -244,26 +244,25 @@
     /* Slots on the track */
     .cline-slot{
       position:absolute; top:50%; transform:translate(-50%,-50%);
-      width:14px; height:14px; border-radius:50%;
-      background:rgba(180,83,9,.15); border:2px dashed rgba(180,83,9,.4);
+      min-width:60px; height:36px; border-radius:10px;
+      background:rgba(180,83,9,.1); border:2px dashed rgba(180,83,9,.4);
       cursor:pointer; transition:all .2s; z-index:2;
+      display:flex; align-items:center; justify-content:center;
     }
-    .cline-slot:hover{ border-color:#f59e0b; background:rgba(245,158,11,.2); }
-    .cline-slot.filled{ background:rgba(180,83,9,.5); border-color:#f59e0b; border-style:solid; }
+    .cline-slot:hover, .cline-slot.drag-over{ border-color:#f59e0b; background:rgba(245,158,11,.2); transform:translate(-50%,-50%) scale(1.08); }
+    .cline-slot.filled{ background:rgba(180,83,9,.4); border-color:#f59e0b; border-style:solid; }
     .cline-slot.correct{ background:rgba(22,163,74,.4)!important; border-color:#4ade80!important; border-style:solid!important; box-shadow:0 0 10px rgba(74,222,128,.4); }
     .cline-slot.wrong{ background:rgba(220,38,38,.4)!important; border-color:#f87171!important; border-style:solid!important; }
     .slot-word-label{
-      position:absolute; top:20px; left:50%; transform:translateX(-50%);
-      font-size:10px; font-weight:800; color:#fde68a; white-space:nowrap;
+      font-size:11px; font-weight:800; color:#fde68a; white-space:nowrap;
       pointer-events:none; text-shadow:0 1px 4px rgba(0,0,0,.8);
     }
     .slot-num-label{
-      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-      font-size:8px; font-weight:900; color:rgba(180,83,9,.6); pointer-events:none;
+      font-size:9px; font-weight:900; color:rgba(180,83,9,.5); pointer-events:none;
     }
 
     /* Anchor words at each end */
-    .cline-anchors{ display:flex; justify-content:space-between; margin-top:28px; }
+    .cline-anchors{ display:flex; justify-content:space-between; margin-top:12px; }
     .cline-anchor{
       font-size:13px; font-weight:900; padding:6px 14px; border-radius:10px;
       max-width:30%;
@@ -288,9 +287,19 @@
       cursor:pointer; transition:all .15s; user-select:none;
       font-family:'Lexend',sans-serif;
     }
-    .missing-word:hover:not(.placed){ background:rgba(180,83,9,.28); border-color:#f59e0b; transform:translateY(-2px); }
+    .missing-word:hover:not(.placed):not(.dragging){ background:rgba(180,83,9,.28); border-color:#f59e0b; transform:translateY(-2px); }
     .missing-word.selected{ background:rgba(180,83,9,.45); border-color:#fbbf24; box-shadow:0 0 12px rgba(245,158,11,.35); }
     .missing-word.placed{ opacity:.3; cursor:default; transform:none; }
+    .missing-word.dragging{ opacity:.4; transform:scale(.95); }
+    .drag-ghost{
+      position:fixed; z-index:9999; pointer-events:none;
+      padding:8px 18px; border-radius:12px;
+      border:2px solid #fbbf24; background:rgba(146,64,14,.9);
+      color:#fde68a; font-size:14px; font-weight:900;
+      font-family:'Lexend',sans-serif;
+      box-shadow:0 8px 24px rgba(0,0,0,.5), 0 0 16px rgba(245,158,11,.3);
+      transform:translate(-50%,-50%);
+    }
     .missing-word.correct-placed{ background:rgba(22,163,74,.2); border-color:#4ade80; color:#86efac; opacity:1; }
     .missing-word.wrong-placed{ background:rgba(220,38,38,.2); border-color:#f87171; color:#fca5a5; opacity:1; }
 
@@ -298,8 +307,9 @@
     .fixed-word{
       position:absolute; top:50%; transform:translate(-50%,-50%);
       background:rgba(13,7,0,.85); border:1.5px solid rgba(180,83,9,.5);
-      border-radius:999px; padding:3px 10px;
-      font-size:10px; font-weight:900; color:#f59e0b;
+      border-radius:10px; padding:6px 14px; height:36px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:11px; font-weight:900; color:#f59e0b;
       white-space:nowrap; pointer-events:none; z-index:3;
       box-shadow:0 2px 8px rgba(0,0,0,.4);
     }
@@ -806,6 +816,86 @@ const CLINES = [
     clue:"From measuring up to formally expressing in numbers",
     explain:"measure (T1) → count → calculate → assess → evaluate → quantify (T3)"
   },
+  {
+    category:"Hiding",
+    leftAnchor:"hide", rightAnchor:"obscure",
+    words:["hide","cover","mask","conceal","camouflage","obscure"],
+    gaps:[2,3,4],
+    clue:"From hiding something to making it impossible to see",
+    explain:"hide (T1) → cover → mask → conceal → camouflage → obscure (T3 — make unclear or hard to perceive)"
+  },
+  {
+    category:"Fixing",
+    leftAnchor:"fix", rightAnchor:"rectify",
+    words:["fix","mend","repair","restore","remedy","rectify"],
+    gaps:[2,3,4],
+    clue:"From a quick fix to formally putting something right",
+    explain:"fix (T1) → mend → repair → restore → remedy → rectify (T3 — correct formally)"
+  },
+  {
+    category:"Wanting",
+    leftAnchor:"want", rightAnchor:"covet",
+    words:["want","wish","desire","crave","yearn","covet"],
+    gaps:[2,3,4],
+    clue:"From wanting something to deeply longing for it",
+    explain:"want (T1) → wish → desire → crave → yearn → covet (T3 — desire enviously)"
+  },
+  {
+    category:"Eating",
+    leftAnchor:"eat", rightAnchor:"devour",
+    words:["eat","munch","feast","consume","gorge","devour"],
+    gaps:[2,3,4],
+    clue:"From having a bite to eating with fierce hunger",
+    explain:"eat (T1) → munch → feast → consume → gorge → devour (T3 — eat greedily)"
+  },
+  {
+    category:"Running",
+    leftAnchor:"run", rightAnchor:"sprint",
+    words:["run","jog","dash","race","bolt","sprint"],
+    gaps:[2,3,4],
+    clue:"From a gentle run to maximum speed",
+    explain:"run (T1) → jog → dash → race → bolt → sprint (T3 — run at top speed)"
+  },
+  {
+    category:"Talking Quietly",
+    leftAnchor:"whisper", rightAnchor:"murmur",
+    words:["whisper","hush","mutter","mumble","breathe","murmur"],
+    gaps:[2,3,4],
+    clue:"From barely making a sound to soft, flowing speech",
+    explain:"whisper (T1) → hush → mutter → mumble → breathe → murmur (T3 — speak softly and indistinctly)"
+  },
+  {
+    category:"Being Scared",
+    leftAnchor:"scared", rightAnchor:"petrified",
+    words:["scared","afraid","frightened","alarmed","terrified","petrified"],
+    gaps:[2,3,4],
+    clue:"From a little fright to being frozen with fear",
+    explain:"scared (T1) → afraid → frightened → alarmed → terrified → petrified (T3 — paralysed with fear)"
+  },
+  {
+    category:"Being Happy",
+    leftAnchor:"happy", rightAnchor:"euphoric",
+    words:["happy","glad","pleased","delighted","elated","euphoric"],
+    gaps:[2,3,4],
+    clue:"From a smile to overwhelming joy",
+    explain:"happy (T1) → glad → pleased → delighted → elated → euphoric (T3 — intensely happy)"
+  },
+  {
+    category:"Being Angry",
+    leftAnchor:"angry", rightAnchor:"incensed",
+    words:["angry","annoyed","cross","furious","enraged","incensed"],
+    gaps:[2,3,4],
+    clue:"From mild annoyance to absolute fury",
+    explain:"angry (T1) → annoyed → cross → furious → enraged → incensed (T3 — extremely angry)"
+  },
+  {
+    category:"Teaching",
+    leftAnchor:"teach", rightAnchor:"enlighten",
+    words:["teach","show","instruct","educate","mentor","enlighten"],
+    gaps:[2,3,4],
+    clue:"From showing someone how to deep understanding",
+    explain:"teach (T1) → show → instruct → educate → mentor → enlighten (T3 — bring knowledge and understanding)"
+  },
 ];
 
 // Extension mode clines — more abstract, higher academic demand
@@ -850,6 +940,30 @@ const EXT_CLINES = [
     clue:"From simple improvement to formal reduction of suffering",
     explain:"improve (T1) → fix → restore → enhance → rectify → ameliorate (T3)"
   },
+  {
+    category:"Spreading Ideas",
+    leftAnchor:"share", rightAnchor:"disseminate",
+    words:["share","spread","broadcast","circulate","propagate","disseminate"],
+    gaps:[1,2,3,4],
+    clue:"From sharing casually to formally distributing information widely",
+    explain:"share (T1) → spread → broadcast → circulate → propagate → disseminate (T3)"
+  },
+  {
+    category:"Predicting",
+    leftAnchor:"guess", rightAnchor:"prognosticate",
+    words:["guess","predict","expect","anticipate","forecast","prognosticate"],
+    gaps:[2,3,4],
+    clue:"From a wild guess to a formal expert prediction",
+    explain:"guess (T1) → predict → expect → anticipate → forecast → prognosticate (T3 — foretell formally)"
+  },
+  {
+    category:"Criticising",
+    leftAnchor:"criticise", rightAnchor:"excoriate",
+    words:["criticise","blame","condemn","censure","denounce","excoriate"],
+    gaps:[2,3,4],
+    clue:"From pointing out faults to severe public criticism",
+    explain:"criticise (T1) → blame → condemn → censure → denounce → excoriate (T3 — criticise harshly)"
+  },
 ];
 
 // Full-order mode — students arrange all words (harder)
@@ -877,6 +991,22 @@ const ORDER_CLINES = [
     gaps:[1,2,3,4],
     clue:"Arrange from everyday to academic language",
     explain:"enough (T1) → plenty → sufficient → adequate → ample → commensurate (T3 — proportionate)"
+  },
+  {
+    category:"Being Brave",
+    leftAnchor:"brave", rightAnchor:"intrepid",
+    words:["brave","bold","daring","courageous","valiant","intrepid"],
+    gaps:[1,2,3,4],
+    clue:"Arrange from simple bravery to fearless exploration",
+    explain:"brave (T1) → bold → daring → courageous → valiant → intrepid (T3 — fearlessly adventurous)"
+  },
+  {
+    category:"Being Clever",
+    leftAnchor:"clever", rightAnchor:"astute",
+    words:["clever","smart","bright","intelligent","shrewd","astute"],
+    gaps:[1,2,3,4],
+    clue:"Arrange from casual cleverness to sharp judgement",
+    explain:"clever (T1) → smart → bright → intelligent → shrewd → astute (T3 — sharply perceptive)"
   },
 ];
 
@@ -999,6 +1129,15 @@ function buildClineTrack(c){
       slot.appendChild(wordLbl);
 
       slot.addEventListener('click', () => placeInSlot(i, slot, wordLbl));
+      // Drop target for drag-and-drop
+      slot.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; slot.classList.add('drag-over'); });
+      slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
+      slot.addEventListener('drop', e => {
+        e.preventDefault();
+        slot.classList.remove('drag-over');
+        const word = e.dataTransfer.getData('text/plain');
+        if(word){ selectedWord = word; placeInSlot(i, slot, wordLbl); }
+      });
       clineTrackEl.appendChild(slot);
     }
   });
@@ -1015,15 +1154,91 @@ function buildMissingPool(c){
     tile.className = 'missing-word';
     tile.textContent = word;
     tile.dataset.word = word;
+    tile.setAttribute('draggable','true');
     tile.addEventListener('click', () => selectWord(tile));
+    // Drag start
+    tile.addEventListener('dragstart', e => {
+      if(tile.classList.contains('placed')) { e.preventDefault(); return; }
+      e.dataTransfer.setData('text/plain', word);
+      e.dataTransfer.effectAllowed = 'move';
+      dragWord = word;
+      dragTile = tile;
+      setTimeout(() => tile.classList.add('dragging'), 0);
+    });
+    tile.addEventListener('dragend', () => {
+      tile.classList.remove('dragging');
+      dragWord = null; dragTile = null;
+      document.querySelectorAll('.cline-slot.drag-over').forEach(s => s.classList.remove('drag-over'));
+    });
+    // Touch drag support
+    tile.addEventListener('touchstart', e => {
+      if(tile.classList.contains('placed')) return;
+      e.preventDefault();
+      dragWord = word;
+      dragTile = tile;
+      tile.classList.add('dragging');
+      const ghost = document.createElement('div');
+      ghost.className = 'drag-ghost';
+      ghost.id = 'dragGhost';
+      ghost.textContent = word;
+      document.body.appendChild(ghost);
+      const t = e.touches[0];
+      ghost.style.left = t.clientX + 'px';
+      ghost.style.top = t.clientY + 'px';
+    }, {passive:false});
     missingPoolEl.appendChild(tile);
   });
 
   document.getElementById('missingLabel').textContent =
     gameMode === 'fill'
-      ? 'Tap a word below then tap its position on the cline above'
-      : 'Tap a word then tap its position on the cline above';
+      ? 'Drag words into position on the cline — or tap to select then tap a slot'
+      : 'Drag words into position — or tap to select then tap a slot';
 }
+
+// Drag state
+let dragWord = null, dragTile = null;
+
+// Touch move/end handlers (global)
+document.addEventListener('touchmove', function(e){
+  const ghost = document.getElementById('dragGhost');
+  if(!ghost || !dragWord) return;
+  e.preventDefault();
+  const t = e.touches[0];
+  ghost.style.left = t.clientX + 'px';
+  ghost.style.top = t.clientY + 'px';
+  // Highlight slot under finger
+  document.querySelectorAll('.cline-slot').forEach(s => {
+    const r = s.getBoundingClientRect();
+    if(t.clientX >= r.left && t.clientX <= r.right && t.clientY >= r.top && t.clientY <= r.bottom){
+      s.classList.add('drag-over');
+    } else {
+      s.classList.remove('drag-over');
+    }
+  });
+}, {passive:false});
+
+document.addEventListener('touchend', function(e){
+  const ghost = document.getElementById('dragGhost');
+  if(!ghost || !dragWord) return;
+  ghost.remove();
+  if(dragTile) dragTile.classList.remove('dragging');
+  // Find slot under touch
+  const t = e.changedTouches[0];
+  let hitSlot = null;
+  document.querySelectorAll('.cline-slot').forEach(s => {
+    s.classList.remove('drag-over');
+    const r = s.getBoundingClientRect();
+    if(t.clientX >= r.left && t.clientX <= r.right && t.clientY >= r.top && t.clientY <= r.bottom){
+      hitSlot = s;
+    }
+  });
+  if(hitSlot && dragWord){
+    selectedWord = dragWord;
+    const idx = parseInt(hitSlot.dataset.index);
+    placeInSlot(idx, hitSlot, hitSlot.querySelector('.slot-word-label'));
+  }
+  dragWord = null; dragTile = null;
+});
 
 function selectWord(tile){
   if(tile.classList.contains('placed')) return;
