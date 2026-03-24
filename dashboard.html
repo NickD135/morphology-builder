@@ -1791,17 +1791,17 @@ function renderWordListsTab(){
         </div>
 
         <div style="margin-bottom:10px;">
-          <label style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);display:block;margin-bottom:6px;">Words (one per line — see format below)</label>
-          <textarea id="wlNewWords" rows="8" placeholder="unhappiness, not being happy, un, happy, ness, un·hap·pi·ness, u·n·h·a·p·i·n·e·s&#10;careful, full of care, , care, ful, care·ful, c·air·f·u·l" style="border:2px solid var(--line);border-radius:14px;padding:12px 14px;font-size:13px;width:100%;font-family:'Lexend',sans-serif;resize:vertical;outline:none;"></textarea>
-          <div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:4px;line-height:1.7;">
-            <strong>Format:</strong> word, clue, prefix, base, suffix, syllables, phonemes<br>
-            <strong>Breakdown Blitz:</strong> needs word + clue + prefix + base + suffix (leave prefix/suffix blank if none)<br>
-            <strong>Syllable Splitter:</strong> add syllables separated by · (e.g. <code>un·hap·pi·ness</code>)<br>
-            <strong>Phoneme Splitter:</strong> add phonemes separated by · (e.g. <code>u·n·h·a·p·i·n·e·s</code>)
-          </div>
+          <label style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);display:block;margin-bottom:6px;">Words (one per line — just the words, AI will do the rest)</label>
+          <textarea id="wlNewWords" rows="6" placeholder="unhappiness&#10;careful&#10;replaying&#10;submarine&#10;midnight" style="border:2px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14px;width:100%;font-family:'Lexend',sans-serif;resize:vertical;outline:none;"></textarea>
+          <div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:4px;">Type one word per line. AI will generate clues, morpheme breakdowns, syllable splits, and phoneme splits automatically.</div>
         </div>
 
-        <button onclick="dashCreateWordList()" style="border:none;background:var(--indigo);color:#fff;font-weight:900;font-size:14px;padding:12px 24px;border-radius:14px;cursor:pointer;font-family:'Lexend',sans-serif;">Create Word List &rarr;</button>
+        <div id="wlPreview" style="display:none;margin-bottom:12px;"></div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button onclick="dashAnalyzeWords()" id="wlAnalyzeBtn" style="border:none;background:var(--indigo);color:#fff;font-weight:900;font-size:14px;padding:12px 24px;border-radius:14px;cursor:pointer;font-family:'Lexend',sans-serif;">🤖 Generate Breakdowns</button>
+          <button onclick="dashCreateWordList()" id="wlCreateBtn" style="display:none;border:none;background:#16a34a;color:#fff;font-weight:900;font-size:14px;padding:12px 24px;border-radius:14px;cursor:pointer;font-family:'Lexend',sans-serif;">✓ Save Word List</button>
+        </div>
         <div id="wlStatus" style="display:none;border-radius:14px;padding:12px 16px;font-size:13px;font-weight:800;margin-top:10px;"></div>
       </div>
     </div></div>
@@ -1895,9 +1895,86 @@ async function dashLoadWordLists(){
   }
 }
 
+// Store AI-analyzed words for saving
+var _wlAnalyzedWords = null;
+
+async function dashAnalyzeWords(){
+  const raw = document.getElementById('wlNewWords').value.trim();
+  const statusEl = document.getElementById('wlStatus');
+  const btn = document.getElementById('wlAnalyzeBtn');
+  const preview = document.getElementById('wlPreview');
+
+  function showStatus(msg, isError){
+    statusEl.textContent = msg;
+    statusEl.style.display = 'block';
+    statusEl.style.background = isError ? '#fef2f2' : '#f0fdf4';
+    statusEl.style.border = isError ? '2px solid #fecaca' : '2px solid #bbf7d0';
+    statusEl.style.color = isError ? '#dc2626' : '#166534';
+    if(!isError) setTimeout(() => statusEl.style.display = 'none', 4000);
+  }
+
+  if(!raw){ showStatus('Please enter at least one word.', true); return; }
+
+  var words = raw.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+  if(!words.length){ showStatus('No words found.', true); return; }
+  if(words.length > 30){ showStatus('Maximum 30 words per list.', true); return; }
+
+  btn.disabled = true;
+  btn.textContent = '🤖 Analyzing ' + words.length + ' words...';
+  preview.style.display = 'none';
+  _wlAnalyzedWords = null;
+
+  try {
+    const { data: { session } } = await WordLabData._sb().auth.getSession();
+    if(!session) throw new Error('Not logged in');
+
+    const resp = await fetch('https://qutsbcfkgiihcwaktsaz.supabase.co/functions/v1/analyze-words', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token,
+      },
+      body: JSON.stringify({ words: words }),
+    });
+
+    const data = await resp.json();
+    if(data.error) throw new Error(data.error);
+    if(!data.words || !data.words.length) throw new Error('No results returned');
+
+    _wlAnalyzedWords = data.words;
+
+    // Show preview
+    preview.innerHTML = '<div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--indigo);margin-bottom:8px;">Preview — check and edit if needed</div>' +
+      '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+      '<tr style="background:var(--indigo-soft);"><th style="padding:6px 8px;text-align:left;font-weight:900;color:var(--indigo);">Word</th><th style="padding:6px 8px;text-align:left;">Clue</th><th style="padding:6px 8px;text-align:left;">Prefix</th><th style="padding:6px 8px;text-align:left;">Base</th><th style="padding:6px 8px;text-align:left;">Suffix</th><th style="padding:6px 8px;text-align:left;">Syllables</th><th style="padding:6px 8px;text-align:left;">Phonemes</th></tr>' +
+      data.words.map(function(w, i){
+        return '<tr style="border-bottom:1px solid var(--line);">' +
+          '<td style="padding:6px 8px;font-weight:800;color:#312e81;">' + (w.word||'') + '</td>' +
+          '<td style="padding:6px 8px;">' + (w.clue||'') + '</td>' +
+          '<td style="padding:6px 8px;color:var(--indigo);">' + (w.prefix||'—') + '</td>' +
+          '<td style="padding:6px 8px;font-weight:800;">' + (w.base||'') + '</td>' +
+          '<td style="padding:6px 8px;color:#d97706;">' + (w.suffix1||'—') + (w.suffix2 ? ' + ' + w.suffix2 : '') + '</td>' +
+          '<td style="padding:6px 8px;">' + (w.syllables ? w.syllables.join('·') : '—') + '</td>' +
+          '<td style="padding:6px 8px;">' + (w.phonemes ? w.phonemes.join('·') : '—') + '</td>' +
+          '</tr>';
+      }).join('') +
+      '</table></div>';
+    preview.style.display = 'block';
+
+    // Show save button
+    document.getElementById('wlCreateBtn').style.display = '';
+    showStatus('AI analysis complete! Review the preview, then click Save.', false);
+
+  } catch(e){
+    showStatus('AI error: ' + (e.message || e), true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🤖 Generate Breakdowns';
+  }
+}
+
 async function dashCreateWordList(){
   const name = document.getElementById('wlNewName').value.trim();
-  const raw = document.getElementById('wlNewWords').value.trim();
   const statusEl = document.getElementById('wlStatus');
 
   // Determine selected games
@@ -1924,52 +2001,22 @@ async function dashCreateWordList(){
 
   if(!currentClass){ showStatus('No class selected.', true); return; }
   if(!name){ showStatus('Please enter a list name.', true); return; }
-  if(!raw){ showStatus('Please enter at least one word.', true); return; }
   if(!games.length){ showStatus('Please select at least one target game.', true); return; }
   if(assignMode === 'selected' && !selectedStudents.length){ showStatus('Please select at least one student.', true); return; }
 
-  const words = raw.split('\n').map(line => {
-    const parts = line.split(',').map(p => p.trim());
-    if(parts.length < 2) return null;
-    var w = { word: parts[0] };
-    // Breakdown fields
-    if(parts.length >= 4){
-      w.clue = parts[1] || '';
-      w.prefix = parts[2] || '';
-      w.base = parts[3] || parts[0];
-      w.suffix1 = parts[4] || '';
-      w.suffix2 = parts[5] || '';
-    }
-    // Syllables (field 6 or after suffix2)
-    var syllField = parts.length >= 7 ? parts[6] : (parts.length === 6 ? parts[5] : '');
-    // If breakdown used 6 fields (suffix2), syllables is field 7
-    if(parts.length >= 5){
-      syllField = parts[5] || '';
-      if(parts.length >= 7) syllField = parts[6] || '';
-    }
-    // Phonemes
-    var phonField = '';
-    if(parts.length >= 8) phonField = parts[7] || '';
-    else if(parts.length === 7) phonField = parts[6] || '';
+  // Use AI-analyzed words if available, otherwise parse from textarea
+  var words = _wlAnalyzedWords;
+  if(!words || !words.length){
+    var raw = document.getElementById('wlNewWords').value.trim();
+    if(!raw){ showStatus('Please enter words and click Generate Breakdowns first.', true); return; }
+    // Simple fallback: just word names
+    words = raw.split('\n').map(function(l){
+      var w = l.trim();
+      return w ? { word: w, base: w } : null;
+    }).filter(Boolean);
+  }
 
-    // Parse syllables (dot-separated)
-    if(syllField && syllField.indexOf('·') !== -1){
-      w.syllables = syllField.split('·').map(function(s){ return s.trim(); }).filter(Boolean);
-    } else if(syllField && syllField.indexOf('.') !== -1){
-      w.syllables = syllField.split('.').map(function(s){ return s.trim(); }).filter(Boolean);
-    }
-
-    // Parse phonemes (dot-separated)
-    if(phonField && phonField.indexOf('·') !== -1){
-      w.phonemes = phonField.split('·').map(function(s){ return s.trim(); }).filter(Boolean);
-    } else if(phonField && phonField.indexOf('.') !== -1){
-      w.phonemes = phonField.split('.').map(function(s){ return s.trim(); }).filter(Boolean);
-    }
-
-    return w;
-  }).filter(Boolean);
-
-  if(!words.length){ showStatus('No valid words found.', true); return; }
+  if(!words.length){ showStatus('No words found.', true); return; }
 
   try {
     const { data: inserted, error } = await dbSb().from('class_word_lists').insert({
