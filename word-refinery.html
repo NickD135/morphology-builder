@@ -1,0 +1,1251 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Labs – The Refinery</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#f5f5f5; --panel:#ffffff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b;
+      --amber:#b45309; --amber-2:#d97706; --amber-soft:#fffbeb; --amber-line:#fde68a; --amber-text:#78350f;
+      --copper:#92400e; --copper-2:#b45309;
+      --ok:#15803d; --warn:#b45309; --bad:#dc2626;
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:'Lexend',sans-serif; background:var(--bg); color:var(--text); line-height:1.6; letter-spacing:.02em; }
+    button,input{ font:inherit; }
+
+    /* ── Distillery / Refinery Lab scene ── */
+    html,body{ width:100%; height:100%; overflow:hidden; }
+    .lab-scene{ position:fixed; inset:0; z-index:0; display:flex; flex-direction:column; pointer-events:none; }
+
+    /* Warm dark amber/copper wall */
+    .lab-wall{
+      flex:0 0 62%; background:#1a0e04; position:relative; overflow:hidden;
+    }
+    /* Brick texture suggestion */
+    .lab-wall::before{
+      content:''; position:absolute; inset:0;
+      background:
+        repeating-linear-gradient(0deg, transparent 0, transparent 23px, rgba(180,83,9,.06) 24px),
+        repeating-linear-gradient(90deg, transparent 0, transparent 47px, rgba(180,83,9,.04) 48px);
+    }
+    /* Warm ambient glow from copper vats */
+    .lab-wall::after{
+      content:''; position:absolute; inset:0;
+      background:
+        radial-gradient(ellipse 40% 50% at 20% 80%, rgba(245,158,11,.12) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 50% at 80% 80%, rgba(245,158,11,.10) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 30% at 50% 100%, rgba(180,83,9,.08) 0%, transparent 60%);
+    }
+
+    /* Purity gauge at top — like a distillation column progress */
+    .purity-meter{
+      position:absolute; top:5%; left:50%; transform:translateX(-50%);
+      width:220px; background:#0d0700; border:2px solid #92400e; border-radius:8px;
+      padding:8px 14px; box-shadow:0 0 20px rgba(180,83,9,.2);
+      text-align:center;
+    }
+    .purity-label{ font-size:7px; font-weight:900; letter-spacing:.2em; color:#f59e0b; text-transform:uppercase; margin-bottom:6px; }
+    .purity-track-wrap{ display:flex; align-items:center; gap:6px; }
+    .purity-end{ font-size:8px; font-weight:900; }
+    .purity-end.t1{ color:#94a3b8; }
+    .purity-end.t3{ color:#fbbf24; }
+    .purity-track{ flex:1; height:8px; background:#1a0e04; border-radius:4px; position:relative; border:1px solid rgba(180,83,9,.3); overflow:hidden; }
+    .purity-fill{
+      height:100%; border-radius:4px;
+      background:linear-gradient(90deg,#374151,#78350f,#b45309,#d97706,#f59e0b,#fbbf24);
+      width:100%;
+    }
+    .purity-cursor{
+      position:absolute; top:50%; width:12px; height:12px; border-radius:50%;
+      background:#fbbf24; transform:translate(-50%,-50%);
+      box-shadow:0 0 8px rgba(251,191,36,.8);
+      left:50%;
+      transition:left .5s cubic-bezier(.34,1.56,.64,1);
+      animation:cursorPulse 2s ease-in-out infinite;
+    }
+    @keyframes cursorPulse{ 0%,100%{box-shadow:0 0 4px rgba(251,191,36,.5)} 50%{box-shadow:0 0 14px rgba(251,191,36,1)} }
+
+    /* Distillation column on left wall */
+    .distill-column{
+      position:absolute; left:18px; top:8%; width:28px; height:75%;
+      background:#1a0a02; border:2px solid #92400e; border-radius:6px;
+      display:flex; flex-direction:column;
+    }
+    .distill-band{
+      flex:1; border-radius:2px; margin:2px;
+      opacity:0.7;
+    }
+
+    /* Pipe network */
+    .pipes-svg{ position:absolute; inset:0; width:100%; height:100%; }
+
+    /* Wall shelves / gauges */
+    .gauge-panel{
+      position:absolute; background:#0d0700; border:1.5px solid #92400e;
+      border-radius:6px; padding:8px 10px;
+      box-shadow:0 0 10px rgba(180,83,9,.15);
+    }
+    .gauge-label{ font-size:7px; font-weight:900; letter-spacing:.15em; color:#f59e0b; text-transform:uppercase; margin-bottom:4px; }
+    .gauge-val{ font-size:14px; font-weight:900; color:#fbbf24; text-align:center; font-family:'Lexend',monospace; }
+    .gauge-unit{ font-size:7px; color:#92400e; text-align:center; font-weight:700; }
+
+    /* Tier label badges on wall */
+    .tier-badge{
+      position:absolute; border-radius:6px; padding:5px 10px; text-align:center;
+    }
+
+    /* Copper vats on floor level */
+    .vat-glow{ animation:vatGlow 3s ease-in-out infinite; }
+    @keyframes vatGlow{ 0%,100%{opacity:.6} 50%{opacity:1} }
+
+    /* Steam particles */
+    .steam{ animation:steamRise 2.5s ease-out infinite; transform-origin:center bottom; }
+    .steam2{ animation:steamRise 2.5s ease-out infinite 0.8s; }
+    .steam3{ animation:steamRise 2.5s ease-out infinite 1.6s; }
+    @keyframes steamRise{
+      0%{opacity:0;transform:translateY(0) scaleX(1)}
+      30%{opacity:0.5}
+      100%{opacity:0;transform:translateY(-40px) scaleX(1.5)}
+    }
+
+    /* Floor — stone/industrial */
+    .lab-floor{
+      flex:0 0 38%;
+      background:repeating-linear-gradient(90deg,#1a0e04 0,#1a0e04 50px,#140b02 50px,#140b02 100px);
+      position:relative; border-top:4px solid #92400e;
+      box-shadow:0 -4px 24px rgba(180,83,9,.2);
+    }
+    .floor-heat{
+      position:absolute; top:0; left:0; right:0; height:50px;
+      background:linear-gradient(180deg,rgba(245,158,11,.08) 0%,transparent 100%);
+    }
+    .lab-bench-ref{
+      position:absolute; bottom:0; height:70%; width:160px;
+      background:#0d0700; border-top:6px solid #92400e; border-radius:4px 4px 0 0;
+    }
+    .lab-bench-ref.left{ left:10px; }
+    .lab-bench-ref.right{ right:10px; }
+    .bench-top-ref{
+      position:absolute; top:-14px; left:-6px; right:-6px; height:14px;
+      background:#92400e; border-radius:4px 4px 0 0; border-top:2px solid #b45309;
+    }
+
+    /* Steam/smoke particles */
+    #particles{ position:fixed; inset:0; pointer-events:none; z-index:1; overflow:hidden; }
+    .particle{ position:absolute; bottom:-10px; border-radius:50%; animation:particleFloat linear infinite; }
+    @keyframes particleFloat{ from{transform:translateY(0) translateX(0);opacity:.6;} to{transform:translateY(calc(-100vh - 20px)) translateX(var(--dx,8px));opacity:0;} }
+
+    /* ── Header ── */
+    .header{ position:fixed!important; top:0!important; left:0!important; right:0!important; width:100%!important; z-index:50; background:rgba(13,7,0,.8)!important; backdrop-filter:blur(12px)!important; -webkit-backdrop-filter:blur(12px)!important; border-bottom:1px solid rgba(180,83,9,.3)!important; box-shadow:0 1px 12px rgba(180,83,9,.1)!important; padding:0!important; }
+    .headerInner{ padding:0 20px!important; height:56px!important; display:flex!important; align-items:center!important; justify-content:space-between; gap:12px; flex-wrap:wrap; max-width:none!important; }
+    .brand{ display:flex; align-items:center; gap:12px; flex-shrink:0; }
+    .brandIcon{ width:36px!important; height:36px!important; border-radius:10px; background:#92400e!important; color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px!important; box-shadow:0 0 12px rgba(180,83,9,.4); }
+    .brandText h1{ margin:0; font-size:15px!important; font-weight:900; color:#fde68a!important; }
+    .brandText .sub{ font-size:9px; text-transform:uppercase; letter-spacing:.22em; color:#f59e0b!important; font-weight:900; margin-top:2px; display:block; }
+    .hud{ display:flex; gap:8px; align-items:center; flex-wrap:nowrap!important; overflow-x:auto!important; }
+    .hud::-webkit-scrollbar{ display:none; }
+    .pill{ display:inline-flex; align-items:center; justify-content:center; min-height:32px!important; border:1px solid rgba(180,83,9,.3)!important; border-radius:999px; background:rgba(180,83,9,.12)!important; padding:6px 14px; font-size:12px!important; font-weight:800; color:#fde68a!important; white-space:nowrap; flex-shrink:0; }
+    .pill.score{ background:rgba(180,83,9,.4)!important; color:#fde68a!important; border-color:transparent!important; }
+    .pill.streak{ background:rgba(251,146,60,.15)!important; color:#fed7aa!important; border-color:rgba(251,146,60,.3)!important; }
+    .topBtn{ border:none; background:rgba(180,83,9,.2)!important; color:#fde68a!important; font-weight:800; font-size:11px!important; text-transform:uppercase; letter-spacing:.12em; padding:8px 14px!important; border-radius:10px!important; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; white-space:nowrap; flex-shrink:0; transition:background .15s; }
+    .topBtn:hover{ background:rgba(180,83,9,.35)!important; }
+    #wlLoginBtn{ border:1px solid rgba(180,83,9,.3)!important; background:rgba(180,83,9,.12)!important; color:#fde68a!important; border-radius:10px!important; white-space:nowrap!important; flex-shrink:0!important; }
+
+    /* ── Game panel ── */
+    .wrap{
+      position:fixed!important; top:56px!important; bottom:0!important; left:50%!important;
+      transform:translateX(-50%)!important; width:78vw!important; max-width:none!important;
+      margin:0!important; z-index:10; display:flex!important; flex-direction:column!important;
+      justify-content:center!important; padding:16px 0!important; overflow-y:auto;
+    }
+    .wrap::-webkit-scrollbar{ width:0; }
+
+    .panel{
+      background:rgba(13,7,0,.9)!important;
+      backdrop-filter:blur(16px)!important; -webkit-backdrop-filter:blur(16px)!important;
+      border:2px solid rgba(180,83,9,.4)!important;
+      box-shadow:0 16px 48px rgba(0,0,0,.6), 0 0 0 1px rgba(180,83,9,.1), inset 0 1px 0 rgba(245,158,11,.1)!important;
+      border-radius:20px!important;
+    }
+    .panelInner{ padding:18px 24px!important; }
+
+    /* Heat bar — like a furnace temperature gauge */
+    .bar{ width:100%; height:8px!important; background:rgba(180,83,9,.12)!important; border-radius:999px; overflow:hidden; }
+    .barFill{ height:100%; width:100%; background:linear-gradient(90deg,#1e3a5f 0%,#374151 20%,#78350f 50%,#d97706 75%,#fbbf24 100%); transition:width .2s linear; border-radius:999px; }
+
+    /* Tier tabs */
+    .modeSel{
+      border:1.5px solid rgba(180,83,9,.3); background:rgba(180,83,9,.08); border-radius:10px;
+      padding:7px 16px; font-weight:800; font-size:11px; text-transform:uppercase;
+      letter-spacing:.1em; cursor:pointer; color:#f59e0b;
+      font-family:'Lexend',sans-serif; transition:all .15s;
+    }
+    .modeSel.active{ background:#92400e!important; color:#fde68a!important; border-color:#92400e!important; box-shadow:0 0 14px rgba(180,83,9,.5); }
+    .modeSel:hover:not(.active){ border-color:rgba(180,83,9,.5); color:#fde68a; }
+
+    /* Cline display */
+    .clineLabel{
+      font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.22em;
+      color:#f59e0b; text-align:center; margin-bottom:4px;
+    }
+    .clineCategory{
+      font-size:clamp(18px,4vw,32px); font-weight:900; color:#fde68a;
+      text-align:center; letter-spacing:-.02em; line-height:1;
+      text-shadow:0 0 30px rgba(245,158,11,.3);
+      margin:4px 0 6px;
+    }
+    .clineClue{
+      font-size:13px; font-weight:600; color:#d97706; text-align:center; margin-bottom:14px; line-height:1.5;
+    }
+    .clineClue strong{ color:#f59e0b; }
+
+    /* THE CLINE BAR — the core mechanic */
+    .cline-wrap{ margin:0 0 16px; }
+
+    .cline-tier-labels{
+      display:flex; justify-content:space-between; margin-bottom:8px;
+    }
+    .tier-label-pill{
+      padding:4px 12px; border-radius:999px; font-size:10px; font-weight:900;
+      text-transform:uppercase; letter-spacing:.1em;
+    }
+    .tier-label-pill.t1{ background:rgba(100,116,139,.2); border:1.5px solid rgba(100,116,139,.4); color:#94a3b8; }
+    .tier-label-pill.t2{ background:rgba(180,83,9,.2); border:1.5px solid rgba(180,83,9,.4); color:#f59e0b; }
+    .tier-label-pill.t3{ background:rgba(251,191,36,.15); border:1.5px solid rgba(251,191,36,.4); color:#fbbf24; }
+
+    /* The actual cline track */
+    .cline-track{
+      position:relative; height:16px; border-radius:8px;
+      background:linear-gradient(90deg,
+        rgba(100,116,139,.3) 0%,
+        rgba(100,116,139,.3) 33%,
+        rgba(180,83,9,.3) 33%,
+        rgba(180,83,9,.3) 66%,
+        rgba(251,191,36,.2) 66%,
+        rgba(251,191,36,.2) 100%
+      );
+      border:1.5px solid rgba(180,83,9,.25);
+      margin-bottom:4px;
+    }
+    /* Tier zone dividers */
+    .cline-track::before{
+      content:''; position:absolute; left:33.33%; top:0; bottom:0; width:2px;
+      background:rgba(180,83,9,.4); border-radius:0;
+    }
+    .cline-track::after{
+      content:''; position:absolute; left:66.66%; top:0; bottom:0; width:2px;
+      background:rgba(251,191,36,.35); border-radius:0;
+    }
+
+    /* Slots on the track */
+    .cline-slot{
+      position:absolute; top:50%; transform:translate(-50%,-50%);
+      width:14px; height:14px; border-radius:50%;
+      background:rgba(180,83,9,.15); border:2px dashed rgba(180,83,9,.4);
+      cursor:pointer; transition:all .2s; z-index:2;
+    }
+    .cline-slot:hover{ border-color:#f59e0b; background:rgba(245,158,11,.2); }
+    .cline-slot.filled{ background:rgba(180,83,9,.5); border-color:#f59e0b; border-style:solid; }
+    .cline-slot.correct{ background:rgba(22,163,74,.4)!important; border-color:#4ade80!important; border-style:solid!important; box-shadow:0 0 10px rgba(74,222,128,.4); }
+    .cline-slot.wrong{ background:rgba(220,38,38,.4)!important; border-color:#f87171!important; border-style:solid!important; }
+    .slot-word-label{
+      position:absolute; top:20px; left:50%; transform:translateX(-50%);
+      font-size:10px; font-weight:800; color:#fde68a; white-space:nowrap;
+      pointer-events:none; text-shadow:0 1px 4px rgba(0,0,0,.8);
+    }
+    .slot-num-label{
+      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+      font-size:8px; font-weight:900; color:rgba(180,83,9,.6); pointer-events:none;
+    }
+
+    /* Anchor words at each end */
+    .cline-anchors{ display:flex; justify-content:space-between; margin-top:28px; }
+    .cline-anchor{
+      font-size:13px; font-weight:900; padding:6px 14px; border-radius:10px;
+      max-width:30%;
+    }
+    .cline-anchor.left{ background:rgba(100,116,139,.2); border:1.5px solid rgba(100,116,139,.4); color:#94a3b8; text-align:left; }
+    .cline-anchor.right{ background:rgba(251,191,36,.15); border:1.5px solid rgba(251,191,36,.4); color:#fbbf24; text-align:right; }
+    .anchor-tier{ font-size:8px; font-weight:700; opacity:.7; display:block; margin-bottom:2px; letter-spacing:.1em; text-transform:uppercase; }
+
+    /* MISSING WORDS to place */
+    .missing-words-label{
+      font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.15em;
+      color:#92400e; text-align:center; margin:14px 0 8px;
+    }
+    .missing-words-pool{
+      display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;
+    }
+    .missing-word{
+      padding:8px 16px; border-radius:12px;
+      border:2px solid rgba(180,83,9,.4);
+      background:rgba(180,83,9,.12); color:#fde68a;
+      font-size:14px; font-weight:900;
+      cursor:pointer; transition:all .15s; user-select:none;
+      font-family:'Lexend',sans-serif;
+    }
+    .missing-word:hover:not(.placed){ background:rgba(180,83,9,.28); border-color:#f59e0b; transform:translateY(-2px); }
+    .missing-word.selected{ background:rgba(180,83,9,.45); border-color:#fbbf24; box-shadow:0 0 12px rgba(245,158,11,.35); }
+    .missing-word.placed{ opacity:.3; cursor:default; transform:none; }
+    .missing-word.correct-placed{ background:rgba(22,163,74,.2); border-color:#4ade80; color:#86efac; opacity:1; }
+    .missing-word.wrong-placed{ background:rgba(220,38,38,.2); border-color:#f87171; color:#fca5a5; opacity:1; }
+
+    /* FIXED WORDS shown on the cline */
+    .fixed-word{
+      position:absolute; top:50%; transform:translate(-50%,-50%);
+      background:rgba(13,7,0,.85); border:1.5px solid rgba(180,83,9,.5);
+      border-radius:999px; padding:3px 10px;
+      font-size:10px; font-weight:900; color:#f59e0b;
+      white-space:nowrap; pointer-events:none; z-index:3;
+      box-shadow:0 2px 8px rgba(0,0,0,.4);
+    }
+
+    /* Feedback */
+    .feedback{ min-height:24px; text-align:center; font-size:20px; font-weight:900; }
+    .feedback.ok{ color:#4ade80; }
+    .feedback.bad{ color:#f87171; }
+    .subFeedback{ min-height:20px; text-align:center; color:#d97706; font-weight:700; margin-top:4px; line-height:1.5; font-size:13px; }
+
+    /* Buttons */
+    .actionRow{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:14px; }
+    .secondaryBtn{ border:1.5px solid rgba(180,83,9,.35); background:rgba(180,83,9,.1); color:#d97706; font-weight:800; font-size:12px; padding:10px 18px; border-radius:12px; cursor:pointer; text-transform:uppercase; letter-spacing:.08em; transition:all .15s; font-family:'Lexend',sans-serif; }
+    .secondaryBtn:hover{ background:rgba(180,83,9,.2); }
+    .primaryBtn{ border:none; background:#92400e; color:#fde68a; font-weight:900; font-size:12px; padding:12px 28px; border-radius:12px; cursor:pointer; text-transform:uppercase; letter-spacing:.08em; box-shadow:0 8px 20px rgba(180,83,9,.4); transition:all .15s; font-family:'Lexend',sans-serif; }
+    .primaryBtn:hover{ background:#b45309; transform:translateY(-1px); }
+
+    /* Scientist */
+    .scientist-stage{ position:fixed; right:0; width:calc((100vw - 78vw)/2); top:56px; bottom:0; z-index:11; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    #sciCharWrap{ width:120px; height:150px; display:flex; align-items:flex-end; justify-content:center; animation:sciIdle 3s ease-in-out infinite; }
+    #sciCharWrap.sci-correct{ animation:sciJump .6s ease-out; }
+    #sciCharWrap.sci-wrong{ animation:sciShake .5s ease-out; }
+    #sciCharWrap.sci-streak{ animation:sciDance .8s ease-in-out infinite; }
+    @keyframes sciIdle{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+    @keyframes sciJump{0%{transform:translateY(0)}30%{transform:translateY(-22px)}100%{transform:translateY(0)}}
+    @keyframes sciShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-4deg) translateX(-4px)}40%{transform:rotate(4deg) translateX(4px)}60%{transform:rotate(-3deg) translateX(-3px)}80%{transform:rotate(2deg)}}
+    @keyframes sciDance{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+
+    .scene-prop-left{ position:fixed; left:0; width:calc((100vw - 78vw)/2); top:56px; bottom:0; z-index:11; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; }
+
+    .flashSuccess{ box-shadow:0 0 0 3px rgba(74,222,128,.5), 0 16px 48px rgba(0,0,0,.6)!important; border-color:rgba(74,222,128,.5)!important; }
+    .flashFail{ box-shadow:0 0 0 3px rgba(248,113,113,.4), 0 16px 48px rgba(0,0,0,.6)!important; border-color:rgba(248,113,113,.4)!important; }
+
+    @media(max-width:700px){
+      .lab-scene{ display:none; }
+      body{ background:linear-gradient(160deg,#1a0800 0%,#78350f 60%,#d97706 100%)!important; overflow-y:auto!important; }
+      .wrap{ width:calc(100vw - 24px)!important; position:relative!important; top:auto; bottom:auto; left:auto; transform:none; justify-content:flex-start!important; padding-top:72px!important; }
+      .scientist-stage,.scene-prop-left{ display:none!important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Distillery / Refinery Lab Scene ── -->
+<div class="lab-scene" aria-hidden="true">
+  <div class="lab-wall">
+
+    <!-- Purity meter at top centre -->
+    <div class="purity-meter">
+      <div class="purity-label">⚗️ Refinery Output — Purity Grade</div>
+      <div class="purity-track-wrap">
+        <span class="purity-end t1">T1</span>
+        <div class="purity-track">
+          <div class="purity-fill"></div>
+          <div class="purity-cursor" id="purityCursor"></div>
+        </div>
+        <span class="purity-end t3">T3</span>
+      </div>
+    </div>
+
+    <!-- Distillation column - left wall -->
+    <div class="distill-column">
+      <div class="distill-band" style="background:#374151;flex:2;"></div>
+      <div class="distill-band" style="background:#78350f;flex:2;"></div>
+      <div class="distill-band" style="background:#b45309;flex:2;"></div>
+      <div class="distill-band" style="background:#d97706;flex:2;"></div>
+      <div class="distill-band" style="background:#f59e0b;flex:2;"></div>
+      <div class="distill-band" style="background:#fbbf24;flex:1;"></div>
+    </div>
+
+    <!-- Pipe network SVG -->
+    <svg class="pipes-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <!-- Main horizontal pipe -->
+      <rect x="5" y="48" width="90" height="4" fill="none" stroke="#92400e" stroke-width=".4"/>
+      <!-- Vertical feeds -->
+      <rect x="20" y="20" width="2" height="28" fill="none" stroke="#78350f" stroke-width=".3"/>
+      <rect x="40" y="15" width="2" height="33" fill="none" stroke="#78350f" stroke-width=".3"/>
+      <rect x="60" y="25" width="2" height="23" fill="none" stroke="#78350f" stroke-width=".3"/>
+      <rect x="80" y="18" width="2" height="30" fill="none" stroke="#78350f" stroke-width=".3"/>
+      <!-- Pipe joints -->
+      <circle cx="20" cy="48" r="1.5" fill="#92400e" opacity=".6"/>
+      <circle cx="40" cy="48" r="1.5" fill="#92400e" opacity=".6"/>
+      <circle cx="60" cy="48" r="1.5" fill="#92400e" opacity=".6"/>
+      <circle cx="80" cy="48" r="1.5" fill="#92400e" opacity=".6"/>
+      <!-- Drop lines to vats -->
+      <rect x="20" y="52" width="2" height="20" fill="none" stroke="#78350f" stroke-width=".3"/>
+      <rect x="80" y="52" width="2" height="20" fill="none" stroke="#78350f" stroke-width=".3"/>
+    </svg>
+
+    <!-- Tier labels on wall -->
+    <div class="tier-badge" style="left:60px;top:55%;background:rgba(100,116,139,.12);border:1px solid rgba(100,116,139,.3);">
+      <div style="font-size:8px;font-weight:900;color:#64748b;letter-spacing:.15em;">TIER 1</div>
+      <div style="font-size:7px;color:#475569;font-weight:700;">Everyday</div>
+    </div>
+    <div class="tier-badge" style="left:50%;transform:translateX(-50%);top:55%;background:rgba(180,83,9,.12);border:1px solid rgba(180,83,9,.3);">
+      <div style="font-size:8px;font-weight:900;color:#f59e0b;letter-spacing:.15em;">TIER 2</div>
+      <div style="font-size:7px;color:#d97706;font-weight:700;">Academic</div>
+    </div>
+    <div class="tier-badge" style="right:60px;top:55%;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);">
+      <div style="font-size:8px;font-weight:900;color:#fbbf24;letter-spacing:.15em;">TIER 3</div>
+      <div style="font-size:7px;color:#f59e0b;font-weight:700;">Specialist</div>
+    </div>
+
+    <!-- Gauges on right wall area -->
+    <div class="gauge-panel" style="right:20px;top:10%;">
+      <div class="gauge-label">Temp °C</div>
+      <div class="gauge-val">847°</div>
+      <div class="gauge-unit">FURNACE</div>
+    </div>
+    <div class="gauge-panel" style="right:20px;top:30%;">
+      <div class="gauge-label">Pressure</div>
+      <div class="gauge-val">2.4</div>
+      <div class="gauge-unit">BAR</div>
+    </div>
+    <div class="gauge-panel" style="right:20px;top:50%;">
+      <div class="gauge-label">Purity</div>
+      <div class="gauge-val" id="wallPurity">T1</div>
+      <div class="gauge-unit">OUTPUT</div>
+    </div>
+
+    <!-- Wall shelf equipment -->
+    <div style="position:absolute;top:65%;left:60px;right:160px;height:5px;background:#3d1a05;border-bottom:2px solid #78350f;"></div>
+    <div style="position:absolute;top:65%;left:60px;display:flex;align-items:flex-end;gap:12px;padding-bottom:5px;">
+      <!-- Alembic flask -->
+      <svg width="30" height="48" viewBox="0 0 30 48">
+        <path d="M12 6 L8 20 L2 40 Q2 48 8 48 L22 48 Q28 48 28 40 L22 20 L18 6Z" fill="#f59e0b" opacity="0.7"/>
+        <rect x="10" y="0" width="10" height="8" rx="2" fill="#92400e"/>
+        <ellipse cx="15" cy="36" rx="10" ry="3" fill="rgba(251,191,36,.5)"/>
+        <ellipse class="steam" cx="15" cy="2" rx="4" ry="2.5" fill="rgba(255,255,255,.25)"/>
+      </svg>
+      <!-- Test tube rack -->
+      <svg width="44" height="42" viewBox="0 0 44 42">
+        <rect x="0" y="0" width="44" height="6" rx="2" fill="#78350f"/>
+        <rect x="0" y="36" width="44" height="6" rx="2" fill="#78350f"/>
+        <rect x="6" y="6" width="6" height="30" rx="3" fill="#374151" opacity=".8"/>
+        <rect x="6" y="6" width="6" height="20" rx="3" fill="#94a3b8" opacity=".5"/>
+        <rect x="16" y="6" width="6" height="30" rx="3" fill="#92400e" opacity=".8"/>
+        <rect x="16" y="6" width="6" height="14" rx="3" fill="#f59e0b" opacity=".6"/>
+        <rect x="26" y="6" width="6" height="30" rx="3" fill="#b45309" opacity=".8"/>
+        <rect x="26" y="6" width="6" height="22" rx="3" fill="#d97706" opacity=".6"/>
+        <rect x="36" y="6" width="6" height="30" rx="3" fill="#78350f" opacity=".8"/>
+        <rect x="36" y="6" width="6" height="28" rx="3" fill="#fbbf24" opacity=".5"/>
+      </svg>
+      <!-- Round-bottom flask -->
+      <svg width="28" height="44" viewBox="0 0 28 44">
+        <rect x="10" y="0" width="8" height="12" rx="2" fill="#92400e"/>
+        <rect x="8" y="10" width="12" height="8" rx="2" fill="#78350f"/>
+        <circle cx="14" cy="32" r="12" fill="#d97706" opacity="0.75"/>
+        <ellipse cx="14" cy="28" rx="8" ry="3" fill="rgba(251,191,36,.4)"/>
+        <ellipse class="steam2" cx="14" cy="2" rx="3.5" ry="2" fill="rgba(255,255,255,.2)"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Floor -->
+  <div class="lab-floor">
+    <div class="floor-heat"></div>
+
+    <!-- Left vat -->
+    <div class="lab-bench-ref left"><div class="bench-top-ref"></div></div>
+    <!-- Right vat -->
+    <div class="lab-bench-ref right"><div class="bench-top-ref"></div></div>
+
+    <!-- Left copper vat on bench -->
+    <svg style="position:absolute;left:14px;bottom:0;" width="148" height="130" viewBox="0 0 148 130">
+      <!-- Vat body -->
+      <rect x="10" y="20" width="128" height="90" rx="8" fill="#1a0800" stroke="#92400e" stroke-width="2"/>
+      <!-- Copper shine bands -->
+      <rect x="10" y="20" width="128" height="12" rx="8" fill="#b45309" opacity=".6"/>
+      <rect x="10" y="98" width="128" height="12" rx="8" fill="#92400e" opacity=".5"/>
+      <!-- Liquid inside -->
+      <rect x="12" y="35" width="124" height="72" rx="4" fill="#78350f" opacity=".4"/>
+      <ellipse class="vat-glow" cx="74" cy="50" rx="55" ry="20" fill="#f59e0b" opacity=".08"/>
+      <!-- Steam rising -->
+      <ellipse class="steam" cx="40" cy="22" rx="8" ry="4" fill="rgba(255,200,100,.2)"/>
+      <ellipse class="steam2" cx="74" cy="20" rx="10" ry="5" fill="rgba(255,200,100,.15)"/>
+      <ellipse class="steam3" cx="110" cy="22" rx="8" ry="4" fill="rgba(255,200,100,.2)"/>
+      <!-- Pipe fitting -->
+      <rect x="60" y="10" width="28" height="12" rx="4" fill="#78350f" stroke="#92400e" stroke-width="1"/>
+      <!-- Liquid level line -->
+      <line x1="12" y1="60" x2="136" y2="60" stroke="rgba(245,158,11,.2)" stroke-width="1"/>
+      <!-- Label -->
+      <rect x="28" y="75" width="92" height="22" rx="4" fill="rgba(13,7,0,.7)"/>
+      <text x="74" y="90" text-anchor="middle" font-family="Lexend,sans-serif" font-size="9" font-weight="900" fill="#f59e0b">TIER 1 FEED</text>
+    </svg>
+
+    <!-- Right copper vat -->
+    <svg style="position:absolute;right:14px;bottom:0;" width="148" height="130" viewBox="0 0 148 130">
+      <rect x="10" y="20" width="128" height="90" rx="8" fill="#1a0800" stroke="#b45309" stroke-width="2"/>
+      <rect x="10" y="20" width="128" height="12" rx="8" fill="#d97706" opacity=".7"/>
+      <rect x="10" y="98" width="128" height="12" rx="8" fill="#b45309" opacity=".6"/>
+      <rect x="12" y="35" width="124" height="72" rx="4" fill="#92400e" opacity=".5"/>
+      <ellipse class="vat-glow" cx="74" cy="50" rx="55" ry="20" fill="#fbbf24" opacity=".12"/>
+      <ellipse class="steam2" cx="40" cy="22" rx="8" ry="4" fill="rgba(255,220,100,.25)"/>
+      <ellipse class="steam3" cx="74" cy="20" rx="10" ry="5" fill="rgba(255,220,100,.2)"/>
+      <ellipse class="steam" cx="110" cy="22" rx="8" ry="4" fill="rgba(255,220,100,.25)"/>
+      <rect x="60" y="10" width="28" height="12" rx="4" fill="#b45309" stroke="#d97706" stroke-width="1"/>
+      <line x1="12" y1="55" x2="136" y2="55" stroke="rgba(251,191,36,.25)" stroke-width="1"/>
+      <rect x="28" y="75" width="92" height="22" rx="4" fill="rgba(13,7,0,.7)"/>
+      <text x="74" y="90" text-anchor="middle" font-family="Lexend,sans-serif" font-size="9" font-weight="900" fill="#fbbf24">TIER 3 OUTPUT</text>
+    </svg>
+  </div>
+</div>
+
+<div id="particles"></div>
+
+<!-- Left prop — large distillation column -->
+<div class="scene-prop-left" aria-hidden="true">
+  <svg width="90" height="240" viewBox="0 0 90 240" style="animation:propSway 6s ease-in-out infinite">
+    <style>@keyframes propSway{0%,100%{transform:rotate(-1.5deg)}50%{transform:rotate(1.5deg)}}</style>
+    <!-- Column body -->
+    <rect x="28" y="30" width="34" height="180" rx="6" fill="#0d0700" stroke="#92400e" stroke-width="2"/>
+    <!-- Tier bands inside column -->
+    <rect x="30" y="32" width="30" height="30" rx="3" fill="#374151" opacity=".6"/>
+    <rect x="30" y="62" width="30" height="30" rx="3" fill="#78350f" opacity=".6"/>
+    <rect x="30" y="92" width="30" height="30" rx="3" fill="#b45309" opacity=".6"/>
+    <rect x="30" y="122" width="30" height="30" rx="3" fill="#d97706" opacity=".6"/>
+    <rect x="30" y="152" width="30" height="30" rx="3" fill="#f59e0b" opacity=".6"/>
+    <rect x="30" y="182" width="30" height="26" rx="3" fill="#fbbf24" opacity=".6"/>
+    <!-- Tier labels -->
+    <text x="45" y="50" text-anchor="middle" font-family="Lexend,sans-serif" font-size="7" font-weight="700" fill="#64748b">T1</text>
+    <text x="45" y="80" text-anchor="middle" font-family="Lexend,sans-serif" font-size="7" font-weight="700" fill="#b45309">T1+</text>
+    <text x="45" y="110" text-anchor="middle" font-family="Lexend,sans-serif" font-size="7" font-weight="700" fill="#d97706">T2</text>
+    <text x="45" y="140" text-anchor="middle" font-family="Lexend,sans-serif" font-size="7" font-weight="700" fill="#f59e0b">T2+</text>
+    <text x="45" y="170" text-anchor="middle" font-family="Lexend,sans-serif" font-size="7" font-weight="700" fill="#fbbf24">T3</text>
+    <text x="45" y="198" text-anchor="middle" font-family="Lexend,sans-serif" font-size="7" font-weight="900" fill="#fbbf24">T3+</text>
+    <!-- Pipe feeds -->
+    <rect x="0" y="62" width="28" height="5" rx="2" fill="#78350f"/>
+    <rect x="0" y="122" width="28" height="5" rx="2" fill="#b45309"/>
+    <rect x="62" y="92" width="28" height="5" rx="2" fill="#d97706"/>
+    <rect x="62" y="152" width="28" height="5" rx="2" fill="#f59e0b"/>
+    <!-- Top cap -->
+    <rect x="22" y="22" width="46" height="10" rx="4" fill="#78350f" stroke="#92400e" stroke-width="1"/>
+    <!-- Steam from top -->
+    <ellipse class="steam" cx="45" cy="20" rx="8" ry="4" fill="rgba(255,200,80,.3)"/>
+    <ellipse class="steam2" cx="38" cy="18" rx="5" ry="3" fill="rgba(255,200,80,.2)"/>
+    <ellipse class="steam3" cx="52" cy="19" rx="5" ry="3" fill="rgba(255,200,80,.2)"/>
+    <!-- Base -->
+    <rect x="18" y="210" width="54" height="10" rx="3" fill="#92400e" stroke="#b45309" stroke-width="1"/>
+    <rect x="22" y="220" width="46" height="8" rx="2" fill="#78350f"/>
+    <!-- Drain valve -->
+    <rect x="36" y="218" width="18" height="5" rx="2" fill="#d97706"/>
+    <!-- Indicator light -->
+    <circle cx="45" cy="230" r="3" fill="#f59e0b" style="animation:propPulse 1.5s ease-in-out infinite"/>
+    <style>@keyframes propPulse{0%,100%{opacity:.5;filter:none}50%{opacity:1;filter:drop-shadow(0 0 4px #f59e0b)}}</style>
+  </svg>
+</div>
+
+<div class="scientist-stage"><div id="sciCharWrap"></div></div>
+
+<!-- ── Header ── -->
+<header class="header">
+  <div class="headerInner">
+    <div class="brand">
+      <div class="brandIcon">⚗️</div>
+      <div class="brandText"><h1>The Refinery</h1><span class="sub">Word Labs · Distillery Lab</span></div>
+    </div>
+    <div class="hud">
+      <span class="pill streak" id="streakPill">🔥 Streak: 0</span>
+      <span class="pill score" id="scorePill">0 XP</span>
+      <span id="wlPillSlot"></span>
+      <button id="wlLoginBtn" onclick="wlShowLogin()" style="border:1px solid rgba(180,83,9,.3);background:rgba(180,83,9,.12);border-radius:10px;padding:7px 12px;font-weight:800;font-size:11px;cursor:pointer;font-family:'Lexend',sans-serif;color:#fde68a;">👤 Log in</button>
+      <a href="landing.html" class="topBtn">🏠 Home</a>
+      <a href="scientist.html" class="topBtn" style="background:rgba(99,102,241,.2)!important;color:#c7d2fe!important;">🧬 My Scientist</a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="panel" id="gameCard"><div class="panelInner">
+
+    <!-- Heat bar -->
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <span style="font-size:10px;font-weight:700;letter-spacing:.06em;color:#f59e0b;text-transform:uppercase;">🔥 Furnace Heat</span>
+        <span id="fuelLabel" style="font-size:10px;font-weight:700;color:#f59e0b;">100%</span>
+      </div>
+      <div class="bar"><div class="barFill" id="fuelBar"></div></div>
+      <div style="font-size:10px;color:#92400e;opacity:.8;margin-top:3px;text-align:center;letter-spacing:.03em;" id="missionSubLabel">Active Mission · The Refinery · Arrange words from Tier 1 to Tier 3</div>
+    </div>
+
+    <!-- Mode selector -->
+    <div style="display:flex;justify-content:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+      <button class="modeSel active" id="modeFill" onclick="setMode('fill')">⚗️ Fill the Gap</button>
+      <button class="modeSel" id="modeOrder" onclick="setMode('order')">📊 Full Cline</button>
+    </div>
+
+    <!-- Cline label -->
+    <div class="clineLabel" id="clineLabel">⚗️ Refine This Word</div>
+    <div class="clineCategory" id="clineCategory">SPEAK</div>
+    <div class="clineClue" id="clineClue">Arrange from <strong>everyday Tier 1</strong> to <strong>specialist Tier 3</strong></div>
+
+    <!-- THE CLINE -->
+    <div class="cline-wrap">
+      <div class="cline-tier-labels">
+        <span class="tier-label-pill t1">Tier 1 — Everyday</span>
+        <span class="tier-label-pill t2">Tier 2 — Academic</span>
+        <span class="tier-label-pill t3">Tier 3 — Specialist</span>
+      </div>
+      <div class="cline-track" id="clineTrack"></div>
+      <div class="cline-anchors">
+        <div class="cline-anchor left" id="leftAnchor">
+          <span class="anchor-tier">Tier 1</span>
+          <span id="leftAnchorWord">say</span>
+        </div>
+        <div class="cline-anchor right" id="rightAnchor">
+          <span class="anchor-tier">Tier 3</span>
+          <span id="rightAnchorWord">enunciate</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Missing words to place -->
+    <div class="missing-words-label" id="missingLabel">Select a word then tap its position on the cline</div>
+    <div class="missing-words-pool" id="missingPool"></div>
+
+    <div style="display:flex;justify-content:center;margin-top:8px;">
+      <button class="primaryBtn" id="checkBtn" onclick="checkCline()" style="display:none;">Check Refinery ⚗️</button>
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+    <div class="subFeedback" id="subFeedback"></div>
+
+    <div class="actionRow">
+      <button class="secondaryBtn" onclick="restartGame()">Restart</button>
+      <button class="secondaryBtn" onclick="skipQuestion()">Skip →</button>
+    </div>
+
+  </div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="wordlab-data.js"></script>
+<script src="wordlab-extension-data.js"></script>
+<script src="wordlab-scientist.js"></script>
+<script src="wordlab-audio.js"></script>
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// THE REFINERY — Data
+// Clines move from Tier 1 (everyday) → Tier 2 (academic) → Tier 3 (specialist)
+// Format: { category, leftAnchor (T1), rightAnchor (T3), words (in order T1→T3),
+//           gaps: indices of words to remove (students must place these),
+//           clue }
+// ─────────────────────────────────────────────────────────────────────────────
+
+const CLINES = [
+  {
+    category:"Talking",
+    leftAnchor:"say", rightAnchor:"enunciate",
+    words:["say","speak","state","communicate","articulate","enunciate"],
+    gaps:[2,3,4],
+    clue:"From a quick word to precise speech",
+    explain:"say (T1) → speak → state → communicate → articulate → enunciate (T3 — careful, precise pronunciation)"
+  },
+  {
+    category:"Thinking",
+    leftAnchor:"think", rightAnchor:"hypothesise",
+    words:["think","wonder","consider","reflect","analyse","hypothesise"],
+    gaps:[2,3,4],
+    clue:"From casual thought to scientific reasoning",
+    explain:"think (T1) → wonder → consider → reflect → analyse → hypothesise (T3)"
+  },
+  {
+    category:"Looking",
+    leftAnchor:"look", rightAnchor:"scrutinise",
+    words:["look","watch","observe","examine","inspect","scrutinise"],
+    gaps:[2,3,4],
+    clue:"From a glance to careful study",
+    explain:"look (T1) → watch → observe → examine → inspect → scrutinise (T3 — examine critically)"
+  },
+  {
+    category:"Changing",
+    leftAnchor:"change", rightAnchor:"metamorphose",
+    words:["change","shift","alter","modify","transform","metamorphose"],
+    gaps:[2,3,4],
+    clue:"From a small shift to a complete transformation",
+    explain:"change (T1) → shift → alter → modify → transform → metamorphose (T3)"
+  },
+  {
+    category:"Getting Bigger",
+    leftAnchor:"grow", rightAnchor:"proliferate",
+    words:["grow","spread","increase","expand","escalate","proliferate"],
+    gaps:[2,3,4],
+    clue:"From simple growth to rapid spreading",
+    explain:"grow (T1) → spread → increase → expand → escalate → proliferate (T3 — increase rapidly)"
+  },
+  {
+    category:"Making",
+    leftAnchor:"make", rightAnchor:"synthesise",
+    words:["make","build","create","construct","fabricate","synthesise"],
+    gaps:[2,3,4],
+    clue:"From making something to combining elements scientifically",
+    explain:"make (T1) → build → create → construct → fabricate → synthesise (T3)"
+  },
+  {
+    category:"Breaking Down",
+    leftAnchor:"break", rightAnchor:"decompose",
+    words:["break","split","divide","separate","fragment","decompose"],
+    gaps:[2,3,4],
+    clue:"From snapping something to chemical breakdown",
+    explain:"break (T1) → split → divide → separate → fragment → decompose (T3)"
+  },
+  {
+    category:"Showing",
+    leftAnchor:"show", rightAnchor:"elucidate",
+    words:["show","explain","present","demonstrate","illustrate","elucidate"],
+    gaps:[2,3,4],
+    clue:"From pointing something out to making it perfectly clear",
+    explain:"show (T1) → explain → present → demonstrate → illustrate → elucidate (T3 — make clear)"
+  },
+  {
+    category:"Disagreeing",
+    leftAnchor:"argue", rightAnchor:"refute",
+    words:["argue","disagree","dispute","challenge","contest","refute"],
+    gaps:[2,3,4],
+    clue:"From a simple disagreement to proving something wrong",
+    explain:"argue (T1) → disagree → dispute → challenge → contest → refute (T3 — prove false with evidence)"
+  },
+  {
+    category:"Deciding",
+    leftAnchor:"choose", rightAnchor:"adjudicate",
+    words:["choose","decide","judge","determine","evaluate","adjudicate"],
+    gaps:[2,3,4],
+    clue:"From picking a favourite to formal judging",
+    explain:"choose (T1) → decide → judge → determine → evaluate → adjudicate (T3 — make a formal judgement)"
+  },
+  {
+    category:"Collecting",
+    leftAnchor:"gather", rightAnchor:"consolidate",
+    words:["gather","collect","group","compile","accumulate","consolidate"],
+    gaps:[2,3,4],
+    clue:"From picking things up to bringing everything together formally",
+    explain:"gather (T1) → collect → group → compile → accumulate → consolidate (T3)"
+  },
+  {
+    category:"Moving",
+    leftAnchor:"move", rightAnchor:"migrate",
+    words:["move","travel","journey","relocate","transfer","migrate"],
+    gaps:[2,3,4],
+    clue:"From going somewhere to a formal population movement",
+    explain:"move (T1) → travel → journey → relocate → transfer → migrate (T3)"
+  },
+  {
+    category:"Writing",
+    leftAnchor:"write", rightAnchor:"transcribe",
+    words:["write","note","record","document","chronicle","transcribe"],
+    gaps:[2,3,4],
+    clue:"From jotting something down to formal written recording",
+    explain:"write (T1) → note → record → document → chronicle → transcribe (T3)"
+  },
+  {
+    category:"Asking",
+    leftAnchor:"ask", rightAnchor:"interrogate",
+    words:["ask","question","query","enquire","investigate","interrogate"],
+    gaps:[2,3,4],
+    clue:"From a simple question to formal questioning",
+    explain:"ask (T1) → question → query → enquire → investigate → interrogate (T3)"
+  },
+  {
+    category:"Helping",
+    leftAnchor:"help", rightAnchor:"facilitate",
+    words:["help","support","assist","aid","enable","facilitate"],
+    gaps:[2,3,4],
+    clue:"From helping out to formally enabling something to happen",
+    explain:"help (T1) → support → assist → aid → enable → facilitate (T3)"
+  },
+  {
+    category:"Stopping",
+    leftAnchor:"stop", rightAnchor:"terminate",
+    words:["stop","end","finish","conclude","cease","terminate"],
+    gaps:[2,3,4],
+    clue:"From halting to formally ending something",
+    explain:"stop (T1) → end → finish → conclude → cease → terminate (T3)"
+  },
+  {
+    category:"Starting",
+    leftAnchor:"start", rightAnchor:"instigate",
+    words:["start","begin","launch","initiate","commence","instigate"],
+    gaps:[2,3,4],
+    clue:"From getting going to formally setting something in motion",
+    explain:"start (T1) → begin → launch → initiate → commence → instigate (T3)"
+  },
+  {
+    category:"Checking",
+    leftAnchor:"check", rightAnchor:"corroborate",
+    words:["check","test","review","verify","validate","corroborate"],
+    gaps:[2,3,4],
+    clue:"From a quick look to formal confirmation with evidence",
+    explain:"check (T1) → test → review → verify → validate → corroborate (T3)"
+  },
+  {
+    category:"Connecting",
+    leftAnchor:"join", rightAnchor:"amalgamate",
+    words:["join","link","connect","combine","integrate","amalgamate"],
+    gaps:[2,3,4],
+    clue:"From joining together to a formal merger",
+    explain:"join (T1) → link → connect → combine → integrate → amalgamate (T3)"
+  },
+  {
+    category:"Measuring",
+    leftAnchor:"measure", rightAnchor:"quantify",
+    words:["measure","count","calculate","assess","evaluate","quantify"],
+    gaps:[2,3,4],
+    clue:"From measuring up to formally expressing in numbers",
+    explain:"measure (T1) → count → calculate → assess → evaluate → quantify (T3)"
+  },
+];
+
+// Extension mode clines — more abstract, higher academic demand
+const EXT_CLINES = [
+  {
+    category:"Influencing",
+    leftAnchor:"affect", rightAnchor:"catalyse",
+    words:["affect","change","influence","shape","determine","catalyse"],
+    gaps:[1,2,3,4],
+    clue:"From having an effect to triggering a rapid reaction",
+    explain:"affect (T1) → change → influence → shape → determine → catalyse (T3 — trigger significant change)"
+  },
+  {
+    category:"Understanding",
+    leftAnchor:"know", rightAnchor:"extrapolate",
+    words:["know","understand","interpret","comprehend","infer","extrapolate"],
+    gaps:[2,3,4],
+    clue:"From basic knowing to extending knowledge beyond the data",
+    explain:"know (T1) → understand → interpret → comprehend → infer → extrapolate (T3)"
+  },
+  {
+    category:"Disagreeing Formally",
+    leftAnchor:"disagree", rightAnchor:"repudiate",
+    words:["disagree","dispute","challenge","contradict","denounce","repudiate"],
+    gaps:[2,3,4],
+    clue:"From disagreeing to formally rejecting with authority",
+    explain:"disagree (T1) → dispute → challenge → contradict → denounce → repudiate (T3)"
+  },
+  {
+    category:"Making Worse",
+    leftAnchor:"worsen", rightAnchor:"exacerbate",
+    words:["worsen","damage","harm","deteriorate","aggravate","exacerbate"],
+    gaps:[2,3,4],
+    clue:"From getting worse to formally intensifying a problem",
+    explain:"worsen (T1) → damage → harm → deteriorate → aggravate → exacerbate (T3)"
+  },
+  {
+    category:"Getting Better",
+    leftAnchor:"improve", rightAnchor:"ameliorate",
+    words:["improve","fix","restore","enhance","rectify","ameliorate"],
+    gaps:[2,3,4],
+    clue:"From simple improvement to formal reduction of suffering",
+    explain:"improve (T1) → fix → restore → enhance → rectify → ameliorate (T3)"
+  },
+];
+
+// Full-order mode — students arrange all words (harder)
+const ORDER_CLINES = [
+  {
+    category:"Feeling Sad",
+    leftAnchor:"sad", rightAnchor:"despondent",
+    words:["sad","unhappy","sorrowful","melancholy","dejected","despondent"],
+    gaps:[1,2,3,4],
+    clue:"Arrange all words from least to most formal/intense",
+    explain:"sad (T1) → unhappy → sorrowful → melancholy → dejected → despondent (T3)"
+  },
+  {
+    category:"Being Wrong",
+    leftAnchor:"wrong", rightAnchor:"fallacious",
+    words:["wrong","incorrect","mistaken","inaccurate","erroneous","fallacious"],
+    gaps:[1,2,3,4],
+    clue:"Arrange from everyday to academic to technical",
+    explain:"wrong (T1) → incorrect → mistaken → inaccurate → erroneous → fallacious (T3 — based on false reasoning)"
+  },
+  {
+    category:"Enough",
+    leftAnchor:"enough", rightAnchor:"commensurate",
+    words:["enough","plenty","sufficient","adequate","ample","commensurate"],
+    gaps:[1,2,3,4],
+    clue:"Arrange from everyday to academic language",
+    explain:"enough (T1) → plenty → sufficient → adequate → ample → commensurate (T3 — proportionate)"
+  },
+];
+
+// Apply extension mode
+(function(){
+  if(typeof WordLabData !== 'undefined' && WordLabData.isExtensionMode && WordLabData.isExtensionMode()){
+    CLINES.push(...EXT_CLINES);
+    ORDER_CLINES.push(...EXT_CLINES.map(c => ({...c, gaps:[1,2,3,4]})));
+  }
+})();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GAME STATE
+// ─────────────────────────────────────────────────────────────────────────────
+let gameMode = 'fill';
+let score = 0, streak = 0, fuel = 100;
+let currentCline = null, buttonsLocked = false, fuelInterval = null;
+let selectedWord = null;
+let placed = {}; // slotIndex → word
+
+const clineTrackEl  = document.getElementById('clineTrack');
+const missingPoolEl = document.getElementById('missingPool');
+const feedbackEl    = document.getElementById('feedback');
+const subFeedbackEl = document.getElementById('subFeedback');
+const scorePillEl   = document.getElementById('scorePill');
+const streakPillEl  = document.getElementById('streakPill');
+const fuelBarEl     = document.getElementById('fuelBar');
+const fuelLabelEl   = document.getElementById('fuelLabel');
+const gameCardEl    = document.getElementById('gameCard');
+const checkBtnEl    = document.getElementById('checkBtn');
+const purityCursor  = document.getElementById('purityCursor');
+const wallPurityEl  = document.getElementById('wallPurity');
+
+function shuffleArray(arr){ return [...arr].sort(()=>Math.random()-.5); }
+
+function updateHud(){
+  scorePillEl.textContent = `${score} XP`;
+  streakPillEl.textContent = `🔥 Streak: ${streak}`;
+  fuelBarEl.style.width = `${Math.max(fuel,0)}%`;
+  fuelLabelEl.textContent = `${Math.max(Math.round(fuel),0)}%`;
+}
+
+function setPurityMeter(pct){
+  if(purityCursor) purityCursor.style.left = pct+'%';
+  if(wallPurityEl){
+    if(pct < 33) wallPurityEl.textContent = 'T1';
+    else if(pct < 66) wallPurityEl.textContent = 'T2';
+    else wallPurityEl.textContent = 'T3';
+  }
+}
+
+function setMode(m){
+  gameMode = m;
+  ['fill','order'].forEach(x => {
+    document.getElementById('mode'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('active', x===m);
+  });
+  score=0; streak=0; fuel=100; updateHud();
+  loadQuestion();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOAD QUESTION
+// ─────────────────────────────────────────────────────────────────────────────
+function loadQuestion(){
+  gameCardEl.classList.remove('flashSuccess','flashFail');
+  if(fuel<=0) return;
+  buttonsLocked = false;
+  selectedWord = null;
+  placed = {};
+  feedbackEl.textContent = '';
+  feedbackEl.className = 'feedback';
+  subFeedbackEl.textContent = '';
+  checkBtnEl.style.display = 'none';
+
+  const pool = gameMode === 'order' ? ORDER_CLINES : CLINES;
+  currentCline = pool[Math.floor(Math.random()*pool.length)];
+  const c = currentCline;
+
+  document.getElementById('clineLabel').textContent = gameMode === 'fill' ? '⚗️ Fill the Gaps' : '📊 Arrange the Cline';
+  document.getElementById('clineCategory').textContent = c.category.toUpperCase();
+  document.getElementById('clineClue').innerHTML = c.clue;
+  document.getElementById('leftAnchorWord').textContent = c.leftAnchor;
+  document.getElementById('rightAnchorWord').textContent = c.rightAnchor;
+  document.getElementById('missionSubLabel').textContent = `Active Mission · The Refinery · ${c.category}`;
+
+  setPurityMeter(50);
+  buildClineTrack(c);
+  buildMissingPool(c);
+}
+
+function buildClineTrack(c){
+  clineTrackEl.innerHTML = '';
+  const n = c.words.length;
+  const gapSet = new Set(c.gaps);
+
+  c.words.forEach((word,i) => {
+    const pct = ((i + 0.5) / n) * 100;
+
+    if(!gapSet.has(i)){
+      // Fixed word — shown on track
+      const fixed = document.createElement('div');
+      fixed.className = 'fixed-word';
+      fixed.style.left = pct+'%';
+      fixed.textContent = word;
+      clineTrackEl.appendChild(fixed);
+    } else {
+      // Gap slot — student must fill
+      const slot = document.createElement('div');
+      slot.className = 'cline-slot';
+      slot.style.left = pct+'%';
+      slot.dataset.index = i;
+
+      const numLbl = document.createElement('div');
+      numLbl.className = 'slot-num-label';
+      numLbl.textContent = i+1;
+      slot.appendChild(numLbl);
+
+      const wordLbl = document.createElement('div');
+      wordLbl.className = 'slot-word-label';
+      slot.appendChild(wordLbl);
+
+      slot.addEventListener('click', () => placeInSlot(i, slot, wordLbl));
+      clineTrackEl.appendChild(slot);
+    }
+  });
+}
+
+function buildMissingPool(c){
+  missingPoolEl.innerHTML = '';
+  const gapSet = new Set(c.gaps);
+  const missingWords = c.words.filter((_,i) => gapSet.has(i));
+  const shuffled = shuffleArray(missingWords);
+
+  shuffled.forEach(word => {
+    const tile = document.createElement('div');
+    tile.className = 'missing-word';
+    tile.textContent = word;
+    tile.dataset.word = word;
+    tile.addEventListener('click', () => selectWord(tile));
+    missingPoolEl.appendChild(tile);
+  });
+
+  document.getElementById('missingLabel').textContent =
+    gameMode === 'fill'
+      ? 'Tap a word below then tap its position on the cline above'
+      : 'Tap a word then tap its position on the cline above';
+}
+
+function selectWord(tile){
+  if(tile.classList.contains('placed')) return;
+  missingPoolEl.querySelectorAll('.missing-word').forEach(t => t.classList.remove('selected'));
+  if(selectedWord === tile.dataset.word){
+    selectedWord = null;
+  } else {
+    selectedWord = tile.dataset.word;
+    tile.classList.add('selected');
+  }
+}
+
+function placeInSlot(slotIndex, slotEl, wordLblEl){
+  if(!selectedWord || buttonsLocked) return;
+
+  // Remove word from any slot it was already in
+  Object.keys(placed).forEach(idx => {
+    if(placed[idx] === selectedWord){
+      const oldSlot = clineTrackEl.querySelector(`.cline-slot[data-index="${idx}"]`);
+      if(oldSlot){
+        oldSlot.classList.remove('filled');
+        oldSlot.querySelector('.slot-word-label').textContent = '';
+        oldSlot.querySelector('.slot-num-label').style.display = '';
+      }
+      delete placed[idx];
+    }
+  });
+
+  // If slot already had a word, put it back in pool
+  if(placed[slotIndex]){
+    const displaced = placed[slotIndex];
+    missingPoolEl.querySelectorAll('.missing-word').forEach(t => {
+      if(t.dataset.word === displaced) t.classList.remove('placed');
+    });
+    delete placed[slotIndex];
+  }
+
+  // Place selected word
+  placed[slotIndex] = selectedWord;
+  slotEl.classList.add('filled');
+  wordLblEl.textContent = selectedWord;
+  slotEl.querySelector('.slot-num-label').style.display = 'none';
+
+  // Mark tile as placed
+  missingPoolEl.querySelectorAll('.missing-word').forEach(t => {
+    if(t.dataset.word === selectedWord){
+      t.classList.add('placed');
+      t.classList.remove('selected');
+    }
+  });
+
+  // Update purity meter based on how far along this slot is
+  const n = currentCline.words.length;
+  const avgPct = Object.keys(placed).reduce((sum,idx) => sum + (parseInt(idx)/n*100), 0) / Object.keys(placed).length;
+  setPurityMeter(Math.round(avgPct));
+
+  selectedWord = null;
+
+  // Show check button when all gaps filled
+  const allFilled = Object.keys(placed).length === currentCline.gaps.length;
+  checkBtnEl.style.display = allFilled ? 'inline-flex' : 'none';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHECK ANSWER
+// ─────────────────────────────────────────────────────────────────────────────
+function checkCline(){
+  if(buttonsLocked || fuel<=0) return;
+  buttonsLocked = true;
+
+  const c = currentCline;
+  let correct = 0;
+  let total = c.gaps.length;
+
+  c.gaps.forEach(i => {
+    const slot = clineTrackEl.querySelector(`.cline-slot[data-index="${i}"]`);
+    const correctWord = c.words[i];
+    const placedWord = placed[i];
+
+    if(slot){
+      if(placedWord === correctWord){
+        slot.classList.add('correct');
+        correct++;
+        // Also highlight the pool tile green
+        missingPoolEl.querySelectorAll('.missing-word').forEach(t => {
+          if(t.dataset.word === placedWord) t.classList.add('correct-placed');
+        });
+      } else {
+        slot.classList.add('wrong');
+        missingPoolEl.querySelectorAll('.missing-word').forEach(t => {
+          if(t.dataset.word === placedWord) t.classList.add('wrong-placed');
+        });
+      }
+    }
+  });
+
+  const allCorrect = correct === total;
+  const cat = 'cline:' + c.category.toLowerCase().replace(/\s+/g,'-');
+
+  if(allCorrect){
+    score += 70 + (streak*10); streak++; fuel = Math.min(fuel+10,100);
+    setPurityMeter(95);
+    if(typeof WordLabData !== 'undefined' && WordLabData.getSession()){
+      const res = WordLabData.recordAttempt('word-refinery', cat, true, 0);
+      if(typeof WLScientist !== 'undefined') WLScientist.react('correct', res);
+    }
+    if(typeof WLAudio !== 'undefined'){ WLAudio.correct(); if(streak>=3) WLAudio.streak(streak); }
+    feedbackEl.textContent = '✅ Perfectly refined!';
+    feedbackEl.className = 'feedback ok';
+    subFeedbackEl.textContent = c.explain;
+    gameCardEl.classList.add('flashSuccess');
+    setTimeout(()=>gameCardEl.classList.remove('flashSuccess'),600);
+  } else {
+    streak=0; fuel=Math.max(fuel-10,0);
+    setPurityMeter(20);
+    if(typeof WordLabData !== 'undefined' && WordLabData.getSession()) WordLabData.recordAttempt('word-refinery', cat, false, 0);
+    if(typeof WLScientist !== 'undefined') WLScientist.react('wrong');
+    if(typeof WLAudio !== 'undefined') WLAudio.wrong();
+    feedbackEl.textContent = `❌ ${correct} of ${total} correct`;
+    feedbackEl.className = 'feedback bad';
+    subFeedbackEl.textContent = `Correct order: ${c.explain}`;
+    gameCardEl.classList.add('flashFail');
+    setTimeout(()=>gameCardEl.classList.remove('flashFail'),600);
+  }
+
+  updateHud();
+  checkBtnEl.style.display = 'none';
+  if(fuel<=0){ setTimeout(endGame,800); return; }
+  setTimeout(loadQuestion, 2200);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GAME FLOW
+// ─────────────────────────────────────────────────────────────────────────────
+function startFuelDrain(){
+  clearInterval(fuelInterval);
+  fuelInterval = setInterval(()=>{
+    fuel -= 0.18;
+    if(fuel<=0){ fuel=0; updateHud(); endGame(); clearInterval(fuelInterval); return; }
+    updateHud();
+  }, 220);
+}
+
+function endGame(){
+  buttonsLocked = true;
+  missingPoolEl.innerHTML = '';
+  clineTrackEl.innerHTML = '';
+  checkBtnEl.style.display = 'none';
+  feedbackEl.textContent = 'Furnace cooled';
+  feedbackEl.className = 'feedback bad';
+  subFeedbackEl.textContent = `Final score: ${score} XP`;
+}
+
+function restartGame(){
+  score=0; streak=0; fuel=100;
+  updateHud(); startFuelDrain(); loadQuestion();
+}
+
+function skipQuestion(){
+  if(fuel<=0) return;
+  streak=0; fuel=Math.max(fuel-8,0);
+  updateHud();
+  if(fuel<=0){ endGame(); return; }
+  loadQuestion();
+}
+
+updateHud();
+startFuelDrain();
+loadQuestion();
+</script>
+
+<!-- Particles — warm smoke/steam -->
+<script>
+(function(){
+  var w=document.getElementById('particles');
+  if(!w) return;
+  var cs=['rgba(245,158,11,.15)','rgba(180,83,9,.2)','rgba(251,191,36,.12)','rgba(255,255,255,.08)'];
+  for(var i=0;i<22;i++){
+    var p=document.createElement('div');
+    p.className='particle';
+    var s=(Math.random()*5+3)+'px';
+    var dx=(Math.random()*20-10)+'px';
+    p.style.cssText='width:'+s+';height:'+s+';left:'+(Math.random()*100)+'%;bottom:'+(Math.random()*100)+'%;background:'+cs[Math.floor(Math.random()*cs.length)]+';--dx:'+dx+';border-radius:50%;animation-duration:'+(16+Math.random()*20)+'s;animation-delay:'+(Math.random()*18)+'s;';
+    w.appendChild(p);
+  }
+})();
+(async function(){
+  var w=document.getElementById('sciCharWrap');
+  if(!w||typeof WLScientist==='undefined') return;
+  var sd=typeof WordLabData!=='undefined'?await WordLabData.getStudentData():null;
+  w.innerHTML=WLScientist.buildSVG(sd?sd.scientist:{},'neutral');
+})();
+</script>
+
+<!-- Login -->
+<script>
+document.addEventListener('DOMContentLoaded', async function(){
+  if(typeof WordLabData!=='undefined'&&WordLabData.getSession()){
+    try{
+      const limit=await WordLabData.checkDailyLimit();
+      if(limit&&limit.blocked){
+        const o=document.createElement('div');
+        o.style.cssText='position:fixed;inset:0;background:rgba(13,7,0,.95);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        o.innerHTML='<div style="background:#1a0800;border:2px solid #92400e;border-radius:24px;padding:40px;max-width:440px;text-align:center;color:#fde68a;font-family:Lexend,sans-serif;"><div style="font-size:48px;margin-bottom:16px;">⚗️</div><h2 style="font-size:22px;font-weight:900;margin-bottom:12px;">Furnace cooled for today</h2><p style="color:#d97706;font-size:14px;margin-bottom:24px;">You\'ve completed 30 questions today on the free plan. Come back tomorrow or ask your teacher about upgrading.</p><a href="landing.html" style="background:#92400e;color:#fde68a;padding:12px 24px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px;">Back to Home</a></div>';
+        document.body.appendChild(o);
+        return;
+      }
+    }catch(e){}
+  }
+  if(typeof WordLabData==='undefined') return;
+  WordLabData.initLoginUI({accentColor:'#92400e',accentSoft:'#fffbeb',accentLine:'#fde68a',accentText:'#78350f',onLogin:function(){location.reload();}});
+  var session=WordLabData.getSession();
+  var btn=document.getElementById('wlLoginBtn');
+  if(btn){ btn.onclick=function(){wlShowLogin();}; if(session) btn.textContent='👤 '+session.studentName; }
+  if(typeof WordLabData!=='undefined'&&WordLabData.isExtensionMode&&WordLabData.isExtensionMode()){
+    var extPill=document.createElement('div');
+    extPill.style.cssText='background:#92400e;color:#fde68a;font-size:10px;font-weight:900;padding:4px 10px;border-radius:20px;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;';
+    extPill.textContent='🔬 Extension';
+    var hud=document.querySelector('.hud');
+    if(hud) hud.appendChild(extPill);
+  }
+});
+</script>
+</body>
+</html>
