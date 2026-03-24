@@ -693,6 +693,18 @@ const SHOP = {
     {id:'star_sticker',     name:'Star Sticker',    cost:50,                            icon:'⭐'},
     {id:'magnifying_glass', name:'Magnifying Glass',cost:0, requiresBadge:'answered_100', icon:'🔍'},
   ],
+  pets: [
+    {id:'none',       name:'None',         cost:0,  free:true,  icon:'❌'},
+    {id:'cat',        name:'Grey Cat',     cost:120,             icon:'🐱'},
+    {id:'ginger_cat', name:'Ginger Cat',   cost:120,             icon:'🐈'},
+    {id:'puppy',      name:'Puppy',        cost:150,             icon:'🐶'},
+    {id:'bird',       name:'Bluebird',     cost:100,             icon:'🐦'},
+    {id:'frog',       name:'Lab Frog',     cost:80,              icon:'🐸'},
+    {id:'owl',        name:'Wise Owl',     cost:200,             icon:'🦉'},
+    {id:'dragon',     name:'Baby Dragon',  cost:500, legendary:true, icon:'🐉'},
+    {id:'horse',      name:'Mini Horse',   cost:200,             icon:'🐴'},
+    {id:'hamster',    name:'Hamster',      cost:100,             icon:'🐹'},
+  ],
 };
 const SKIN_TONES = ['#FDBCB4','#F1C27D','#E0AC69','#C68642','#8D5524','#FFCBA4'];
 
@@ -804,6 +816,13 @@ async function render() {
             }).join('')}</div>
           </div>
           <div class="custSection">
+            <div class="custLabel">Shoulder Pet</div>
+            <div class="optRow">${SHOP.pets.filter(a=> sd.is_teacher || a.free || owned.includes(a.id)).map(a=>{
+              const cur = sci.pet||'none';
+              return `<button class="optPill${a.id===cur?' active':''}" onclick="applyOption('pet',${a.id==='none'?'null':"'"+a.id+"'"})">${a.icon} ${a.name}</button>`;
+            }).join('')}</div>
+          </div>
+          <div class="custSection">
             <div class="custLabel">Particle Effect</div>
             ${renderCurrentEffect(sd)}
           </div>
@@ -846,6 +865,7 @@ async function render() {
       ${renderShopSection('Coat Patterns',      SHOP.coatPatterns,    'coatPattern',  sd)}
       ${renderShopSection('Head Accessories',   SHOP.headAccessories, 'head',         sd)}
       ${renderShopSection('Face Accessories',   SHOP.faceAccessories, 'face',         sd)}
+      ${renderShopSection('Shoulder Pets',      SHOP.pets,            'pet',          sd)}
       <div class="shopSection">
         <div class="shopSectionTitle">✨ Particle Effects</div>
         <div class="shopGrid" id="effectsGrid">${renderEffectsSection(sd)}</div>
@@ -906,7 +926,7 @@ async function render() {
 function renderShopSection(title, items, field, sd) {
   const sci   = sd.scientist || {};
   const owned = sci.owned || [];
-  const curVal = field==='head' ? (sci.head||null) : field==='face' ? (sci.face||null) : sci[field];
+  const curVal = (field==='head'||field==='face'||field==='pet') ? (sci[field]||null) : sci[field];
   return `<div class="shopSection">
     <div class="shopSectionTitle">${title}</div>
     <div class="shopGrid">${items.map(item => {
@@ -1045,7 +1065,7 @@ async function shopBuy(itemId, cost, field) {
   if (!result.success) { alert('Not enough quarks!'); return; }
   const updates = {};
   updates[field] = itemId;
-  if (field==='head'||field==='face') updates[field] = itemId==='none'?null:itemId;
+  if (field==='head'||field==='face'||field==='pet') updates[field] = itemId==='none'?null:itemId;
   await WordLabData.saveScientist(updates);
   await render();
 }

@@ -100,6 +100,142 @@ const WLScientist = (() => {
       magnifying_glass:`<circle cx="45" cy="37" r="8" fill="none" stroke="#374151" stroke-width="2.2"/><circle cx="45" cy="37" r="6.5" fill="rgba(147,197,253,0.22)"/><line x1="51" y1="43" x2="58" y2="52" stroke="#374151" stroke-width="3" stroke-linecap="round"/><circle cx="43" cy="34.5" r="1.8" fill="white" opacity="0.65"/>`,
     };
 
+    // Pets — sit on the right shoulder
+    const petAcc = scientist.pet || null;
+    const petAccSVG = {
+      cat: `<g transform="translate(56,48)">
+        <ellipse cx="0" cy="6" rx="5" ry="4" fill="#6b7280"/>
+        <circle cx="0" cy="0" r="4" fill="#6b7280"/>
+        <polygon points="-3,-4 -4,-8 -1,-5" fill="#6b7280"/>
+        <polygon points="3,-4 4,-8 1,-5" fill="#6b7280"/>
+        <polygon points="-3,-4 -4,-8 -1,-5" fill="#9ca3af" opacity=".4"/>
+        <polygon points="3,-4 4,-8 1,-5" fill="#9ca3af" opacity=".4"/>
+        <circle cx="-1.5" cy="-1" r="1" fill="#fbbf24"/>
+        <circle cx="1.5" cy="-1" r="1" fill="#fbbf24"/>
+        <circle cx="-1.5" cy="-1" r=".4" fill="#1e1b4b"/>
+        <circle cx="1.5" cy="-1" r=".4" fill="#1e1b4b"/>
+        <ellipse cx="0" cy="1.5" rx=".8" ry=".5" fill="#f9a8d4"/>
+        <path d="M-6,8 Q-8,4 -5,6" stroke="#6b7280" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <style>.pet-idle{animation:petBob 2.5s ease-in-out infinite}</style>
+      </g>`,
+      ginger_cat: `<g transform="translate(56,48)">
+        <ellipse cx="0" cy="6" rx="5" ry="4" fill="#f97316"/>
+        <circle cx="0" cy="0" r="4" fill="#f97316"/>
+        <polygon points="-3,-4 -4,-8 -1,-5" fill="#f97316"/>
+        <polygon points="3,-4 4,-8 1,-5" fill="#f97316"/>
+        <polygon points="-3,-4 -4,-8 -1,-5" fill="#fb923c" opacity=".5"/>
+        <polygon points="3,-4 4,-8 1,-5" fill="#fb923c" opacity=".5"/>
+        <circle cx="-1.5" cy="-1" r="1" fill="#16a34a"/>
+        <circle cx="1.5" cy="-1" r="1" fill="#16a34a"/>
+        <circle cx="-1.5" cy="-1" r=".4" fill="#1e1b4b"/>
+        <circle cx="1.5" cy="-1" r=".4" fill="#1e1b4b"/>
+        <ellipse cx="0" cy="1.5" rx=".8" ry=".5" fill="#f9a8d4"/>
+        <path d="M-6,8 Q-8,4 -5,6" stroke="#f97316" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <line x1="-2" y1="3" x2="-1" y2="5" stroke="#ea580c" stroke-width=".8"/>
+        <line x1="2" y1="3" x2="1" y2="5" stroke="#ea580c" stroke-width=".8"/>
+      </g>`,
+      puppy: `<g transform="translate(56,48)">
+        <ellipse cx="0" cy="6" rx="5.5" ry="4" fill="#a16207"/>
+        <circle cx="0" cy="0" r="4.5" fill="#a16207"/>
+        <ellipse cx="-4" cy="-2" rx="3" ry="4" fill="#92400e" transform="rotate(-20,-4,-2)"/>
+        <ellipse cx="4" cy="-2" rx="3" ry="4" fill="#92400e" transform="rotate(20,4,-2)"/>
+        <circle cx="-1.8" cy="-1" r="1.2" fill="#fff"/>
+        <circle cx="1.8" cy="-1" r="1.2" fill="#fff"/>
+        <circle cx="-1.8" cy="-1" r=".5" fill="#1e1b4b"/>
+        <circle cx="1.8" cy="-1" r=".5" fill="#1e1b4b"/>
+        <ellipse cx="0" cy="2" rx="1.5" ry="1" fill="#1e1b4b"/>
+        <path d="M-1.5,3 Q0,5 1.5,3" stroke="#dc2626" stroke-width=".8" fill="#ef4444" opacity=".7"/>
+        <path d="M5,8 Q8,6 7,4" stroke="#a16207" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      </g>`,
+      bird: `<g transform="translate(58,44)">
+        <ellipse cx="0" cy="4" rx="4" ry="3.5" fill="#3b82f6"/>
+        <circle cx="0" cy="0" r="3" fill="#3b82f6"/>
+        <circle cx="1.5" cy="-0.5" r=".9" fill="#fff"/>
+        <circle cx="1.5" cy="-0.5" r=".35" fill="#1e1b4b"/>
+        <polygon points="3,0 6,-1 3,1.5" fill="#f59e0b"/>
+        <path d="M-3,2 Q-7,0 -5,4" stroke="#2563eb" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+        <path d="M-3,3 Q-6,2 -4,5" stroke="#2563eb" stroke-width="1" fill="none" stroke-linecap="round"/>
+        <line x1="-1" y1="7" x2="-1" y2="9" stroke="#f59e0b" stroke-width=".8"/>
+        <line x1="1" y1="7" x2="1" y2="9" stroke="#f59e0b" stroke-width=".8"/>
+      </g>`,
+      frog: `<g transform="translate(56,48)">
+        <ellipse cx="0" cy="4" rx="5" ry="3.5" fill="#16a34a"/>
+        <ellipse cx="0" cy="0" rx="5" ry="3.5" fill="#22c55e"/>
+        <circle cx="-2.5" cy="-3" r="2" fill="#22c55e"/>
+        <circle cx="2.5" cy="-3" r="2" fill="#22c55e"/>
+        <circle cx="-2.5" cy="-3" r="1.2" fill="#fff"/>
+        <circle cx="2.5" cy="-3" r="1.2" fill="#fff"/>
+        <circle cx="-2.5" cy="-3" r=".5" fill="#1e1b4b"/>
+        <circle cx="2.5" cy="-3" r=".5" fill="#1e1b4b"/>
+        <path d="M-2,1 Q0,2.5 2,1" stroke="#15803d" stroke-width=".8" fill="none"/>
+        <circle cx="-2" cy="1.5" rx=".6" ry=".3" fill="#f87171" opacity=".4"/>
+        <circle cx="2" cy="1.5" rx=".6" ry=".3" fill="#f87171" opacity=".4"/>
+      </g>`,
+      owl: `<g transform="translate(57,45)">
+        <ellipse cx="0" cy="5" rx="5" ry="4.5" fill="#78350f"/>
+        <ellipse cx="0" cy="0" rx="5" ry="4.5" fill="#92400e"/>
+        <circle cx="-2" cy="-1" r="2.2" fill="#fef3c7"/>
+        <circle cx="2" cy="-1" r="2.2" fill="#fef3c7"/>
+        <circle cx="-2" cy="-1" r="1" fill="#f59e0b"/>
+        <circle cx="2" cy="-1" r="1" fill="#f59e0b"/>
+        <circle cx="-2" cy="-1" r=".4" fill="#1e1b4b"/>
+        <circle cx="2" cy="-1" r=".4" fill="#1e1b4b"/>
+        <polygon points="0,1 -1,2.5 1,2.5" fill="#f59e0b"/>
+        <polygon points="-3,-5 -5,-7 -1,-5" fill="#92400e"/>
+        <polygon points="3,-5 5,-7 1,-5" fill="#92400e"/>
+        <path d="M-4,3 Q-7,1 -6,5" stroke="#78350f" stroke-width="1.2" fill="none"/>
+        <path d="M4,3 Q7,1 6,5" stroke="#78350f" stroke-width="1.2" fill="none"/>
+        <ellipse cx="0" cy="5" rx="3" ry="2" fill="#d2b48c" opacity=".4"/>
+      </g>`,
+      dragon: `<g transform="translate(56,44)">
+        <ellipse cx="0" cy="7" rx="4.5" ry="3.5" fill="#7c3aed"/>
+        <circle cx="0" cy="1" r="4" fill="#7c3aed"/>
+        <polygon points="-3,-3 -5,-7 -1,-4" fill="#8b5cf6"/>
+        <polygon points="3,-3 5,-7 1,-4" fill="#8b5cf6"/>
+        <circle cx="-1.5" cy="0" r="1" fill="#fbbf24"/>
+        <circle cx="1.5" cy="0" r="1" fill="#fbbf24"/>
+        <circle cx="-1.5" cy="0" r=".4" fill="#1e1b4b"/>
+        <circle cx="1.5" cy="0" r=".4" fill="#1e1b4b"/>
+        <path d="M-2,3 Q0,4 2,3" stroke="#5b21b6" stroke-width=".8" fill="none"/>
+        <path d="M-4,4 Q-8,0 -6,6" stroke="#7c3aed" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+        <path d="M4,4 Q8,0 6,6" stroke="#7c3aed" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+        <polygon points="0,-5 -1,-3 1,-3" fill="#ef4444" opacity=".7"/>
+        <path d="M5,10 Q8,8 7,6" stroke="#7c3aed" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <polygon points="7,5.5 9,5 7,7" fill="#7c3aed"/>
+      </g>`,
+      horse: `<g transform="translate(54,44)">
+        <ellipse cx="0" cy="8" rx="6" ry="4.5" fill="#92400e"/>
+        <ellipse cx="5" cy="2" rx="3.5" ry="5" fill="#92400e" transform="rotate(20,5,2)"/>
+        <polygon points="6,-3 5,-8 8,-4" fill="#78350f"/>
+        <polygon points="7,-3 6,-8 9,-4" fill="#78350f"/>
+        <circle cx="6.5" cy="0" r=".9" fill="#1e1b4b"/>
+        <circle cx="6.5" cy="0" r=".3" fill="#fff"/>
+        <ellipse cx="8" cy="2.5" rx="1.5" ry="1" fill="#78350f"/>
+        <circle cx="8.5" cy="2" r=".4" fill="#1e1b4b"/>
+        <path d="M3,-5 Q1,-9 -1,-6 Q-2,-4 0,-5 Q1,-7 2,-5" stroke="#4a2c0a" stroke-width=".8" fill="none"/>
+        <path d="M4,-4 Q3,-7 1,-5" stroke="#4a2c0a" stroke-width=".8" fill="none"/>
+        <line x1="-4" y1="11" x2="-4" y2="14" stroke="#78350f" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="-1" y1="12" x2="-1" y2="14" stroke="#78350f" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="2" y1="11" x2="2" y2="14" stroke="#78350f" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M-5,8 Q-8,6 -7,10" stroke="#4a2c0a" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      </g>`,
+      hamster: `<g transform="translate(56,49)">
+        <ellipse cx="0" cy="4" rx="5" ry="3.5" fill="#f5d0a9"/>
+        <circle cx="0" cy="0" r="4" fill="#f5d0a9"/>
+        <ellipse cx="-3.5" cy="-2.5" rx="2" ry="2.5" fill="#f5d0a9"/>
+        <ellipse cx="3.5" cy="-2.5" rx="2" ry="2.5" fill="#f5d0a9"/>
+        <ellipse cx="-3.5" cy="-2.5" rx="1.2" ry="1.5" fill="#fce7f3"/>
+        <ellipse cx="3.5" cy="-2.5" rx="1.2" ry="1.5" fill="#fce7f3"/>
+        <circle cx="-1.5" cy="-0.5" r=".9" fill="#1e1b4b"/>
+        <circle cx="1.5" cy="-0.5" r=".9" fill="#1e1b4b"/>
+        <circle cx="-1.5" cy="-0.8" r=".3" fill="#fff"/>
+        <circle cx="1.5" cy="-0.8" r=".3" fill="#fff"/>
+        <ellipse cx="0" cy="1.5" rx=".7" ry=".5" fill="#f9a8d4"/>
+        <ellipse cx="-2" cy="2" rx="2" ry="1.5" fill="#fde68a" opacity=".3"/>
+        <ellipse cx="2" cy="2" rx="2" ry="1.5" fill="#fde68a" opacity=".3"/>
+      </g>`,
+    };
+
     const customImg = t => customSlots['_img_'+t] && customSlots[t]
       ? `<image href="${customSlots['_img_'+t]}" x="-10" y="0" width="100" height="120" preserveAspectRatio="none"/>`
       : '';
@@ -133,6 +269,8 @@ const WLScientist = (() => {
   <!-- Face accessory -->
   ${faceAcc && faceAccSVG[faceAcc] ? faceAccSVG[faceAcc] : ''}
   ${sparkles}${dizzy}
+  <!-- Pet -->
+  ${petAcc && petAccSVG[petAcc] ? petAccSVG[petAcc] : ''}
   <!-- Custom head / face / background overlays -->
   ${customImg('head')}${customImg('face')}${customImg('background')}
 </svg>`;

@@ -128,7 +128,7 @@ const WordLabData = (() => {
     if (!char.badges) char.badges = [];
     if (!char.scientist) char.scientist = {
       skinTone:'#FDBCB4', coatColor:'#ffffff', coatPattern:'plain',
-      head:null, face:null, background:'lab', effect:null, owned:[], customSlots:{}
+      head:null, face:null, pet:null, background:'lab', effect:null, owned:[], customSlots:{}
     };
     if (typeof char.scientist.effect === 'undefined') char.scientist.effect = null;
     if (!char.scientist.customSlots) char.scientist.customSlots = {};
