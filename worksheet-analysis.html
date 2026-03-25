@@ -438,9 +438,20 @@ function parseExample(exStr, morpheme, mtype) {
 
   if (mtype === 'base') {
     const m = marked.toLowerCase(), b = morpheme.form.toLowerCase();
-    if (m !== b && !b.includes(m) && !m.includes(b)) return null;
-    if (!before && !after) return null;
-    return { word, prefix: before, base: marked, suffix: after };
+    // Case 1: the base itself is underlined (e.g. "<u>teach</u>er")
+    if (m === b || b.includes(m) || m.includes(b)) {
+      // If the word is just the base with no affixes, still accept it as a standalone example
+      return { word, prefix: before, base: marked, suffix: after };
+    }
+    // Case 2: a suffix/prefix is underlined instead — infer the base from context
+    // e.g. base="teach", example="teach<u>er</u>" → before="teach", marked="er"
+    if (before && before.toLowerCase().includes(b)) {
+      return { word, prefix: '', base: before, suffix: marked };
+    }
+    if (after && after.toLowerCase().includes(b)) {
+      return { word, prefix: marked, base: after, suffix: '' };
+    }
+    return null;
   }
   if (mtype === 'prefix') {
     if (marked.toLowerCase() !== morpheme.form.toLowerCase()) return null;
