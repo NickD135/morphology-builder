@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phoneme Splitter — Worksheet Generator · Word Labs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#f0f4ff;--line:#e2e8f0;--text:#0f172a;--indigo:#4338ca;--indigo-2:#6366f1;--indigo-soft:#eef2ff;--slate:#475569;--slate-light:#e2e8f0;--slate-mid:#94a3b8;--teal:#0d9488;--teal-soft:#f0fdfa;--teal-line:#99f6e4;--amber:#d97706;--amber-soft:#fef3c7;--amber-line:#fcd34d;--amber-dark:#92400e;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Lexend',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;}
+    button,input,select{font:inherit;}
+    .header{background:#fff;border-bottom:1px solid var(--line);padding:12px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;box-shadow:0 1px 4px rgba(15,23,42,.06);}
+    .brandIcon{width:40px;height:40px;border-radius:11px;background:var(--indigo);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto;}
+    .brandText h1{font-size:18px;font-weight:900;color:#312e81;}
+    .brandText .sub{font-size:9px;text-transform:uppercase;letter-spacing:.22em;color:var(--indigo-2);font-weight:800;}
+    .headerBadge{margin-left:auto;background:var(--teal-soft);color:var(--teal);border:1px solid var(--teal-line);border-radius:999px;padding:4px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;}
+    .main{display:flex;flex:1;overflow:hidden;}
+    .sidebar{width:300px;flex-shrink:0;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;}
+    .sideInner{padding:16px;flex:1;overflow-y:auto;}
+    .section{margin-bottom:18px;}
+    .sectionLabel{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.22em;color:var(--indigo-2);margin-bottom:8px;}
+    .radioGroup{display:flex;flex-direction:column;gap:5px;}
+    .radioGroup label{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);border-radius:9px;padding:7px 11px;cursor:pointer;font-size:12px;font-weight:700;color:var(--slate);transition:all .12s;}
+    .radioGroup label:has(input:checked){border-color:var(--indigo-2);background:var(--indigo-soft);color:var(--indigo);}
+    .radioGroup input[type=radio]{accent-color:var(--indigo);flex-shrink:0;}
+    .radioGroup label .hint{font-size:10px;font-weight:600;color:#94a3b8;margin-left:auto;}
+    .radioGroup label:has(input:checked) .hint{color:var(--indigo-2);}
+    .stepper{display:flex;align-items:center;border:1.5px solid var(--line);border-radius:9px;overflow:hidden;width:fit-content;}
+    .stepperBtn{width:32px;height:32px;border:none;background:#f8fafc;cursor:pointer;font-size:14px;font-weight:700;color:var(--slate);}
+    .stepperBtn:hover{background:var(--indigo-soft);color:var(--indigo);}
+    .stepperVal{width:38px;text-align:center;font-size:13px;font-weight:800;border:none;border-left:1.5px solid var(--line);border-right:1.5px solid var(--line);height:32px;background:#fff;}
+    .toggleRow{display:flex;align-items:center;justify-content:space-between;padding:7px 0;}
+    .toggleRow+.toggleRow{border-top:1px solid var(--line);}
+    .toggleLabel{font-size:12px;font-weight:700;color:var(--slate);}
+    .toggleSub{font-size:10px;color:#94a3b8;font-weight:600;}
+    .toggle{position:relative;width:38px;height:21px;flex-shrink:0;}
+    .toggle input{opacity:0;width:0;height:0;}
+    .toggleSlider{position:absolute;inset:0;background:#e2e8f0;border-radius:999px;cursor:pointer;transition:background .15s;}
+    .toggleSlider::before{content:'';position:absolute;width:15px;height:15px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .15s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+    .toggle input:checked+.toggleSlider{background:var(--indigo);}
+    .toggle input:checked+.toggleSlider::before{transform:translateX(17px);}
+    .sideFooter{padding:14px 16px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:7px;background:#fff;flex-shrink:0;}
+    .btnGenerate{background:var(--indigo);color:#fff;border:none;border-radius:11px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;width:100%;}
+    .btnGenerate:hover{background:#3730a3;}
+    .btnRegen{background:#fff;color:var(--indigo);border:1.5px solid var(--indigo-2);border-radius:11px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;width:100%;display:none;}
+    .btnPrint{background:#0f172a;color:#fff;border:none;border-radius:11px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;width:100%;display:none;}
+    .preview{flex:1;overflow-y:auto;padding:24px;background:var(--bg);}
+    .previewEmpty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:#94a3b8;text-align:center;}
+    .previewEmpty .icon{font-size:44px;opacity:.35;}
+    .previewEmpty .msg{font-size:14px;font-weight:700;}
+    .previewEmpty .sub{font-size:12px;font-weight:600;}
+    .worksheet{background:#fff;border-radius:14px;border:1px solid var(--line);padding:26px;box-shadow:0 3px 12px rgba(15,23,42,.06);max-width:860px;margin:0 auto;}
+    .ws-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:13px;border-bottom:2px solid #e2e8f0;}
+    .ws-logo{display:flex;align-items:center;gap:9px;}
+    .ws-logo-icon{width:32px;height:32px;border-radius:8px;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex:0 0 auto;}
+    .ws-logo-text{font-size:13px;font-weight:900;color:#312e81;}
+    .ws-logo-sub{font-size:8px;text-transform:uppercase;letter-spacing:.2em;color:var(--teal);font-weight:800;}
+    .ws-meta{text-align:right;}
+    .ws-meta-label{font-size:8px;text-transform:uppercase;letter-spacing:.16em;color:#94a3b8;font-weight:800;margin-bottom:3px;}
+    .ws-meta-line{display:flex;align-items:center;gap:7px;justify-content:flex-end;margin-bottom:3px;font-size:10px;font-weight:700;color:#475569;}
+    .ws-meta-field{border-bottom:1.5px solid #94a3b8;min-width:90px;height:15px;display:inline-block;}
+    .ws-title{font-size:16px;font-weight:900;color:#312e81;margin-bottom:2px;}
+    .ws-subtitle{font-size:10px;color:#64748b;font-weight:600;margin-bottom:12px;}
+    .ws-instructions{background:var(--teal-soft);border:1.5px solid var(--teal-line);border-radius:8px;padding:8px 13px;margin-bottom:8px;font-size:11px;color:var(--teal);font-weight:700;line-height:1.6;}
+    .grapheme-strip{background:var(--amber-soft);border:1.5px solid var(--amber-line);border-radius:8px;padding:7px 13px;margin-bottom:14px;font-size:10px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;}
+    .grapheme-strip strong{font-size:9px;text-transform:uppercase;letter-spacing:.14em;color:var(--amber-dark);margin-right:4px;white-space:nowrap;}
+    .g-pill{border:1px solid var(--amber-line);border-radius:5px;padding:2px 6px;font-size:10px;font-weight:800;color:var(--amber-dark);background:#fff;}
+    .phon-table{width:100%;border-collapse:collapse;}
+    .phon-table th{padding:6px 8px;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;border:1.5px solid var(--line);}
+    .phon-table th.th-num{background:#f1f5f9;color:var(--slate);width:5%;}
+    .phon-table th.th-word{background:#f1f5f9;color:var(--slate);width:20%;}
+    .phon-table th.th-clue{background:var(--indigo-soft);color:var(--indigo);width:35%;}
+    .phon-table th.th-ans{background:var(--teal-soft);color:var(--teal);width:40%;}
+    .phon-table td{padding:8px;border:1.5px solid var(--line);vertical-align:middle;}
+    .phon-table tr:nth-child(even) td{background:#fafafa;}
+    .word-cell{font-weight:900;color:#312e81;font-size:12px;}
+    .clue-cell{font-size:10px;font-weight:600;color:var(--slate);}
+    .ans-line{border-bottom:1.5px solid #475569;height:20px;display:block;width:90%;}
+    .ws-key{margin-top:16px;padding-top:14px;border-top:2px dashed #e2e8f0;}
+    .ws-key-title{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.18em;color:#dc2626;margin-bottom:10px;}
+    .ws-key-grid{display:flex;flex-wrap:wrap;gap:4px 24px;}
+    .ws-key-item{font-size:10px;font-weight:700;color:#475569;}
+    .ws-key-item span{color:#0f172a;font-weight:900;}
+    @media print{body{display:block;height:auto;}.header,.sidebar{display:none!important;}.main{display:block;}.preview{padding:0;overflow:visible;}.previewEmpty{display:none;}.worksheet{border:none;border-radius:0;box-shadow:none;padding:10px 14px;max-width:none;}.ws-key{page-break-before:always;}@page{size:A4;margin:10mm 12mm;}}
+  </style>
+</head>
+<body>
+<div class="header">
+  <div class="brandIcon">🔬</div>
+  <div class="brandText"><h1>Word Labs</h1><span class="sub">Worksheet Generator</span></div>
+  <div class="headerBadge">Phoneme Splitter</div>
+</div>
+<div class="main">
+  <div class="sidebar">
+    <div class="sideInner">
+      <div class="section">
+        <div class="sectionLabel">Difficulty</div>
+        <div class="radioGroup">
+          <label><input type="radio" name="diff" value="Starter" checked> Starter <span class="hint">sh, ch, th, wh</span></label>
+          <label><input type="radio" name="diff" value="Level up"> Level Up <span class="hint">vowel digraphs</span></label>
+          <label><input type="radio" name="diff" value="Challenge"> Challenge <span class="hint">complex clusters</span></label>
+          <label><input type="radio" name="diff" value="mixed"> Mixed</label>
+        </div>
+      </div>
+      <div class="section">
+        <div class="sectionLabel">Number of words</div>
+        <div class="stepper">
+          <button class="stepperBtn" onclick="stepCount(-1)">−</button>
+          <input type="number" class="stepperVal" id="countInput" min="5" max="20" value="12" readonly>
+          <button class="stepperBtn" onclick="stepCount(1)">+</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="sectionLabel">Extras</div>
+        <div class="toggleRow">
+          <div><div class="toggleLabel">Grapheme reminder strip</div><div class="toggleSub">Shows common digraphs to watch for</div></div>
+          <label class="toggle"><input type="checkbox" id="toggleStrip" checked><span class="toggleSlider"></span></label>
+        </div>
+        <div class="toggleRow">
+          <div><div class="toggleLabel">Answer key</div><div class="toggleSub">Teacher copy, separate page</div></div>
+          <label class="toggle"><input type="checkbox" id="toggleKey" checked><span class="toggleSlider"></span></label>
+        </div>
+      </div>
+    </div>
+    <div class="sideFooter">
+      <button class="btnGenerate" onclick="generateWorksheet()">⚡ Generate Worksheet</button>
+      <button class="btnRegen" id="regenBtn" onclick="generateWorksheet()">🔄 Regenerate</button>
+      <button class="btnPrint" id="printBtn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+    </div>
+  </div>
+  <div class="preview">
+    <div class="previewEmpty" id="previewEmpty">
+      <div class="icon">🔊</div>
+      <div class="msg">Your Phoneme Splitter worksheet will appear here</div>
+      <div class="sub">Configure options on the left, then hit Generate</div>
+    </div>
+    <div id="worksheetOutput" style="display:none;"></div>
+  </div>
+</div>
+<script>
+const WORDS = [
+  {word:"cat",phonemes:["c","a","t"],diff:"Starter",clue:"a furry pet"},{word:"ship",phonemes:["sh","i","p"],diff:"Starter",clue:"a large boat"},{word:"chat",phonemes:["ch","a","t"],diff:"Starter",clue:"a friendly talk"},{word:"thin",phonemes:["th","i","n"],diff:"Starter",clue:"not thick"},{word:"fish",phonemes:["f","i","sh"],diff:"Starter",clue:"swims in water"},{word:"rich",phonemes:["r","i","ch"],diff:"Starter",clue:"having a lot of money"},{word:"bath",phonemes:["b","a","th"],diff:"Starter",clue:"you wash in this"},{word:"shop",phonemes:["sh","o","p"],diff:"Starter",clue:"a place to buy things"},{word:"chip",phonemes:["ch","i","p"],diff:"Starter",clue:"a fried potato slice"},{word:"rush",phonemes:["r","u","sh"],diff:"Starter",clue:"to hurry"},{word:"much",phonemes:["m","u","ch"],diff:"Starter",clue:"a large amount"},{word:"then",phonemes:["th","e","n"],diff:"Starter",clue:"after that"},{word:"when",phonemes:["wh","e","n"],diff:"Starter",clue:"at what time"},{word:"shed",phonemes:["sh","e","d"],diff:"Starter",clue:"a small outdoor building"},{word:"chin",phonemes:["ch","i","n"],diff:"Starter",clue:"below your mouth"},{word:"with",phonemes:["w","i","th"],diff:"Starter",clue:"accompanied by"},{word:"chop",phonemes:["ch","o","p"],diff:"Starter",clue:"to cut with force"},{word:"shut",phonemes:["sh","u","t"],diff:"Starter",clue:"to close"},{word:"thud",phonemes:["th","u","d"],diff:"Starter",clue:"a dull heavy sound"},{word:"whip",phonemes:["wh","i","p"],diff:"Starter",clue:"to beat quickly"},{word:"path",phonemes:["p","a","th"],diff:"Starter",clue:"a track to walk on"},{word:"wish",phonemes:["w","i","sh"],diff:"Starter",clue:"a hope or desire"},{word:"lash",phonemes:["l","a","sh"],diff:"Starter",clue:"to strike sharply"},
+  {word:"rain",phonemes:["r","ai","n"],diff:"Level up",clue:"water from the sky"},{word:"feet",phonemes:["f","ee","t"],diff:"Level up",clue:"you walk on these"},{word:"boat",phonemes:["b","oa","t"],diff:"Level up",clue:"floats on water"},{word:"moon",phonemes:["m","oo","n"],diff:"Level up",clue:"orbits the Earth"},{word:"book",phonemes:["b","oo","k"],diff:"Level up",clue:"you read it"},{word:"play",phonemes:["p","l","ay"],diff:"Level up",clue:"have fun"},{word:"seed",phonemes:["s","ee","d"],diff:"Level up",clue:"planted to grow"},{word:"coin",phonemes:["c","oi","n"],diff:"Level up",clue:"a piece of money"},{word:"loud",phonemes:["l","ou","d"],diff:"Level up",clue:"making a lot of sound"},{word:"night",phonemes:["n","igh","t"],diff:"Level up",clue:"when it is dark"},{word:"light",phonemes:["l","igh","t"],diff:"Level up",clue:"the opposite of dark"},{word:"read",phonemes:["r","ea","d"],diff:"Level up",clue:"to look at written words"},{word:"train",phonemes:["t","r","ai","n"],diff:"Level up",clue:"moves on tracks"},{word:"cream",phonemes:["c","r","ea","m"],diff:"Level up",clue:"thick white dairy product"},{word:"shout",phonemes:["sh","ou","t"],diff:"Level up",clue:"to call out loudly"},{word:"chain",phonemes:["ch","ai","n"],diff:"Level up",clue:"linked metal rings"},{word:"teeth",phonemes:["t","ee","th"],diff:"Level up",clue:"you chew with these"},{word:"beach",phonemes:["b","ea","ch"],diff:"Level up",clue:"sand by the sea"},{word:"sheet",phonemes:["sh","ee","t"],diff:"Level up",clue:"goes on a bed"},{word:"float",phonemes:["f","l","oa","t"],diff:"Level up",clue:"to rest on water"},{word:"green",phonemes:["g","r","ee","n"],diff:"Level up",clue:"colour of grass"},{word:"snail",phonemes:["s","n","ai","l"],diff:"Level up",clue:"slow shell creature"},{word:"flight",phonemes:["f","l","igh","t"],diff:"Level up",clue:"a journey by plane"},
+  {word:"bright",phonemes:["b","r","igh","t"],diff:"Challenge",clue:"very light or clever"},{word:"throat",phonemes:["th","r","oa","t"],diff:"Challenge",clue:"inside your neck"},{word:"thought",phonemes:["th","ough","t"],diff:"Challenge",clue:"past tense of think"},{word:"street",phonemes:["s","t","r","ee","t"],diff:"Challenge",clue:"a road in a town"},{word:"spring",phonemes:["s","p","r","i","ng"],diff:"Challenge",clue:"the season after winter"},{word:"strong",phonemes:["s","t","r","o","ng"],diff:"Challenge",clue:"having great power"},{word:"splash",phonemes:["s","p","l","a","sh"],diff:"Challenge",clue:"to scatter liquid"},{word:"choice",phonemes:["ch","oi","ce"],diff:"Challenge",clue:"an option to select"},{word:"shook",phonemes:["sh","oo","k"],diff:"Challenge",clue:"past tense of shake"},{word:"teacher",phonemes:["t","ea","ch","er"],diff:"Challenge",clue:"helps you learn"},{word:"thunder",phonemes:["th","u","n","d","er"],diff:"Challenge",clue:"loud sound in a storm"},{word:"feather",phonemes:["f","ea","th","er"],diff:"Challenge",clue:"grows on a bird"},{word:"birthday",phonemes:["b","ir","th","d","ay"],diff:"Challenge",clue:"day you were born"},{word:"shoulder",phonemes:["sh","ou","l","d","er"],diff:"Challenge",clue:"connects arm to body"},{word:"strength",phonemes:["s","t","r","e","ng","th"],diff:"Challenge",clue:"how powerful you are"},{word:"scratch",phonemes:["s","c","r","a","tch"],diff:"Challenge",clue:"to scrape the surface"},{word:"squeak",phonemes:["s","qu","ea","k"],diff:"Challenge",clue:"a high pitched sound"},{word:"shriek",phonemes:["sh","r","ie","k"],diff:"Challenge",clue:"to scream sharply"},{word:"church",phonemes:["ch","ur","ch"],diff:"Challenge",clue:"a place of worship"},{word:"thrush",phonemes:["th","r","u","sh"],diff:"Challenge",clue:"a type of songbird"},
+];
+
+function shuffle(arr){return [...arr].sort(()=>Math.random()-.5);}
+function stepCount(d){const el=document.getElementById('countInput');el.value=Math.min(20,Math.max(5,parseInt(el.value)+d));}
+
+function generateWorksheet(){
+  const diff    = document.querySelector('input[name=diff]:checked').value;
+  const count   = parseInt(document.getElementById('countInput').value)||12;
+  const strip   = document.getElementById('toggleStrip').checked;
+  const showKey = document.getElementById('toggleKey').checked;
+
+  let pool = diff==='mixed' ? [...WORDS] : WORDS.filter(w=>w.diff===diff);
+  const bank = shuffle(pool).slice(0,count);
+  const diffLabel = diff==='mixed'?'Mixed':diff;
+
+  const graphemes = ['sh','ch','th','wh','ng','ck','ai','ay','ee','ea','oo','oa','oi','ou','igh','tion','are','ore','er','ir','ur','ar'];
+  const stripHtml = strip ? `<div class="grapheme-strip"><strong>Keep these together:</strong>${graphemes.map(g=>`<span class="g-pill">${g}</span>`).join('')}</div>` : '';
+
+  const rows = bank.map((w,i)=>`
+    <tr>
+      <td style="text-align:center;font-size:10px;font-weight:700;color:#94a3b8;">${i+1}</td>
+      <td class="word-cell">${w.word}</td>
+      <td class="clue-cell">${w.clue||''}</td>
+      <td><span class="ans-line"></span></td>
+    </tr>`).join('');
+
+  let keyHtml='';
+  if(showKey){
+    const items=bank.map((w,i)=>
+      `<div class="ws-key-item">${i+1}. ${w.word} → <span>${w.phonemes.join(' / ')}</span></div>`
+    ).join('');
+    keyHtml=`<div class="ws-key"><div class="ws-key-title">Answer Key — Teacher Copy</div><div class="ws-key-grid">${items}</div></div>`;
+  }
+
+  document.getElementById('worksheetOutput').innerHTML=`
+    <div class="worksheet">
+      <div class="ws-header">
+        <div class="ws-logo"><div class="ws-logo-icon">PH</div><div><div class="ws-logo-text">Word Labs</div><div class="ws-logo-sub">Phoneme Splitter</div></div></div>
+        <div class="ws-meta">
+          <div class="ws-meta-label">Student details</div>
+          <div class="ws-meta-line">Name: <span class="ws-meta-field"></span></div>
+          <div class="ws-meta-line">Date: <span class="ws-meta-field"></span></div>
+          <div class="ws-meta-line">Class: <span class="ws-meta-field"></span></div>
+        </div>
+      </div>
+      <div class="ws-title">Phoneme Splitter</div>
+      <div class="ws-subtitle">${count} words · ${diffLabel} · Word Labs</div>
+      <div class="ws-instructions">📋 <strong>Instructions:</strong> Split each word into its individual sounds. Write them separated by slashes (/). Some letters work together as one sound — keep those together.</div>
+      ${stripHtml}
+      <table class="phon-table">
+        <thead><tr>
+          <th class="th-num">#</th>
+          <th class="th-word">Word</th>
+          <th class="th-clue">Clue</th>
+          <th class="th-ans">Phonemes — write each sound separated by /</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      ${keyHtml}
+    </div>`;
+
+  document.getElementById('worksheetOutput').style.display='block';
+  document.getElementById('previewEmpty').style.display='none';
+  document.getElementById('regenBtn').style.display='block';
+  document.getElementById('printBtn').style.display='block';
+}
+</script>
+</body>
+</html>
