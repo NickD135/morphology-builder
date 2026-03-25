@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Root Lab — Worksheet Generator · Word Labs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#f0f4ff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b;
+      --indigo:#4338ca; --indigo-2:#6366f1; --indigo-soft:#eef2ff;
+      --green:#16a34a; --green-soft:#f0fdf4; --green-line:#bbf7d0;
+      --orange:#ea580c; --orange-soft:#fff7ed; --orange-line:#fed7aa;
+      --ok:#15803d; --bad:#dc2626;
+      --teal:#0d9488; --teal-soft:#f0fdfa;
+      --purple:#7c3aed; --purple-soft:#f5f3ff; --purple-line:#ddd6fe;
+      --slate:#475569; --slate-light:#e2e8f0; --slate-mid:#94a3b8;
+      --amber:#d97706; --amber-soft:#fef3c7; --amber-line:#fcd34d;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Lexend',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;}
+    button,input,select{font:inherit;}
+
+    /* HEADER */
+    .header{background:#fff;border-bottom:1px solid var(--line);padding:12px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;box-shadow:0 1px 4px rgba(15,23,42,.06);}
+    .brandIcon{width:40px;height:40px;border-radius:11px;background:var(--indigo);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto;}
+    .brandText h1{font-size:18px;font-weight:900;color:#312e81;letter-spacing:-.02em;}
+    .brandText .sub{font-size:9px;text-transform:uppercase;letter-spacing:.22em;color:var(--indigo-2);font-weight:800;}
+    .headerBadge{margin-left:auto;background:var(--indigo-soft);color:var(--indigo);border:1px solid #c7d2fe;border-radius:999px;padding:4px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;}
+
+    /* LAYOUT */
+    .main{display:flex;flex:1;overflow:hidden;}
+    .sidebar{width:300px;flex-shrink:0;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;}
+    .sideInner{padding:16px;flex:1;overflow-y:auto;}
+    .section{margin-bottom:18px;}
+    .sectionLabel{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.22em;color:var(--indigo-2);margin-bottom:8px;}
+
+    .radioGroup{display:flex;flex-direction:column;gap:5px;}
+    .radioGroup label{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);border-radius:9px;padding:7px 11px;cursor:pointer;font-size:12px;font-weight:700;color:var(--slate);transition:all .12s;}
+    .radioGroup label:has(input:checked){border-color:var(--indigo-2);background:var(--indigo-soft);color:var(--indigo);}
+    .radioGroup input[type=radio]{accent-color:var(--indigo);flex-shrink:0;}
+    .radioGroup label .hint{font-size:10px;font-weight:600;color:#94a3b8;margin-left:auto;}
+    .radioGroup label:has(input:checked) .hint{color:var(--indigo-2);}
+
+    .stepper{display:flex;align-items:center;border:1.5px solid var(--line);border-radius:9px;overflow:hidden;width:fit-content;}
+    .stepperBtn{width:32px;height:32px;border:none;background:#f8fafc;cursor:pointer;font-size:14px;font-weight:700;color:var(--slate);transition:background .12s;}
+    .stepperBtn:hover{background:var(--indigo-soft);color:var(--indigo);}
+    .stepperVal{width:38px;text-align:center;font-size:13px;font-weight:800;border:none;border-left:1.5px solid var(--line);border-right:1.5px solid var(--line);height:32px;background:#fff;}
+
+    .toggleRow{display:flex;align-items:center;justify-content:space-between;padding:7px 0;}
+    .toggleRow+.toggleRow{border-top:1px solid var(--line);}
+    .toggleLabel{font-size:12px;font-weight:700;color:var(--slate);}
+    .toggleSub{font-size:10px;color:#94a3b8;font-weight:600;}
+    .toggle{position:relative;width:38px;height:21px;flex-shrink:0;}
+    .toggle input{opacity:0;width:0;height:0;}
+    .toggleSlider{position:absolute;inset:0;background:#e2e8f0;border-radius:999px;cursor:pointer;transition:background .15s;}
+    .toggleSlider::before{content:'';position:absolute;width:15px;height:15px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .15s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+    .toggle input:checked+.toggleSlider{background:var(--indigo);}
+    .toggle input:checked+.toggleSlider::before{transform:translateX(17px);}
+
+    .sideFooter{padding:14px 16px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:7px;background:#fff;flex-shrink:0;}
+    .btnGenerate{background:var(--indigo);color:#fff;border:none;border-radius:11px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;width:100%;}
+    .btnGenerate:hover{background:#3730a3;}
+    .btnRegen{background:#fff;color:var(--indigo);border:1.5px solid var(--indigo-2);border-radius:11px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;width:100%;display:none;}
+    .btnRegen:hover{background:var(--indigo-soft);}
+    .btnPrint{background:#0f172a;color:#fff;border:none;border-radius:11px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;width:100%;display:none;}
+    .btnPrint:hover{background:#1e293b;}
+
+    .preview{flex:1;overflow-y:auto;padding:24px;background:var(--bg);}
+    .previewEmpty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:#94a3b8;text-align:center;}
+    .previewEmpty .icon{font-size:44px;opacity:.35;}
+    .previewEmpty .msg{font-size:14px;font-weight:700;}
+    .previewEmpty .sub{font-size:12px;font-weight:600;}
+
+    /* ── WORKSHEET ───────────────────────────────────────────── */
+    .worksheet{background:#fff;border-radius:14px;border:1px solid var(--line);padding:26px;box-shadow:0 3px 12px rgba(15,23,42,.06);max-width:860px;margin:0 auto;}
+
+    .ws-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:13px;border-bottom:2px solid #e2e8f0;}
+    .ws-logo{display:flex;align-items:center;gap:9px;}
+    .ws-logo-icon{width:32px;height:32px;border-radius:8px;background:#4338ca;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;flex:0 0 auto;}
+    .ws-logo-text{font-size:13px;font-weight:900;color:#312e81;}
+    .ws-logo-sub{font-size:8px;text-transform:uppercase;letter-spacing:.2em;color:#6366f1;font-weight:800;}
+    .ws-meta{text-align:right;}
+    .ws-meta-label{font-size:8px;text-transform:uppercase;letter-spacing:.16em;color:#94a3b8;font-weight:800;margin-bottom:3px;}
+    .ws-meta-line{display:flex;align-items:center;gap:7px;justify-content:flex-end;margin-bottom:3px;font-size:10px;font-weight:700;color:#475569;}
+    .ws-meta-field{border-bottom:1.5px solid #94a3b8;min-width:90px;height:15px;display:inline-block;}
+
+    .ws-title{font-size:16px;font-weight:900;color:#312e81;margin-bottom:2px;}
+    .ws-subtitle{font-size:10px;color:#64748b;font-weight:600;margin-bottom:12px;}
+    .ws-instructions{background:#eef2ff;border:1.5px solid #c7d2fe;border-radius:8px;padding:8px 13px;margin-bottom:16px;font-size:11px;color:#4338ca;font-weight:700;line-height:1.6;}
+
+    /* word block */
+    .word-block{margin-bottom:14px;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;}
+    .word-block-header{background:#312e81;padding:8px 14px;display:flex;align-items:center;gap:10px;}
+    .word-block-num{font-size:10px;font-weight:900;color:#c7d2fe;}
+    .word-block-word{font-size:16px;font-weight:900;color:#fff;letter-spacing:-.01em;}
+
+    .morph-row{display:flex;border-bottom:1.5px solid var(--line);}
+    .morph-cell{flex:1;padding:0;border-right:1.5px solid var(--line);}
+    .morph-cell:last-child{border-right:none;}
+    .morph-cell-top{padding:5px 8px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;}
+    .morph-type-label{font-size:7px;font-weight:900;text-transform:uppercase;letter-spacing:.18em;}
+    .morph-form{font-size:13px;font-weight:900;}
+    .morph-cell-bot{padding:4px 8px 6px;border-top:1px dashed;}
+    .morph-meaning-label{font-size:7px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:#94a3b8;margin-bottom:2px;}
+    .morph-meaning-blank{border-bottom:1px solid #94a3b8;height:14px;width:100%;}
+    .morph-meaning-given{font-size:10px;font-weight:700;color:#475569;}
+
+    .prefix-cell .morph-cell-top{background:#eff6ff;}
+    .prefix-cell .morph-type-label{color:#1e40af;}
+    .prefix-cell .morph-form{color:#1e40af;}
+    .prefix-cell .morph-cell-bot{background:#f8fbff;border-top-color:#bfdbfe;}
+    .base-cell .morph-cell-top{background:#fef3c7;}
+    .base-cell .morph-type-label{color:#92400e;}
+    .base-cell .morph-form{color:#92400e;}
+    .base-cell .morph-cell-bot{background:#fffdf0;border-top-color:#fcd34d;}
+    .suffix-cell .morph-cell-top{background:#f0fdf4;}
+    .suffix-cell .morph-type-label{color:#166634;}
+    .suffix-cell .morph-form{color:#166634;}
+    .suffix-cell .morph-cell-bot{background:#f8fdf9;border-top-color:#86efac;}
+    .none-cell .morph-cell-top{background:#f8fafc;}
+    .none-cell .morph-type-label{color:#94a3b8;}
+    .none-cell .morph-form{color:#cbd5e1;}
+    .none-cell .morph-cell-bot{background:#f8fafc;border-top-color:#e2e8f0;}
+
+    /* meaning section */
+    .meaning-row{padding:10px 14px;background:#f8fafc;}
+    .meaning-question{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:#475569;margin-bottom:8px;}
+    .meaning-options{display:flex;flex-direction:column;gap:5px;}
+    .meaning-option{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;color:#1e293b;}
+    .meaning-option-circle{width:16px;height:16px;border-radius:50%;border:1.5px solid #94a3b8;flex-shrink:0;}
+    .meaning-option-letter{font-size:9px;font-weight:900;color:#94a3b8;width:12px;flex-shrink:0;}
+
+    /* cloze section */
+    .cloze-row{padding:10px 14px;background:#fefce8;border-top:1.5px solid #fcd34d;}
+    .cloze-label{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:#92400e;margin-bottom:6px;}
+    .cloze-question{font-size:11px;font-weight:700;color:#1e293b;margin-bottom:6px;line-height:1.5;}
+    .cloze-options{display:flex;flex-direction:column;gap:4px;}
+    .cloze-option{display:flex;align-items:flex-start;gap:7px;font-size:10px;font-weight:600;color:#475569;line-height:1.4;}
+    .cloze-option-circle{width:14px;height:14px;border-radius:50%;border:1.5px solid #94a3b8;flex-shrink:0;margin-top:1px;}
+
+    /* answer key */
+    .ws-key{margin-top:16px;padding-top:14px;border-top:2px dashed #e2e8f0;}
+    .ws-key-title{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.18em;color:#dc2626;margin-bottom:10px;}
+    .ws-key-grid{display:flex;flex-wrap:wrap;gap:5px 20px;}
+    .ws-key-item{font-size:10px;font-weight:700;color:#475569;}
+    .ws-key-item span{color:#0f172a;font-weight:900;}
+
+    /* PRINT */
+    @media print {
+      body{display:block;height:auto;}
+      .header,.sidebar{display:none!important;}
+      .main{display:block;}
+      .preview{padding:0;overflow:visible;}
+      .previewEmpty{display:none;}
+      .worksheet{border:none;border-radius:0;box-shadow:none;padding:10px 14px;max-width:none;}
+      .ws-key{page-break-before:always;border-top:none;padding-top:20px;}
+      @page{size:A4;margin:10mm 12mm;}
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brandIcon">🔬</div>
+  <div class="brandText">
+    <h1>Word Labs</h1>
+    <span class="sub">Worksheet Generator</span>
+  </div>
+  <div class="headerBadge">Root Lab</div>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sideInner">
+
+      <div class="section">
+        <div class="sectionLabel">Difficulty</div>
+        <div class="radioGroup">
+          <label><input type="radio" name="level" value="starter" checked> Starter <span class="hint">2-morpheme words</span></label>
+          <label><input type="radio" name="level" value="levelup"> Level Up <span class="hint">3-morpheme words</span></label>
+          <label><input type="radio" name="level" value="challenge"> Challenge <span class="hint">complex words</span></label>
+          <label><input type="radio" name="level" value="mixed"> Mixed</label>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sectionLabel">Morphemes shown</div>
+        <div class="radioGroup">
+          <label><input type="radio" name="scaffold" value="none" checked> All blank — students identify everything</label>
+          <label><input type="radio" name="scaffold" value="form"> Morpheme forms given — meanings blank</label>
+          <label><input type="radio" name="scaffold" value="given"> All given — focus on meaning only</label>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sectionLabel">Number of words</div>
+        <div class="stepper">
+          <button class="stepperBtn" onclick="stepCount(-1)">−</button>
+          <input type="number" class="stepperVal" id="countInput" min="3" max="12" value="6" readonly>
+          <button class="stepperBtn" onclick="stepCount(1)">+</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sectionLabel">Extras</div>
+        <div class="toggleRow">
+          <div><div class="toggleLabel">Cloze sentences</div><div class="toggleSub">Challenge words only — use in sentence</div></div>
+          <label class="toggle"><input type="checkbox" id="toggleCloze" checked><span class="toggleSlider"></span></label>
+        </div>
+        <div class="toggleRow">
+          <div><div class="toggleLabel">Answer key</div><div class="toggleSub">Teacher copy, separate page</div></div>
+          <label class="toggle"><input type="checkbox" id="toggleKey" checked><span class="toggleSlider"></span></label>
+        </div>
+      </div>
+
+    </div>
+    <div class="sideFooter">
+      <button class="btnGenerate" onclick="generateWorksheet()">⚡ Generate Worksheet</button>
+      <button class="btnRegen" id="regenBtn" onclick="generateWorksheet()">🔄 Regenerate</button>
+      <button class="btnPrint" id="printBtn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+    </div>
+  </div>
+
+  <div class="preview">
+    <div class="previewEmpty" id="previewEmpty">
+      <div class="icon">🌿</div>
+      <div class="msg">Your Root Lab worksheet will appear here</div>
+      <div class="sub">Choose difficulty and options, then hit Generate</div>
+    </div>
+    <div id="worksheetOutput" style="display:none;"></div>
+  </div>
+</div>
+
+<script>
+// ── Inline Root Lab word data ─────────────────────────────────
+const WORDS = [
+  // STARTER
+  {word:'helpful',     parts:{prefix:null,  base:'help',    suffix:'ful'},  meanings:{prefix:null,        base:'to assist',         suffix:'full of'},       fullMeaning:'full of help',                distractors:['needing help quickly','helping others together','asking for assistance'],        level:'starter'},
+  {word:'replay',      parts:{prefix:'re',  base:'play',    suffix:null},   meanings:{prefix:'again',     base:'to play',           suffix:null},            fullMeaning:'play again',                  distractors:['playing fast','stopping play','playing quietly'],                               level:'starter'},
+  {word:'jumped',      parts:{prefix:null,  base:'jump',    suffix:'ed'},   meanings:{prefix:null,        base:'to jump',           suffix:'past tense'},    fullMeaning:'did jump (in the past)',       distractors:['about to jump','jumping right now','unable to jump'],                          level:'starter'},
+  {word:'teacher',     parts:{prefix:null,  base:'teach',   suffix:'er'},   meanings:{prefix:null,        base:'to teach',          suffix:'one who'},       fullMeaning:'one who teaches',             distractors:['a school subject','one who learns','a way of teaching'],                       level:'starter'},
+  {word:'kindness',    parts:{prefix:null,  base:'kind',    suffix:'ness'}, meanings:{prefix:null,        base:'being kind',        suffix:'the state of'},  fullMeaning:'the state of being kind',     distractors:['a type of gift','a kind person','the act of giving'],                          level:'starter'},
+  {word:'careful',     parts:{prefix:null,  base:'care',    suffix:'ful'},  meanings:{prefix:null,        base:'care / attention',  suffix:'full of'},       fullMeaning:'full of care',                distractors:['without any care','caring too much','in a careless way'],                      level:'starter'},
+  {word:'quickly',     parts:{prefix:null,  base:'quick',   suffix:'ly'},   meanings:{prefix:null,        base:'fast',              suffix:'in a way that is'},fullMeaning:'in a fast way',             distractors:['a type of speed','becoming faster','the quickest thing'],                     level:'starter'},
+  {word:'builder',     parts:{prefix:null,  base:'build',   suffix:'er'},   meanings:{prefix:null,        base:'to build',          suffix:'one who'},       fullMeaning:'one who builds',              distractors:['a building material','the act of building','something that was built'],        level:'starter'},
+  {word:'movement',    parts:{prefix:null,  base:'move',    suffix:'ment'}, meanings:{prefix:null,        base:'to move',           suffix:'the act of'},    fullMeaning:'the act of moving',           distractors:['a still object','moving very fast','one who moves things'],                   level:'starter'},
+  {word:'sadness',     parts:{prefix:null,  base:'sad',     suffix:'ness'}, meanings:{prefix:null,        base:'sad / unhappy',     suffix:'the state of'},  fullMeaning:'the state of being sad',      distractors:['a happy feeling','one who is sad','becoming sad slowly'],                     level:'starter'},
+  {word:'darker',      parts:{prefix:null,  base:'dark',    suffix:'er'},   meanings:{prefix:null,        base:'dark',              suffix:'more (comparative)'},fullMeaning:'more dark',              distractors:['the darkest of all','without any light','in a dark way'],                     level:'starter'},
+  {word:'brighter',    parts:{prefix:null,  base:'bright',  suffix:'er'},   meanings:{prefix:null,        base:'bright / shining',  suffix:'more (comparative)'},fullMeaning:'more bright',            distractors:['very bright light','the brightest thing','in a bright way'],                  level:'starter'},
+  // LEVEL UP
+  {word:'unhelpful',   parts:{prefix:'un',  base:'help',    suffix:'ful'},  meanings:{prefix:'not',       base:'to assist',         suffix:'full of'},       fullMeaning:'not full of help',            distractors:['full of helping others','able to help','needing help'],                        level:'levelup'},
+  {word:'replaying',   parts:{prefix:'re',  base:'play',    suffix:'ing'},  meanings:{prefix:'again',     base:'to play',           suffix:'ongoing action'},fullMeaning:'playing again right now',     distractors:['ready to play','played in the past','stopped playing'],                        level:'levelup'},
+  {word:'rebuilding',  parts:{prefix:'re',  base:'build',   suffix:'ing'},  meanings:{prefix:'again',     base:'to build',          suffix:'ongoing action'},fullMeaning:'building again right now',    distractors:['built long ago','unable to build','a finished building'],                     level:'levelup'},
+  {word:'unkindness',  parts:{prefix:'un',  base:'kind',    suffix:'ness'}, meanings:{prefix:'not',       base:'being kind',        suffix:'the state of'},  fullMeaning:'the state of not being kind', distractors:['one who is kind','a type of kindness','being overly kind'],                  level:'levelup'},
+  {word:'mismanaged',  parts:{prefix:'mis', base:'manage',  suffix:'ed'},   meanings:{prefix:'wrongly',   base:'to manage',         suffix:'past tense'},    fullMeaning:'managed wrongly (in the past)',distractors:['managed very well','currently managing','refused to manage'],              level:'levelup'},
+  {word:'disconnected',parts:{prefix:'dis', base:'connect', suffix:'ed'},   meanings:{prefix:'not / apart',base:'to connect',       suffix:'past tense'},    fullMeaning:'made not connected (in the past)',distractors:['connected very well','currently connecting','able to connect'],       level:'levelup'},
+  {word:'overreacting',parts:{prefix:'over',base:'react',   suffix:'ing'},  meanings:{prefix:'too much',  base:'to react',          suffix:'ongoing action'},fullMeaning:'reacting too much right now', distractors:['not reacting at all','reacted in the past','about to react'],               level:'levelup'},
+  {word:'previewing',  parts:{prefix:'pre', base:'view',    suffix:'ing'},  meanings:{prefix:'before',    base:'to view / look at', suffix:'ongoing action'},fullMeaning:'looking at something before',  distractors:['looked long ago','refused to look','looked too closely'],                   level:'levelup'},
+  {word:'rethinking',  parts:{prefix:'re',  base:'think',   suffix:'ing'},  meanings:{prefix:'again',     base:'to think',          suffix:'ongoing action'},fullMeaning:'thinking again right now',    distractors:['stopped thinking','thought in the past','unable to think'],                  level:'levelup'},
+  {word:'forewarned',  parts:{prefix:'fore',base:'warn',    suffix:'ed'},   meanings:{prefix:'before / ahead',base:'to warn',       suffix:'past tense'},    fullMeaning:'warned ahead of time',        distractors:['warned too late','unable to warn','warning right now'],                       level:'levelup'},
+  {word:'exported',    parts:{prefix:'ex',  base:'port',    suffix:'ed'},   meanings:{prefix:'out',       base:'to carry',          suffix:'past tense'},    fullMeaning:'carried out (in the past)',   distractors:['carried back in','being carried now','refused to carry'],                    level:'levelup'},
+  // CHALLENGE
+  {word:'unmanageable',    parts:{prefix:'un',   base:'manage',  suffix:'able'}, meanings:{prefix:'not',        base:'to manage',    suffix:'able to be'},    fullMeaning:'not able to be managed',         distractors:['easy to manage','managed well in the past','the act of managing'],             level:'challenge',
+   cloze:{question:'Which sentence uses "unmanageable" correctly?',options:[{text:'The crowd became unmanageable after the concert was cancelled.',correct:true},{text:'She unmanageable the project and handed it in on time.',correct:false},{text:'The unmanageable gave a long speech at the school assembly.',correct:false}]}},
+  {word:'interconnected',  parts:{prefix:'inter',base:'connect', suffix:'ed'},   meanings:{prefix:'between each',base:'to connect',  suffix:'past tense'},    fullMeaning:'connected between each other',   distractors:['not connected at all','connecting right now','able to be connected'],          level:'challenge',
+   cloze:{question:'Which sentence uses "interconnected" correctly?',options:[{text:'Scientists found that all the ecosystems in the rainforest were interconnected.',correct:true},{text:'She interconnected to the library every Tuesday after school.',correct:false},{text:'The interconnected decided to stay home and rest for the day.',correct:false}]}},
+  {word:'overprotective',  parts:{prefix:'over', base:'protect', suffix:'ive'},  meanings:{prefix:'too much',   base:'to protect',   suffix:'tending to'},    fullMeaning:'tending to protect too much',    distractors:['not able to protect','protected in the past','refusing to protect'],           level:'challenge',
+   cloze:{question:'Which sentence uses "overprotective" correctly?',options:[{text:'Some parents can be overprotective and worry too much about their children.',correct:true},{text:'The dog overprotective its owner by running away.',correct:false},{text:'She felt overprotective when she forgot her homework.',correct:false}]}},
+  {word:'mispronounced',   parts:{prefix:'mis',  base:'pronounce',suffix:'ed'},  meanings:{prefix:'wrongly',    base:'to say aloud', suffix:'past tense'},     fullMeaning:'said aloud in the wrong way',    distractors:['said correctly','saying right now','refused to speak'],                       level:'challenge',
+   cloze:{question:'Which sentence uses "mispronounced" correctly?',options:[{text:'He mispronounced the French word and everyone giggled.',correct:true},{text:'She mispronounced to school every day by bus.',correct:false},{text:'The teacher mispronounced a gold star on the chart.',correct:false}]}},
+];
+
+function shuffle(arr) { return [...arr].sort(() => Math.random() - .5); }
+function stepCount(d) {
+  const el = document.getElementById('countInput');
+  el.value = Math.min(12, Math.max(3, parseInt(el.value) + d));
+}
+
+function generateWorksheet() {
+  const level    = document.querySelector('input[name=level]:checked').value;
+  const scaffold = document.querySelector('input[name=scaffold]:checked').value;
+  const count    = parseInt(document.getElementById('countInput').value) || 6;
+  const showCloze= document.getElementById('toggleCloze').checked;
+  const showKey  = document.getElementById('toggleKey').checked;
+
+  let pool = level === 'mixed' ? WORDS : WORDS.filter(w => w.level === level);
+  const bank = shuffle(pool).slice(0, count);
+
+  if (!bank.length) {
+    alert('No words available for the selected difficulty.');
+    return;
+  }
+
+  const levelLabel = {starter:'Starter',levelup:'Level Up',challenge:'Challenge',mixed:'Mixed'}[level];
+  const scaffoldLabel = {none:'All Blank',form:'Forms Given',given:'All Given'}[scaffold];
+  const letters = ['A','B','C','D'];
+
+  const instrMap = {
+    none:  'Identify the prefix, base and suffix in each word and write them in the boxes. Write the meaning of each morpheme. Then circle the correct meaning for the whole word.',
+    form:  'The morpheme pieces are shown. Write the meaning of each morpheme in the space provided. Then circle the correct meaning for the whole word.',
+    given: 'The morphemes and their meanings are shown. Read them carefully, then circle the correct meaning for the whole word.',
+  };
+
+  let blocks = '';
+  bank.forEach((w, i) => {
+    const types = ['prefix','base','suffix'];
+    let morphCells = '';
+
+    types.forEach(t => {
+      const form    = w.parts[t];
+      const meaning = w.meanings[t];
+      const typeClass = t + '-cell';
+      const showForm = scaffold !== 'none';
+      const showMeaning = scaffold === 'given';
+
+      morphCells += `
+        <div class="morph-cell ${typeClass}">
+          <div class="morph-cell-top">
+            <span class="morph-type-label">${t}</span>
+            <span class="morph-form">${showForm ? (form || '—') : '&nbsp;'}</span>
+            ${!showForm ? `<div style="border-bottom:1.5px dashed #94a3b8;width:80%;height:14px;margin-top:2px;"></div>` : ''}
+          </div>
+          <div class="morph-cell-bot">
+            <div class="morph-meaning-label">meaning</div>
+            ${showMeaning && meaning
+              ? `<div class="morph-meaning-given">${meaning}</div>`
+              : `<div class="morph-meaning-blank"></div>`
+            }
+          </div>
+        </div>`;
+    });
+
+    // Shuffle options: correct + distractors
+    const options = shuffle([
+      { text: w.fullMeaning, correct: true },
+      ...w.distractors.map(d => ({ text: d, correct: false }))
+    ]);
+
+    const optionHtml = options.map((opt, j) => `
+      <div class="meaning-option">
+        <span class="meaning-option-letter">${letters[j]}</span>
+        <div class="meaning-option-circle"></div>
+        <span>${opt.text}</span>
+      </div>`).join('');
+
+    // Cloze (challenge only, if toggled)
+    let clozeHtml = '';
+    if (showCloze && w.cloze) {
+      const clozeOpts = w.cloze.options.map((opt, j) => `
+        <div class="cloze-option">
+          <div class="cloze-option-circle"></div>
+          <span>${opt.text}</span>
+        </div>`).join('');
+      clozeHtml = `
+        <div class="cloze-row">
+          <div class="cloze-label">Use it in context</div>
+          <div class="cloze-question">${w.cloze.question}</div>
+          <div class="cloze-options">${clozeOpts}</div>
+        </div>`;
+    }
+
+    blocks += `
+      <div class="word-block">
+        <div class="word-block-header">
+          <span class="word-block-num">${i + 1}.</span>
+          <span class="word-block-word">${w.word}</span>
+        </div>
+        <div class="morph-row">${morphCells}</div>
+        <div class="meaning-row">
+          <div class="meaning-question">What does this word mean? Circle the correct answer.</div>
+          <div class="meaning-options">${optionHtml}</div>
+        </div>
+        ${clozeHtml}
+      </div>`;
+  });
+
+  // Answer key
+  let keyHtml = '';
+  if (showKey) {
+    const keyItems = bank.map((w, i) => {
+      const options = shuffle([
+        { text: w.fullMeaning, correct: true },
+        ...w.distractors.map(d => ({ text: d, correct: false }))
+      ]);
+      const correctLetter = letters[options.findIndex(o => o.correct)];
+      return `<div class="ws-key-item">${i+1}. <span>${w.word}</span> — ${correctLetter} (${w.fullMeaning})</div>`;
+    }).join('');
+    keyHtml = `
+      <div class="ws-key">
+        <div class="ws-key-title">✱ Answer Key — Teacher Copy</div>
+        <div class="ws-key-grid">${keyItems}</div>
+      </div>`;
+  }
+
+  document.getElementById('worksheetOutput').innerHTML = `
+    <div class="worksheet">
+      <div class="ws-header">
+        <div class="ws-logo">
+          <div class="ws-logo-icon">RL</div>
+          <div><div class="ws-logo-text">Word Labs</div><div class="ws-logo-sub">Root Lab</div></div>
+        </div>
+        <div class="ws-meta">
+          <div class="ws-meta-label">Student details</div>
+          <div class="ws-meta-line">Name: <span class="ws-meta-field"></span></div>
+          <div class="ws-meta-line">Date: <span class="ws-meta-field"></span></div>
+          <div class="ws-meta-line">Class: <span class="ws-meta-field"></span></div>
+        </div>
+      </div>
+      <div class="ws-title">Root Lab</div>
+      <div class="ws-subtitle">${count} words · ${levelLabel} · ${scaffoldLabel} · Word Labs</div>
+      <div class="ws-instructions">📋 <strong>Instructions:</strong> ${instrMap[scaffold]}</div>
+      ${blocks}
+      ${keyHtml}
+    </div>`;
+
+  document.getElementById('worksheetOutput').style.display = 'block';
+  document.getElementById('previewEmpty').style.display    = 'none';
+  document.getElementById('regenBtn').style.display        = 'block';
+  document.getElementById('printBtn').style.display        = 'block';
+}
+</script>
+</body>
+</html>

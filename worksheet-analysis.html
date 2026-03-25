@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Word Analysis — Worksheet Generator · Word Labs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#f0f4ff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b;
+      --indigo:#4338ca; --indigo-2:#6366f1; --indigo-soft:#eef2ff;
+      --green:#16a34a; --green-soft:#f0fdf4; --green-line:#bbf7d0;
+      --orange:#ea580c; --orange-soft:#fff7ed; --orange-line:#fed7aa;
+      --ok:#15803d; --bad:#dc2626;
+      --teal:#0d9488; --teal-soft:#f0fdfa; --teal-line:#99f6e4;
+      --purple:#7c3aed; --purple-soft:#f5f3ff; --purple-line:#ddd6fe;
+      --slate:#475569; --slate-light:#e2e8f0; --slate-mid:#94a3b8;
+      --amber:#d97706; --amber-soft:#fef3c7; --amber-line:#fcd34d;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Lexend',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;}
+    button,input,select{font:inherit;}
+
+    /* HEADER */
+    .header{background:#fff;border-bottom:1px solid var(--line);padding:12px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;box-shadow:0 1px 4px rgba(15,23,42,.06);}
+    .brandIcon{width:40px;height:40px;border-radius:11px;background:var(--indigo);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto;}
+    .brandText h1{font-size:18px;font-weight:900;color:#312e81;letter-spacing:-.02em;}
+    .brandText .sub{font-size:9px;text-transform:uppercase;letter-spacing:.22em;color:var(--indigo-2);font-weight:800;}
+    .headerBadge{margin-left:auto;background:var(--indigo-soft);color:var(--indigo);border:1px solid #c7d2fe;border-radius:999px;padding:4px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;}
+
+    /* LAYOUT */
+    .main{display:flex;flex:1;overflow:hidden;}
+    .sidebar{width:300px;flex-shrink:0;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;}
+    .sideInner{padding:16px;flex:1;overflow-y:auto;}
+    .section{margin-bottom:18px;}
+    .sectionLabel{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.22em;color:var(--indigo-2);margin-bottom:8px;}
+
+    /* RADIO GROUP */
+    .radioGroup{display:flex;flex-direction:column;gap:5px;}
+    .radioGroup label{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);border-radius:9px;padding:7px 11px;cursor:pointer;font-size:12px;font-weight:700;color:var(--slate);transition:all .12s;}
+    .radioGroup label:has(input:checked){border-color:var(--indigo-2);background:var(--indigo-soft);color:var(--indigo);}
+    .radioGroup input[type=radio]{accent-color:var(--indigo);flex-shrink:0;}
+
+    /* MORPHEME TYPE TABS */
+    .miniTabs{display:flex;gap:5px;margin-bottom:10px;}
+    .miniTab{flex:1;padding:6px 4px;text-align:center;font-size:10px;font-weight:800;cursor:pointer;border:1.5px solid var(--line);border-radius:8px;background:#f8fafc;color:var(--slate);transition:all .12s;}
+    .miniTab.active{background:var(--indigo);color:#fff;border-color:var(--indigo);}
+
+    /* DROPDOWN SEARCH */
+    .dropWrap{margin-top:8px;}
+    .dropSearch{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:600;color:var(--text);margin-bottom:5px;outline:none;transition:border .12s;}
+    .dropSearch:focus{border-color:var(--indigo-2);}
+    .dropList{border:1.5px solid var(--line);border-radius:8px;overflow-y:auto;max-height:160px;background:#fff;}
+    .dropItem{display:flex;align-items:center;gap:7px;padding:6px 9px;cursor:pointer;font-size:11px;border-bottom:1px solid #f1f5f9;transition:background .1s;}
+    .dropItem:last-child{border-bottom:none;}
+    .dropItem:hover{background:#f8fafc;}
+    .dropItem input[type=radio]{accent-color:var(--indigo);flex-shrink:0;}
+    .item-form{font-weight:800;color:var(--text);}
+    .item-meaning{color:#94a3b8;font-size:10px;margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px;}
+    .item-tag{font-size:9px;font-weight:800;padding:1px 5px;border-radius:4px;flex-shrink:0;}
+    .item-tag.latin{background:#eef2ff;color:#4338ca;}
+    .item-tag.greek{background:var(--teal-soft);color:var(--teal);}
+    .item-tag.anglo{background:var(--orange-soft);color:var(--orange);}
+    .item-tag.ext{background:var(--purple-soft);color:var(--purple);}
+    .selLabel{font-size:10px;font-weight:700;color:var(--indigo-2);margin-top:5px;}
+
+    /* EXTENSION TOGGLE */
+    .extToggleRow{display:flex;align-items:center;justify-content:space-between;padding:6px 0;margin-top:6px;}
+    .extToggleLabel{font-size:11px;font-weight:700;color:var(--slate);}
+    .toggle{position:relative;width:36px;height:20px;flex-shrink:0;}
+    .toggle input{opacity:0;width:0;height:0;}
+    .toggleSlider{position:absolute;inset:0;background:#e2e8f0;border-radius:999px;cursor:pointer;transition:background .15s;}
+    .toggleSlider::before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .15s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+    .toggle input:checked+.toggleSlider{background:var(--purple);}
+    .toggle input:checked+.toggleSlider::before{transform:translateX(16px);}
+
+    /* CUSTOM LIST */
+    .customListSelect{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;color:var(--text);background:#fff;cursor:pointer;outline:none;margin-top:4px;}
+    .customListSelect:focus{border-color:var(--indigo-2);}
+    .customMsg{font-size:11px;font-weight:600;color:#94a3b8;margin-top:5px;line-height:1.5;}
+    .customMsg.error{color:var(--bad);}
+    .customMsg.ok{color:var(--ok);}
+    .loadRow{display:flex;gap:5px;align-items:center;margin-top:6px;}
+    .loadRow .dropSearch{margin-bottom:0;flex:1;}
+    .btnLoad{border:1.5px solid var(--indigo-2);border-radius:8px;padding:6px 11px;font-size:11px;font-weight:800;cursor:pointer;background:#fff;color:var(--indigo);white-space:nowrap;}
+    .btnLoad:hover{background:var(--indigo-soft);}
+
+    /* STEPPER */
+    .stepper{display:flex;align-items:center;border:1.5px solid var(--line);border-radius:9px;overflow:hidden;width:fit-content;}
+    .stepperBtn{width:32px;height:32px;border:none;background:#f8fafc;cursor:pointer;font-size:14px;font-weight:700;color:var(--slate);transition:background .12s;}
+    .stepperBtn:hover{background:var(--indigo-soft);color:var(--indigo);}
+    .stepperVal{width:38px;text-align:center;font-size:13px;font-weight:800;border:none;border-left:1.5px solid var(--line);border-right:1.5px solid var(--line);height:32px;background:#fff;}
+
+    /* TOGGLES */
+    .toggleRow{display:flex;align-items:center;justify-content:space-between;padding:7px 0;}
+    .toggleRow+.toggleRow{border-top:1px solid var(--line);}
+    .toggleLabel{font-size:12px;font-weight:700;color:var(--slate);}
+    .toggleSub{font-size:10px;color:#94a3b8;font-weight:600;}
+    .toggleKey input:checked+.toggleSlider{background:var(--indigo);}
+
+    /* FOOTER */
+    .sideFooter{padding:14px 16px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:7px;background:#fff;flex-shrink:0;}
+    .btnGenerate{background:var(--indigo);color:#fff;border:none;border-radius:11px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;width:100%;}
+    .btnGenerate:hover{background:#3730a3;}
+    .btnRegen{background:#fff;color:var(--indigo);border:1.5px solid var(--indigo-2);border-radius:11px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;width:100%;display:none;}
+    .btnRegen:hover{background:var(--indigo-soft);}
+    .btnPrint{background:#0f172a;color:#fff;border:none;border-radius:11px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;width:100%;display:none;}
+    .btnPrint:hover{background:#1e293b;}
+
+    /* PREVIEW */
+    .preview{flex:1;overflow-y:auto;padding:24px;background:var(--bg);}
+    .previewEmpty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:#94a3b8;text-align:center;}
+    .previewEmpty .icon{font-size:44px;opacity:.35;}
+    .previewEmpty .msg{font-size:14px;font-weight:700;}
+    .previewEmpty .sub{font-size:12px;font-weight:600;}
+
+    /* WORKSHEET */
+    .worksheet{background:#fff;border-radius:14px;border:1px solid var(--line);padding:26px;box-shadow:0 3px 12px rgba(15,23,42,.06);max-width:860px;margin:0 auto;}
+
+    .ws-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:13px;border-bottom:2px solid #e2e8f0;}
+    .ws-logo{display:flex;align-items:center;gap:9px;}
+    .ws-logo-icon{width:32px;height:32px;border-radius:8px;background:#4338ca;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;flex:0 0 auto;}
+    .ws-logo-text{font-size:13px;font-weight:900;color:#312e81;}
+    .ws-logo-sub{font-size:8px;text-transform:uppercase;letter-spacing:.2em;color:#6366f1;font-weight:800;}
+    .ws-meta{text-align:right;}
+    .ws-meta-label{font-size:8px;text-transform:uppercase;letter-spacing:.16em;color:#94a3b8;font-weight:800;margin-bottom:3px;}
+    .ws-meta-line{display:flex;align-items:center;gap:7px;justify-content:flex-end;margin-bottom:3px;font-size:10px;font-weight:700;color:#475569;}
+    .ws-meta-field{border-bottom:1.5px solid #94a3b8;min-width:90px;height:15px;display:inline-block;}
+
+    .ws-title{font-size:16px;font-weight:900;color:#312e81;margin-bottom:2px;}
+    .ws-subtitle{font-size:10px;color:#64748b;font-weight:600;margin-bottom:4px;}
+
+    /* focus morpheme callout */
+    .ws-focus{display:inline-flex;align-items:center;gap:8px;background:var(--indigo-soft);border:1.5px solid #c7d2fe;border-radius:8px;padding:7px 14px;margin-bottom:14px;}
+    .ws-focus-label{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;color:var(--indigo-2);}
+    .ws-focus-morpheme{font-size:15px;font-weight:900;color:#312e81;}
+    .ws-focus-meaning{font-size:11px;font-weight:700;color:var(--indigo);border-left:1.5px solid #c7d2fe;padding-left:10px;margin-left:4px;}
+
+    .ws-instructions{background:#eef2ff;border:1.5px solid #c7d2fe;border-radius:8px;padding:8px 13px;margin-bottom:14px;font-size:11px;color:#4338ca;font-weight:700;line-height:1.6;}
+
+    /* ANALYSIS TABLE */
+    .ws-table{width:100%;border-collapse:collapse;font-size:11px;}
+    .ws-table th{padding:6px 8px;text-align:left;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:#475569;border:1.5px solid #e2e8f0;}
+    .ws-table th.col-word{background:#f1f5f9;width:18%;}
+    .ws-table th.col-prefix{background:#eff6ff;color:#1e40af;width:13%;}
+    .ws-table th.col-base{background:#fef3c7;color:#92400e;width:13%;}
+    .ws-table th.col-suffix{background:#f0fdf4;color:#166634;width:13%;}
+    .ws-table th.col-syllables{background:#f5f3ff;color:#5b21b6;width:21%;}
+    .ws-table th.col-phonemes{background:var(--teal-soft);color:var(--teal);width:22%;}
+
+    .ws-table td{padding:0;border:1.5px solid #e2e8f0;vertical-align:middle;height:14mm;}
+    .ws-table tr:nth-child(even) td{background:#fafafa;}
+
+    .cell-word{padding:6px 10px;}
+    .word-display{font-size:13px;font-weight:900;color:#312e81;}
+    .word-focus{color:var(--indigo);text-decoration:underline;text-decoration-color:#c7d2fe;text-decoration-thickness:2px;}
+
+    /* morpheme cells */
+    .cell-morph{padding:5px;}
+    .morph-blank{border:1.5px dashed #94a3b8;border-radius:5px;height:26px;background:#fafafa;}
+    .morph-given{border-radius:5px;padding:5px 7px;font-size:10px;font-weight:800;text-align:center;}
+    .morph-given.prefix{background:#eff6ff;color:#1e40af;border:1.5px solid #bfdbfe;}
+    .morph-given.base{background:#fef3c7;color:#92400e;border:1.5px solid #fcd34d;}
+    .morph-given.suffix{background:#f0fdf4;color:#166634;border:1.5px solid #86efac;}
+    .morph-none{text-align:center;color:#cbd5e1;font-size:11px;font-weight:800;}
+
+    /* slash cells */
+    .cell-slash{padding:6px 8px;}
+    .slash-blank{border-bottom:1.5px solid #475569;height:26px;display:block;width:100%;}
+    /* scaffold: show count hint */
+    .slash-hint{font-size:9px;font-weight:700;color:#94a3b8;margin-top:2px;}
+
+    /* answer key */
+    .ws-key{margin-top:18px;padding-top:14px;border-top:2px dashed #e2e8f0;}
+    .ws-key-title{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.18em;color:#dc2626;margin-bottom:10px;}
+    .ws-key-table{width:100%;border-collapse:collapse;font-size:10px;}
+    .ws-key-table td{padding:4px 8px;border:1px solid #f1f5f9;font-weight:700;color:#475569;}
+    .ws-key-table td.kw{font-weight:900;color:#312e81;}
+    .ws-key-table tr:nth-child(even) td{background:#f8fafc;}
+
+    /* PRINT */
+    @media print {
+      body{display:block;height:auto;}
+      .header,.sidebar{display:none!important;}
+      .main{display:block;}
+      .preview{padding:0;overflow:visible;}
+      .previewEmpty{display:none;}
+      .worksheet{border:none;border-radius:0;box-shadow:none;padding:10px 14px;max-width:none;}
+      .ws-key{page-break-before:always;border-top:none;padding-top:20px;}
+      @page{size:A4;margin:10mm 12mm;}
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brandIcon">🔬</div>
+  <div class="brandText">
+    <h1>Word Labs</h1>
+    <span class="sub">Worksheet Generator</span>
+  </div>
+  <div class="headerBadge">Word Analysis</div>
+</div>
+
+<div class="main">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sideInner">
+
+      <!-- SOURCE -->
+      <div class="section">
+        <div class="sectionLabel">Word source</div>
+        <div class="radioGroup">
+          <label><input type="radio" name="source" value="morpheme" checked> Focus morpheme</label>
+          <label><input type="radio" name="source" value="random"> Randomised</label>
+          <label><input type="radio" name="source" value="custom"> Custom word list</label>
+        </div>
+
+        <!-- MORPHEME PICKER -->
+        <div id="morphemeWrap" style="margin-top:12px;">
+          <div class="miniTabs">
+            <div class="miniTab active" id="mtab-base"   onclick="setMorphemeType('base')">Base</div>
+            <div class="miniTab"        id="mtab-prefix" onclick="setMorphemeType('prefix')">Prefix</div>
+            <div class="miniTab"        id="mtab-suffix" onclick="setMorphemeType('suffix')">Suffix</div>
+          </div>
+          <div class="extToggleRow">
+            <span class="extToggleLabel">Include extension morphemes</span>
+            <label class="toggle"><input type="checkbox" id="extToggle" onchange="buildMorphemeList()"><span class="toggleSlider"></span></label>
+          </div>
+          <div class="dropWrap">
+            <input type="text" class="dropSearch" id="morphSearch" placeholder="Search…" oninput="filterMorphemeList()">
+            <div class="dropList" id="morphDropList"></div>
+            <div class="selLabel" id="morphSelLabel">None selected</div>
+          </div>
+        </div>
+
+        <!-- RANDOM OPTIONS -->
+        <div id="randomWrap" style="display:none;margin-top:10px;">
+          <div class="sectionLabel" style="margin-bottom:6px;">Pool</div>
+          <div class="radioGroup">
+            <label><input type="radio" name="randpool" value="standard" checked> Standard words</label>
+            <label><input type="radio" name="randpool" value="extension"> Extension words</label>
+            <label><input type="radio" name="randpool" value="mixed"> Mixed</label>
+          </div>
+        </div>
+
+        <!-- CUSTOM LIST -->
+        <div id="customWrap" style="display:none;margin-top:10px;">
+          <select class="customListSelect" id="customListSelect">
+            <option value="">— load a list first —</option>
+          </select>
+          <div class="customMsg" id="customMsg">Enter your class code to load lists.</div>
+          <div class="loadRow">
+            <input type="text" class="dropSearch" id="classCodeInput" placeholder="Class code">
+            <button class="btnLoad" onclick="loadCustomLists()">Load</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- DIFFICULTY / SCAFFOLD -->
+      <div class="section">
+        <div class="sectionLabel">Scaffold level</div>
+        <div class="radioGroup">
+          <label><input type="radio" name="scaffold" value="none" checked> No scaffold — all blank</label>
+          <label><input type="radio" name="scaffold" value="morphemes"> Morphemes given, fill syllables + phonemes</label>
+          <label><input type="radio" name="scaffold" value="hints"> Show counts as hints (e.g. "3 syllables")</label>
+        </div>
+      </div>
+
+      <!-- WORD COUNT -->
+      <div class="section">
+        <div class="sectionLabel">Number of words</div>
+        <div class="stepper">
+          <button class="stepperBtn" onclick="stepCount(-1)">−</button>
+          <input type="number" class="stepperVal" id="countInput" min="2" max="5" value="3" readonly>
+          <button class="stepperBtn" onclick="stepCount(1)">+</button>
+        </div>
+      </div>
+
+      <!-- EXTRAS -->
+      <div class="section">
+        <div class="sectionLabel">Extras</div>
+        <div class="toggleRow toggleKey">
+          <div><div class="toggleLabel">Answer key</div><div class="toggleSub">Teacher copy, separate page</div></div>
+          <label class="toggle"><input type="checkbox" id="toggleKey" checked><span class="toggleSlider"></span></label>
+        </div>
+      </div>
+
+    </div>
+    <div class="sideFooter">
+      <button class="btnGenerate" onclick="generateWorksheet()">⚡ Generate Worksheet</button>
+      <button class="btnRegen"    id="regenBtn" onclick="generateWorksheet()">🔄 Regenerate</button>
+      <button class="btnPrint"    id="printBtn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+    </div>
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="preview">
+    <div class="previewEmpty" id="previewEmpty">
+      <div class="icon">🔎</div>
+      <div class="msg">Your analysis worksheet will appear here</div>
+      <div class="sub">Pick a source, configure options, then hit Generate</div>
+    </div>
+    <div id="worksheetOutput" style="display:none;"></div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="wordlab-extension-data.js"></script>
+<script>
+// ── State ────────────────────────────────────────────────────
+let morphemeType    = 'base';  // base | prefix | suffix
+let selectedMorphId = null;
+let customListsData = {};
+
+const SUPABASE_URL  = 'https://qutsbcfkgiihcwaktsaz.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dHNiY2ZrZ2lpaGN3YWt0c2F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NDE1NDksImV4cCI6MjA4OTUxNzU0OX0.h1N26KCcyHDrW4FRk6iBNmJUMQcFCYi8eHpOC818B8E';
+
+// ── Source switching ─────────────────────────────────────────
+document.querySelectorAll('input[name=source]').forEach(r => {
+  r.addEventListener('change', () => {
+    document.getElementById('morphemeWrap').style.display = r.value==='morpheme' ? 'block' : 'none';
+    document.getElementById('randomWrap').style.display   = r.value==='random'   ? 'block' : 'none';
+    document.getElementById('customWrap').style.display   = r.value==='custom'   ? 'block' : 'none';
+  });
+});
+
+// ── Morpheme type tabs ───────────────────────────────────────
+function setMorphemeType(type) {
+  morphemeType    = type;
+  selectedMorphId = null;
+  ['base','prefix','suffix'].forEach(t => {
+    document.getElementById(`mtab-${t}`).classList.toggle('active', t === type);
+  });
+  buildMorphemeList();
+}
+
+function getMorphemePool() {
+  const ext    = document.getElementById('extToggle').checked;
+  const MORPH  = window.MORPHEMES || {};
+  const EXT    = window.WL_EXTENSION || {};
+  if (morphemeType === 'base') {
+    const standard = (MORPH.bases || []).filter(b => ['latin','greek','anglo'].includes(b.group));
+    const extension = ext ? (EXT.bases || []).map(b => ({...b, _ext:true})) : [];
+    return [...standard, ...extension];
+  }
+  if (morphemeType === 'prefix') {
+    const standard  = MORPH.prefixes || [];
+    const extension = ext ? (EXT.prefixes || []).map(p => ({...p, _ext:true})) : [];
+    return [...standard, ...extension];
+  }
+  // suffix
+  const standard  = MORPH.suffixes || [];
+  const extension = ext ? (EXT.suffixes || []).map(s => ({...s, _ext:true})) : [];
+  return [...standard, ...extension];
+}
+
+function buildMorphemeList(filter='') {
+  const list = document.getElementById('morphDropList');
+  list.innerHTML = '';
+  const q    = filter.toLowerCase();
+  getMorphemePool().forEach(item => {
+    const str = (item.form + ' ' + item.meaning + ' ' + (item.group||'')).toLowerCase();
+    if (q && !str.includes(q)) return;
+    const row = document.createElement('label');
+    row.className = 'dropItem';
+    const rb = document.createElement('input');
+    rb.type  = 'radio'; rb.name = 'morphemePick'; rb.value = item.id;
+    rb.checked = (item.id === selectedMorphId);
+    rb.addEventListener('change', () => {
+      selectedMorphId = item.id;
+      document.getElementById('morphSelLabel').textContent = `Selected: ${item.display || item.form}`;
+    });
+    row.appendChild(rb);
+    const form = document.createElement('span'); form.className = 'item-form';
+    form.textContent = item.display || item.form;
+    const mng = document.createElement('span'); mng.className = 'item-meaning'; mng.textContent = item.meaning;
+    row.appendChild(form);
+    if (item.group) {
+      const tag = document.createElement('span');
+      tag.className = `item-tag ${item._ext ? 'ext' : item.group}`;
+      tag.textContent = item._ext ? 'ext' : item.group;
+      row.appendChild(tag);
+    }
+    row.appendChild(mng);
+    list.appendChild(row);
+  });
+}
+buildMorphemeList();
+
+function filterMorphemeList() {
+  buildMorphemeList(document.getElementById('morphSearch').value);
+}
+
+// ── Stepper ──────────────────────────────────────────────────
+function stepCount(d) {
+  const el = document.getElementById('countInput');
+  el.value = Math.min(5, Math.max(2, parseInt(el.value) + d));
+}
+
+// ── Custom list loader ───────────────────────────────────────
+async function loadCustomLists() {
+  const code = document.getElementById('classCodeInput').value.trim().toUpperCase();
+  if (!code) { setMsg('Enter a class code first.','error'); return; }
+  setMsg('Loading…','');
+  try {
+    const cr = await fetch(`${SUPABASE_URL}/rest/v1/classes?class_code=eq.${encodeURIComponent(code)}&select=id,name`,
+      { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` }});
+    const classes = await cr.json();
+    if (!classes.length) { setMsg('Class code not found.','error'); return; }
+    const lr = await fetch(`${SUPABASE_URL}/rest/v1/class_word_lists?class_id=eq.${classes[0].id}&select=id,name,words`,
+      { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` }});
+    const lists = await lr.json();
+    if (!lists.length) { setMsg('No word lists found.','error'); return; }
+    customListsData = {};
+    lists.forEach(l => { customListsData[l.id] = { name: l.name, words: l.words||[] }; });
+    const sel = document.getElementById('customListSelect');
+    sel.innerHTML = lists.map(l => `<option value="${l.id}">${l.name} (${(l.words||[]).length} words)</option>`).join('');
+    setMsg(`✓ ${lists.length} list${lists.length>1?'s':''} loaded for ${classes[0].name}`,'ok');
+  } catch(e) { setMsg('Could not load lists.','error'); }
+}
+function setMsg(msg, type) {
+  const el = document.getElementById('customMsg');
+  el.textContent = msg; el.className = 'customMsg' + (type ? ' '+type : '');
+}
+
+// ── Parse example to extract morphemes ──────────────────────
+function parseExample(exStr, morpheme, mtype) {
+  const uMatch = exStr.match(/<u>(.*?)<\/u>/);
+  if (!uMatch) return null;
+  const marked = uMatch[1];
+  const word   = exStr.replace(/<\/?[^>]+>/g,'').replace(/\s/g,'');
+  if (!word || word.length < 2) return null;
+  const uIdx  = exStr.indexOf('<u>');
+  const before = exStr.slice(0, uIdx).replace(/<\/?[^>]+>/g,'').trim();
+  const after  = exStr.slice(exStr.indexOf('</u>')+4).replace(/<\/?[^>]+>/g,'').trim();
+
+  if (mtype === 'base') {
+    const m = marked.toLowerCase(), b = morpheme.form.toLowerCase();
+    if (m !== b && !b.includes(m) && !m.includes(b)) return null;
+    if (!before && !after) return null;
+    return { word, prefix: before, base: marked, suffix: after };
+  }
+  if (mtype === 'prefix') {
+    if (marked.toLowerCase() !== morpheme.form.toLowerCase()) return null;
+    if (!after) return null;
+    return { word, prefix: marked, base: after, suffix: '' };
+  }
+  // suffix
+  if (marked.toLowerCase() !== morpheme.form.toLowerCase()) return null;
+  if (!before) return null;
+  return { word, prefix: '', base: before, suffix: marked };
+}
+
+
+// ── Fallback phoneme splitter ────────────────────────────────
+// Used when a word isn't in the phoneme database.
+// Handles digraphs, r-controlled vowels, -tion/-sion, silent e.
+function phonemeFallback(word) {
+  const w = word.toLowerCase().trim();
+  const patterns = [
+    // 4-char
+    'ough','aigh','eigh','tion','sion',
+    // 3-char
+    'igh','tch','dge','sch','eau','ing',
+    // r-controlled vowels
+    'are','ore','ire','ure','air','ear','eer','our',
+    // 2-char consonant digraphs
+    'sh','ch','th','wh','ck','ng','ph','wr','kn','gn','qu',
+    // 2-char vowel digraphs
+    'ai','ay','ee','ea','oo','oa','oi','ou','ow','ue','ui',
+    'ie','ei','au','aw','ew','ir','er','ur','ar','or',
+  ];
+  const phonemes = [];
+  let i = 0;
+  while (i < w.length) {
+    let matched = false;
+    for (const p of patterns) {
+      if (w.slice(i, i + p.length) === p) {
+        phonemes.push(p); i += p.length; matched = true; break;
+      }
+    }
+    if (!matched) {
+      // Skip silent final e (e at end preceded by consonant)
+      if (w[i] === 'e' && i === w.length - 1 && i > 0 && !'aeiouy'.includes(w[i-1])) {
+        i++;
+      } else {
+        phonemes.push(w[i]); i++;
+      }
+    }
+  }
+  return phonemes;
+}
+
+// ── Fallback syllable splitter ───────────────────────────────
+// Rule-based V/CV and VC/CV splitting.
+function syllableFallback(word) {
+  const w = word.toLowerCase().trim();
+  const vowels = 'aeiouy';
+  const vPos = [...w].map((c, i) => vowels.includes(c) ? i : -1).filter(i => i >= 0);
+  if (vPos.length <= 1) return [w];
+
+  const syllables = [];
+  let start = 0;
+  for (let k = 0; k < vPos.length - 1; k++) {
+    const v1 = vPos[k];
+    const v2 = vPos[k + 1];
+    const gap = v2 - v1 - 1; // consonants between vowels
+    if (gap === 0) continue;  // vowel team — keep together
+    if (gap === 1) {
+      // V-CV: split before the consonant
+      syllables.push(w.slice(start, v1 + 1));
+      start = v1 + 1;
+    } else {
+      // VC-CV: split after first consonant
+      syllables.push(w.slice(start, v1 + 2));
+      start = v1 + 2;
+    }
+  }
+  syllables.push(w.slice(start));
+  return syllables.filter(s => s.length > 0);
+}
+
+// ── Syllable lookup from phoneme/syllable word lists ─────────
+function getSyllables(word) {
+  const ext = window.WL_EXTENSION || {};
+  const allSyl = [
+    ...((window.SYLLABLE_WORDS_STD) || []),
+    ...(ext.syllableWords || [])
+  ];
+  const found = allSyl.find(w => w.word.toLowerCase() === word.toLowerCase());
+  return found ? found.syllables : syllableFallback(word);
+}
+
+function getPhonemeSplit(word) {
+  const ext = window.WL_EXTENSION || {};
+  const allPhon = [
+    ...((window.PHONEME_WORDS_STD) || []),
+    ...(ext.phonemeWords || [])
+  ];
+  const found = allPhon.find(w => w.word.toLowerCase() === word.toLowerCase());
+  return found ? found.phonemes : phonemeFallback(word);
+}
+
+function shuffle(arr) { return [...arr].sort(() => Math.random()-.5); }
+
+// ── Build word list from source ──────────────────────────────
+function buildWordList(source, count) {
+  if (source === 'morpheme') {
+    if (!selectedMorphId) { alert('Please select a morpheme first.'); return null; }
+    const pool = getMorphemePool();
+    const morph = pool.find(m => m.id === selectedMorphId);
+    if (!morph) return null;
+    const words = [];
+    shuffle(morph.examples || []).forEach(ex => {
+      if (words.length >= count) return;
+      const parsed = parseExample(ex, morph, morphemeType);
+      if (!parsed) return;
+      words.push({ ...parsed, morpheme: morph, mtype: morphemeType });
+    });
+    if (!words.length) { alert('No valid examples found for this morpheme.'); return null; }
+    return { words, focusMorph: morph, mtype: morphemeType };
+  }
+
+  if (source === 'custom') {
+    const listId = document.getElementById('customListSelect').value;
+    const list   = customListsData[listId];
+    if (!list) { alert('Please load a custom list first.'); return null; }
+    const words = shuffle(list.words
+      .filter(w => w.word && (w.prefix || w.base || w.suffix1))
+      .map(w => ({
+        word:   w.word,
+        prefix: w.prefix  || '',
+        base:   w.base    || '',
+        suffix: w.suffix1 || '',
+        mtype:  'base'
+      }))
+    ).slice(0, count);
+    if (!words.length) { alert('No usable words in this list.'); return null; }
+    return { words, focusMorph: null, mtype: 'base' };
+  }
+
+  // random
+  const pool = document.querySelector('input[name=randpool]:checked').value;
+  const ext  = window.WL_EXTENSION || {};
+  const MORPH = window.MORPHEMES || {};
+  let allBases = [];
+  if (pool === 'standard' || pool === 'mixed')
+    allBases = [...allBases, ...(MORPH.bases||[]).filter(b => ['latin','greek','anglo'].includes(b.group))];
+  if (pool === 'extension' || pool === 'mixed')
+    allBases = [...allBases, ...(ext.bases||[])];
+
+  const words = [];
+  const tried = new Set();
+  const shuffled = shuffle(allBases);
+  for (const base of shuffled) {
+    if (words.length >= count) break;
+    for (const ex of shuffle(base.examples||[])) {
+      const parsed = parseExample(ex, base, 'base');
+      if (!parsed || tried.has(parsed.word)) continue;
+      tried.add(parsed.word);
+      words.push({ ...parsed, mtype: 'base' });
+      break;
+    }
+  }
+  if (!words.length) { alert('Could not generate words.'); return null; }
+  return { words, focusMorph: null, mtype: 'base' };
+}
+
+// ── Generate ─────────────────────────────────────────────────
+function generateWorksheet() {
+  const source   = document.querySelector('input[name=source]:checked').value;
+  const scaffold = document.querySelector('input[name=scaffold]:checked').value;
+  const count    = parseInt(document.getElementById('countInput').value) || 3;
+  const showKey  = document.getElementById('toggleKey').checked;
+
+  const result = buildWordList(source, count);
+  if (!result) return;
+  const { words, focusMorph, mtype } = result;
+
+  // ── Focus morpheme callout ───────────────────────────────
+  let focusHtml = '';
+  if (focusMorph) {
+    const display = focusMorph.display || focusMorph.form;
+    focusHtml = `
+      <div class="ws-focus">
+        <span class="ws-focus-label">Focus morpheme</span>
+        <span class="ws-focus-morpheme">${display}</span>
+        <span class="ws-focus-meaning">${focusMorph.meaning}</span>
+      </div>`;
+  }
+
+  // ── Instructions ─────────────────────────────────────────
+  const instrMap = {
+    none:      'For each word, break it into its morphemes, then write the syllables separated by slashes, then write the phonemes separated by slashes.',
+    morphemes: 'The morphemes are shown. Write the syllables separated by slashes (/), then write the phonemes separated by slashes.',
+    hints:     'For each word, break it into its morphemes, then write syllables and phonemes using slashes. The count is shown as a hint.',
+  };
+
+  // ── Table rows ───────────────────────────────────────────
+  let rows = '';
+  words.forEach((w, i) => {
+    const sylData  = getSyllables(w.word);
+    const phonData = getPhonemeSplit(w.word);
+    const sylCount  = sylData  ? sylData.length  : null;
+    const phonCount = phonData ? phonData.length : null;
+
+    // Morpheme cells
+    const prefixCell = scaffold === 'morphemes'
+      ? (w.prefix ? `<div class="morph-given prefix">${w.prefix}</div>` : `<div class="morph-none">—</div>`)
+      : `<div class="morph-blank"></div>`;
+    const baseCell = scaffold === 'morphemes'
+      ? `<div class="morph-given base">${w.base}</div>`
+      : `<div class="morph-blank"></div>`;
+    const suffixCell = scaffold === 'morphemes'
+      ? (w.suffix ? `<div class="morph-given suffix">${w.suffix}</div>` : `<div class="morph-none">—</div>`)
+      : `<div class="morph-blank"></div>`;
+
+    // Syllable hint
+    const sylHint = scaffold === 'hints' && sylCount
+      ? `<div class="slash-hint">${sylCount} syllable${sylCount>1?'s':''}</div>` : '';
+    const phonHint = scaffold === 'hints' && phonCount
+      ? `<div class="slash-hint">${phonCount} phoneme${phonCount>1?'s':''}</div>` : '';
+
+    // Highlight focus morpheme in word display
+    let wordDisplay = w.word;
+    if (focusMorph) {
+      const re = new RegExp(`(${focusMorph.form})`, 'i');
+      wordDisplay = w.word.replace(re, `<span class="word-focus">$1</span>`);
+    }
+
+    rows += `
+      <tr>
+        <td class="cell-word"><div class="word-display">${wordDisplay}</div></td>
+        <td class="cell-morph">${prefixCell}</td>
+        <td class="cell-morph">${baseCell}</td>
+        <td class="cell-morph">${suffixCell}</td>
+        <td class="cell-slash"><span class="slash-blank"></span>${sylHint}</td>
+        <td class="cell-slash"><span class="slash-blank"></span>${phonHint}</td>
+      </tr>`;
+  });
+
+  // ── Answer key ───────────────────────────────────────────
+  let keyHtml = '';
+  if (showKey) {
+    let keyRows = '';
+    words.forEach(w => {
+      const sylData  = getSyllables(w.word);
+      const phonData = getPhonemeSplit(w.word);
+      keyRows += `
+        <tr>
+          <td class="kw">${w.word}</td>
+          <td>${w.prefix || '—'}</td>
+          <td>${w.base}</td>
+          <td>${w.suffix || '—'}</td>
+          <td>${sylData  ? sylData.join('/')  : '—'}</td>
+          <td>${phonData ? phonData.join('/') : '—'}</td>
+        </tr>`;
+    });
+    keyHtml = `
+      <div class="ws-key">
+        <div class="ws-key-title">✱ Answer Key — Teacher Copy</div>
+        <table class="ws-key-table">
+          <thead><tr>
+            <td style="font-weight:900;color:#312e81;">Word</td>
+            <td style="color:#1e40af;">Prefix</td>
+            <td style="color:#92400e;">Base</td>
+            <td style="color:#166634;">Suffix</td>
+            <td style="color:#5b21b6;">Syllables</td>
+            <td style="color:var(--teal);">Phonemes</td>
+          </tr></thead>
+          <tbody>${keyRows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  const srcLabel      = { morpheme:'Focus Morpheme', random:'Randomised', custom:'Custom List' }[source];
+  const scaffoldLabel = { none:'No Scaffold', morphemes:'Morphemes Given', hints:'Count Hints' }[scaffold];
+  const focusLabel    = focusMorph ? ` — ${focusMorph.display || focusMorph.form}` : '';
+
+  document.getElementById('worksheetOutput').innerHTML = `
+    <div class="worksheet">
+      <div class="ws-header">
+        <div class="ws-logo">
+          <div class="ws-logo-icon">🔎</div>
+          <div><div class="ws-logo-text">Word Labs</div><div class="ws-logo-sub">Word Analysis</div></div>
+        </div>
+        <div class="ws-meta">
+          <div class="ws-meta-label">Student details</div>
+          <div class="ws-meta-line">Name: <span class="ws-meta-field"></span></div>
+          <div class="ws-meta-line">Date: <span class="ws-meta-field"></span></div>
+          <div class="ws-meta-line">Class: <span class="ws-meta-field"></span></div>
+        </div>
+      </div>
+      <div class="ws-title">Word Analysis${focusLabel}</div>
+      <div class="ws-subtitle">${words.length} words · ${srcLabel} · ${scaffoldLabel} · Word Labs</div>
+      ${focusHtml}
+      <div class="ws-instructions">📋 <strong>Instructions:</strong> ${instrMap[scaffold]}</div>
+      <table class="ws-table">
+        <thead><tr>
+          <th class="col-word">WORD</th>
+          <th class="col-prefix">PREFIX</th>
+          <th class="col-base">BASE</th>
+          <th class="col-suffix">SUFFIX</th>
+          <th class="col-syllables">SYLLABLES &nbsp;<span style="font-weight:600;opacity:.6;">write with /</span></th>
+          <th class="col-phonemes">PHONEMES &nbsp;<span style="font-weight:600;opacity:.6;">write with /</span></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      ${keyHtml}
+    </div>`;
+
+  document.getElementById('worksheetOutput').style.display = 'block';
+  document.getElementById('previewEmpty').style.display    = 'none';
+  document.getElementById('regenBtn').style.display        = 'block';
+  document.getElementById('printBtn').style.display        = 'block';
+}
+</script>
+</body>
+</html>

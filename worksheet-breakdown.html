@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Breakdown Blitz — Worksheet Generator · Word Labs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#f0f4ff; --panel:#fff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b;
+      --indigo:#4338ca; --indigo-2:#6366f1; --indigo-soft:#eef2ff;
+      --green:#16a34a; --green-soft:#f0fdf4; --green-line:#bbf7d0;
+      --orange:#ea580c; --orange-soft:#fff7ed; --orange-line:#fed7aa;
+      --ok:#15803d; --bad:#dc2626;
+      --teal:#0d9488; --teal-soft:#f0fdfa; --teal-line:#99f6e4;
+      --slate:#475569;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Lexend',sans-serif;background:var(--bg);color:var(--text);line-height:1.5;height:100vh;display:flex;flex-direction:column;}
+    button,input,select{font:inherit;}
+
+    /* HEADER */
+    .header{background:#fff;border-bottom:1px solid var(--line);padding:12px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;box-shadow:0 1px 4px rgba(15,23,42,.06);}
+    .brandIcon{width:40px;height:40px;border-radius:11px;background:var(--indigo);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto;}
+    .brandText h1{font-size:18px;font-weight:900;color:#312e81;letter-spacing:-.02em;}
+    .brandText .sub{font-size:9px;text-transform:uppercase;letter-spacing:.22em;color:var(--indigo-2);font-weight:800;}
+    .headerBadge{margin-left:auto;background:var(--indigo-soft);color:var(--indigo);border:1px solid #c7d2fe;border-radius:999px;padding:4px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;}
+
+    /* SPLIT LAYOUT */
+    .main{display:flex;flex:1;overflow:hidden;}
+
+    /* SIDEBAR */
+    .sidebar{width:300px;flex-shrink:0;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;}
+    .sideInner{padding:16px;flex:1;overflow-y:auto;}
+    .section{margin-bottom:18px;}
+    .sectionLabel{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.22em;color:var(--indigo-2);margin-bottom:8px;}
+
+    /* FOCUS TABS */
+    .focusTabs{display:flex;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:16px;}
+    .focusTab{flex:1;padding:9px 4px;text-align:center;font-size:11px;font-weight:800;cursor:pointer;border:none;background:#f8fafc;color:var(--slate);transition:all .12s;border-right:1.5px solid var(--line);}
+    .focusTab:last-child{border-right:none;}
+    .focusTab.active{background:var(--indigo);color:#fff;}
+    .focusTab .tab-icon{display:block;font-size:14px;margin-bottom:2px;}
+
+    /* RADIO GROUP */
+    .radioGroup{display:flex;flex-direction:column;gap:5px;}
+    .radioGroup label{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);border-radius:9px;padding:7px 11px;cursor:pointer;font-size:12px;font-weight:700;color:var(--slate);transition:all .12s;}
+    .radioGroup label:has(input:checked){border-color:var(--indigo-2);background:var(--indigo-soft);color:var(--indigo);}
+    .radioGroup input[type=radio]{accent-color:var(--indigo);flex-shrink:0;}
+
+    /* BASE DROPDOWN */
+    .baseDropWrap{margin-top:10px;}
+    .baseSearch{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;outline:none;transition:border .12s;}
+    .baseSearch:focus{border-color:var(--indigo-2);}
+    .baseDropList{border:1.5px solid var(--line);border-radius:8px;overflow-y:auto;max-height:160px;background:#fff;}
+    .baseDropItem{display:flex;align-items:center;gap:7px;padding:5px 9px;cursor:pointer;font-size:11px;font-weight:700;color:var(--slate);border-bottom:1px solid #f1f5f9;transition:background .1s;}
+    .baseDropItem:last-child{border-bottom:none;}
+    .baseDropItem:hover{background:#f8fafc;}
+    .baseDropItem input[type=checkbox]{accent-color:var(--indigo);flex-shrink:0;}
+    .item-form{font-weight:800;color:var(--text);}
+    .item-meaning{color:#94a3b8;font-size:10px;font-weight:600;margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px;}
+    .item-tag{font-size:9px;font-weight:800;padding:1px 5px;border-radius:4px;flex-shrink:0;}
+    .item-tag.latin{background:#eef2ff;color:#4338ca;}
+    .item-tag.greek{background:var(--teal-soft);color:var(--teal);}
+    .item-tag.anglo{background:var(--orange-soft);color:var(--orange);}
+    .item-tag.prefix{background:#f5f3ff;color:#7c3aed;}
+    .item-tag.suffix{background:var(--green-soft);color:var(--green);}
+    .baseSelCount{font-size:10px;font-weight:700;color:var(--indigo-2);margin-top:5px;}
+
+    /* CUSTOM LIST */
+    .customListSelect{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;color:var(--text);background:#fff;cursor:pointer;outline:none;margin-top:4px;}
+    .customListSelect:focus{border-color:var(--indigo-2);}
+    .customListMsg{font-size:11px;font-weight:600;color:#94a3b8;margin-top:6px;line-height:1.5;}
+    .customListMsg.error{color:var(--bad);}
+    .customListMsg.ok{color:var(--ok);}
+    .loadRow{display:flex;gap:6px;align-items:center;margin-top:7px;}
+    .loadRow .baseSearch{margin-bottom:0;flex:1;}
+    .btnLoad{border:1.5px solid var(--indigo-2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:800;cursor:pointer;background:#fff;color:var(--indigo);white-space:nowrap;transition:all .12s;}
+    .btnLoad:hover{background:var(--indigo-soft);}
+
+    /* STEPPER */
+    .stepper{display:flex;align-items:center;border:1.5px solid var(--line);border-radius:9px;overflow:hidden;width:fit-content;}
+    .stepperBtn{width:34px;height:34px;border:none;background:#f8fafc;cursor:pointer;font-size:15px;font-weight:700;color:var(--slate);transition:background .12s;}
+    .stepperBtn:hover{background:var(--indigo-soft);color:var(--indigo);}
+    .stepperVal{width:40px;text-align:center;font-size:13px;font-weight:800;color:var(--text);border:none;border-left:1.5px solid var(--line);border-right:1.5px solid var(--line);height:34px;background:#fff;}
+
+    /* TOGGLES */
+    .toggleRow{display:flex;align-items:center;justify-content:space-between;padding:7px 0;}
+    .toggleRow+.toggleRow{border-top:1px solid var(--line);}
+    .toggleLabel{font-size:12px;font-weight:700;color:var(--slate);}
+    .toggleSub{font-size:10px;color:#94a3b8;font-weight:600;}
+    .toggle{position:relative;width:38px;height:21px;flex-shrink:0;}
+    .toggle input{opacity:0;width:0;height:0;}
+    .toggleSlider{position:absolute;inset:0;background:#e2e8f0;border-radius:999px;cursor:pointer;transition:background .15s;}
+    .toggleSlider::before{content:'';position:absolute;width:15px;height:15px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .15s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+    .toggle input:checked+.toggleSlider{background:var(--indigo);}
+    .toggle input:checked+.toggleSlider::before{transform:translateX(17px);}
+
+    /* FOOTER */
+    .sideFooter{padding:14px 16px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:7px;background:#fff;flex-shrink:0;}
+    .btnGenerate{background:var(--indigo);color:#fff;border:none;border-radius:11px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;width:100%;transition:background .12s;}
+    .btnGenerate:hover{background:#3730a3;}
+    .btnRegen{background:#fff;color:var(--indigo);border:1.5px solid var(--indigo-2);border-radius:11px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;width:100%;display:none;}
+    .btnRegen:hover{background:var(--indigo-soft);}
+    .btnPrint{background:#0f172a;color:#fff;border:none;border-radius:11px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;width:100%;display:none;}
+    .btnPrint:hover{background:#1e293b;}
+
+    /* PREVIEW */
+    .preview{flex:1;overflow-y:auto;padding:24px;background:var(--bg);}
+    .previewEmpty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:#94a3b8;text-align:center;}
+    .previewEmpty .icon{font-size:44px;opacity:.35;}
+    .previewEmpty .msg{font-size:14px;font-weight:700;}
+    .previewEmpty .sub{font-size:12px;font-weight:600;}
+
+    /* WORKSHEET */
+    .worksheet{background:#fff;border-radius:14px;border:1px solid var(--line);padding:26px;box-shadow:0 3px 12px rgba(15,23,42,.06);max-width:840px;margin:0 auto;}
+    .ws-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;padding-bottom:14px;border-bottom:2px solid #e2e8f0;}
+    .ws-logo{display:flex;align-items:center;gap:9px;}
+    .ws-logo-icon{width:32px;height:32px;border-radius:8px;background:#4338ca;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;flex:0 0 auto;}
+    .ws-logo-text{font-size:13px;font-weight:900;color:#312e81;}
+    .ws-logo-sub{font-size:8px;text-transform:uppercase;letter-spacing:.2em;color:#6366f1;font-weight:800;}
+    .ws-meta{text-align:right;}
+    .ws-meta-label{font-size:8px;text-transform:uppercase;letter-spacing:.16em;color:#94a3b8;font-weight:800;margin-bottom:3px;}
+    .ws-meta-line{display:flex;align-items:center;gap:7px;justify-content:flex-end;margin-bottom:3px;font-size:10px;font-weight:700;color:#475569;}
+    .ws-meta-field{border-bottom:1.5px solid #94a3b8;min-width:90px;height:15px;display:inline-block;}
+    .ws-title{font-size:16px;font-weight:900;color:#312e81;margin-bottom:2px;}
+    .ws-subtitle{font-size:10px;color:#64748b;font-weight:600;margin-bottom:14px;}
+    .ws-instructions{background:#eef2ff;border:1.5px solid #c7d2fe;border-radius:8px;padding:9px 13px;margin-bottom:14px;font-size:11px;color:#4338ca;font-weight:700;line-height:1.6;}
+    .ws-legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;align-items:center;}
+    .ws-legend-item{display:flex;align-items:center;gap:5px;font-size:9px;font-weight:700;color:#475569;}
+    .ws-legend-box{width:16px;height:11px;border-radius:2px;border:1.5px solid;}
+    .ws-legend-box.prefix{background:#eff6ff;border-color:#bfdbfe;}
+    .ws-legend-box.base{background:#fef3c7;border-color:#fcd34d;}
+    .ws-legend-box.suffix{background:#f0fdf4;border-color:#86efac;}
+    .ws-legend-key{font-size:9px;font-weight:600;color:#94a3b8;margin-left:4px;}
+
+    .ws-table{width:100%;border-collapse:collapse;font-size:11px;}
+    .ws-table th{background:#f1f5f9;padding:6px 8px;text-align:left;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.16em;color:#475569;border:1.5px solid #e2e8f0;}
+    .ws-table th.col-meaning{width:28%;}
+    .ws-table th.col-prefix{width:13%;background:#eff6ff;color:#1e40af;}
+    .ws-table th.col-base{width:13%;background:#fef3c7;color:#92400e;}
+    .ws-table th.col-suffix{width:13%;background:#f0fdf4;color:#166634;}
+    .ws-table th.col-word{width:29%;background:#f5f3ff;color:#5b21b6;}
+    .ws-table td{padding:0;border:1.5px solid #e2e8f0;vertical-align:middle;}
+    .ws-table tr:nth-child(even) td{background:#fafafa;}
+    .cell-num{width:24px;text-align:center;font-size:9px;font-weight:800;color:#94a3b8;padding:8px 3px;}
+    .cell-meaning{padding:8px 10px;font-size:11px;font-weight:700;color:#1e293b;line-height:1.4;}
+    .cell-meaning .focus-tag{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.12em;padding:1px 5px;border-radius:3px;display:inline-block;margin-bottom:2px;}
+    .cell-meaning .focus-tag.prefix{background:#eff6ff;color:#1e40af;}
+    .cell-meaning .focus-tag.suffix{background:#f0fdf4;color:#166634;}
+    .cell-meaning .focus-tag.base{background:#fef3c7;color:#92400e;}
+    .cell-morph{padding:5px;}
+    .morph-given{border-radius:5px;padding:5px 7px;font-size:11px;font-weight:800;text-align:center;}
+    .morph-given.prefix{background:#eff6ff;color:#1e40af;border:1.5px solid #bfdbfe;}
+    .morph-given.base{background:#fef3c7;color:#92400e;border:1.5px solid #fcd34d;}
+    .morph-given.suffix{background:#f0fdf4;color:#166634;border:1.5px solid #86efac;}
+    .morph-none{text-align:center;color:#cbd5e1;font-size:12px;font-weight:800;}
+    .morph-blank{border:1.5px dashed #94a3b8;border-radius:5px;height:26px;background:#fafafa;}
+    .cell-word{padding:5px 8px;}
+    .word-blank{border-bottom:1.5px solid #475569;height:24px;display:block;width:100%;}
+
+    .ws-wordbank{margin-top:16px;padding:11px 13px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;}
+    .ws-wordbank-title{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.18em;color:#64748b;margin-bottom:7px;}
+    .ws-wordbank-words{display:flex;flex-wrap:wrap;gap:5px;}
+    .ws-wordbank-word{border:1.5px solid #c4b5fd;background:#f5f3ff;border-radius:4px;padding:2px 9px;font-size:10px;font-weight:700;color:#5b21b6;}
+
+    .ws-key{margin-top:18px;padding-top:14px;border-top:2px dashed #e2e8f0;}
+    .ws-key-title{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.18em;color:#dc2626;margin-bottom:9px;}
+    .ws-key-grid{display:flex;flex-wrap:wrap;gap:4px 16px;}
+    .ws-key-item{font-size:10px;font-weight:700;color:#475569;}
+    .ws-key-item span{color:#0f172a;}
+
+    /* PRINT */
+    @media print {
+      body{display:block;height:auto;}
+      .header,.sidebar{display:none!important;}
+      .main{display:block;}
+      .preview{padding:0;overflow:visible;}
+      .previewEmpty{display:none;}
+      .worksheet{border:none;border-radius:0;box-shadow:none;padding:10px 14px;max-width:none;}
+      .ws-key{page-break-before:always;border-top:none;padding-top:20px;}
+      @page{size:A4;margin:10mm 12mm;}
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brandIcon">🔬</div>
+  <div class="brandText">
+    <h1>Word Labs</h1>
+    <span class="sub">Worksheet Generator</span>
+  </div>
+  <div class="headerBadge">Breakdown Blitz</div>
+</div>
+
+<div class="main">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sideInner">
+
+      <!-- FOCUS TABS -->
+      <div class="sectionLabel">Focus</div>
+      <div class="focusTabs" style="margin-bottom:18px;">
+        <button class="focusTab active" id="tab-prefix" onclick="setFocus('prefix')">
+          <span class="tab-icon">➕</span>Prefix
+        </button>
+        <button class="focusTab" id="tab-base" onclick="setFocus('base')">
+          <span class="tab-icon">🔤</span>Base
+        </button>
+        <button class="focusTab" id="tab-suffix" onclick="setFocus('suffix')">
+          <span class="tab-icon">➕</span>Suffix
+        </button>
+      </div>
+
+      <!-- SOURCE SECTION — changes per tab -->
+      <div class="section" id="sourceSection">
+        <div class="sectionLabel" id="sourceLabel">Prefix source</div>
+        <div id="sourceControls"><!-- filled by setFocus() --></div>
+      </div>
+
+      <!-- DIFFICULTY -->
+      <div class="section">
+        <div class="sectionLabel">Difficulty</div>
+        <div class="radioGroup" id="diffGroup">
+          <!-- filled by setFocus() -->
+        </div>
+      </div>
+
+      <!-- QUESTIONS -->
+      <div class="section">
+        <div class="sectionLabel">Number of questions</div>
+        <div class="stepper">
+          <button class="stepperBtn" onclick="stepCount(-1)">−</button>
+          <input type="number" class="stepperVal" id="countInput" min="5" max="30" value="12" readonly>
+          <button class="stepperBtn" onclick="stepCount(1)">+</button>
+        </div>
+      </div>
+
+      <!-- EXTRAS -->
+      <div class="section">
+        <div class="sectionLabel">Extras</div>
+        <div class="toggleRow">
+          <div><div class="toggleLabel">Word bank</div><div class="toggleSub">Shuffled answers at bottom</div></div>
+          <label class="toggle"><input type="checkbox" id="toggleWordbank"><span class="toggleSlider"></span></label>
+        </div>
+        <div class="toggleRow">
+          <div><div class="toggleLabel">Answer key</div><div class="toggleSub">Teacher copy, separate page</div></div>
+          <label class="toggle"><input type="checkbox" id="toggleKey" checked><span class="toggleSlider"></span></label>
+        </div>
+      </div>
+
+    </div>
+    <div class="sideFooter">
+      <button class="btnGenerate" onclick="generateWorksheet()">⚡ Generate Worksheet</button>
+      <button class="btnRegen" id="regenBtn" onclick="generateWorksheet()">🔄 Regenerate</button>
+      <button class="btnPrint" id="printBtn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+    </div>
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="preview">
+    <div class="previewEmpty" id="previewEmpty">
+      <div class="icon">📄</div>
+      <div class="msg">Your worksheet will appear here</div>
+      <div class="sub">Choose a focus, configure options, then hit Generate</div>
+    </div>
+    <div id="worksheetOutput" style="display:none;"></div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+// ── State ────────────────────────────────────────────────────
+let currentFocus = 'prefix'; // 'prefix' | 'base' | 'suffix'
+const selectedBases = new Set();
+let customListsData = {};
+
+// ── Supabase ─────────────────────────────────────────────────
+const SUPABASE_URL  = 'https://qutsbcfkgiihcwaktsaz.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dHNiY2ZrZ2lpaGN3YWt0c2F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NDE1NDksImV4cCI6MjA4OTUxNzU0OX0.h1N26KCcyHDrW4FRk6iBNmJUMQcFCYi8eHpOC818B8E';
+
+// ── Tab switching ────────────────────────────────────────────
+function setFocus(focus) {
+  currentFocus = focus;
+  ['prefix','base','suffix'].forEach(f => {
+    document.getElementById(`tab-${f}`).classList.toggle('active', f === focus);
+  });
+  renderSourceControls();
+  renderDifficultyOptions();
+}
+
+function renderSourceControls() {
+  const label = document.getElementById('sourceLabel');
+  const ctrl  = document.getElementById('sourceControls');
+
+  if (currentFocus === 'prefix') {
+    label.textContent = 'Prefix source';
+    ctrl.innerHTML = `
+      <div class="radioGroup">
+        <label><input type="radio" name="source" value="all" checked> All prefixes</label>
+        <label><input type="radio" name="source" value="pick"> Pick specific prefixes</label>
+      </div>
+      <div id="pickerWrap" style="display:none;margin-top:10px;">
+        <input type="text" class="baseSearch" id="baseSearch" placeholder="Search prefixes…" oninput="filterDropList()">
+        <div class="baseDropList" id="baseDropList"></div>
+        <div class="baseSelCount" id="baseSelCount">0 selected</div>
+      </div>`;
+    document.querySelectorAll('input[name=source]').forEach(r =>
+      r.addEventListener('change', () => {
+        document.getElementById('pickerWrap').style.display = r.value==='pick' ? 'block' : 'none';
+        if (r.value==='pick') buildDropList();
+      })
+    );
+
+  } else if (currentFocus === 'suffix') {
+    label.textContent = 'Suffix source';
+    ctrl.innerHTML = `
+      <div class="radioGroup">
+        <label><input type="radio" name="source" value="all" checked> All suffixes</label>
+        <label><input type="radio" name="source" value="pick"> Pick specific suffixes</label>
+      </div>
+      <div id="pickerWrap" style="display:none;margin-top:10px;">
+        <input type="text" class="baseSearch" id="baseSearch" placeholder="Search suffixes…" oninput="filterDropList()">
+        <div class="baseDropList" id="baseDropList"></div>
+        <div class="baseSelCount" id="baseSelCount">0 selected</div>
+      </div>`;
+    document.querySelectorAll('input[name=source]').forEach(r =>
+      r.addEventListener('change', () => {
+        document.getElementById('pickerWrap').style.display = r.value==='pick' ? 'block' : 'none';
+        if (r.value==='pick') buildDropList();
+      })
+    );
+
+  } else {
+    // base
+    label.textContent = 'Base source';
+    ctrl.innerHTML = `
+      <div class="radioGroup">
+        <label><input type="radio" name="source" value="all" checked> All bases (mixed)</label>
+        <label><input type="radio" name="source" value="latin"> Latin bases only</label>
+        <label><input type="radio" name="source" value="greek"> Greek bases only</label>
+        <label><input type="radio" name="source" value="anglo"> Anglo-Saxon only</label>
+        <label><input type="radio" name="source" value="pick"> Pick specific bases</label>
+        <label><input type="radio" name="source" value="custom"> Custom word list</label>
+      </div>
+      <div id="pickerWrap" style="display:none;margin-top:10px;">
+        <input type="text" class="baseSearch" id="baseSearch" placeholder="Search bases…" oninput="filterDropList()">
+        <div class="baseDropList" id="baseDropList"></div>
+        <div class="baseSelCount" id="baseSelCount">0 selected</div>
+      </div>
+      <div id="customWrap" style="display:none;margin-top:10px;">
+        <select class="customListSelect" id="customListSelect">
+          <option value="">— load a list first —</option>
+        </select>
+        <div class="customListMsg" id="customListMsg">Enter your class code to load lists.</div>
+        <div class="loadRow">
+          <input type="text" class="baseSearch" id="classCodeInput" placeholder="Class code" style="margin-bottom:0;">
+          <button class="btnLoad" onclick="loadCustomLists()">Load</button>
+        </div>
+      </div>`;
+    document.querySelectorAll('input[name=source]').forEach(r =>
+      r.addEventListener('change', () => {
+        document.getElementById('pickerWrap').style.display  = r.value==='pick'   ? 'block' : 'none';
+        document.getElementById('customWrap').style.display  = r.value==='custom' ? 'block' : 'none';
+        if (r.value==='pick') buildDropList();
+      })
+    );
+  }
+}
+
+function renderDifficultyOptions() {
+  const group = document.getElementById('diffGroup');
+  if (currentFocus === 'prefix') {
+    group.innerHTML = `
+      <label><input type="radio" name="diff" value="easy" checked> 🟢 Easy — base &amp; suffix shown, fill prefix + word</label>
+      <label><input type="radio" name="diff" value="hard"> 🔴 Hard — meaning only, fill everything</label>`;
+  } else if (currentFocus === 'suffix') {
+    group.innerHTML = `
+      <label><input type="radio" name="diff" value="easy" checked> 🟢 Easy — base &amp; prefix shown, fill suffix + word</label>
+      <label><input type="radio" name="diff" value="hard"> 🔴 Hard — meaning only, fill everything</label>`;
+  } else {
+    group.innerHTML = `
+      <label><input type="radio" name="diff" value="easy" checked> 🟢 Easy — base shown, fill prefix + word</label>
+      <label><input type="radio" name="diff" value="medium"> 🟡 Medium — suffix shown, fill prefix + base + word</label>
+      <label><input type="radio" name="diff" value="hard"> 🔴 Hard — meaning only, fill everything</label>`;
+  }
+}
+
+// init
+renderSourceControls();
+renderDifficultyOptions();
+
+// ── Stepper ──────────────────────────────────────────────────
+function stepCount(d) {
+  const el = document.getElementById('countInput');
+  el.value = Math.min(30, Math.max(5, parseInt(el.value) + d));
+}
+
+// ── Dropdown list builder ────────────────────────────────────
+function getPickPool() {
+  if (currentFocus === 'prefix') return (window.MORPHEMES && window.MORPHEMES.prefixes) || [];
+  if (currentFocus === 'suffix') return (window.MORPHEMES && window.MORPHEMES.suffixes) || [];
+  const all = (window.MORPHEMES && window.MORPHEMES.bases) || [];
+  return all.filter(b => ['latin','greek','anglo'].includes(b.group));
+}
+
+function buildDropList(filter='') {
+  const list = document.getElementById('baseDropList');
+  if (!list) return;
+  list.innerHTML = '';
+  const q = filter.toLowerCase();
+  getPickPool().forEach(item => {
+    const searchStr = (item.form + ' ' + item.meaning + ' ' + (item.group||'')).toLowerCase();
+    if (q && !searchStr.includes(q)) return;
+    const row = document.createElement('label');
+    row.className = 'baseDropItem';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = item.id;
+    cb.checked = selectedBases.has(item.id);
+    cb.addEventListener('change', () => {
+      if (cb.checked) selectedBases.add(item.id); else selectedBases.delete(item.id);
+      updateSelCount();
+    });
+    row.appendChild(cb);
+    const form = document.createElement('span'); form.className='item-form';
+    form.textContent = currentFocus==='prefix' ? item.display || (item.form+'-') :
+                       currentFocus==='suffix' ? item.display || ('-'+item.form) : item.form;
+    const mng = document.createElement('span'); mng.className='item-meaning'; mng.textContent = item.meaning;
+    row.appendChild(form);
+    if (item.group) {
+      const tag = document.createElement('span'); tag.className=`item-tag ${item.group}`; tag.textContent = item.group;
+      row.appendChild(tag);
+    }
+    row.appendChild(mng);
+    list.appendChild(row);
+  });
+}
+
+function filterDropList() {
+  buildDropList(document.getElementById('baseSearch')?.value || '');
+}
+
+function updateSelCount() {
+  const el = document.getElementById('baseSelCount');
+  if (el) el.textContent = selectedBases.size === 0 ? 'None selected' :
+    `${selectedBases.size} selected`;
+}
+
+// ── Custom list loader ───────────────────────────────────────
+async function loadCustomLists() {
+  const code = document.getElementById('classCodeInput')?.value.trim().toUpperCase();
+  if (!code) { setCustomMsg('Enter a class code first.', 'error'); return; }
+  setCustomMsg('Loading…', '');
+  try {
+    const classRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/classes?class_code=eq.${encodeURIComponent(code)}&select=id,name`,
+      { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } }
+    );
+    const classes = await classRes.json();
+    if (!classes.length) { setCustomMsg('Class code not found.', 'error'); return; }
+    const classId = classes[0].id;
+    const listsRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/class_word_lists?class_id=eq.${classId}&select=id,name,words`,
+      { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } }
+    );
+    const lists = await listsRes.json();
+    if (!lists.length) { setCustomMsg('No word lists found for this class.', 'error'); return; }
+    customListsData = {};
+    lists.forEach(l => { customListsData[l.id] = { name: l.name, words: l.words || [] }; });
+    const sel = document.getElementById('customListSelect');
+    sel.innerHTML = lists.map(l =>
+      `<option value="${l.id}">${l.name} (${(l.words||[]).length} words)</option>`
+    ).join('');
+    setCustomMsg(`✓ ${lists.length} list${lists.length>1?'s':''} loaded for ${classes[0].name}`, 'ok');
+  } catch(e) {
+    setCustomMsg('Could not load lists. Check your connection.', 'error');
+  }
+}
+
+function setCustomMsg(msg, type) {
+  const el = document.getElementById('customListMsg');
+  if (el) { el.textContent = msg; el.className = 'customListMsg' + (type ? ' '+type : ''); }
+}
+
+// ── Parse helpers ────────────────────────────────────────────
+// For BASE focus — <u> marks the base
+function parseBaseExample(exStr, baseForm) {
+  const uMatch = exStr.match(/<u>(.*?)<\/u>/);
+  if (!uMatch) return null;
+  const marked = uMatch[1];
+  const m = marked.toLowerCase(), b = baseForm.toLowerCase();
+  if (m !== b && !b.includes(m) && !m.includes(b)) return null;
+  const word    = exStr.replace(/<\/?[^>]+>/g,'').replace(/\s/g,'');
+  if (!word || word.length < 3) return null;
+  const uIdx    = exStr.indexOf('<u>');
+  const prefix  = exStr.slice(0, uIdx).replace(/<\/?[^>]+>/g,'').trim();
+  const suffix  = exStr.slice(exStr.indexOf('</u>')+4).replace(/<\/?[^>]+>/g,'').trim();
+  if (!prefix && !suffix) return null;
+  return { prefix, base: marked, suffix, word };
+}
+
+// For PREFIX focus — <u> marks the prefix
+function parsePrefixExample(exStr, prefixForm) {
+  const uMatch = exStr.match(/<u>(.*?)<\/u>/);
+  if (!uMatch) return null;
+  const marked = uMatch[1];
+  if (marked.toLowerCase() !== prefixForm.toLowerCase()) return null;
+  const word   = exStr.replace(/<\/?[^>]+>/g,'').replace(/\s/g,'');
+  if (!word || word.length < 4) return null;
+  const afterU = exStr.slice(exStr.indexOf('</u>')+4).replace(/<\/?[^>]+>/g,'').trim();
+  if (!afterU) return null; // no base = nothing to show
+  return { prefix: marked, base: afterU, suffix: '', word };
+}
+
+// For SUFFIX focus — <u> marks the suffix
+function parseSuffixExample(exStr, suffixForm) {
+  const uMatch = exStr.match(/<u>(.*?)<\/u>/);
+  if (!uMatch) return null;
+  const marked = uMatch[1];
+  if (marked.toLowerCase() !== suffixForm.toLowerCase()) return null;
+  const word   = exStr.replace(/<\/?[^>]+>/g,'').replace(/\s/g,'');
+  if (!word || word.length < 4) return null;
+  const uIdx   = exStr.indexOf('<u>');
+  const base   = exStr.slice(0, uIdx).replace(/<\/?[^>]+>/g,'').trim();
+  if (!base) return null; // no base = nothing to show
+  return { prefix: '', base, suffix: marked, word };
+}
+
+// ── Build question bank ───────────────────────────────────────
+function shuffle(arr) { return [...arr].sort(() => Math.random()-.5); }
+
+function buildQuestionBank(source) {
+  const MORPHEMES = window.MORPHEMES || {};
+  const questions = [];
+
+  if (currentFocus === 'prefix') {
+    const pool = source==='pick'
+      ? (MORPHEMES.prefixes||[]).filter(p => selectedBases.has(p.id))
+      : (MORPHEMES.prefixes||[]);
+    pool.forEach(pfx => {
+      (pfx.examples||[]).forEach(ex => {
+        const p = parsePrefixExample(ex, pfx.form);
+        if (!p) return;
+        questions.push({ focusMeaning: pfx.meaning, focusForm: pfx.display||pfx.form+'-', focus:'prefix', ...p });
+      });
+    });
+
+  } else if (currentFocus === 'suffix') {
+    const pool = source==='pick'
+      ? (MORPHEMES.suffixes||[]).filter(s => selectedBases.has(s.id))
+      : (MORPHEMES.suffixes||[]);
+    pool.forEach(sfx => {
+      (sfx.examples||[]).forEach(ex => {
+        const p = parseSuffixExample(ex, sfx.form);
+        if (!p) return;
+        questions.push({ focusMeaning: sfx.meaning, focusForm: sfx.display||'-'+sfx.form, focus:'suffix', ...p });
+      });
+    });
+
+  } else {
+    // base focus
+    if (source === 'custom') {
+      const listId = document.getElementById('customListSelect')?.value;
+      const list   = customListsData[listId];
+      if (!list) return [];
+      list.words.filter(w => w.word && (w.prefix || w.suffix1 || w.suffix2)).forEach(w => {
+        questions.push({
+          focusMeaning: w.clue || w.base || '',
+          focusForm:    w.base || '',
+          focus:        'base',
+          prefix:       w.prefix || '',
+          base:         w.base   || '',
+          suffix:       [w.suffix1, w.suffix2].filter(Boolean).join(''),
+          word:         w.word
+        });
+      });
+      return questions;
+    }
+    const allBases = MORPHEMES.bases || [];
+    let pool;
+    if (source==='pick')         pool = allBases.filter(b => selectedBases.has(b.id));
+    else if (source==='all')     pool = allBases.filter(b => ['latin','greek','anglo'].includes(b.group));
+    else                         pool = allBases.filter(b => b.group===source);
+    pool.forEach(base => {
+      (base.examples||[]).forEach(ex => {
+        const p = parseBaseExample(ex, base.form);
+        if (!p) return;
+        questions.push({ focusMeaning: base.meaning, focusForm: base.form, focus:'base', ...p });
+      });
+    });
+  }
+  return questions;
+}
+
+// ── Render one morpheme cell ─────────────────────────────────
+function morphCell(value, type, isBlank) {
+  if (isBlank) return `<td class="cell-morph"><div class="morph-blank"></div></td>`;
+  if (!value)  return `<td class="cell-morph"><div class="morph-none">—</div></td>`;
+  return `<td class="cell-morph"><div class="morph-given ${type}">${value}</div></td>`;
+}
+
+// ── Generate ─────────────────────────────────────────────────
+function generateWorksheet() {
+  const source   = document.querySelector('input[name=source]:checked')?.value || 'all';
+  const diff     = document.querySelector('input[name=diff]:checked')?.value   || 'easy';
+  const count    = Math.min(30, Math.max(5, parseInt(document.getElementById('countInput').value)||12));
+  const wordbank = document.getElementById('toggleWordbank').checked;
+  const showKey  = document.getElementById('toggleKey').checked;
+  const bank     = shuffle(buildQuestionBank(source)).slice(0, count);
+
+  if (!bank.length) {
+    alert('No questions could be generated. Try a different source or select more morphemes.');
+    return;
+  }
+
+  let rows = '';
+  bank.forEach((q, i) => {
+    let pb, bb, sb;
+    if (currentFocus === 'prefix') {
+      // blank = the prefix (what they're studying)
+      // easy: base given (suffix always — since prefix examples rarely have suffixes too)
+      // hard: only meaning, fill everything
+      pb = true;                      // always blank the prefix
+      bb = diff==='hard';             // hard: blank base too
+      sb = diff==='hard' && !!q.suffix;
+    } else if (currentFocus === 'suffix') {
+      // blank = the suffix
+      pb = diff==='hard' && !!q.prefix;
+      bb = diff==='hard';
+      sb = true;                      // always blank the suffix
+    } else {
+      // base focus — same as before
+      if (diff==='easy')        { pb=!!q.prefix; bb=false; sb=false; }
+      else if (diff==='medium') { pb=!!q.prefix; bb=true;  sb=false; }
+      else                      { pb=!!q.prefix; bb=true;  sb=!!q.suffix; }
+    }
+
+    const focusTagHtml = `<div class="focus-tag ${q.focus}">${q.focus}</div>`;
+    rows += `
+      <tr>
+        <td class="cell-num">${i+1}</td>
+        <td class="cell-meaning">
+          ${focusTagHtml}
+          <div>${q.focusMeaning}</div>
+        </td>
+        ${morphCell(q.prefix,'prefix',pb)}
+        ${morphCell(q.base,  'base',  bb)}
+        ${morphCell(q.suffix,'suffix',sb)}
+        <td class="cell-word"><span class="word-blank"></span></td>
+      </tr>`;
+  });
+
+  const wordBankHtml = wordbank ? `
+    <div class="ws-wordbank">
+      <div class="ws-wordbank-title">Word Bank — use each word once</div>
+      <div class="ws-wordbank-words">${shuffle(bank.map(q=>q.word)).map(w=>`<div class="ws-wordbank-word">${w}</div>`).join('')}</div>
+    </div>` : '';
+
+  const keyHtml = showKey ? `
+    <div class="ws-key">
+      <div class="ws-key-title">✱ Answer Key — Teacher Copy</div>
+      <div class="ws-key-grid">
+        ${bank.map((q,i)=>`<div class="ws-key-item">${i+1}. <span>${q.word}</span> <span style="color:#94a3b8;font-size:9px;">(${q.prefix||'—'} · ${q.base} · ${q.suffix||'—'})</span></div>`).join('')}
+      </div>
+    </div>` : '';
+
+  const focusLabels = { prefix:'Prefix', base:'Base', suffix:'Suffix' };
+  const srcLabels   = { all:'All', latin:'Latin', greek:'Greek', anglo:'Anglo-Saxon', pick:'Selected', custom:'Custom List' };
+  const diffLabels  = { easy:'Easy', medium:'Medium', hard:'Hard' };
+
+  const instrMap = {
+    prefix: {
+      easy: `Look at the <strong>prefix meaning</strong>. The base is shown. Write the correct <strong>prefix</strong>, then write the complete word.`,
+      hard: `Look at the <strong>prefix meaning</strong> only. Fill in the <strong>prefix</strong>, <strong>base</strong>, and complete word.`
+    },
+    suffix: {
+      easy: `Look at the <strong>suffix meaning</strong>. The base is shown. Write the correct <strong>suffix</strong>, then write the complete word.`,
+      hard: `Look at the <strong>suffix meaning</strong> only. Fill in the <strong>base</strong>, <strong>suffix</strong>, and complete word.`
+    },
+    base: {
+      easy:   `Look at the <strong>meaning</strong> and the <strong>base</strong> shown. Write the correct <strong>prefix</strong>, then write the complete word.`,
+      medium: `Look at the <strong>meaning</strong> and the <strong>suffix</strong> shown. Write the <strong>prefix</strong> and <strong>base</strong>, then write the complete word.`,
+      hard:   `Look at the <strong>meaning</strong> only. Fill in every morpheme box, then write the complete word.`
+    }
+  };
+
+  document.getElementById('worksheetOutput').innerHTML = `
+    <div class="worksheet">
+      <div class="ws-header">
+        <div class="ws-logo">
+          <div class="ws-logo-icon">🔬</div>
+          <div><div class="ws-logo-text">Word Labs</div><div class="ws-logo-sub">Breakdown Blitz</div></div>
+        </div>
+        <div class="ws-meta">
+          <div class="ws-meta-label">Student details</div>
+          <div class="ws-meta-line">Name: <span class="ws-meta-field"></span></div>
+          <div class="ws-meta-line">Date: <span class="ws-meta-field"></span></div>
+          <div class="ws-meta-line">Class: <span class="ws-meta-field"></span></div>
+        </div>
+      </div>
+      <div class="ws-title">Breakdown Blitz — ${focusLabels[currentFocus]} Focus</div>
+      <div class="ws-subtitle">${count} questions · ${diffLabels[diff]} · ${srcLabels[source]||''} · Word Labs</div>
+      <div class="ws-instructions">📋 <strong>Instructions:</strong> ${instrMap[currentFocus][diff]||instrMap[currentFocus]['easy']}</div>
+      <div class="ws-legend">
+        <div class="ws-legend-item"><div class="ws-legend-box prefix"></div> Prefix</div>
+        <div class="ws-legend-item"><div class="ws-legend-box base"></div> Base</div>
+        <div class="ws-legend-item"><div class="ws-legend-box suffix"></div> Suffix</div>
+        <div class="ws-legend-key">— = none here &nbsp;|&nbsp; dashed box = fill in</div>
+      </div>
+      <table class="ws-table">
+        <thead><tr>
+          <th style="width:24px;">#</th>
+          <th class="col-meaning">MEANING</th>
+          <th class="col-prefix">PREFIX</th>
+          <th class="col-base">BASE</th>
+          <th class="col-suffix">SUFFIX</th>
+          <th class="col-word">FULL WORD</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      ${wordBankHtml}
+      ${keyHtml}
+    </div>`;
+
+  document.getElementById('worksheetOutput').style.display = 'block';
+  document.getElementById('previewEmpty').style.display    = 'none';
+  document.getElementById('regenBtn').style.display        = 'block';
+  document.getElementById('printBtn').style.display        = 'block';
+}
+</script>
+</body>
+</html>

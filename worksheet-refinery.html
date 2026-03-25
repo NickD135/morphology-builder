@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Word Refinery — Worksheet Generator · Word Labs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#f0f4ff; --line:#e2e8f0; --text:#0f172a;
+      --indigo:#4338ca; --indigo-2:#6366f1; --indigo-soft:#eef2ff;
+      --ok:#15803d; --bad:#dc2626;
+      --slate:#475569; --slate-light:#e2e8f0; --slate-mid:#94a3b8;
+      --amber:#d97706; --amber-soft:#fef3c7; --amber-line:#fcd34d; --amber-dark:#92400e;
+      --t1:#64748b; --t2:#b45309; --t3:#ca8a04;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Lexend',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;}
+    button,input,select{font:inherit;}
+
+    .header{background:#fff;border-bottom:1px solid var(--line);padding:12px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;box-shadow:0 1px 4px rgba(15,23,42,.06);}
+    .brandIcon{width:40px;height:40px;border-radius:11px;background:var(--indigo);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto;}
+    .brandText h1{font-size:18px;font-weight:900;color:#312e81;letter-spacing:-.02em;}
+    .brandText .sub{font-size:9px;text-transform:uppercase;letter-spacing:.22em;color:var(--indigo-2);font-weight:800;}
+    .headerBadge{margin-left:auto;background:var(--amber-soft);color:var(--amber-dark);border:1px solid var(--amber-line);border-radius:999px;padding:4px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;}
+
+    .main{display:flex;flex:1;overflow:hidden;}
+    .sidebar{width:300px;flex-shrink:0;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;}
+    .sideInner{padding:16px;flex:1;overflow-y:auto;}
+    .section{margin-bottom:18px;}
+    .sectionLabel{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.22em;color:var(--indigo-2);margin-bottom:8px;}
+
+    .radioGroup{display:flex;flex-direction:column;gap:5px;}
+    .radioGroup label{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);border-radius:9px;padding:7px 11px;cursor:pointer;font-size:12px;font-weight:700;color:var(--slate);transition:all .12s;}
+    .radioGroup label:has(input:checked){border-color:var(--indigo-2);background:var(--indigo-soft);color:var(--indigo);}
+    .radioGroup input[type=radio]{accent-color:var(--indigo);flex-shrink:0;}
+    .radioGroup label .hint{font-size:10px;font-weight:600;color:#94a3b8;margin-left:auto;}
+    .radioGroup label:has(input:checked) .hint{color:var(--indigo-2);}
+
+    .stepper{display:flex;align-items:center;border:1.5px solid var(--line);border-radius:9px;overflow:hidden;width:fit-content;}
+    .stepperBtn{width:32px;height:32px;border:none;background:#f8fafc;cursor:pointer;font-size:14px;font-weight:700;color:var(--slate);transition:background .12s;}
+    .stepperBtn:hover{background:var(--indigo-soft);color:var(--indigo);}
+    .stepperVal{width:38px;text-align:center;font-size:13px;font-weight:800;border:none;border-left:1.5px solid var(--line);border-right:1.5px solid var(--line);height:32px;background:#fff;}
+
+    .toggleRow{display:flex;align-items:center;justify-content:space-between;padding:7px 0;}
+    .toggleRow+.toggleRow{border-top:1px solid var(--line);}
+    .toggleLabel{font-size:12px;font-weight:700;color:var(--slate);}
+    .toggleSub{font-size:10px;color:#94a3b8;font-weight:600;}
+    .toggle{position:relative;width:38px;height:21px;flex-shrink:0;}
+    .toggle input{opacity:0;width:0;height:0;}
+    .toggleSlider{position:absolute;inset:0;background:#e2e8f0;border-radius:999px;cursor:pointer;transition:background .15s;}
+    .toggleSlider::before{content:'';position:absolute;width:15px;height:15px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .15s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+    .toggle input:checked+.toggleSlider{background:var(--indigo);}
+    .toggle input:checked+.toggleSlider::before{transform:translateX(17px);}
+
+    .sideFooter{padding:14px 16px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:7px;background:#fff;flex-shrink:0;}
+    .btnGenerate{background:var(--indigo);color:#fff;border:none;border-radius:11px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;width:100%;}
+    .btnGenerate:hover{background:#3730a3;}
+    .btnRegen{background:#fff;color:var(--indigo);border:1.5px solid var(--indigo-2);border-radius:11px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;width:100%;display:none;}
+    .btnRegen:hover{background:var(--indigo-soft);}
+    .btnPrint{background:#0f172a;color:#fff;border:none;border-radius:11px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;width:100%;display:none;}
+    .btnPrint:hover{background:#1e293b;}
+
+    .preview{flex:1;overflow-y:auto;padding:24px;background:var(--bg);}
+    .previewEmpty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:#94a3b8;text-align:center;}
+    .previewEmpty .icon{font-size:44px;opacity:.35;}
+    .previewEmpty .msg{font-size:14px;font-weight:700;}
+    .previewEmpty .sub{font-size:12px;font-weight:600;}
+
+    /* ── WORKSHEET ──────────────────────────────────────────── */
+    .worksheet{background:#fff;border-radius:14px;border:1px solid var(--line);padding:26px;box-shadow:0 3px 12px rgba(15,23,42,.06);max-width:860px;margin:0 auto;}
+    .ws-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:13px;border-bottom:2px solid #e2e8f0;}
+    .ws-logo{display:flex;align-items:center;gap:9px;}
+    .ws-logo-icon{width:32px;height:32px;border-radius:8px;background:var(--amber);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex:0 0 auto;}
+    .ws-logo-text{font-size:13px;font-weight:900;color:#312e81;}
+    .ws-logo-sub{font-size:8px;text-transform:uppercase;letter-spacing:.2em;color:var(--amber);font-weight:800;}
+    .ws-meta{text-align:right;}
+    .ws-meta-label{font-size:8px;text-transform:uppercase;letter-spacing:.16em;color:#94a3b8;font-weight:800;margin-bottom:3px;}
+    .ws-meta-line{display:flex;align-items:center;gap:7px;justify-content:flex-end;margin-bottom:3px;font-size:10px;font-weight:700;color:#475569;}
+    .ws-meta-field{border-bottom:1.5px solid #94a3b8;min-width:90px;height:15px;display:inline-block;}
+    .ws-title{font-size:16px;font-weight:900;color:#312e81;margin-bottom:2px;}
+    .ws-subtitle{font-size:10px;color:#64748b;font-weight:600;margin-bottom:12px;}
+    .ws-instructions{background:var(--amber-soft);border:1.5px solid var(--amber-line);border-radius:8px;padding:8px 13px;margin-bottom:8px;font-size:11px;color:var(--amber-dark);font-weight:700;line-height:1.6;}
+
+    /* tier legend */
+    .tier-legend{display:flex;gap:16px;margin-bottom:14px;align-items:center;}
+    .tier-pill{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:800;}
+    .tier-dot{width:10px;height:10px;border-radius:50%;}
+    .tier-dot.t1{background:#94a3b8;}
+    .tier-dot.t2{background:#b45309;}
+    .tier-dot.t3{background:#ca8a04;}
+
+    /* cline block */
+    .cline-block{margin-bottom:14px;border:1.5px solid var(--amber-line);border-radius:10px;overflow:hidden;}
+    .cline-header{background:linear-gradient(90deg,#78350f,#b45309);padding:6px 14px;display:flex;align-items:center;justify-content:space-between;}
+    .cline-category{font-size:11px;font-weight:900;color:#fff;}
+    .cline-clue{font-size:9px;font-weight:700;color:rgba(255,255,255,.75);font-style:italic;}
+    .cline-body{padding:12px 14px;}
+
+    /* tier labels row */
+    .tier-labels{display:flex;justify-content:space-between;margin-bottom:4px;}
+    .tier-label{font-size:7px;font-weight:900;text-transform:uppercase;letter-spacing:.12em;}
+    .tier-label.t1{color:var(--t1);}
+    .tier-label.t2{color:var(--t2);}
+    .tier-label.t3{color:var(--t3);}
+
+    /* the cline track */
+    .cline-track{display:flex;align-items:center;gap:0;margin-bottom:8px;}
+    .cline-arrow{font-size:9px;color:var(--amber-line);flex-shrink:0;padding:0 3px;}
+    .cline-words{display:flex;flex:1;gap:2px;align-items:center;}
+    .cline-word{flex:1;text-align:center;padding:6px 2px;border-radius:6px;font-size:10px;font-weight:800;position:relative;}
+    .cline-word.given{background:var(--amber-soft);border:1.5px solid var(--amber-line);color:var(--amber-dark);}
+    .cline-word.blank{background:#fafafa;border:1.5px dashed #94a3b8;}
+    .cline-word.anchor-left{background:#78350f;color:#fff;border:none;}
+    .cline-word.anchor-right{background:#ca8a04;color:#fff;border:none;}
+    .cline-word-num{position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:6px;font-weight:900;color:#94a3b8;}
+
+    /* word bank */
+    .cline-wordbank{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;}
+    .cline-wordbank-label{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:#94a3b8;width:100%;margin-bottom:2px;}
+    .cline-bankword{border:1.5px solid var(--amber-line);background:#fff;border-radius:6px;padding:3px 10px;font-size:10px;font-weight:800;color:var(--amber-dark);}
+
+    /* answer key */
+    .ws-key{margin-top:16px;padding-top:14px;border-top:2px dashed #e2e8f0;}
+    .ws-key-title{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.18em;color:#dc2626;margin-bottom:10px;}
+    .ws-key-item{margin-bottom:5px;}
+    .ws-key-cat{font-size:9px;font-weight:900;color:var(--amber-dark);margin-bottom:2px;}
+    .ws-key-order{font-size:10px;font-weight:700;color:#475569;}
+
+    @media print {
+      body{display:block;height:auto;}
+      .header,.sidebar{display:none!important;}
+      .main{display:block;}
+      .preview{padding:0;overflow:visible;}
+      .previewEmpty{display:none;}
+      .worksheet{border:none;border-radius:0;box-shadow:none;padding:10px 14px;max-width:none;}
+      .ws-key{page-break-before:always;border-top:none;padding-top:20px;}
+      @page{size:A4;margin:10mm 12mm;}
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brandIcon">🔬</div>
+  <div class="brandText">
+    <h1>Word Labs</h1>
+    <span class="sub">Worksheet Generator</span>
+  </div>
+  <div class="headerBadge">Word Refinery</div>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sideInner">
+
+      <div class="section">
+        <div class="sectionLabel">Word pool</div>
+        <div class="radioGroup">
+          <label><input type="radio" name="pool" value="standard" checked> Standard <span class="hint">everyday to academic</span></label>
+          <label><input type="radio" name="pool" value="extension"> Extension <span class="hint">abstract, higher demand</span></label>
+          <label><input type="radio" name="pool" value="mixed"> Mixed</label>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sectionLabel">Gaps to fill</div>
+        <div class="radioGroup">
+          <label><input type="radio" name="gaps" value="middle" checked> Middle words <span class="hint">T2 words blank</span></label>
+          <label><input type="radio" name="gaps" value="all"> All blank <span class="hint">word bank given</span></label>
+          <label><input type="radio" name="gaps" value="nobank"> All blank, no bank <span class="hint">from memory</span></label>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sectionLabel">Number of clines</div>
+        <div class="stepper">
+          <button class="stepperBtn" onclick="stepCount(-1)">−</button>
+          <input type="number" class="stepperVal" id="countInput" min="2" max="8" value="4" readonly>
+          <button class="stepperBtn" onclick="stepCount(1)">+</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sectionLabel">Extras</div>
+        <div class="toggleRow">
+          <div><div class="toggleLabel">Show clue</div><div class="toggleSub">Context hint for each cline</div></div>
+          <label class="toggle"><input type="checkbox" id="toggleClue" checked><span class="toggleSlider"></span></label>
+        </div>
+        <div class="toggleRow">
+          <div><div class="toggleLabel">Show tier labels</div><div class="toggleSub">T1 / T2 / T3 above track</div></div>
+          <label class="toggle"><input type="checkbox" id="toggleTiers" checked><span class="toggleSlider"></span></label>
+        </div>
+        <div class="toggleRow">
+          <div><div class="toggleLabel">Answer key</div><div class="toggleSub">Teacher copy, separate page</div></div>
+          <label class="toggle"><input type="checkbox" id="toggleKey" checked><span class="toggleSlider"></span></label>
+        </div>
+      </div>
+
+    </div>
+    <div class="sideFooter">
+      <button class="btnGenerate" onclick="generateWorksheet()">⚡ Generate Worksheet</button>
+      <button class="btnRegen" id="regenBtn" onclick="generateWorksheet()">🔄 Regenerate</button>
+      <button class="btnPrint" id="printBtn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+    </div>
+  </div>
+
+  <div class="preview">
+    <div class="previewEmpty" id="previewEmpty">
+      <div class="icon">⚗️</div>
+      <div class="msg">Your Word Refinery worksheet will appear here</div>
+      <div class="sub">Configure options on the left, then hit Generate</div>
+    </div>
+    <div id="worksheetOutput" style="display:none;"></div>
+  </div>
+</div>
+
+<script>
+const CLINES = [
+  {category:"Talking",       leftAnchor:"say",     rightAnchor:"enunciate",   words:["say","speak","state","communicate","articulate","enunciate"],   gaps:[2,3,4], clue:"From a quick word to precise speech"},
+  {category:"Thinking",      leftAnchor:"think",   rightAnchor:"hypothesise", words:["think","wonder","consider","reflect","analyse","hypothesise"],  gaps:[2,3,4], clue:"From casual thought to scientific reasoning"},
+  {category:"Looking",       leftAnchor:"look",    rightAnchor:"scrutinise",  words:["look","watch","observe","examine","inspect","scrutinise"],      gaps:[2,3,4], clue:"From a glance to careful study"},
+  {category:"Changing",      leftAnchor:"change",  rightAnchor:"metamorphose",words:["change","shift","alter","modify","transform","metamorphose"],   gaps:[2,3,4], clue:"From a small shift to a complete transformation"},
+  {category:"Getting Bigger",leftAnchor:"grow",    rightAnchor:"proliferate", words:["grow","spread","increase","expand","escalate","proliferate"],   gaps:[2,3,4], clue:"From simple growth to rapid spreading"},
+  {category:"Making",        leftAnchor:"make",    rightAnchor:"synthesise",  words:["make","build","create","construct","fabricate","synthesise"],   gaps:[2,3,4], clue:"From making something to combining elements scientifically"},
+  {category:"Breaking Down", leftAnchor:"break",   rightAnchor:"decompose",   words:["break","split","divide","separate","fragment","decompose"],     gaps:[2,3,4], clue:"From snapping something to chemical breakdown"},
+  {category:"Showing",       leftAnchor:"show",    rightAnchor:"elucidate",   words:["show","explain","present","demonstrate","illustrate","elucidate"],gaps:[2,3,4],clue:"From pointing something out to making it perfectly clear"},
+  {category:"Disagreeing",   leftAnchor:"argue",   rightAnchor:"refute",      words:["argue","disagree","dispute","challenge","contest","refute"],    gaps:[2,3,4], clue:"From a simple disagreement to proving something wrong"},
+  {category:"Deciding",      leftAnchor:"choose",  rightAnchor:"adjudicate",  words:["choose","decide","judge","determine","evaluate","adjudicate"],  gaps:[2,3,4], clue:"From picking a favourite to formal judging"},
+  {category:"Collecting",    leftAnchor:"gather",  rightAnchor:"consolidate", words:["gather","collect","group","compile","accumulate","consolidate"],gaps:[2,3,4], clue:"From picking things up to bringing everything together formally"},
+  {category:"Moving",        leftAnchor:"move",    rightAnchor:"migrate",     words:["move","travel","journey","relocate","transfer","migrate"],      gaps:[2,3,4], clue:"From going somewhere to a formal population movement"},
+  {category:"Writing",       leftAnchor:"write",   rightAnchor:"transcribe",  words:["write","note","record","document","chronicle","transcribe"],    gaps:[2,3,4], clue:"From jotting something down to formal written recording"},
+  {category:"Asking",        leftAnchor:"ask",     rightAnchor:"interrogate", words:["ask","question","query","enquire","investigate","interrogate"], gaps:[2,3,4], clue:"From a simple question to formal questioning"},
+  {category:"Helping",       leftAnchor:"help",    rightAnchor:"facilitate",  words:["help","support","assist","aid","enable","facilitate"],          gaps:[2,3,4], clue:"From helping out to formally enabling something to happen"},
+  {category:"Stopping",      leftAnchor:"stop",    rightAnchor:"terminate",   words:["stop","end","finish","conclude","cease","terminate"],           gaps:[2,3,4], clue:"From halting to formally ending something"},
+  {category:"Starting",      leftAnchor:"start",   rightAnchor:"instigate",   words:["start","begin","launch","initiate","commence","instigate"],     gaps:[2,3,4], clue:"From getting going to formally setting something in motion"},
+  {category:"Checking",      leftAnchor:"check",   rightAnchor:"corroborate", words:["check","test","review","verify","validate","corroborate"],      gaps:[2,3,4], clue:"From a quick look to formal confirmation with evidence"},
+  {category:"Connecting",    leftAnchor:"join",    rightAnchor:"amalgamate",  words:["join","link","connect","combine","integrate","amalgamate"],     gaps:[2,3,4], clue:"From joining together to a formal merger"},
+  {category:"Measuring",     leftAnchor:"measure", rightAnchor:"quantify",    words:["measure","count","calculate","assess","evaluate","quantify"],   gaps:[2,3,4], clue:"From measuring up to formally expressing in numbers"},
+  {category:"Hiding",        leftAnchor:"hide",    rightAnchor:"obscure",     words:["hide","cover","mask","conceal","camouflage","obscure"],         gaps:[2,3,4], clue:"From hiding something to making it impossible to see"},
+  {category:"Fixing",        leftAnchor:"fix",     rightAnchor:"rectify",     words:["fix","mend","repair","restore","remedy","rectify"],             gaps:[2,3,4], clue:"From a quick fix to formally putting something right"},
+  {category:"Wanting",       leftAnchor:"want",    rightAnchor:"covet",       words:["want","wish","desire","crave","yearn","covet"],                 gaps:[2,3,4], clue:"From wanting something to deeply longing for it"},
+  {category:"Eating",        leftAnchor:"eat",     rightAnchor:"devour",      words:["eat","munch","feast","consume","gorge","devour"],               gaps:[2,3,4], clue:"From having a bite to eating with fierce hunger"},
+  {category:"Running",       leftAnchor:"run",     rightAnchor:"sprint",      words:["run","jog","dash","race","bolt","sprint"],                      gaps:[2,3,4], clue:"From a gentle run to maximum speed"},
+  {category:"Being Scared",  leftAnchor:"scared",  rightAnchor:"petrified",   words:["scared","afraid","frightened","alarmed","terrified","petrified"],gaps:[2,3,4],clue:"From a little fright to being frozen with fear"},
+  {category:"Being Happy",   leftAnchor:"happy",   rightAnchor:"euphoric",    words:["happy","glad","pleased","delighted","elated","euphoric"],       gaps:[2,3,4], clue:"From a smile to overwhelming joy"},
+  {category:"Being Angry",   leftAnchor:"angry",   rightAnchor:"incensed",    words:["angry","annoyed","cross","furious","enraged","incensed"],       gaps:[2,3,4], clue:"From mild annoyance to absolute fury"},
+  {category:"Teaching",      leftAnchor:"teach",   rightAnchor:"enlighten",   words:["teach","show","instruct","educate","mentor","enlighten"],       gaps:[2,3,4], clue:"From showing someone how to deep understanding"},
+];
+
+const EXT_CLINES = [
+  {category:"Influencing",       leftAnchor:"affect",   rightAnchor:"catalyse",     words:["affect","change","influence","shape","determine","catalyse"],      gaps:[1,2,3,4], clue:"From having an effect to triggering a rapid reaction"},
+  {category:"Understanding",     leftAnchor:"know",     rightAnchor:"extrapolate",  words:["know","understand","interpret","comprehend","infer","extrapolate"],  gaps:[2,3,4],   clue:"From basic knowing to extending knowledge beyond the data"},
+  {category:"Disagreeing Formally",leftAnchor:"disagree",rightAnchor:"repudiate",  words:["disagree","dispute","challenge","contradict","denounce","repudiate"],gaps:[2,3,4],   clue:"From disagreeing to formally rejecting with authority"},
+  {category:"Making Worse",      leftAnchor:"worsen",   rightAnchor:"exacerbate",   words:["worsen","damage","harm","deteriorate","aggravate","exacerbate"],     gaps:[2,3,4],   clue:"From getting worse to formally intensifying a problem"},
+  {category:"Getting Better",    leftAnchor:"improve",  rightAnchor:"ameliorate",   words:["improve","fix","restore","enhance","rectify","ameliorate"],          gaps:[2,3,4],   clue:"From simple improvement to formal reduction of suffering"},
+  {category:"Spreading Ideas",   leftAnchor:"share",    rightAnchor:"disseminate",  words:["share","spread","broadcast","circulate","propagate","disseminate"],  gaps:[1,2,3,4], clue:"From sharing casually to formally distributing information widely"},
+];
+
+function shuffle(arr) { return [...arr].sort(() => Math.random() - .5); }
+function stepCount(d) {
+  const el = document.getElementById('countInput');
+  el.value = Math.min(8, Math.max(2, parseInt(el.value) + d));
+}
+
+function generateWorksheet() {
+  const pool      = document.querySelector('input[name=pool]:checked').value;
+  const gapsMode  = document.querySelector('input[name=gaps]:checked').value;
+  const count     = parseInt(document.getElementById('countInput').value) || 4;
+  const showClue  = document.getElementById('toggleClue').checked;
+  const showTiers = document.getElementById('toggleTiers').checked;
+  const showKey   = document.getElementById('toggleKey').checked;
+
+  let src = pool === 'standard'  ? [...CLINES]
+          : pool === 'extension' ? [...EXT_CLINES]
+          : [...CLINES, ...EXT_CLINES];
+  const bank = shuffle(src).slice(0, count);
+
+  const poolLabel = {standard:'Standard',extension:'Extension',mixed:'Mixed'}[pool];
+  const gapsLabel = {middle:'Middle Words Blank',all:'All Blank + Word Bank',nobank:'All Blank'}[gapsMode];
+
+  const instrMap = {
+    middle: 'The T1 (everyday) and T3 (specialist) words are given at each end. Fill in the missing middle words to complete the cline from least to most formal.',
+    all:    'The anchor words are given at each end. Use the word bank to fill in all six words in the correct order from least to most formal.',
+    nobank: 'The anchor words are given at each end. Write the missing words in the correct order from least to most formal — no word bank this time!',
+  };
+
+  // Tier positions: indices 0-1 = T1, 2-3 = T2, 4-5 = T3
+  const tierOf = i => i <= 1 ? 't1' : i <= 3 ? 't2' : 't3';
+  const tierLabel = i => i <= 1 ? 'T1' : i <= 3 ? 'T2' : 'T3';
+
+  let blocks = '';
+  bank.forEach((cline, bi) => {
+    // Which positions are blank?
+    let blankIndices;
+    if (gapsMode === 'middle') {
+      blankIndices = new Set(cline.gaps);
+    } else {
+      // all or nobank: all middle (indices 1-4), anchors always given
+      blankIndices = new Set([1,2,3,4]);
+    }
+
+    // Build the word track
+    let trackHtml = '';
+    const gapWords = [];
+
+    cline.words.forEach((word, wi) => {
+      const isAnchorLeft  = wi === 0;
+      const isAnchorRight = wi === cline.words.length - 1;
+      const isBlank       = blankIndices.has(wi);
+      const tier          = tierOf(wi);
+
+      if (isAnchorLeft) {
+        trackHtml += `<div class="cline-word anchor-left">${word}</div>`;
+      } else if (isAnchorRight) {
+        trackHtml += `<div class="cline-word anchor-right">${word}</div>`;
+      } else if (isBlank) {
+        trackHtml += `<div class="cline-word blank"><span class="cline-word-num">${wi + 1}</span></div>`;
+        gapWords.push(word);
+      } else {
+        trackHtml += `<div class="cline-word given">${word}</div>`;
+      }
+
+      // Arrow between words
+      if (wi < cline.words.length - 1) {
+        trackHtml += `<div class="cline-arrow">&#8594;</div>`;
+      }
+    });
+
+    // Tier label row
+    let tierHtml = '';
+    if (showTiers) {
+      tierHtml = `
+        <div class="tier-labels">
+          <span class="tier-label t1">Tier 1 — everyday</span>
+          <span class="tier-label t2">Tier 2 — academic</span>
+          <span class="tier-label t3">Tier 3 — specialist</span>
+        </div>`;
+    }
+
+    // Word bank (shuffle gap words)
+    let wbHtml = '';
+    if (gapsMode !== 'nobank' && gapWords.length) {
+      const shuffled = shuffle(gapWords);
+      wbHtml = `
+        <div class="cline-wordbank">
+          <div class="cline-wordbank-label">Word bank</div>
+          ${shuffled.map(w => `<span class="cline-bankword">${w}</span>`).join('')}
+        </div>`;
+    }
+
+    blocks += `
+      <div class="cline-block">
+        <div class="cline-header">
+          <span class="cline-category">${bi + 1}. ${cline.category}</span>
+          ${showClue ? `<span class="cline-clue">${cline.clue}</span>` : ''}
+        </div>
+        <div class="cline-body">
+          ${tierHtml}
+          <div class="cline-track">
+            <div class="cline-words">${trackHtml}</div>
+          </div>
+          ${wbHtml}
+        </div>
+      </div>`;
+  });
+
+  // Answer key
+  let keyHtml = '';
+  if (showKey) {
+    const keyItems = bank.map((cline, i) => `
+      <div class="ws-key-item">
+        <div class="ws-key-cat">${i+1}. ${cline.category}</div>
+        <div class="ws-key-order">${cline.words.join(' → ')}</div>
+      </div>`).join('');
+    keyHtml = `<div class="ws-key"><div class="ws-key-title">Answer Key — Teacher Copy</div>${keyItems}</div>`;
+  }
+
+  document.getElementById('worksheetOutput').innerHTML = `
+    <div class="worksheet">
+      <div class="ws-header">
+        <div class="ws-logo">
+          <div class="ws-logo-icon">WR</div>
+          <div><div class="ws-logo-text">Word Labs</div><div class="ws-logo-sub">Word Refinery</div></div>
+        </div>
+        <div class="ws-meta">
+          <div class="ws-meta-label">Student details</div>
+          <div class="ws-meta-line">Name: <span class="ws-meta-field"></span></div>
+          <div class="ws-meta-line">Date: <span class="ws-meta-field"></span></div>
+          <div class="ws-meta-line">Class: <span class="ws-meta-field"></span></div>
+        </div>
+      </div>
+      <div class="ws-title">Word Refinery</div>
+      <div class="ws-subtitle">${count} clines · ${poolLabel} · ${gapsLabel} · Word Labs</div>
+      <div class="ws-instructions">📋 <strong>Instructions:</strong> ${instrMap[gapsMode]}</div>
+      <div class="tier-legend">
+        <div class="tier-pill"><div class="tier-dot t1"></div> T1 — everyday language</div>
+        <div class="tier-pill"><div class="tier-dot t2"></div> T2 — academic language</div>
+        <div class="tier-pill"><div class="tier-dot t3"></div> T3 — specialist language</div>
+      </div>
+      ${blocks}
+      ${keyHtml}
+    </div>`;
+
+  document.getElementById('worksheetOutput').style.display = 'block';
+  document.getElementById('previewEmpty').style.display    = 'none';
+  document.getElementById('regenBtn').style.display        = 'block';
+  document.getElementById('printBtn').style.display        = 'block';
+}
+</script>
+</body>
+</html>
