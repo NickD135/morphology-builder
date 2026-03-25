@@ -58,7 +58,9 @@ let DATA = {
           { part: "ion",      meaning: "act or process of" },
         ],
         syllables: "re/con/struc/tion",
-        phonemes:  "r/e/c/o/n/s/t/r/u/c/t/io/n",
+        phonemes:  [
+          {g:"r"},{g:"e"},{g:"c"},{g:"o"},{g:"n"},{g:"s"},{g:"t"},{g:"r"},{g:"u"},{g:"c"},{g:"t"},{g:"io",s:"/sh/"},{g:"n"}
+        ],
       },
       {
         word: "structure",
@@ -67,7 +69,9 @@ let DATA = {
           { part: "ure",      meaning: "result of"     },
         ],
         syllables: "struc/ture",
-        phonemes:  "s/t/r/u/c/t/u/re",
+        phonemes:  [
+          {g:"s"},{g:"t"},{g:"r"},{g:"u"},{g:"c"},{g:"t"},{g:"u"},{g:"re"}
+        ],
       },
     ],
   },
@@ -85,7 +89,9 @@ let DATA = {
           { part: "ure",      meaning: "result of"     },
         ],
         syllables: "mi/cro/struc/ture",
-        phonemes:  "m/i/c/r/o/s/t/r/u/c/t/u/re",
+        phonemes:  [
+          {g:"m"},{g:"i"},{g:"c"},{g:"r"},{g:"o"},{g:"s"},{g:"t"},{g:"r"},{g:"u"},{g:"c"},{g:"t"},{g:"u"},{g:"re"}
+        ],
       },
       {
         word: "nonstructural",
@@ -96,7 +102,9 @@ let DATA = {
           { part: "al",       meaning: "relating to"   },
         ],
         syllables: "non/struc/tur/al",
-        phonemes:  "n/o/n/s/t/r/u/c/t/u/r/a/l",
+        phonemes:  [
+          {g:"n"},{g:"o"},{g:"n"},{g:"s"},{g:"t"},{g:"r"},{g:"u"},{g:"c"},{g:"t"},{g:"u"},{g:"r"},{g:"a"},{g:"l"}
+        ],
       },
       {
         word: "destructive",
@@ -106,7 +114,9 @@ let DATA = {
           { part: "ive",      meaning: "tending to"    },
         ],
         syllables: "de/struc/tive",
-        phonemes:  "d/e/s/t/r/u/c/t/i/ve",
+        phonemes:  [
+          {g:"d"},{g:"e"},{g:"s"},{g:"t"},{g:"r"},{g:"u"},{g:"c"},{g:"t"},{g:"i"},{g:"ve",s:"/v/"}
+        ],
       },
     ],
   },
@@ -878,15 +888,15 @@ function addBreakdownStep(pres, day, dictData, wordIndex, step) {
   addBreakdownRow(slide, "Syllables", 3.58,
     showSyllables ? wordData.syllables : null, "syllable");
 
-  // PHONEMES row
+  // PHONEMES row (taller to fit sound annotations)
   const showPhonemes = step === "phonemes";
   addBreakdownRow(slide, "Phonemes", 4.48,
     showPhonemes ? wordData.phonemes : null, "phoneme");
 }
 
 function addBreakdownRow(slide, label, y, data, type) {
-  // Morpheme rows are taller to fit rule notes
-  const rowH = type === "morpheme" ? 0.92 : 0.72;
+  // Morpheme rows are taller to fit rule notes; phoneme rows taller for sound annotations
+  const rowH = type === "morpheme" ? 0.92 : type === "phoneme" ? 0.88 : 0.72;
   // Row label
   slide.addShape("rect", { x: 0.4, y, w: 1.5, h: rowH, fill: { color: C.slateLight }, line: { color: C.slateLight }, rectRadius: 0.06 });
   slide.addText(label, { x: 0.4, y, w: 1.5, h: rowH, fontSize: 11, bold: true, color: C.slate, fontFace: FONT, align: "center", valign: "middle", margin: 0 });
@@ -928,16 +938,27 @@ function addBreakdownRow(slide, label, y, data, type) {
       if (i < n - 1) slide.addText("·", { x: x + chipW, y: y + 0.1, w: gap, h: 0.52, fontSize: 16, bold: true, color: C.teal, fontFace: FONT, align: "center", valign: "middle", margin: 0 });
     });
   } else if (type === "phoneme") {
-    // data is string like "r/e/c/o/n/..."
-    slide.addShape("rect", { x: 2.05, y, w: 7.55, h: 0.72, fill: { color: "fce7f3" }, line: { color: "db2777" }, rectRadius: 0.06 });
-    const parts = data.split("/");
+    // data can be:
+    //   - array of {g: "grapheme", s?: "/sound/"} objects (new format)
+    //   - string like "r/e/c/o/n/..." (legacy format)
+    const parts = Array.isArray(data)
+      ? data
+      : data.split("/").map(g => ({ g }));
+    const hasSounds = parts.some(p => p.s);
+    const rowH = hasSounds ? 0.88 : 0.72;
+    slide.addShape("rect", { x: 2.05, y, w: 7.55, h: rowH, fill: { color: "fce7f3" }, line: { color: "db2777" }, rectRadius: 0.06 });
     const n = parts.length;
     const chipW = Math.min(0.75, 7.2 / n - 0.06);
     const gap = Math.max(0.02, (7.2 - n * chipW) / (n + 1));
+    const chipH = hasSounds ? 0.42 : 0.52;
     parts.forEach((p, i) => {
-      const x = 2.08 + gap + i * (chipW + gap);
-      slide.addShape("rect", { x, y: y + 0.1, w: chipW, h: 0.52, fill: { color: C.white }, line: { color: "db2777" }, rectRadius: 0.04 });
-      slide.addText(p, { x, y: y + 0.1, w: chipW, h: 0.52, fontSize: Math.max(9, 13 - n), bold: true, color: "9d174d", fontFace: FONT, align: "center", valign: "middle", margin: 0 });
+      const cx = 2.08 + gap + i * (chipW + gap);
+      slide.addShape("rect", { x: cx, y: y + 0.08, w: chipW, h: chipH, fill: { color: C.white }, line: { color: "db2777" }, rectRadius: 0.04 });
+      slide.addText(p.g, { x: cx, y: y + 0.08, w: chipW, h: chipH, fontSize: Math.max(9, 13 - n), bold: true, color: "9d174d", fontFace: FONT, align: "center", valign: "middle", margin: 0 });
+      // Sound annotation underneath when grapheme makes a non-obvious sound
+      if (p.s) {
+        slide.addText(p.s, { x: cx, y: y + 0.08 + chipH + 0.02, w: chipW, h: 0.24, fontSize: 7.5, color: "94a3b8", italic: true, fontFace: FONT_BODY, align: "center", valign: "top", margin: 0 });
+      }
     });
   }
 }

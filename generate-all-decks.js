@@ -16,13 +16,214 @@ const { buildDeck } = require("./wordlabs-deck-generator");
 //  type: "base" | "prefix" | "suffix"
 // ============================================================
 const ALL_MORPHEMES = [
-  // Bases
+  // ── CORE BASES (97) ──
+  { morpheme: "act", type: "base" },
+  { morpheme: "appear", type: "base" },
+  { morpheme: "apply", type: "base" },
+  { morpheme: "argue", type: "base" },
+  { morpheme: "assist", type: "base" },
+  { morpheme: "attract", type: "base" },
+  { morpheme: "behave", type: "base" },
+  { morpheme: "believe", type: "base" },
+  { morpheme: "build", type: "base" },
+  { morpheme: "care", type: "base" },
+  { morpheme: "collect", type: "base" },
+  { morpheme: "communicate", type: "base" },
+  { morpheme: "connect", type: "base" },
+  { morpheme: "construct", type: "base" },
+  { morpheme: "create", type: "base" },
+  { morpheme: "decide", type: "base" },
+  { morpheme: "develop", type: "base" },
+  { morpheme: "direct", type: "base" },
+  { morpheme: "educate", type: "base" },
+  { morpheme: "employ", type: "base" },
+  { morpheme: "encourage", type: "base" },
+  { morpheme: "enjoy", type: "base" },
+  { morpheme: "excite", type: "base" },
+  { morpheme: "expect", type: "base" },
+  { morpheme: "explore", type: "base" },
+  { morpheme: "express", type: "base" },
+  { morpheme: "extend", type: "base" },
+  { morpheme: "form", type: "base" },
+  { morpheme: "friend", type: "base" },
+  { morpheme: "govern", type: "base" },
+  { morpheme: "grow", type: "base" },
+  { morpheme: "help", type: "base" },
+  { morpheme: "inform", type: "base" },
+  { morpheme: "inspire", type: "base" },
+  { morpheme: "introduce", type: "base" },
+  { morpheme: "invest", type: "base" },
+  { morpheme: "join", type: "base" },
+  { morpheme: "judge", type: "base" },
+  { morpheme: "learn", type: "base" },
+  { morpheme: "locate", type: "base" },
+  { morpheme: "manage", type: "base" },
+  { morpheme: "measure", type: "base" },
+  { morpheme: "migrate", type: "base" },
+  { morpheme: "motivate", type: "base" },
+  { morpheme: "move", type: "base" },
+  { morpheme: "observe", type: "base" },
+  { morpheme: "operate", type: "base" },
+  { morpheme: "organise", type: "base" },
+  { morpheme: "participate", type: "base" },
+  { morpheme: "perform", type: "base" },
+  { morpheme: "persuade", type: "base" },
+  { morpheme: "predict", type: "base" },
+  { morpheme: "prepare", type: "base" },
+  { morpheme: "prevent", type: "base" },
+  { morpheme: "produce", type: "base" },
+  { morpheme: "protect", type: "base" },
+  { morpheme: "react", type: "base" },
+  { morpheme: "reduce", type: "base" },
+  { morpheme: "reflect", type: "base" },
+  { morpheme: "reject", type: "base" },
+  { morpheme: "relate", type: "base" },
+  { morpheme: "remove", type: "base" },
+  { morpheme: "repair", type: "base" },
+  { morpheme: "replace", type: "base" },
+  { morpheme: "report", type: "base" },
+  { morpheme: "respect", type: "base" },
+  { morpheme: "respond", type: "base" },
+  { morpheme: "return", type: "base" },
+  { morpheme: "reveal", type: "base" },
+  { morpheme: "review", type: "base" },
+  { morpheme: "revise", type: "base" },
+  { morpheme: "rotate", type: "base" },
+  { morpheme: "solve", type: "base" },
+  { morpheme: "structure", type: "base" },
+  { morpheme: "suggest", type: "base" },
+  { morpheme: "support", type: "base" },
+  { morpheme: "transport", type: "base" },
+  { morpheme: "trust", type: "base" },
+  { morpheme: "use", type: "base" },
+  { morpheme: "value", type: "base" },
+  { morpheme: "visit", type: "base" },
+  { morpheme: "watch", type: "base" },
+  { morpheme: "write", type: "base" },
+  { morpheme: "legal", type: "base" },
+  { morpheme: "logical", type: "base" },
+  { morpheme: "literate", type: "base" },
+  { morpheme: "regular", type: "base" },
+  { morpheme: "rational", type: "base" },
+  { morpheme: "responsible", type: "base" },
+  { morpheme: "typical", type: "base" },
+  { morpheme: "hero", type: "base" },
+  { morpheme: "market", type: "base" },
+  { morpheme: "power", type: "base" },
+  { morpheme: "fast", type: "base" },
+
+  // ── ANGLO BASES (42) ──
+  { morpheme: "teach", type: "base" },
+  { morpheme: "meet", type: "base" },
+  { morpheme: "rest", type: "base" },
+  { morpheme: "go", type: "base" },
+  { morpheme: "tall", type: "base" },
+  { morpheme: "ask", type: "base" },
+  { morpheme: "eat", type: "base" },
+  { morpheme: "train", type: "base" },
+  { morpheme: "usual", type: "base" },
+  { morpheme: "end", type: "base" },
+  { morpheme: "turn", type: "base" },
+  { morpheme: "open", type: "base" },
+  { morpheme: "make", type: "base" },
+  { morpheme: "jump", type: "base" },
+  { morpheme: "bad", type: "base" },
+  { morpheme: "lock", type: "base" },
+  { morpheme: "like", type: "base" },
+  { morpheme: "happy", type: "base" },
+  { morpheme: "push", type: "base" },
+  { morpheme: "zip", type: "base" },
+  { morpheme: "take", type: "base" },
+  { morpheme: "see", type: "base" },
+  { morpheme: "brisk", type: "base" },
+  { morpheme: "wake", type: "base" },
+  { morpheme: "send", type: "base" },
+  { morpheme: "round", type: "base" },
+  { morpheme: "cloud", type: "base" },
+  { morpheme: "pay", type: "base" },
+  { morpheme: "lift", type: "base" },
+  { morpheme: "pack", type: "base" },
+  { morpheme: "sound", type: "base" },
+  { morpheme: "correct", type: "base" },
+  { morpheme: "part", type: "base" },
+  { morpheme: "live", type: "base" },
+  { morpheme: "sad", type: "base" },
+  { morpheme: "merge", type: "base" },
+  { morpheme: "run", type: "base" },
+  { morpheme: "plan", type: "base" },
+  { morpheme: "hop", type: "base" },
+
+  // ── LATIN BASES (47) ──
+  { morpheme: "rupt", type: "base" },
+  { morpheme: "tract", type: "base" },
+  { morpheme: "cred", type: "base" },
+  { morpheme: "dic", type: "base" },
+  { morpheme: "dict", type: "base" },
   { morpheme: "struct", type: "base" },
-  { morpheme: "port",   type: "base" },
-  // Prefixes
+  { morpheme: "scrib", type: "base" },
+  { morpheme: "script", type: "base" },
+  { morpheme: "port", type: "base" },
+  { morpheme: "aud", type: "base" },
+  { morpheme: "flex", type: "base" },
+  { morpheme: "flect", type: "base" },
+  { morpheme: "ject", type: "base" },
+  { morpheme: "spec", type: "base" },
+  { morpheme: "spect", type: "base" },
+  { morpheme: "spic", type: "base" },
+  { morpheme: "miss", type: "base" },
+  { morpheme: "mit", type: "base" },
+  { morpheme: "sci", type: "base" },
+  { morpheme: "pend", type: "base" },
+  { morpheme: "pens", type: "base" },
+  { morpheme: "vis", type: "base" },
+  { morpheme: "vid", type: "base" },
+  { morpheme: "fer", type: "base" },
+  { morpheme: "vers", type: "base" },
+  { morpheme: "vert", type: "base" },
+  { morpheme: "duc", type: "base" },
+  { morpheme: "duct", type: "base" },
+  { morpheme: "sec", type: "base" },
+  { morpheme: "sect", type: "base" },
+  { morpheme: "claus", type: "base" },
+  { morpheme: "clos", type: "base" },
+  { morpheme: "vit", type: "base" },
+  { morpheme: "viv", type: "base" },
+  { morpheme: "cept", type: "base" },
+  { morpheme: "cess", type: "base" },
+  { morpheme: "fect", type: "base" },
+  { morpheme: "fix", type: "base" },
+  { morpheme: "sign", type: "base" },
+  { morpheme: "tend", type: "base" },
+  { morpheme: "press", type: "base" },
+  { morpheme: "gress", type: "base" },
+  { morpheme: "cede", type: "base" },
+  { morpheme: "claim", type: "base" },
+  { morpheme: "prove", type: "base" },
+  { morpheme: "ply", type: "base" },
+  { morpheme: "spire", type: "base" },
+
+  // ── GREEK BASES (15) ──
+  { morpheme: "graph", type: "base" },
+  { morpheme: "gram", type: "base" },
+  { morpheme: "micro", type: "base" },
+  { morpheme: "hydr", type: "base" },
+  { morpheme: "hydro", type: "base" },
+  { morpheme: "therm", type: "base" },
+  { morpheme: "thermo", type: "base" },
+  { morpheme: "phon", type: "base" },
+  { morpheme: "logy", type: "base" },
+  { morpheme: "chron", type: "base" },
+  { morpheme: "chrono", type: "base" },
+  { morpheme: "photo", type: "base" },
+  { morpheme: "scope", type: "base" },
+  { morpheme: "meter", type: "base" },
+  { morpheme: "aero", type: "base" },
+
+  // ── PREFIXES ──
   { morpheme: "re",     type: "prefix" },
   { morpheme: "un",     type: "prefix" },
-  // Suffixes
+
+  // ── SUFFIXES ──
   { morpheme: "tion",   type: "suffix" },
   { morpheme: "ful",    type: "suffix" },
 ];
@@ -89,7 +290,7 @@ The JSON must match this EXACT schema (no extra fields, no missing fields):
           {"part": "suffix", "meaning": "meaning of suffix"}
         ],
         "syllables": "syl/la/bles",
-        "phonemes": "ph/o/n/e/m/es"
+        "phonemes": [{"g":"ph"},{"g":"o"},{"g":"n"},{"g":"e"},{"g":"m"},{"g":"es"}]
       },
       {
         "word": "focusword2",
@@ -98,7 +299,7 @@ The JSON must match this EXACT schema (no extra fields, no missing fields):
           {"part": "suffix", "meaning": "meaning of suffix"}
         ],
         "syllables": "syl/la/bles",
-        "phonemes": "ph/o/n/e/m/es"
+        "phonemes": [{"g":"ph"},{"g":"o"},{"g":"n"},{"g":"e"},{"g":"m"},{"g":"es"}]
       }
     ]
   },
@@ -110,19 +311,19 @@ The JSON must match this EXACT schema (no extra fields, no missing fields):
         "word": "focusword1",
         "morphemes": [{"part": "morpheme_part", "meaning": "meaning"}],
         "syllables": "syl/la/bles",
-        "phonemes": "ph/o/n/e/m/es"
+        "phonemes": [{"g":"ph"},{"g":"o"},{"g":"n"},{"g":"e"},{"g":"m"},{"g":"es"}]
       },
       {
         "word": "focusword2",
         "morphemes": [{"part": "morpheme_part", "meaning": "meaning"}],
         "syllables": "syl/la/bles",
-        "phonemes": "ph/o/n/e/m/es"
+        "phonemes": [{"g":"ph"},{"g":"o"},{"g":"n"},{"g":"e"},{"g":"m"},{"g":"es"}]
       },
       {
         "word": "focusword3",
         "morphemes": [{"part": "morpheme_part", "meaning": "meaning"}],
         "syllables": "syl/la/bles",
-        "phonemes": "ph/o/n/e/m/es"
+        "phonemes": [{"g":"ph"},{"g":"o"},{"g":"n"},{"g":"e"},{"g":"m"},{"g":"es"}]
       }
     ]
   }
@@ -147,23 +348,26 @@ MORPHEME NOTES — the "note" field:
   * SPELLING CHANGES: when a base word drops a letter before a suffix. E.g. "create" drops the "e" before "-ion" → "creation". Add note like: "note": "'e' dropped before vowel suffix"
 - Only add "note" when there IS a rule to explain. Do NOT add "note" to straightforward morphemes
 
-PHONEMES — CRITICAL RULES:
-- phonemes: split using / — each segment is the GRAPHEME (the actual LETTERS from the word) that represent ONE sound
-- You MUST use the exact letters from the word, NEVER substitute sound representations
-- CORRECT: "recharge" = "r/e/ch/ar/ge" (every segment uses the actual letters from the word)
-- WRONG: "recharge" = "r/e/ch/ar/j" (the "j" sound is spelled "ge" in this word — use "ge")
-- CORRECT: "structure" = "s/t/r/u/c/t/u/re" (the final sound uses "re" not "er" or a phonetic symbol)
-- CORRECT: "destructive" = "d/e/s/t/r/u/c/t/i/ve" (NOT "d/e/s/t/r/u/c/t/iv")
-- Every consonant sound = its own grapheme segment
-- Every vowel sound = its own grapheme segment
+PHONEMES — NEW FORMAT (CRITICAL):
+- phonemes is now an ARRAY OF OBJECTS, not a string
+- Each object has: "g" (the grapheme — the actual LETTERS from the word) and optionally "s" (the sound it makes, only when non-obvious)
+- "g" = the exact letters from the word that represent one sound. ALWAYS use the real letters, never substitute sound representations
+- "s" = the sound annotation (e.g. "/sh/", "/k/", "/j/", "/z/", "/f/") — ONLY include this when the grapheme makes an unexpected or non-obvious sound
+- CORRECT: "unsure" = [{"g":"u"},{"g":"n"},{"g":"s","s":"/sh/"},{"g":"u"},{"g":"re"}] — the "s" makes a /sh/ sound so it gets an "s" annotation
+- CORRECT: "recharge" = [{"g":"r"},{"g":"e"},{"g":"ch"},{"g":"ar"},{"g":"ge","s":"/j/"}] — "ge" makes /j/ sound
+- CORRECT: "structure" = [{"g":"s"},{"g":"t"},{"g":"r"},{"g":"u"},{"g":"c"},{"g":"t"},{"g":"u"},{"g":"re"}] — no surprising sounds, so no "s" fields
+- CORRECT: "education" = [{"g":"e"},{"g":"d"},{"g":"u"},{"g":"c","s":"/k/"},{"g":"a"},{"g":"t","s":"/sh/"},{"g":"io"},{"g":"n"}]
+- Every consonant sound = its own grapheme
+- Every vowel sound = its own grapheme
 - Digraphs (two letters, one sound) stay together: "sh", "ch", "th", "ph", "wh", "ng", "ck"
 - Vowel digraphs stay together: "ee", "ea", "oa", "ai", "ay", "oo", "ou", "ow", "oi", "oy", "ar", "er", "ir", "or", "ur"
-- "tion" as a suffix = "t/io/n" (3 graphemes) or "sh/u/n" sound but written as "t/io/n"
-- "ge" at end of word making /j/ sound = "ge" (one grapheme, e.g. "charge" = "ch/ar/ge")
-- "ce" at end of word making /s/ sound = "ce" (one grapheme)
-- Double consonants making one sound: "pp", "ll", "ss", "ff", "tt", "rr" = one segment
-- Split vowels like hope = "h/o/p/e" (4 graphemes), make = "m/a/k/e" (4 graphemes)
-- VALIDATION: join all phoneme segments together (remove "/") — the result MUST exactly equal the original word. If it doesn't, your phonemes are wrong
+- "ge" at end of word making /j/ sound = {"g":"ge","s":"/j/"}
+- "ce" at end of word making /s/ sound = {"g":"ce","s":"/s/"}
+- Double consonants making one sound: "pp", "ll", "ss", "ff", "tt", "rr" = one grapheme
+- Split vowels: hope = [{"g":"h"},{"g":"o"},{"g":"p"},{"g":"e"}]
+- WHEN TO ADD "s" (sound annotation): only when the letters don't obviously make the sound they look like. E.g. "s" making /sh/, "c" making /s/ or /sh/, "g" making /j/, "ti" making /sh/, "ph" making /f/, silent letters, etc.
+- DO NOT add "s" for straightforward sounds like "t" making /t/, "m" making /m/, etc.
+- VALIDATION: join all "g" values together — the result MUST exactly equal the original word
 - Use Australian/British English spelling (e.g. "organise" not "organize")
 
 Return ONLY the JSON object. No markdown, no backticks, no explanation.`;
@@ -220,7 +424,7 @@ The JSON must match this EXACT schema:
           {"part": "suffix", "meaning": "meaning of suffix"}
         ],
         "syllables": "syl/la/bles",
-        "phonemes": "ph/o/n/e/m/es"
+        "phonemes": [{"g":"ph"},{"g":"o"},{"g":"n"},{"g":"e"},{"g":"m"},{"g":"es"}]
       },
       {
         "word": "focusword2",
@@ -229,7 +433,7 @@ The JSON must match this EXACT schema:
           {"part": "base", "meaning": "meaning of base"}
         ],
         "syllables": "syl/la/bles",
-        "phonemes": "ph/o/n/e/m/es"
+        "phonemes": [{"g":"ph"},{"g":"o"},{"g":"n"},{"g":"e"},{"g":"m"},{"g":"es"}]
       }
     ]
   },
@@ -241,19 +445,19 @@ The JSON must match this EXACT schema:
         "word": "focusword1",
         "morphemes": [{"part": "part", "meaning": "meaning"}],
         "syllables": "syl/la/bles",
-        "phonemes": "ph/o/n/e/m/es"
+        "phonemes": [{"g":"ph"},{"g":"o"},{"g":"n"},{"g":"e"},{"g":"m"},{"g":"es"}]
       },
       {
         "word": "focusword2",
         "morphemes": [{"part": "part", "meaning": "meaning"}],
         "syllables": "syl/la/bles",
-        "phonemes": "ph/o/n/e/m/es"
+        "phonemes": [{"g":"ph"},{"g":"o"},{"g":"n"},{"g":"e"},{"g":"m"},{"g":"es"}]
       },
       {
         "word": "focusword3",
         "morphemes": [{"part": "part", "meaning": "meaning"}],
         "syllables": "syl/la/bles",
-        "phonemes": "ph/o/n/e/m/es"
+        "phonemes": [{"g":"ph"},{"g":"o"},{"g":"n"},{"g":"e"},{"g":"m"},{"g":"es"}]
       }
     ]
   }
@@ -281,18 +485,18 @@ MORPHEME NOTES — the "note" field:
 PHONEMES — CRITICAL RULES:
 - phonemes: split using / — each segment is the GRAPHEME (the actual LETTERS from the word) that represent ONE sound
 - You MUST use the exact letters from the word, NEVER substitute sound representations
-- CORRECT: "recharge" = "r/e/ch/ar/ge" (every segment uses the actual letters)
-- WRONG: "recharge" = "r/e/ch/ar/j" (the "j" sound is spelled "ge" — use "ge")
-- CORRECT: "destructive" = "d/e/s/t/r/u/c/t/i/ve" (NOT "d/e/s/t/r/u/c/t/iv")
-- Every consonant sound = its own grapheme segment
-- Every vowel sound = its own grapheme segment
+- phonemes is now an ARRAY OF OBJECTS, not a string
+- Each object has: "g" (grapheme — actual letters from the word) and optionally "s" (sound, only when non-obvious)
+- CORRECT: "unsure" = [{"g":"u"},{"g":"n"},{"g":"s","s":"/sh/"},{"g":"u"},{"g":"re"}]
+- CORRECT: "recharge" = [{"g":"r"},{"g":"e"},{"g":"ch"},{"g":"ar"},{"g":"ge","s":"/j/"}]
+- CORRECT: "structure" = [{"g":"s"},{"g":"t"},{"g":"r"},{"g":"u"},{"g":"c"},{"g":"t"},{"g":"u"},{"g":"re"}] — no "s" fields needed
 - Digraphs stay together: "sh", "ch", "th", "ph", "wh", "ng", "ck"
 - Vowel digraphs stay together: "ee", "ea", "oa", "ai", "ay", "oo", "ou", "ow", "oi", "oy", "ar", "er", "ir", "or", "ur"
-- "ge" at end of word making /j/ sound = "ge" (one grapheme)
-- "ce" at end of word making /s/ sound = "ce" (one grapheme)
-- Double consonants = one segment: "pp", "ll", "ss", "ff", "tt", "rr"
-- Split vowels: hope = "h/o/p/e", make = "m/a/k/e"
-- VALIDATION: join all phoneme segments (remove "/") — must exactly equal the original word
+- "ge" at end = {"g":"ge","s":"/j/"}, "ce" at end = {"g":"ce","s":"/s/"}
+- Double consonants = one grapheme: "pp", "ll", "ss", "ff", "tt", "rr"
+- WHEN TO ADD "s": only when letters don't obviously make the sound they look like (s→/sh/, c→/s/, g→/j/, ti→/sh/, ph→/f/, etc.)
+- DO NOT add "s" for straightforward sounds
+- VALIDATION: join all "g" values — must exactly equal the original word
 - Use Australian/British English spelling
 
 Return ONLY the JSON object. No markdown, no backticks, no explanation.`;
@@ -349,7 +553,7 @@ The JSON must match this EXACT schema:
           {"part": "${morpheme}", "meaning": "meaning of suffix"}
         ],
         "syllables": "syl/la/bles",
-        "phonemes": "ph/o/n/e/m/es"
+        "phonemes": [{"g":"ph"},{"g":"o"},{"g":"n"},{"g":"e"},{"g":"m"},{"g":"es"}]
       },
       {
         "word": "focusword2",
@@ -358,7 +562,7 @@ The JSON must match this EXACT schema:
           {"part": "${morpheme}", "meaning": "meaning of suffix"}
         ],
         "syllables": "syl/la/bles",
-        "phonemes": "ph/o/n/e/m/es"
+        "phonemes": [{"g":"ph"},{"g":"o"},{"g":"n"},{"g":"e"},{"g":"m"},{"g":"es"}]
       }
     ]
   },
@@ -370,19 +574,19 @@ The JSON must match this EXACT schema:
         "word": "focusword1",
         "morphemes": [{"part": "part", "meaning": "meaning"}],
         "syllables": "syl/la/bles",
-        "phonemes": "ph/o/n/e/m/es"
+        "phonemes": [{"g":"ph"},{"g":"o"},{"g":"n"},{"g":"e"},{"g":"m"},{"g":"es"}]
       },
       {
         "word": "focusword2",
         "morphemes": [{"part": "part", "meaning": "meaning"}],
         "syllables": "syl/la/bles",
-        "phonemes": "ph/o/n/e/m/es"
+        "phonemes": [{"g":"ph"},{"g":"o"},{"g":"n"},{"g":"e"},{"g":"m"},{"g":"es"}]
       },
       {
         "word": "focusword3",
         "morphemes": [{"part": "part", "meaning": "meaning"}],
         "syllables": "syl/la/bles",
-        "phonemes": "ph/o/n/e/m/es"
+        "phonemes": [{"g":"ph"},{"g":"o"},{"g":"n"},{"g":"e"},{"g":"m"},{"g":"es"}]
       }
     ]
   }
@@ -409,19 +613,18 @@ MORPHEME NOTES — the "note" field:
 
 PHONEMES — CRITICAL RULES:
 - phonemes: split using / — each segment is the GRAPHEME (the actual LETTERS from the word) that represent ONE sound
-- You MUST use the exact letters from the word, NEVER substitute sound representations
-- CORRECT: "recharge" = "r/e/ch/ar/ge" (every segment uses actual letters)
-- WRONG: "recharge" = "r/e/ch/ar/j" ("j" sound is spelled "ge" — use "ge")
-- CORRECT: "education" = "e/d/u/c/a/t/io/n" (NOT "e/d/u/k/a/sh/u/n")
-- Every consonant sound = its own grapheme segment
-- Every vowel sound = its own grapheme segment
+- phonemes is now an ARRAY OF OBJECTS, not a string
+- Each object has: "g" (grapheme — actual letters from the word) and optionally "s" (sound, only when non-obvious)
+- CORRECT: "education" = [{"g":"e"},{"g":"d"},{"g":"u"},{"g":"c","s":"/k/"},{"g":"a"},{"g":"t","s":"/sh/"},{"g":"io"},{"g":"n"}]
+- CORRECT: "recharge" = [{"g":"r"},{"g":"e"},{"g":"ch"},{"g":"ar"},{"g":"ge","s":"/j/"}]
+- CORRECT: "helpful" = [{"g":"h"},{"g":"e"},{"g":"l"},{"g":"p"},{"g":"f"},{"g":"u"},{"g":"l"}] — no "s" fields needed
 - Digraphs stay together: "sh", "ch", "th", "ph", "wh", "ng", "ck"
 - Vowel digraphs stay together: "ee", "ea", "oa", "ai", "ay", "oo", "ou", "ow", "oi", "oy", "ar", "er", "ir", "or", "ur"
-- "ge" at end of word making /j/ sound = "ge" (one grapheme)
-- "ce" at end of word making /s/ sound = "ce" (one grapheme)
-- Double consonants = one segment: "pp", "ll", "ss", "ff", "tt", "rr"
-- Split vowels: hope = "h/o/p/e", make = "m/a/k/e"
-- VALIDATION: join all phoneme segments (remove "/") — must exactly equal the original word
+- "ge" at end = {"g":"ge","s":"/j/"}, "ce" at end = {"g":"ce","s":"/s/"}
+- Double consonants = one grapheme: "pp", "ll", "ss", "ff", "tt", "rr"
+- WHEN TO ADD "s": only when letters don't obviously make the sound they look like (s→/sh/, c→/s/, g→/j/, ti→/sh/, ph→/f/, etc.)
+- DO NOT add "s" for straightforward sounds
+- VALIDATION: join all "g" values — must exactly equal the original word
 - Use Australian/British English spelling
 
 Return ONLY the JSON object. No markdown, no backticks, no explanation.`;
