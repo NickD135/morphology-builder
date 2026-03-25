@@ -18,6 +18,8 @@
     *{ box-sizing:border-box; }
     body{ margin:0; font-family:'Lexend',sans-serif; background:var(--bg); color:var(--text); line-height:1.5; letter-spacing:.02em; }
     button,input,select{ font:inherit; }
+    .skip-link{position:absolute;top:-40px;left:0;background:#4338ca;color:#fff;padding:8px 16px;z-index:10000;font-weight:700;font-size:14px;border-radius:0 0 8px 0;transition:top .2s;}
+    .skip-link:focus{top:0;}
     h1,h2,h3,p{ margin:0; }
 
     .header{ position:sticky; top:0; z-index:20; background:var(--bg); border-bottom:1px solid var(--line); box-shadow:0 1px 2px rgba(15,23,42,.05); }
@@ -213,9 +215,13 @@
     button,input[type="text"]{min-height:44px;font-size:14px!important;}
     .startBtn,.morphBtn{padding:14px 20px!important;min-height:44px;}
   }
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;}
+  .tile:focus{outline:3px solid #4338ca;outline-offset:2px;}
+  .dropzone:focus{outline:3px solid #4338ca;outline-offset:2px;}
   </style>
 </head>
 <body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
 
 <div class="lab-scene" aria-hidden="true">
   <div class="lab-wall">
@@ -261,7 +267,7 @@
 <div id="particles"></div>
 <div class="scientist-stage"><div id="petCharWrap" class="pet-idle"></div><div id="sciCharWrap"></div></div>
 
-<header class="header">
+<header class="header" role="banner">
     <div class="headerInner">
       <div class="brand">
         <div class="brandIcon">⚡</div>
@@ -271,10 +277,10 @@
         </div>
       </div>
 
-      <div class="hud">
+      <div class="hud" role="navigation" aria-label="Game controls">
         <span class="pill" id="basePill">Base: none</span>
-        <span class="pill time" id="timerPill">Time: 00:00</span>
-        <span class="pill score" id="scorePill">Score: 0</span>
+        <span class="pill time" id="timerPill" aria-live="polite">Time: 00:00</span>
+        <span class="pill score" id="scorePill" aria-live="polite">Score: 0</span>
         <span id="wlPillSlot"></span>
         <button id="wlLoginBtn" onclick="wlShowLogin()" style="border:2px solid #e2e8f0;background:#fff;border-radius:12px;padding:8px 14px;font-weight:800;font-size:12px;cursor:pointer;font-family:'Lexend',sans-serif;color:#334155;">👤 Log in</button>
         <a href="landing.html" class="topBtn">🏠 Home</a>
@@ -283,7 +289,7 @@
     </div>
   </header>
 
-  <div class="wrap">
+  <div class="wrap" id="main-content" role="main">
     <div class="grid">
       <div class="panel">
         <div class="panelInner">
@@ -355,22 +361,22 @@
             <div class="slots">
               <div>
                 <div class="slotLabel">Prefix slot</div>
-                <div class="dropzone prefix" id="prefixZone" data-zone="prefix"></div>
+                <div class="dropzone prefix" id="prefixZone" data-zone="prefix" tabindex="0" role="listbox" aria-label="Prefix slot — press Enter to clear"></div>
               </div>
 
               <div>
                 <div class="slotLabel">Base slot</div>
-                <div class="dropzone base" id="baseZone" data-zone="base"></div>
+                <div class="dropzone base" id="baseZone" data-zone="base" tabindex="0" role="listbox" aria-label="Base slot (fixed for round)"></div>
               </div>
 
               <div>
                 <div class="slotLabel">Suffix 1 slot</div>
-                <div class="dropzone suffix" id="suffix1Zone" data-zone="suffix1"></div>
+                <div class="dropzone suffix" id="suffix1Zone" data-zone="suffix1" tabindex="0" role="listbox" aria-label="Suffix 1 slot — press Enter to clear"></div>
               </div>
 
               <div>
                 <div class="slotLabel">Suffix 2 slot</div>
-                <div class="dropzone suffix" id="suffix2Zone" data-zone="suffix2"></div>
+                <div class="dropzone suffix" id="suffix2Zone" data-zone="suffix2" tabindex="0" role="listbox" aria-label="Suffix 2 slot — press Enter to clear"></div>
               </div>
             </div>
 
@@ -383,7 +389,7 @@
               <div class="outputLabel">Current word</div>
               <div class="wordOut" id="wordOut">Choose a base to begin</div>
               <div class="meaningOut" id="meaningOut">Then build as many real words as you can.</div>
-              <div class="statusOut warn" id="statusOut"></div>
+              <div class="statusOut warn" id="statusOut" aria-live="assertive"></div>
             </div>
           </div>
         </div>
@@ -397,7 +403,8 @@
                 <h3>Viable prefixes</h3>
                 <span class="countBadge prefixBadge" id="prefixCount">0</span>
               </div>
-              <div class="tiles" id="prefixBank"></div>
+              <p class="sr-only">Press Enter or Space on a tile to select it. Press Enter or Space on a drop zone to clear it.</p>
+              <div class="tiles" id="prefixBank" role="listbox" aria-label="Available prefixes"></div>
               <div class="tiny">Only prefixes that can make at least one real word with this base are shown.</div>
             </div>
           </div>
@@ -410,7 +417,7 @@
                 <h3>Viable suffixes</h3>
                 <span class="countBadge suffixBadge" id="suffixCount">0</span>
               </div>
-              <div class="tiles" id="suffixBank"></div>
+              <div class="tiles" id="suffixBank" role="listbox" aria-label="Available suffixes"></div>
               <div class="tiny">Only suffixes that can make at least one real word with this base are shown.</div>
             </div>
           </div>
@@ -775,9 +782,14 @@
 
       function makeTileHtml(item, type, selected = false){
         const tileClass = type === "prefix" ? "prefixTile" : type === "suffix" ? "suffixTile" : "baseTile";
+        const ariaLabel = type + ": " + item.form + (item.meaning ? " — " + item.meaning : "") + (selected ? " (selected)" : "");
         return `
           <div class="tile ${tileClass}${selected ? " selected" : ""}"
                draggable="${state.running ? "true" : "false"}"
+               tabindex="0"
+               role="option"
+               aria-selected="${selected ? "true" : "false"}"
+               aria-label="${ariaLabel}"
                data-uid="${item.uid}"
                data-type="${type}">
             <div class="form">${type === "prefix" ? item.form : type === "suffix" ? item.form : item.form}</div>
@@ -984,6 +996,14 @@
           addToBuilder(hit.type, hit.item);
         });
 
+        bankEl.addEventListener("keydown", e => {
+          if (e.key !== "Enter" && e.key !== " ") return;
+          const hit = getTileFromEventTarget(e.target);
+          if (!hit || hit.tile.classList.contains("disabled")) return;
+          e.preventDefault();
+          addToBuilder(hit.type, hit.item);
+        });
+
         bankEl.addEventListener("dragstart", e => {
           const hit = getTileFromEventTarget(e.target);
           if (!hit || hit.tile.classList.contains("disabled")) return;
@@ -1021,6 +1041,17 @@
         });
 
         zoneEl.addEventListener("dblclick", () => {
+          clearZone(zoneEl);
+        });
+
+        zoneEl.addEventListener("keydown", e => {
+          if (e.key !== "Enter" && e.key !== " ") return;
+          e.preventDefault();
+          clearZone(zoneEl);
+        });
+      }
+
+      function clearZone(zoneEl){
           const zoneType = zoneEl.dataset.zone;
           if (zoneType === "prefix") state.current.prefix = null;
           if (zoneType === "suffix1"){
@@ -1031,7 +1062,6 @@
           renderZones();
           renderBanks();
           updateOutput();
-        });
       }
 
       function scoreWord(word){

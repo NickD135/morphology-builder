@@ -24,8 +24,9 @@ privacy-law-compliant, multi-tenant, with proper teacher auth and a payment laye
   current project may be in US; check and migrate if needed
 
 **GitHub repo:** `NickD135/morphology-builder`
-**Supabase project ref:** `qutsbcfkgiihcwaktsaz`
-**Supabase URL:** `https://qutsbcfkgiihcwaktsaz.supabase.co`
+**Supabase project ref:** `kdpavfrzmmzknqfpodrl` (Sydney, ap-southeast-2)
+**Supabase URL:** `https://kdpavfrzmmzknqfpodrl.supabase.co`
+**Old Supabase (deprecated):** `qutsbcfkgiihcwaktsaz` (Singapore — do not use, migration completed 2026-03-25)
 **Local dev:** `python3 -m http.server 8080 --bind 0.0.0.0`
 **Live URL:** https://wordlabs.app (also https://morphology-builder.vercel.app)
 
@@ -666,6 +667,69 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 
 ---
 
+### PHASE 9 — NSW Department of Education Approval
+
+Full checklist document: `docs/nsw-doe-approval-checklist.md`
+
+**What's already done:**
+- ✅ Data sovereignty — Supabase migrated to Sydney (ap-southeast-2) on 2026-03-25
+- ✅ Privacy policy (`privacy.html`) — covers APPs, children's data, notifiable breaches
+- ✅ Terms of service (`terms.html`)
+- ✅ Data handling agreement (`data-agreement.html`)
+- ✅ Teacher auth via Supabase Auth (email/password, hashed)
+- ✅ Student data minimisation (first names only, no PII)
+- ✅ Data deletion (cascade on class delete)
+- ✅ HTTPS everywhere (Supabase + Vercel)
+- ✅ Encryption at rest (Supabase default)
+- ✅ ABN registered, business name registered
+
+**What still needs doing (in priority order):**
+
+#### 9.1 WCAG 2.1 AA accessibility (BIGGEST GAP — do first)
+- [x] Add skip-to-content links on all pages (all 34 HTML pages)
+- [x] Audit all images for descriptive ALT text
+- [x] Add ARIA labels to all forms, buttons, and navigation elements
+- [x] Keyboard navigation audit — all interactive elements reachable and usable without mouse
+- [x] Add keyboard alternatives for drag-and-drop games (Morpheme Builder, Speed Builder, Refinery, Homophone Mode)
+- [x] Error messages clearly described and associated with form fields (aria-live regions added)
+- [x] Add ARIA landmarks (role="banner", role="main", role="navigation") to all pages
+- [x] Add aria-live regions for dynamic content (scores, feedback, errors) across all game/teacher pages
+- [x] Colour contrast audit — fixed #94a3b8→#64748b on light backgrounds, #cbd5e1→#64748b, #64748b→#94a3b8 on dark backgrounds
+- [x] Ensure text is resizable without loss of content — dashboard cells changed from fixed to min-width/min-height
+- [x] Ensure no content relies solely on colour to convey meaning — added ✓/✗ icons to history items, input cards, zone cards; ⚠ to flagged dashboard cells
+- [ ] Test with screen readers (VoiceOver on Mac, NVDA on Windows) — requires manual testing
+
+#### 9.2 Security audit & hardening
+- [x] XSS audit — reviewed all pages; added `escapeHtml()` to all innerHTML user data injection points
+- [x] CSRF audit — JWT-based auth (not cookies) inherently mitigates CSRF; documented in security architecture
+- [x] Write security architecture document — `docs/security-architecture.md` (data flow, encryption, auth, RLS, sub-processors)
+- [x] Write incident response plan — `docs/incident-response-plan.md` (NDB scheme, OAIC notification, templates)
+- [x] Added Content-Security-Policy header to `vercel.json`
+- [x] Fixed open redirect vulnerability in `returnTo` parameter (teacher-login.html)
+- [ ] Arrange external penetration testing (can be done later, but document readiness)
+
+#### 9.3 NSW-specific privacy compliance
+- [x] Review NSW Privacy and Personal Information Protection Act 1998 (PPIP Act) — privacy.html updated with PPIP Act references, IPP alignment
+- [x] Create parent-facing privacy summary — `parent-privacy.html` (print-friendly, linked from pricing FAQ + privacy policy)
+- [x] Clarify parent/guardian consent requirements for students under 16 — Section 5.1 added to privacy.html (IPP 2, school authority, parental consent process)
+- [x] Update privacy.html and data-agreement.html with NSW-specific language — PPIP Act s.9, s.18, s.19 references; NSW IPC as complaint body; IPP compliance in data agreement
+
+#### 9.4 Support & documentation
+- [x] Write formal teacher guide — `teacher-guide.html` rewritten with full setup, activities, dashboard, word lists, troubleshooting FAQ, support info
+- [x] Document support channels — included in teacher guide (email nick@wordlabs.app, 24h response on school days)
+- [x] Create incident reporting process for teachers — included in teacher guide + incident response plan
+
+#### 9.5 Formal approval process
+- [ ] Contact NSW DoE ICT Directorate — request SaaS Risk Assessment form
+- [ ] Complete SaaS Risk Assessment with all supporting documentation
+- [ ] Submit documentation package: privacy policy, security architecture, support plan, data agreement
+- [ ] Undergo technical review by DoE
+- [ ] Complete Privacy Impact Assessment (if required by DoE)
+- [ ] Run formal pilot program with 3–5 NSW teachers (structured feedback collection)
+- [ ] Obtain written approval for wider rollout
+
+---
+
 ### PHASE 8 — Growth & Integrations (Later)
 
 - [ ] Google Classroom integration (roster import via Google API)
@@ -716,3 +780,4 @@ At the start of each working session, do this:
 | Word list priority system | Teachers control whether custom words replace, precede, or mix with built-in words |
 | Pet system hidden | Built full pet companion system but visual quality needs work; code preserved for later |
 | Active plan for PL demo | Temporary: new signups get `active` plan so teachers don't see trial banners during PL session |
+| Supabase Singapore → Sydney migration | NSW DoE requires Australian data centres; migrated 2026-03-25 with full data transfer |

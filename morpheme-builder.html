@@ -479,8 +479,24 @@
     .tile.disabled .alts,
     .tile.disabled .meaning,
     .tile.disabled .meta{
-      color:#94a3b8 !important;
+      color:#64748b !important;
     }
+
+    .tile:focus{
+      outline:3px solid #6366f1;
+      outline-offset:2px;
+    }
+    .tile:focus:not(:focus-visible){ outline:none; }
+    .tile:focus-visible{ outline:3px solid #6366f1; outline-offset:2px; }
+
+    .dropzone:focus{
+      outline:3px solid #818cf8;
+      outline-offset:2px;
+    }
+    .dropzone:focus:not(:focus-visible){ outline:none; }
+    .dropzone:focus-visible{ outline:3px solid #818cf8; outline-offset:2px; }
+
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;}
 
     .tiny{
       margin-top:10px;
@@ -1181,11 +1197,14 @@
       height:100%; background:var(--indigo-2); border-radius:999px;
       animation:loadSlide 1.4s ease-in-out infinite;
     }
+    .skip-link{position:absolute;top:-40px;left:0;background:#4338ca;color:#fff;padding:8px 16px;z-index:10000;font-weight:700;font-size:14px;border-radius:0 0 8px 0;transition:top .2s;}
+    .skip-link:focus{top:0;}
   </style>
 </head>
 
 <body>
-  <header class="appHeader">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+  <header class="appHeader" role="banner">
     <div class="headerInner">
       <div class="brand">
         <div class="brandIcon" aria-hidden="true">
@@ -1204,7 +1223,7 @@
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
           </svg>
-          <input id="globalSearch" class="searchInput" type="text" placeholder="Search morphemes..." />
+          <input id="globalSearch" class="searchInput" type="text" placeholder="Search morphemes..." aria-label="Search morphemes" />
         </div>
         <span id="wlPillSlot" style="display:inline-flex;align-items:center;"></span>
         <a href="landing.html" class="topButton" style="text-decoration:none;display:inline-flex;align-items:center;">🏠 Home</a>
@@ -1301,7 +1320,7 @@
   </div>
   </header>
 
-  <div class="wrap">
+  <div class="wrap" id="main-content" role="main">
     <div class="grid">
       <div class="panel">
         <div class="panelInner">
@@ -1325,13 +1344,14 @@
             </div>
           </div>
 
+          <span class="sr-only">Use Tab to navigate tiles, Enter to select, then Tab to a slot and Enter to place.</span>
           <div class="banks">
             <div class="bank prefixBankWrap">
               <div class="bankHead">
                 <h3>Prefixes</h3>
                 <span class="countBadge prefixBadge" id="prefixCount">0</span>
               </div>
-              <div class="tiles" id="prefixBank"></div>
+              <div class="tiles" id="prefixBank" role="listbox" aria-label="Prefix tiles"></div>
               <div class="tiny">Viable options rise to the top. Non viable ones are greyed out.</div>
             </div>
 
@@ -1341,7 +1361,7 @@
                 <span class="countBadge baseBadge" id="baseCount">0</span>
               </div>
               <div class="bankTools"></div>
-              <div class="tiles" id="baseBank"></div>
+              <div class="tiles" id="baseBank" role="listbox" aria-label="Base word tiles"></div>
               <div class="tiny">Use the filter above to narrow by base type.</div>
             </div>
 
@@ -1350,12 +1370,12 @@
                 <h3>Suffixes</h3>
                 <span class="countBadge suffixBadge" id="suffixCount">0</span>
               </div>
-              <div class="tiles" id="suffixBank"></div>
+              <div class="tiles" id="suffixBank" role="listbox" aria-label="Suffix tiles"></div>
               <div class="tiny">Viable options rise to the top. Non viable ones are greyed out.</div>
             </div>
           </div>
 
-          <div class="tiny" style="margin-top:16px;">Tip: double click a tile in the builder to remove it.</div>
+          <div class="tiny" style="margin-top:16px;">Tip: double click a tile in the builder to remove it. Keyboard: Tab to a tile, Enter to select, then Tab to a slot and Enter to place.</div>
         </div>
       </div>
 
@@ -1370,22 +1390,22 @@
             <div class="builder">
               <div>
                 <div class="slotLabel">Prefix slot</div>
-                <div class="dropzone" id="prefixZone" data-zone="prefix"></div>
+                <div class="dropzone" id="prefixZone" data-zone="prefix" tabindex="0" role="button" aria-label="Prefix slot — press Enter to place selected tile"></div>
               </div>
 
               <div>
                 <div class="slotLabel">Base word slot</div>
-                <div class="dropzone" id="baseZone" data-zone="base"></div>
+                <div class="dropzone" id="baseZone" data-zone="base" tabindex="0" role="button" aria-label="Base word slot — press Enter to place selected tile"></div>
               </div>
 
               <div>
                 <div class="slotLabel">Suffix 1 slot</div>
-                <div class="dropzone" id="suffix1Zone" data-zone="suffix1"></div>
+                <div class="dropzone" id="suffix1Zone" data-zone="suffix1" tabindex="0" role="button" aria-label="Suffix 1 slot — press Enter to place selected tile"></div>
               </div>
 
               <div>
                 <div class="slotLabel">Suffix 2 slot</div>
-                <div class="dropzone" id="suffix2Zone" data-zone="suffix2"></div>
+                <div class="dropzone" id="suffix2Zone" data-zone="suffix2" tabindex="0" role="button" aria-label="Suffix 2 slot — press Enter to place selected tile"></div>
               </div>
             </div>
           </div>
@@ -2608,9 +2628,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function makeTileHtml(item, type, enabled, selected){
     const group = type === "prefix" ? "prefix" : type === "suffix" ? "suffix" : (item.group || "core");
+    const ariaLabelRaw = type + ": " + item.form + (item.meaning ? " — " + item.meaning : "") + (enabled ? "" : " (unavailable)");
+    const ariaLabel = ariaLabelRaw.replace(/"/g, "&quot;");
     return `
       <div class="tile${enabled ? "" : " disabled"}${selected ? " selected" : ""}"
            draggable="${enabled ? "true" : "false"}"
+           tabindex="${enabled ? "0" : "-1"}"
+           role="option"
+           aria-selected="${selected ? "true" : "false"}"
+           aria-label="${ariaLabel}"
+           aria-disabled="${enabled ? "false" : "true"}"
            data-uid="${item.uid}"
            data-type="${type}"
            data-group="${group}">
@@ -2869,10 +2896,23 @@ document.addEventListener("DOMContentLoaded", () => {
     return { tile, item, type: tile.dataset.type };
   }
 
+  // Track the last selected tile for keyboard placement into zones
+  let kbSelectedTile = null; // { type, item }
+
   function setupBankEvents(bankEl){
     bankEl.addEventListener("click", (e) => {
       const hit = getTileFromEventTarget(e.target);
       if (!hit || hit.tile.classList.contains("disabled")) return;
+      kbSelectedTile = { type: hit.type, item: hit.item };
+      addToBuilder(hit.type, hit.item);
+    });
+
+    bankEl.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      const hit = getTileFromEventTarget(e.target);
+      if (!hit || hit.tile.classList.contains("disabled")) return;
+      e.preventDefault();
+      kbSelectedTile = { type: hit.type, item: hit.item };
       addToBuilder(hit.type, hit.item);
     });
 
@@ -2908,6 +2948,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (zoneType !== data.type) return;
       addToBuilder(zoneType, item);
+    });
+
+    // Keyboard: Enter/Space on a zone places the last selected tile, or removes the current one
+    zoneEl.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+      const zoneType = zoneEl.dataset.zone;
+
+      // If zone already has a tile, remove it (same as double-click)
+      if (current[zoneType]){
+        current[zoneType] = null;
+        if (zoneType === "suffix1") current.suffix2 = null;
+        refreshState();
+        return;
+      }
+
+      // Otherwise, place the keyboard-selected tile if it matches
+      if (!kbSelectedTile) return;
+      const sel = kbSelectedTile;
+
+      if (zoneType === "suffix1" || zoneType === "suffix2"){
+        if (sel.type !== "suffix") return;
+        addToBuilder(zoneType, sel.item);
+      } else {
+        if (sel.type !== zoneType) return;
+        addToBuilder(zoneType, sel.item);
+      }
     });
 
     zoneEl.addEventListener("dblclick", () => {

@@ -4,8 +4,8 @@
 
 const WordLabData = (() => {
 
-  const SUPABASE_URL  = 'https://qutsbcfkgiihcwaktsaz.supabase.co';
-  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dHNiY2ZrZ2lpaGN3YWt0c2F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NDE1NDksImV4cCI6MjA4OTUxNzU0OX0.h1N26KCcyHDrW4FRk6iBNmJUMQcFCYi8eHpOC818B8E';
+  const SUPABASE_URL  = 'https://kdpavfrzmmzknqfpodrl.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkcGF2ZnJ6bW16a25xZnBvZHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjgzOTIsImV4cCI6MjA5MDAwNDM5Mn0.n5fe7HvXWMsM4xN_iaU_N4xLkC5xD4y9Uoer_DG-dlg';
   const SESSION_KEY   = 'wordlab_session_v1';
 
   const CODE_LETTERS = 'ABCDEFGHJKLMNPRSTUVWXYZ'; // no I, O, Q
@@ -30,6 +30,10 @@ const WordLabData = (() => {
     }
     return _sbClient;
   }
+
+  // ── HTML escaping (XSS prevention) ───────────────────────────
+  const _ESC_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) { return _ESC_MAP[c]; }); }
 
   // ── Constants ─────────────────────────────────────────────────
   const LEVEL_TITLES = ['Quark Cadet','Lab Apprentice','Lab Assistant','Junior Scientist','Morpheme Scientist','Word Chemist','Senior Researcher','Lead Scientist','Word Professor','Linguistic Expert','Etymology Scholar','Morpheme Master','Word Architect','Language Scientist','Quark Commander','Grand Researcher','Word Alchemist','Linguistic Professor','Grand Etymologist','Word Labs Legend'];
@@ -699,11 +703,11 @@ const WordLabData = (() => {
       '.wl-sbtn:hover{border-color:' + accent + ';background:' + accentSoft + ';color:' + accentText + ';}' +
       '.wl-primary-btn{border:none;background:' + accent + ';color:#fff;border-radius:14px;padding:13px;font-size:14px;font-weight:900;cursor:pointer;width:100%;font-family:\'Lexend\',sans-serif;margin-bottom:10px;transition:background .15s;}' +
       '.wl-primary-btn:hover{background:#3730a3;}' +
-      '.wl-back{color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer;text-align:left;margin-bottom:16px;display:inline-block;}' +
+      '.wl-back{color:#64748b;font-size:12px;font-weight:700;cursor:pointer;text-align:left;margin-bottom:16px;display:inline-block;}' +
       '.wl-back:hover{color:#475569;}' +
       '.wl-err{color:#dc2626;font-size:13px;font-weight:800;margin-bottom:10px;min-height:18px;}' +
-      '.wl-skip{border:none;background:none;color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer;text-decoration:underline;font-family:\'Lexend\',sans-serif;}' +
-      '.wl-no{color:#94a3b8;font-size:13px;font-weight:700;padding:8px 0;}';
+      '.wl-skip{border:none;background:none;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;text-decoration:underline;font-family:\'Lexend\',sans-serif;}' +
+      '.wl-no{color:#64748b;font-size:13px;font-weight:700;padding:8px 0;}';
     document.head.appendChild(style);
 
     var ov = document.createElement('div');
@@ -711,7 +715,7 @@ const WordLabData = (() => {
     ov.className = 'wl-ov wl-hide';
     ov.innerHTML =
       '<div class="wl-box" style="position:relative;">' +
-        '<button id="wlCloseBtn" onclick="document.getElementById(\'wlOverlay\').classList.add(\'wl-hide\')" style="position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:10px;border:2px solid #e2e8f0;background:#fff;cursor:pointer;font-size:16px;color:#94a3b8;display:flex;align-items:center;justify-content:center;font-family:Lexend,sans-serif;transition:all .15s;z-index:1;" onmouseover="this.style.background=\'#f1f5f9\';this.style.color=\'#475569\'" onmouseout="this.style.background=\'#fff\';this.style.color=\'#94a3b8\'">&times;</button>' +
+        '<button id="wlCloseBtn" onclick="document.getElementById(\'wlOverlay\').classList.add(\'wl-hide\')" style="position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:10px;border:2px solid #e2e8f0;background:#fff;cursor:pointer;font-size:16px;color:#64748b;display:flex;align-items:center;justify-content:center;font-family:Lexend,sans-serif;transition:all .15s;z-index:1;" onmouseover="this.style.background=\'#f1f5f9\';this.style.color=\'#475569\'" onmouseout="this.style.background=\'#fff\';this.style.color=\'#64748b\'">&times;</button>' +
         // Step 1: class code
         '<div id="wlStep1">' +
           '<div class="wl-icon">🔑</div>' +
@@ -809,7 +813,7 @@ const WordLabData = (() => {
           return;
         }
         if (list) list.innerHTML = students.map(function(s) {
-          return '<button class="wl-sbtn" onclick="WordLabData._pickStudent(\'' + s.id + '\',\'' + s.name.replace(/'/g,"\\'") + '\')">' + s.name + '</button>';
+          return '<button class="wl-sbtn" onclick="WordLabData._pickStudent(\'' + s.id + '\',\'' + escapeHtml(s.name).replace(/'/g,"&#39;") + '\')">' + escapeHtml(s.name) + '</button>';
         }).join('');
       } catch(e) {
         if (err) err.textContent = 'Error connecting \u2014 try again.';
@@ -903,8 +907,8 @@ const WordLabData = (() => {
       '</button>';
     var studentPill = name
       ? '<span style="display:inline-flex;align-items:center;gap:0;background:#eef2ff;border:1px solid #c7d2fe;border-radius:999px;font-family:Lexend,sans-serif;">' +
-          '<span style="padding:6px 4px 6px 14px;font-size:12px;font-weight:800;color:#4338ca;cursor:pointer;" onclick="wlShowLogin()">👤 ' + name + '</span>' +
-          '<button onclick="WordLabData._logoutStudent()" title="Log out" style="background:none;border:none;cursor:pointer;padding:6px 10px 6px 4px;font-size:13px;color:#94a3b8;display:inline-flex;align-items:center;transition:color .15s;" onmouseover="this.style.color=\'#dc2626\'" onmouseout="this.style.color=\'#94a3b8\'">✕</button>' +
+          '<span style="padding:6px 4px 6px 14px;font-size:12px;font-weight:800;color:#4338ca;cursor:pointer;" onclick="wlShowLogin()">👤 ' + escapeHtml(name) + '</span>' +
+          '<button onclick="WordLabData._logoutStudent()" title="Log out" style="background:none;border:none;cursor:pointer;padding:6px 10px 6px 4px;font-size:13px;color:#64748b;display:inline-flex;align-items:center;transition:color .15s;" onmouseover="this.style.color=\'#dc2626\'" onmouseout="this.style.color=\'#64748b\'">✕</button>' +
         '</span>'
       : '';
     slot.style.display = 'inline-flex';
@@ -1257,7 +1261,8 @@ const WordLabData = (() => {
     createTeacherStudent, getTeacherStudent, enterStudentMode, exitStudentMode, isTeacherPreview,
     isExtensionMode, loadExtensionData,
     checkDailyLimit, incrementDailyUsage,
-    getCustomWords, getCustomWordPriority
+    getCustomWords, getCustomWordPriority,
+    escapeHtml
   };
 
 })();

@@ -14,6 +14,8 @@
       --orange:#ea580c; --orange-soft:#fff7ed; --orange-line:#fed7aa; --orange-text:#9a3412;
       --bad:#dc2626;
     }
+    .skip-link{position:absolute;top:-40px;left:0;background:#4338ca;color:#fff;padding:8px 16px;z-index:10000;font-weight:700;font-size:14px;border-radius:0 0 8px 0;transition:top .2s;}
+    .skip-link:focus{top:0;}
     *{ box-sizing:border-box; }
     body{ margin:0; font-family:'Lexend',sans-serif; background:var(--bg); color:var(--text); line-height:1.5; }
     button,input,textarea,select{ font:inherit; }
@@ -114,33 +116,34 @@
   </style>
 </head>
 <body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
 
 <!-- ── Auth check overlay (hidden once session confirmed) ── -->
-<div id="teacherGate" style="position:fixed;inset:0;background:rgba(15,23,42,.65);z-index:9999;display:flex;align-items:center;justify-content:center;">
+<div id="teacherGate" style="position:fixed;inset:0;background:rgba(15,23,42,.65);z-index:9999;display:flex;align-items:center;justify-content:center;" aria-live="polite">
   <div style="background:#fff;border-radius:28px;padding:36px 32px;max-width:420px;width:90vw;text-align:center;box-shadow:0 40px 80px rgba(15,23,42,.25);font-family:'Lexend',sans-serif;">
     <div style="font-size:44px;margin-bottom:12px;">⏳</div>
     <div style="font-size:18px;font-weight:900;color:#312e81;">Checking access...</div>
   </div>
 </div>
 
-<header class="header">
+<header class="header" role="banner">
   <div class="headerInner">
     <div class="brand">
       <div class="brandIcon">⚙️</div>
       <div class="brandText"><h1>Class Setup</h1><span class="sub">Word Labs · Teacher Tools</span></div>
     </div>
-    <div style="display:flex;gap:10px;align-items:center;">
+    <nav style="display:flex;gap:10px;align-items:center;" role="navigation" aria-label="Main navigation">
       <span id="teacherEmail" style="font-size:12px;font-weight:700;color:#64748b;"></span>
       <a href="item-creator.html" style="color:#cbd5e1;font-size:16px;text-decoration:none;padding:6px 8px;opacity:.35;" title="Item Creator">🎨</a>
       <a href="dashboard.html" class="topBtn">📊 Dashboard</a>
       <a href="account.html" class="topBtn">👤 Account</a>
       <a href="landing.html" class="topBtn">🏠 Home</a>
       <button class="topBtn" style="background:#334155;" onclick="WordLabData.teacherSignOut()">Sign Out</button>
-    </div>
+    </nav>
   </div>
 </header>
 
-<div class="wrap">
+<div class="wrap" id="main-content" role="main">
   <!-- Upgrade banner for free tier -->
   <div id="upgradeBanner" style="display:none;background:linear-gradient(135deg,#312e81,#4338ca);border-radius:20px;padding:18px 24px;color:#e0e7ff;font-family:'Lexend',sans-serif;margin-bottom:4px;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
@@ -153,29 +156,29 @@
   </div>
 
   <div class="panel"><div class="panelInner">
-    <div class="tabs">
+    <div class="tabs" role="navigation" aria-label="Class setup tabs">
       <button class="tab active" onclick="showTab('manage',this)">Manage classes</button>
       <button class="tab" onclick="showTab('create',this)">Create new class</button>
     </div>
 
     <!-- Create tab -->
     <div id="tabCreate" class="hidden">
-      <div class="successBanner" id="successBanner">✅ Class created! Students can now log in and start activities.</div>
+      <div class="successBanner" id="successBanner" aria-live="polite">✅ Class created! Students can now log in and start activities.</div>
 
       <div class="field" style="margin-bottom:16px;">
-        <label>Class name</label>
+        <label for="className">Class name</label>
         <input type="text" id="className" placeholder="e.g. 3B Literacy" autocomplete="off">
         <span class="hint">The name you use for this class. A unique login code will be generated automatically.</span>
       </div>
 
       <div class="field" style="margin-bottom:16px;">
-        <label>Your game name <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--indigo);">(you'll be added to the class too)</span></label>
+        <label for="teacherGameName">Your game name <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--indigo);">(you'll be added to the class too)</span></label>
         <input type="text" id="teacherGameName" placeholder="e.g. Mr Smith, Coach D, The Professor" autocomplete="off">
         <span class="hint">Pick a fun name — this is how you'll appear in the class as a player. You can use this to preview what students see.</span>
       </div>
 
       <div class="field" style="margin-bottom:20px;">
-        <label>Student names</label>
+        <label for="studentNames">Student names</label>
         <textarea id="studentNames" placeholder="Enter one name per line:&#10;Aiden Smith&#10;Bella Jones&#10;Charlie Brown&#10;..."></textarea>
         <span class="hint">One name per line. You can add or remove students later. Or <label style="color:var(--indigo);font-weight:800;cursor:pointer;text-transform:none;letter-spacing:0;">import a CSV<input type="file" accept=".csv,.txt" style="display:none;" onchange="loadCSVToTextarea(this, 'studentNames')"></label></span>
       </div>
@@ -251,8 +254,8 @@
       document.getElementById('teacherGameName').value = '';
 
       const banner = document.getElementById('successBanner');
-      const gameNameMsg = gameName ? ` You've been added as "<strong>${gameName}</strong>".` : '';
-      banner.innerHTML = `✅ Class "<strong>${name}</strong>" created with ${students.length} students!${generatedCode ? ' Class code: <strong>' + generatedCode + '</strong>.' : ''}${gameNameMsg}`;
+      const gameNameMsg = gameName ? ` You've been added as "<strong>${WordLabData.escapeHtml(gameName)}</strong>".` : '';
+      banner.innerHTML = `✅ Class "<strong>${WordLabData.escapeHtml(name)}</strong>" created with ${students.length} students!${generatedCode ? ' Class code: <strong>' + WordLabData.escapeHtml(generatedCode) + '</strong>.' : ''}${gameNameMsg}`;
       banner.classList.add('show');
       setTimeout(() => banner.classList.remove('show'), 8000);
     } catch(e) {
@@ -275,7 +278,7 @@
       classes = await WordLabData.getClasses();
     } catch(e) {
       const detail = (e && (e.message || JSON.stringify(e))) || 'Unknown error';
-      container.innerHTML = `<div class="emptyState" style="color:#dc2626;">Error loading classes: ${detail}</div>`;
+      container.innerHTML = `<div class="emptyState" style="color:#dc2626;">Error loading classes: ${WordLabData.escapeHtml(detail)}</div>`;
       return;
     }
 
@@ -289,13 +292,13 @@
       <div class="classCard" id="card_${cls.id}">
         <div class="classCardTop">
           <div>
-            <div class="className">${cls.name}</div>
-            <div class="classMeta">${cls.students.length} student${cls.students.length !== 1 ? 's' : ''} · Code: <strong style="color:var(--indigo);letter-spacing:.08em;">${cls.class_code}</strong> · Created ${new Date(cls.created).toLocaleDateString()}</div>
+            <div class="className">${WordLabData.escapeHtml(cls.name)}</div>
+            <div class="classMeta">${cls.students.length} student${cls.students.length !== 1 ? 's' : ''} · Code: <strong style="color:var(--indigo);letter-spacing:.08em;">${WordLabData.escapeHtml(cls.class_code)}</strong> · Created ${new Date(cls.created).toLocaleDateString()}</div>
           </div>
           <div class="classActions">
             <button class="secondaryBtn" onclick="printClassCodes('${cls.id}')">🖨 Print codes</button>
             <button class="secondaryBtn" id="toggleBtn_${cls.id}" onclick="toggleStudents('${cls.id}')">Hide students</button>
-            <button class="dangerBtn" onclick="deleteClass('${cls.id}', '${cls.name.replace(/'/g,"\\'")}')">Delete</button>
+            <button class="dangerBtn" onclick="deleteClass('${cls.id}', '${WordLabData.escapeHtml(cls.name)}')">Delete</button>
           </div>
         </div>
         <div class="crownRow">
@@ -316,7 +319,7 @@
           <div class="studentGrid" id="studentGrid_${cls.id}">
             ${cls.students.map(s => `
               <div class="studentRow" id="chip_${s.id}">
-                <span class="studentName">${s.name}</span>
+                <span class="studentName">${WordLabData.escapeHtml(s.name)}</span>
                 <span class="studentActions">
                   <button id="teacherBtn_${s.id}" class="studentActionBtn teacherBtn" onclick="toggleTeacher('${cls.id}','${s.id}',this)" title="Lets this student also view the class dashboard">Teacher mode</button>
                   <button
@@ -469,20 +472,20 @@
       }
     } catch(e) {}
 
-    const header = schoolName ? schoolName + ' — ' + cls.name : cls.name;
+    const header = schoolName ? WordLabData.escapeHtml(schoolName) + ' — ' + WordLabData.escapeHtml(cls.name) : WordLabData.escapeHtml(cls.name);
     const cards = cls.students.map(s =>
       `<div class="card">
         <div class="site">${window.location.host}</div>
-        <div class="name">${s.name}</div>
+        <div class="name">${WordLabData.escapeHtml(s.name)}</div>
         <div class="label">Class code</div>
-        <div class="code">${classCode}</div>
+        <div class="code">${WordLabData.escapeHtml(classCode)}</div>
         <div class="label">Your code</div>
-        <div class="code">${s.student_code || '—'}</div>
+        <div class="code">${WordLabData.escapeHtml(s.student_code || '—')}</div>
       </div>`
     ).join('');
 
     const win = window.open('', '_blank');
-    win.document.write(`<!doctype html><html><head><title>Login Cards — ${cls.name}</title>
+    win.document.write(`<!doctype html><html><head><title>Login Cards — ${WordLabData.escapeHtml(cls.name)}</title>
     <style>
       @page{ size:A4; margin:12mm; }
       body{ font-family:'Lexend',Arial,sans-serif; margin:0; }
@@ -490,7 +493,7 @@
       .card{ border:2px solid #c7d2fe; border-radius:12px; padding:14px; text-align:center; background:#fff; page-break-inside:avoid; }
       .site{ font-size:10px; font-weight:700; color:#6366f1; margin-bottom:8px; letter-spacing:.05em; }
       .name{ font-size:18px; font-weight:900; color:#1e1b4b; margin-bottom:10px; }
-      .label{ font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:#94a3b8; margin-bottom:3px; }
+      .label{ font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:#64748b; margin-bottom:3px; }
       .code{ font-size:22px; font-weight:900; color:#4338ca; background:#eef2ff; border-radius:8px; padding:5px 10px; display:inline-block; margin-bottom:8px; letter-spacing:.15em; }
       @media print{ button{ display:none; } }
     </style></head><body>
@@ -553,8 +556,8 @@
   }
 
   // ── Extension mode toggle ──────────────────────────────────────
-  const SUPABASE_URL  = 'https://qutsbcfkgiihcwaktsaz.supabase.co';
-  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1dHNiY2ZrZ2lpaGN3YWt0c2F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NDE1NDksImV4cCI6MjA4OTUxNzU0OX0.h1N26KCcyHDrW4FRk6iBNmJUMQcFCYi8eHpOC818B8E';
+  const SUPABASE_URL  = 'https://kdpavfrzmmzknqfpodrl.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkcGF2ZnJ6bW16a25xZnBvZHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjgzOTIsImV4cCI6MjA5MDAwNDM5Mn0.n5fe7HvXWMsM4xN_iaU_N4xLkC5xD4y9Uoer_DG-dlg';
   const _csSb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
   async function toggleExtension(studentId, current) {
@@ -603,8 +606,8 @@
     }
   })();
 </script>
-<p style="text-align:center;font-size:12px;font-weight:600;color:#94a3b8;padding:24px 20px;border-top:1px solid #e2e8f0;margin-top:32px;">
-  🧪 Word Labs · <a href="about.html" style="color:#94a3b8;">About</a> · <a href="privacy.html" style="color:#94a3b8;">Privacy</a> · <a href="terms.html" style="color:#94a3b8;">Terms</a> · <a href="mailto:nick@wordlabs.app" style="color:#94a3b8;">Contact</a>
+<p style="text-align:center;font-size:12px;font-weight:600;color:#64748b;padding:24px 20px;border-top:1px solid #e2e8f0;margin-top:32px;">
+  🧪 Word Labs · <a href="about.html" style="color:#64748b;">About</a> · <a href="privacy.html" style="color:#64748b;">Privacy</a> · <a href="terms.html" style="color:#64748b;">Terms</a> · <a href="mailto:nick@wordlabs.app" style="color:#64748b;">Contact</a>
 </p>
 </body>
 </html>

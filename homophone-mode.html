@@ -18,6 +18,8 @@
     *{ box-sizing:border-box; }
     html,body{ margin:0; width:100%; height:100%; overflow:hidden; font-family:'Lexend',sans-serif; color:#e0e7ff; }
     button,input{ font:inherit; }
+    .skip-link{position:absolute;top:-40px;left:0;background:#4338ca;color:#fff;padding:8px 16px;z-index:10000;font-weight:700;font-size:14px;border-radius:0 0 8px 0;transition:top .2s;}
+    .skip-link:focus{top:0;}
 
     /* ── Signal Interception Lab Scene ── */
     .lab-scene{ position:fixed; inset:0; z-index:0; display:flex; flex-direction:column; pointer-events:none; }
@@ -227,6 +229,7 @@
     .result-val{ font-size:20px; font-weight:900; color:#f472b6; }
     .result-lbl{ font-size:8px; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:#f9a8d4; margin-top:2px; }
 
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;}
     .hidden{ display:none !important; }
     @media(max-width:900px){
       .game-zone{ width:calc(100vw - 16px); }
@@ -241,6 +244,7 @@
   </style>
 </head>
 <body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
 
 <!-- ── Lab Scene ── -->
 <div class="lab-scene">
@@ -265,16 +269,16 @@
 <div class="scientist-stage"><div id="petCharWrap" class="pet-idle"></div><div id="sciCharWrap"></div></div>
 
 <!-- ── Header ── -->
-<header class="site-header">
+<header class="site-header" role="banner">
   <div class="hdr-inner">
     <div class="hdr-brand">
       <div class="hdr-icon">📡</div>
       <div><div class="hdr-title">Homophone Hunter</div><span class="hdr-sub">Signal Interception Lab</span></div>
     </div>
-    <div class="hdr-pills">
+    <div class="hdr-pills" role="navigation" aria-label="Game controls">
       <span id="wlPillSlot"></span>
-      <span class="hud-pill streak" id="streakPill" style="display:none;">🔥 0</span>
-      <span class="hud-pill score" id="scorePill">0 XP</span>
+      <span class="hud-pill streak" id="streakPill" style="display:none;" aria-live="polite">🔥 0</span>
+      <span class="hud-pill score" id="scorePill" aria-live="polite">0 XP</span>
       <button id="wlLoginBtn" class="hdr-btn dark" style="display:none;">👤 Log in</button>
       <a href="landing.html" class="hdr-btn dark">🏠 Home</a>
       <a href="scientist.html" class="hdr-btn rose">🧬</a>
@@ -283,10 +287,10 @@
 </header>
 
 <!-- ── Game Zone ── -->
-<div class="game-zone">
+<div class="game-zone" id="main-content" role="main">
   <!-- Fuel -->
   <div class="fuel-pill" id="fuelPill" style="display:none;">
-    <div class="fuel-row"><span>📡 Signal Strength</span><span id="fuelLabel">100%</span></div>
+    <div class="fuel-row"><span>📡 Signal Strength</span><span id="fuelLabel" aria-live="polite">100%</span></div>
     <div class="fuel-track"><div class="fuel-fill" id="fuelBar"></div></div>
   </div>
 
@@ -305,18 +309,18 @@
         <strong>Fuel:</strong> Correct answers boost your signal. Wrong answers drain it. If the signal dies, the mission ends!
       </div>
 
-      <div class="mode-grid">
-        <div class="mode-card active" onclick="selectMode('mode1',this)">
+      <div class="mode-grid" role="radiogroup" aria-label="Game mode selection">
+        <div class="mode-card active" tabindex="0" role="radio" aria-checked="true" onclick="selectMode('mode1',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectMode('mode1',this);}">
           <div class="mode-emoji">📡</div>
           <div class="mode-name">Intercept</div>
           <div class="mode-desc">Pick the right word to complete each sentence.</div>
         </div>
-        <div class="mode-card" onclick="selectMode('mode2',this)">
+        <div class="mode-card" tabindex="0" role="radio" aria-checked="false" onclick="selectMode('mode2',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectMode('mode2',this);}">
           <div class="mode-emoji">🖥️</div>
           <div class="mode-name">Decode</div>
           <div class="mode-desc">Two sentences — drag each word to the right monitor.</div>
         </div>
-        <div class="mode-card" onclick="selectMode('mode3',this)">
+        <div class="mode-card" tabindex="0" role="radio" aria-checked="false" onclick="selectMode('mode3',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectMode('mode3',this);}">
           <div class="mode-emoji">⚡</div>
           <div class="mode-name">Transmission</div>
           <div class="mode-desc">Find and fix the wrong homophones in a paragraph.</div>
@@ -329,8 +333,8 @@
     <!-- ── Game Screen ── -->
     <div id="gameScreen" class="hidden">
       <div id="gameArea"></div>
-      <div class="feedback" id="feedback"></div>
-      <div class="sub-feedback" id="subFeedback"></div>
+      <div class="feedback" id="feedback" aria-live="assertive"></div>
+      <div class="sub-feedback" id="subFeedback" aria-live="polite"></div>
       <div class="action-row">
         <button class="sec-btn" onclick="backToSetup()">← Change Mode</button>
         <button class="sec-btn" onclick="skipQuestion()">Skip →</button>
@@ -343,7 +347,7 @@
 </div>
 
 <!-- Fix modal -->
-<div class="fix-modal" id="fixModal">
+<div class="fix-modal" id="fixModal" role="dialog" aria-modal="true" aria-label="Choose the correct spelling">
   <div class="fix-panel">
     <div class="fix-title" id="fixWord"></div>
     <div class="fix-sub">Choose the correct spelling:</div>
@@ -636,8 +640,9 @@ const fuelLabelEl = document.getElementById('fuelLabel');
 // ── Mode selection ─────────────────────────────────────────
 function selectMode(mode, el) {
   selectedMode = mode;
-  document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.mode-card').forEach(c => { c.classList.remove('active'); c.setAttribute('aria-checked', 'false'); });
   el.classList.add('active');
+  el.setAttribute('aria-checked', 'true');
 }
 
 function backToSetup() {
@@ -796,15 +801,15 @@ function renderMode2(area, q) {
     <div class="dual-monitors">
       <div class="monitor-box" id="mon1">
         <div class="monitor-label">🖥️ Monitor A</div>
-        <div class="sentence-text" style="font-size:15px;">${q.s1.s.replace('___','<span class="drop-target" id="drop1" data-answer="'+q.s1.a+'">?</span>')}</div>
+        <div class="sentence-text" style="font-size:15px;">${q.s1.s.replace('___','<span class="drop-target" id="drop1" data-answer="'+q.s1.a+'" tabindex="0" role="button" aria-label="Blank 1 — Monitor A drop target">?</span>')}</div>
       </div>
       <div class="monitor-box" id="mon2">
         <div class="monitor-label">🖥️ Monitor B</div>
-        <div class="sentence-text" style="font-size:15px;">${q.s2.s.replace('___','<span class="drop-target" id="drop2" data-answer="'+q.s2.a+'">?</span>')}</div>
+        <div class="sentence-text" style="font-size:15px;">${q.s2.s.replace('___','<span class="drop-target" id="drop2" data-answer="'+q.s2.a+'" tabindex="0" role="button" aria-label="Blank 2 — Monitor B drop target">?</span>')}</div>
       </div>
     </div>
     <div class="drag-tiles">${words.map((w,i) =>
-      `<div class="drag-tile" draggable="true" id="dtile_${i}" data-word="${w}" ondragstart="dStart(event)">${w}</div>`
+      `<div class="drag-tile" draggable="true" id="dtile_${i}" data-word="${w}" ondragstart="dStart(event)" tabindex="0" role="button" aria-label="Word tile: ${w}">${w}</div>`
     ).join('')}</div>`;
 
   ['drop1','drop2'].forEach(id => {
@@ -812,13 +817,17 @@ function renderMode2(area, q) {
     el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('dragover'); });
     el.addEventListener('dragleave', () => el.classList.remove('dragover'));
     el.addEventListener('drop', e => { e.preventDefault(); el.classList.remove('dragover'); doDrop(id, e.dataTransfer.getData('text/plain'), e.dataTransfer.getData('tid')); });
-    el.addEventListener('click', () => { if(m2State.selectedTile){ doDrop(id, m2State.selectedTile.dataset.word, m2State.selectedTile.id); m2State.selectedTile=null; } });
+    const placeSelected = () => { if(m2State.selectedTile){ doDrop(id, m2State.selectedTile.dataset.word, m2State.selectedTile.id); m2State.selectedTile=null; } };
+    el.addEventListener('click', placeSelected);
+    el.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); placeSelected(); } });
   });
   document.querySelectorAll('.drag-tile').forEach(t => {
-    t.addEventListener('click', () => {
+    const selectTile = () => {
       document.querySelectorAll('.drag-tile').forEach(x => x.classList.remove('selected'));
       if (!t.classList.contains('used')) { t.classList.add('selected'); m2State.selectedTile = t; }
-    });
+    };
+    t.addEventListener('click', selectTile);
+    t.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); selectTile(); } });
   });
 }
 
@@ -841,7 +850,8 @@ function doDrop(dropId, word, tileId) {
 
   drop.textContent = word;
   drop.classList.add('filled');
-  if (tile) tile.classList.add('used');
+  drop.setAttribute('aria-label', (dropId === 'drop1' ? 'Blank 1' : 'Blank 2') + ' — filled with: ' + word);
+  if (tile) { tile.classList.add('used'); tile.setAttribute('aria-disabled', 'true'); }
   m2State.placed[dropId] = word;
 
   if (m2State.placed.drop1 && m2State.placed.drop2) {
@@ -878,7 +888,7 @@ function renderMode3(area, q) {
     if (m) {
       const shown = m[1], correct = m[2];
       const isError = shown !== correct;
-      html += `<span class="para-word" data-shown="${shown}" data-correct="${correct}" onclick="fixWord(this)">${shown}</span>`;
+      html += `<span class="para-word" data-shown="${shown}" data-correct="${correct}" onclick="fixWord(this)" tabindex="0" role="button" aria-label="Word: ${shown}">${shown}</span>`;
     } else {
       html += part;
     }
@@ -891,6 +901,11 @@ function renderMode3(area, q) {
       <div class="para-text">${html}</div>
     </div>
     <div style="text-align:center;font-size:12px;color:#f9a8d4;font-weight:700;margin-top:8px;">Some homophones are wrong — click any word you think is incorrect · <strong id="errorsLeft">${totalErrors}</strong> to find</div>`;
+
+  // Add keyboard support for para-words
+  area.querySelectorAll('.para-word').forEach(pw => {
+    pw.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fixWord(pw); } });
+  });
 }
 
 function fixWord(el) {
@@ -913,6 +928,9 @@ function fixWord(el) {
     `<button class="opt-btn" onclick="applyFix(this,'${w.replace(/'/g,"\\'")}','${correct.replace(/'/g,"\\'")}')">${w}</button>`
   ).join('');
   document.getElementById('fixModal').classList.add('open');
+  // Focus first option for keyboard users
+  const firstOpt = document.querySelector('#fixOptions .opt-btn');
+  if (firstOpt) firstOpt.focus();
   m3State.currentEl = el;
 }
 
