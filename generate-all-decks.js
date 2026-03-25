@@ -138,16 +138,32 @@ RULES:
 - day2: dictation sentence with EXACTLY 2 focus words containing "${morpheme}". Count commas, semicolons, colons, question marks, exclamation marks (NOT full stops) for punctuationCount
 - day3: harder dictation sentence with EXACTLY 3 focus words containing "${morpheme}". Count punctuation the same way
 - Each focus word needs a complete morpheme breakdown (every prefix + root + suffix as separate parts with meanings)
-- syllables: split using / (Australian English pronunciation)
-- phonemes: split using / — each segment is the GRAPHEME (actual letters) for ONE sound. Rules:
-  * Every consonant sound = its own segment: "s/t/r/u/c/t" not "str/uct"
-  * Every vowel sound = its own segment: "h/o/p/e" (split vowel o_e counts as TWO separate graphemes: "o" and "e")
-  * Digraphs (two letters, one sound) stay together: "sh", "ch", "th", "ph", "wh", "ng", "ck"
-  * Vowel digraphs stay together: "ee", "ea", "oa", "ai", "ay", "oo", "ou", "ow", "oi", "oy"
-  * "tion" = "t/ion" (t is one sound, ion is one sound). "sion" = "sion" (one sound)
-  * Double consonants: "pp" = one sound, "ll" = one sound, "ss" = one sound
-  * Split vowels like hope = "h/o/p/e" (4 graphemes), make = "m/a/k/e" (4 graphemes)
-  * WRONG: "ope", "ul", "ful" — these combine multiple sounds. Every sound must be separate
+
+MORPHEME NOTES — the "note" field:
+- Each morpheme object can have an OPTIONAL "note" field with a short rule explanation (shown as small grey text on the slide)
+- Use "note" for:
+  * ASSIMILATED PREFIXES: when a prefix changes spelling to match the following consonant. E.g. "con" → "col" before "l" (collection), "con" → "com" before "m/p" (complete), "in" → "im" before "m/p" (impossible), "ad" → "ac" before "c" (accept). Add note like: "note": "con → col before 'l'"
+  * CONNECTING VOWELS: when a vowel appears between morphemes that isn't part of either morpheme. E.g. the "a" in "education" (educ + a + tion), the "i" in "horrific" (horr + i + fic). Show the connecting vowel as its own morpheme part: {"part": "a", "meaning": "connecting vowel", "note": "links base to suffix"}
+  * SPELLING CHANGES: when a base word drops a letter before a suffix. E.g. "create" drops the "e" before "-ion" → "creation". Add note like: "note": "'e' dropped before vowel suffix"
+- Only add "note" when there IS a rule to explain. Do NOT add "note" to straightforward morphemes
+
+PHONEMES — CRITICAL RULES:
+- phonemes: split using / — each segment is the GRAPHEME (the actual LETTERS from the word) that represent ONE sound
+- You MUST use the exact letters from the word, NEVER substitute sound representations
+- CORRECT: "recharge" = "r/e/ch/ar/ge" (every segment uses the actual letters from the word)
+- WRONG: "recharge" = "r/e/ch/ar/j" (the "j" sound is spelled "ge" in this word — use "ge")
+- CORRECT: "structure" = "s/t/r/u/c/t/u/re" (the final sound uses "re" not "er" or a phonetic symbol)
+- CORRECT: "destructive" = "d/e/s/t/r/u/c/t/i/ve" (NOT "d/e/s/t/r/u/c/t/iv")
+- Every consonant sound = its own grapheme segment
+- Every vowel sound = its own grapheme segment
+- Digraphs (two letters, one sound) stay together: "sh", "ch", "th", "ph", "wh", "ng", "ck"
+- Vowel digraphs stay together: "ee", "ea", "oa", "ai", "ay", "oo", "ou", "ow", "oi", "oy", "ar", "er", "ir", "or", "ur"
+- "tion" as a suffix = "t/io/n" (3 graphemes) or "sh/u/n" sound but written as "t/io/n"
+- "ge" at end of word making /j/ sound = "ge" (one grapheme, e.g. "charge" = "ch/ar/ge")
+- "ce" at end of word making /s/ sound = "ce" (one grapheme)
+- Double consonants making one sound: "pp", "ll", "ss", "ff", "tt", "rr" = one segment
+- Split vowels like hope = "h/o/p/e" (4 graphemes), make = "m/a/k/e" (4 graphemes)
+- VALIDATION: join all phoneme segments together (remove "/") — the result MUST exactly equal the original word. If it doesn't, your phonemes are wrong
 - Use Australian/British English spelling (e.g. "organise" not "organize")
 
 Return ONLY the JSON object. No markdown, no backticks, no explanation.`;
@@ -253,16 +269,30 @@ RULES:
 - day2: dictation with EXACTLY 2 focus words starting with "${morpheme}-"
 - day3: harder dictation with EXACTLY 3 focus words starting with "${morpheme}-"
 - Each focus word: full morpheme breakdown (prefix + base + any suffixes), syllables, grapheme-based phonemes
-- syllables: split using / (Australian English pronunciation)
-- phonemes: split using / — each segment is the GRAPHEME (actual letters) for ONE sound. Rules:
-  * Every consonant sound = its own segment: "s/t/r/u/c/t" not "str/uct"
-  * Every vowel sound = its own segment
-  * Digraphs (two letters, one sound) stay together: "sh", "ch", "th", "ph", "wh", "ng", "ck"
-  * Vowel digraphs stay together: "ee", "ea", "oa", "ai", "ay", "oo", "ou", "ow", "oi", "oy"
-  * "tion" = "t/ion" (t is one sound, ion is one sound). "sion" = "sion" (one sound)
-  * Double consonants: "pp" = one sound, "ll" = one sound, "ss" = one sound
-  * Split vowels like hope = "h/o/p/e", make = "m/a/k/e"
-  * WRONG: "ope", "ul", "ful" — these combine multiple sounds. Every sound must be separate
+
+MORPHEME NOTES — the "note" field:
+- Each morpheme object can have an OPTIONAL "note" field with a short rule explanation (shown as small grey text on the slide)
+- Use "note" for:
+  * ASSIMILATED PREFIXES: when a prefix changes spelling to match the following consonant. E.g. "con" → "col" before "l" (collection), "con" → "com" before "m/p" (complete), "in" → "im" before "m/p" (impossible), "ad" → "ac" before "c" (accept). Add note like: "note": "con → col before 'l'"
+  * CONNECTING VOWELS: when a vowel appears between morphemes that isn't part of either morpheme. Show as its own part: {"part": "a", "meaning": "connecting vowel", "note": "links base to suffix"}
+  * SPELLING CHANGES: when a base word drops a letter before a suffix. E.g. "create" drops "e" before "-ion". Add note like: "note": "'e' dropped before vowel suffix"
+- Only add "note" when there IS a rule to explain
+
+PHONEMES — CRITICAL RULES:
+- phonemes: split using / — each segment is the GRAPHEME (the actual LETTERS from the word) that represent ONE sound
+- You MUST use the exact letters from the word, NEVER substitute sound representations
+- CORRECT: "recharge" = "r/e/ch/ar/ge" (every segment uses the actual letters)
+- WRONG: "recharge" = "r/e/ch/ar/j" (the "j" sound is spelled "ge" — use "ge")
+- CORRECT: "destructive" = "d/e/s/t/r/u/c/t/i/ve" (NOT "d/e/s/t/r/u/c/t/iv")
+- Every consonant sound = its own grapheme segment
+- Every vowel sound = its own grapheme segment
+- Digraphs stay together: "sh", "ch", "th", "ph", "wh", "ng", "ck"
+- Vowel digraphs stay together: "ee", "ea", "oa", "ai", "ay", "oo", "ou", "ow", "oi", "oy", "ar", "er", "ir", "or", "ur"
+- "ge" at end of word making /j/ sound = "ge" (one grapheme)
+- "ce" at end of word making /s/ sound = "ce" (one grapheme)
+- Double consonants = one segment: "pp", "ll", "ss", "ff", "tt", "rr"
+- Split vowels: hope = "h/o/p/e", make = "m/a/k/e"
+- VALIDATION: join all phoneme segments (remove "/") — must exactly equal the original word
 - Use Australian/British English spelling
 
 Return ONLY the JSON object. No markdown, no backticks, no explanation.`;
@@ -368,16 +398,30 @@ RULES:
 - day2: dictation with EXACTLY 2 focus words ending in "-${morpheme}"
 - day3: harder dictation with EXACTLY 3 focus words ending in "-${morpheme}"
 - Each focus word: full morpheme breakdown (any prefixes + base + suffix), syllables, grapheme-based phonemes
-- syllables: split using / (Australian English pronunciation)
-- phonemes: split using / — each segment is the GRAPHEME (actual letters) for ONE sound. Rules:
-  * Every consonant sound = its own segment: "s/t/r/u/c/t" not "str/uct"
-  * Every vowel sound = its own segment
-  * Digraphs (two letters, one sound) stay together: "sh", "ch", "th", "ph", "wh", "ng", "ck"
-  * Vowel digraphs stay together: "ee", "ea", "oa", "ai", "ay", "oo", "ou", "ow", "oi", "oy"
-  * "tion" = "t/ion" (t is one sound, ion is one sound). "sion" = "sion" (one sound)
-  * Double consonants: "pp" = one sound, "ll" = one sound, "ss" = one sound
-  * Split vowels like hope = "h/o/p/e", make = "m/a/k/e"
-  * WRONG: "ope", "ul", "ful" — these combine multiple sounds. Every sound must be separate
+
+MORPHEME NOTES — the "note" field:
+- Each morpheme object can have an OPTIONAL "note" field with a short rule explanation (shown as small grey text on the slide)
+- Use "note" for:
+  * ASSIMILATED PREFIXES: when a prefix changes spelling. E.g. "con" → "col" before "l", "in" → "im" before "m/p". Add note like: "note": "con → col before 'l'"
+  * CONNECTING VOWELS: when a vowel appears between morphemes that isn't part of either. E.g. the "a" in "education" (educ + a + tion). Show as its own part: {"part": "a", "meaning": "connecting vowel", "note": "links base to suffix"}
+  * SPELLING CHANGES: when a base drops a letter before a suffix. E.g. "create" → "creation" drops "e". Add note: "note": "'e' dropped before vowel suffix"
+- Only add "note" when there IS a rule to explain
+
+PHONEMES — CRITICAL RULES:
+- phonemes: split using / — each segment is the GRAPHEME (the actual LETTERS from the word) that represent ONE sound
+- You MUST use the exact letters from the word, NEVER substitute sound representations
+- CORRECT: "recharge" = "r/e/ch/ar/ge" (every segment uses actual letters)
+- WRONG: "recharge" = "r/e/ch/ar/j" ("j" sound is spelled "ge" — use "ge")
+- CORRECT: "education" = "e/d/u/c/a/t/io/n" (NOT "e/d/u/k/a/sh/u/n")
+- Every consonant sound = its own grapheme segment
+- Every vowel sound = its own grapheme segment
+- Digraphs stay together: "sh", "ch", "th", "ph", "wh", "ng", "ck"
+- Vowel digraphs stay together: "ee", "ea", "oa", "ai", "ay", "oo", "ou", "ow", "oi", "oy", "ar", "er", "ir", "or", "ur"
+- "ge" at end of word making /j/ sound = "ge" (one grapheme)
+- "ce" at end of word making /s/ sound = "ce" (one grapheme)
+- Double consonants = one segment: "pp", "ll", "ss", "ff", "tt", "rr"
+- Split vowels: hope = "h/o/p/e", make = "m/a/k/e"
+- VALIDATION: join all phoneme segments (remove "/") — must exactly equal the original word
 - Use Australian/British English spelling
 
 Return ONLY the JSON object. No markdown, no backticks, no explanation.`;

@@ -58,7 +58,7 @@ let DATA = {
           { part: "ion",      meaning: "act or process of" },
         ],
         syllables: "re/con/struc/tion",
-        phonemes:  "r/e/c/o/n/s/t/r/u/c/tion",
+        phonemes:  "r/e/c/o/n/s/t/r/u/c/t/io/n",
       },
       {
         word: "structure",
@@ -67,7 +67,7 @@ let DATA = {
           { part: "ure",      meaning: "result of"     },
         ],
         syllables: "struc/ture",
-        phonemes:  "s/t/r/u/c/t/ure",
+        phonemes:  "s/t/r/u/c/t/u/re",
       },
     ],
   },
@@ -85,7 +85,7 @@ let DATA = {
           { part: "ure",      meaning: "result of"     },
         ],
         syllables: "mi/cro/struc/ture",
-        phonemes:  "m/i/c/r/o/s/t/r/u/c/t/ure",
+        phonemes:  "m/i/c/r/o/s/t/r/u/c/t/u/re",
       },
       {
         word: "nonstructural",
@@ -96,7 +96,7 @@ let DATA = {
           { part: "al",       meaning: "relating to"   },
         ],
         syllables: "non/struc/tur/al",
-        phonemes:  "n/o/n/s/t/r/u/c/t/ur/al",
+        phonemes:  "n/o/n/s/t/r/u/c/t/u/r/a/l",
       },
       {
         word: "destructive",
@@ -106,7 +106,7 @@ let DATA = {
           { part: "ive",      meaning: "tending to"    },
         ],
         syllables: "de/struc/tive",
-        phonemes:  "d/e/s/t/r/u/c/t/ive",
+        phonemes:  "d/e/s/t/r/u/c/t/i/ve",
       },
     ],
   },
@@ -868,36 +868,38 @@ function addBreakdownStep(pres, day, dictData, wordIndex, step) {
   slide.addShape("rect", { x: 3.0, y: 1.45, w: 4.0, h: 0.8, fill: { color: C.indigoMid }, line: { color: C.indigoMid }, rectRadius: 0.1, shadow: makeShadow() });
   slide.addText(wordData.word, { x: 3.0, y: 1.45, w: 4.0, h: 0.8, fontSize: 28, bold: true, color: C.white, fontFace: FONT, align: "center", valign: "middle", margin: 0 });
 
-  // MORPHEMES row
+  // MORPHEMES row (taller to fit notes about assimilated prefixes, connecting vowels etc.)
   const showMorphemes = step !== "attempt";
   addBreakdownRow(slide, "Morphemes", 2.45,
     showMorphemes ? wordData.morphemes : null, "morpheme");
 
   // SYLLABLES row
   const showSyllables = step === "syllables" || step === "phonemes";
-  addBreakdownRow(slide, "Syllables", 3.48,
+  addBreakdownRow(slide, "Syllables", 3.58,
     showSyllables ? wordData.syllables : null, "syllable");
 
   // PHONEMES row
   const showPhonemes = step === "phonemes";
-  addBreakdownRow(slide, "Phonemes", 4.38,
+  addBreakdownRow(slide, "Phonemes", 4.48,
     showPhonemes ? wordData.phonemes : null, "phoneme");
 }
 
 function addBreakdownRow(slide, label, y, data, type) {
+  // Morpheme rows are taller to fit rule notes
+  const rowH = type === "morpheme" ? 0.92 : 0.72;
   // Row label
-  slide.addShape("rect", { x: 0.4, y, w: 1.5, h: 0.72, fill: { color: C.slateLight }, line: { color: C.slateLight }, rectRadius: 0.06 });
-  slide.addText(label, { x: 0.4, y, w: 1.5, h: 0.72, fontSize: 11, bold: true, color: C.slate, fontFace: FONT, align: "center", valign: "middle", margin: 0 });
+  slide.addShape("rect", { x: 0.4, y, w: 1.5, h: rowH, fill: { color: C.slateLight }, line: { color: C.slateLight }, rectRadius: 0.06 });
+  slide.addText(label, { x: 0.4, y, w: 1.5, h: rowH, fontSize: 11, bold: true, color: C.slate, fontFace: FONT, align: "center", valign: "middle", margin: 0 });
 
   if (!data) {
     // Blank writing area
-    slide.addShape("rect", { x: 2.05, y, w: 7.55, h: 0.72, fill: { color: C.offWhite }, line: { color: C.slateLight, dashType: "dash" }, rectRadius: 0.06 });
-    slide.addText("Write here...", { x: 2.05, y, w: 7.55, h: 0.72, fontSize: 11, color: "cbd5e1", italic: true, fontFace: FONT_BODY, align: "center", valign: "middle" });
+    slide.addShape("rect", { x: 2.05, y, w: 7.55, h: rowH, fill: { color: C.offWhite }, line: { color: C.slateLight, dashType: "dash" }, rectRadius: 0.06 });
+    slide.addText("Write here...", { x: 2.05, y, w: 7.55, h: rowH, fontSize: 11, color: "cbd5e1", italic: true, fontFace: FONT_BODY, align: "center", valign: "middle" });
     return;
   }
 
   if (type === "morpheme") {
-    // data is array of {part, meaning}
+    // data is array of {part, meaning, note?}
     const n = data.length;
     const chipW = Math.min(2.0, 7.4 / n - 0.12);
     const gap = (7.4 - n * chipW) / (n + 1);
@@ -905,8 +907,12 @@ function addBreakdownRow(slide, label, y, data, type) {
       const x = 2.08 + gap + i * (chipW + gap);
       const partIsMorpheme = DATA.morpheme.startsWith(m.part) || m.part === DATA.morpheme;
       const chipType = m.part === DATA.morpheme ? "base" : (i < data.length - 1 && i === 0 || m.meaning.includes("again") || m.meaning.includes("with") || m.meaning.includes("undo") || m.meaning.includes("not") || m.meaning.includes("small") ? "prefix" : "suffix");
-      morphemeChip(slide, m.part, chipType, x, y + 0.02, chipW, 0.38);
-      slide.addText(m.meaning, { x, y: y + 0.42, w: chipW, h: 0.28, fontSize: 8.5, color: C.slate, fontFace: FONT_BODY, align: "center", valign: "top", margin: 0 });
+      morphemeChip(slide, m.part, chipType, x, y + 0.02, chipW, 0.32);
+      slide.addText(m.meaning, { x, y: y + 0.36, w: chipW, h: 0.22, fontSize: 8.5, color: C.slate, fontFace: FONT_BODY, align: "center", valign: "top", margin: 0 });
+      // Show rule note (assimilated prefix, connecting vowel, etc.) in small grey italic
+      if (m.note) {
+        slide.addText(m.note, { x, y: y + 0.56, w: chipW, h: 0.2, fontSize: 7, color: "94a3b8", italic: true, fontFace: FONT_BODY, align: "center", valign: "top", margin: 0 });
+      }
     });
   } else if (type === "syllable") {
     // data is string like "re/con/struc/tion"
