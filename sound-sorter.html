@@ -505,7 +505,7 @@
 // type: 'vowel' | 'consonant'
 // ═══════════════════════════════════════════════════════════════
 
-const WORDS = [
+let WORDS = [
 
   // ── LONG A ──────────────────────────────────────────────────
   { word:"rain",     sound:"long-a", soundLabel:"Long A",  grapheme:"ai",   before:"r",    after:"n",    clue:"water falling from the sky",           level:"starter",   type:"vowel", distractors:["ay","a_e"],        explain:"The 'ai' grapheme makes the long a sound in the middle of words." },
@@ -882,7 +882,7 @@ const WORDS = [
 // ═══════════════════════════════════════════════════════════════
 // SOUND GROUP DEFINITIONS (for the pill picker)
 // ═══════════════════════════════════════════════════════════════
-const SOUND_GROUPS = {
+let SOUND_GROUPS = {
   vowel: [
     { id:"long-a",   label:"Long A" },
     { id:"long-e",   label:"Long E" },
@@ -930,6 +930,55 @@ const SOUND_GROUPS = {
   });
   SOUND_GROUPS.vowel     = [...seen.vowel.entries()].map(([id, label]) => ({ id, label }));
   SOUND_GROUPS.consonant = [...seen.consonant.entries()].map(([id, label]) => ({ id, label }));
+})();
+
+// ── Custom word list support ──
+var _originalSoundWords = WORDS.slice();
+(async function loadCustomSoundWords(){
+  try {
+    if (typeof WordLabData === 'undefined' || !WordLabData.getCustomWords) return;
+    var custom = await WordLabData.getCustomWords('sound-sorter');
+    if (!custom.length) return;
+    var customWords = custom.filter(function(w) {
+      return w.word && w.grapheme && w.sound && w.soundLabel;
+    }).map(function(w) {
+      return {
+        word: w.word,
+        sound: w.sound,
+        soundLabel: w.soundLabel,
+        grapheme: w.grapheme,
+        before: w.before || '',
+        after: w.after || '',
+        clue: w.clue || '',
+        level: w.ssLevel || w.level || 'levelup',
+        type: w.ssType || w.type || 'vowel',
+        distractors: w.distractors || [],
+        explain: w.explain || ''
+      };
+    });
+    if (!customWords.length) return;
+    var priority = WordLabData.getCustomWordPriority('sound-sorter');
+    if (priority === 'custom_only') {
+      WORDS.splice(0, WORDS.length); customWords.forEach(function(w){ WORDS.push(w); });
+    } else if (priority === 'custom_first') {
+      var orig = _originalSoundWords.slice();
+      WORDS.splice(0, WORDS.length);
+      customWords.forEach(function(w){ WORDS.push(w); });
+      orig.forEach(function(w){ WORDS.push(w); });
+    } else {
+      customWords.forEach(function(w){ WORDS.push(w); });
+    }
+    // Rebuild SOUND_GROUPS to include new sounds from custom words
+    var seen = { vowel: new Map(), consonant: new Map() };
+    WORDS.forEach(function(w) {
+      var t = w.type === 'consonant' ? 'consonant' : 'vowel';
+      if (!seen[t].has(w.sound)) seen[t].set(w.sound, w.soundLabel);
+    });
+    SOUND_GROUPS.vowel = [];
+    SOUND_GROUPS.consonant = [];
+    seen.vowel.forEach(function(label, id){ SOUND_GROUPS.vowel.push({id:id, label:label}); });
+    seen.consonant.forEach(function(label, id){ SOUND_GROUPS.consonant.push({id:id, label:label}); });
+  } catch(e) { console.warn('Custom sound-sorter words load error:', e); }
 })();
 
 // ═══════════════════════════════════════════════════════════════

@@ -1227,6 +1227,65 @@ const WordLabData = (() => {
     return _customWordsPriorityCache[gameName] || 'mixed';
   }
 
+  // ── Custom morphemes (for Mission Mode / Meaning Mode) ─────
+  var _customMorphemesCache = null;
+  var _customMorphemesPriorityCache = null;
+
+  async function getCustomMorphemes(gameName) {
+    var session = getSession();
+    if (!session) return [];
+    try {
+      if (!_customMorphemesCache) {
+        var { data: sets } = await sb().from('class_morphemes')
+          .select('id, morphemes, games, priority')
+          .eq('class_id', session.classId);
+        if (!sets || sets.length === 0) { _customMorphemesCache = []; _customMorphemesPriorityCache = {}; return []; }
+
+        var setIds = sets.map(function(s) { return s.id; });
+        var { data: assignments } = await sb().from('morpheme_set_assignments')
+          .select('morpheme_set_id, student_id')
+          .in('morpheme_set_id', setIds);
+        var assignMap = {};
+        (assignments || []).forEach(function(a) {
+          if (!assignMap[a.morpheme_set_id]) assignMap[a.morpheme_set_id] = [];
+          assignMap[a.morpheme_set_id].push(a.student_id);
+        });
+
+        _customMorphemesCache = [];
+        _customMorphemesPriorityCache = {};
+        var priorityRank = { custom_only: 3, custom_first: 2, mixed: 1 };
+        sets.forEach(function(set) {
+          var assigned = assignMap[set.id];
+          if (assigned && assigned.length > 0 && assigned.indexOf(session.studentId) === -1) return;
+          var games = set.games || ['meaning'];
+          var setPriority = set.priority || 'mixed';
+          games.forEach(function(g) {
+            var current = _customMorphemesPriorityCache[g] || 'mixed';
+            if ((priorityRank[setPriority] || 1) > (priorityRank[current] || 1)) {
+              _customMorphemesPriorityCache[g] = setPriority;
+            }
+          });
+          (set.morphemes || []).forEach(function(m) {
+            m._games = games;
+            _customMorphemesCache.push(m);
+          });
+        });
+      }
+
+      return _customMorphemesCache.filter(function(m) {
+        return m._games && m._games.indexOf(gameName) !== -1;
+      });
+    } catch(e) {
+      console.warn('getCustomMorphemes error:', e);
+      return [];
+    }
+  }
+
+  function getCustomMorphemePriority(gameName) {
+    if (!_customMorphemesPriorityCache) return 'mixed';
+    return _customMorphemesPriorityCache[gameName] || 'mixed';
+  }
+
   // ── Lazy-load extension data ────────────────────────────────
   let _extLoaded = false;
   let _extLoading = null;
@@ -1262,6 +1321,7 @@ const WordLabData = (() => {
     isExtensionMode, loadExtensionData,
     checkDailyLimit, incrementDailyUsage,
     getCustomWords, getCustomWordPriority,
+    getCustomMorphemes, getCustomMorphemePriority,
     escapeHtml
   };
 

@@ -1811,12 +1811,33 @@ async function giveReward(type){
 // ── Word Lists Tab ───────────────────────────────────────────────
 let _wlLoaded = false;
 
+function showWLSubTab(tab){
+  document.querySelectorAll('.wlSubTab').forEach(function(b){
+    b.classList.remove('active');
+    b.style.background = 'transparent';
+    b.style.color = 'var(--muted)';
+  });
+  var activeBtn = document.getElementById('wlSubTab' + (tab === 'words' ? 'Words' : 'Morphemes'));
+  activeBtn.classList.add('active');
+  activeBtn.style.background = 'var(--indigo)';
+  activeBtn.style.color = '#fff';
+  document.getElementById('wlWordsPanel').style.display = tab === 'words' ? '' : 'none';
+  document.getElementById('wlMorphemesPanel').style.display = tab === 'morphemes' ? '' : 'none';
+  if(tab === 'morphemes') dashLoadMorphemeSets();
+}
+
 function renderWordListsTab(){
   const container = document.getElementById('sectionWordLists');
   if(!container || !currentClass) return;
 
   container.innerHTML = `
     <div class="panel"><div class="panelInner">
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button class="wlSubTab active" onclick="showWLSubTab('words')" id="wlSubTabWords" style="border:none;background:var(--indigo);color:#fff;font-weight:800;font-size:11px;padding:7px 16px;border-radius:10px;cursor:pointer;font-family:'Lexend',sans-serif;transition:all .15s;">📝 Word Lists</button>
+        <button class="wlSubTab" onclick="showWLSubTab('morphemes')" id="wlSubTabMorphemes" style="border:none;background:transparent;color:var(--muted);font-weight:800;font-size:11px;padding:7px 16px;border-radius:10px;cursor:pointer;font-family:'Lexend',sans-serif;transition:all .15s;">🧬 Morphemes</button>
+      </div>
+
+      <div id="wlWordsPanel">
       <div class="panelTitle">📝 Custom Word Lists</div>
       <p style="font-size:13px;color:var(--muted);font-weight:700;margin:0 0 16px;">Create word lists that appear in student activities. Choose which games each list applies to, and optionally assign to specific students for differentiation.</p>
 
@@ -1841,6 +1862,9 @@ function renderWordListsTab(){
             </label>
             <label style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#334155;cursor:pointer;background:#f8fafc;border:2px solid var(--line);border-radius:10px;padding:6px 12px;">
               <input type="checkbox" id="wlGamePhoneme"> 🔊 Phoneme Splitter
+            </label>
+            <label style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#334155;cursor:pointer;background:#f8fafc;border:2px solid var(--line);border-radius:10px;padding:6px 12px;">
+              <input type="checkbox" id="wlGameSoundSorter"> 🔤 Sound Sorter
             </label>
           </div>
         </div>
@@ -1881,11 +1905,99 @@ function renderWordListsTab(){
         </div>
         <div id="wlStatus" style="display:none;border-radius:14px;padding:12px 16px;font-size:13px;font-weight:800;margin-top:10px;"></div>
       </div>
+      </div><!-- end wlWordsPanel -->
+
+      <div id="wlMorphemesPanel" style="display:none;">
+        <div class="panelTitle">🧬 Custom Morpheme Sets</div>
+        <p style="font-size:13px;color:var(--muted);font-weight:700;margin:0 0 16px;">Create morpheme sets for Meaning Mode and Mission Mode. Add prefixes, suffixes, or bases and AI will generate meanings, examples, and valid combinations.</p>
+
+        <div id="mlExistingSets"><div style="text-align:center;color:var(--muted);font-weight:700;font-size:13px;padding:20px;">Loading morpheme sets...</div></div>
+
+        <div style="border-top:2px solid var(--line);padding-top:16px;margin-top:16px;">
+          <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:10px;">Create new morpheme set</div>
+
+          <div style="margin-bottom:10px;">
+            <label style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);display:block;margin-bottom:6px;">Set name</label>
+            <input type="text" id="mlNewName" placeholder="e.g. Week 5 Prefixes" style="border:2px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14px;width:100%;font-family:'Lexend',sans-serif;outline:none;">
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);display:block;margin-bottom:6px;">Target games</label>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              <label style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#334155;cursor:pointer;background:#f8fafc;border:2px solid var(--line);border-radius:10px;padding:6px 12px;">
+                <input type="checkbox" id="mlGameMeaning" checked> 🧠 Meaning Mode
+              </label>
+              <label style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#334155;cursor:pointer;background:#f8fafc;border:2px solid var(--line);border-radius:10px;padding:6px 12px;">
+                <input type="checkbox" id="mlGameMission" checked> 🚀 Mission Mode
+              </label>
+            </div>
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);display:block;margin-bottom:6px;">Morpheme priority</label>
+            <select id="mlPriority" style="border:2px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;font-weight:700;font-family:'Lexend',sans-serif;outline:none;">
+              <option value="mixed">Mixed — shuffle with built-in morphemes</option>
+              <option value="custom_first">Custom first — your morphemes first, then built-in</option>
+              <option value="custom_only">Custom only — only use these morphemes</option>
+            </select>
+            <div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:4px;">Controls whether these morphemes replace, precede, or mix with the game's built-in morphemes.</div>
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);display:block;margin-bottom:6px;">Assign to</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <select id="mlAssignMode" onchange="mlToggleStudentPicker()" style="border:2px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;font-weight:700;font-family:'Lexend',sans-serif;outline:none;">
+                <option value="all">All students in class</option>
+                <option value="selected">Selected students only</option>
+              </select>
+            </div>
+            <div id="mlStudentPicker" style="display:none;margin-top:8px;max-height:200px;overflow-y:auto;border:2px solid var(--line);border-radius:14px;padding:10px;">
+            </div>
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);display:block;margin-bottom:6px;">Morpheme type</label>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              <label style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#334155;cursor:pointer;background:#f8fafc;border:2px solid var(--line);border-radius:10px;padding:6px 12px;">
+                <input type="radio" name="mlType" value="prefix" checked> Prefix
+              </label>
+              <label style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#334155;cursor:pointer;background:#f8fafc;border:2px solid var(--line);border-radius:10px;padding:6px 12px;">
+                <input type="radio" name="mlType" value="suffix"> Suffix
+              </label>
+              <label style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:#334155;cursor:pointer;background:#f8fafc;border:2px solid var(--line);border-radius:10px;padding:6px 12px;">
+                <input type="radio" name="mlType" value="base"> Base
+              </label>
+            </div>
+          </div>
+
+          <div style="margin-bottom:10px;">
+            <label style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);display:block;margin-bottom:6px;">Morphemes (one per line)</label>
+            <textarea id="mlNewMorphemes" rows="6" placeholder="un\nre\ndis\npre\nmis" style="border:2px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14px;width:100%;font-family:'Lexend',sans-serif;resize:vertical;outline:none;"></textarea>
+            <div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:4px;">Type one morpheme per line. AI will generate meanings, example words, and valid combinations automatically.</div>
+          </div>
+
+          <div id="mlPreview" style="display:none;margin-bottom:12px;"></div>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button onclick="dashAnalyzeMorphemes()" id="mlAnalyzeBtn" style="border:none;background:var(--indigo);color:#fff;font-weight:900;font-size:14px;padding:12px 24px;border-radius:14px;cursor:pointer;font-family:'Lexend',sans-serif;">✨ Generate with AI</button>
+            <button onclick="dashCreateMorphemeSet()" id="mlCreateBtn" style="display:none;border:none;background:#16a34a;color:#fff;font-weight:900;font-size:14px;padding:12px 24px;border-radius:14px;cursor:pointer;font-family:'Lexend',sans-serif;">✓ Save Morpheme Set</button>
+          </div>
+          <div id="mlStatus" style="display:none;border-radius:14px;padding:12px 16px;font-size:13px;font-weight:800;margin-top:10px;"></div>
+        </div>
+      </div><!-- end wlMorphemesPanel -->
+
     </div></div>
   `;
 
   wlPopulateStudentPicker();
+  mlPopulateStudentPicker();
   dashLoadWordLists();
+
+  // Apply sub-tab active styling
+  container.querySelectorAll('.wlSubTab').forEach(function(btn){
+    btn.addEventListener('mouseenter', function(){ if(!this.classList.contains('active')) this.style.background='rgba(99,102,241,.08)'; this.style.color = this.classList.contains('active') ? '#fff' : 'var(--indigo)'; });
+    btn.addEventListener('mouseleave', function(){ if(!this.classList.contains('active')){ this.style.background='transparent'; this.style.color='var(--muted)'; } });
+  });
 }
 
 function wlToggleStudentPicker(){
@@ -1931,7 +2043,7 @@ async function dashLoadWordLists(){
       assignMap[a.word_list_id].push(a.student_id);
     });
 
-    var gameLabels = { breakdown:'🧩 Breakdown', syllable:'✂️ Syllable', phoneme:'🔊 Phoneme' };
+    var gameLabels = { breakdown:'🧩 Breakdown', syllable:'✂️ Syllable', phoneme:'🔊 Phoneme', 'sound-sorter':'🔤 Sound Sorter' };
     var priorityLabels = { custom_only:'Custom only', custom_first:'Custom first', mixed:'Mixed' };
     var priorityColors = { custom_only:'#dc2626', custom_first:'#d97706', mixed:'#6366f1' };
     var priorityBg = { custom_only:'#fef2f2', custom_first:'#fffbeb', mixed:'#eef2ff' };
@@ -2031,9 +2143,10 @@ async function dashAnalyzeWords(){
     _wlAnalyzedWords = data.words;
 
     // Show preview
+    var showSS = document.getElementById('wlGameSoundSorter').checked;
     preview.innerHTML = '<div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--indigo);margin-bottom:8px;">Preview — check and edit if needed</div>' +
       '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">' +
-      '<tr style="background:var(--indigo-soft);"><th style="padding:6px 8px;text-align:left;font-weight:900;color:var(--indigo);">Word</th><th style="padding:6px 8px;text-align:left;">Clue</th><th style="padding:6px 8px;text-align:left;">Prefix</th><th style="padding:6px 8px;text-align:left;">Base</th><th style="padding:6px 8px;text-align:left;">Suffix</th><th style="padding:6px 8px;text-align:left;">Syllables</th><th style="padding:6px 8px;text-align:left;">Phonemes</th></tr>' +
+      '<tr style="background:var(--indigo-soft);"><th style="padding:6px 8px;text-align:left;font-weight:900;color:var(--indigo);">Word</th><th style="padding:6px 8px;text-align:left;">Clue</th><th style="padding:6px 8px;text-align:left;">Prefix</th><th style="padding:6px 8px;text-align:left;">Base</th><th style="padding:6px 8px;text-align:left;">Suffix</th><th style="padding:6px 8px;text-align:left;">Syllables</th><th style="padding:6px 8px;text-align:left;">Phonemes</th>' + (showSS ? '<th style="padding:6px 8px;text-align:left;">Sound</th><th style="padding:6px 8px;text-align:left;">Grapheme</th>' : '') + '</tr>' +
       data.words.map(function(w, i){
         return '<tr style="border-bottom:1px solid var(--line);">' +
           '<td style="padding:6px 8px;font-weight:800;color:#312e81;">' + (w.word||'') + '</td>' +
@@ -2043,6 +2156,7 @@ async function dashAnalyzeWords(){
           '<td style="padding:6px 8px;color:#d97706;">' + (w.suffix1||'—') + (w.suffix2 ? ' + ' + w.suffix2 : '') + '</td>' +
           '<td style="padding:6px 8px;">' + (w.syllables ? w.syllables.join('·') : '—') + '</td>' +
           '<td style="padding:6px 8px;">' + (w.phonemes ? w.phonemes.join('·') : '—') + '</td>' +
+          (showSS ? '<td style="padding:6px 8px;">' + (w.soundLabel||'—') + '</td><td style="padding:6px 8px;font-weight:800;">' + (w.grapheme||'—') + '</td>' : '') +
           '</tr>';
       }).join('') +
       '</table></div>';
@@ -2069,6 +2183,7 @@ async function dashCreateWordList(){
   if(document.getElementById('wlGameBreakdown').checked) games.push('breakdown');
   if(document.getElementById('wlGameSyllable').checked) games.push('syllable');
   if(document.getElementById('wlGamePhoneme').checked) games.push('phoneme');
+  if(document.getElementById('wlGameSoundSorter').checked) games.push('sound-sorter');
   var priority = document.getElementById('wlPriority').value || 'mixed';
 
   // Determine selected students
@@ -2126,6 +2241,7 @@ async function dashCreateWordList(){
 
     document.getElementById('wlNewName').value = '';
     document.getElementById('wlNewWords').value = '';
+    document.getElementById('wlGameSoundSorter').checked = false;
     showStatus('"' + name + '" created with ' + words.length + ' words for ' + games.length + ' game' + (games.length !== 1 ? 's' : '') + '!', false);
     dashLoadWordLists();
   } catch(e){
@@ -2235,6 +2351,347 @@ async function dashSavePriority(listId){
     var modal = document.getElementById('wlPriorityModal');
     if(modal) modal.remove();
     dashLoadWordLists();
+  } catch(e){ alert('Error: ' + (e.message || e)); }
+}
+
+// ── Morpheme Sets ────────────────────────────────────────────────
+
+function mlToggleStudentPicker(){
+  var mode = document.getElementById('mlAssignMode').value;
+  document.getElementById('mlStudentPicker').style.display = mode === 'selected' ? 'block' : 'none';
+}
+
+function mlPopulateStudentPicker(){
+  var picker = document.getElementById('mlStudentPicker');
+  if(!picker || !currentClass || !currentClass.students) return;
+  var students = currentClass.students.slice().sort(function(a,b){ return a.name.localeCompare(b.name); });
+  picker.innerHTML = students.map(function(s){
+    return '<label style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:13px;font-weight:700;color:#334155;cursor:pointer;">' +
+      '<input type="checkbox" class="mlStudentCb" value="' + s.id + '"> ' + s.name + '</label>';
+  }).join('');
+}
+
+var _mlAnalyzedMorphemes = null;
+
+function mlShowStatus(msg, isError){
+  var el = document.getElementById('mlStatus');
+  if(!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.background = isError ? '#fef2f2' : '#f0fdf4';
+  el.style.border = isError ? '2px solid #fecaca' : '2px solid #bbf7d0';
+  el.style.color = isError ? '#dc2626' : '#166534';
+  if(!isError) setTimeout(function(){ el.style.display = 'none'; }, 4000);
+}
+
+async function dashLoadMorphemeSets(){
+  if(!currentClass) return;
+  var container = document.getElementById('mlExistingSets');
+  if(!container) return;
+
+  try {
+    var { data, error } = await dbSb().from('class_morphemes')
+      .select('id, name, morphemes, games, priority, morpheme_type, created_at')
+      .eq('class_id', currentClass.id)
+      .order('created_at', { ascending: false });
+    if(error) throw error;
+
+    if(!data || !data.length){
+      container.innerHTML = '<div style="background:#f8fafc;border:2px solid var(--line);border-radius:14px;padding:16px;text-align:center;color:var(--muted);font-weight:700;font-size:13px;">No morpheme sets yet. Create one below.</div>';
+      return;
+    }
+
+    // Fetch assignments
+    var setIds = data.map(function(s){ return s.id; });
+    var { data: allAssigns } = await dbSb().from('morpheme_set_assignments')
+      .select('morpheme_set_id, student_id')
+      .in('morpheme_set_id', setIds);
+    var assignMap = {};
+    (allAssigns || []).forEach(function(a){
+      if(!assignMap[a.morpheme_set_id]) assignMap[a.morpheme_set_id] = [];
+      assignMap[a.morpheme_set_id].push(a.student_id);
+    });
+
+    var gameLabels = { meaning:'🧠 Meaning', mission:'🚀 Mission' };
+    var priorityLabels = { custom_only:'Custom only', custom_first:'Custom first', mixed:'Mixed' };
+    var priorityColors = { custom_only:'#dc2626', custom_first:'#d97706', mixed:'#6366f1' };
+    var priorityBg = { custom_only:'#fef2f2', custom_first:'#fffbeb', mixed:'#eef2ff' };
+    var priorityBorder = { custom_only:'#fecaca', custom_first:'#fde68a', mixed:'#c7d2fe' };
+    var typeLabels = { prefix:'Prefix', suffix:'Suffix', base:'Base' };
+    var typeColors = { prefix:'var(--indigo)', suffix:'#d97706', base:'#0d9488' };
+    var typeBg = { prefix:'var(--indigo-soft)', suffix:'#fffbeb', base:'#f0fdfa' };
+    var typeBorder = { prefix:'#c7d2fe', suffix:'#fde68a', base:'#99f6e4' };
+
+    container.innerHTML = data.map(function(set){
+      var morphemes = set.morphemes || [];
+      var games = set.games || ['meaning'];
+      var setPriority = set.priority || 'mixed';
+      var setType = set.morpheme_type || 'prefix';
+      var assigns = assignMap[set.id] || [];
+      var assignLabel = assigns.length === 0 ? 'All students' :
+        assigns.length + ' student' + (assigns.length !== 1 ? 's' : '');
+
+      var assignNames = '';
+      if(assigns.length > 0 && currentClass.students){
+        var nameMap = {};
+        currentClass.students.forEach(function(s){ nameMap[s.id] = s.name; });
+        assignNames = assigns.map(function(id){ return WordLabData.escapeHtml(nameMap[id] || '?'); }).sort().join(', ');
+      }
+
+      return '<div style="background:#f8fafc;border:2px solid var(--line);border-radius:16px;padding:14px 18px;margin-bottom:10px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">' +
+          '<div>' +
+            '<div style="font-size:15px;font-weight:900;color:#312e81;">' + WordLabData.escapeHtml(set.name) + '</div>' +
+            '<div style="font-size:12px;color:var(--muted);font-weight:700;">' + morphemes.length + ' morpheme' + (morphemes.length !== 1 ? 's' : '') + ' &middot; ' + assignLabel + (assignNames ? ' (' + assignNames + ')' : '') + '</div>' +
+          '</div>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+            '<button onclick="dashChangeMorphemePriority(\'' + set.id + '\')" style="border:2px solid ' + priorityBorder[setPriority] + ';background:' + priorityBg[setPriority] + ';color:' + priorityColors[setPriority] + ';font-weight:800;font-size:12px;border-radius:10px;padding:6px 14px;cursor:pointer;white-space:nowrap;font-family:\'Lexend\',sans-serif;">⚡ ' + priorityLabels[setPriority] + '</button>' +
+            '<button onclick="dashAssignMorphemeSet(\'' + set.id + '\')" style="border:2px solid #c7d2fe;background:var(--indigo-soft);color:var(--indigo);font-weight:800;font-size:12px;border-radius:10px;padding:6px 14px;cursor:pointer;white-space:nowrap;font-family:\'Lexend\',sans-serif;">👥 Assign</button>' +
+            '<button onclick="dashDeleteMorphemeSet(\'' + set.id + '\',\'' + WordLabData.escapeHtml(set.name) + '\')" style="border:2px solid #fecaca;background:#fef2f2;color:#dc2626;font-weight:800;font-size:12px;border-radius:10px;padding:6px 14px;cursor:pointer;white-space:nowrap;font-family:\'Lexend\',sans-serif;">Delete</button>' +
+          '</div>' +
+        '</div>' +
+        '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;">' +
+          '<span style="background:' + typeBg[setType] + ';border:1px solid ' + typeBorder[setType] + ';border-radius:6px;padding:2px 8px;font-size:10px;font-weight:800;color:' + typeColors[setType] + ';">' + typeLabels[setType] + '</span>' +
+          games.map(function(g){ return '<span style="background:#e0e7ff;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:800;color:var(--indigo);">' + (gameLabels[g]||g) + '</span>'; }).join('') +
+        '</div>' +
+        '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">' +
+          morphemes.map(function(m){ return '<span style="background:var(--indigo-soft);border:1px solid #c7d2fe;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:800;color:var(--indigo);">' + WordLabData.escapeHtml(m.form || m.morpheme || '') + '</span>'; }).join('') +
+        '</div>' +
+      '</div>';
+    }).join('');
+  } catch(e){
+    container.innerHTML = '<div style="background:#fef2f2;border:2px solid #fecaca;border-radius:14px;padding:16px;text-align:center;color:#dc2626;font-weight:700;font-size:13px;">Error loading morpheme sets.</div>';
+  }
+}
+
+async function dashAnalyzeMorphemes(){
+  var raw = document.getElementById('mlNewMorphemes').value.trim();
+  var btn = document.getElementById('mlAnalyzeBtn');
+  var preview = document.getElementById('mlPreview');
+  var morphType = document.querySelector('input[name="mlType"]:checked').value;
+
+  if(!raw){ mlShowStatus('Please enter at least one morpheme.', true); return; }
+
+  var morphemes = raw.split('\n').map(function(l){ return l.trim().toLowerCase(); }).filter(Boolean);
+  if(!morphemes.length){ mlShowStatus('No morphemes found.', true); return; }
+  if(morphemes.length > 30){ mlShowStatus('Maximum 30 morphemes per set.', true); return; }
+
+  btn.disabled = true;
+  btn.textContent = '✨ Analyzing ' + morphemes.length + ' morphemes...';
+  preview.style.display = 'none';
+  _mlAnalyzedMorphemes = null;
+
+  try {
+    var { data: { session } } = await WordLabData._sb().auth.getSession();
+    if(!session) throw new Error('Not logged in');
+
+    var resp = await fetch('https://kdpavfrzmmzknqfpodrl.supabase.co/functions/v1/analyze-morphemes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token,
+      },
+      body: JSON.stringify({ morphemes: morphemes, type: morphType }),
+    });
+
+    var respText = await resp.text();
+    var data;
+    try { data = JSON.parse(respText); } catch(pe) {
+      throw new Error('Invalid response (HTTP ' + resp.status + '): ' + respText.slice(0, 200));
+    }
+    if(data.error) throw new Error(data.error);
+    if(!data.morphemes || !data.morphemes.length) throw new Error('No results returned');
+
+    _mlAnalyzedMorphemes = data.morphemes;
+
+    var typeLabel = morphType === 'prefix' ? 'Valid Bases' : morphType === 'suffix' ? 'Valid Bases' : 'Valid Prefixes/Suffixes';
+    preview.innerHTML = '<div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--indigo);margin-bottom:8px;">Preview — check and edit if needed</div>' +
+      '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+      '<tr style="background:var(--indigo-soft);"><th style="padding:6px 8px;text-align:left;font-weight:900;color:var(--indigo);">Form</th><th style="padding:6px 8px;text-align:left;">Type</th><th style="padding:6px 8px;text-align:left;">Meaning</th><th style="padding:6px 8px;text-align:left;">Examples</th><th style="padding:6px 8px;text-align:left;">' + typeLabel + '</th></tr>' +
+      data.morphemes.map(function(m){
+        var examples = (m.examples || []).join(', ');
+        var combos = (m.validBases || m.validCombinations || []).join(', ');
+        return '<tr style="border-bottom:1px solid var(--line);">' +
+          '<td style="padding:6px 8px;font-weight:800;color:#312e81;">' + WordLabData.escapeHtml(m.form || '') + '</td>' +
+          '<td style="padding:6px 8px;">' + WordLabData.escapeHtml(m.type || morphType) + '</td>' +
+          '<td style="padding:6px 8px;">' + WordLabData.escapeHtml(m.meaning || '') + '</td>' +
+          '<td style="padding:6px 8px;">' + WordLabData.escapeHtml(examples) + '</td>' +
+          '<td style="padding:6px 8px;">' + WordLabData.escapeHtml(combos) + '</td>' +
+          '</tr>';
+      }).join('') +
+      '</table></div>';
+    preview.style.display = 'block';
+
+    document.getElementById('mlCreateBtn').style.display = '';
+    mlShowStatus('AI analysis complete! Review the preview, then click Save.', false);
+
+  } catch(e){
+    mlShowStatus('AI error: ' + (e.message || e), true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✨ Generate with AI';
+  }
+}
+
+async function dashCreateMorphemeSet(){
+  var name = document.getElementById('mlNewName').value.trim();
+  var morphType = document.querySelector('input[name="mlType"]:checked').value;
+
+  var games = [];
+  if(document.getElementById('mlGameMeaning').checked) games.push('meaning');
+  if(document.getElementById('mlGameMission').checked) games.push('mission');
+  var priority = document.getElementById('mlPriority').value || 'mixed';
+
+  var assignMode = document.getElementById('mlAssignMode').value;
+  var selectedStudents = [];
+  if(assignMode === 'selected'){
+    document.querySelectorAll('.mlStudentCb:checked').forEach(function(cb){ selectedStudents.push(cb.value); });
+  }
+
+  if(!currentClass){ mlShowStatus('No class selected.', true); return; }
+  if(!name){ mlShowStatus('Please enter a set name.', true); return; }
+  if(!games.length){ mlShowStatus('Please select at least one target game.', true); return; }
+  if(assignMode === 'selected' && !selectedStudents.length){ mlShowStatus('Please select at least one student.', true); return; }
+
+  var morphemes = _mlAnalyzedMorphemes;
+  if(!morphemes || !morphemes.length){
+    var raw = document.getElementById('mlNewMorphemes').value.trim();
+    if(!raw){ mlShowStatus('Please enter morphemes and click Generate with AI first.', true); return; }
+    morphemes = raw.split('\n').map(function(l){
+      var m = l.trim().toLowerCase();
+      return m ? { form: m, type: morphType, meaning: '', examples: [] } : null;
+    }).filter(Boolean);
+  }
+
+  if(!morphemes.length){ mlShowStatus('No morphemes found.', true); return; }
+
+  try {
+    var { data: inserted, error } = await dbSb().from('class_morphemes').insert({
+      class_id: currentClass.id,
+      name: name,
+      morphemes: morphemes,
+      games: games,
+      priority: priority,
+      morpheme_type: morphType
+    }).select('id').single();
+    if(error) throw error;
+
+    if(selectedStudents.length > 0 && inserted){
+      var assignRows = selectedStudents.map(function(sid){
+        return { morpheme_set_id: inserted.id, student_id: sid };
+      });
+      await dbSb().from('morpheme_set_assignments').insert(assignRows);
+    }
+
+    document.getElementById('mlNewName').value = '';
+    document.getElementById('mlNewMorphemes').value = '';
+    document.getElementById('mlPreview').style.display = 'none';
+    document.getElementById('mlCreateBtn').style.display = 'none';
+    _mlAnalyzedMorphemes = null;
+    mlShowStatus('"' + name + '" created with ' + morphemes.length + ' morpheme' + (morphemes.length !== 1 ? 's' : '') + ' for ' + games.length + ' game' + (games.length !== 1 ? 's' : '') + '!', false);
+    dashLoadMorphemeSets();
+  } catch(e){
+    mlShowStatus('Error: ' + (e.message || e), true);
+  }
+}
+
+async function dashAssignMorphemeSet(setId){
+  if(!currentClass || !currentClass.students) return;
+  var students = currentClass.students.slice().sort(function(a,b){ return a.name.localeCompare(b.name); });
+
+  var { data: current } = await dbSb().from('morpheme_set_assignments')
+    .select('student_id')
+    .eq('morpheme_set_id', setId);
+  var assigned = (current || []).map(function(a){ return a.student_id; });
+
+  var checkboxes = students.map(function(s){
+    var checked = assigned.indexOf(s.id) !== -1 ? 'checked' : '';
+    return '<label style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:13px;font-weight:700;color:#334155;cursor:pointer;">' +
+      '<input type="checkbox" class="mlAssignCb" value="' + s.id + '" ' + checked + '> ' + s.name + '</label>';
+  }).join('');
+
+  var html = '<div style="max-height:300px;overflow-y:auto;margin-bottom:12px;">' +
+    '<label style="display:flex;align-items:center;gap:6px;padding:6px 0;font-size:13px;font-weight:800;color:var(--indigo);cursor:pointer;border-bottom:1px solid var(--line);margin-bottom:6px;">' +
+    '<input type="checkbox" id="mlAssignAll" ' + (assigned.length === 0 ? 'checked' : '') + ' onchange="document.querySelectorAll(\'.mlAssignCb\').forEach(function(c){c.checked=false;c.disabled=this.checked;}.bind(this))"> All students (no specific assignment)</label>' +
+    checkboxes + '</div>' +
+    '<button onclick="saveMorphemeAssignments(\'' + setId + '\')" style="border:none;background:var(--indigo);color:#fff;font-weight:900;font-size:13px;padding:10px 20px;border-radius:12px;cursor:pointer;font-family:\'Lexend\',sans-serif;">Save Assignments</button>';
+
+  var overlay = document.createElement('div');
+  overlay.id = 'mlAssignOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:60;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = '<div style="background:#fff;border-radius:24px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,.3);border:4px solid var(--line);padding:24px;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><div style="font-size:16px;font-weight:900;color:#312e81;">👥 Assign Morpheme Set</div>' +
+    '<button onclick="document.getElementById(\'mlAssignOverlay\').remove()" style="border:none;background:var(--line);border-radius:8px;padding:6px 12px;font-weight:800;cursor:pointer;font-family:\'Lexend\',sans-serif;">✕</button></div>' +
+    html + '</div>';
+  document.body.appendChild(overlay);
+}
+
+async function saveMorphemeAssignments(setId){
+  var allStudents = document.getElementById('mlAssignAll').checked;
+
+  await dbSb().from('morpheme_set_assignments').delete().eq('morpheme_set_id', setId);
+
+  if(!allStudents){
+    var selected = [];
+    document.querySelectorAll('.mlAssignCb:checked').forEach(function(cb){ selected.push(cb.value); });
+    if(selected.length > 0){
+      var rows = selected.map(function(sid){ return { morpheme_set_id: setId, student_id: sid }; });
+      await dbSb().from('morpheme_set_assignments').insert(rows);
+    }
+  }
+
+  document.getElementById('mlAssignOverlay').remove();
+  dashLoadMorphemeSets();
+}
+
+async function dashDeleteMorphemeSet(setId, setName){
+  if(!confirm('Delete morpheme set "' + setName + '"? This cannot be undone.')) return;
+  try {
+    await dbSb().from('class_morphemes').delete().eq('id', setId);
+    dashLoadMorphemeSets();
+  } catch(e){ alert('Error: ' + (e.message || e)); }
+}
+
+async function dashChangeMorphemePriority(setId){
+  var options = [
+    { value:'mixed', label:'Mixed — shuffle with built-in morphemes' },
+    { value:'custom_first', label:'Custom first — your morphemes first, then built-in' },
+    { value:'custom_only', label:'Custom only — only use these morphemes' }
+  ];
+  var { data: current } = await dbSb().from('class_morphemes').select('priority').eq('id', setId).single();
+  var currentVal = (current && current.priority) || 'mixed';
+
+  var html = '<div style="font-size:14px;font-weight:900;color:#312e81;margin-bottom:12px;">Change Morpheme Priority</div>' +
+    '<div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:12px;">Controls how these morphemes interact with the game\'s built-in morphemes.</div>' +
+    options.map(function(o){
+      var checked = o.value === currentVal ? 'checked' : '';
+      return '<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin-bottom:6px;background:#f8fafc;border:2px solid var(--line);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;color:#334155;">' +
+        '<input type="radio" name="mlPriorityChange" value="' + o.value + '" ' + checked + '> ' + o.label + '</label>';
+    }).join('') +
+    '<div style="display:flex;gap:8px;margin-top:12px;">' +
+    '<button onclick="dashSaveMorphemePriority(\'' + setId + '\')" style="border:none;background:var(--indigo);color:#fff;font-weight:900;font-size:13px;padding:10px 20px;border-radius:10px;cursor:pointer;font-family:\'Lexend\',sans-serif;">Save</button>' +
+    '<button onclick="document.getElementById(\'mlPriorityModal\').remove()" style="border:2px solid var(--line);background:#f8fafc;color:var(--muted);font-weight:900;font-size:13px;padding:10px 20px;border-radius:10px;cursor:pointer;font-family:\'Lexend\',sans-serif;">Cancel</button>' +
+    '</div>';
+
+  var existing = document.getElementById('mlPriorityModal');
+  if(existing) existing.remove();
+
+  var modal = document.createElement('div');
+  modal.id = 'mlPriorityModal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.4);';
+  modal.innerHTML = '<div style="background:#fff;border-radius:20px;padding:24px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2);">' + html + '</div>';
+  modal.addEventListener('click', function(e){ if(e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+async function dashSaveMorphemePriority(setId){
+  var selected = document.querySelector('input[name="mlPriorityChange"]:checked');
+  if(!selected) return;
+  try {
+    await dbSb().from('class_morphemes').update({ priority: selected.value }).eq('id', setId);
+    var modal = document.getElementById('mlPriorityModal');
+    if(modal) modal.remove();
+    dashLoadMorphemeSets();
   } catch(e){ alert('Error: ' + (e.message || e)); }
 }
 

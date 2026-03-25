@@ -54,6 +54,7 @@ For each word below, provide:
 2. Morpheme breakdown: prefix (if any), base word, suffix (if any), suffix2 (if any)
 3. Syllable breakdown
 4. Grapheme-phoneme breakdown: split the word into its sound units using the ACTUAL LETTERS from the word
+5. Sound Sorter analysis: identify the most notable grapheme-sound pattern
 
 CRITICAL RULES:
 - If a word is misspelled, CORRECT IT. Use the correctly spelled version in your response.
@@ -75,6 +76,20 @@ PHONEME RULES (VERY IMPORTANT):
 - WRONG: "happy" → ["h","a","p","ee"] — this does NOT spell "happy"
 - Common graphemes: sh, ch, th, wh, ck, ng, ai, ee, oo, ar, or, er, ir, ur, ow, oi, ea, igh, oa, ay, ey, ou, ph, kn, wr, mb, pp, tt, ll, ss, ff, zz
 
+SOUND SORTER RULES:
+- Pick the most interesting or teachable grapheme-sound pattern in the word
+- "sound" must be one of these exact IDs: long-a, long-e, long-i, long-o, long-u, short-a, short-e, short-i, short-o, short-u, oo-long, oo-short, ow, oy, or, ar, er, air, ear, sh, ch, th, f, k, j, z, n, r, m, s, ng, w
+- "soundLabel" is the display name (e.g. "Long A", "SH sound", "OW sound", "AR sound")
+- "grapheme" is the specific spelling in this word (e.g. "ai", "ay", "a_e", "sh", "ch", "igh")
+- "before" is the letters BEFORE the grapheme, "after" is the letters AFTER
+- before + grapheme + after MUST exactly spell the word
+- "ssLevel": "starter" for very common spellings, "levelup" for less common, "challenge" for unusual
+- "ssType": "vowel" or "consonant"
+- "distractors": 2-3 other graphemes that make the SAME sound (wrong answer options)
+  - e.g. for "rain" (grapheme "ai", sound long-a): distractors ["ay","a_e"]
+  - e.g. for "ship" (grapheme "sh", sound sh): distractors ["ti","ci"]
+- "explain": one child-friendly sentence about this spelling pattern
+
 Return ONLY valid JSON — an array of objects with this exact structure:
 [
   {
@@ -85,7 +100,16 @@ Return ONLY valid JSON — an array of objects with this exact structure:
     "suffix1": "ness",
     "suffix2": "",
     "syllables": ["un", "hap", "pi", "ness"],
-    "phonemes": ["u", "n", "h", "a", "pp", "i", "n", "e", "ss"]
+    "phonemes": ["u", "n", "h", "a", "pp", "i", "n", "e", "ss"],
+    "sound": "short-a",
+    "soundLabel": "Short A",
+    "grapheme": "a",
+    "before": "unh",
+    "after": "ppiness",
+    "ssLevel": "starter",
+    "ssType": "vowel",
+    "distractors": ["e", "u"],
+    "explain": "The letter 'a' makes the short a sound in the middle of 'happy'."
   }
 ]
 
@@ -102,7 +126,7 @@ ${words.map((w, i) => `${i + 1}. ${w}`).join('\n')}`;
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 4096,
+        max_tokens: 8192,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
