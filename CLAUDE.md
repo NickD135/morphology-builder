@@ -719,30 +719,53 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 Integrating the NSW Department of Education Spelling Diagnostic Assessment (Sets 1–7)
 into Word Labs as a structured spelling progression system.
 
-#### 10.1 Spelling sets data (`spelling-sets.js`)
-- [ ] Create `spelling-sets.js` with all 7 sets structured by set number and section
-- [ ] Each word tagged with set, section, focus area, and difficulty tier
-- [ ] Tier mapping: Sets 1-2 → starter (foundation), Sets 3-4 → starter, Set 5 → levelup, Sets 6-7 → challenge
+#### 10.1 Spelling sets data
+- [x] ~~Created `spelling-sets.js` with NSW DoE data~~ — removed (trademarked content)
+- [x] Pivoted to teacher-input system — teachers create/import their own diagnostic sets
 
 #### 10.2 Diagnostic dashboard tab
-- [ ] New "Spelling Sets" tab on teacher dashboard
-- [ ] Sub-tabs: Set 1 | Set 2 | Set 3 | Set 4 | Set 5 | Set 6 | Set 7
-- [ ] Heatmap per set: words as columns, students as rows (like Breakdown Blitz)
-- [ ] Teacher assigns each student to a set (`spelling_set` field on student record)
-- [ ] Historical view: when student moves to next set, previous set data preserved
+- [x] New "Spelling Sets" tab on teacher dashboard
+- [x] Set sub-tabs: one per created set + "New Set" button
+- [x] Heatmap per set: words as columns, students as rows (like Breakdown Blitz)
+- [x] Multi-select student assignment with checkboxes (select all/none/save)
+- [x] AI word analysis integration — "Generate Breakdowns" button on set creation
+- [x] "Save without AI" option for quick plain-word sets
+- [x] Edit words, rename set, delete set
+- [x] "Run AI Analysis" button on existing plain-word sets
+- [x] AI-analyzed badge vs words-only badge on each set
+- [x] Historical assignments preserved (active/completed tracking)
+- [ ] Historical view UI — see completed set data alongside current set
 - [ ] Progress tracking across sets visible in student profile
 
 #### 10.3 Activity word prioritisation
-- [ ] Student's assigned spelling set words get prioritised in activities
-- [ ] Words feed into: Phoneme Splitter, Syllable Splitter, Sound Sorter, Breakdown Blitz
-- [ ] Priority system: spelling set words first, then built-in words
-- [ ] Activity records tagged with spelling set for dashboard tracking
+- [x] `getSpellingSetWords()` in wordlab-data.js loads assigned set words
+- [x] `recordSpellingAttempt()` dual-tracks progress to game + spelling set heatmap
+- [x] Words feed into: Breakdown Blitz, Phoneme Splitter, Syllable Splitter, Sound Sorter
+- [x] Spelling set words prepended (highest priority) in each game
+- [ ] Feed into Meaning Mode and Mission Mode (needs morpheme ID matching)
 
-#### 10.4 Per-activity extension toggle
+#### 10.4 Spelling Check-In (audio dictation assessment)
+- [x] New `spelling-test.html` — audio dictation spelling test
+- [x] Google Cloud TTS for clear pronunciation (Australian English, falls back to browser TTS)
+- [x] AI-generated hint/clue shown between listen button and input box
+- [x] Instant feedback: correct (green) / wrong (red + correction shown)
+- [x] Results summary with score and per-word breakdown
+- [x] Progress tracked to spelling set heatmap on dashboard
+- [x] Teacher triggers: "Start Check-In Now" / "Schedule" / "Stop Check-In"
+- [x] Landing page takeover: full-screen modal when check-in is active
+- [x] Activity card on landing page + navigation drawer
+- [ ] Pre/post test comparison view on dashboard
+- [ ] Automatic set progression (teacher moves student to harder set after post-test)
+
+#### 10.5 Per-activity extension toggle (future)
 - [ ] Replace single `extension_mode` boolean with `extension_activities` array on student record
-- [ ] Teachers can toggle extension per activity in class-setup (e.g., Sound Sorter on extension, everything else base)
+- [ ] Teachers can toggle extension per activity in class-setup
 - [ ] Each game page checks if its specific activity is in the extension list
 - [ ] Dashboard respects per-activity extension settings
+
+#### 10.6 Assimilated prefixes
+- [x] Updated `data.js` altForms: ad (+ag,an,ar), con (+col,cor,co)
+- [x] Meaning Mode and Mission Mode show altForms in small text on prefix tiles
 
 ---
 
