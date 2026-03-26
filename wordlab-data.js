@@ -1110,18 +1110,18 @@ const WordLabData = (() => {
       const [usageResult, clsResult] = await Promise.all([
         sb().from('daily_usage').select('question_count')
           .eq('student_id', session.studentId).eq('usage_date', today).maybeSingle(),
-        sb().from('classes').select('teacher_account_id')
+        sb().from('classes').select('school_id')
           .eq('id', session.classId).maybeSingle()
       ]);
       const count = (usageResult.data && usageResult.data.question_count) || 0;
       const cls = clsResult.data;
-      if (cls && cls.teacher_account_id) {
-        const { data: teacher } = await sb()
-          .from('teacher_accounts')
-          .select('tier')
-          .eq('id', cls.teacher_account_id)
+      if (cls && cls.school_id) {
+        const { data: school } = await sb()
+          .from('schools')
+          .select('plan')
+          .eq('id', cls.school_id)
           .maybeSingle();
-        if (teacher && teacher.tier !== 'free') {
+        if (school && school.plan !== 'trial' && school.plan !== 'expired') {
           return { blocked: false, count: count };
         }
       }

@@ -104,7 +104,7 @@ Deno.serve(async (req: Request) => {
       mode: 'subscription',
       allow_promotion_codes: true,
       success_url: successUrl || 'https://wordlabs.app/dashboard?upgraded=1',
-      cancel_url: cancelUrl || 'https://wordlabs.app/pricing',
+      cancel_url: cancelUrl || 'https://wordlabs.app/pricing.html',
       metadata: {
         school_id: school.id,
         plan_type: resolvedPlanType,
