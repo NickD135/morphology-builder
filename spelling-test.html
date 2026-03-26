@@ -92,6 +92,9 @@
     <div class="wordNum" id="wordNum">1</div>
     <button class="listenBtn" id="listenBtn" onclick="speakWord()">🔊 Listen</button>
     <button class="listenBtn replay hidden" id="replayBtn" onclick="speakWord()">🔊 Hear again</button>
+    <div id="hintWrap" class="hidden" style="background:#fef3c7;border:1.5px solid #fcd34d;border-radius:10px;padding:8px 14px;margin-bottom:12px;font-size:12px;font-weight:700;color:#92400e;">
+      <span style="font-size:9px;text-transform:uppercase;letter-spacing:.1em;font-weight:800;color:#b45309;">Hint:</span> <span id="hintText"></span>
+    </div>
     <div class="inputWrap">
       <input type="text" class="wordInput" id="wordInput" placeholder="Type the word..." autocomplete="off" autocapitalize="off" spellcheck="false">
     </div>
@@ -119,14 +122,25 @@
 <script src="wordlab-scientist.js"></script>
 <script src="wordlab-audio.js"></script>
 <script>
-var testWords = [];
+var testWords = [];   // Array of { word, clue, ... } objects
 var currentIndex = 0;
 var results = [];
 var currentSetId = null;
 var currentSetName = '';
 
+function getCurrentWord() {
+  var w = testWords[currentIndex];
+  if (!w) return '';
+  return typeof w === 'string' ? w : (w.word || w);
+}
+
+function getCurrentClue() {
+  var w = testWords[currentIndex];
+  if (!w || typeof w === 'string') return '';
+  return w.clue || '';
+}
+
 async function init() {
-  // Wait for login
   if (typeof WordLabData === 'undefined') { showNoTest(); return; }
   var session = WordLabData.getSession();
   if (!session) {
@@ -135,25 +149,31 @@ async function init() {
   }
 
   try {
-    // Load spelling set words
     var ssWords = await WordLabData.getSpellingSetWords();
     if (!ssWords.length) { showNoTest(); return; }
 
-    // Check if any assigned set has an active assessment
-    // For now, use all assigned spelling set words
-    var setId = ssWords[0]._spellingSetId;
-    currentSetId = setId;
-
-    // Get set name
+    // Find the set that has an active assessment (or scheduled and due)
     var sb = WordLabData._sb();
-    var { data: setData } = await sb.from('class_spelling_sets')
-      .select('name').eq('id', setId).maybeSingle();
-    currentSetName = setData ? setData.name : 'Spelling Test';
+    var setIds = [];
+    ssWords.forEach(function(w) { if (w._spellingSetId && setIds.indexOf(w._spellingSetId) === -1) setIds.push(w._spellingSetId); });
 
-    testWords = ssWords.filter(function(w) { return w._spellingSetId === setId; })
-      .map(function(w) { return typeof w === 'string' ? w : (w.word || w); });
+    var { data: sets } = await sb.from('class_spelling_sets')
+      .select('id, name, assessment_active, assessment_scheduled_at')
+      .in('id', setIds);
 
-    // Shuffle
+    var activeSet = null;
+    (sets || []).forEach(function(s) {
+      if (s.assessment_active) { activeSet = s; return; }
+      if (s.assessment_scheduled_at && new Date(s.assessment_scheduled_at) <= new Date()) { activeSet = s; }
+    });
+
+    if (!activeSet) { showNoTest(); return; }
+
+    currentSetId = activeSet.id;
+    currentSetName = activeSet.name || 'Spelling Test';
+
+    // Keep full word objects (for clue access)
+    testWords = ssWords.filter(function(w) { return w._spellingSetId === currentSetId; });
     testWords.sort(function() { return Math.random() - 0.5; });
 
     if (!testWords.length) { showNoTest(); return; }
@@ -162,7 +182,6 @@ async function init() {
     document.getElementById('testSetSub').textContent = testWords.length + ' words — listen carefully, then type each word';
     showTest();
     updateProgress();
-
   } catch(e) {
     console.warn('Spelling test init error:', e);
     showNoTest();
@@ -198,20 +217,34 @@ function updateProgress() {
   document.getElementById('nextBtn').classList.add('hidden');
   document.getElementById('listenBtn').classList.remove('hidden');
   document.getElementById('replayBtn').classList.add('hidden');
+
+  // Show hint if available
+  var clue = getCurrentClue();
+  var hintWrap = document.getElementById('hintWrap');
+  var hintText = document.getElementById('hintText');
+  if (clue && hintWrap && hintText) {
+    hintText.textContent = clue;
+    hintWrap.classList.remove('hidden');
+  } else if (hintWrap) {
+    hintWrap.classList.add('hidden');
+  }
+
   document.getElementById('wordInput').focus();
 }
 
 function speakWord() {
-  var word = testWords[currentIndex];
+  var word = getCurrentWord();
   if (!word) return;
 
-  // Use browser TTS
-  if ('speechSynthesis' in window) {
+  // Use Google Cloud TTS via speak-word edge function for clear audio
+  if (typeof WordLabData !== 'undefined' && WordLabData.speakInLanguage) {
+    WordLabData.speakInLanguage(word, 'en-AU');
+  } else if ('speechSynthesis' in window) {
+    // Fallback to browser TTS
     window.speechSynthesis.cancel();
     var utter = new SpeechSynthesisUtterance(word);
     utter.lang = 'en-AU';
     utter.rate = 0.85;
-    utter.pitch = 1;
     window.speechSynthesis.speak(utter);
   }
 
@@ -224,7 +257,7 @@ function speakWord() {
 function checkWord() {
   var input = document.getElementById('wordInput');
   var typed = (input.value || '').trim().toLowerCase();
-  var correct = testWords[currentIndex].toLowerCase();
+  var correct = getCurrentWord().toLowerCase();
 
   if (!typed) { input.focus(); return; }
 

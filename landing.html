@@ -1904,6 +1904,33 @@ async function initStudentLayout(session) {
     // ── Daily Challenges ──
     try { renderDailyChallenges(); } catch(e) { console.warn('challenges render error', e); }
 
+    // ── Check for active spelling assessment ──
+    try {
+      var ssWords = await WordLabData.getSpellingSetWords();
+      if (ssWords.length) {
+        var ssSetIds = [];
+        ssWords.forEach(function(w) { if (w._spellingSetId && ssSetIds.indexOf(w._spellingSetId) === -1) ssSetIds.push(w._spellingSetId); });
+        var { data: ssSets } = await _lsb().from('class_spelling_sets')
+          .select('id, name, assessment_active, assessment_scheduled_at')
+          .in('id', ssSetIds);
+        var activeAssess = (ssSets || []).find(function(s) {
+          return s.assessment_active || (s.assessment_scheduled_at && new Date(s.assessment_scheduled_at) <= new Date());
+        });
+        if (activeAssess) {
+          // Show assessment takeover banner
+          var banner = document.createElement('div');
+          banner.style.cssText = 'position:fixed;inset:0;z-index:9990;background:rgba(15,23,42,0.9);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);';
+          banner.innerHTML = '<div style="background:#fff;border-radius:24px;padding:40px;max-width:440px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);font-family:Lexend,sans-serif;">' +
+            '<div style="font-size:48px;margin-bottom:12px;">📝</div>' +
+            '<div style="font-size:20px;font-weight:900;color:#312e81;margin-bottom:6px;">Spelling Test Ready</div>' +
+            '<div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:20px;">Your teacher has started a spelling assessment:<br><strong style="color:#312e81;">' + (activeAssess.name || 'Spelling Test') + '</strong></div>' +
+            '<a href="spelling-test.html" style="display:block;background:#4338ca;color:#fff;border:none;border-radius:14px;padding:14px;font-size:16px;font-weight:900;cursor:pointer;font-family:Lexend,sans-serif;text-decoration:none;">Start Spelling Test →</a>' +
+            '</div>';
+          document.body.appendChild(banner);
+        }
+      }
+    } catch(e) { console.warn('Assessment check error', e); }
+
   } catch(e) {
     console.warn('Student layout init failed', e);
     if(nameEl) nameEl.textContent = session.studentName || 'Scientist';

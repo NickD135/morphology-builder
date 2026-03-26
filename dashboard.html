@@ -2720,7 +2720,7 @@ async function loadSpellingSetsData() {
   if (!currentClass) return;
   try {
     var { data: sets } = await dbSb().from('class_spelling_sets')
-      .select('id, name, set_number, words, created_at')
+      .select('id, name, set_number, words, created_at, assessment_active, assessment_scheduled_at')
       .eq('class_id', currentClass.id)
       .order('set_number', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: true });
@@ -2854,8 +2854,22 @@ function buildSpellingSetHeatmap(set) {
     '</div>' +
     '<div style="display:flex;flex-wrap:wrap;gap:4px;" id="ssStudentCheckboxes">' + studentCheckboxes + '</div>' +
     '</div>' +
+    // Assessment status
+    var isAssessActive = !!set.assessment_active;
+    var scheduledAt = set.assessment_scheduled_at ? new Date(set.assessment_scheduled_at) : null;
+    var isScheduled = scheduledAt && scheduledAt > new Date();
+    var assessBadge = isAssessActive ? '<span style="background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:9px;font-weight:800;padding:2px 8px;border-radius:6px;">📝 Assessment LIVE</span>'
+      : isScheduled ? '<span style="background:#fef3c7;border:1px solid #fcd34d;color:#92400e;font-size:9px;font-weight:800;padding:2px 8px;border-radius:6px;">⏰ Scheduled ' + scheduledAt.toLocaleDateString('en-AU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) + '</span>'
+      : '';
+
     // Action buttons row
-    '<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;">' +
+    '<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">' +
+      (isAssessActive
+        ? '<button onclick="ssStopAssessment(\'' + set.id + '\')" style="border:1.5px solid #bbf7d0;background:#f0fdf4;color:#166534;border-radius:8px;padding:5px 12px;font-size:10px;font-weight:800;cursor:pointer;font-family:\'Lexend\',sans-serif;">⏹️ Stop Assessment</button>'
+        : '<button onclick="ssStartAssessment(\'' + set.id + '\')" style="border:1.5px solid #bbf7d0;background:#f0fdf4;color:#166534;border-radius:8px;padding:5px 12px;font-size:10px;font-weight:800;cursor:pointer;font-family:\'Lexend\',sans-serif;">▶️ Start Assessment Now</button>' +
+          '<button onclick="ssScheduleAssessment(\'' + set.id + '\')" style="border:1.5px solid var(--line);background:#fff;color:var(--muted);border-radius:8px;padding:5px 12px;font-size:10px;font-weight:800;cursor:pointer;font-family:\'Lexend\',sans-serif;">⏰ Schedule</button>'
+      ) +
+      assessBadge +
       '<button onclick="ssEditWords(\'' + set.id + '\')" style="border:1.5px solid var(--line);background:#fff;color:var(--slate);border-radius:8px;padding:5px 12px;font-size:10px;font-weight:800;cursor:pointer;font-family:\'Lexend\',sans-serif;">✏️ Edit Words</button>' +
       '<button onclick="ssEditName(\'' + set.id + '\')" style="border:1.5px solid var(--line);background:#fff;color:var(--slate);border-radius:8px;padding:5px 12px;font-size:10px;font-weight:800;cursor:pointer;font-family:\'Lexend\',sans-serif;">📝 Rename</button>' +
       (!isAI ? '<button onclick="ssRunAI(\'' + set.id + '\')" style="border:1.5px solid var(--indigo);background:var(--indigo-soft);color:var(--indigo);border-radius:8px;padding:5px 12px;font-size:10px;font-weight:800;cursor:pointer;font-family:\'Lexend\',sans-serif;">🤖 Run AI Analysis</button>' : '') +
@@ -3137,6 +3151,43 @@ async function ssEditWords(setId) {
   // Save as plain strings — teacher can re-run AI after
   try {
     await dbSb().from('class_spelling_sets').update({ words: words, updated_at: new Date().toISOString() }).eq('id', setId);
+    await renderSpellingSetsTab();
+  } catch(e) { alert('Error: ' + (e.message || e)); }
+}
+
+async function ssStartAssessment(setId) {
+  try {
+    await dbSb().from('class_spelling_sets').update({
+      assessment_active: true,
+      assessment_scheduled_at: null,
+      updated_at: new Date().toISOString()
+    }).eq('id', setId);
+    await renderSpellingSetsTab();
+  } catch(e) { alert('Error: ' + (e.message || e)); }
+}
+
+async function ssStopAssessment(setId) {
+  try {
+    await dbSb().from('class_spelling_sets').update({
+      assessment_active: false,
+      assessment_scheduled_at: null,
+      updated_at: new Date().toISOString()
+    }).eq('id', setId);
+    await renderSpellingSetsTab();
+  } catch(e) { alert('Error: ' + (e.message || e)); }
+}
+
+async function ssScheduleAssessment(setId) {
+  var dateStr = prompt('Schedule assessment start (YYYY-MM-DD HH:MM):', new Date(Date.now() + 86400000).toISOString().slice(0,16).replace('T',' '));
+  if (!dateStr) return;
+  var date = new Date(dateStr.replace(' ', 'T'));
+  if (isNaN(date.getTime())) { alert('Invalid date format. Use YYYY-MM-DD HH:MM'); return; }
+  try {
+    await dbSb().from('class_spelling_sets').update({
+      assessment_active: false,
+      assessment_scheduled_at: date.toISOString(),
+      updated_at: new Date().toISOString()
+    }).eq('id', setId);
     await renderSpellingSetsTab();
   } catch(e) { alert('Error: ' + (e.message || e)); }
 }
