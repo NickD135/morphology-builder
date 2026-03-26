@@ -5,6 +5,31 @@
 
 const WLScientist = (() => {
 
+  // ── Badge pin helper ─────────────────────────────────────────
+  function _buildBadgePins(scientist) {
+    var pins = (scientist && scientist.displayBadges) || [];
+    if (!pins.length) return '';
+    // Look up badge icons
+    var allBadges = [];
+    if (typeof WordLabData !== 'undefined') {
+      allBadges = [].concat(WordLabData.ALL_BADGES || [], WordLabData.LEGENDARY_BADGES || []);
+    }
+    // Pin positions on right side of coat chest
+    var positions = [{x:48, y:70}, {x:56, y:78}, {x:48, y:86}];
+    var svgParts = [];
+    for (var i = 0; i < Math.min(pins.length, 3); i++) {
+      var badgeId = pins[i];
+      var badge = allBadges.find(function(b) { return b.id === badgeId; });
+      if (!badge) continue;
+      var px = positions[i].x, py = positions[i].y;
+      svgParts.push(
+        '<circle cx="' + px + '" cy="' + py + '" r="5.5" fill="#eef2ff" stroke="#a5b4fc" stroke-width="0.8"/>' +
+        '<text x="' + px + '" y="' + (py + 2.5) + '" text-anchor="middle" font-size="6.5" dominant-baseline="middle">' + badge.icon + '</text>'
+      );
+    }
+    return svgParts.join('');
+  }
+
   // ── SVG builder ──────────────────────────────────────────────
   function buildSVG(scientist, reaction) {
     scientist = scientist || {};
@@ -116,6 +141,8 @@ const WLScientist = (() => {
   <!-- Pocket -->
   <rect x="18" y="78" width="12" height="9" rx="3" fill="none" stroke="#e2e8f0" stroke-width="1.2"/>
   <line x1="22" y1="80" x2="22" y2="87" stroke="#a5b4fc" stroke-width="1" opacity="0.6"/>
+  <!-- Badge pins -->
+  ${_buildBadgePins(scientist)}
   <!-- Neck -->
   <rect x="33" y="54" width="14" height="10" rx="3" fill="${skin}"/>
   <!-- Head -->
@@ -549,6 +576,8 @@ const WLScientist = (() => {
       if (hdr) hdr.insertBefore(el, hdr.firstChild);
     }
 
+    // Cache dance moves for react()
+    _cachedDances = (sd.scientist && sd.scientist.dances) || {};
     _startEquippedEffect(sd);
     _injectPetStage(sd);
 
@@ -571,6 +600,7 @@ const WLScientist = (() => {
     if (typeof WordLabData === 'undefined') return;
     const sd = await WordLabData.getStudentData();
     if (!sd) return;
+    _cachedDances = (sd.scientist && sd.scientist.dances) || {};
     if (await _checkCrown()) {
       sd.scientist = Object.assign({}, sd.scientist, { head: 'donut_crown' });
     }
@@ -594,19 +624,83 @@ const WLScientist = (() => {
     _renderWidget(reaction || 'neutral');
   }
 
+  // ── Dance Moves System ───────────────────────────────────────
+  const DANCE_ANIMS = {
+    // Correct tier
+    bounce:    { keyframes: null, duration: 300 }, // default — handled inline
+    nod:       { keyframes: 'wlDanceNod', duration: 500 },
+    wink:      { keyframes: 'wlDanceWink', duration: 500 },
+    // 3-streak
+    default3:  { keyframes: null, duration: 400 },
+    spin:      { keyframes: 'wlDanceSpin', duration: 600 },
+    hop:       { keyframes: 'wlDanceHop', duration: 700 },
+    // 5-streak
+    default5:  { keyframes: null, duration: 500 },
+    backflip:  { keyframes: 'wlDanceBackflip', duration: 700 },
+    moonwalk:  { keyframes: 'wlDanceMoonwalk', duration: 900 },
+    wave:      { keyframes: 'wlDanceWave', duration: 800 },
+    // 10-streak
+    default10: { keyframes: null, duration: 600 },
+    rocket:    { keyframes: 'wlDanceRocket', duration: 1000 },
+    disco:     { keyframes: 'wlDanceDisco', duration: 1000 },
+    breakdance:{ keyframes: 'wlDanceBreakdance', duration: 900 },
+    // 15-streak
+    default15: { keyframes: null, duration: 700 },
+    fireworks: { keyframes: 'wlDanceFireworks', duration: 1000 },
+    victory:   { keyframes: 'wlDanceVictory', duration: 1000 },
+    supersaiyan:{ keyframes: 'wlDanceSuperSaiyan', duration: 1200 },
+    // 30+ legendary
+    default30: { keyframes: null, duration: 800 },
+    portal:    { keyframes: 'wlDancePortal', duration: 1200 },
+    quantum:   { keyframes: 'wlDanceQuantum', duration: 1500 },
+    supernova: { keyframes: 'wlDanceSupernova', duration: 1200 },
+  };
+
+  var _cachedDances = {};
+
+  function _getStreakTier(streak) {
+    if (streak >= 30) return 'streak30';
+    if (streak >= 15) return 'streak15';
+    if (streak >= 10) return 'streak10';
+    if (streak >= 5) return 'streak5';
+    if (streak >= 3) return 'streak3';
+    return 'correct';
+  }
+
+  function _playDance(danceId) {
+    var av = document.getElementById('wlSciAvatar');
+    if (!av) return 0;
+    var anim = danceId ? DANCE_ANIMS[danceId] : null;
+    if (!anim || !anim.keyframes) return 0;
+    av.style.animation = anim.keyframes + ' ' + anim.duration + 'ms ease';
+    setTimeout(function() { if (document.getElementById('wlSciAvatar')) document.getElementById('wlSciAvatar').style.animation = ''; }, anim.duration + 50);
+    return anim.duration;
+  }
+
+  function _previewDance(danceId) {
+    _renderWidget('excited');
+    var dur = _playDance(danceId);
+    setTimeout(function() { _renderWidget('neutral'); }, Math.max(dur + 100, 500));
+  }
+
   // ── Reactions ─────────────────────────────────────────────────
   function react(type, extras) {
     extras = extras || {};
+    var streak = extras.streak || 0;
     const avatar = () => document.getElementById('wlSciAvatar');
     _petReact(type);
 
     if (type === 'correct') {
       _renderWidget('happy');
-      // Bounce animation
-      if (avatar()) {
+      // Play equipped correct dance or default bounce
+      var correctDance = _cachedDances.correct || null;
+      var danceTime = _playDance(correctDance);
+      if (!danceTime && avatar()) {
+        // Default bounce
         avatar().style.transition = 'transform .15s';
         avatar().style.transform  = 'translateY(-6px) scale(1.08)';
         setTimeout(() => { if (avatar()) { avatar().style.transform = ''; } }, 300);
+        danceTime = 300;
       }
       // Quark pop
       if (extras.quarksEarned > 0) _showQuarkPop(extras.quarksEarned);
@@ -614,7 +708,7 @@ const WLScientist = (() => {
       if (extras.newBadges && extras.newBadges.length) {
         extras.newBadges.forEach((id, i) => setTimeout(() => _showBadgeToast(id), i * 1800));
       }
-      setTimeout(() => _renderWidget('neutral'), 700);
+      setTimeout(() => _renderWidget('neutral'), Math.max(danceTime + 100, 700));
 
     } else if (type === 'wrong') {
       _renderWidget('wrong');
@@ -625,8 +719,21 @@ const WLScientist = (() => {
       setTimeout(() => _renderWidget('neutral'), 600);
 
     } else if (type === 'streak') {
-      _renderWidget('excited');
-      setTimeout(() => _renderWidget('neutral'), 900);
+      var tier = _getStreakTier(streak);
+      var mood = streak >= 10 ? 'excited' : 'happy';
+      _renderWidget(mood);
+      var tierDance = _cachedDances[tier] || null;
+      var dur = _playDance(tierDance);
+      // Default streak animation if no dance equipped
+      if (!dur && avatar()) {
+        var defaultScale = 1.05 + Math.min(streak, 30) * 0.005;
+        var defaultY = -6 - Math.min(streak, 30) * 0.5;
+        avatar().style.transition = 'transform .2s';
+        avatar().style.transform = 'translateY(' + defaultY + 'px) scale(' + defaultScale + ')';
+        setTimeout(function() { if (avatar()) avatar().style.transform = ''; }, 400);
+        dur = 400;
+      }
+      setTimeout(() => _renderWidget('neutral'), Math.max(dur + 100, 900));
     }
   }
 
@@ -665,6 +772,23 @@ const WLScientist = (() => {
       @keyframes wlPopUp   { 0%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-40px)} }
       @keyframes wlSlideUp { 0%{opacity:0;transform:translateX(-50%) translateY(20px)} 100%{opacity:1;transform:translateX(-50%) translateY(0)} }
       @keyframes wlShake   { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+      /* Dance move keyframes */
+      @keyframes wlDanceNod { 0%,100%{transform:rotate(0) translateY(0)} 25%{transform:rotate(-4deg) translateY(-3px)} 75%{transform:rotate(4deg) translateY(-3px)} }
+      @keyframes wlDanceWink { 0%,100%{transform:scale(1) rotate(0)} 40%{transform:scale(1.12) rotate(-3deg)} 70%{transform:scale(0.95) rotate(2deg)} }
+      @keyframes wlDanceSpin { 0%{transform:rotateY(0)} 100%{transform:rotateY(360deg)} }
+      @keyframes wlDanceHop { 0%,100%{transform:translateY(0)} 20%{transform:translateY(-14px)} 40%{transform:translateY(-4px)} 60%{transform:translateY(-10px)} 80%{transform:translateY(-2px)} }
+      @keyframes wlDanceBackflip { 0%{transform:rotateX(0) scale(1)} 50%{transform:rotateX(180deg) scale(0.8)} 100%{transform:rotateX(360deg) scale(1)} }
+      @keyframes wlDanceMoonwalk { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-15px) scaleX(-1)} 50%{transform:translateX(0) scaleX(-1)} 75%{transform:translateX(15px) scaleX(1)} }
+      @keyframes wlDanceWave { 0%,100%{transform:rotate(0)} 15%{transform:rotate(-12deg)} 30%{transform:rotate(12deg)} 45%{transform:rotate(-8deg)} 60%{transform:rotate(8deg)} }
+      @keyframes wlDanceRocket { 0%{transform:translateY(0) scale(1)} 30%{transform:translateY(-35px) scale(1.2)} 50%{transform:translateY(-35px) scale(1.2)} 80%{transform:translateY(5px) scale(0.95)} 100%{transform:translateY(0) scale(1)} }
+      @keyframes wlDanceDisco { 0%{transform:scale(1);filter:hue-rotate(0deg)} 25%{transform:scale(1.1) rotate(-5deg);filter:hue-rotate(90deg)} 50%{transform:scale(1) rotate(5deg);filter:hue-rotate(180deg)} 75%{transform:scale(1.1) rotate(-3deg);filter:hue-rotate(270deg)} 100%{transform:scale(1);filter:hue-rotate(360deg)} }
+      @keyframes wlDanceBreakdance { 0%{transform:rotate(0) scale(1)} 25%{transform:rotate(90deg) scale(0.8)} 50%{transform:rotate(180deg) scale(1.1)} 75%{transform:rotate(270deg) scale(0.8)} 100%{transform:rotate(360deg) scale(1)} }
+      @keyframes wlDanceFireworks { 0%{transform:scale(1);opacity:1} 20%{transform:scale(1.5);opacity:1} 40%{transform:scale(0.7);opacity:0.8} 60%{transform:scale(1.3);opacity:1} 80%{transform:scale(0.9)} 100%{transform:scale(1)} }
+      @keyframes wlDanceVictory { 0%{transform:rotate(0) translateY(0)} 25%{transform:rotate(-15deg) translateY(-12px)} 50%{transform:rotate(15deg) translateY(-20px)} 75%{transform:rotate(-10deg) translateY(-8px)} 100%{transform:rotate(0) translateY(0)} }
+      @keyframes wlDanceSuperSaiyan { 0%{transform:scale(1);filter:brightness(1)} 20%{transform:scale(1.15);filter:brightness(1.5) saturate(1.5)} 50%{transform:scale(1.2);filter:brightness(1.8) saturate(2)} 80%{transform:scale(1.1);filter:brightness(1.3)} 100%{transform:scale(1);filter:brightness(1)} }
+      @keyframes wlDancePortal { 0%{transform:scale(1) rotate(0)} 35%{transform:scale(0) rotate(180deg)} 65%{transform:scale(0) rotate(180deg)} 100%{transform:scale(1) rotate(360deg)} }
+      @keyframes wlDanceQuantum { 0%{transform:translate(0,0) scale(1);filter:none} 15%{transform:translate(-4px,3px) scale(1.05);filter:hue-rotate(60deg)} 30%{transform:translate(4px,-3px) scale(0.95);filter:hue-rotate(120deg)} 45%{transform:translate(-3px,-4px) scale(1.1);filter:hue-rotate(200deg)} 60%{transform:translate(3px,4px) scale(0.9);filter:hue-rotate(280deg)} 75%{transform:translate(-2px,2px) scale(1.05);filter:hue-rotate(340deg)} 100%{transform:translate(0,0) scale(1);filter:none} }
+      @keyframes wlDanceSupernova { 0%{transform:scale(1);filter:brightness(1)} 20%{transform:scale(1.8);filter:brightness(2) saturate(3)} 40%{transform:scale(0.3);filter:brightness(0.5)} 60%{transform:scale(1.4);filter:brightness(1.5)} 100%{transform:scale(1);filter:brightness(1)} }
       #sciCharWrap { position:relative; z-index:20; }
       #wlSciAvatar { position:relative; z-index:20; }
       .pet-tank {
@@ -715,6 +839,6 @@ const WLScientist = (() => {
     inject();
   }
 
-  return { inject, react, refresh, buildSVG, buildPetSVG, openProfile, _restartEffects: _startEquippedEffect, _injectPetStage };
+  return { inject, react, refresh, buildSVG, buildPetSVG, openProfile, _restartEffects: _startEquippedEffect, _injectPetStage, _previewDance, DANCE_ANIMS };
 
 })();

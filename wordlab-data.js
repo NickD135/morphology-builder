@@ -141,6 +141,8 @@ const WordLabData = (() => {
     };
     if (typeof char.scientist.effect === 'undefined') char.scientist.effect = null;
     if (!char.scientist.customSlots) char.scientist.customSlots = {};
+    if (!char.scientist.displayBadges) char.scientist.displayBadges = [];
+    if (!char.scientist.dances) char.scientist.dances = {};
     if (!char.stats) char.stats = {
       totalCorrect:0, totalAnswered:0, sessions:0, activitiesPlayed:[], bestStreak:0
     };

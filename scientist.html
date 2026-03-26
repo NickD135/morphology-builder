@@ -89,6 +89,7 @@
     .shopSection{ margin-bottom:28px; }
     .shopSectionTitle{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.18em; color:var(--indigo); margin-bottom:12px; padding-bottom:8px; border-bottom:2px solid var(--line); }
     .shopGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
+    .badgePinsGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; }
     .shopItem{ background:var(--panel); border:2px solid var(--line); border-radius:16px; padding:14px; text-align:center; display:flex; flex-direction:column; gap:6px; }
     .shopItem.owned{ border-color:var(--indigo-line); background:var(--indigo-soft); }
     .shopItem.locked{ opacity:.5; }
@@ -708,6 +709,42 @@ const SHOP = {
     {id:'horse',      name:'Mini Horse',   cost:200,             icon:'🐴'},
     {id:'hamster',    name:'Hamster',      cost:100,             icon:'🐹'},
   ],
+  dances: {
+    correct: [
+      {id:'bounce',   name:'Bounce',     cost:0,   free:true, icon:'⬆️',  desc:'Simple bounce (default)'},
+      {id:'nod',      name:'Nod',        cost:30,             icon:'😄',  desc:'Happy nod side to side'},
+      {id:'wink',     name:'Wink',       cost:50,             icon:'😉',  desc:'Playful wink and scale'},
+    ],
+    streak3: [
+      {id:'default3', name:'Excited',    cost:0,   free:true, icon:'😃',  desc:'Default streak reaction'},
+      {id:'spin',     name:'Spin',       cost:60,             icon:'🌀',  desc:'Full 360 spin'},
+      {id:'hop',      name:'Hop',        cost:80,             icon:'🦘',  desc:'Happy multi-hop'},
+    ],
+    streak5: [
+      {id:'default5', name:'Streak Bounce',cost:0, free:true, icon:'✨',  desc:'Default bounce'},
+      {id:'backflip', name:'Backflip',   cost:120,            icon:'🤸',  desc:'Full rotation flip'},
+      {id:'moonwalk', name:'Moonwalk',   cost:150,            icon:'🕺',  desc:'Slide left and right'},
+      {id:'wave',     name:'Wave',       cost:100,            icon:'👋',  desc:'Excited wave'},
+    ],
+    streak10: [
+      {id:'default10',name:'Big Bounce', cost:0,   free:true, icon:'⚡',  desc:'Default big bounce'},
+      {id:'rocket',   name:'Rocket Launch',cost:200,          icon:'🚀',  desc:'Fly up and back down'},
+      {id:'disco',    name:'Disco',      cost:250,            icon:'🪩',  desc:'Flash rainbow colours'},
+      {id:'breakdance',name:'Breakdance',cost:220,            icon:'🤖',  desc:'Spin and scale'},
+    ],
+    streak15: [
+      {id:'default15',name:'Celebration',cost:0,   free:true, icon:'🎉',  desc:'Default celebration'},
+      {id:'fireworks',name:'Fireworks',  cost:400,            icon:'🎆',  desc:'Burst and scale'},
+      {id:'victory',  name:'Victory Lap',cost:350,            icon:'🏆',  desc:'Triumphant orbit'},
+      {id:'supersaiyan',name:'Super Saiyan',cost:450,         icon:'💥',  desc:'Power up glow'},
+    ],
+    streak30: [
+      {id:'default30',name:'Legendary',  cost:0,   free:true, icon:'🌈',  desc:'Default legendary'},
+      {id:'portal',   name:'Portal Warp',cost:800,  legendary:true, icon:'🌀',  desc:'Warp in and out of existence'},
+      {id:'quantum',  name:'Quantum Dance',cost:1000,legendary:true,icon:'⚛️', desc:'Glitch through dimensions'},
+      {id:'supernova',name:'Supernova',  cost:900,  legendary:true, icon:'🌟',  desc:'Explode and reform'},
+    ],
+  },
 };
 const SKIN_TONES = ['#FDBCB4','#F1C27D','#E0AC69','#C68642','#8D5524','#FFCBA4'];
 
@@ -754,7 +791,8 @@ async function render() {
       <button class="tabBtn active" data-tab="scientist" onclick="switchTab('scientist',this)">🧬 My Scientist</button>
       <button class="tabBtn" data-tab="badges" onclick="switchTab('badges',this)">🏅 Badges</button>
       <button class="tabBtn" data-tab="shop" onclick="switchTab('shop',this)">🛍️ Lab Shop</button>
-      <button class="tabBtn" data-tab="effects" onclick="switchTab('effects',this)">✨ Particle Effects</button>
+      <button class="tabBtn" data-tab="dances" onclick="switchTab('dances',this)">💃 Dances</button>
+      <button class="tabBtn" data-tab="effects" onclick="switchTab('effects',this)">✨ Effects</button>
       <button class="tabBtn" data-tab="custom" onclick="switchTab('custom',this)">🎨 Custom</button>
     </div>
 
@@ -832,6 +870,36 @@ async function render() {
 
     <!-- TAB 2: Badges -->
     <div id="tab-badges" class="tabPanel">
+      <!-- Badge Pins section -->
+      <div class="shopSection" style="margin-bottom:20px;">
+        <div class="shopSectionTitle">📌 Badge Pins <span style="font-size:10px;font-weight:700;color:var(--muted);margin-left:6px;">Pin up to 3 badges on your lab coat!</span></div>
+        <div class="badgePinsGrid">
+          ${(function() {
+            const pins = (sci.displayBadges || []);
+            const allB = [].concat(WordLabData.ALL_BADGES, WordLabData.LEGENDARY_BADGES);
+            const earnedBadges = allB.filter(b => sd.badges.includes(b.id));
+            if (earnedBadges.length === 0) return '<div style="color:var(--muted);font-size:12px;font-weight:700;padding:12px;">Earn badges to pin them on your coat!</div>';
+            return earnedBadges.map(b => {
+              const isPinned = pins.includes(b.id);
+              const canPin = pins.length < 3;
+              let btn = '';
+              if (isPinned) {
+                btn = '<button class="shopBtn equipped" onclick="unpinBadge(\'' + b.id + '\')">📌 Pinned</button>';
+              } else if (canPin) {
+                btn = '<button class="shopBtn equip" onclick="pinBadge(\'' + b.id + '\')">Pin</button>';
+              } else {
+                btn = '<span class="shopBtn cantafford">3 pinned</span>';
+              }
+              return '<div class="shopItem owned">' +
+                '<div class="shopItemIcon">' + b.icon + '</div>' +
+                '<div class="shopItemName">' + b.label + '</div>' +
+                '<div class="shopItemCost" style="font-size:9px;">Free</div>' +
+                btn +
+              '</div>';
+            }).join('');
+          })()}
+        </div>
+      </div>
       <div class="badgesGrid">
         ${WordLabData.ALL_BADGES.map(b=>{
           const earned = sd.badges.includes(b.id);
@@ -876,7 +944,22 @@ async function render() {
       </div>
     </div>
 
-    <!-- TAB 4: Particle Effects -->
+    <!-- TAB 4: Dance Moves -->
+    <div id="tab-dances" class="tabPanel">
+      <div class="shopBalance">
+        <span style="font-size:28px;">⚛️</span>
+        <div><div class="shopBalanceAmt">${sd.quarks}</div><div class="shopBalanceLbl">quarks available</div></div>
+      </div>
+      <p style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:16px;">Buy dance moves that play when you get correct answers and streaks!</p>
+      ${renderDanceSection('Correct Answer ⬆️', SHOP.dances.correct, 'correct', sd)}
+      ${renderDanceSection('3 Streak 🔥', SHOP.dances.streak3, 'streak3', sd)}
+      ${renderDanceSection('5 Streak ⚡', SHOP.dances.streak5, 'streak5', sd)}
+      ${renderDanceSection('10 Streak 💪', SHOP.dances.streak10, 'streak10', sd)}
+      ${renderDanceSection('15 Streak 🎉', SHOP.dances.streak15, 'streak15', sd)}
+      ${renderDanceSection('30+ Streak 🌟 Legendary', SHOP.dances.streak30, 'streak30', sd)}
+    </div>
+
+    <!-- TAB 5: Particle Effects -->
     <div id="tab-effects" class="tabPanel">
       <div class="shopBalance">
         <span style="font-size:28px;">⚛️</span>
@@ -958,6 +1041,38 @@ function renderShopSection(title, items, field, sd) {
         <div class="shopItemCost">${item.free?'Free':item.legendary?'Legendary':(item.cost===0&&item.requiresBadge)?'🏅 Badge':('⚛️ '+item.cost)}</div>
         ${btn}
       </div>`;
+    }).join('')}</div>
+  </div>`;
+}
+
+function renderDanceSection(title, items, tier, sd) {
+  const sci = sd.scientist || {};
+  const owned = sci.owned || [];
+  const equippedId = (sci.dances || {})[tier] || items[0].id;
+  return `<div class="shopSection">
+    <div class="shopSectionTitle">${title}</div>
+    <div class="shopGrid">${items.map(function(item) {
+      const isOwned = sd.is_teacher || item.free || owned.includes('dance_' + item.id);
+      const isEquipped = item.id === equippedId || (item.free && !((sci.dances||{})[tier]) && item === items[0]);
+      const canAfford = sd.quarks >= item.cost;
+      let btn = '';
+      if (isEquipped) {
+        btn = '<span class="shopBtn equipped">✓ Equipped</span>';
+      } else if (isOwned) {
+        btn = '<button class="shopBtn equip" onclick="shopEquipDance(\'' + tier + '\',\'' + item.id + '\')">Equip</button>';
+      } else if (canAfford) {
+        btn = '<button class="shopBtn buy" onclick="shopBuyDance(\'' + item.id + '\',' + item.cost + ',\'' + tier + '\')">⚛️ ' + item.cost + '</button>';
+      } else {
+        btn = '<span class="shopBtn cantafford">Need ' + (item.cost - sd.quarks) + ' more ⚛️</span>';
+      }
+      return '<div class="shopItem' + (isOwned ? ' owned' : '') + (item.legendary ? ' legendary' : '') + '">' +
+        '<div class="shopItemIcon">' + item.icon + '</div>' +
+        '<div class="shopItemName">' + item.name + '</div>' +
+        '<div class="shopItemCost" style="font-size:9px;color:var(--muted);">' + item.desc + '</div>' +
+        '<div class="shopItemCost">' + (item.free ? 'Free' : item.legendary ? 'Legendary' : '⚛️ ' + item.cost) + '</div>' +
+        btn +
+        '<button class="shopBtn" style="background:none;border:1px solid var(--line);color:var(--muted);font-size:9px;margin-top:2px;" onclick="previewDance(\'' + item.id + '\')">▶ Preview</button>' +
+      '</div>';
     }).join('')}</div>
   </div>`;
 }
@@ -1075,6 +1190,45 @@ async function shopEquip(field, itemId) {
   updates[field] = (itemId==='none' || itemId==='null') ? null : itemId;
   await WordLabData.saveScientist(updates);
   await render();
+}
+
+// ── Badge Pins ────────────────────────────────────────────────
+async function pinBadge(badgeId) {
+  const sci = await WordLabData.getScientist() || {};
+  const pins = (sci.displayBadges || []).slice();
+  if (pins.length >= 3 || pins.includes(badgeId)) return;
+  pins.push(badgeId);
+  await WordLabData.saveScientist({ displayBadges: pins });
+  await render();
+}
+async function unpinBadge(badgeId) {
+  const sci = await WordLabData.getScientist() || {};
+  const pins = (sci.displayBadges || []).filter(function(id) { return id !== badgeId; });
+  await WordLabData.saveScientist({ displayBadges: pins });
+  await render();
+}
+
+// ── Dance Moves ───────────────────────────────────────────────
+async function shopBuyDance(danceId, cost, tier) {
+  const result = await WordLabData.purchase('dance_' + danceId, cost);
+  if (!result.success) { alert('Not enough quarks!'); return; }
+  const sci = await WordLabData.getScientist() || {};
+  const dances = Object.assign({}, sci.dances || {});
+  dances[tier] = danceId;
+  await WordLabData.saveScientist({ dances: dances });
+  await render();
+}
+async function shopEquipDance(tier, danceId) {
+  const sci = await WordLabData.getScientist() || {};
+  const dances = Object.assign({}, sci.dances || {});
+  dances[tier] = danceId;
+  await WordLabData.saveScientist({ dances: dances });
+  await render();
+}
+function previewDance(danceId) {
+  if (typeof WLScientist !== 'undefined' && WLScientist._previewDance) {
+    WLScientist._previewDance(danceId);
+  }
 }
 
 // ── Custom shop items from Supabase ───────────────────────────
