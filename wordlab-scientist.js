@@ -764,38 +764,101 @@ const WLScientist = (() => {
   }
 
   function _playDance(danceId) {
-    var av = document.getElementById('wlSciAvatar');
-    if (!av) return 0;
     var anim = danceId ? DANCE_ANIMS[danceId] : null;
     if (!anim || !anim.keyframes) return 0;
-    av.style.animation = anim.keyframes + ' ' + anim.duration + 'ms ease';
-    setTimeout(function() { if (document.getElementById('wlSciAvatar')) document.getElementById('wlSciAvatar').style.animation = ''; }, anim.duration + 50);
+    var animCSS = anim.keyframes + ' ' + anim.duration + 'ms ease forwards';
+    // Apply to all scientist targets: header widget avatar + game stage
+    var targets = [];
+    var av = document.getElementById('wlSciAvatar');
+    if (av) targets.push(av);
+    var stage = document.getElementById('sciCharWrap');
+    if (stage) targets.push(stage);
+    if (!targets.length) return 0;
+    targets.forEach(function(el) {
+      // Override idle animation with the dance
+      el.style.animation = 'none';
+      el.offsetHeight; // force reflow
+      el.style.animation = animCSS;
+    });
+    setTimeout(function() {
+      targets.forEach(function(el) {
+        if (!el || !el.parentNode) return;
+        // Restore idle animation on the game stage, clear on widget
+        if (el.id === 'sciCharWrap') {
+          el.style.animation = '';
+        } else {
+          el.style.animation = '';
+        }
+      });
+    }, anim.duration + 50);
     return anim.duration;
+  }
+
+  // Update stage scientist SVG mood (the big one on game pages)
+  function _updateStageMood(reaction) {
+    var stage = document.getElementById('sciCharWrap');
+    if (!stage) return;
+    try {
+      if (typeof WordLabData === 'undefined') return;
+      var sd = WordLabData.getStudentData();
+      if (sd && sd.then) {
+        sd.then(function(data) {
+          if (data && stage.parentNode) {
+            stage.innerHTML = buildSVG(data.scientist || {}, reaction || 'neutral');
+          }
+        });
+      }
+    } catch(e) {}
   }
 
   function _previewDance(danceId) {
     _renderWidget('excited');
+    _updateStageMood('excited');
     var dur = _playDance(danceId);
-    setTimeout(function() { _renderWidget('neutral'); }, Math.max(dur + 100, 500));
+    setTimeout(function() {
+      _renderWidget('neutral');
+      _updateStageMood('neutral');
+    }, Math.max(dur + 100, 500));
   }
 
   // ── Reactions ─────────────────────────────────────────────────
+  function _defaultBounce(targets, yPx, scale, duration) {
+    targets.forEach(function(el) {
+      if (!el) return;
+      // Pause idle animation during bounce
+      if (el.id === 'sciCharWrap') { el.style.animation = 'none'; }
+      el.style.transition = 'transform ' + Math.round(duration * 0.5) + 'ms ease';
+      el.style.transform = 'translateY(' + yPx + 'px) scale(' + scale + ')';
+    });
+    setTimeout(function() {
+      targets.forEach(function(el) {
+        if (!el) return;
+        el.style.transform = '';
+        // Restore idle animation
+        if (el.id === 'sciCharWrap') { el.style.animation = ''; }
+      });
+    }, duration);
+  }
+
   function react(type, extras) {
     extras = extras || {};
     var streak = extras.streak || 0;
-    const avatar = () => document.getElementById('wlSciAvatar');
+    var avatar = document.getElementById('wlSciAvatar');
+    var stage = document.getElementById('sciCharWrap');
+    var allTargets = [avatar, stage].filter(Boolean);
     _petReact(type);
+
+    // Remove any leftover stage CSS classes
+    if (stage) stage.classList.remove('sci-correct', 'sci-wrong', 'sci-streak');
 
     if (type === 'correct') {
       _renderWidget('happy');
+      _updateStageMood('happy');
       // Play equipped correct dance or default bounce
       var correctDance = _cachedDances.correct || null;
       var danceTime = _playDance(correctDance);
-      if (!danceTime && avatar()) {
-        // Default bounce
-        avatar().style.transition = 'transform .15s';
-        avatar().style.transform  = 'translateY(-6px) scale(1.08)';
-        setTimeout(() => { if (avatar()) { avatar().style.transform = ''; } }, 300);
+      if (!danceTime) {
+        _defaultBounce(allTargets, -6, 1.08, 300);
         danceTime = 300;
       }
       // Quark pop
@@ -804,32 +867,36 @@ const WLScientist = (() => {
       if (extras.newBadges && extras.newBadges.length) {
         extras.newBadges.forEach((id, i) => setTimeout(() => _showBadgeToast(id), i * 1800));
       }
-      setTimeout(() => _renderWidget('neutral'), Math.max(danceTime + 100, 700));
+      setTimeout(function() { _renderWidget('neutral'); _updateStageMood('neutral'); }, Math.max(danceTime + 100, 700));
 
     } else if (type === 'wrong') {
       _renderWidget('wrong');
-      if (_widgetEl) {
-        _widgetEl.style.animation = 'wlShake .4s ease';
-        setTimeout(() => { if (_widgetEl) _widgetEl.style.animation = ''; }, 450);
-      }
-      setTimeout(() => _renderWidget('neutral'), 600);
+      _updateStageMood('wrong');
+      // Shake both widget and stage
+      var shakeTargets = [_widgetEl, stage].filter(Boolean);
+      shakeTargets.forEach(function(el) {
+        el.style.animation = 'wlShake .4s ease';
+      });
+      setTimeout(function() {
+        shakeTargets.forEach(function(el) { if (el) el.style.animation = ''; });
+      }, 450);
+      setTimeout(function() { _renderWidget('neutral'); _updateStageMood('neutral'); }, 600);
 
     } else if (type === 'streak') {
       var tier = _getStreakTier(streak);
       var mood = streak >= 10 ? 'excited' : 'happy';
       _renderWidget(mood);
+      _updateStageMood(mood);
       var tierDance = _cachedDances[tier] || null;
       var dur = _playDance(tierDance);
       // Default streak animation if no dance equipped
-      if (!dur && avatar()) {
+      if (!dur) {
         var defaultScale = 1.05 + Math.min(streak, 30) * 0.005;
         var defaultY = -6 - Math.min(streak, 30) * 0.5;
-        avatar().style.transition = 'transform .2s';
-        avatar().style.transform = 'translateY(' + defaultY + 'px) scale(' + defaultScale + ')';
-        setTimeout(function() { if (avatar()) avatar().style.transform = ''; }, 400);
+        _defaultBounce(allTargets, defaultY, defaultScale, 400);
         dur = 400;
       }
-      setTimeout(() => _renderWidget('neutral'), Math.max(dur + 100, 900));
+      setTimeout(function() { _renderWidget('neutral'); _updateStageMood('neutral'); }, Math.max(dur + 100, 900));
     }
   }
 
@@ -871,10 +938,10 @@ const WLScientist = (() => {
       /* Dance move keyframes */
       @keyframes wlDanceNod { 0%,100%{transform:rotate(0) translateY(0)} 25%{transform:rotate(-4deg) translateY(-3px)} 75%{transform:rotate(4deg) translateY(-3px)} }
       @keyframes wlDanceWink { 0%,100%{transform:scale(1) rotate(0)} 40%{transform:scale(1.12) rotate(-3deg)} 70%{transform:scale(0.95) rotate(2deg)} }
-      @keyframes wlDanceSpin { 0%{transform:rotateY(0)} 100%{transform:rotateY(360deg)} }
-      @keyframes wlDanceHop { 0%,100%{transform:translateY(0)} 20%{transform:translateY(-14px)} 40%{transform:translateY(-4px)} 60%{transform:translateY(-10px)} 80%{transform:translateY(-2px)} }
-      @keyframes wlDanceBackflip { 0%{transform:rotateX(0) scale(1)} 50%{transform:rotateX(180deg) scale(0.8)} 100%{transform:rotateX(360deg) scale(1)} }
-      @keyframes wlDanceMoonwalk { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-15px) scaleX(-1)} 50%{transform:translateX(0) scaleX(-1)} 75%{transform:translateX(15px) scaleX(1)} }
+      @keyframes wlDanceSpin { 0%{transform:rotate(0) scale(1)} 50%{transform:rotate(180deg) scale(0.85)} 100%{transform:rotate(360deg) scale(1)} }
+      @keyframes wlDanceHop { 0%,100%{transform:translateY(0)} 20%{transform:translateY(-18px) scale(1.05)} 40%{transform:translateY(-4px)} 60%{transform:translateY(-14px) scale(1.03)} 80%{transform:translateY(-2px)} }
+      @keyframes wlDanceBackflip { 0%{transform:translateY(0) scale(1)} 25%{transform:translateY(-20px) scale(1.1)} 50%{transform:translateY(-25px) rotate(180deg) scale(0.8)} 75%{transform:translateY(-10px) rotate(300deg) scale(0.9)} 100%{transform:translateY(0) rotate(360deg) scale(1)} }
+      @keyframes wlDanceMoonwalk { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-18px)} 40%{transform:translateX(-10px) translateY(-4px)} 60%{transform:translateX(18px)} 80%{transform:translateX(10px) translateY(-4px)} }
       @keyframes wlDanceWave { 0%,100%{transform:rotate(0)} 15%{transform:rotate(-12deg)} 30%{transform:rotate(12deg)} 45%{transform:rotate(-8deg)} 60%{transform:rotate(8deg)} }
       @keyframes wlDanceRocket { 0%{transform:translateY(0) scale(1)} 30%{transform:translateY(-35px) scale(1.2)} 50%{transform:translateY(-35px) scale(1.2)} 80%{transform:translateY(5px) scale(0.95)} 100%{transform:translateY(0) scale(1)} }
       @keyframes wlDanceDisco { 0%{transform:scale(1);filter:hue-rotate(0deg)} 25%{transform:scale(1.1) rotate(-5deg);filter:hue-rotate(90deg)} 50%{transform:scale(1) rotate(5deg);filter:hue-rotate(180deg)} 75%{transform:scale(1.1) rotate(-3deg);filter:hue-rotate(270deg)} 100%{transform:scale(1);filter:hue-rotate(360deg)} }
