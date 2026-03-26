@@ -1,7 +1,7 @@
 const PREFIXES = [
-  { id:"ad", form:"ad", display:"ad-", meaning:"towards; to", allowedPos:["noun","adj","verb"], altForms:["ac","af","al","ap","as","at"], examples:["<u>ad</u>here","<u>ad</u>join","<u>ad</u>mit"] },
+  { id:"ad", form:"ad", display:"ad-", meaning:"towards; to", allowedPos:["noun","adj","verb"], altForms:["ac","af","ag","al","an","ap","ar","as","at"], examples:["<u>ad</u>here","<u>ad</u>join","<u>ad</u>mit"] },
   { id:"anti", form:"anti", display:"anti-", meaning:"against", allowedPos:["noun","adj","verb"], examples:["<u>anti</u>social","<u>anti</u>clockwise","<u>anti</u>biotic"] },
-  { id:"con", form:"con", display:"con-", meaning:"with or together", allowedPos:["noun","adj","verb"], altForms:["com"], examples:["<u>con</u>nect","<u>con</u>struct","<u>con</u>tract"] },
+  { id:"con", form:"con", display:"con-", meaning:"with or together", allowedPos:["noun","adj","verb"], altForms:["com","col","cor","co"], examples:["<u>con</u>nect","<u>con</u>struct","<u>con</u>tract"] },
   { id:"contra", form:"contra", display:"contra-", meaning:"against; opposite", allowedPos:["noun","adj","verb"], examples:["<u>contra</u>dict","<u>contra</u>st","<u>contra</u>vene"] },
   { id:"de", form:"de", display:"de-", meaning:"undo; remove; down", allowedPos:["verb"], examples:["<u>de</u>activate","<u>de</u>compose","<u>de</u>rail"] },
   { id:"dis", form:"dis", display:"dis-", meaning:"not; opposite; apart", allowedPos:["noun","adj","verb"], examples:["<u>dis</u>agree","<u>dis</u>connect","<u>dis</u>like"] },
