@@ -442,6 +442,7 @@
     <button class="navTab" onclick="showSection('homophone-hunter',this)">📡 Homophones</button>
     <button class="navTab" onclick="showSection('word-spectrum',this)">🧲 Spectrum</button>
     <button class="navTab" onclick="showSection('word-refinery',this)">⚗️ Refinery</button>
+    <button class="navTab" onclick="showSection('spelling-sets',this)">📊 Spelling Sets</button>
   </div>
 
   <div id="sectionSummary"></div>
@@ -457,6 +458,7 @@
   <div id="sectionMissionMode" class="hidden"></div>
   <div id="sectionRootLab" class="hidden"></div>
   <div id="sectionWordLists" class="hidden"></div>
+  <div id="sectionSpellingSets" class="hidden"></div>
 </div>
 </div>
 
@@ -927,6 +929,7 @@ function showSection(name, btn){
     'word-spectrum':'sectionWordSpectrum',
     'word-refinery':'sectionWordRefinery',
     'word-lists':'sectionWordLists',
+    'spelling-sets':'sectionSpellingSets',
   };
 
   // Hide ALL sections before showing the new one
@@ -940,6 +943,7 @@ function showSection(name, btn){
 
   // Load word lists when that tab is selected
   if(name === 'word-lists') renderWordListsTab();
+  if(name === 'spelling-sets') renderSpellingSetsTab();
 }
 
 // ── Flags ────────────────────────────────────────────────────────
@@ -2701,6 +2705,297 @@ async function dashSaveMorphemePriority(setId){
     if(modal) modal.remove();
     dashLoadMorphemeSets();
   } catch(e){ alert('Error: ' + (e.message || e)); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SPELLING SETS
+// ═══════════════════════════════════════════════════════════════
+
+var _spellingSets = [];
+var _spellingAssignments = {};
+var _spellingProgress = {};
+var _activeSpellingSetId = null;
+
+async function loadSpellingSetsData() {
+  if (!currentClass) return;
+  try {
+    var { data: sets } = await dbSb().from('class_spelling_sets')
+      .select('id, name, set_number, words, created_at')
+      .eq('class_id', currentClass.id)
+      .order('set_number', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: true });
+    _spellingSets = sets || [];
+
+    // Load assignments
+    if (_spellingSets.length) {
+      var setIds = _spellingSets.map(function(s) { return s.id; });
+      var { data: assigns } = await dbSb().from('spelling_set_assignments')
+        .select('spelling_set_id, student_id, active, assigned_at, completed_at')
+        .in('spelling_set_id', setIds);
+      _spellingAssignments = {};
+      (assigns || []).forEach(function(a) {
+        if (!_spellingAssignments[a.spelling_set_id]) _spellingAssignments[a.spelling_set_id] = [];
+        _spellingAssignments[a.spelling_set_id].push(a);
+      });
+    }
+
+    // Load spelling progress for all students
+    var studentIds = currentClass.students.map(function(s) { return s.id; });
+    if (studentIds.length) {
+      var { data: prog } = await dbSb().from('student_progress')
+        .select('student_id, category, correct, total, total_time')
+        .eq('activity', 'spelling-set')
+        .in('student_id', studentIds);
+      _spellingProgress = {};
+      (prog || []).forEach(function(r) {
+        if (!_spellingProgress[r.student_id]) _spellingProgress[r.student_id] = {};
+        _spellingProgress[r.student_id][r.category] = {
+          correct: r.correct || 0, total: r.total || 0, totalTime: r.total_time || 0
+        };
+      });
+    }
+  } catch (e) { console.warn('loadSpellingSetsData error', e); }
+}
+
+async function renderSpellingSetsTab() {
+  var container = document.getElementById('sectionSpellingSets');
+  if (!container || !currentClass) return;
+
+  container.innerHTML = '<div class="panel"><div class="panelInner"><div class="panelTitle">Loading...</div></div></div>';
+  await loadSpellingSetsData();
+
+  // Set sub-tabs
+  var tabsHtml = _spellingSets.map(function(set, i) {
+    var isActive = _activeSpellingSetId ? set.id === _activeSpellingSetId : i === 0;
+    return '<button class="navTab ssSetTab' + (isActive ? ' active' : '') + '" onclick="showSpellingSet(\'' + set.id + '\',this)" style="font-size:11px;padding:6px 12px;">' +
+      WordLabData.escapeHtml(set.name) + ' <span style="font-size:9px;color:' + (isActive ? '#e0e7ff' : '#94a3b8') + ';">(' + (set.words || []).length + ')</span></button>';
+  }).join('');
+  tabsHtml += '<button class="navTab ssSetTab" onclick="showSpellingSetCreate()" style="font-size:11px;padding:6px 12px;border-style:dashed;">+ New Set</button>';
+
+  // Pick active set
+  var activeSet = null;
+  if (_activeSpellingSetId) {
+    activeSet = _spellingSets.find(function(s) { return s.id === _activeSpellingSetId; });
+  }
+  if (!activeSet && _spellingSets.length) {
+    activeSet = _spellingSets[0];
+    _activeSpellingSetId = activeSet.id;
+  }
+
+  var contentHtml = '';
+  if (activeSet) {
+    contentHtml = buildSpellingSetHeatmap(activeSet);
+  } else {
+    contentHtml = '<div class="panel"><div class="panelInner">' +
+      '<div style="text-align:center;padding:40px 20px;color:#94a3b8;">' +
+      '<div style="font-size:36px;margin-bottom:12px;">📊</div>' +
+      '<div style="font-size:14px;font-weight:700;margin-bottom:6px;">No spelling sets yet</div>' +
+      '<div style="font-size:12px;">Create your first spelling set to start tracking student progress.</div>' +
+      '</div></div></div>';
+  }
+
+  container.innerHTML =
+    '<div class="panel"><div class="panelInner">' +
+      '<div class="panelTitle">📊 Spelling Diagnostic Sets</div>' +
+      '<p style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:14px;">Create spelling sets, assign students, and track their progress word by word.</p>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;" id="ssSetTabs">' + tabsHtml + '</div>' +
+    '</div></div>' +
+    '<div id="ssActiveContent">' + contentHtml + '</div>' +
+    '<div id="ssCreatePanel" style="display:none;">' + buildSpellingSetCreateForm() + '</div>';
+}
+
+function showSpellingSet(setId, btn) {
+  _activeSpellingSetId = setId;
+  document.querySelectorAll('.ssSetTab').forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  document.getElementById('ssCreatePanel').style.display = 'none';
+  var set = _spellingSets.find(function(s) { return s.id === setId; });
+  if (set) {
+    document.getElementById('ssActiveContent').innerHTML = buildSpellingSetHeatmap(set);
+    document.getElementById('ssActiveContent').style.display = '';
+  }
+}
+
+function showSpellingSetCreate() {
+  document.querySelectorAll('.ssSetTab').forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById('ssActiveContent').style.display = 'none';
+  document.getElementById('ssCreatePanel').style.display = '';
+}
+
+function buildSpellingSetHeatmap(set) {
+  var words = (set.words || []).map(function(w) { return typeof w === 'string' ? w : (w.word || ''); });
+  if (!words.length) return '<div class="panel"><div class="panelInner"><div class="noFlags">No words in this set.</div></div></div>';
+
+  var assigns = _spellingAssignments[set.id] || [];
+  var activeStudentIds = assigns.filter(function(a) { return a.active; }).map(function(a) { return a.student_id; });
+  var historicalStudentIds = assigns.filter(function(a) { return !a.active; }).map(function(a) { return a.student_id; });
+
+  // Student assignment controls
+  var unassigned = currentClass.students.filter(function(s) { return activeStudentIds.indexOf(s.id) === -1; });
+  var assignHtml = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">' +
+    '<label style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Assign:</label>' +
+    '<select id="ssAssignStudent" style="padding:5px 10px;border:1.5px solid var(--line);border-radius:8px;font-size:12px;font-weight:700;">' +
+    (unassigned.length ? unassigned.map(function(s) { return '<option value="' + s.id + '">' + WordLabData.escapeHtml(s.name) + '</option>'; }).join('') : '<option value="">All assigned</option>') +
+    '</select>' +
+    '<button onclick="assignToSpellingSet(\'' + set.id + '\')" style="border:none;background:var(--indigo);color:#fff;border-radius:8px;padding:5px 14px;font-size:11px;font-weight:900;cursor:pointer;font-family:\'Lexend\',sans-serif;"' + (unassigned.length ? '' : ' disabled') + '>Assign</button>' +
+    '<button onclick="assignAllToSpellingSet(\'' + set.id + '\')" style="border:1.5px solid var(--line);background:#fff;color:var(--muted);border-radius:8px;padding:5px 14px;font-size:11px;font-weight:800;cursor:pointer;font-family:\'Lexend\',sans-serif;"' + (unassigned.length ? '' : ' disabled') + '>Assign All</button>' +
+    '<span style="margin-left:auto;font-size:10px;font-weight:700;color:var(--muted);">' + activeStudentIds.length + '/' + currentClass.students.length + ' assigned</span>' +
+    '<button onclick="deleteSpellingSet(\'' + set.id + '\')" style="border:1.5px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:8px;padding:5px 12px;font-size:10px;font-weight:800;cursor:pointer;font-family:\'Lexend\',sans-serif;">Delete Set</button>' +
+    '</div>';
+
+  // Heatmap
+  var headerCols = words.map(function(w) {
+    return '<th class="rotate"><span>' + WordLabData.escapeHtml(w) + '</span></th>';
+  }).join('');
+
+  var rows = currentClass.students.map(function(student) {
+    var isAssigned = activeStudentIds.indexOf(student.id) !== -1;
+    var isHistorical = historicalStudentIds.indexOf(student.id) !== -1;
+    var progress = _spellingProgress[student.id] || {};
+
+    if (!isAssigned && !isHistorical) {
+      return '<tr style="opacity:0.3;"><td class="student-name">' + WordLabData.escapeHtml(student.name) + '</td>' +
+        words.map(function() { return '<td><div class="cell no-data" title="Not assigned">–</div></td>'; }).join('') + '</tr>';
+    }
+
+    var rowStyle = isHistorical && !isAssigned ? 'opacity:0.6;' : '';
+    var cells = words.map(function(word) {
+      var key = 'ss:' + set.id.slice(0,8) + ':' + word.toLowerCase();
+      var result = progress[key] || null;
+      if (!result || result.total === 0) return '<td><div class="cell no-data" title="No data yet">–</div></td>';
+      var pct = WordLabData.getAccuracy(result);
+      var ac = accClass(pct);
+      var flagged = WordLabData.isIntervention(result, THRESHOLD_PCT, THRESHOLD_ATTEMPTS);
+      var tooltip = WordLabData.escapeHtml(student.name) + ' — ' + word + '\\n' + pct + '% (' + result.correct + '/' + result.total + ')' + (flagged ? '\\n⚠️ Needs support' : '');
+      return '<td><div class="cell ' + ac + '" title="' + tooltip + '"' +
+        (flagged ? ' style="outline:3px solid var(--bad);outline-offset:-2px;"' : '') +
+        '>' + (flagged ? '<span aria-hidden="true" style="font-size:9px;position:absolute;top:1px;right:2px;">⚠</span>' : '') + pct + '%</div></td>';
+    }).join('');
+
+    var badge = isHistorical && !isAssigned ? ' <span style="font-size:8px;background:#94a3b8;color:#fff;padding:1px 5px;border-radius:4px;">completed</span>' : '';
+    return '<tr style="' + rowStyle + '"><td class="student-name" onclick="showStudentProfile(\'' + student.id + '\')">' + WordLabData.escapeHtml(student.name) + badge + '</td>' + cells + '</tr>';
+  }).join('');
+
+  var legend = '<div class="legend"><span>Accuracy:</span>' +
+    '<span class="legendCell" style="background:#166534;"></span><span>100%</span>' +
+    '<span class="legendCell" style="background:#4ade80;"></span><span>80%+</span>' +
+    '<span class="legendCell" style="background:#86efac;"></span><span>70%+</span>' +
+    '<span class="legendCell" style="background:#fde047;"></span><span>50%+</span>' +
+    '<span class="legendCell" style="background:#ef4444;"></span><span>&lt;50%</span>' +
+    '<span class="legendCell" style="background:#f1f5f9;border:1px solid #cbd5e1;"></span><span>No data</span></div>';
+
+  return '<div class="panel"><div class="panelInner">' +
+    '<div class="panelTitle">' + WordLabData.escapeHtml(set.name) + ' — ' + words.length + ' words</div>' +
+    assignHtml + legend +
+    '<div class="heatmapWrap"><table class="heatmap"><thead><tr><th>Student</th>' + headerCols + '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
+    '</div></div>';
+}
+
+function buildSpellingSetCreateForm() {
+  return '<div class="panel"><div class="panelInner">' +
+    '<div class="panelTitle">+ Create New Spelling Set</div>' +
+    '<div style="display:flex;flex-direction:column;gap:12px;max-width:500px;">' +
+      '<div>' +
+        '<label style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px;">Set name</label>' +
+        '<input type="text" id="ssNewName" placeholder="e.g. Set 3 — Stage 1" style="width:100%;padding:10px 14px;border:1.5px solid var(--line);border-radius:10px;font-size:13px;font-weight:700;font-family:\'Lexend\',sans-serif;">' +
+      '</div>' +
+      '<div>' +
+        '<label style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px;">Set number (for ordering)</label>' +
+        '<input type="number" id="ssNewNumber" placeholder="e.g. 3" min="1" max="99" style="width:80px;padding:10px 14px;border:1.5px solid var(--line);border-radius:10px;font-size:13px;font-weight:700;font-family:\'Lexend\',sans-serif;">' +
+      '</div>' +
+      '<div>' +
+        '<label style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px;">Words (one per line, or comma-separated)</label>' +
+        '<textarea id="ssNewWords" rows="10" placeholder="sat\ntub\nvet\nwag\ncup\nmen" style="width:100%;padding:10px 14px;border:1.5px solid var(--line);border-radius:10px;font-size:13px;font-weight:600;font-family:\'Lexend\',sans-serif;resize:vertical;"></textarea>' +
+      '</div>' +
+      '<div id="ssCreateStatus" style="display:none;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:700;"></div>' +
+      '<button onclick="createSpellingSet()" style="border:none;background:var(--indigo);color:#fff;border-radius:12px;padding:12px;font-size:14px;font-weight:900;cursor:pointer;font-family:\'Lexend\',sans-serif;width:100%;">Create Set</button>' +
+    '</div>' +
+    '</div></div>';
+}
+
+async function createSpellingSet() {
+  var name = (document.getElementById('ssNewName').value || '').trim();
+  var number = parseInt(document.getElementById('ssNewNumber').value) || null;
+  var rawWords = (document.getElementById('ssNewWords').value || '').trim();
+  var statusEl = document.getElementById('ssCreateStatus');
+
+  if (!name) { ssShowStatus('Please enter a set name.', true); return; }
+  if (!rawWords) { ssShowStatus('Please enter some words.', true); return; }
+
+  // Parse words — support newline, comma, or space separated
+  var words = rawWords.split(/[\n,]+/).map(function(w) { return w.trim().toLowerCase(); }).filter(function(w) { return w.length > 0; });
+  words = Array.from(new Set(words)); // deduplicate
+
+  if (!words.length) { ssShowStatus('No valid words found.', true); return; }
+  if (!currentClass) { ssShowStatus('No class selected.', true); return; }
+
+  try {
+    var { data, error } = await dbSb().from('class_spelling_sets').insert({
+      class_id: currentClass.id,
+      name: name,
+      set_number: number,
+      words: words
+    }).select('id').single();
+    if (error) throw error;
+
+    ssShowStatus('"' + name + '" created with ' + words.length + ' words!', false);
+    document.getElementById('ssNewName').value = '';
+    document.getElementById('ssNewWords').value = '';
+    document.getElementById('ssNewNumber').value = '';
+    _activeSpellingSetId = data.id;
+    await renderSpellingSetsTab();
+  } catch(e) {
+    ssShowStatus('Error: ' + (e.message || e), true);
+  }
+}
+
+function ssShowStatus(msg, isError) {
+  var el = document.getElementById('ssCreateStatus');
+  if (!el) return;
+  el.style.display = '';
+  el.textContent = msg;
+  el.style.background = isError ? '#fef2f2' : '#f0fdf4';
+  el.style.border = '2px solid ' + (isError ? '#fecaca' : '#bbf7d0');
+  el.style.color = isError ? '#dc2626' : '#166534';
+}
+
+async function assignToSpellingSet(setId) {
+  var sel = document.getElementById('ssAssignStudent');
+  if (!sel || !sel.value) return;
+  var studentId = sel.value;
+  try {
+    await dbSb().from('spelling_set_assignments').upsert({
+      spelling_set_id: setId,
+      student_id: studentId,
+      active: true,
+      assigned_at: new Date().toISOString()
+    }, { onConflict: 'spelling_set_id,student_id' });
+    await renderSpellingSetsTab();
+  } catch(e) { alert('Error assigning student: ' + (e.message || e)); }
+}
+
+async function assignAllToSpellingSet(setId) {
+  if (!currentClass) return;
+  var assigns = _spellingAssignments[setId] || [];
+  var assignedIds = assigns.map(function(a) { return a.student_id; });
+  var unassigned = currentClass.students.filter(function(s) { return assignedIds.indexOf(s.id) === -1; });
+  if (!unassigned.length) return;
+  try {
+    var rows = unassigned.map(function(s) {
+      return { spelling_set_id: setId, student_id: s.id, active: true, assigned_at: new Date().toISOString() };
+    });
+    await dbSb().from('spelling_set_assignments').upsert(rows, { onConflict: 'spelling_set_id,student_id' });
+    await renderSpellingSetsTab();
+  } catch(e) { alert('Error: ' + (e.message || e)); }
+}
+
+async function deleteSpellingSet(setId) {
+  if (!confirm('Delete this spelling set? Student progress data will be preserved but the set will be removed.')) return;
+  try {
+    await dbSb().from('class_spelling_sets').delete().eq('id', setId);
+    _activeSpellingSetId = null;
+    await renderSpellingSetsTab();
+  } catch(e) { alert('Error: ' + (e.message || e)); }
 }
 
 // ── Boot ─────────────────────────────────────────────────────────
