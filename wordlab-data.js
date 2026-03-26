@@ -1404,15 +1404,29 @@ const WordLabData = (() => {
   }
 
   // Build EALD speak buttons HTML (English + home language)
-  function buildEALDSpeakButtons(wordGetter) {
+  // wordElId = ID of an element whose dataset.ealdWord holds the English word
+  function buildEALDSpeakButtons() {
     var lang = getEALDLanguage();
     if (!lang) return '';
     var langName = (EALD_LANGUAGES[lang] || lang).split(' (')[0];
-    var ttsCode = EALD_TTS_CODES[lang] || lang;
     return '<span class="eald-speak-group">' +
-      '<button class="eald-speak-btn" onclick="WordLabData.speakInLanguage((' + wordGetter + ')(),\'en-AU\')" title="Hear in English" aria-label="Hear word in English">🔊 English</button>' +
-      '<button class="eald-speak-btn eald-speak-home" onclick="(function(){var w=(' + wordGetter + ')();var el=document.getElementById(\'ealdTranslation\');var t=el&&el.dataset.translatedWord;WordLabData.speakInLanguage(t||w,\'' + ttsCode + '\');})()" title="Hear in ' + escapeHtml(langName) + '" aria-label="Hear word in ' + escapeHtml(langName) + '">🔊 ' + escapeHtml(langName) + '</button>' +
+      '<button class="eald-speak-btn" onclick="WordLabData._speakEALD(\'en\')" title="Hear in English" aria-label="Hear word in English">🔊 English</button>' +
+      '<button class="eald-speak-btn eald-speak-home" onclick="WordLabData._speakEALD(\'home\')" title="Hear in ' + escapeHtml(langName) + '" aria-label="Hear word in ' + escapeHtml(langName) + '">🔊 ' + escapeHtml(langName) + '</button>' +
       '</span>';
+  }
+
+  // Internal: speak English word or translated word
+  function _speakEALD(which) {
+    var el = document.getElementById('ealdTranslation');
+    var englishWord = el ? (el.dataset.englishWord || '') : '';
+    var translatedWord = el ? (el.dataset.translatedWord || '') : '';
+    if (which === 'en') {
+      speakInLanguage(englishWord, 'en-AU');
+    } else {
+      var lang = getEALDLanguage();
+      var ttsCode = EALD_TTS_CODES[lang] || lang;
+      speakInLanguage(translatedWord || englishWord, ttsCode);
+    }
   }
 
   // Build a reveal button + hidden translation container
@@ -1501,7 +1515,7 @@ const WordLabData = (() => {
     getCustomWords, getCustomWordPriority,
     getCustomMorphemes, getCustomMorphemePriority,
     getEALDLanguage, getEALDLanguageName, getTranslations, createEALDPill, injectEALDStyles, EALD_LANGUAGES, EALD_TTS_CODES,
-    speakInLanguage, buildEALDSpeakButtons, buildEALDRevealButton,
+    speakInLanguage, buildEALDSpeakButtons, buildEALDRevealButton, _speakEALD,
     escapeHtml
   };
 
