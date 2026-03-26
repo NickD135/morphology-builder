@@ -1385,6 +1385,47 @@ const WordLabData = (() => {
     return pill;
   }
 
+  // BCP 47 language tags for TTS
+  var EALD_TTS_CODES = {
+    bo: 'bo', ar: 'ar-SA', zh: 'zh-CN', 'zh-yue': 'zh-HK', vi: 'vi-VN',
+    hi: 'hi-IN', pa: 'pa-IN', tl: 'fil-PH', ko: 'ko-KR', sm: 'sm',
+    ja: 'ja-JP', th: 'th-TH', ne: 'ne-NP', fa: 'fa-IR', ur: 'ur-PK',
+    sw: 'sw-KE', my: 'my-MM', km: 'km-KH', dz: 'dz'
+  };
+
+  // Speak a word in a given language via browser TTS
+  function speakInLanguage(text, langCode) {
+    if (!text || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = langCode || 'en-AU';
+    u.rate = 0.85;
+    window.speechSynthesis.speak(u);
+  }
+
+  // Build EALD speak buttons HTML (English + home language)
+  function buildEALDSpeakButtons(wordGetter) {
+    var lang = getEALDLanguage();
+    if (!lang) return '';
+    var langName = (EALD_LANGUAGES[lang] || lang).split(' (')[0];
+    var ttsCode = EALD_TTS_CODES[lang] || lang;
+    return '<span class="eald-speak-group">' +
+      '<button class="eald-speak-btn" onclick="WordLabData.speakInLanguage((' + wordGetter + ')(),\'en-AU\')" title="Hear in English" aria-label="Hear word in English">🔊 English</button>' +
+      '<button class="eald-speak-btn eald-speak-home" onclick="(function(){var w=(' + wordGetter + ')();var el=document.getElementById(\'ealdTranslation\');var t=el&&el.dataset.translatedWord;WordLabData.speakInLanguage(t||w,\'' + ttsCode + '\');})()" title="Hear in ' + escapeHtml(langName) + '" aria-label="Hear word in ' + escapeHtml(langName) + '">🔊 ' + escapeHtml(langName) + '</button>' +
+      '</span>';
+  }
+
+  // Build a reveal button + hidden translation container
+  function buildEALDRevealButton() {
+    var lang = getEALDLanguage();
+    if (!lang) return '';
+    var langName = (EALD_LANGUAGES[lang] || lang).split(' (')[0];
+    return '<div class="eald-reveal-wrap" id="ealdRevealWrap">' +
+      '<button class="eald-reveal-btn" id="ealdRevealBtn" onclick="document.getElementById(\'ealdTranslationContent\').classList.toggle(\'show\');this.textContent=this.textContent.indexOf(\'Show\')!==-1?\'Hide \'+this.dataset.lang:\'Show in \'+this.dataset.lang" data-lang="' + escapeHtml(langName) + '">Show in ' + escapeHtml(langName) + '</button>' +
+      '<div class="eald-reveal-content" id="ealdTranslationContent"></div>' +
+      '</div>';
+  }
+
   // Inject shared EALD CSS into the page (called once per page)
   var _ealdCssInjected = false;
   function injectEALDStyles() {
@@ -1399,6 +1440,16 @@ const WordLabData = (() => {
       '.eald-translation-pill.eald-dark{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#c7d2fe;}',
       '@keyframes ealdFadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}',
       '.eald-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;color:#6366f1;}',
+      '.eald-speak-group{display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle;}',
+      '.eald-speak-btn{border:1.5px solid rgba(99,102,241,.25);background:rgba(99,102,241,.06);color:#4338ca;font-family:"Lexend",sans-serif;font-size:11px;font-weight:800;padding:4px 10px;border-radius:8px;cursor:pointer;transition:all .15s;}',
+      '.eald-speak-btn:hover{background:rgba(99,102,241,.15);border-color:#818cf8;}',
+      '.eald-speak-btn.eald-speak-home{background:rgba(99,102,241,.12);border-color:#a5b4fc;}',
+      '.eald-reveal-wrap{text-align:center;margin-top:8px;}',
+      '.eald-reveal-btn{border:1.5px solid rgba(99,102,241,.3);background:rgba(99,102,241,.08);color:#4338ca;font-family:"Lexend",sans-serif;font-size:12px;font-weight:800;padding:6px 16px;border-radius:10px;cursor:pointer;transition:all .15s;}',
+      '.eald-reveal-btn:hover{background:rgba(99,102,241,.18);border-color:#818cf8;transform:translateY(-1px);}',
+      '.eald-reveal-content{max-height:0;overflow:hidden;transition:max-height .3s ease,opacity .3s ease;opacity:0;}',
+      '.eald-reveal-content.show{max-height:200px;opacity:1;margin-top:6px;}',
+      '.eald-definition{font-size:13px;font-weight:700;color:#64748b;font-style:italic;margin-top:4px;}',
     ].join('\n');
     document.head.appendChild(style);
   }
@@ -1439,7 +1490,8 @@ const WordLabData = (() => {
     checkDailyLimit, incrementDailyUsage,
     getCustomWords, getCustomWordPriority,
     getCustomMorphemes, getCustomMorphemePriority,
-    getEALDLanguage, getEALDLanguageName, getTranslations, createEALDPill, injectEALDStyles, EALD_LANGUAGES,
+    getEALDLanguage, getEALDLanguageName, getTranslations, createEALDPill, injectEALDStyles, EALD_LANGUAGES, EALD_TTS_CODES,
+    speakInLanguage, buildEALDSpeakButtons, buildEALDRevealButton,
     escapeHtml
   };
 

@@ -446,7 +446,9 @@
         <div id="clueWrap"><span class="clueText" id="clueText"></span></div>
         <div style="text-align:center;margin-bottom:12px;">
           <button class="speakBtn" onclick="speakWord()">🔊 Hear the word</button>
+          <span id="ealdSpeakBtns"></span>
         </div>
+        <div id="ealdDefinition" class="eald-definition" style="text-align:center;"></div>
         <div class="wordRow" id="wordRow"></div>
         <div class="soundHint" id="soundHint"></div>
       </div>
@@ -1130,6 +1132,24 @@ function loadWord(){
 
   // Auto-speak
   setTimeout(speakWord, 400);
+
+  // EALD: speak buttons + definition on load
+  var ealdSpeakEl=document.getElementById('ealdSpeakBtns');
+  var ealdDefEl=document.getElementById('ealdDefinition');
+  var ealdEl=document.getElementById('ealdTranslation');
+  if(ealdSpeakEl) ealdSpeakEl.innerHTML='';
+  if(ealdDefEl) ealdDefEl.textContent='';
+  if(ealdEl){ealdEl.innerHTML='';ealdEl.dataset.translatedWord='';}
+  if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&currentWord){
+    WordLabData.injectEALDStyles();
+    if(ealdSpeakEl) ealdSpeakEl.innerHTML=WordLabData.buildEALDSpeakButtons('function(){return typeof currentWord!=="undefined"&&currentWord?currentWord.word:""}');
+    WordLabData.getTranslations([currentWord.word],['word']).then(function(t){
+      if(t&&t[currentWord.word]){
+        if(ealdDefEl) ealdDefEl.innerHTML='🌐 '+WordLabData.escapeHtml(t[currentWord.word]);
+        if(ealdEl) ealdEl.dataset.translatedWord=t[currentWord.word];
+      }
+    });
+  }
 }
 
 function buildWordRow(){
@@ -1347,13 +1367,17 @@ function showFeedback(type, title, explain){
   panel.style.display = 'block';
   document.getElementById('feedbackTitle').textContent = title;
   document.getElementById('feedbackExplain').textContent = explain;
-  // EALD word translation
-  var ealdEl=document.getElementById('ealdTranslation');if(ealdEl)ealdEl.innerHTML='';
-  if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&currentWord){
-    WordLabData.injectEALDStyles();
-    WordLabData.getTranslations([currentWord.word],['word']).then(function(t){
-      if(t&&t[currentWord.word]&&ealdEl){ealdEl.innerHTML='<div class="eald-translation-pill"><span class="eald-flag">🌐</span> <b>'+WordLabData.escapeHtml(currentWord.word)+'</b> = '+WordLabData.escapeHtml(t[currentWord.word])+'</div>';}
-    });
+  // EALD reveal button
+  var ealdEl=document.getElementById('ealdTranslation');if(ealdEl){
+    if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&currentWord){
+      WordLabData.injectEALDStyles();
+      ealdEl.innerHTML=WordLabData.buildEALDRevealButton();
+      var cached=ealdEl.dataset.translatedWord;
+      if(cached){
+        var contentEl=document.getElementById('ealdTranslationContent');
+        if(contentEl) contentEl.innerHTML='<div class="eald-translation-pill"><span class="eald-flag">🌐</span> <b>'+WordLabData.escapeHtml(currentWord.word)+'</b> = '+WordLabData.escapeHtml(cached)+'</div>';
+      }
+    } else { ealdEl.innerHTML=''; }
   }
 }
 

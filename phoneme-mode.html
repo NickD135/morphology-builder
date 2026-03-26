@@ -410,6 +410,8 @@
           <div class="gameArea">
             <div class="wordPrompt">Split this word into its individual sounds</div>
             <button class="speakBtn" onclick="speakWord()">🔊 <span>Hear the word</span></button>
+            <span id="ealdSpeakBtns"></span>
+            <div id="ealdDefinition" class="eald-definition"></div>
 
             <div class="chopContainer" id="chopContainer"></div>
 
@@ -632,6 +634,24 @@ function loadWord(){
   hideFeedback();
   document.getElementById('nextBtn').classList.remove('visible');
   document.getElementById('checkBtn').disabled = false;
+  // EALD: speak buttons + definition on load
+  var ealdSpeakEl=document.getElementById('ealdSpeakBtns');
+  var ealdDefEl=document.getElementById('ealdDefinition');
+  var ealdEl=document.getElementById('ealdTranslation');
+  if(ealdSpeakEl) ealdSpeakEl.innerHTML='';
+  if(ealdDefEl) ealdDefEl.textContent='';
+  if(ealdEl){ealdEl.innerHTML='';ealdEl.dataset.translatedWord='';}
+  if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&currentWord){
+    WordLabData.injectEALDStyles();
+    if(ealdSpeakEl) ealdSpeakEl.innerHTML=WordLabData.buildEALDSpeakButtons('function(){return typeof currentWord!=="undefined"&&currentWord?currentWord.word:""}');
+    // Fetch translation for definition display
+    WordLabData.getTranslations([currentWord.word],['word']).then(function(t){
+      if(t&&t[currentWord.word]){
+        if(ealdDefEl) ealdDefEl.innerHTML='🌐 '+WordLabData.escapeHtml(t[currentWord.word]);
+        if(ealdEl) ealdEl.dataset.translatedWord=t[currentWord.word];
+      }
+    });
+  }
 }
 
 // ── State operations ──────────────────────────────────────────────────────────
@@ -821,12 +841,16 @@ function checkAnswer(){
   banner.style.display = 'block';
   updateStats();
   addHistory(currentWord.word, correctStr, ok);
-  // EALD word translation
+  // EALD reveal button
   var ealdEl=document.getElementById('ealdTranslation');if(ealdEl)ealdEl.innerHTML='';
   if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&currentWord){
     WordLabData.injectEALDStyles();
+    ealdEl.innerHTML=WordLabData.buildEALDRevealButton();
     WordLabData.getTranslations([currentWord.word],['word']).then(function(t){
-      if(t&&t[currentWord.word]&&ealdEl){ealdEl.innerHTML='<div class="eald-translation-pill"><span class="eald-flag">🌐</span> <b>'+WordLabData.escapeHtml(currentWord.word)+'</b> = '+WordLabData.escapeHtml(t[currentWord.word])+'</div>';}
+      if(!t||!t[currentWord.word])return;
+      var contentEl=document.getElementById('ealdTranslationContent');
+      if(contentEl){contentEl.innerHTML='<div class="eald-translation-pill"><span class="eald-flag">🌐</span> <b>'+WordLabData.escapeHtml(currentWord.word)+'</b> = '+WordLabData.escapeHtml(t[currentWord.word])+'</div>';}
+      ealdEl.dataset.translatedWord=t[currentWord.word]||'';
     });
   }
   document.getElementById('nextBtn').classList.add('visible');

@@ -539,6 +539,8 @@
 
           <div class="gameArea">
             <div class="wordPrompt">Tap between letters to chop the syllables</div>
+            <div style="text-align:center;margin-bottom:4px;" id="ealdSpeakRow"></div>
+            <div id="ealdDefinition" class="eald-definition" style="text-align:center;"></div>
 
             <div class="chopContainer" id="chopContainer"></div>
 
@@ -825,6 +827,23 @@ function renderWord(){
   hideFeedback();
   document.getElementById('nextBtn').classList.remove('visible');
   document.getElementById('checkBtn').disabled = false;
+  // EALD: speak buttons + definition on load
+  var ealdSpeakEl=document.getElementById('ealdSpeakRow');
+  var ealdDefEl=document.getElementById('ealdDefinition');
+  var ealdEl=document.getElementById('ealdTranslation');
+  if(ealdSpeakEl) ealdSpeakEl.innerHTML='';
+  if(ealdDefEl) ealdDefEl.textContent='';
+  if(ealdEl){ealdEl.innerHTML='';ealdEl.dataset.translatedWord='';}
+  if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&currentWord){
+    WordLabData.injectEALDStyles();
+    if(ealdSpeakEl) ealdSpeakEl.innerHTML='<button class="eald-speak-btn" onclick="if(currentWord&&\'speechSynthesis\' in window){window.speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(currentWord.word);u.lang=\'en-AU\';u.rate=0.8;window.speechSynthesis.speak(u);}">🔊 Hear word</button>'+WordLabData.buildEALDSpeakButtons('function(){return typeof currentWord!=="undefined"&&currentWord?currentWord.word:""}');
+    WordLabData.getTranslations([currentWord.word],['word']).then(function(t){
+      if(t&&t[currentWord.word]){
+        if(ealdDefEl) ealdDefEl.innerHTML='🌐 '+WordLabData.escapeHtml(t[currentWord.word]);
+        if(ealdEl) ealdEl.dataset.translatedWord=t[currentWord.word];
+      }
+    });
+  }
 }
 
 function toggleChop(pos, gapEl){
@@ -929,13 +948,17 @@ function checkAnswer(){
   updateStats();
   addHistory(currentWord.word, correctSylls, isCorrect);
 
-  // EALD word translation
-  var ealdEl=document.getElementById('ealdTranslation');if(ealdEl)ealdEl.innerHTML='';
-  if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&currentWord){
-    WordLabData.injectEALDStyles();
-    WordLabData.getTranslations([currentWord.word],['word']).then(function(t){
-      if(t&&t[currentWord.word]&&ealdEl){ealdEl.innerHTML='<div class="eald-translation-pill"><span class="eald-flag">🌐</span> <b>'+WordLabData.escapeHtml(currentWord.word)+'</b> = '+WordLabData.escapeHtml(t[currentWord.word])+'</div>';}
-    });
+  // EALD reveal button
+  var ealdEl=document.getElementById('ealdTranslation');if(ealdEl){
+    if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&currentWord){
+      WordLabData.injectEALDStyles();
+      ealdEl.innerHTML=WordLabData.buildEALDRevealButton();
+      var cached=ealdEl.dataset.translatedWord;
+      if(cached){
+        var contentEl=document.getElementById('ealdTranslationContent');
+        if(contentEl) contentEl.innerHTML='<div class="eald-translation-pill"><span class="eald-flag">🌐</span> <b>'+WordLabData.escapeHtml(currentWord.word)+'</b> = '+WordLabData.escapeHtml(cached)+'</div>';
+      }
+    } else { ealdEl.innerHTML=''; }
   }
 
   document.getElementById('nextBtn').classList.add('visible');
