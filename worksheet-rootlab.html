@@ -219,6 +219,17 @@
       </div>
 
       <div class="section">
+        <div class="sectionLabel">Language Support</div>
+        <div class="toggleRow">
+          <div><div class="toggleLabel">Translate words</div><div class="toggleSub">Add home language column</div></div>
+          <label class="toggle"><input type="checkbox" id="toggleTranslate" onchange="toggleLangSelect()"><span class="toggleSlider"></span></label>
+        </div>
+        <div id="langSelectWrap" style="display:none;margin-top:6px;">
+          <select id="langSelect" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;"></select>
+        </div>
+      </div>
+
+      <div class="section">
         <div class="sectionLabel">Extras</div>
         <div class="toggleRow">
           <div><div class="toggleLabel">Cloze sentences</div><div class="toggleSub">Challenge words only — use in sentence</div></div>
@@ -299,6 +310,34 @@ function getCustomWords() {
   });
 }
 
+// ── Language support ────────────────────────────────────────
+const EALD_LANGUAGES = {ar:'Arabic',zh:'Chinese (Mandarin)',vi:'Vietnamese',hi:'Hindi',pa:'Punjabi',tl:'Filipino/Tagalog',ko:'Korean',ja:'Japanese',th:'Thai',bn:'Bengali',gu:'Gujarati',ta:'Tamil',te:'Telugu',ur:'Urdu',fa:'Farsi/Persian',my:'Burmese',km:'Khmer',id:'Indonesian',ms:'Malay',sm:'Samoan',tr:'Turkish',he:'Hebrew',sw:'Swahili',af:'Afrikaans',es:'Spanish',pt:'Portuguese',fr:'French',de:'German',it:'Italian',nl:'Dutch',pl:'Polish',ro:'Romanian',el:'Greek',uk:'Ukrainian',ru:'Russian'};
+
+(function populateLangSelect(){
+  var sel = document.getElementById('langSelect');
+  if(!sel) return;
+  sel.innerHTML = Object.entries(EALD_LANGUAGES).map(function(e){ return '<option value="'+e[0]+'">'+e[1]+'</option>'; }).join('');
+})();
+
+function toggleLangSelect(){
+  document.getElementById('langSelectWrap').style.display = document.getElementById('toggleTranslate').checked ? '' : 'none';
+}
+
+async function fetchTranslations(words, lang){
+  try {
+    var resp = await fetch(SUPABASE_URL + '/functions/v1/translate-words', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ words: words, language: lang, contexts: words.map(function(){ return 'word'; }) }),
+    });
+    var data = await resp.json();
+    if(!data.translations) return {};
+    var map = {};
+    data.translations.forEach(function(t){ map[t.word] = t.translation; });
+    return map;
+  } catch(e) { return {}; }
+}
+
 // ── Inline Root Lab word data ─────────────────────────────────
 const WORDS = [
   // STARTER
@@ -361,13 +400,15 @@ function stepCount(d) {
   el.value = Math.min(12, Math.max(3, parseInt(el.value) + d));
 }
 
-function generateWorksheet() {
+async function generateWorksheet() {
   const src      = document.querySelector('input[name=src]:checked').value;
   const level    = document.querySelector('input[name=level]:checked').value;
   const scaffold = document.querySelector('input[name=scaffold]:checked').value;
   const count    = parseInt(document.getElementById('countInput').value) || 6;
   const showCloze= document.getElementById('toggleCloze').checked;
   const showKey  = document.getElementById('toggleKey').checked;
+  const wantTranslate = document.getElementById('toggleTranslate').checked;
+  const lang    = document.getElementById('langSelect').value;
 
   let pool;
   if (src === 'custom') {
@@ -383,6 +424,18 @@ function generateWorksheet() {
     alert('No words available for the selected difficulty.');
     return;
   }
+
+  // Fetch translations if enabled
+  var translations = {};
+  var langName = '';
+  if (wantTranslate && lang) {
+    langName = EALD_LANGUAGES[lang] || lang;
+    var btn = document.querySelector('.btnGenerate');
+    if(btn) btn.textContent = '🌐 Translating...';
+    translations = await fetchTranslations(bank.map(function(w){return w.word;}), lang);
+    if(btn) btn.textContent = '⚡ Generate Worksheet';
+  }
+  const hasTranslation = wantTranslate && Object.keys(translations).length > 0;
 
   const levelLabel = src === 'custom' ? 'Custom List' : {starter:'Starter',levelup:'Level Up',challenge:'Challenge',mixed:'Mixed'}[level];
   const scaffoldLabel = {none:'All Blank',form:'Forms Given',given:'All Given'}[scaffold];
@@ -463,6 +516,7 @@ function generateWorksheet() {
         <div class="word-block-header">
           <span class="word-block-num">${i + 1}.</span>
           <span class="word-block-word">${w.word}</span>
+          ${hasTranslation && translations[w.word] ? '<span style="margin-left:auto;font-size:11px;font-weight:700;color:#c7d2fe;">🌐 ' + translations[w.word] + '</span>' : ''}
         </div>
         <div class="morph-row">${morphCells}</div>
         <div class="meaning-row">

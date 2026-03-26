@@ -197,6 +197,18 @@
         </div>
       </div>
 
+      <!-- LANGUAGE SUPPORT -->
+      <div class="section">
+        <div class="sectionLabel">Language Support</div>
+        <div class="toggleRow">
+          <div><div class="toggleLabel">Translate words</div><div class="toggleSub">Add home language column</div></div>
+          <label class="toggle"><input type="checkbox" id="toggleTranslate" onchange="toggleLangSelect()"><span class="toggleSlider"></span></label>
+        </div>
+        <div id="langSelectWrap" style="display:none;margin-top:6px;">
+          <select id="langSelect" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;"></select>
+        </div>
+      </div>
+
     </div>
     <div class="sideFooter">
       <button class="btnGenerate" onclick="generateWorksheet()">⚡ Generate Worksheet</button>
@@ -257,13 +269,42 @@ const EXT_CLINES = [
   {category:"Spreading Ideas",   leftAnchor:"share",    rightAnchor:"disseminate",  words:["share","spread","broadcast","circulate","propagate","disseminate"],  gaps:[1,2,3,4], clue:"From sharing casually to formally distributing information widely"},
 ];
 
+const SUPABASE_URL  = 'https://kdpavfrzmmzknqfpodrl.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkcGF2ZnJ6bW16a25xZnBvZHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjgzOTIsImV4cCI6MjA5MDAwNDM5Mn0.n5fe7HvXWMsM4xN_iaU_N4xLkC5xD4y9Uoer_DG-dlg';
+
+const EALD_LANGUAGES = {ar:'Arabic',zh:'Chinese (Mandarin)',vi:'Vietnamese',hi:'Hindi',pa:'Punjabi',tl:'Filipino/Tagalog',ko:'Korean',ja:'Japanese',th:'Thai',bn:'Bengali',gu:'Gujarati',ta:'Tamil',te:'Telugu',ur:'Urdu',fa:'Farsi/Persian',my:'Burmese',km:'Khmer',id:'Indonesian',ms:'Malay',sm:'Samoan',tr:'Turkish',he:'Hebrew',sw:'Swahili',af:'Afrikaans',es:'Spanish',pt:'Portuguese',fr:'French',de:'German',it:'Italian',nl:'Dutch',pl:'Polish',ro:'Romanian',el:'Greek',uk:'Ukrainian',ru:'Russian'};
+
+(function populateLangSelect(){
+  var sel = document.getElementById('langSelect');
+  if(!sel) return;
+  sel.innerHTML = Object.entries(EALD_LANGUAGES).map(function(e){ return '<option value="'+e[0]+'">'+e[1]+'</option>'; }).join('');
+})();
+
+function toggleLangSelect(){
+  document.getElementById('langSelectWrap').style.display = document.getElementById('toggleTranslate').checked ? '' : 'none';
+}
+
+async function fetchTranslations(words, lang){
+  try {
+    var resp = await fetch(SUPABASE_URL + '/functions/v1/translate-words', {
+      method:'POST', headers:{'Content-Type':'application/json', apikey:SUPABASE_ANON, Authorization:'Bearer '+SUPABASE_ANON},
+      body: JSON.stringify({words:words, targetLang:lang})
+    });
+    var data = await resp.json();
+    if(!data.translations) return {};
+    var map = {};
+    data.translations.forEach(function(t){ map[t.word] = t.translation; });
+    return map;
+  } catch(e){ console.warn('Translation fetch failed',e); return {}; }
+}
+
 function shuffle(arr) { return [...arr].sort(() => Math.random() - .5); }
 function stepCount(d) {
   const el = document.getElementById('countInput');
   el.value = Math.min(8, Math.max(2, parseInt(el.value) + d));
 }
 
-function generateWorksheet() {
+async function generateWorksheet() {
   const pool      = document.querySelector('input[name=pool]:checked').value;
   const gapsMode  = document.querySelector('input[name=gaps]:checked').value;
   const count     = parseInt(document.getElementById('countInput').value) || 4;
@@ -275,6 +316,19 @@ function generateWorksheet() {
           : pool === 'extension' ? [...EXT_CLINES]
           : [...CLINES, ...EXT_CLINES];
   const bank = shuffle(src).slice(0, count);
+
+  // EALD translations
+  const wantTranslate = document.getElementById('toggleTranslate').checked;
+  const lang = document.getElementById('langSelect').value;
+  let translations = {};
+  let langName = '';
+  if (wantTranslate) {
+    langName = EALD_LANGUAGES[lang] || lang;
+    const allWords = [];
+    bank.forEach(cline => cline.words.forEach(w => { if (!allWords.includes(w)) allWords.push(w); }));
+    translations = await fetchTranslations(allWords, lang);
+  }
+  const hasTranslation = wantTranslate && Object.keys(translations).length > 0;
 
   const poolLabel = {standard:'Standard',extension:'Extension',mixed:'Mixed'}[pool];
   const gapsLabel = {middle:'Middle Words Blank',all:'All Blank + Word Bank',nobank:'All Blank'}[gapsMode];
@@ -310,15 +364,16 @@ function generateWorksheet() {
       const isBlank       = blankIndices.has(wi);
       const tier          = tierOf(wi);
 
+      const tSub = hasTranslation && translations[word] ? `<div style="font-size:7px;font-weight:600;opacity:.75;margin-top:1px;">${translations[word]}</div>` : '';
       if (isAnchorLeft) {
-        trackHtml += `<div class="cline-word anchor-left">${word}</div>`;
+        trackHtml += `<div class="cline-word anchor-left">${word}${tSub}</div>`;
       } else if (isAnchorRight) {
-        trackHtml += `<div class="cline-word anchor-right">${word}</div>`;
+        trackHtml += `<div class="cline-word anchor-right">${word}${tSub}</div>`;
       } else if (isBlank) {
         trackHtml += `<div class="cline-word blank"><span class="cline-word-num">${wi + 1}</span></div>`;
         gapWords.push(word);
       } else {
-        trackHtml += `<div class="cline-word given">${word}</div>`;
+        trackHtml += `<div class="cline-word given">${word}${tSub}</div>`;
       }
 
       // Arrow between words
@@ -345,7 +400,7 @@ function generateWorksheet() {
       wbHtml = `
         <div class="cline-wordbank">
           <div class="cline-wordbank-label">Word bank</div>
-          ${shuffled.map(w => `<span class="cline-bankword">${w}</span>`).join('')}
+          ${shuffled.map(w => `<span class="cline-bankword">${w}${hasTranslation && translations[w] ? ' <span style="font-size:8px;font-weight:600;color:var(--indigo);opacity:.8;">(' + translations[w] + ')</span>' : ''}</span>`).join('')}
         </div>`;
     }
 
@@ -391,7 +446,7 @@ function generateWorksheet() {
         </div>
       </div>
       <div class="ws-title">Word Refinery</div>
-      <div class="ws-subtitle">${count} clines · ${poolLabel} · ${gapsLabel} · Word Labs</div>
+      <div class="ws-subtitle">${count} clines · ${poolLabel} · ${gapsLabel}${hasTranslation ? ' · ' + langName : ''} · Word Labs</div>
       <div class="ws-instructions">📋 <strong>Instructions:</strong> ${instrMap[gapsMode]}</div>
       <div class="tier-legend">
         <div class="tier-pill"><div class="tier-dot t1"></div> T1 — everyday language</div>

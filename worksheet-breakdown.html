@@ -238,6 +238,18 @@
         </div>
       </div>
 
+      <!-- LANGUAGE SUPPORT -->
+      <div class="section">
+        <div class="sectionLabel">Language Support</div>
+        <div class="toggleRow">
+          <div><div class="toggleLabel">Translate words</div><div class="toggleSub">Add home language column</div></div>
+          <label class="toggle"><input type="checkbox" id="toggleTranslate" onchange="toggleLangSelect()"><span class="toggleSlider"></span></label>
+        </div>
+        <div id="langSelectWrap" style="display:none;margin-top:6px;">
+          <select id="langSelect" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;"></select>
+        </div>
+      </div>
+
       <!-- EXTRAS -->
       <div class="section">
         <div class="sectionLabel">Extras</div>
@@ -531,6 +543,34 @@ function parseSuffixExample(exStr, suffixForm) {
 // ── Build question bank ───────────────────────────────────────
 function shuffle(arr) { return [...arr].sort(() => Math.random()-.5); }
 
+// ── Language support ────────────────────────────────────────
+const EALD_LANGUAGES = {ar:'Arabic',zh:'Chinese (Mandarin)',vi:'Vietnamese',hi:'Hindi',pa:'Punjabi',tl:'Filipino/Tagalog',ko:'Korean',ja:'Japanese',th:'Thai',bn:'Bengali',gu:'Gujarati',ta:'Tamil',te:'Telugu',ur:'Urdu',fa:'Farsi/Persian',my:'Burmese',km:'Khmer',id:'Indonesian',ms:'Malay',sm:'Samoan',tr:'Turkish',he:'Hebrew',sw:'Swahili',af:'Afrikaans',es:'Spanish',pt:'Portuguese',fr:'French',de:'German',it:'Italian',nl:'Dutch',pl:'Polish',ro:'Romanian',el:'Greek',uk:'Ukrainian',ru:'Russian'};
+
+(function populateLangSelect(){
+  var sel = document.getElementById('langSelect');
+  if(!sel) return;
+  sel.innerHTML = Object.entries(EALD_LANGUAGES).map(function(e){ return '<option value="'+e[0]+'">'+e[1]+'</option>'; }).join('');
+})();
+
+function toggleLangSelect(){
+  document.getElementById('langSelectWrap').style.display = document.getElementById('toggleTranslate').checked ? '' : 'none';
+}
+
+async function fetchTranslations(words, lang){
+  try {
+    var resp = await fetch(SUPABASE_URL + '/functions/v1/translate-words', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ words: words, language: lang, contexts: words.map(function(){ return 'word'; }) }),
+    });
+    var data = await resp.json();
+    if(!data.translations) return {};
+    var map = {};
+    data.translations.forEach(function(t){ map[t.word] = t.translation; });
+    return map;
+  } catch(e) { return {}; }
+}
+
 function buildQuestionBank(source) {
   const MORPHEMES = window.MORPHEMES || {};
   const questions = [];
@@ -602,18 +642,32 @@ function morphCell(value, type, isBlank) {
 }
 
 // ── Generate ─────────────────────────────────────────────────
-function generateWorksheet() {
+async function generateWorksheet() {
   const source   = document.querySelector('input[name=source]:checked')?.value || 'all';
   const diff     = document.querySelector('input[name=diff]:checked')?.value   || 'easy';
   const count    = Math.min(30, Math.max(5, parseInt(document.getElementById('countInput').value)||12));
   const wordbank = document.getElementById('toggleWordbank').checked;
   const showKey  = document.getElementById('toggleKey').checked;
+  const wantTranslate = document.getElementById('toggleTranslate').checked;
+  const lang    = document.getElementById('langSelect').value;
   const bank     = shuffle(buildQuestionBank(source)).slice(0, count);
 
   if (!bank.length) {
     alert('No questions could be generated. Try a different source or select more morphemes.');
     return;
   }
+
+  // Fetch translations if enabled
+  var translations = {};
+  var langName = '';
+  if (wantTranslate && lang) {
+    langName = EALD_LANGUAGES[lang] || lang;
+    var btn = document.querySelector('.btnGenerate');
+    if(btn) btn.textContent = '🌐 Translating...';
+    translations = await fetchTranslations(bank.map(function(q){return q.word;}), lang);
+    if(btn) btn.textContent = '⚡ Generate Worksheet';
+  }
+  const hasTranslation = wantTranslate && Object.keys(translations).length > 0;
 
   let rows = '';
   bank.forEach((q, i) => {
@@ -645,6 +699,7 @@ function generateWorksheet() {
           ${focusTagHtml}
           <div>${q.focusMeaning}</div>
         </td>
+        ${hasTranslation ? '<td style="padding:5px 8px;font-size:11px;font-weight:700;color:#4338ca;">' + (translations[q.word] || '') + '</td>' : ''}
         ${morphCell(q.prefix,'prefix',pb)}
         ${morphCell(q.base,  'base',  bb)}
         ${morphCell(q.suffix,'suffix',sb)}
@@ -713,6 +768,7 @@ function generateWorksheet() {
         <thead><tr>
           <th style="width:24px;">#</th>
           <th class="col-meaning">MEANING</th>
+          ${hasTranslation ? '<th style="background:#eef2ff;color:#4338ca;width:14%;">🌐 ' + langName + '</th>' : ''}
           <th class="col-prefix">PREFIX</th>
           <th class="col-base">BASE</th>
           <th class="col-suffix">SUFFIX</th>
