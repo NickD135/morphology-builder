@@ -693,6 +693,52 @@ const EXT_SOUND_WORDS = [
   {word:"tough",     sound:"uff-sound",soundLabel:"UF sound",  grapheme:"ough", before:"t",    after:"",       clue:"strong and resilient",               level:"challenge", type:"vowel",     distractors:["uff","uf","u"],      explain:"'ough' says /uff/ in 'tough' — same as in 'rough' and 'enough'."},
   {word:"cough",     sound:"off-sound",soundLabel:"OFF sound", grapheme:"ough", before:"c",    after:"",       clue:"a sudden noisy clearing of the throat",level:"challenge",type:"vowel",    distractors:["off","of","o"],      explain:"'ough' says /off/ in 'cough' — one of its rarest sounds."},
   {word:"bough",     sound:"ow-sound", soundLabel:"OW sound",  grapheme:"ough", before:"b",    after:"",       clue:"a large branch of a tree",           level:"challenge", type:"vowel",     distractors:["ow","ou","aw"],      explain:"'ough' says /ow/ in 'bough' — same as in 'plough'."},
+
+  // ── French-origin ch = sh (expanded) ──────────────────────────────────
+  {word:"chiffon", sound:"sh-sound", soundLabel:"SH sound (French ch)", grapheme:"ch", before:"", after:"iffon", clue:"a light, sheer fabric", level:"challenge", type:"consonant", distractors:["ch","c","sh"], explain:"In French-origin words, ch often makes a /sh/ sound instead of /ch/."},
+  {word:"chassis", sound:"sh-sound", soundLabel:"SH sound (French ch)", grapheme:"ch", before:"", after:"assis", clue:"the frame of a vehicle", level:"challenge", type:"consonant", distractors:["ch","c","sh"], explain:"In French-origin words, ch often makes a /sh/ sound instead of /ch/."},
+  {word:"chevron", sound:"sh-sound", soundLabel:"SH sound (French ch)", grapheme:"ch", before:"", after:"evron", clue:"a V-shaped pattern or symbol", level:"challenge", type:"consonant", distractors:["ch","c","sh"], explain:"In French-origin words, ch often makes a /sh/ sound instead of /ch/."},
+  {word:"chaise", sound:"sh-sound", soundLabel:"SH sound (French ch)", grapheme:"ch", before:"", after:"aise", clue:"a type of long reclining chair", level:"challenge", type:"consonant", distractors:["ch","c","sh"], explain:"In French-origin words, ch often makes a /sh/ sound instead of /ch/."},
+  {word:"chandelier", sound:"sh-sound", soundLabel:"SH sound (French ch)", grapheme:"ch", before:"", after:"andelier", clue:"a decorative hanging light fitting", level:"challenge", type:"consonant", distractors:["ch","c","sh"], explain:"In French-origin words, ch often makes a /sh/ sound instead of /ch/."},
+
+  // ── French -que = /k/ ─────────────────────────────────────────────────
+  {word:"boutique", sound:"k-sound", soundLabel:"K sound (French -que)", grapheme:"que", before:"bouti", after:"", clue:"a small fashionable shop", level:"levelup", type:"consonant", distractors:["ck","c","k"], explain:"In French-origin words, -que at the end makes a /k/ sound."},
+  {word:"technique", sound:"k-sound", soundLabel:"K sound (French -que)", grapheme:"que", before:"techni", after:"", clue:"a skilled method of doing something", level:"levelup", type:"consonant", distractors:["ck","c","k"], explain:"In French-origin words, -que at the end makes a /k/ sound."},
+  {word:"mystique", sound:"k-sound", soundLabel:"K sound (French -que)", grapheme:"que", before:"mysti", after:"", clue:"an air of mystery around someone", level:"challenge", type:"consonant", distractors:["ck","c","k"], explain:"In French-origin words, -que at the end makes a /k/ sound."},
+
+  // ── French -ette endings ──────────────────────────────────────────────
+  {word:"cassette", sound:"et-sound", soundLabel:"Diminutive -ette ending", grapheme:"ette", before:"cass", after:"", clue:"a small plastic case holding tape", level:"levelup", type:"vowel", distractors:["et","it","ate"], explain:"French -ette is a diminutive suffix pronounced /et/."},
+  {word:"gazette", sound:"et-sound", soundLabel:"Diminutive -ette ending", grapheme:"ette", before:"gaz", after:"", clue:"an official newspaper or journal", level:"challenge", type:"vowel", distractors:["et","it","ate"], explain:"French -ette is a diminutive suffix pronounced /et/."},
+  {word:"etiquette", sound:"et-sound", soundLabel:"Diminutive -ette ending", grapheme:"ette", before:"etiqu", after:"", clue:"rules for polite and proper behaviour", level:"challenge", type:"vowel", distractors:["et","it","ate"], explain:"French -ette is a diminutive suffix pronounced /et/."},
+  {word:"brunette", sound:"et-sound", soundLabel:"Diminutive -ette ending", grapheme:"ette", before:"brun", after:"", clue:"a person with dark brown hair", level:"levelup", type:"vowel", distractors:["et","it","ate"], explain:"French -ette is a diminutive suffix pronounced /et/."},
+
+  // ── French silent final consonants ────────────────────────────────────
+  {word:"debut", sound:"silent-t", soundLabel:"Silent final consonant", grapheme:"t", before:"debu", after:"", clue:"a first public performance or appearance", level:"levelup", type:"consonant", distractors:["t","d","ed"], explain:"In French-origin words, the final consonant is often silent."},
+  {word:"croquet", sound:"silent-t", soundLabel:"Silent final consonant", grapheme:"t", before:"croque", after:"", clue:"an outdoor game with mallets and hoops", level:"challenge", type:"consonant", distractors:["t","d","ed"], explain:"In French-origin words, the final consonant is often silent."},
+  {word:"beret", sound:"silent-t", soundLabel:"Silent final consonant", grapheme:"t", before:"bere", after:"", clue:"a soft, flat, round hat", level:"levelup", type:"consonant", distractors:["t","d","ed"], explain:"In French-origin words, the final consonant is often silent."},
+
+  // ── French gn = /n/ ───────────────────────────────────────────────────
+  {word:"cologne", sound:"n-sound", soundLabel:"N sound (French gn)", grapheme:"gn", before:"colo", after:"e", clue:"a lightly scented perfume water", level:"levelup", type:"consonant", distractors:["gn","ng","kn"], explain:"In French-origin words, gn makes a /n/ sound."},
+  {word:"campaign", sound:"n-sound", soundLabel:"N sound (French gn)", grapheme:"gn", before:"campai", after:"", clue:"an organised plan to achieve a goal", level:"levelup", type:"consonant", distractors:["gn","ng","kn"], explain:"In French-origin words, gn makes a /n/ sound."},
+  {word:"lasagne", sound:"n-sound", soundLabel:"N sound (French gn)", grapheme:"gn", before:"lasa", after:"e", clue:"a baked Italian pasta dish with layers", level:"levelup", type:"consonant", distractors:["gn","ng","kn"], explain:"In French-origin words, gn makes a /n/ sound."},
+  {word:"vignette", sound:"n-sound", soundLabel:"N sound (French gn)", grapheme:"gn", before:"vi", after:"ette", clue:"a short descriptive scene or sketch", level:"challenge", type:"consonant", distractors:["gn","ng","kn"], explain:"In French-origin words, gn makes a /n/ sound."},
+  {word:"cognac", sound:"n-sound", soundLabel:"N sound (French gn)", grapheme:"gn", before:"co", after:"ac", clue:"a type of French brandy", level:"challenge", type:"consonant", distractors:["gn","ng","kn"], explain:"In French-origin words, gn makes a /n/ sound."},
+
+  // ── French -oir/-oire endings ─────────────────────────────────────────
+  {word:"reservoir", sound:"wah-sound", soundLabel:"French -oir ending", grapheme:"oir", before:"reserv", after:"", clue:"a large lake that stores water", level:"challenge", type:"vowel", distractors:["or","oir","oar"], explain:"French -oir endings are pronounced /wah/ or /wor/."},
+  {word:"memoir", sound:"wah-sound", soundLabel:"French -oir ending", grapheme:"oir", before:"mem", after:"", clue:"a written account of one's own life", level:"challenge", type:"vowel", distractors:["or","oir","oar"], explain:"French -oir endings are pronounced /wah/ or /wor/."},
+  {word:"repertoire", sound:"wah-sound", soundLabel:"French -oire ending", grapheme:"oire", before:"repert", after:"", clue:"all the skills or works someone knows", level:"challenge", type:"vowel", distractors:["or","oire","oar"], explain:"French -oire endings are pronounced /wah/ or /wor/."},
+  {word:"boudoir", sound:"wah-sound", soundLabel:"French -oir ending", grapheme:"oir", before:"boud", after:"", clue:"a woman's private dressing room", level:"challenge", type:"vowel", distractors:["or","oir","oar"], explain:"French -oir endings are pronounced /wah/ or /wor/."},
+
+  // ── French eau = /oh/ ─────────────────────────────────────────────────
+  {word:"tableau", sound:"oh-sound", soundLabel:"EAU = OH sound", grapheme:"eau", before:"tabl", after:"", clue:"a dramatic scene or still display", level:"challenge", type:"vowel", distractors:["ow","oe","o"], explain:"In French-origin words, eau makes an /oh/ sound."},
+  {word:"trousseau", sound:"oh-sound", soundLabel:"EAU = OH sound", grapheme:"eau", before:"trouss", after:"", clue:"clothing collected by a bride", level:"challenge", type:"vowel", distractors:["ow","oe","o"], explain:"In French-origin words, eau makes an /oh/ sound."},
+
+  // ── French g/ge = /zh/ ────────────────────────────────────────────────
+  {word:"rouge", sound:"zh-sound", soundLabel:"ZH sound (French ge)", grapheme:"ge", before:"rou", after:"", clue:"a red powder used as makeup", level:"challenge", type:"consonant", distractors:["g","j","ge"], explain:"In French-origin words, ge at the end makes a /zh/ sound."},
+  {word:"montage", sound:"zh-sound", soundLabel:"ZH sound (French ge)", grapheme:"ge", before:"monta", after:"", clue:"a collection of images put together", level:"challenge", type:"consonant", distractors:["g","j","ge"], explain:"In French-origin words, ge at the end makes a /zh/ sound."},
+  {word:"collage", sound:"zh-sound", soundLabel:"ZH sound (French ge)", grapheme:"ge", before:"colla", after:"", clue:"artwork made by sticking pieces together", level:"levelup", type:"consonant", distractors:["g","j","ge"], explain:"In French-origin words, ge at the end makes a /zh/ sound."},
+  {word:"massage", sound:"zh-sound", soundLabel:"ZH sound (French ge)", grapheme:"ge", before:"massa", after:"", clue:"rubbing the body to relax muscles", level:"levelup", type:"consonant", distractors:["g","j","ge"], explain:"In French-origin words, ge at the end makes a /zh/ sound."},
 ];
 
 // ── EXTRA BASES (dual-role combining forms for the morpheme builder) ──────────
