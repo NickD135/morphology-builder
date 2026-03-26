@@ -51,6 +51,18 @@
     .loginBtn:hover{ background:#3730a3; }
     .loginError{ color:var(--bad); font-size:13px; font-weight:800; margin-top:8px; display:none; }
 
+    /* Top-level view tabs (Game Data / Spelling Sets) */
+    .viewTabs{
+      display:flex; gap:4px; margin-bottom:12px;
+    }
+    .viewTab{
+      border:none; background:transparent; border-radius:14px 14px 0 0; padding:10px 20px;
+      font-weight:900; font-size:13px; cursor:pointer; color:var(--muted); transition:all .15s;
+      border-bottom:3px solid transparent; font-family:'Lexend',sans-serif;
+    }
+    .viewTab:hover{ color:var(--indigo); background:rgba(99,102,241,.04); }
+    .viewTab.active{ color:var(--indigo); border-bottom-color:var(--indigo); background:var(--indigo-soft); }
+
     /* Dashboard nav tabs — compact wrapped grid */
     .navTabs{
       display:flex; flex-wrap:wrap; gap:4px; margin-bottom:24px; padding:6px;
@@ -429,36 +441,45 @@
 
   <div class="summaryRow" id="summaryRow"></div>
 
-  <div class="navTabs" id="navTabs" role="navigation" aria-label="Activity tabs">
-    <button class="navTab active" onclick="showSection('summary',this)">📋 Summary</button>
-    <button class="navTab" onclick="showSection('flags',this)">⚠️ Flags</button>
-    <button class="navTab" onclick="showSection('sound-sorter',this)">🔤 Sound Sorter</button>
-    <button class="navTab" onclick="showSection('phoneme-splitter',this)">🔊 Phonemes</button>
-    <button class="navTab" onclick="showSection('syllable-splitter',this)">✂️ Syllables</button>
-    <button class="navTab" onclick="showSection('breakdown-blitz',this)">🧩 Breakdown</button>
-    <button class="navTab" onclick="showSection('meaning-mode',this)">🧠 Meaning</button>
-    <button class="navTab" onclick="showSection('mission-mode',this)">⚡ Mission</button>
-    <button class="navTab" onclick="showSection('root-lab',this)">🧫 Root Lab</button>
-    <button class="navTab" onclick="showSection('homophone-hunter',this)">📡 Homophones</button>
-    <button class="navTab" onclick="showSection('word-spectrum',this)">🧲 Spectrum</button>
-    <button class="navTab" onclick="showSection('word-refinery',this)">⚗️ Refinery</button>
-    <button class="navTab" onclick="showSection('spelling-sets',this)">📊 Spelling Sets</button>
+  <div class="viewTabs" role="tablist" aria-label="Dashboard views">
+    <button class="viewTab active" onclick="switchView('games',this)" role="tab" aria-selected="true">Game Data</button>
+    <button class="viewTab" onclick="switchView('spelling',this)" role="tab" aria-selected="false">Class Spelling Sets</button>
   </div>
 
-  <div id="sectionSummary"></div>
-  <div id="sectionFlags" class="hidden"></div>
-  <div id="sectionHomophoneHunter" class="hidden"></div>
-  <div id="sectionWordSpectrum" class="hidden"></div>
-  <div id="sectionWordRefinery" class="hidden"></div>
-  <div id="sectionSoundSorter" class="hidden"></div>
-  <div id="sectionPhonemeSplitter" class="hidden"></div>
-  <div id="sectionSyllableSplitter" class="hidden"></div>
-  <div id="sectionBreakdownBlitz" class="hidden"></div>
-  <div id="sectionMeaningMode" class="hidden"></div>
-  <div id="sectionMissionMode" class="hidden"></div>
-  <div id="sectionRootLab" class="hidden"></div>
-  <div id="sectionWordLists" class="hidden"></div>
-  <div id="sectionSpellingSets" class="hidden"></div>
+  <div id="viewGames">
+    <div class="navTabs" id="navTabs" role="navigation" aria-label="Activity tabs">
+      <button class="navTab active" onclick="showSection('summary',this)">📋 Summary</button>
+      <button class="navTab" onclick="showSection('flags',this)">⚠️ Flags</button>
+      <button class="navTab" onclick="showSection('sound-sorter',this)">🔤 Sound Sorter</button>
+      <button class="navTab" onclick="showSection('phoneme-splitter',this)">🔊 Phonemes</button>
+      <button class="navTab" onclick="showSection('syllable-splitter',this)">✂️ Syllables</button>
+      <button class="navTab" onclick="showSection('breakdown-blitz',this)">🧩 Breakdown</button>
+      <button class="navTab" onclick="showSection('meaning-mode',this)">🧠 Meaning</button>
+      <button class="navTab" onclick="showSection('mission-mode',this)">⚡ Mission</button>
+      <button class="navTab" onclick="showSection('root-lab',this)">🧫 Root Lab</button>
+      <button class="navTab" onclick="showSection('homophone-hunter',this)">📡 Homophones</button>
+      <button class="navTab" onclick="showSection('word-spectrum',this)">🧲 Spectrum</button>
+      <button class="navTab" onclick="showSection('word-refinery',this)">⚗️ Refinery</button>
+    </div>
+
+    <div id="sectionSummary"></div>
+    <div id="sectionFlags" class="hidden"></div>
+    <div id="sectionHomophoneHunter" class="hidden"></div>
+    <div id="sectionWordSpectrum" class="hidden"></div>
+    <div id="sectionWordRefinery" class="hidden"></div>
+    <div id="sectionSoundSorter" class="hidden"></div>
+    <div id="sectionPhonemeSplitter" class="hidden"></div>
+    <div id="sectionSyllableSplitter" class="hidden"></div>
+    <div id="sectionBreakdownBlitz" class="hidden"></div>
+    <div id="sectionMeaningMode" class="hidden"></div>
+    <div id="sectionMissionMode" class="hidden"></div>
+    <div id="sectionRootLab" class="hidden"></div>
+    <div id="sectionWordLists" class="hidden"></div>
+  </div>
+
+  <div id="viewSpelling" class="hidden">
+    <div id="sectionSpellingSets"></div>
+  </div>
 </div>
 </div>
 
@@ -916,7 +937,21 @@ async function renderDashboard(){
   renderHeatmap('word-refinery');
 }
 
+function switchView(view, btn) {
+  document.querySelectorAll('.viewTab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
+  btn.classList.add('active');
+  btn.setAttribute('aria-selected','true');
+
+  document.getElementById('viewGames').classList.toggle('hidden', view !== 'games');
+  document.getElementById('viewSpelling').classList.toggle('hidden', view !== 'spelling');
+
+  if (view === 'spelling') renderSpellingSetsTab();
+}
+
 function showWordLists() {
+  // Ensure we're on the Game Data view
+  var gamesBtn = document.querySelector('.viewTab');
+  if (gamesBtn) switchView('games', gamesBtn);
   document.querySelectorAll('.navTab').forEach(t => t.classList.remove('active'));
   showSection('word-lists', null);
 }
@@ -941,7 +976,6 @@ function showSection(name, btn){
     'word-spectrum':'sectionWordSpectrum',
     'word-refinery':'sectionWordRefinery',
     'word-lists':'sectionWordLists',
-    'spelling-sets':'sectionSpellingSets',
   };
 
   // Hide ALL sections before showing the new one
@@ -955,7 +989,6 @@ function showSection(name, btn){
 
   // Load word lists when that tab is selected
   if(name === 'word-lists') renderWordListsTab();
-  if(name === 'spelling-sets') renderSpellingSetsTab();
 }
 
 // ── Flags ────────────────────────────────────────────────────────
@@ -1862,8 +1895,8 @@ function renderWordListsTab(){
       </div>
 
       <div id="wlWordsPanel">
-      <div class="panelTitle">📝 Custom Word Lists</div>
-      <p style="font-size:13px;color:var(--muted);font-weight:700;margin:0 0 16px;">Create word lists that appear in student activities. Choose which games each list applies to, and optionally assign to specific students for differentiation.</p>
+      <div class="panelTitle">📝 Custom Word Lists — Practice Only</div>
+      <p style="font-size:13px;color:var(--muted);font-weight:700;margin:0 0 16px;">Create word lists that feed into student game activities for extra practice. These words are <strong>not tracked on the dashboard</strong> — no data is collected. To track student progress on specific words, use <a href="#" onclick="switchView('spelling',document.querySelectorAll('.viewTab')[1]);return false;" style="color:var(--indigo);font-weight:800;">Class Spelling Sets</a> instead.</p>
 
       <div id="wlExistingLists"><div style="text-align:center;color:var(--muted);font-weight:700;font-size:13px;padding:20px;">Loading word lists...</div></div>
 
