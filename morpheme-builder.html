@@ -1873,6 +1873,14 @@ document.addEventListener("DOMContentLoaded", () => {
   let GLOBAL_VIABLE_READY = false;
   let GLOBAL_VIABLE = { prefixes: new Set(), bases: new Set(), suffixes: new Set() };
 
+  // Pre-computed valid word index: maps morpheme UIDs to partner sets
+  // Built during background scan so viability checks become O(1) lookups
+  let VALID_COMBOS = [];       // Array of {p, b, s1, s2} uid tuples for all valid words
+  let VALID_BY_PREFIX = {};    // prefix_uid → Set of base_uids it works with
+  let VALID_BY_BASE = {};      // base_uid → Set of {p, s1, s2} combos
+  let VALID_BY_SUFFIX = {};    // suffix_uid → true (exists in any valid combo)
+  let VALID_INDEX_READY = false;
+
   // Per-selection viability (computed on demand, fast)
   let currentViableSets = {
     viablePrefixes: new Set(ALL_PREFIXES.map(p => p.uid)),
@@ -1887,7 +1895,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const DICT_CACHE      = new Map();
   let   lastLookupWord  = "";
 
-  function clearComputedCaches(){ viabilityCache.clear(); wordCache.clear(); }
+  function clearComputedCaches(){
+    viabilityCache.clear(); wordCache.clear();
+    // Don't clear the valid combos index — it survives cache clears
+    // and only gets rebuilt on full background scan
+  }
 
   // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
@@ -2514,37 +2526,67 @@ document.addEventListener("DOMContentLoaded", () => {
     return result;
   }
 
-  // Background scan — deferred and chunked so it never blocks the UI
+  // Background scan — builds a complete index of valid morpheme combinations
+  // so all viability checks become fast lookups instead of O(n^4) sweeps
   async function computeGlobalViableSetsChunked(){
     GLOBAL_VIABLE_READY = false;
+    VALID_INDEX_READY = false;
     els.dictPill.textContent += " • scanning…";
 
     const prefixes = new Set();
     const bases    = new Set();
     const suffixes = new Set();
+    const combos   = [];
+    const byPrefix = {};
+    const byBase   = {};
+    const bySuffix = {};
 
-    // Yield to the browser every N items so frames aren't dropped
     const pause = () => new Promise(resolve => setTimeout(resolve, 0));
+    const prefixList = [null, ...ALL_PREFIXES];
+    const suffixList = [null, ...ALL_SUFFIXES];
 
-    for (let i = 0; i < ALL_PREFIXES.length; i++){
-      if (existsRealWordWithLocks(ALL_PREFIXES[i], null, null, null))
-        prefixes.add(ALL_PREFIXES[i].uid);
-      await pause();
+    // Iterate bases (outer) — yield every few bases to keep UI responsive
+    for (let bi = 0; bi < ALL_BASES.length; bi++){
+      const b = ALL_BASES[bi];
+      // Check bare base
+      if (isRealWord(b.form)) bases.add(b.uid);
+
+      for (const p of prefixList){
+        if (p && redundantPrefix(p, b)) continue;
+        for (const s1 of suffixList){
+          for (const s2 of suffixList){
+            if (!s1 && s2) continue;
+            if (s1 && s2 && s1.uid === s2.uid) continue;
+            const word = computeWord(p, b, s1, s2);
+            if (isRealWord(word)){
+              const puid  = p  ? p.uid  : null;
+              const buid  = b.uid;
+              const s1uid = s1 ? s1.uid : null;
+              const s2uid = s2 ? s2.uid : null;
+              combos.push({ p: puid, b: buid, s1: s1uid, s2: s2uid });
+              bases.add(buid);
+              if (puid) {
+                prefixes.add(puid);
+                if (!byPrefix[puid]) byPrefix[puid] = new Set();
+                byPrefix[puid].add(buid);
+              }
+              if (!byBase[buid]) byBase[buid] = [];
+              byBase[buid].push({ p: puid, s1: s1uid, s2: s2uid });
+              if (s1uid) { suffixes.add(s1uid); bySuffix[s1uid] = true; }
+              if (s2uid) { suffixes.add(s2uid); bySuffix[s2uid] = true; }
+            }
+          }
+        }
+      }
+      // Yield every 5 bases to keep the UI responsive
+      if (bi % 5 === 0) await pause();
     }
 
-    for (let i = 0; i < ALL_SUFFIXES.length; i++){
-      const s = ALL_SUFFIXES[i];
-      if (existsRealWordWithLocks(null, null, s, null) || existsRealWordWithLocks(null, null, null, s))
-        suffixes.add(s.uid);
-      await pause();
-    }
-
-    for (let i = 0; i < ALL_BASES.length; i++){
-      const b = ALL_BASES[i];
-      if (isRealWord(b.form) || existsRealWordWithLocks(null, b, null, null))
-        bases.add(b.uid);
-      await pause();
-    }
+    VALID_COMBOS = combos;
+    VALID_BY_PREFIX = byPrefix;
+    VALID_BY_BASE = byBase;
+    VALID_BY_SUFFIX = bySuffix;
+    VALID_INDEX_READY = true;
 
     GLOBAL_VIABLE = { prefixes, bases, suffixes };
     GLOBAL_VIABLE_READY = true;
@@ -2554,7 +2596,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function computeViableSets(){
     // Fast path: nothing selected yet — everything is potentially viable.
-    // Avoid the O(n^4) sweep entirely on first load.
     if (!current.prefix && !current.base && !current.suffix1 && !current.suffix2){
       return {
         viablePrefixes: new Set(ALL_PREFIXES.map(p => p.uid)),
@@ -2569,7 +2610,32 @@ document.addEventListener("DOMContentLoaded", () => {
     const viableSuffix1  = new Set();
     const viableSuffix2  = new Set();
 
-    // Bases: only sweep if an affix is locked (otherwise all bases stay open)
+    // Fast path: use pre-built index if available
+    if (VALID_INDEX_READY && VALID_COMBOS.length > 0) {
+      const cp = current.prefix  ? current.prefix.uid  : undefined;
+      const cb = current.base    ? current.base.uid    : undefined;
+      const cs1 = current.suffix1 ? current.suffix1.uid : undefined;
+      const cs2 = current.suffix2 ? current.suffix2.uid : undefined;
+
+      for (let i = 0; i < VALID_COMBOS.length; i++) {
+        const c = VALID_COMBOS[i];
+        // Check if this combo is compatible with current selections
+        if (cp  !== undefined && c.p  !== cp)  continue;
+        if (cb  !== undefined && c.b  !== cb)  continue;
+        if (cs1 !== undefined && c.s1 !== cs1) continue;
+        if (cs2 !== undefined && c.s2 !== cs2) continue;
+        // This combo is compatible — mark all its parts as viable
+        if (c.p)  viablePrefixes.add(c.p);
+        viableBases.add(c.b);
+        if (c.s1) viableSuffix1.add(c.s1);
+        if (c.s2) viableSuffix2.add(c.s2);
+      }
+      // Also mark null prefix as viable (no prefix is always an option)
+      if (cp === undefined) for (const p of ALL_PREFIXES) viablePrefixes.add(p.uid);
+      return { viablePrefixes, viableBases, viableSuffix1, viableSuffix2 };
+    }
+
+    // Fallback: old sweep method (before index is built)
     const hasAffixLock = !!current.prefix || !!current.suffix1 || !!current.suffix2;
     if (!hasAffixLock){
       for (const b of ALL_BASES) viableBases.add(b.uid);
@@ -2580,18 +2646,15 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // Prefixes: only sweep if a base is selected (much cheaper — base is locked)
     if (current.base){
       for (const p of ALL_PREFIXES){
         if (existsRealWordWithLocks(p, current.base, current.suffix1, current.suffix2))
           viablePrefixes.add(p.uid);
       }
     } else {
-      // No base yet — show all prefixes as available
       for (const p of ALL_PREFIXES) viablePrefixes.add(p.uid);
     }
 
-    // Suffixes: only sweep if a base is selected
     if (current.base){
       for (const s of ALL_SUFFIXES){
         if (existsRealWordWithLocks(current.prefix, current.base, s, current.suffix2))
@@ -2600,7 +2663,6 @@ document.addEventListener("DOMContentLoaded", () => {
           viableSuffix2.add(s.uid);
       }
     } else {
-      // No base yet — show all suffixes as available
       for (const s of ALL_SUFFIXES) viableSuffix1.add(s.uid);
     }
 
