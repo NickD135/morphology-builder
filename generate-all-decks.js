@@ -219,13 +219,66 @@ const ALL_MORPHEMES = [
   { morpheme: "meter", type: "base" },
   { morpheme: "aero", type: "base" },
 
-  // ── PREFIXES ──
+  // ── PREFIXES (35) ──
   { morpheme: "re",     type: "prefix" },
   { morpheme: "un",     type: "prefix" },
+  { morpheme: "ad",     type: "prefix" },
+  { morpheme: "anti",   type: "prefix" },
+  { morpheme: "con",    type: "prefix" },
+  { morpheme: "contra", type: "prefix" },
+  { morpheme: "de",     type: "prefix" },
+  { morpheme: "dis",    type: "prefix" },
+  { morpheme: "en",     type: "prefix" },
+  { morpheme: "em",     type: "prefix" },
+  { morpheme: "ex",     type: "prefix" },
+  { morpheme: "e",      type: "prefix" },
+  { morpheme: "extra",  type: "prefix" },
+  { morpheme: "fore",   type: "prefix" },
+  { morpheme: "hyper",  type: "prefix" },
+  { morpheme: "in",     type: "prefix" },
+  { morpheme: "inter",  type: "prefix" },
+  { morpheme: "mal",    type: "prefix" },
+  { morpheme: "mega",   type: "prefix" },
+  { morpheme: "micro",  type: "prefix" },
+  { morpheme: "mid",    type: "prefix" },
+  { morpheme: "mis",    type: "prefix" },
+  { morpheme: "multi",  type: "prefix" },
+  { morpheme: "non",    type: "prefix" },
+  { morpheme: "ob",     type: "prefix" },
+  { morpheme: "over",   type: "prefix" },
+  { morpheme: "post",   type: "prefix" },
+  { morpheme: "pre",    type: "prefix" },
+  { morpheme: "pro",    type: "prefix" },
+  { morpheme: "semi",   type: "prefix" },
+  { morpheme: "sub",    type: "prefix" },
+  { morpheme: "super",  type: "prefix" },
+  { morpheme: "trans",  type: "prefix" },
+  { morpheme: "under",  type: "prefix" },
+  { morpheme: "a",      type: "prefix" },
 
-  // ── SUFFIXES ──
+  // ── SUFFIXES (22) ──
   { morpheme: "tion",   type: "suffix" },
   { morpheme: "ful",    type: "suffix" },
+  { morpheme: "er",     type: "suffix" },
+  { morpheme: "or",     type: "suffix" },
+  { morpheme: "ing",    type: "suffix" },
+  { morpheme: "ed",     type: "suffix" },
+  { morpheme: "ly",     type: "suffix" },
+  { morpheme: "less",   type: "suffix" },
+  { morpheme: "ness",   type: "suffix" },
+  { morpheme: "ment",   type: "suffix" },
+  { morpheme: "able",   type: "suffix" },
+  { morpheme: "ish",    type: "suffix" },
+  { morpheme: "ist",    type: "suffix" },
+  { morpheme: "ive",    type: "suffix" },
+  { morpheme: "ous",    type: "suffix" },
+  { morpheme: "al",     type: "suffix" },
+  { morpheme: "hood",   type: "suffix" },
+  { morpheme: "ship",   type: "suffix" },
+  { morpheme: "ity",    type: "suffix" },
+  { morpheme: "ance",   type: "suffix" },
+  { morpheme: "ent",    type: "suffix" },
+  { morpheme: "ic",     type: "suffix" },
 ];
 
 // Allow filtering via command line: node generate-all-decks.js struct port
@@ -706,7 +759,8 @@ async function main() {
 
   for (const entry of MORPHEMES) {
     const { morpheme, type } = entry;
-    const filename = `wordlabs-${morpheme}-3day.pptx`;
+    const typeTag = type === "base" ? "" : `-${type}`;
+    const filename = `wordlabs-${morpheme}${typeTag}-3day.pptx`;
     const outputPath = path.join(OUTPUT_DIR, filename);
 
     // Skip if already exists

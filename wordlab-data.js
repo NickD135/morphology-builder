@@ -74,6 +74,11 @@ const WordLabData = (() => {
     {id:'quarks_250',      label:'Quark Accumulator',    icon:'💫',  desc:'Earn 250 quarks'},
     {id:'quarks_500',      label:'Quark Hoarder',        icon:'💎',  desc:'Earn 500 quarks'},
     {id:'quarks_1000',     label:'Quark Magnate',        icon:'💰',  desc:'Earn 1000 quarks'},
+    // ── Daily play streaks ──
+    {id:'day_streak_3',    label:'Three-Day Streak',     icon:'📅',  desc:'Play 10+ minutes for 3 days in a row'},
+    {id:'day_streak_7',    label:'Week Warrior',         icon:'🗓️',  desc:'Play 10+ minutes for 7 days in a row'},
+    {id:'day_streak_14',   label:'Fortnight Focus',      icon:'🔥',  desc:'Play 10+ minutes for 14 days in a row'},
+    {id:'day_streak_30',   label:'Monthly Champion',     icon:'🏅',  desc:'Play 10+ minutes for 30 days in a row'},
   ];
   const LEGENDARY_BADGES = [
     {id:'legend_morpheme',  label:'Morpheme Master',   icon:'👑',  desc:'1000 correct answers'},
@@ -183,6 +188,11 @@ const WordLabData = (() => {
       {id:'quarks_250',      ok: () => student.quarks >= 250},
       {id:'quarks_500',      ok: () => student.quarks >= 500},
       {id:'quarks_1000',     ok: () => student.quarks >= 1000},
+      // Daily play streaks (read from localStorage challenge data)
+      {id:'day_streak_3',    ok: () => { try { var d = _loadChallengeData(student.student_id); return d.streak && d.streak.count >= 3; } catch(e) { return false; } }},
+      {id:'day_streak_7',    ok: () => { try { var d = _loadChallengeData(student.student_id); return d.streak && d.streak.count >= 7; } catch(e) { return false; } }},
+      {id:'day_streak_14',   ok: () => { try { var d = _loadChallengeData(student.student_id); return d.streak && d.streak.count >= 14; } catch(e) { return false; } }},
+      {id:'day_streak_30',   ok: () => { try { var d = _loadChallengeData(student.student_id); return d.streak && d.streak.count >= 30; } catch(e) { return false; } }},
       // Legendary
       {id:'legend_morpheme',  ok: () => s.totalCorrect >= 1000},
       {id:'legend_sessions',  ok: () => s.sessions >= 50},
@@ -587,7 +597,11 @@ const WordLabData = (() => {
     // Track daily usage for free tier limits
     try { incrementDailyUsage(); } catch(e) {}
 
-    return { quarks: char.quarks, xp: char.xp, quarksEarned, xpEarned, newBadges, level: getLevel(char.xp) };
+    // Update daily/weekly challenge progress
+    var challengeResult = null;
+    try { challengeResult = updateChallengeProgress(activity, correct, streak); } catch(e) {}
+
+    return { quarks: char.quarks, xp: char.xp, quarksEarned, xpEarned, newBadges, level: getLevel(char.xp), challengeResult };
   }
 
   // ── Student data ──────────────────────────────────────────────
@@ -1169,6 +1183,353 @@ const WordLabData = (() => {
     } catch(e) { console.warn('incrementDailyUsage error', e); }
   }
 
+  // ── Daily Challenges System ─────────────────────────────────
+  // Generates 3 daily challenges (easy/medium/hard) + 1 weekly challenge
+  // Tracks daily play streak (consecutive days with 10+ min activity)
+
+  const CHALLENGE_GAMES = [
+    { key: 'phoneme-splitter',  name: 'Phoneme Splitter', icon: '🔊' },
+    { key: 'syllable-splitter', name: 'Syllable Splitter', icon: '✂️' },
+    { key: 'breakdown-blitz',   name: 'Breakdown Blitz',  icon: '🧩' },
+    { key: 'mission-mode',      name: 'Mission Mode',     icon: '🚀' },
+    { key: 'meaning-mode',      name: 'Meaning Mode',     icon: '💡' },
+    { key: 'sound-sorter',      name: 'Sound Sorter',     icon: '🎧' },
+    { key: 'speed-mode',        name: 'Speed Builder',    icon: '⚡' },
+    { key: 'root-lab',          name: 'Root Lab',         icon: '🌿' },
+    { key: 'homophone-hunter',  name: 'Homophone Hunter', icon: '👯' },
+    { key: 'word-refinery',     name: 'The Refinery',     icon: '🏭' },
+    { key: 'word-spectrum',     name: 'Word Spectrum',    icon: '🌈' },
+  ];
+
+  const CHALLENGE_TEMPLATES = {
+    easy: [
+      { type: 'correct_in_game', count: 3,  label: 'Get {count} correct in {game}', quarks: 10, xp: 20 },
+      { type: 'correct_in_game', count: 5,  label: 'Get {count} correct in {game}', quarks: 12, xp: 25 },
+      { type: 'play_game',       count: 1,  label: 'Play a round of {game}',         quarks: 8,  xp: 15 },
+      { type: 'correct_any',     count: 5,  label: 'Answer {count} questions correctly in any activity', quarks: 10, xp: 20 },
+    ],
+    medium: [
+      { type: 'correct_in_game', count: 10, label: 'Get {count} correct in {game}', quarks: 25, xp: 50 },
+      { type: 'correct_in_game', count: 8,  label: 'Get {count} correct in {game}', quarks: 20, xp: 40 },
+      { type: 'streak_in_game',  count: 5,  label: 'Get a streak of {count} in {game}', quarks: 30, xp: 50 },
+      { type: 'play_different',  count: 3,  label: 'Play {count} different activities today', quarks: 25, xp: 45 },
+      { type: 'correct_any',     count: 15, label: 'Answer {count} questions correctly today', quarks: 20, xp: 40 },
+    ],
+    hard: [
+      { type: 'correct_in_game', count: 20, label: 'Get {count} correct in {game}', quarks: 50, xp: 100 },
+      { type: 'streak_in_game',  count: 8,  label: 'Get a streak of {count} in {game}', quarks: 60, xp: 100 },
+      { type: 'play_different',  count: 5,  label: 'Play {count} different activities today', quarks: 50, xp: 80 },
+      { type: 'correct_any',     count: 30, label: 'Answer {count} questions correctly today', quarks: 45, xp: 80 },
+      { type: 'perfect_run',     count: 5,  label: 'Get {count} in a row correct in {game}',  quarks: 60, xp: 100 },
+    ]
+  };
+
+  const WEEKLY_TEMPLATES = [
+    { type: 'correct_any',    count: 100, label: 'Answer {count} questions correctly this week', quarks: 150, xp: 300 },
+    { type: 'play_different', count: 8,   label: 'Play {count} different activities this week',  quarks: 120, xp: 250 },
+    { type: 'correct_any',    count: 75,  label: 'Answer {count} questions correctly this week', quarks: 120, xp: 250 },
+    { type: 'play_days',      count: 5,   label: 'Play on {count} different days this week',     quarks: 200, xp: 400 },
+  ];
+
+  function _seededRandom(seed) {
+    var x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+  }
+
+  function _getTodayStr() { return new Date().toISOString().slice(0, 10); }
+
+  function _getWeekStr() {
+    var d = new Date();
+    var day = d.getDay(); // 0=Sun
+    var monday = new Date(d);
+    monday.setDate(d.getDate() - ((day + 6) % 7)); // back to Monday
+    return monday.toISOString().slice(0, 10);
+  }
+
+  function _challengeStorageKey(studentId) { return 'wl_challenges_' + studentId; }
+
+  function _loadChallengeData(studentId) {
+    try {
+      var raw = localStorage.getItem(_challengeStorageKey(studentId));
+      return raw ? JSON.parse(raw) : {};
+    } catch(e) { return {}; }
+  }
+
+  function _saveChallengeData(studentId, data) {
+    try { localStorage.setItem(_challengeStorageKey(studentId), JSON.stringify(data)); }
+    catch(e) { console.warn('saveChallengeData error', e); }
+  }
+
+  function _generateDailyChallenges(studentId, dateStr) {
+    // Use date + studentId hash as seed for deterministic daily challenges per student
+    var seed = 0;
+    for (var i = 0; i < dateStr.length; i++) seed = seed * 31 + dateStr.charCodeAt(i);
+    for (var j = 0; j < studentId.length; j++) seed = seed * 31 + studentId.charCodeAt(j);
+
+    var challenges = [];
+    var usedGames = [];
+
+    ['easy', 'medium', 'hard'].forEach(function(difficulty, idx) {
+      var templates = CHALLENGE_TEMPLATES[difficulty];
+      var tIdx = Math.floor(_seededRandom(seed + idx * 1000) * templates.length);
+      var template = templates[tIdx];
+
+      // Pick a game not already used
+      var available = CHALLENGE_GAMES.filter(function(g) { return usedGames.indexOf(g.key) === -1; });
+      var gIdx = Math.floor(_seededRandom(seed + idx * 2000 + 1) * available.length);
+      var game = available[gIdx] || CHALLENGE_GAMES[0];
+      if (template.type === 'correct_in_game' || template.type === 'streak_in_game' || template.type === 'perfect_run') {
+        usedGames.push(game.key);
+      }
+
+      var label = template.label.replace('{count}', template.count).replace('{game}', game.name);
+      challenges.push({
+        id: difficulty + '_' + dateStr,
+        difficulty: difficulty,
+        type: template.type,
+        game: game.key,
+        gameName: game.name,
+        gameIcon: game.icon,
+        count: template.count,
+        label: label,
+        quarks: template.quarks,
+        xp: template.xp,
+        progress: 0,
+        claimed: false
+      });
+    });
+    return challenges;
+  }
+
+  function _generateWeeklyChallenge(studentId, weekStr) {
+    var seed = 0;
+    for (var i = 0; i < weekStr.length; i++) seed = seed * 31 + weekStr.charCodeAt(i);
+    for (var j = 0; j < studentId.length; j++) seed = seed * 31 + studentId.charCodeAt(j);
+    seed += 99999; // offset from daily seed
+
+    var tIdx = Math.floor(_seededRandom(seed) * WEEKLY_TEMPLATES.length);
+    var template = WEEKLY_TEMPLATES[tIdx];
+    var label = template.label.replace('{count}', template.count);
+    return {
+      id: 'weekly_' + weekStr,
+      difficulty: 'weekly',
+      type: template.type,
+      count: template.count,
+      label: label,
+      quarks: template.quarks,
+      xp: template.xp,
+      progress: 0,
+      claimed: false,
+      daysPlayed: []
+    };
+  }
+
+  function getDailyChallenges() {
+    var session = loadSession();
+    if (!session) return { daily: [], weekly: null, streak: 0 };
+    var studentId = session.studentId;
+    var today = _getTodayStr();
+    var week = _getWeekStr();
+    var data = _loadChallengeData(studentId);
+
+    // Generate or load daily challenges
+    if (!data.dailyDate || data.dailyDate !== today) {
+      data.daily = _generateDailyChallenges(studentId, today);
+      data.dailyDate = today;
+      // Track today's session data
+      data.todayGames = [];
+      data.todayCorrect = 0;
+      data.todayBestStreaks = {};
+    }
+
+    // Generate or load weekly challenge
+    if (!data.weeklyWeek || data.weeklyWeek !== week) {
+      data.weekly = _generateWeeklyChallenge(studentId, week);
+      data.weeklyWeek = week;
+    }
+
+    // Load streak
+    if (!data.streak) data.streak = { count: 0, lastDate: null };
+
+    _saveChallengeData(studentId, data);
+    return { daily: data.daily, weekly: data.weekly, streak: data.streak };
+  }
+
+  function updateChallengeProgress(activity, correct, streak) {
+    var session = loadSession();
+    if (!session) return null;
+    var studentId = session.studentId;
+    var today = _getTodayStr();
+    var data = _loadChallengeData(studentId);
+    if (!data.daily || data.dailyDate !== today) return null; // no challenges loaded
+
+    // Update daily tracking
+    if (!data.todayGames) data.todayGames = [];
+    if (data.todayGames.indexOf(activity) === -1) data.todayGames.push(activity);
+    if (correct) data.todayCorrect = (data.todayCorrect || 0) + 1;
+    if (!data.todayBestStreaks) data.todayBestStreaks = {};
+    if (streak > (data.todayBestStreaks[activity] || 0)) data.todayBestStreaks[activity] = streak;
+
+    // Update play time tracking for streak
+    if (!data.todayPlayStart) data.todayPlayStart = Date.now();
+    data.todayLastAction = Date.now();
+
+    var completed = [];
+
+    // Update each daily challenge
+    data.daily.forEach(function(ch) {
+      if (ch.claimed) return;
+      var oldProgress = ch.progress;
+
+      if (ch.type === 'correct_in_game' && correct && activity === ch.game) {
+        ch.progress = Math.min((ch.progress || 0) + 1, ch.count);
+      } else if (ch.type === 'correct_any' && correct) {
+        ch.progress = data.todayCorrect;
+      } else if (ch.type === 'streak_in_game' && activity === ch.game) {
+        ch.progress = Math.max(ch.progress || 0, data.todayBestStreaks[activity] || 0);
+      } else if (ch.type === 'perfect_run' && activity === ch.game) {
+        ch.progress = Math.max(ch.progress || 0, data.todayBestStreaks[activity] || 0);
+      } else if (ch.type === 'play_game' && activity === ch.game) {
+        ch.progress = 1;
+      } else if (ch.type === 'play_different') {
+        ch.progress = data.todayGames.length;
+      }
+
+      if (ch.progress >= ch.count && oldProgress < ch.count) {
+        completed.push(ch);
+      }
+    });
+
+    // Update weekly challenge
+    if (data.weekly && !data.weekly.claimed) {
+      var wk = data.weekly;
+      if (wk.type === 'correct_any' && correct) {
+        wk.progress = (wk.progress || 0) + 1;
+      } else if (wk.type === 'play_different') {
+        if (!wk.gamesPlayed) wk.gamesPlayed = [];
+        if (wk.gamesPlayed.indexOf(activity) === -1) wk.gamesPlayed.push(activity);
+        wk.progress = wk.gamesPlayed.length;
+      } else if (wk.type === 'play_days') {
+        if (!wk.daysPlayed) wk.daysPlayed = [];
+        if (wk.daysPlayed.indexOf(today) === -1) wk.daysPlayed.push(today);
+        wk.progress = wk.daysPlayed.length;
+      }
+      if (wk.progress >= wk.count && !completed.includes(wk)) {
+        completed.push(wk);
+      }
+    }
+
+    _saveChallengeData(studentId, data);
+
+    // Show toast for newly completed challenges
+    if (completed.length > 0) {
+      completed.forEach(function(ch) { _showChallengeToast(ch); });
+    }
+
+    return { daily: data.daily, weekly: data.weekly, completed: completed };
+  }
+
+  function _showChallengeToast(challenge) {
+    // Inject toast CSS once
+    if (!document.getElementById('wlChallengeToastStyle')) {
+      var s = document.createElement('style');
+      s.id = 'wlChallengeToastStyle';
+      s.textContent =
+        '.wl-challenge-toast{position:fixed;top:20px;right:20px;z-index:99998;background:linear-gradient(135deg,#1e1b4b,#312e81);border:2px solid rgba(99,102,241,0.5);border-radius:16px;padding:14px 20px;font-family:Lexend,sans-serif;color:#e0e7ff;box-shadow:0 20px 40px rgba(0,0,0,0.4);animation:wlToastIn .4s ease,wlToastOut .4s ease 3.6s forwards;display:flex;align-items:center;gap:12px;max-width:340px;}' +
+        '.wl-challenge-toast-icon{font-size:28px;flex-shrink:0;}' +
+        '.wl-challenge-toast-text{font-size:12px;font-weight:700;line-height:1.4;}' +
+        '.wl-challenge-toast-title{font-size:13px;font-weight:900;color:#a5b4fc;margin-bottom:2px;}' +
+        '.wl-challenge-toast-reward{font-size:11px;font-weight:800;color:#818cf8;}' +
+        '@keyframes wlToastIn{0%{opacity:0;transform:translateX(60px) scale(.9)}100%{opacity:1;transform:translateX(0) scale(1)}}' +
+        '@keyframes wlToastOut{0%{opacity:1;transform:translateX(0)}100%{opacity:0;transform:translateX(60px)}}';
+      document.head.appendChild(s);
+    }
+    var toast = document.createElement('div');
+    toast.className = 'wl-challenge-toast';
+    var diffLabel = challenge.difficulty === 'weekly' ? 'Weekly Challenge' : challenge.difficulty.charAt(0).toUpperCase() + challenge.difficulty.slice(1) + ' Challenge';
+    toast.innerHTML =
+      '<div class="wl-challenge-toast-icon">🎯</div>' +
+      '<div class="wl-challenge-toast-text">' +
+        '<div class="wl-challenge-toast-title">' + diffLabel + ' Complete!</div>' +
+        '<div>' + escapeHtml(challenge.label) + '</div>' +
+        '<div class="wl-challenge-toast-reward">⚛️ ' + challenge.quarks + ' quarks · +' + challenge.xp + ' XP ready to claim</div>' +
+      '</div>';
+    document.body.appendChild(toast);
+    setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 4200);
+  }
+
+  async function claimChallengeReward(challengeId) {
+    var session = loadSession();
+    if (!session) return null;
+    var studentId = session.studentId;
+    var data = _loadChallengeData(studentId);
+
+    // Find the challenge
+    var challenge = null;
+    if (data.daily) {
+      challenge = data.daily.find(function(c) { return c.id === challengeId; });
+    }
+    if (!challenge && data.weekly && data.weekly.id === challengeId) {
+      challenge = data.weekly;
+    }
+    if (!challenge || challenge.claimed || challenge.progress < challenge.count) return null;
+
+    challenge.claimed = true;
+    _saveChallengeData(studentId, data);
+
+    // Award quarks and XP
+    var { data: existing } = await sb().from('student_character')
+      .select('*').eq('student_id', studentId).maybeSingle();
+    var char = ensureCharFields(existing ? { ...existing } : { student_id: studentId });
+    char.quarks += challenge.quarks;
+    char.xp += challenge.xp;
+    var newBadges = checkBadges(char);
+    await sb().from('student_character').upsert(
+      { student_id: studentId, quarks: char.quarks, xp: char.xp,
+        badges: char.badges, scientist: char.scientist, stats: char.stats,
+        updated_at: new Date().toISOString() },
+      { onConflict: 'student_id' }
+    );
+
+    return { quarks: char.quarks, xp: char.xp, quarksEarned: challenge.quarks,
+             xpEarned: challenge.xp, newBadges: newBadges, level: getLevel(char.xp) };
+  }
+
+  function updateDailyStreak() {
+    var session = loadSession();
+    if (!session) return { count: 0 };
+    var studentId = session.studentId;
+    var today = _getTodayStr();
+    var data = _loadChallengeData(studentId);
+    if (!data.streak) data.streak = { count: 0, lastDate: null };
+
+    // Check if student played 10+ min today
+    var playMs = 0;
+    if (data.todayPlayStart && data.todayLastAction) {
+      playMs = data.todayLastAction - data.todayPlayStart;
+    }
+    var playedEnough = playMs >= 10 * 60 * 1000; // 10 minutes
+
+    if (playedEnough && data.streak.lastDate !== today) {
+      // Check if yesterday was the last streak day
+      var yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      var yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+      if (data.streak.lastDate === yesterdayStr) {
+        data.streak.count++;
+      } else if (!data.streak.lastDate) {
+        data.streak.count = 1;
+      } else {
+        data.streak.count = 1; // reset
+      }
+      data.streak.lastDate = today;
+      _saveChallengeData(studentId, data);
+    }
+
+    return data.streak;
+  }
+
   // ── Custom word lists loader ────────────────────────────────
   // Returns words from teacher-created lists filtered by game and student assignment
   let _customWordsCache = null;
@@ -1588,6 +1949,7 @@ const WordLabData = (() => {
     createTeacherStudent, getTeacherStudent, enterStudentMode, exitStudentMode, isTeacherPreview,
     isExtensionMode, loadExtensionData,
     checkDailyLimit, incrementDailyUsage,
+    getDailyChallenges, updateChallengeProgress, claimChallengeReward, updateDailyStreak, CHALLENGE_GAMES,
     getCustomWords, getCustomWordPriority,
     getCustomMorphemes, getCustomMorphemePriority,
     getEALDLanguage, getEALDLanguageName, getTranslations, createEALDPill, injectEALDStyles, EALD_LANGUAGES, EALD_TTS_CODES,
