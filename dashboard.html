@@ -2823,8 +2823,11 @@ function showSpellingSetCreate() {
 }
 
 function buildSpellingSetHeatmap(set) {
-  var words = (set.words || []).map(function(w) { return typeof w === 'string' ? w : (w.word || ''); });
+  var rawWords = set.words || [];
+  var isAI = rawWords.length > 0 && typeof rawWords[0] === 'object';
+  var words = rawWords.map(function(w) { return typeof w === 'string' ? w : (w.word || ''); });
   if (!words.length) return '<div class="panel"><div class="panelInner"><div class="noFlags">No words in this set.</div></div></div>';
+  var aiLabel = isAI ? '<span style="background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:9px;font-weight:800;padding:2px 8px;border-radius:6px;margin-left:8px;">AI Analyzed — works in all games</span>' : '<span style="background:#fef3c7;border:1px solid #fcd34d;color:#92400e;font-size:9px;font-weight:800;padding:2px 8px;border-radius:6px;margin-left:8px;">Words only — run AI for game integration</span>';
 
   var assigns = _spellingAssignments[set.id] || [];
   var activeStudentIds = assigns.filter(function(a) { return a.active; }).map(function(a) { return a.student_id; });
@@ -2885,7 +2888,7 @@ function buildSpellingSetHeatmap(set) {
     '<span class="legendCell" style="background:#f1f5f9;border:1px solid #cbd5e1;"></span><span>No data</span></div>';
 
   return '<div class="panel"><div class="panelInner">' +
-    '<div class="panelTitle">' + WordLabData.escapeHtml(set.name) + ' — ' + words.length + ' words</div>' +
+    '<div class="panelTitle">' + WordLabData.escapeHtml(set.name) + ' — ' + words.length + ' words ' + aiLabel + '</div>' +
     assignHtml + legend +
     '<div class="heatmapWrap"><table class="heatmap"><thead><tr><th>Student</th>' + headerCols + '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
     '</div></div>';
@@ -2894,40 +2897,108 @@ function buildSpellingSetHeatmap(set) {
 function buildSpellingSetCreateForm() {
   return '<div class="panel"><div class="panelInner">' +
     '<div class="panelTitle">+ Create New Spelling Set</div>' +
-    '<div style="display:flex;flex-direction:column;gap:12px;max-width:500px;">' +
-      '<div>' +
-        '<label style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px;">Set name</label>' +
-        '<input type="text" id="ssNewName" placeholder="e.g. Set 3 — Stage 1" style="width:100%;padding:10px 14px;border:1.5px solid var(--line);border-radius:10px;font-size:13px;font-weight:700;font-family:\'Lexend\',sans-serif;">' +
-      '</div>' +
-      '<div>' +
-        '<label style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px;">Set number (for ordering)</label>' +
-        '<input type="number" id="ssNewNumber" placeholder="e.g. 3" min="1" max="99" style="width:80px;padding:10px 14px;border:1.5px solid var(--line);border-radius:10px;font-size:13px;font-weight:700;font-family:\'Lexend\',sans-serif;">' +
+    '<div style="display:flex;flex-direction:column;gap:12px;max-width:700px;">' +
+      '<div style="display:flex;gap:12px;flex-wrap:wrap;">' +
+        '<div style="flex:1;min-width:200px;">' +
+          '<label style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px;">Set name</label>' +
+          '<input type="text" id="ssNewName" placeholder="e.g. Set 3 — Stage 1" style="width:100%;padding:10px 14px;border:1.5px solid var(--line);border-radius:10px;font-size:13px;font-weight:700;font-family:\'Lexend\',sans-serif;">' +
+        '</div>' +
+        '<div style="width:80px;">' +
+          '<label style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px;">Set #</label>' +
+          '<input type="number" id="ssNewNumber" placeholder="3" min="1" max="99" style="width:100%;padding:10px 14px;border:1.5px solid var(--line);border-radius:10px;font-size:13px;font-weight:700;font-family:\'Lexend\',sans-serif;">' +
+        '</div>' +
       '</div>' +
       '<div>' +
         '<label style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px;">Words (one per line, or comma-separated)</label>' +
-        '<textarea id="ssNewWords" rows="10" placeholder="sat\ntub\nvet\nwag\ncup\nmen" style="width:100%;padding:10px 14px;border:1.5px solid var(--line);border-radius:10px;font-size:13px;font-weight:600;font-family:\'Lexend\',sans-serif;resize:vertical;"></textarea>' +
+        '<textarea id="ssNewWords" rows="8" placeholder="sat\ntub\nvet\nwag\ncup\nmen\nnut\ndim" style="width:100%;padding:10px 14px;border:1.5px solid var(--line);border-radius:10px;font-size:13px;font-weight:600;font-family:\'Lexend\',sans-serif;resize:vertical;"></textarea>' +
       '</div>' +
+      '<div id="ssPreview" style="display:none;margin-bottom:4px;max-height:300px;overflow-y:auto;border:1.5px solid var(--line);border-radius:10px;padding:10px;"></div>' +
       '<div id="ssCreateStatus" style="display:none;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:700;"></div>' +
-      '<button onclick="createSpellingSet()" style="border:none;background:var(--indigo);color:#fff;border-radius:12px;padding:12px;font-size:14px;font-weight:900;cursor:pointer;font-family:\'Lexend\',sans-serif;width:100%;">Create Set</button>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+        '<button onclick="ssAnalyzeWords()" id="ssAnalyzeBtn" style="border:none;background:var(--indigo);color:#fff;font-weight:900;font-size:13px;padding:11px 20px;border-radius:12px;cursor:pointer;font-family:\'Lexend\',sans-serif;">🤖 Generate Breakdowns</button>' +
+        '<button onclick="createSpellingSet()" id="ssCreateBtn" style="display:none;border:none;background:#16a34a;color:#fff;font-weight:900;font-size:13px;padding:11px 20px;border-radius:12px;cursor:pointer;font-family:\'Lexend\',sans-serif;">✓ Save Spelling Set</button>' +
+        '<button onclick="createSpellingSetPlain()" style="border:1.5px solid var(--line);background:#fff;color:var(--muted);font-weight:800;font-size:11px;padding:11px 16px;border-radius:12px;cursor:pointer;font-family:\'Lexend\',sans-serif;">Save without AI (words only)</button>' +
+      '</div>' +
     '</div>' +
     '</div></div>';
+}
+
+var _ssAnalyzedWords = null;
+
+async function ssAnalyzeWords() {
+  var raw = (document.getElementById('ssNewWords').value || '').trim();
+  var btn = document.getElementById('ssAnalyzeBtn');
+  var preview = document.getElementById('ssPreview');
+
+  if (!raw) { ssShowStatus('Please enter at least one word.', true); return; }
+
+  var words = raw.split(/[\n,]+/).map(function(l) { return l.trim(); }).filter(Boolean);
+  words = Array.from(new Set(words));
+  if (!words.length) { ssShowStatus('No words found.', true); return; }
+  if (words.length > 30) { ssShowStatus('Maximum 30 words per batch. Split into multiple sets for larger lists.', true); return; }
+
+  btn.disabled = true;
+  btn.textContent = '🤖 Analyzing ' + words.length + ' words...';
+  preview.style.display = 'none';
+  _ssAnalyzedWords = null;
+
+  try {
+    var { data: { session } } = await WordLabData._sb().auth.getSession();
+    if (!session) throw new Error('Not logged in');
+
+    var resp = await fetch('https://kdpavfrzmmzknqfpodrl.supabase.co/functions/v1/analyze-words', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ words: words }),
+    });
+
+    var respText = await resp.text();
+    var data;
+    try { data = JSON.parse(respText); } catch(pe) {
+      throw new Error('Invalid response (HTTP ' + resp.status + '): ' + respText.slice(0, 200));
+    }
+    if (data.error) throw new Error(data.error);
+    if (!data.words || !data.words.length) throw new Error('No results returned');
+
+    _ssAnalyzedWords = data.words;
+
+    // Show preview table
+    preview.innerHTML = '<div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:var(--indigo);margin-bottom:6px;">Preview — ' + data.words.length + ' words analyzed</div>' +
+      '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:11px;">' +
+      '<tr style="background:var(--indigo-soft);"><th style="padding:5px 6px;text-align:left;font-weight:900;color:var(--indigo);">Word</th><th style="padding:5px 6px;">Clue</th><th style="padding:5px 6px;">Prefix</th><th style="padding:5px 6px;">Base</th><th style="padding:5px 6px;">Suffix</th><th style="padding:5px 6px;">Syllables</th><th style="padding:5px 6px;">Phonemes</th></tr>' +
+      data.words.map(function(w) {
+        return '<tr style="border-bottom:1px solid var(--line);">' +
+          '<td style="padding:5px 6px;font-weight:800;color:#312e81;">' + (w.word || '') + '</td>' +
+          '<td style="padding:5px 6px;font-size:10px;">' + (w.clue || '') + '</td>' +
+          '<td style="padding:5px 6px;color:var(--indigo);">' + (w.prefix || '—') + '</td>' +
+          '<td style="padding:5px 6px;font-weight:800;">' + (w.base || '') + '</td>' +
+          '<td style="padding:5px 6px;color:#d97706;">' + (w.suffix1 || '—') + (w.suffix2 ? ' + ' + w.suffix2 : '') + '</td>' +
+          '<td style="padding:5px 6px;">' + (w.syllables ? w.syllables.join('·') : '—') + '</td>' +
+          '<td style="padding:5px 6px;">' + (w.phonemes ? w.phonemes.join('·') : '—') + '</td>' +
+          '</tr>';
+      }).join('') +
+      '</table></div>';
+    preview.style.display = '';
+
+    document.getElementById('ssCreateBtn').style.display = '';
+    ssShowStatus('AI analysis complete! Review, then click Save.', false);
+  } catch(e) {
+    ssShowStatus('AI error: ' + (e.message || e), true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🤖 Generate Breakdowns';
+  }
 }
 
 async function createSpellingSet() {
   var name = (document.getElementById('ssNewName').value || '').trim();
   var number = parseInt(document.getElementById('ssNewNumber').value) || null;
-  var rawWords = (document.getElementById('ssNewWords').value || '').trim();
-  var statusEl = document.getElementById('ssCreateStatus');
 
   if (!name) { ssShowStatus('Please enter a set name.', true); return; }
-  if (!rawWords) { ssShowStatus('Please enter some words.', true); return; }
-
-  // Parse words — support newline, comma, or space separated
-  var words = rawWords.split(/[\n,]+/).map(function(w) { return w.trim().toLowerCase(); }).filter(function(w) { return w.length > 0; });
-  words = Array.from(new Set(words)); // deduplicate
-
-  if (!words.length) { ssShowStatus('No valid words found.', true); return; }
   if (!currentClass) { ssShowStatus('No class selected.', true); return; }
+
+  var words = _ssAnalyzedWords;
+  if (!words || !words.length) { ssShowStatus('Run AI analysis first, or use "Save without AI".', true); return; }
 
   try {
     var { data, error } = await dbSb().from('class_spelling_sets').insert({
@@ -2939,6 +3010,43 @@ async function createSpellingSet() {
     if (error) throw error;
 
     ssShowStatus('"' + name + '" created with ' + words.length + ' words!', false);
+    document.getElementById('ssNewName').value = '';
+    document.getElementById('ssNewWords').value = '';
+    document.getElementById('ssNewNumber').value = '';
+    document.getElementById('ssPreview').style.display = 'none';
+    document.getElementById('ssCreateBtn').style.display = 'none';
+    _ssAnalyzedWords = null;
+    _activeSpellingSetId = data.id;
+    await renderSpellingSetsTab();
+  } catch(e) {
+    ssShowStatus('Error: ' + (e.message || e), true);
+  }
+}
+
+async function createSpellingSetPlain() {
+  var name = (document.getElementById('ssNewName').value || '').trim();
+  var number = parseInt(document.getElementById('ssNewNumber').value) || null;
+  var rawWords = (document.getElementById('ssNewWords').value || '').trim();
+
+  if (!name) { ssShowStatus('Please enter a set name.', true); return; }
+  if (!rawWords) { ssShowStatus('Please enter some words.', true); return; }
+  if (!currentClass) { ssShowStatus('No class selected.', true); return; }
+
+  var words = rawWords.split(/[\n,]+/).map(function(w) { return w.trim().toLowerCase(); }).filter(function(w) { return w.length > 0; });
+  words = Array.from(new Set(words));
+  if (!words.length) { ssShowStatus('No valid words found.', true); return; }
+
+  // Save as simple word strings (no AI data — won't work in most games but heatmap will track)
+  try {
+    var { data, error } = await dbSb().from('class_spelling_sets').insert({
+      class_id: currentClass.id,
+      name: name,
+      set_number: number,
+      words: words
+    }).select('id').single();
+    if (error) throw error;
+
+    ssShowStatus('"' + name + '" saved with ' + words.length + ' words (no AI breakdowns).', false);
     document.getElementById('ssNewName').value = '';
     document.getElementById('ssNewWords').value = '';
     document.getElementById('ssNewNumber').value = '';
