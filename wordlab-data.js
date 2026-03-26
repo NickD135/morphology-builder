@@ -1203,31 +1203,32 @@ const WordLabData = (() => {
 
   const CHALLENGE_TEMPLATES = {
     easy: [
-      { type: 'correct_in_game', count: 3,  label: 'Get {count} correct in {game}', quarks: 10, xp: 20 },
-      { type: 'correct_in_game', count: 5,  label: 'Get {count} correct in {game}', quarks: 12, xp: 25 },
-      { type: 'play_game',       count: 1,  label: 'Play a round of {game}',         quarks: 8,  xp: 15 },
-      { type: 'correct_any',     count: 5,  label: 'Answer {count} questions correctly in any activity', quarks: 10, xp: 20 },
+      { type: 'correct_in_game', count: 15, label: 'Get {count} correct in {game}', quarks: 15, xp: 30 },
+      { type: 'correct_in_game', count: 20, label: 'Get {count} correct in {game}', quarks: 18, xp: 35 },
+      { type: 'correct_any',     count: 25, label: 'Answer {count} questions correctly in any activity', quarks: 15, xp: 30 },
+      { type: 'play_different',  count: 2,  label: 'Play {count} different activities today', quarks: 12, xp: 25 },
+      { type: 'streak_in_game',  count: 3,  label: 'Get a streak of {count} in {game}', quarks: 15, xp: 30 },
     ],
     medium: [
-      { type: 'correct_in_game', count: 10, label: 'Get {count} correct in {game}', quarks: 25, xp: 50 },
-      { type: 'correct_in_game', count: 8,  label: 'Get {count} correct in {game}', quarks: 20, xp: 40 },
-      { type: 'streak_in_game',  count: 5,  label: 'Get a streak of {count} in {game}', quarks: 30, xp: 50 },
-      { type: 'play_different',  count: 3,  label: 'Play {count} different activities today', quarks: 25, xp: 45 },
-      { type: 'correct_any',     count: 15, label: 'Answer {count} questions correctly today', quarks: 20, xp: 40 },
+      { type: 'correct_in_game', count: 30, label: 'Get {count} correct in {game}', quarks: 30, xp: 60 },
+      { type: 'correct_in_game', count: 25, label: 'Get {count} correct in {game}', quarks: 25, xp: 50 },
+      { type: 'streak_in_game',  count: 7,  label: 'Get a streak of {count} in {game}', quarks: 35, xp: 60 },
+      { type: 'play_different',  count: 4,  label: 'Play {count} different activities today', quarks: 30, xp: 55 },
+      { type: 'correct_any',     count: 50, label: 'Answer {count} questions correctly today', quarks: 30, xp: 55 },
     ],
     hard: [
-      { type: 'correct_in_game', count: 20, label: 'Get {count} correct in {game}', quarks: 50, xp: 100 },
-      { type: 'streak_in_game',  count: 8,  label: 'Get a streak of {count} in {game}', quarks: 60, xp: 100 },
-      { type: 'play_different',  count: 5,  label: 'Play {count} different activities today', quarks: 50, xp: 80 },
-      { type: 'correct_any',     count: 30, label: 'Answer {count} questions correctly today', quarks: 45, xp: 80 },
-      { type: 'perfect_run',     count: 5,  label: 'Get {count} in a row correct in {game}',  quarks: 60, xp: 100 },
+      { type: 'correct_in_game', count: 50, label: 'Get {count} correct in {game}', quarks: 60, xp: 120 },
+      { type: 'streak_in_game',  count: 12, label: 'Get a streak of {count} in {game}', quarks: 75, xp: 120 },
+      { type: 'play_different',  count: 6,  label: 'Play {count} different activities today', quarks: 60, xp: 100 },
+      { type: 'correct_any',     count: 80, label: 'Answer {count} questions correctly today', quarks: 55, xp: 100 },
+      { type: 'perfect_run',     count: 10, label: 'Get {count} in a row correct in {game}',  quarks: 75, xp: 120 },
     ]
   };
 
   const WEEKLY_TEMPLATES = [
-    { type: 'correct_any',    count: 100, label: 'Answer {count} questions correctly this week', quarks: 150, xp: 300 },
-    { type: 'play_different', count: 8,   label: 'Play {count} different activities this week',  quarks: 120, xp: 250 },
-    { type: 'correct_any',    count: 75,  label: 'Answer {count} questions correctly this week', quarks: 120, xp: 250 },
+    { type: 'correct_any',    count: 250, label: 'Answer {count} questions correctly this week', quarks: 200, xp: 400 },
+    { type: 'play_different', count: 9,   label: 'Play {count} different activities this week',  quarks: 150, xp: 300 },
+    { type: 'correct_any',    count: 175, label: 'Answer {count} questions correctly this week', quarks: 150, xp: 300 },
     { type: 'play_days',      count: 5,   label: 'Play on {count} different days this week',     quarks: 200, xp: 400 },
   ];
 
