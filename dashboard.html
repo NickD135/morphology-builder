@@ -747,37 +747,42 @@ async function startCheckout() {
 
 // ── Auth + class picker ───────────────────────────────────────────
 async function initDashboard(){
-  const user = await WordLabData.requireTeacherAuth();
-  if (!user) return; // redirected
-
-  const emailEl = document.getElementById('teacherEmailDisplay');
-  if (emailEl) emailEl.textContent = user.email;
-
-  // Show plan banner if on trial or expired
-  await showPlanBanner();
-
-  const classes = await WordLabData.getClasses();
   const sub = document.getElementById('loginSub');
+  try {
+    const user = await WordLabData.requireTeacherAuth();
+    if (!user) return; // redirected
 
-  if (!classes.length) {
-    sub.textContent = "You don't have any classes yet.";
-    return;
+    const emailEl = document.getElementById('teacherEmailDisplay');
+    if (emailEl) emailEl.textContent = user.email;
+
+    // Show plan banner if on trial or expired
+    try { await showPlanBanner(); } catch(e) { console.warn('Plan banner error:', e); }
+
+    const classes = await WordLabData.getClasses();
+
+    if (!classes.length) {
+      sub.textContent = "You don't have any classes yet.";
+      return;
+    }
+
+    // If only one class, load it directly
+    if (classes.length === 1) {
+      currentClass = await WordLabData.getClass(classes[0].id);
+      showDashboard();
+      return;
+    }
+
+    // Multiple classes — show picker
+    sub.textContent = 'Select a class to view student data.';
+    const sel = document.getElementById('classSelect');
+    sel.innerHTML = '<option value="">Select a class...</option>' +
+      classes.map(c => `<option value="${c.id}">${WordLabData.escapeHtml(c.name)}</option>`).join('');
+    document.getElementById('classSelectField').style.display = '';
+    document.getElementById('loginBtn').style.display = '';
+  } catch(e) {
+    console.error('Dashboard init error:', e);
+    if (sub) sub.textContent = 'Error loading dashboard: ' + (e.message || e) + '. Please refresh the page.';
   }
-
-  // If only one class, load it directly
-  if (classes.length === 1) {
-    currentClass = await WordLabData.getClass(classes[0].id);
-    showDashboard();
-    return;
-  }
-
-  // Multiple classes — show picker
-  sub.textContent = 'Select a class to view student data.';
-  const sel = document.getElementById('classSelect');
-  sel.innerHTML = '<option value="">Select a class...</option>' +
-    classes.map(c => `<option value="${c.id}">${WordLabData.escapeHtml(c.name)}</option>`).join('');
-  document.getElementById('classSelectField').style.display = '';
-  document.getElementById('loginBtn').style.display = '';
 }
 
 async function login(){
@@ -787,8 +792,15 @@ async function login(){
     return;
   }
   document.getElementById('loginError').style.display = 'none';
-  currentClass = await WordLabData.getClass(classId);
-  showDashboard();
+  const sub = document.getElementById('loginSub');
+  try {
+    sub.textContent = 'Loading class data...';
+    currentClass = await WordLabData.getClass(classId);
+    showDashboard();
+  } catch(e) {
+    console.error('Error loading class:', e);
+    sub.textContent = 'Error loading class: ' + (e.message || e) + '. Please try again.';
+  }
 }
 
 function showDashboard(){

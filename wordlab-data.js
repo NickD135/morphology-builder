@@ -374,7 +374,8 @@ const WordLabData = (() => {
       const [progResult, charResult] = await Promise.all([
         sb().from('student_progress')
           .select('student_id, activity, category, correct, total, total_time, updated_at, is_extension')
-          .in('student_id', studentIds),
+          .in('student_id', studentIds)
+          .limit(10000),
         sb().from('student_character')
           .select('student_id, quarks, xp, badges, scientist, stats')
           .in('student_id', studentIds)
