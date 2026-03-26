@@ -1416,13 +1416,16 @@ const WordLabData = (() => {
   }
 
   // Build a reveal button + hidden translation container
-  function buildEALDRevealButton() {
+  function buildEALDRevealButton(idSuffix) {
     var lang = getEALDLanguage();
     if (!lang) return '';
     var langName = (EALD_LANGUAGES[lang] || lang).split(' (')[0];
-    return '<div class="eald-reveal-wrap" id="ealdRevealWrap">' +
-      '<button class="eald-reveal-btn" id="ealdRevealBtn" onclick="document.getElementById(\'ealdTranslationContent\').classList.toggle(\'show\');this.textContent=this.textContent.indexOf(\'Show\')!==-1?\'Hide \'+this.dataset.lang:\'Show in \'+this.dataset.lang" data-lang="' + escapeHtml(langName) + '">Show in ' + escapeHtml(langName) + '</button>' +
-      '<div class="eald-reveal-content" id="ealdTranslationContent"></div>' +
+    var suffix = idSuffix || '';
+    var contentId = 'ealdTranslationContent' + suffix;
+    var btnId = 'ealdRevealBtn' + suffix;
+    return '<div class="eald-reveal-wrap" id="ealdRevealWrap' + suffix + '">' +
+      '<button class="eald-reveal-btn" id="' + btnId + '" onclick="var c=document.getElementById(\'' + contentId + '\');c.classList.toggle(\'show\');this.textContent=this.textContent.indexOf(\'Show\')!==-1?\'Hide \'+this.dataset.lang:\'Show in \'+this.dataset.lang" data-lang="' + escapeHtml(langName) + '">Show in ' + escapeHtml(langName) + '</button>' +
+      '<div class="eald-reveal-content" id="' + contentId + '"></div>' +
       '</div>';
   }
 
@@ -1449,7 +1452,14 @@ const WordLabData = (() => {
       '.eald-reveal-btn:hover{background:rgba(99,102,241,.18);border-color:#818cf8;transform:translateY(-1px);}',
       '.eald-reveal-content{max-height:0;overflow:hidden;transition:max-height .3s ease,opacity .3s ease;opacity:0;}',
       '.eald-reveal-content.show{max-height:200px;opacity:1;margin-top:6px;}',
-      '.eald-definition{font-size:13px;font-weight:700;color:#64748b;font-style:italic;margin-top:4px;}',
+      '.eald-definition{text-align:center;margin-top:4px;}',
+      '.eald-def-btn{border:1.5px solid rgba(99,102,241,.25);background:rgba(99,102,241,.06);color:#4338ca;font-family:"Lexend",sans-serif;font-size:11px;font-weight:800;padding:5px 14px;border-radius:8px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}',
+      '.eald-def-btn:hover{background:rgba(99,102,241,.15);border-color:#818cf8;transform:translateY(-1px);}',
+      '.eald-def-btn .eald-def-front,.eald-def-btn .eald-def-back{transition:opacity .25s ease;}',
+      '.eald-def-btn .eald-def-back{display:none;}',
+      '.eald-def-btn.flipped .eald-def-front{display:none;}',
+      '.eald-def-btn.flipped .eald-def-back{display:inline;}',
+      '.eald-def-btn.flipped{background:rgba(99,102,241,.12);border-color:#a5b4fc;}',
     ].join('\n');
     document.head.appendChild(style);
   }
