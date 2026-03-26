@@ -735,6 +735,23 @@ var _originalSylWords = WORDS.slice();
     }
   } catch(e) {}
 })();
+// Load spelling set words (prepended — highest priority)
+(async function(){
+  try{
+    if(typeof WordLabData==='undefined'||!WordLabData.getSpellingSetWords) return;
+    var ssWords = await WordLabData.getSpellingSetWords();
+    var ssSyllables = ssWords.filter(function(w){ return w.word && w.syllables && w.syllables.length > 0; }).map(function(w){
+      return {word:w.word, syllables:w.syllables, clue:w.clue||'', _spellingSetId:w._spellingSetId};
+    });
+    if(ssSyllables.length) WORDS.splice(0, 0, ...ssSyllables);
+  }catch(e){}
+})();
+// Helper: also record spelling set progress when a spelling set word is answered
+function _ssTrack(question, correct) {
+  if (question && question._spellingSetId && typeof WordLabData !== 'undefined' && WordLabData.recordSpellingAttempt) {
+    WordLabData.recordSpellingAttempt(question._spellingSetId, question.word, correct, 0);
+  }
+}
 
 // ── State ────────────────────────────────────────────────────────────────────
 let currentWord = null;
@@ -924,6 +941,7 @@ function checkAnswer(){
 
     const _sylCat=(currentWord.syllables.length>=4?'4+':currentWord.syllables.length)+' syllables';
     const _wlResult=typeof WordLabData!=='undefined'&&WordLabData.getSession()?WordLabData.recordAttempt('syllable-splitter',_sylCat,true,0):null;
+    _ssTrack(currentWord, true);
     if(typeof WLScientist!=='undefined') WLScientist.react('correct',_wlResult);
     if(typeof WLAudio!=='undefined') WLAudio.correct();
     if(streak>=3&&typeof WLScientist!=='undefined') WLScientist.react('streak',{streak:streak});
@@ -934,7 +952,7 @@ function checkAnswer(){
     score = Math.max(0, score - 2);
     streak = 0;
     wrong++;
-    if(typeof WordLabData!=='undefined'&&WordLabData.getSession()){const _sylCatW=(currentWord.syllables.length>=4?'4+':currentWord.syllables.length)+' syllables';WordLabData.recordAttempt('syllable-splitter',_sylCatW,false,0);}
+    if(typeof WordLabData!=='undefined'&&WordLabData.getSession()){const _sylCatW=(currentWord.syllables.length>=4?'4+':currentWord.syllables.length)+' syllables';WordLabData.recordAttempt('syllable-splitter',_sylCatW,false,0);_ssTrack(currentWord, false);}
     if(typeof WLScientist!=='undefined') WLScientist.react('wrong');
     if(typeof WLAudio!=='undefined') WLAudio.wrong();
 

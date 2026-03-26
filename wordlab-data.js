@@ -1664,6 +1664,61 @@ const WordLabData = (() => {
     return _customMorphemesPriorityCache[gameName] || 'mixed';
   }
 
+  // ── Spelling set words loader ──────────────────────────────────
+  // Loads AI-analyzed words from the student's assigned spelling set(s)
+  var _spellingSetWordsCache = null;
+
+  async function getSpellingSetWords() {
+    var session = loadSession();
+    if (!session) return [];
+    if (_spellingSetWordsCache) return _spellingSetWordsCache;
+    try {
+      // Get all spelling sets for this class
+      var { data: sets } = await sb().from('class_spelling_sets')
+        .select('id, words')
+        .eq('class_id', session.classId);
+      if (!sets || !sets.length) { _spellingSetWordsCache = []; return []; }
+
+      // Get this student's active assignments
+      var setIds = sets.map(function(s) { return s.id; });
+      var { data: assigns } = await sb().from('spelling_set_assignments')
+        .select('spelling_set_id')
+        .eq('student_id', session.studentId)
+        .eq('active', true)
+        .in('spelling_set_id', setIds);
+
+      if (!assigns || !assigns.length) { _spellingSetWordsCache = []; return []; }
+      var assignedSetIds = assigns.map(function(a) { return a.spelling_set_id; });
+
+      // Collect words from assigned sets
+      var words = [];
+      sets.forEach(function(set) {
+        if (assignedSetIds.indexOf(set.id) === -1) return;
+        (set.words || []).forEach(function(w) {
+          if (typeof w === 'object' && w.word) {
+            w._spellingSetId = set.id;
+            words.push(w);
+          }
+        });
+      });
+
+      _spellingSetWordsCache = words;
+      return words;
+    } catch(e) {
+      console.warn('getSpellingSetWords error:', e);
+      _spellingSetWordsCache = [];
+      return [];
+    }
+  }
+
+  // Record a spelling set attempt — uses special activity key so dashboard heatmap picks it up
+  async function recordSpellingAttempt(setId, word, correct, timeMs) {
+    var session = loadSession();
+    if (!session) return {};
+    var category = 'ss:' + setId.slice(0, 8) + ':' + word.toLowerCase();
+    return recordAttempt('spelling-set', category, correct, timeMs);
+  }
+
   // ── EALD (English as an Additional Language or Dialect) ─────
   const EALD_LANGUAGES = {
     // — High-priority for Australian schools —
@@ -1959,6 +2014,7 @@ const WordLabData = (() => {
     getDailyChallenges, updateChallengeProgress, claimChallengeReward, updateDailyStreak, CHALLENGE_GAMES,
     getCustomWords, getCustomWordPriority,
     getCustomMorphemes, getCustomMorphemePriority,
+    getSpellingSetWords, recordSpellingAttempt,
     getEALDLanguage, getEALDLanguageName, getTranslations, createEALDPill, injectEALDStyles, EALD_LANGUAGES, EALD_TTS_CODES,
     speakInLanguage, buildEALDSpeakButtons, buildEALDRevealButton, _speakEALD,
     escapeHtml

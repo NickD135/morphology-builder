@@ -1096,6 +1096,35 @@ var _originalSoundWords = WORDS.slice();
     seen.consonant.forEach(function(label, id){ SOUND_GROUPS.consonant.push({id:id, label:label}); });
   } catch(e) { console.warn('Custom sound-sorter words load error:', e); }
 })();
+// Load spelling set words (prepended — highest priority)
+(async function(){
+  try{
+    if(typeof WordLabData==='undefined'||!WordLabData.getSpellingSetWords) return;
+    var ssWords = await WordLabData.getSpellingSetWords();
+    var ssSounds = ssWords.filter(function(w){ return w.word && w.sound && w.grapheme; }).map(function(w){
+      return {word:w.word, sound:w.sound, soundLabel:w.soundLabel||w.sound, grapheme:w.grapheme, before:w.before||'', after:w.after||'', clue:w.clue||'', level:w.ssLevel||w.level||'levelup', type:w.ssType||w.type||'vowel', distractors:w.distractors||[], explain:w.explain||'', _spellingSetId:w._spellingSetId};
+    });
+    if(ssSounds.length){
+      WORDS.splice(0, 0, ...ssSounds);
+      // Rebuild SOUND_GROUPS to include new sounds from spelling set words
+      var seen = { vowel: new Map(), consonant: new Map() };
+      WORDS.forEach(function(w) {
+        var t = w.type === 'consonant' ? 'consonant' : 'vowel';
+        if (!seen[t].has(w.sound)) seen[t].set(w.sound, w.soundLabel);
+      });
+      SOUND_GROUPS.vowel = [];
+      SOUND_GROUPS.consonant = [];
+      seen.vowel.forEach(function(label, id){ SOUND_GROUPS.vowel.push({id:id, label:label}); });
+      seen.consonant.forEach(function(label, id){ SOUND_GROUPS.consonant.push({id:id, label:label}); });
+    }
+  }catch(e){}
+})();
+// Helper: also record spelling set progress when a spelling set word is answered
+function _ssTrack(question, correct) {
+  if (question && question._spellingSetId && typeof WordLabData !== 'undefined' && WordLabData.recordSpellingAttempt) {
+    WordLabData.recordSpellingAttempt(question._spellingSetId, question.word, correct, 0);
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════
 // STATE
@@ -1386,6 +1415,7 @@ function checkAnswer(grapheme){
     correctCount++;
     if(typeof WordLabData !== 'undefined' && WordLabData.getSession()){
       const _wlResult = WordLabData.recordAttempt('sound-sorter', currentWord.soundLabel, true, Date.now() - (window._questionStart||Date.now()));
+      _ssTrack(currentWord, true);
       if(typeof WLScientist!=='undefined') WLScientist.react('correct',_wlResult);
     }
     if(typeof WLAudio!=='undefined') WLAudio.correct();
@@ -1428,6 +1458,7 @@ function checkAnswer(grapheme){
       wrongCount++;
       if(typeof WordLabData !== 'undefined' && WordLabData.getSession()){
         WordLabData.recordAttempt('sound-sorter', currentWord.soundLabel, false, Date.now() - (window._questionStart||Date.now()));
+        _ssTrack(currentWord, false);
       }
       if(typeof WLScientist!=='undefined') WLScientist.react('wrong');
       if(typeof WLAudio!=='undefined') WLAudio.wrong();

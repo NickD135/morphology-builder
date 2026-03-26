@@ -594,6 +594,23 @@ var _originalPhonWords = WORDS.slice();
     }
   } catch(e) {}
 })();
+// Load spelling set words (prepended — highest priority)
+(async function(){
+  try{
+    if(typeof WordLabData==='undefined'||!WordLabData.getSpellingSetWords) return;
+    var ssWords = await WordLabData.getSpellingSetWords();
+    var ssPhonemes = ssWords.filter(function(w){ return w.word && w.phonemes && w.phonemes.length > 0; }).map(function(w){
+      return {word:w.word, phonemes:w.phonemes, diff:'Custom', clue:w.clue||'', _spellingSetId:w._spellingSetId};
+    });
+    if(ssPhonemes.length) WORDS.splice(0, 0, ...ssPhonemes);
+  }catch(e){}
+})();
+// Helper: also record spelling set progress when a spelling set word is answered
+function _ssTrack(question, correct) {
+  if (question && question._spellingSetId && typeof WordLabData !== 'undefined' && WordLabData.recordSpellingAttempt) {
+    WordLabData.recordSpellingAttempt(question._spellingSetId, question.word, correct, 0);
+  }
+}
 
 let currentWord = null;
 let currentDiff = "Starter";
@@ -819,6 +836,7 @@ function checkAnswer(){
     score += pts; streak++; correctCount++;
     if(streak > bestStreak) bestStreak = streak;
     const _wlResult=typeof WordLabData!=='undefined'&&WordLabData.getSession()?WordLabData.recordAttempt('phoneme-splitter',currentWord.diff,true,0):null;
+    _ssTrack(currentWord, true);
     if(typeof WLScientist!=='undefined') WLScientist.react('correct',_wlResult);
     if(typeof WLAudio!=='undefined') WLAudio.correct();
     if(streak>=3&&typeof WLScientist!=='undefined') WLScientist.react('streak',{streak:streak});
@@ -827,7 +845,7 @@ function checkAnswer(){
     banner.innerHTML = `✅ Perfect! <b>${currentWord.word}</b> → ${correctStr} (${correct.length} phonemes)${streak>=3?` <span style="color:var(--orange-text)">🔥 +5 streak bonus!</span>`:''}`;
   } else {
     score = Math.max(0, score-2); streak = 0; wrongCount++;
-    if(typeof WordLabData!=='undefined'&&WordLabData.getSession()){WordLabData.recordAttempt('phoneme-splitter',currentWord.diff,false,0);}
+    if(typeof WordLabData!=='undefined'&&WordLabData.getSession()){WordLabData.recordAttempt('phoneme-splitter',currentWord.diff,false,0);_ssTrack(currentWord, false);}
     if(typeof WLScientist!=='undefined') WLScientist.react('wrong');
     if(typeof WLAudio!=='undefined') WLAudio.wrong();
     banner.className = 'feedbackBanner wrong';
