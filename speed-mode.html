@@ -390,6 +390,8 @@
               <div class="wordOut" id="wordOut">Choose a base to begin</div>
               <div class="meaningOut" id="meaningOut">Then build as many real words as you can.</div>
               <div class="statusOut warn" id="statusOut" aria-live="assertive"></div>
+              <span id="ealdSpeakBtns"></span>
+              <div id="ealdDefinition" class="eald-definition"></div>
               <div id="ealdTranslation" aria-live="polite"></div>
             </div>
           </div>
@@ -1122,13 +1124,25 @@
 
         els.statusOut.textContent = `Scored ${points} point${points === 1 ? "" : "s"} for ${word}.`;
         els.statusOut.className = "statusOut ok";
-        // EALD
-        var ealdEl=document.getElementById('ealdTranslation');if(ealdEl)ealdEl.innerHTML='';
+        // EALD: speak buttons + flip reveal
+        var ealdSpeakEl=document.getElementById('ealdSpeakBtns');
+        var ealdDefEl=document.getElementById('ealdDefinition');
+        var ealdEl=document.getElementById('ealdTranslation');
+        if(ealdSpeakEl) ealdSpeakEl.innerHTML='';
+        if(ealdDefEl) ealdDefEl.innerHTML='';
+        if(ealdEl){ealdEl.innerHTML='';ealdEl.dataset.translatedWord='';ealdEl.dataset.englishWord='';}
         if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()){
           WordLabData.injectEALDStyles();
-          ealdEl.innerHTML=WordLabData.buildEALDRevealButton();
+          var langName=(WordLabData.EALD_LANGUAGES[WordLabData.getEALDLanguage()]||'').split(' (')[0];
+          if(ealdEl) ealdEl.dataset.englishWord=word;
+          if(ealdSpeakEl) ealdSpeakEl.innerHTML=WordLabData.buildEALDSpeakButtons();
+          if(ealdDefEl) ealdDefEl.innerHTML='<button class="eald-def-btn" id="ealdDefBtn" onclick="this.classList.toggle(\'flipped\')"><span class="eald-def-front">🌐 Show in '+WordLabData.escapeHtml(langName)+'</span><span class="eald-def-back" id="ealdDefText">Loading...</span></button>';
           WordLabData.getTranslations([word],['word']).then(function(t){
-            if(t&&t[word]){var contentEl=document.getElementById('ealdTranslationContent');if(contentEl){contentEl.innerHTML='<div class="eald-translation-pill eald-inline"><span class="eald-flag">🌐</span> '+WordLabData.escapeHtml(t[word])+'</div>';}}
+            if(t&&t[word]){
+              var defText=document.getElementById('ealdDefText');
+              if(defText) defText.textContent='🌐 '+t[word];
+              if(ealdEl) ealdEl.dataset.translatedWord=t[word];
+            }
           });
         }
 

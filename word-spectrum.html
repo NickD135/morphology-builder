@@ -523,6 +523,8 @@
       </div>
     </div>
 
+    <span id="ealdSpeakBtns"></span>
+    <div id="ealdDefinition" class="eald-definition"></div>
     <div class="feedback" id="feedback" aria-live="assertive"></div>
     <div class="subFeedback" id="subFeedback" aria-live="polite"></div>
     <div id="ealdTranslation" aria-live="polite"></div>
@@ -838,6 +840,27 @@ function loadSynonymAntonym(){
     btn.addEventListener('click', () => checkSynonymAntonym(opt));
     optionsEl.appendChild(btn);
   });
+  // EALD: speak buttons + flip reveal on load
+  var ealdSpeakEl=document.getElementById('ealdSpeakBtns');
+  var ealdDefEl=document.getElementById('ealdDefinition');
+  var ealdEl=document.getElementById('ealdTranslation');
+  if(ealdSpeakEl) ealdSpeakEl.innerHTML='';
+  if(ealdDefEl) ealdDefEl.innerHTML='';
+  if(ealdEl){ealdEl.innerHTML='';ealdEl.dataset.translatedWord='';ealdEl.dataset.englishWord='';}
+  if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&q){
+    WordLabData.injectEALDStyles();
+    var langName=(WordLabData.EALD_LANGUAGES[WordLabData.getEALDLanguage()]||'').split(' (')[0];
+    if(ealdEl) ealdEl.dataset.englishWord=q.word;
+    if(ealdSpeakEl) ealdSpeakEl.innerHTML=WordLabData.buildEALDSpeakButtons();
+    if(ealdDefEl) ealdDefEl.innerHTML='<button class="eald-def-btn" id="ealdDefBtn" onclick="this.classList.toggle(\'flipped\')"><span class="eald-def-front">🌐 Show in '+WordLabData.escapeHtml(langName)+'</span><span class="eald-def-back" id="ealdDefText">Loading...</span></button>';
+    WordLabData.getTranslations([q.word],['word']).then(function(t){
+      if(t&&t[q.word]){
+        var defText=document.getElementById('ealdDefText');
+        if(defText) defText.textContent='🌐 '+t[q.word];
+        if(ealdEl) ealdEl.dataset.translatedWord=t[q.word];
+      }
+    });
+  }
 }
 
 function lockButtons(){ optionsEl.querySelectorAll('button').forEach(b => b.disabled = true); }
@@ -976,6 +999,29 @@ function loadSpectrum(){
 
   document.getElementById('checkSpectrumBtn').style.display = 'none';
   buttonsLocked = false;
+  // EALD: speak buttons + flip reveal on load (spectrum mode)
+  var ealdSpeakEl=document.getElementById('ealdSpeakBtns');
+  var ealdDefEl=document.getElementById('ealdDefinition');
+  var ealdEl=document.getElementById('ealdTranslation');
+  if(ealdSpeakEl) ealdSpeakEl.innerHTML='';
+  if(ealdDefEl) ealdDefEl.innerHTML='';
+  if(ealdEl){ealdEl.innerHTML='';ealdEl.dataset.translatedWord='';ealdEl.dataset.englishWord='';}
+  if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&q){
+    WordLabData.injectEALDStyles();
+    var langName=(WordLabData.EALD_LANGUAGES[WordLabData.getEALDLanguage()]||'').split(' (')[0];
+    var allW=(q.words||[]).slice();if(q.leftAnchor)allW.unshift(q.leftAnchor);if(q.rightAnchor)allW.push(q.rightAnchor);
+    if(ealdEl) ealdEl.dataset.englishWord=allW.join(', ');
+    if(ealdSpeakEl) ealdSpeakEl.innerHTML=WordLabData.buildEALDSpeakButtons();
+    if(ealdDefEl) ealdDefEl.innerHTML='<button class="eald-def-btn" id="ealdDefBtn" onclick="this.classList.toggle(\'flipped\')"><span class="eald-def-front">🌐 Show in '+WordLabData.escapeHtml(langName)+'</span><span class="eald-def-back" id="ealdDefText">Loading...</span></button>';
+    var contexts=allW.map(function(){return 'word';});
+    WordLabData.getTranslations(allW,contexts).then(function(t){
+      if(!t)return;
+      var defText=document.getElementById('ealdDefText');
+      var pairs=allW.filter(function(w){return t[w];}).map(function(w){return w+' = '+t[w];});
+      if(defText&&pairs.length) defText.textContent='🌐 '+pairs.join(' · ');
+      if(ealdEl&&t[allW[0]]) ealdEl.dataset.translatedWord=t[allW[0]];
+    });
+  }
 }
 
 function selectSpectrumWord(tile){

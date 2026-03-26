@@ -1417,6 +1417,8 @@
           <div class="word" id="wordOut">Choose a base word</div>
           <div class="gloss" id="meaningOut">Then add a prefix or suffix to change the meaning.</div>
           <div class="status warn" id="statusOut"></div>
+          <span id="ealdSpeakBtns"></span>
+          <div id="ealdDefinition" class="eald-definition"></div>
           <div id="ealdTranslation" aria-live="polite" style="text-align:center;margin-top:4px;"></div>
         </div>
 
@@ -2816,22 +2818,25 @@ document.addEventListener("DOMContentLoaded", () => {
       els.statusOut.className   = "status bad";
     }
 
-    // EALD translation for built word + meaning
-    var ealdEl=document.getElementById('ealdTranslation');if(ealdEl)ealdEl.innerHTML='';
+    // EALD: speak buttons + flip reveal
+    var ealdSpeakEl=document.getElementById('ealdSpeakBtns');
+    var ealdDefEl=document.getElementById('ealdDefinition');
+    var ealdEl=document.getElementById('ealdTranslation');
+    if(ealdSpeakEl) ealdSpeakEl.innerHTML='';
+    if(ealdDefEl) ealdDefEl.innerHTML='';
+    if(ealdEl){ealdEl.innerHTML='';ealdEl.dataset.translatedWord='';ealdEl.dataset.englishWord='';}
     if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&w){
       WordLabData.injectEALDStyles();
-      ealdEl.innerHTML=WordLabData.buildEALDRevealButton();
-      var meaning=els.meaningOut.textContent||'';
-      var toTranslate=[w];var contexts=['word'];
-      if(meaning&&meaning.trim()){toTranslate.push(meaning);contexts.push('definition');}
-      WordLabData.getTranslations(toTranslate,contexts).then(function(t){
-        if(!t)return;
-        var contentEl=document.getElementById('ealdTranslationContent');
-        if(!contentEl)return;
-        var parts=[];
-        if(t[w])parts.push('<b>'+WordLabData.escapeHtml(w)+'</b> = '+WordLabData.escapeHtml(t[w]));
-        if(meaning&&t[meaning])parts.push(WordLabData.escapeHtml(t[meaning]));
-        if(parts.length){contentEl.innerHTML='<div class="eald-translation-pill eald-inline"><span class="eald-flag">🌐</span> '+parts.join(' · ')+'</div>';}
+      var langName=(WordLabData.EALD_LANGUAGES[WordLabData.getEALDLanguage()]||'').split(' (')[0];
+      if(ealdEl) ealdEl.dataset.englishWord=w;
+      if(ealdSpeakEl) ealdSpeakEl.innerHTML=WordLabData.buildEALDSpeakButtons();
+      if(ealdDefEl) ealdDefEl.innerHTML='<button class="eald-def-btn" id="ealdDefBtn" onclick="this.classList.toggle(\'flipped\')"><span class="eald-def-front">🌐 Show in '+WordLabData.escapeHtml(langName)+'</span><span class="eald-def-back" id="ealdDefText">Loading...</span></button>';
+      WordLabData.getTranslations([w],['word']).then(function(t){
+        if(t&&t[w]){
+          var defText=document.getElementById('ealdDefText');
+          if(defText) defText.textContent='🌐 '+t[w];
+          if(ealdEl) ealdEl.dataset.translatedWord=t[w];
+        }
       });
     }
   }

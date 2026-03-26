@@ -634,6 +634,8 @@
       <button class="primaryBtn" id="checkBtn" onclick="checkCline()" style="display:none;">Check Refinery ⚗️</button>
     </div>
 
+    <span id="ealdSpeakBtns"></span>
+    <div id="ealdDefinition" class="eald-definition"></div>
     <div class="feedback" id="feedback" aria-live="assertive"></div>
     <div class="subFeedback" id="subFeedback" aria-live="polite"></div>
     <div id="ealdTranslation" aria-live="polite"></div>
@@ -1100,6 +1102,29 @@ function loadQuestion(){
   setPurityMeter(50);
   buildClineTrack(c);
   buildMissingPool(c);
+  // EALD: speak buttons + flip reveal on load
+  var ealdSpeakEl=document.getElementById('ealdSpeakBtns');
+  var ealdDefEl=document.getElementById('ealdDefinition');
+  var ealdEl=document.getElementById('ealdTranslation');
+  if(ealdSpeakEl) ealdSpeakEl.innerHTML='';
+  if(ealdDefEl) ealdDefEl.innerHTML='';
+  if(ealdEl){ealdEl.innerHTML='';ealdEl.dataset.translatedWord='';ealdEl.dataset.englishWord='';}
+  if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&c){
+    WordLabData.injectEALDStyles();
+    var langName=(WordLabData.EALD_LANGUAGES[WordLabData.getEALDLanguage()]||'').split(' (')[0];
+    var allWords=c.words||[];
+    if(ealdEl) ealdEl.dataset.englishWord=allWords.join(', ');
+    if(ealdSpeakEl) ealdSpeakEl.innerHTML=WordLabData.buildEALDSpeakButtons();
+    if(ealdDefEl) ealdDefEl.innerHTML='<button class="eald-def-btn" id="ealdDefBtn" onclick="this.classList.toggle(\'flipped\')"><span class="eald-def-front">🌐 Show in '+WordLabData.escapeHtml(langName)+'</span><span class="eald-def-back" id="ealdDefText">Loading...</span></button>';
+    var contexts=allWords.map(function(){return 'word';});
+    WordLabData.getTranslations(allWords,contexts).then(function(t){
+      if(!t)return;
+      var defText=document.getElementById('ealdDefText');
+      var pairs=allWords.filter(function(w){return t[w];}).map(function(w){return w+' = '+t[w];});
+      if(defText&&pairs.length) defText.textContent='🌐 '+pairs.join(' · ');
+      if(ealdEl&&t[allWords[0]]) ealdEl.dataset.translatedWord=t[allWords[0]];
+    });
+  }
 }
 
 function buildClineTrack(c){

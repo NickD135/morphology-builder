@@ -722,6 +722,8 @@
     </div>
 
     <div class="baseMeaning" id="baseMeaning">Loading...</div>
+    <span id="ealdSpeakBtns"></span>
+    <div id="ealdDefinition" class="eald-definition"></div>
     <div class="options"     id="options"></div>
     <div class="feedback"    id="feedback" aria-live="assertive"></div>
     <div class="subFeedback" id="subFeedback" aria-live="polite"></div>
@@ -1140,6 +1142,28 @@
     feedbackEl.textContent="";feedbackEl.className="feedback";subFeedbackEl.textContent="";
     resetDropZone();optionsEl.innerHTML="";
     q.options.forEach((option,index)=>{const btn=document.createElement("button");btn.type="button";btn.className=`bubbleBtn ${["blue","green","purple","orange"][index%4]}`;btn.style.animationDelay=`${index*.18}s`;const inner=document.createElement("div");inner.className="bubbleInner";const main=document.createElement("span");const _lbl=getPrefixLabel(option);main.textContent=_lbl;if(_lbl.length>7)main.style.fontSize='11px';else if(_lbl.length>5)main.style.fontSize='13px';else if(_lbl.length>4)main.style.fontSize='15px';inner.appendChild(main);btn.appendChild(inner);btn.addEventListener("click",()=>checkAnswer(option));optionsEl.appendChild(btn);});
+    // EALD: speak buttons + flip reveal on load
+    var ealdSpeakEl=document.getElementById('ealdSpeakBtns');
+    var ealdDefEl=document.getElementById('ealdDefinition');
+    var ealdEl=document.getElementById('ealdTranslation');
+    if(ealdSpeakEl) ealdSpeakEl.innerHTML='';
+    if(ealdDefEl) ealdDefEl.innerHTML='';
+    if(ealdEl){ealdEl.innerHTML='';ealdEl.dataset.translatedWord='';ealdEl.dataset.englishWord='';}
+    if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&q){
+      WordLabData.injectEALDStyles();
+      var langName=(WordLabData.EALD_LANGUAGES[WordLabData.getEALDLanguage()]||'').split(' (')[0];
+      var _meaning=q.targetMeaning||'';
+      if(ealdEl) ealdEl.dataset.englishWord=_meaning;
+      if(ealdSpeakEl) ealdSpeakEl.innerHTML=WordLabData.buildEALDSpeakButtons();
+      if(ealdDefEl) ealdDefEl.innerHTML='<button class="eald-def-btn" id="ealdDefBtn" onclick="this.classList.toggle(\'flipped\')"><span class="eald-def-front">🌐 Show in '+WordLabData.escapeHtml(langName)+'</span><span class="eald-def-back" id="ealdDefText">Loading...</span></button>';
+      WordLabData.getTranslations([_meaning],['morpheme_meaning']).then(function(t){
+        if(t&&t[_meaning]){
+          var defText=document.getElementById('ealdDefText');
+          if(defText) defText.textContent='🌐 '+t[_meaning];
+          if(ealdEl) ealdEl.dataset.translatedWord=t[_meaning];
+        }
+      });
+    }
   }
   function lockButtons(){optionsEl.querySelectorAll("button").forEach(b=>b.disabled=true);}
   function checkAnswer(choice){

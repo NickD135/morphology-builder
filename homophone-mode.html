@@ -333,6 +333,8 @@
     <!-- ── Game Screen ── -->
     <div id="gameScreen" class="hidden">
       <div id="gameArea"></div>
+      <span id="ealdSpeakBtns"></span>
+      <div id="ealdDefinition" class="eald-definition"></div>
       <div class="feedback" id="feedback" aria-live="assertive"></div>
       <div class="sub-feedback" id="subFeedback" aria-live="polite"></div>
       <div id="ealdTranslation" aria-live="polite"></div>
@@ -751,6 +753,32 @@ function showQuestion() {
   if (selectedMode === 'mode1') renderMode1(area, q);
   else if (selectedMode === 'mode2') renderMode2(area, q);
   else renderMode3(area, q);
+  // EALD: speak buttons + flip reveal on load
+  var ealdSpeakEl=document.getElementById('ealdSpeakBtns');
+  var ealdDefEl=document.getElementById('ealdDefinition');
+  var ealdEl=document.getElementById('ealdTranslation');
+  if(ealdSpeakEl) ealdSpeakEl.innerHTML='';
+  if(ealdDefEl) ealdDefEl.innerHTML='';
+  if(ealdEl){ealdEl.innerHTML='';ealdEl.dataset.translatedWord='';ealdEl.dataset.englishWord='';}
+  if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&q){
+    WordLabData.injectEALDStyles();
+    var langName=(WordLabData.EALD_LANGUAGES[WordLabData.getEALDLanguage()]||'').split(' (')[0];
+    var words=q.words||q.group||[q.word||''];
+    if(ealdEl) ealdEl.dataset.englishWord=words.join(', ');
+    if(ealdSpeakEl) ealdSpeakEl.innerHTML=WordLabData.buildEALDSpeakButtons();
+    if(ealdDefEl) ealdDefEl.innerHTML='<button class="eald-def-btn" id="ealdDefBtn" onclick="this.classList.toggle(\'flipped\')"><span class="eald-def-front">🌐 Show in '+WordLabData.escapeHtml(langName)+'</span><span class="eald-def-back" id="ealdDefText">Loading...</span></button>';
+    var toTranslate=[];var contexts=[];
+    words.forEach(function(w){toTranslate.push(w);contexts.push('word');});
+    var defs=q.definitions||[];
+    defs.forEach(function(d,i){if(d){toTranslate.push(d);contexts.push('definition');}});
+    WordLabData.getTranslations(toTranslate,contexts).then(function(t){
+      if(!t)return;
+      var defText=document.getElementById('ealdDefText');
+      var pairs=words.filter(function(w){return t[w];}).map(function(w){return w+' = '+t[w];});
+      if(defText&&pairs.length) defText.textContent='🌐 '+pairs.join(' · ');
+      if(ealdEl&&t[words[0]]) ealdEl.dataset.translatedWord=t[words[0]];
+    });
+  }
 }
 
 // ══════════════════════════════════════════════════════════════

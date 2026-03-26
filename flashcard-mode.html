@@ -343,6 +343,8 @@
                 <div class="info full"><span class="label">Example / hint</span><div class="value" id="sentenceText"></div></div>
                 <div class="info full"><span class="label">Word examples</span><div class="value" id="examplesList"></div></div>
                 <div class="info full" id="ealdRow" style="display:none"><span class="label">🌐 Translation</span><div class="value" id="ealdTranslation"></div></div>
+                <div class="info full" id="ealdSpeakRow" style="display:none"><span class="label">🔊 Listen</span><div class="value"><span id="ealdSpeakBtns"></span></div></div>
+                <div class="info full" id="ealdDefRow" style="display:none"><span class="label"></span><div class="value"><div id="ealdDefinition" class="eald-definition"></div></div></div>
               </div>
             </div>
           </div>
@@ -606,13 +608,23 @@
     $("emojiBox").textContent = showEmoji.checked ? (card.emoji || "🧠") : "";
     renderExamples(card);
 
-    // EALD translation
+    // EALD translation + speak buttons + flip reveal
     var ealdRow = $("ealdRow"), ealdEl = $("ealdTranslation");
+    var ealdSpeakRow = $("ealdSpeakRow"), ealdSpeakEl = $("ealdSpeakBtns");
+    var ealdDefRow = $("ealdDefRow"), ealdDefEl = $("ealdDefinition");
     if (ealdRow) ealdRow.style.display = 'none';
-    if (ealdEl) ealdEl.textContent = '';
+    if (ealdEl) { ealdEl.textContent = ''; ealdEl.dataset.translatedWord = ''; ealdEl.dataset.englishWord = ''; }
+    if (ealdSpeakRow) ealdSpeakRow.style.display = 'none';
+    if (ealdSpeakEl) ealdSpeakEl.innerHTML = '';
+    if (ealdDefRow) ealdDefRow.style.display = 'none';
+    if (ealdDefEl) ealdDefEl.innerHTML = '';
     if (typeof WordLabData !== 'undefined' && WordLabData.getEALDLanguage()) {
       WordLabData.injectEALDStyles();
+      var langName = (WordLabData.EALD_LANGUAGES[WordLabData.getEALDLanguage()] || '').split(' (')[0];
       var morpheme = card.morpheme || '', meaning = card.meaning || '';
+      if (ealdEl) ealdEl.dataset.englishWord = meaning || morpheme;
+      if (ealdSpeakEl) { ealdSpeakEl.innerHTML = WordLabData.buildEALDSpeakButtons(); if (ealdSpeakRow) ealdSpeakRow.style.display = ''; }
+      if (ealdDefEl) { ealdDefEl.innerHTML = '<button class="eald-def-btn" id="ealdDefBtn" onclick="this.classList.toggle(\'flipped\')"><span class="eald-def-front">🌐 Show in ' + WordLabData.escapeHtml(langName) + '</span><span class="eald-def-back" id="ealdDefText">Loading...</span></button>'; if (ealdDefRow) ealdDefRow.style.display = ''; }
       WordLabData.getTranslations([morpheme, meaning], ['word', 'morpheme_meaning']).then(function(t) {
         if (!t) return;
         var parts = [];
@@ -622,6 +634,11 @@
           ealdEl.innerHTML = parts.join(' — ');
           ealdRow.style.display = '';
         }
+        var defText = document.getElementById('ealdDefText');
+        if (defText && t[meaning]) defText.textContent = '🌐 ' + t[meaning];
+        else if (defText && t[morpheme]) defText.textContent = '🌐 ' + t[morpheme];
+        if (ealdEl && t[meaning]) ealdEl.dataset.translatedWord = t[meaning];
+        else if (ealdEl && t[morpheme]) ealdEl.dataset.translatedWord = t[morpheme];
       });
     }
 
