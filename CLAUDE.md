@@ -554,10 +554,16 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 - [x] Edge function `analyze-words` uses Claude API to analyze up to 30 words at once
 
 #### 7.3 Student experience
-- [x] "Daily goal" system — 20 questions/day with progress bar on landing page
+- [x] "Daily goal" system — replaced with daily challenges system in status strip
 - [x] Class XP leaderboard on landing page (top 5 in class, highlights current student)
 - [x] Notification when a badge is newly earned (popup/animation) — already in WLScientist.react
-- [x] Home screen shows "Welcome back, [name]!" with quarks, level, badges, daily goal
+- [x] Home screen shows "Welcome back, [name]!" with quarks, level, badges, challenges
+- [x] Daily challenges: 3 per day (easy/medium/hard) + weekly challenge, randomised per student
+- [x] Daily play streak tracking (10+ min/day) with animated flame badge
+- [x] Streak flame grows/intensifies over 30 days, resets on break
+- [x] Badge pins on scientist lab coat (up to 3 earned badges)
+- [x] 22 purchasable dance moves across 6 streak tiers (correct → 30+ streak)
+- [x] Dance moves play on both header widget and large game stage scientist
 
 #### 7.4 Mobile polish
 - [x] Full audit of all game pages on mobile (320px–480px)
@@ -604,8 +610,8 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 - [x] Preview table before saving
 - [x] Phonemes use actual graphemes (letters) from the word, not sound representations
 - [x] AI auto-corrects misspelled words
-- [ ] TODO: Expand to Sound Sorter, Mission Mode, Meaning Mode (needs more data per word)
-- [ ] TODO: Test phoneme/syllable integration end-to-end with student accounts
+- [x] Expanded to Sound Sorter, Mission Mode, Meaning Mode (custom lists now work in all 6 games)
+- [x] Phoneme/syllable integration working end-to-end with student accounts
 
 ---
 
@@ -645,7 +651,7 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 
 #### Teacher auth & signup
 - [x] School name field added to teacher-login.html Create Account form
-- [x] ⚠️ TEMPORARY: New signups get `plan: 'active'` (for PL demo 2026-03-25) — revert to `plan: 'trial'` with 30-day window after
+- [x] New signups reverted to `plan: 'trial'` with 30-day window (was temporarily `active` for PL demo)
 
 #### Fixes
 - [x] Shop item publish: always include base64 `image_data` (fixes NOT NULL constraint)
@@ -664,6 +670,79 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 - [x] Differentiation, HPGE, intervention documentation
 - [x] Activities at a glance grid, references section
 - [x] About link added to footers across 12+ pages
+
+---
+
+### PHASE 7.7 — Session 2026-03-26
+
+#### Teaching slide decks (prefix/suffix)
+- [x] Generated all 35 prefix + 22 suffix PPTX teaching decks via Claude API
+- [x] Updated `generate-all-decks.js` with all morphemes and type-tagged filenames
+- [x] Updated `teacher-resources.html` with all 254 decks (197 bases + 35 prefixes + 22 suffixes)
+
+#### Daily challenges system
+- [x] 3 daily challenges per student (easy/medium/hard) + weekly challenge
+- [x] Randomised game types, seeded per student per day (deterministic)
+- [x] Daily play streak tracking (10+ min/day to maintain streak)
+- [x] Streak badges: 3-day, 7-day, 14-day, 30-day
+- [x] Challenge toast notifications on all game pages
+- [x] Compact challenges + animated streak flame in landing page status strip
+- [x] Claim rewards with scientist animation
+
+#### Scientist character upgrades
+- [x] Badge pins: up to 3 earned badges pinnable on lab coat
+- [x] Dynamic streak flame badge: grows/intensifies over 30 days, animated SVG
+- [x] 22 purchasable dance moves across 6 tiers (correct, 3/5/10/15/30+ streaks)
+- [x] Dances play on both header widget AND large game stage scientist
+- [x] Fixed 3D rotation dances (Spin, Backflip) to use visible 2D transforms
+
+#### Worksheet generators
+- [x] Custom word list support added to 4 more generators (Phoneme, Syllable, Sound Sorter, Root Lab)
+- [x] EALD translation support added to all 9 worksheet generators
+- [x] Column widths rebalanced when translation column is present
+
+#### Performance & data fixes
+- [x] Morpheme Builder: pre-built valid word index replaces O(n^4) viability sweep
+- [x] Dictionary: replaced 5,837-word auto-generated list with curated 20,220-word list
+- [x] Sound Sorter: expanded from 233 to 349 words across all sounds
+- [x] Extension Sound Sorter: expanded from 54 to 84 words with 30 French-origin words
+- [x] Dashboard extension toggle: fixed missing `wordlab-extension-data.js` script tag
+- [x] Dashboard base/extension data: `getClass()` now filters by `is_extension`
+- [x] AI word analyzer (`analyze-words` edge function): improved error handling, redeployed
+- [x] New signups reverted from `active` to 30-day `trial`
+- [x] Leaderboard expanded from top 3 to top 5
+
+---
+
+### PHASE 10 — NSW Spelling Diagnostic Integration
+
+Integrating the NSW Department of Education Spelling Diagnostic Assessment (Sets 1–7)
+into Word Labs as a structured spelling progression system.
+
+#### 10.1 Spelling sets data (`spelling-sets.js`)
+- [ ] Create `spelling-sets.js` with all 7 sets structured by set number and section
+- [ ] Each word tagged with set, section, focus area, and difficulty tier
+- [ ] Tier mapping: Sets 1-2 → starter (foundation), Sets 3-4 → starter, Set 5 → levelup, Sets 6-7 → challenge
+
+#### 10.2 Diagnostic dashboard tab
+- [ ] New "Spelling Sets" tab on teacher dashboard
+- [ ] Sub-tabs: Set 1 | Set 2 | Set 3 | Set 4 | Set 5 | Set 6 | Set 7
+- [ ] Heatmap per set: words as columns, students as rows (like Breakdown Blitz)
+- [ ] Teacher assigns each student to a set (`spelling_set` field on student record)
+- [ ] Historical view: when student moves to next set, previous set data preserved
+- [ ] Progress tracking across sets visible in student profile
+
+#### 10.3 Activity word prioritisation
+- [ ] Student's assigned spelling set words get prioritised in activities
+- [ ] Words feed into: Phoneme Splitter, Syllable Splitter, Sound Sorter, Breakdown Blitz
+- [ ] Priority system: spelling set words first, then built-in words
+- [ ] Activity records tagged with spelling set for dashboard tracking
+
+#### 10.4 Per-activity extension toggle
+- [ ] Replace single `extension_mode` boolean with `extension_activities` array on student record
+- [ ] Teachers can toggle extension per activity in class-setup (e.g., Sound Sorter on extension, everything else base)
+- [ ] Each game page checks if its specific activity is in the extension list
+- [ ] Dashboard respects per-activity extension settings
 
 ---
 
