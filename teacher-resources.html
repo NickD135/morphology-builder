@@ -172,7 +172,19 @@
     .dlBtn.primary{ background:#0d9488; color:#fff; }
     .dlBtn.primary:hover{ background:#0f766e; }
     .dlBtn.primary:disabled{ background:#1e293b; color:#475569; cursor:default; }
+    .dlBtn.eald{ background:rgba(180,83,9,.15); color:#fbbf24; border:1.5px solid rgba(251,191,36,.3); flex:none; width:100%; }
+    .dlBtn.eald:hover{ background:rgba(180,83,9,.25); }
+    .dlBtn.eald:disabled{ background:#1e293b; color:#475569; border-color:#334155; cursor:default; }
     .dlBtn svg{ width:14px; height:14px; fill:currentColor; flex-shrink:0; }
+    .ealdRow{ display:flex; gap:6px; align-items:center; margin-top:2px; flex-wrap:wrap; }
+    .ealdLangSelect{
+      flex:1; min-width:0; padding:6px 10px; border-radius:8px;
+      border:1.5px solid rgba(251,191,36,.3); background:rgba(255,255,255,.04);
+      color:#fbbf24; font-family:'Lexend',sans-serif; font-size:11px; font-weight:700;
+      outline:none; cursor:pointer;
+    }
+    .ealdLangSelect option{ background:#1e1b4b; color:#e0e7ff; }
+    .ealdStatus{ font-size:10px; font-weight:700; color:#94a3b8; text-align:center; margin-top:2px; }
 
     .comingSoonBadge{
       position:absolute; top:16px; right:16px;
@@ -501,8 +513,10 @@
 
 <!-- ── Scripts ── -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <script src="data.js"></script>
 <script src="wordlab-data.js"></script>
+<script src="wordlabs-deck-translated.js"></script>
 <script>
 
 /* ── Top-level tab switching ── */
@@ -1178,7 +1192,9 @@ function renderDecks() {
     var typeBadge = '<span style="display:inline-block;background:' + typeColor + ';color:#fff;font-size:9px;font-weight:900;padding:2px 8px;border-radius:6px;letter-spacing:.05em;vertical-align:middle;margin-left:8px;">' + d.type.toUpperCase() + '</span>';
     var catLabel = DECK_CATEGORIES.find(function(c) { return c.id === d.category; });
     var catText = catLabel ? catLabel.label : '';
-    return '<div class="deckCard">' +
+    var deckType = d.type === 'Prefix' ? 'prefix' : d.type === 'Suffix' ? 'suffix' : 'base';
+    var cardId = 'deck-' + d.morpheme + '-' + deckType;
+    return '<div class="deckCard" id="' + cardId + '">' +
       '<div class="deckMorpheme">' +
         '<span class="deckRoot">&#8216;' + label + '&#8217;</span>' + typeBadge +
       '</div>' +
@@ -1188,6 +1204,16 @@ function renderDecks() {
       '<div class="deckActions">' +
         '<a class="dlBtn primary" href="' + url + '" download="' + fname + '">' + dlIcon + ' Download</a>' +
       '</div>' +
+      '<div class="ealdRow">' +
+        '<select class="ealdLangSelect" id="lang-' + cardId + '">' +
+          '<option value="">Select language...</option>' +
+          Object.entries(WordLabData.EALD_LANGUAGES).map(function(e) { return '<option value="' + e[0] + '">' + e[1] + '</option>'; }).join('') +
+        '</select>' +
+        '<button class="dlBtn eald" onclick="generateTranslatedDeck(\'' + d.morpheme + '\',\'' + deckType + '\',\'' + cardId + '\')" id="btn-' + cardId + '">' +
+          '&#127760; EALD Deck' +
+        '</button>' +
+      '</div>' +
+      '<div class="ealdStatus" id="status-' + cardId + '"></div>' +
     '</div>';
   }).join('');
 }
@@ -1201,6 +1227,68 @@ document.getElementById('deckSearch').addEventListener('input', function() {
 renderTabs();
 renderDecks();
 
+/* ── EALD Translated Deck Generation ── */
+var SUPABASE_URL = 'https://kdpavfrzmmzknqfpodrl.supabase.co';
+
+async function generateTranslatedDeck(morpheme, type, cardId) {
+  var langSelect = document.getElementById('lang-' + cardId);
+  var btn = document.getElementById('btn-' + cardId);
+  var statusEl = document.getElementById('status-' + cardId);
+  var langCode = langSelect ? langSelect.value : '';
+
+  if (!langCode) {
+    statusEl.textContent = 'Please select a language first.';
+    statusEl.style.color = '#ef4444';
+    return;
+  }
+
+  var langName = (WordLabData.EALD_LANGUAGES[langCode] || langCode).split(' (')[0];
+  var fullLangName = WordLabData.EALD_LANGUAGES[langCode] || langCode;
+
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+  statusEl.textContent = 'Calling AI to generate ' + langName + ' translations — this may take 15-30 seconds...';
+  statusEl.style.color = '#fbbf24';
+
+  try {
+    var resp = await fetch(SUPABASE_URL + '/functions/v1/generate-translated-deck', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        morpheme: morpheme,
+        type: type,
+        language: langCode,
+        languageName: fullLangName,
+      }),
+    });
+
+    var data = await resp.json();
+    if (!resp.ok || !data.deck) {
+      throw new Error(data.error || 'Failed to generate deck data');
+    }
+
+    statusEl.textContent = 'Building PowerPoint slides...';
+    var deckData = data.deck;
+    deckData.type = type;
+
+    var pres = WLDeckBuilder.buildDeck(deckData, langName);
+
+    var filename = 'wordlabs-' + morpheme + (type === 'prefix' ? '-prefix' : type === 'suffix' ? '-suffix' : '') + '-EALD-' + langCode + '.pptx';
+    statusEl.textContent = 'Downloading ' + filename + '...';
+
+    await pres.writeFile({ fileName: filename });
+
+    statusEl.textContent = '\u2705 Downloaded! ' + langName + ' translated deck for \u2018' + morpheme + '\u2019';
+    statusEl.style.color = '#4ade80';
+  } catch (err) {
+    console.error('Translated deck error:', err);
+    statusEl.textContent = 'Error: ' + (err.message || 'Unknown error. Please try again.');
+    statusEl.style.color = '#ef4444';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '\ud83c\udf10 EALD Deck';
+  }
+}
 
 </script>
 </body>
