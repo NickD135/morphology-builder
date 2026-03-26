@@ -373,7 +373,7 @@ const WordLabData = (() => {
     if (studentIds.length) {
       const [progResult, charResult] = await Promise.all([
         sb().from('student_progress')
-          .select('student_id, activity, category, correct, total, total_time, updated_at')
+          .select('student_id, activity, category, correct, total, total_time, updated_at, is_extension')
           .in('student_id', studentIds),
         sb().from('student_character')
           .select('student_id, quarks, xp, badges, scientist, stats')
@@ -391,6 +391,16 @@ const WordLabData = (() => {
     const progressMap = {};
     const lastActiveMap = {};
     progressRows.forEach(row => {
+      // Track last active from ALL rows (base + extension)
+      if (row.updated_at) {
+        var ts = new Date(row.updated_at).getTime();
+        if (!lastActiveMap[row.student_id] || ts > lastActiveMap[row.student_id]) {
+          lastActiveMap[row.student_id] = ts;
+        }
+      }
+      // Only include base (non-extension) data in student.results
+      // Extension data is loaded separately by the dashboard
+      if (row.is_extension) return;
       if (!progressMap[row.student_id]) progressMap[row.student_id] = {};
       if (!progressMap[row.student_id][row.activity]) progressMap[row.student_id][row.activity] = {};
       progressMap[row.student_id][row.activity][row.category] = {
@@ -398,12 +408,6 @@ const WordLabData = (() => {
         total: row.total,
         totalTime: row.total_time
       };
-      if (row.updated_at) {
-        var ts = new Date(row.updated_at).getTime();
-        if (!lastActiveMap[row.student_id] || ts > lastActiveMap[row.student_id]) {
-          lastActiveMap[row.student_id] = ts;
-        }
-      }
     });
 
     const students = (studs || []).map(s => ({
