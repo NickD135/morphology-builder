@@ -175,6 +175,22 @@
     <div class="sideInner">
 
       <div class="section">
+        <div class="sectionLabel">Word Source</div>
+        <div class="radioGroup">
+          <label><input type="radio" name="src" value="builtin" checked onchange="toggleCustom()"> Built-in words</label>
+          <label><input type="radio" name="src" value="custom" onchange="toggleCustom()"> Custom word list</label>
+        </div>
+        <div id="customWrap" style="display:none;margin-top:8px;">
+          <input type="text" id="classCodeInput" placeholder="Class code" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;margin-bottom:4px;">
+          <button onclick="loadCustomLists()" style="border:none;background:var(--indigo);color:#fff;border-radius:8px;padding:6px 14px;font-size:11px;font-weight:800;cursor:pointer;width:100%;">Load Lists</button>
+          <div id="customListMsg" style="font-size:11px;font-weight:600;color:#94a3b8;margin-top:4px;"></div>
+          <select id="customListSelect" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;margin-top:6px;display:none;">
+            <option value="">— load a list first —</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section">
         <div class="sectionLabel">Difficulty</div>
         <div class="radioGroup">
           <label><input type="radio" name="level" value="starter" checked> Starter <span class="hint">2-morpheme words</span></label>
@@ -233,6 +249,56 @@
 </div>
 
 <script>
+// ── Supabase ─────────────────────────────────────────────────
+const SUPABASE_URL  = 'https://kdpavfrzmmzknqfpodrl.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkcGF2ZnJ6bW16a25xZnBvZHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjgzOTIsImV4cCI6MjA5MDAwNDM5Mn0.n5fe7HvXWMsM4xN_iaU_N4xLkC5xD4y9Uoer_DG-dlg';
+var customListsData = {};
+
+function toggleCustom() {
+  var isCustom = document.querySelector('input[name=src]:checked').value === 'custom';
+  document.getElementById('customWrap').style.display = isCustom ? '' : 'none';
+}
+
+async function loadCustomLists() {
+  var code = (document.getElementById('classCodeInput').value || '').trim().toUpperCase();
+  var msg = document.getElementById('customListMsg');
+  var sel = document.getElementById('customListSelect');
+  if (!code) { msg.textContent = 'Enter a class code first.'; msg.style.color = '#dc2626'; return; }
+  msg.textContent = 'Loading…'; msg.style.color = '#94a3b8';
+  try {
+    var classRes = await fetch(SUPABASE_URL + '/rest/v1/classes?class_code=eq.' + encodeURIComponent(code) + '&select=id,name', { headers: { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON } });
+    var classes = await classRes.json();
+    if (!classes.length) { msg.textContent = 'Class code not found.'; msg.style.color = '#dc2626'; return; }
+    var listsRes = await fetch(SUPABASE_URL + '/rest/v1/class_word_lists?class_id=eq.' + classes[0].id + '&select=id,name,words', { headers: { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON } });
+    var lists = await listsRes.json();
+    if (!lists.length) { msg.textContent = 'No word lists for this class.'; msg.style.color = '#dc2626'; return; }
+    customListsData = {};
+    lists.forEach(function(l) { customListsData[l.id] = { name: l.name, words: l.words || [] }; });
+    sel.innerHTML = lists.map(function(l) { return '<option value="' + l.id + '">' + l.name + ' (' + (l.words||[]).length + ' words)</option>'; }).join('');
+    sel.style.display = '';
+    msg.textContent = '✓ ' + lists.length + ' list' + (lists.length > 1 ? 's' : '') + ' loaded'; msg.style.color = '#16a34a';
+  } catch(e) { msg.textContent = 'Could not load lists.'; msg.style.color = '#dc2626'; }
+}
+
+function getCustomWords() {
+  var listId = document.getElementById('customListSelect').value;
+  var list = customListsData[listId];
+  if (!list) return [];
+  return list.words.filter(function(w) {
+    return w.word && (w.prefix || w.base || w.suffix1 || w.suffix2);
+  }).map(function(w) {
+    var suffix = [w.suffix1, w.suffix2].filter(Boolean).join('');
+    return {
+      word: w.word,
+      parts: { prefix: w.prefix || null, base: w.base || null, suffix: suffix || null },
+      meanings: { prefix: w.prefix ? '' : null, base: w.clue || '', suffix: suffix ? '' : null },
+      fullMeaning: w.clue || w.base || '',
+      distractors: [],
+      level: 'custom'
+    };
+  });
+}
+
 // ── Inline Root Lab word data ─────────────────────────────────
 const WORDS = [
   // STARTER
@@ -296,13 +362,20 @@ function stepCount(d) {
 }
 
 function generateWorksheet() {
+  const src      = document.querySelector('input[name=src]:checked').value;
   const level    = document.querySelector('input[name=level]:checked').value;
   const scaffold = document.querySelector('input[name=scaffold]:checked').value;
   const count    = parseInt(document.getElementById('countInput').value) || 6;
   const showCloze= document.getElementById('toggleCloze').checked;
   const showKey  = document.getElementById('toggleKey').checked;
 
-  let pool = level === 'mixed' ? WORDS : WORDS.filter(w => w.level === level);
+  let pool;
+  if (src === 'custom') {
+    pool = getCustomWords();
+    if (!pool.length) { alert('No words with morpheme data in this list. Make sure the list was generated with AI breakdowns (prefix, base, or suffix).'); return; }
+  } else {
+    pool = level === 'mixed' ? WORDS : WORDS.filter(w => w.level === level);
+  }
   const capped = Math.min(count, pool.length);
   const bank = shuffle(pool).slice(0, capped);
 
@@ -311,7 +384,7 @@ function generateWorksheet() {
     return;
   }
 
-  const levelLabel = {starter:'Starter',levelup:'Level Up',challenge:'Challenge',mixed:'Mixed'}[level];
+  const levelLabel = src === 'custom' ? 'Custom List' : {starter:'Starter',levelup:'Level Up',challenge:'Challenge',mixed:'Mixed'}[level];
   const scaffoldLabel = {none:'All Blank',form:'Forms Given',given:'All Given'}[scaffold];
   const letters = ['A','B','C','D'];
 
@@ -356,12 +429,18 @@ function generateWorksheet() {
       ...w.distractors.map(d => ({ text: d, correct: false }))
     ]);
 
-    const optionHtml = options.map((opt, j) => `
-      <div class="meaning-option">
-        <span class="meaning-option-letter">${letters[j]}</span>
-        <div class="meaning-option-circle"></div>
-        <span>${opt.text}</span>
-      </div>`).join('');
+    let optionHtml;
+    if (w.distractors.length === 0) {
+      // Custom words without distractors — write-in blank
+      optionHtml = `<div style="border-bottom:1.5px solid #94a3b8;height:18px;width:100%;margin-top:4px;"></div>`;
+    } else {
+      optionHtml = options.map((opt, j) => `
+        <div class="meaning-option">
+          <span class="meaning-option-letter">${letters[j]}</span>
+          <div class="meaning-option-circle"></div>
+          <span>${opt.text}</span>
+        </div>`).join('');
+    }
 
     // Cloze (challenge only, if toggled)
     let clozeHtml = '';
@@ -387,7 +466,7 @@ function generateWorksheet() {
         </div>
         <div class="morph-row">${morphCells}</div>
         <div class="meaning-row">
-          <div class="meaning-question">What does this word mean? Circle the correct answer.</div>
+          <div class="meaning-question">${w.distractors.length > 0 ? 'What does this word mean? Circle the correct answer.' : 'What does this word mean? Write your answer below.'}</div>
           <div class="meaning-options">${optionHtml}</div>
         </div>
         ${clozeHtml}
@@ -398,6 +477,9 @@ function generateWorksheet() {
   let keyHtml = '';
   if (showKey) {
     const keyItems = bank.map((w, i) => {
+      if (w.distractors.length === 0) {
+        return `<div class="ws-key-item">${i+1}. <span>${w.word}</span> — ${w.fullMeaning}</div>`;
+      }
       const options = shuffle([
         { text: w.fullMeaning, correct: true },
         ...w.distractors.map(d => ({ text: d, correct: false }))

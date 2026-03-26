@@ -100,6 +100,21 @@
   <div class="sidebar">
     <div class="sideInner">
       <div class="section">
+        <div class="sectionLabel">Word Source</div>
+        <div class="radioGroup">
+          <label><input type="radio" name="src" value="builtin" checked onchange="toggleCustom()"> Built-in words</label>
+          <label><input type="radio" name="src" value="custom" onchange="toggleCustom()"> Custom word list</label>
+        </div>
+        <div id="customWrap" style="display:none;margin-top:8px;">
+          <input type="text" id="classCodeInput" placeholder="Class code" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;margin-bottom:4px;">
+          <button onclick="loadCustomLists()" style="border:none;background:var(--indigo);color:#fff;border-radius:8px;padding:6px 14px;font-size:11px;font-weight:800;cursor:pointer;width:100%;">Load Lists</button>
+          <div id="customListMsg" style="font-size:11px;font-weight:600;color:#94a3b8;margin-top:4px;"></div>
+          <select id="customListSelect" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;margin-top:6px;display:none;">
+            <option value="">— load a list first —</option>
+          </select>
+        </div>
+      </div>
+      <div class="section">
         <div class="sectionLabel">Focus sound</div>
         <select class="soundSelect" id="soundSelect">
           <option value="all">All sounds (mixed)</option>
@@ -711,6 +726,46 @@ const WORDS = [
   {word:"bruise",sound:"long-u",soundLabel:"Long U",grapheme:"ui",before:"br",after:"se",clue:"a dark mark on your skin from a bump",level:"challenge",distractors:["oo","ue","ew"],explain:"The 'ui' grapheme makes the long oo sound in 'bruise'."},
   {word:"flew",sound:"long-u",soundLabel:"Long U",grapheme:"ew",before:"fl",after:"",clue:"past tense of fly",level:"challenge",distractors:["oo","ue","ou"],explain:"The 'ew' grapheme makes the long oo sound in 'flew'."}
 ];
+
+const SUPABASE_URL  = 'https://kdpavfrzmmzknqfpodrl.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkcGF2ZnJ6bW16a25xZnBvZHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjgzOTIsImV4cCI6MjA5MDAwNDM5Mn0.n5fe7HvXWMsM4xN_iaU_N4xLkC5xD4y9Uoer_DG-dlg';
+var customListsData = {};
+
+function toggleCustom() {
+  var isCustom = document.querySelector('input[name=src]:checked').value === 'custom';
+  document.getElementById('customWrap').style.display = isCustom ? '' : 'none';
+}
+
+async function loadCustomLists() {
+  var code = (document.getElementById('classCodeInput').value || '').trim().toUpperCase();
+  var msg = document.getElementById('customListMsg');
+  var sel = document.getElementById('customListSelect');
+  if (!code) { msg.textContent = 'Enter a class code first.'; msg.style.color = '#dc2626'; return; }
+  msg.textContent = 'Loading…'; msg.style.color = '#94a3b8';
+  try {
+    var classRes = await fetch(SUPABASE_URL + '/rest/v1/classes?class_code=eq.' + encodeURIComponent(code) + '&select=id,name', { headers: { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON } });
+    var classes = await classRes.json();
+    if (!classes.length) { msg.textContent = 'Class code not found.'; msg.style.color = '#dc2626'; return; }
+    var listsRes = await fetch(SUPABASE_URL + '/rest/v1/class_word_lists?class_id=eq.' + classes[0].id + '&select=id,name,words', { headers: { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON } });
+    var lists = await listsRes.json();
+    if (!lists.length) { msg.textContent = 'No word lists for this class.'; msg.style.color = '#dc2626'; return; }
+    customListsData = {};
+    lists.forEach(function(l) { customListsData[l.id] = { name: l.name, words: l.words || [] }; });
+    sel.innerHTML = lists.map(function(l) { return '<option value="' + l.id + '">' + l.name + ' (' + (l.words||[]).length + ' words)</option>'; }).join('');
+    sel.style.display = '';
+    msg.textContent = '✓ ' + lists.length + ' list' + (lists.length > 1 ? 's' : '') + ' loaded'; msg.style.color = '#16a34a';
+  } catch(e) { msg.textContent = 'Could not load lists.'; msg.style.color = '#dc2626'; }
+}
+
+function getCustomWords() {
+  var listId = document.getElementById('customListSelect').value;
+  var list = customListsData[listId];
+  if (!list) return [];
+  return list.words.filter(function(w) { return w.word && w.sound && w.grapheme && w.distractors; }).map(function(w) {
+    return { word: w.word, sound: w.sound, soundLabel: w.soundLabel || w.sound, grapheme: w.grapheme, before: w.before || '', after: w.after || '', clue: w.clue || '', distractors: w.distractors || [], level: w.ssLevel || 'starter', explain: w.explain || '' };
+  });
+}
+
 function shuffle(arr){return [...arr].sort(()=>Math.random()-.5);}
 function stepCount(d){const el=document.getElementById('countInput');el.value=Math.min(20,Math.max(5,parseInt(el.value)+d));}
 
@@ -730,15 +785,22 @@ function buildBlankWord(before, grapheme, after){
 }
 
 function generateWorksheet(){
+  const src        = document.querySelector('input[name=src]:checked').value;
   const soundSel   = document.getElementById('soundSelect').value;
   const level      = document.querySelector('input[name=level]:checked').value;
   const count      = parseInt(document.getElementById('countInput').value)||10;
   const showExpl   = document.getElementById('toggleExplain').checked;
   const showKey    = document.getElementById('toggleKey').checked;
 
-  let pool = [...WORDS];
-  if(soundSel!=='all') pool=pool.filter(w=>w.soundLabel===soundSel);
-  if(level!=='mixed')  pool=pool.filter(w=>w.level===level);
+  let pool;
+  if (src === 'custom') {
+    pool = getCustomWords();
+    if (!pool.length) { alert('No words with sound sorter data in this list. Make sure the list has sound, grapheme, and distractors for each word.'); return; }
+  } else {
+    pool = [...WORDS];
+    if(soundSel!=='all') pool=pool.filter(w=>w.soundLabel===soundSel);
+    if(level!=='mixed')  pool=pool.filter(w=>w.level===level);
+  }
 
   if(!pool.length){alert('No words for that combination. Try Mixed difficulty or All sounds.');return;}
   const actualCount = Math.min(count, pool.length);
@@ -748,8 +810,8 @@ function generateWorksheet(){
   }
   const bank=shuffle(pool).slice(0,actualCount);
 
-  const soundLabel = soundSel==='all'?'Mixed sounds':soundSel;
-  const levelLabel = {starter:'Starter',levelup:'Level Up',challenge:'Challenge',mixed:'Mixed'}[level];
+  const soundLabel = src==='custom' ? 'Custom List' : (soundSel==='all'?'Mixed sounds':soundSel);
+  const levelLabel = src==='custom' ? 'Custom' : {starter:'Starter',levelup:'Level Up',challenge:'Challenge',mixed:'Mixed'}[level];
 
   const rows=bank.map((w,i)=>{
     const allOpts=shuffle([w.grapheme,...w.distractors]).slice(0,Math.min(3,w.distractors.length+1));

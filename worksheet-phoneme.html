@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+2<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -95,6 +95,21 @@
   <div class="sidebar">
     <div class="sideInner">
       <div class="section">
+        <div class="sectionLabel">Word Source</div>
+        <div class="radioGroup">
+          <label><input type="radio" name="src" value="builtin" checked onchange="toggleCustom()"> Built-in words</label>
+          <label><input type="radio" name="src" value="custom" onchange="toggleCustom()"> Custom word list</label>
+        </div>
+        <div id="customWrap" style="display:none;margin-top:8px;">
+          <input type="text" id="classCodeInput" placeholder="Class code" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;margin-bottom:4px;">
+          <button onclick="loadCustomLists()" style="border:none;background:var(--indigo);color:#fff;border-radius:8px;padding:6px 14px;font-size:11px;font-weight:800;cursor:pointer;width:100%;">Load Lists</button>
+          <div id="customListMsg" style="font-size:11px;font-weight:600;color:#94a3b8;margin-top:4px;"></div>
+          <select id="customListSelect" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;margin-top:6px;display:none;">
+            <option value="">— load a list first —</option>
+          </select>
+        </div>
+      </div>
+      <div class="section">
         <div class="sectionLabel">Difficulty</div>
         <div class="radioGroup">
           <label><input type="radio" name="diff" value="Starter" checked> Starter <span class="hint">sh, ch, th, wh</span></label>
@@ -145,18 +160,64 @@ const WORDS = [
   {word:"bright",phonemes:["b","r","igh","t"],diff:"Challenge",clue:"very light or clever"},{word:"throat",phonemes:["th","r","oa","t"],diff:"Challenge",clue:"inside your neck"},{word:"thought",phonemes:["th","ough","t"],diff:"Challenge",clue:"past tense of think"},{word:"street",phonemes:["s","t","r","ee","t"],diff:"Challenge",clue:"a road in a town"},{word:"spring",phonemes:["s","p","r","i","ng"],diff:"Challenge",clue:"the season after winter"},{word:"strong",phonemes:["s","t","r","o","ng"],diff:"Challenge",clue:"having great power"},{word:"splash",phonemes:["s","p","l","a","sh"],diff:"Challenge",clue:"to scatter liquid"},{word:"choice",phonemes:["ch","oi","ce"],diff:"Challenge",clue:"an option to select"},{word:"shook",phonemes:["sh","oo","k"],diff:"Challenge",clue:"past tense of shake"},{word:"teacher",phonemes:["t","ea","ch","er"],diff:"Challenge",clue:"helps you learn"},{word:"thunder",phonemes:["th","u","n","d","er"],diff:"Challenge",clue:"loud sound in a storm"},{word:"feather",phonemes:["f","ea","th","er"],diff:"Challenge",clue:"grows on a bird"},{word:"birthday",phonemes:["b","ir","th","d","ay"],diff:"Challenge",clue:"day you were born"},{word:"shoulder",phonemes:["sh","ou","l","d","er"],diff:"Challenge",clue:"connects arm to body"},{word:"strength",phonemes:["s","t","r","e","ng","th"],diff:"Challenge",clue:"how powerful you are"},{word:"scratch",phonemes:["s","c","r","a","tch"],diff:"Challenge",clue:"to scrape the surface"},{word:"squeak",phonemes:["s","qu","ea","k"],diff:"Challenge",clue:"a high pitched sound"},{word:"shriek",phonemes:["sh","r","ie","k"],diff:"Challenge",clue:"to scream sharply"},{word:"church",phonemes:["ch","ur","ch"],diff:"Challenge",clue:"a place of worship"},{word:"thrush",phonemes:["th","r","u","sh"],diff:"Challenge",clue:"a type of songbird"},
 ];
 
+const SUPABASE_URL  = 'https://kdpavfrzmmzknqfpodrl.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkcGF2ZnJ6bW16a25xZnBvZHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjgzOTIsImV4cCI6MjA5MDAwNDM5Mn0.n5fe7HvXWMsM4xN_iaU_N4xLkC5xD4y9Uoer_DG-dlg';
+var customListsData = {};
+
+function toggleCustom() {
+  var isCustom = document.querySelector('input[name=src]:checked').value === 'custom';
+  document.getElementById('customWrap').style.display = isCustom ? '' : 'none';
+}
+
+async function loadCustomLists() {
+  var code = (document.getElementById('classCodeInput').value || '').trim().toUpperCase();
+  var msg = document.getElementById('customListMsg');
+  var sel = document.getElementById('customListSelect');
+  if (!code) { msg.textContent = 'Enter a class code first.'; msg.style.color = '#dc2626'; return; }
+  msg.textContent = 'Loading…'; msg.style.color = '#94a3b8';
+  try {
+    var classRes = await fetch(SUPABASE_URL + '/rest/v1/classes?class_code=eq.' + encodeURIComponent(code) + '&select=id,name', { headers: { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON } });
+    var classes = await classRes.json();
+    if (!classes.length) { msg.textContent = 'Class code not found.'; msg.style.color = '#dc2626'; return; }
+    var listsRes = await fetch(SUPABASE_URL + '/rest/v1/class_word_lists?class_id=eq.' + classes[0].id + '&select=id,name,words', { headers: { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON } });
+    var lists = await listsRes.json();
+    if (!lists.length) { msg.textContent = 'No word lists for this class.'; msg.style.color = '#dc2626'; return; }
+    customListsData = {};
+    lists.forEach(function(l) { customListsData[l.id] = { name: l.name, words: l.words || [] }; });
+    sel.innerHTML = lists.map(function(l) { return '<option value="' + l.id + '">' + l.name + ' (' + (l.words||[]).length + ' words)</option>'; }).join('');
+    sel.style.display = '';
+    msg.textContent = '✓ ' + lists.length + ' list' + (lists.length > 1 ? 's' : '') + ' loaded'; msg.style.color = '#16a34a';
+  } catch(e) { msg.textContent = 'Could not load lists.'; msg.style.color = '#dc2626'; }
+}
+
+function getCustomWords() {
+  var listId = document.getElementById('customListSelect').value;
+  var list = customListsData[listId];
+  if (!list) return [];
+  return list.words.filter(function(w) { return w.word && w.phonemes && w.phonemes.length > 0; }).map(function(w) {
+    return { word: w.word, phonemes: w.phonemes, diff: 'Custom', clue: w.clue || '' };
+  });
+}
+
 function shuffle(arr){return [...arr].sort(()=>Math.random()-.5);}
 function stepCount(d){const el=document.getElementById('countInput');el.value=Math.min(20,Math.max(5,parseInt(el.value)+d));}
 
 function generateWorksheet(){
+  const src     = document.querySelector('input[name=src]:checked').value;
   const diff    = document.querySelector('input[name=diff]:checked').value;
   const count   = parseInt(document.getElementById('countInput').value)||12;
   const strip   = document.getElementById('toggleStrip').checked;
   const showKey = document.getElementById('toggleKey').checked;
 
-  let pool = diff==='mixed' ? [...WORDS] : WORDS.filter(w=>w.diff===diff);
+  let pool;
+  if (src === 'custom') {
+    pool = getCustomWords();
+    if (!pool.length) { alert('No words with phoneme data in this list. Make sure the list was generated with AI breakdowns.'); return; }
+  } else {
+    pool = diff==='mixed' ? [...WORDS] : WORDS.filter(w=>w.diff===diff);
+  }
   const bank = shuffle(pool).slice(0,count);
-  const diffLabel = diff==='mixed'?'Mixed':diff;
+  const diffLabel = src === 'custom' ? 'Custom List' : (diff==='mixed'?'Mixed':diff);
 
   const graphemes = ['sh','ch','th','wh','ng','ck','ai','ay','ee','ea','oo','oa','oi','ou','igh','tion','are','ore','er','ir','ur','ar'];
   const stripHtml = strip ? `<div class="grapheme-strip"><strong>Keep these together:</strong>${graphemes.map(g=>`<span class="g-pill">${g}</span>`).join('')}</div>` : '';

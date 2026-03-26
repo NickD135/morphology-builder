@@ -96,6 +96,21 @@
   <div class="sidebar">
     <div class="sideInner">
       <div class="section">
+        <div class="sectionLabel">Word Source</div>
+        <div class="radioGroup">
+          <label><input type="radio" name="src" value="builtin" checked onchange="toggleCustom()"> Built-in words</label>
+          <label><input type="radio" name="src" value="custom" onchange="toggleCustom()"> Custom word list</label>
+        </div>
+        <div id="customWrap" style="display:none;margin-top:8px;">
+          <input type="text" id="classCodeInput" placeholder="Class code" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;margin-bottom:4px;">
+          <button onclick="loadCustomLists()" style="border:none;background:var(--indigo);color:#fff;border-radius:8px;padding:6px 14px;font-size:11px;font-weight:800;cursor:pointer;width:100%;">Load Lists</button>
+          <div id="customListMsg" style="font-size:11px;font-weight:600;color:#94a3b8;margin-top:4px;"></div>
+          <select id="customListSelect" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;margin-top:6px;display:none;">
+            <option value="">— load a list first —</option>
+          </select>
+        </div>
+      </div>
+      <div class="section">
         <div class="sectionLabel">Syllable count</div>
         <div class="radioGroup">
           <label><input type="radio" name="sylcount" value="2" checked> 2 syllables <span class="hint">e.g. butter</span></label>
@@ -142,22 +157,67 @@ const WORDS = [
   {word:"information",syllables:["in","for","ma","tion"]},{word:"communication",syllables:["com","mu","ni","ca","tion"]},{word:"education",syllables:["ed","u","ca","tion"]},{word:"organisation",syllables:["or","gan","i","sa","tion"]},{word:"investigation",syllables:["in","ves","ti","ga","tion"]},{word:"vocabulary",syllables:["vo","cab","u","lar","y"]},{word:"responsibility",syllables:["re","spon","si","bil","i","ty"]},{word:"approximately",syllables:["ap","prox","i","mate","ly"]},{word:"construction",syllables:["con","struc","tion"]},{word:"understanding",syllables:["un","der","stand","ing"]},{word:"independent",syllables:["in","de","pen","dent"]},{word:"celebration",syllables:["cel","e","bra","tion"]},{word:"environment",syllables:["en","vi","ron","ment"]},{word:"international",syllables:["in","ter","na","tion","al"]},{word:"multiplication",syllables:["mul","ti","pli","ca","tion"]},{word:"immediately",syllables:["im","me","di","ate","ly"]},{word:"photography",syllables:["pho","tog","ra","phy"]},{word:"electricity",syllables:["e","lec","tri","ci","ty"]},{word:"democracy",syllables:["de","moc","ra","cy"]},{word:"geography",syllables:["ge","og","ra","phy"]},{word:"temperature",syllables:["tem","per","a","ture"]},{word:"caterpillar",syllables:["cat","er","pil","lar"]},{word:"discovery",syllables:["dis","cov","er","y"]},
 ];
 
+const SUPABASE_URL  = 'https://kdpavfrzmmzknqfpodrl.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkcGF2ZnJ6bW16a25xZnBvZHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjgzOTIsImV4cCI6MjA5MDAwNDM5Mn0.n5fe7HvXWMsM4xN_iaU_N4xLkC5xD4y9Uoer_DG-dlg';
+var customListsData = {};
+
+function toggleCustom() {
+  var isCustom = document.querySelector('input[name=src]:checked').value === 'custom';
+  document.getElementById('customWrap').style.display = isCustom ? '' : 'none';
+}
+
+async function loadCustomLists() {
+  var code = (document.getElementById('classCodeInput').value || '').trim().toUpperCase();
+  var msg = document.getElementById('customListMsg');
+  var sel = document.getElementById('customListSelect');
+  if (!code) { msg.textContent = 'Enter a class code first.'; msg.style.color = '#dc2626'; return; }
+  msg.textContent = 'Loading…'; msg.style.color = '#94a3b8';
+  try {
+    var classRes = await fetch(SUPABASE_URL + '/rest/v1/classes?class_code=eq.' + encodeURIComponent(code) + '&select=id,name', { headers: { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON } });
+    var classes = await classRes.json();
+    if (!classes.length) { msg.textContent = 'Class code not found.'; msg.style.color = '#dc2626'; return; }
+    var listsRes = await fetch(SUPABASE_URL + '/rest/v1/class_word_lists?class_id=eq.' + classes[0].id + '&select=id,name,words', { headers: { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON } });
+    var lists = await listsRes.json();
+    if (!lists.length) { msg.textContent = 'No word lists for this class.'; msg.style.color = '#dc2626'; return; }
+    customListsData = {};
+    lists.forEach(function(l) { customListsData[l.id] = { name: l.name, words: l.words || [] }; });
+    sel.innerHTML = lists.map(function(l) { return '<option value="' + l.id + '">' + l.name + ' (' + (l.words||[]).length + ' words)</option>'; }).join('');
+    sel.style.display = '';
+    msg.textContent = '✓ ' + lists.length + ' list' + (lists.length > 1 ? 's' : '') + ' loaded'; msg.style.color = '#16a34a';
+  } catch(e) { msg.textContent = 'Could not load lists.'; msg.style.color = '#dc2626'; }
+}
+
+function getCustomWords() {
+  var listId = document.getElementById('customListSelect').value;
+  var list = customListsData[listId];
+  if (!list) return [];
+  return list.words.filter(function(w) { return w.word && w.syllables && w.syllables.length > 0; }).map(function(w) {
+    return { word: w.word, syllables: w.syllables, clue: w.clue || '' };
+  });
+}
+
 function shuffle(arr){return [...arr].sort(()=>Math.random()-.5);}
 function stepCount(d){const el=document.getElementById('countInput');el.value=Math.min(20,Math.max(5,parseInt(el.value)+d));}
 
 function generateWorksheet(){
+  const src      = document.querySelector('input[name=src]:checked').value;
   const sylcount = document.querySelector('input[name=sylcount]:checked').value;
   const count    = parseInt(document.getElementById('countInput').value)||12;
   const showKey  = document.getElementById('toggleKey').checked;
 
   let pool;
-  if(sylcount==='2')    pool=WORDS.filter(w=>w.syllables.length===2);
-  else if(sylcount==='3') pool=WORDS.filter(w=>w.syllables.length===3);
-  else if(sylcount==='4') pool=WORDS.filter(w=>w.syllables.length>=4);
-  else pool=[...WORDS];
+  if (src === 'custom') {
+    pool = getCustomWords();
+    if (!pool.length) { alert('No words with syllable data in this list. Make sure the list was generated with AI breakdowns.'); return; }
+  } else {
+    if(sylcount==='2')    pool=WORDS.filter(w=>w.syllables.length===2);
+    else if(sylcount==='3') pool=WORDS.filter(w=>w.syllables.length===3);
+    else if(sylcount==='4') pool=WORDS.filter(w=>w.syllables.length>=4);
+    else pool=[...WORDS];
+  }
 
   const bank=shuffle(pool).slice(0,count);
-  const sylLabel={2:'2 syllables',3:'3 syllables',4:'4+ syllables',mixed:'Mixed'}[sylcount];
+  const sylLabel = src === 'custom' ? 'Custom List' : {2:'2 syllables',3:'3 syllables',4:'4+ syllables',mixed:'Mixed'}[sylcount];
 
   const rows=bank.map((w,i)=>`
     <tr>
