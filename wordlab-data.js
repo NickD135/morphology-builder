@@ -1298,7 +1298,7 @@ const WordLabData = (() => {
 
   // ── EALD (English as an Additional Language or Dialect) ─────
   const EALD_LANGUAGES = {
-    bo: 'Tibetan (བོད་སྐད)',
+    // — High-priority for Australian schools —
     ar: 'Arabic (العربية)',
     zh: 'Mandarin Chinese (中文)',
     'zh-yue': 'Cantonese (廣東話)',
@@ -1307,16 +1307,51 @@ const WordLabData = (() => {
     pa: 'Punjabi (ਪੰਜਾਬੀ)',
     tl: 'Filipino/Tagalog',
     ko: 'Korean (한국어)',
-    sm: 'Samoan (Gagana Sāmoa)',
     ja: 'Japanese (日本語)',
     th: 'Thai (ภาษาไทย)',
+    // — South & Central Asian —
+    bn: 'Bengali (বাংলা)',
+    gu: 'Gujarati (ગુજરાતી)',
+    ta: 'Tamil (தமிழ்)',
+    te: 'Telugu (తెలుగు)',
+    kn: 'Kannada (ಕನ್ನಡ)',
+    ml: 'Malayalam (മലയാളം)',
+    mr: 'Marathi (मराठी)',
     ne: 'Nepali (नेपाली)',
-    fa: 'Farsi/Persian (فارسی)',
     ur: 'Urdu (اردو)',
-    sw: 'Swahili (Kiswahili)',
+    fa: 'Farsi/Persian (فارسی)',
+    bo: 'Tibetan (བོད་སྐད)',
+    dz: 'Dzongkha (རྫོང་ཁ)',
     my: 'Burmese (မြန်မာစာ)',
     km: 'Khmer (ភាសាខ្មែរ)',
-    dz: 'Dzongkha (རྫོང་ཁ)',
+    // — Southeast Asian & Pacific —
+    id: 'Indonesian (Bahasa Indonesia)',
+    ms: 'Malay (Bahasa Melayu)',
+    sm: 'Samoan (Gagana Sāmoa)',
+    // — Middle Eastern & African —
+    tr: 'Turkish (Türkçe)',
+    he: 'Hebrew (עברית)',
+    sw: 'Swahili (Kiswahili)',
+    af: 'Afrikaans',
+    // — European —
+    es: 'Spanish (Español)',
+    pt: 'Portuguese (Português)',
+    fr: 'French (Français)',
+    de: 'German (Deutsch)',
+    it: 'Italian (Italiano)',
+    nl: 'Dutch (Nederlands)',
+    pl: 'Polish (Polski)',
+    ro: 'Romanian (Română)',
+    cs: 'Czech (Čeština)',
+    el: 'Greek (Ελληνικά)',
+    hu: 'Hungarian (Magyar)',
+    uk: 'Ukrainian (Українська)',
+    ru: 'Russian (Русский)',
+    sv: 'Swedish (Svenska)',
+    nb: 'Norwegian (Norsk)',
+    da: 'Danish (Dansk)',
+    fi: 'Finnish (Suomi)',
+    is: 'Icelandic (Íslenska)',
   };
 
   function getEALDLanguage() {
@@ -1387,10 +1422,17 @@ const WordLabData = (() => {
 
   // BCP 47 language tags for TTS
   var EALD_TTS_CODES = {
-    bo: 'bo', ar: 'ar-SA', zh: 'zh-CN', 'zh-yue': 'zh-HK', vi: 'vi-VN',
-    hi: 'hi-IN', pa: 'pa-IN', tl: 'fil-PH', ko: 'ko-KR', sm: 'sm',
-    ja: 'ja-JP', th: 'th-TH', ne: 'ne-NP', fa: 'fa-IR', ur: 'ur-PK',
-    sw: 'sw-KE', my: 'my-MM', km: 'km-KH', dz: 'dz'
+    ar: 'ar-SA', zh: 'zh-CN', 'zh-yue': 'zh-HK', vi: 'vi-VN', hi: 'hi-IN',
+    pa: 'pa-IN', tl: 'fil-PH', ko: 'ko-KR', ja: 'ja-JP', th: 'th-TH',
+    bn: 'bn-IN', gu: 'gu-IN', ta: 'ta-IN', te: 'te-IN', kn: 'kn-IN',
+    ml: 'ml-IN', mr: 'mr-IN', ne: 'ne-NP', ur: 'ur-PK', fa: 'fa-IR',
+    bo: 'bo', dz: 'dz', my: 'my-MM', km: 'km-KH',
+    id: 'id-ID', ms: 'ms-MY', sm: 'sm',
+    tr: 'tr-TR', he: 'he-IL', sw: 'sw-KE', af: 'af-ZA',
+    es: 'es-ES', pt: 'pt-BR', fr: 'fr-FR', de: 'de-DE', it: 'it-IT',
+    nl: 'nl-NL', pl: 'pl-PL', ro: 'ro-RO', cs: 'cs-CZ', el: 'el-GR',
+    hu: 'hu-HU', uk: 'uk-UA', ru: 'ru-RU', sv: 'sv-SE', nb: 'nb-NO',
+    da: 'da-DK', fi: 'fi-FI', is: 'is-IS'
   };
 
   // Speak a word via Google Cloud TTS (falls back to browser TTS)

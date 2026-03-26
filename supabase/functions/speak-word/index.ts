@@ -15,7 +15,9 @@ function json(data: unknown, status = 200) {
 
 // Google Cloud TTS language codes (BCP-47) and preferred voice names
 const VOICE_MAP: Record<string, { lang: string; voice?: string; gender: string }> = {
+  // English
   'en':     { lang: 'en-AU',  voice: 'en-AU-Neural2-A', gender: 'FEMALE' },
+  // High-priority Australian school languages
   'ar':     { lang: 'ar-XA',  voice: 'ar-XA-Neural2-A', gender: 'FEMALE' },
   'zh':     { lang: 'cmn-CN', voice: 'cmn-CN-Neural2-A', gender: 'FEMALE' },
   'zh-yue': { lang: 'yue-HK', gender: 'FEMALE' },
@@ -26,15 +28,49 @@ const VOICE_MAP: Record<string, { lang: string; voice?: string; gender: string }
   'ko':     { lang: 'ko-KR',  voice: 'ko-KR-Neural2-A', gender: 'FEMALE' },
   'ja':     { lang: 'ja-JP',  voice: 'ja-JP-Neural2-B', gender: 'FEMALE' },
   'th':     { lang: 'th-TH',  voice: 'th-TH-Neural2-C', gender: 'FEMALE' },
+  // South & Central Asian
+  'bn':     { lang: 'bn-IN',  voice: 'bn-IN-Neural2-A', gender: 'FEMALE' },
+  'gu':     { lang: 'gu-IN',  voice: 'gu-IN-Neural2-A', gender: 'FEMALE' },
+  'ta':     { lang: 'ta-IN',  voice: 'ta-IN-Neural2-A', gender: 'FEMALE' },
+  'te':     { lang: 'te-IN',  voice: 'te-IN-Neural2-A', gender: 'FEMALE' },
+  'kn':     { lang: 'kn-IN',  voice: 'kn-IN-Neural2-A', gender: 'FEMALE' },
+  'ml':     { lang: 'ml-IN',  voice: 'ml-IN-Neural2-A', gender: 'FEMALE' },
+  'mr':     { lang: 'mr-IN',  voice: 'mr-IN-Neural2-A', gender: 'FEMALE' },
   'ne':     { lang: 'ne-NP',  gender: 'FEMALE' },
-  'fa':     { lang: 'fa-IR',  gender: 'FEMALE' },
   'ur':     { lang: 'ur-PK',  gender: 'FEMALE' },
-  'sw':     { lang: 'sw-KE',  gender: 'FEMALE' },
-  'my':     { lang: 'my-MM',  gender: 'FEMALE' },
-  'km':     { lang: 'km-KH',  gender: 'FEMALE' },
+  'fa':     { lang: 'fa-IR',  gender: 'FEMALE' },
   'bo':     { lang: 'bo-CN',  gender: 'FEMALE' },
   'dz':     { lang: 'dz',     gender: 'FEMALE' },
+  'my':     { lang: 'my-MM',  gender: 'FEMALE' },
+  'km':     { lang: 'km-KH',  gender: 'FEMALE' },
+  // Southeast Asian & Pacific
+  'id':     { lang: 'id-ID',  voice: 'id-ID-Neural2-A', gender: 'FEMALE' },
+  'ms':     { lang: 'ms-MY',  voice: 'ms-MY-Neural2-A', gender: 'FEMALE' },
   'sm':     { lang: 'sm',     gender: 'FEMALE' },
+  // Middle Eastern & African
+  'tr':     { lang: 'tr-TR',  voice: 'tr-TR-Neural2-A', gender: 'FEMALE' },
+  'he':     { lang: 'he-IL',  voice: 'he-IL-Neural2-A', gender: 'FEMALE' },
+  'sw':     { lang: 'sw-KE',  gender: 'FEMALE' },
+  'af':     { lang: 'af-ZA',  voice: 'af-ZA-Neural2-A', gender: 'FEMALE' },
+  // European
+  'es':     { lang: 'es-ES',  voice: 'es-ES-Neural2-A', gender: 'FEMALE' },
+  'pt':     { lang: 'pt-BR',  voice: 'pt-BR-Neural2-A', gender: 'FEMALE' },
+  'fr':     { lang: 'fr-FR',  voice: 'fr-FR-Neural2-A', gender: 'FEMALE' },
+  'de':     { lang: 'de-DE',  voice: 'de-DE-Neural2-A', gender: 'FEMALE' },
+  'it':     { lang: 'it-IT',  voice: 'it-IT-Neural2-A', gender: 'FEMALE' },
+  'nl':     { lang: 'nl-NL',  voice: 'nl-NL-Neural2-A', gender: 'FEMALE' },
+  'pl':     { lang: 'pl-PL',  voice: 'pl-PL-Neural2-A', gender: 'FEMALE' },
+  'ro':     { lang: 'ro-RO',  voice: 'ro-RO-Neural2-A', gender: 'FEMALE' },
+  'cs':     { lang: 'cs-CZ',  voice: 'cs-CZ-Neural2-A', gender: 'FEMALE' },
+  'el':     { lang: 'el-GR',  voice: 'el-GR-Neural2-A', gender: 'FEMALE' },
+  'hu':     { lang: 'hu-HU',  voice: 'hu-HU-Neural2-A', gender: 'FEMALE' },
+  'uk':     { lang: 'uk-UA',  voice: 'uk-UA-Neural2-A', gender: 'FEMALE' },
+  'ru':     { lang: 'ru-RU',  voice: 'ru-RU-Neural2-A', gender: 'FEMALE' },
+  'sv':     { lang: 'sv-SE',  voice: 'sv-SE-Neural2-A', gender: 'FEMALE' },
+  'nb':     { lang: 'nb-NO',  voice: 'nb-NO-Neural2-A', gender: 'FEMALE' },
+  'da':     { lang: 'da-DK',  voice: 'da-DK-Neural2-A', gender: 'FEMALE' },
+  'fi':     { lang: 'fi-FI',  voice: 'fi-FI-Neural2-A', gender: 'FEMALE' },
+  'is':     { lang: 'is-IS',  voice: 'is-IS-Neural2-A', gender: 'FEMALE' },
 };
 
 Deno.serve(async (req: Request) => {
