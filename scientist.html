@@ -878,8 +878,34 @@ async function render() {
             const pins = (sci.displayBadges || []);
             const allB = [].concat(WordLabData.ALL_BADGES, WordLabData.LEGENDARY_BADGES);
             const earnedBadges = allB.filter(b => sd.badges.includes(b.id));
-            if (earnedBadges.length === 0) return '<div style="color:var(--muted);font-size:12px;font-weight:700;padding:12px;">Earn badges to pin them on your coat!</div>';
-            return earnedBadges.map(b => {
+            var items = '';
+
+            // Streak Flame — always available as first option
+            var streakDays = 0;
+            try { streakDays = WordLabData.updateDailyStreak().count || 0; } catch(e) {}
+            var flameLabel = streakDays > 0 ? streakDays + ' day streak' : 'No streak yet';
+            var flamePinned = pins.includes('streak_flame');
+            var flameCanPin = pins.length < 3;
+            var flameBtn = '';
+            if (flamePinned) {
+              flameBtn = '<button class="shopBtn equipped" onclick="unpinBadge(\'streak_flame\')">📌 Pinned</button>';
+            } else if (flameCanPin) {
+              flameBtn = '<button class="shopBtn equip" onclick="pinBadge(\'streak_flame\')">Pin</button>';
+            } else {
+              flameBtn = '<span class="shopBtn cantafford">3 pinned</span>';
+            }
+            var flameIntensity = streakDays >= 30 ? 'Legendary' : streakDays >= 14 ? 'Blazing' : streakDays >= 7 ? 'Hot' : streakDays >= 3 ? 'Warming' : 'Spark';
+            items += '<div class="shopItem owned" style="border-color:#f59e0b;background:linear-gradient(135deg,#fffbeb,#fef3c7);">' +
+              '<div class="shopItemIcon" style="font-size:28px;">🔥</div>' +
+              '<div class="shopItemName" style="color:#92400e;">Streak Flame</div>' +
+              '<div class="shopItemCost" style="font-size:9px;color:#b45309;">' + flameIntensity + ' — ' + flameLabel + '</div>' +
+              flameBtn +
+            '</div>';
+
+            if (earnedBadges.length === 0 && !flamePinned) {
+              items += '<div style="color:var(--muted);font-size:12px;font-weight:700;padding:12px;grid-column:span 2;">Earn badges to pin more on your coat!</div>';
+            }
+            items += earnedBadges.map(b => {
               const isPinned = pins.includes(b.id);
               const canPin = pins.length < 3;
               let btn = '';
@@ -897,6 +923,7 @@ async function render() {
                 btn +
               '</div>';
             }).join('');
+            return items;
           })()}
         </div>
       </div>

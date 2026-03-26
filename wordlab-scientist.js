@@ -5,6 +5,89 @@
 
 const WLScientist = (() => {
 
+  // ── Streak flame SVG builder ─────────────────────────────────
+  function _buildStreakFlame(cx, cy, streakDays) {
+    // Flame grows from tiny (1 day) to massive (30+ days)
+    // Scale: 0.5 at day 1, up to 2.0 at day 30
+    var days = Math.max(streakDays || 0, 1);
+    var scale = Math.min(0.5 + (days - 1) * 0.055, 2.2);
+    var h = 8 * scale;  // flame height
+    var w = 5 * scale;  // flame width
+
+    // Colour intensifies: orange → deep orange → red → blue-white core at 30+
+    var outerColor, innerColor, coreColor;
+    if (days >= 30) {
+      outerColor = '#dc2626'; innerColor = '#f59e0b'; coreColor = '#93c5fd';
+    } else if (days >= 14) {
+      outerColor = '#dc2626'; innerColor = '#f97316'; coreColor = '#fef08a';
+    } else if (days >= 7) {
+      outerColor = '#f97316'; innerColor = '#fbbf24'; coreColor = '#fef9c3';
+    } else {
+      outerColor = '#fb923c'; innerColor = '#fcd34d'; coreColor = '#fef9c3';
+    }
+
+    // Animation speed increases with streak (slower flicker = calmer, faster = intense)
+    var animDur = days >= 30 ? '0.3s' : days >= 14 ? '0.5s' : days >= 7 ? '0.8s' : '1.2s';
+    var animName = 'streakFlame' + Math.round(cx) + Math.round(cy);
+
+    // Glow radius grows with streak
+    var glowR = Math.min(3 + days * 0.3, 12);
+    var glowOpacity = Math.min(0.15 + days * 0.01, 0.45);
+
+    var svg = '';
+    // Glow
+    svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + glowR + '" fill="' + outerColor + '" opacity="' + glowOpacity + '"/>';
+    // Outer flame
+    svg += '<path d="M' + cx + ',' + (cy - h) +
+      ' C' + (cx - w * 0.6) + ',' + (cy - h * 0.4) +
+      ' ' + (cx - w) + ',' + (cy + 1) +
+      ' ' + cx + ',' + (cy + 3) +
+      ' C' + (cx + w) + ',' + (cy + 1) +
+      ' ' + (cx + w * 0.6) + ',' + (cy - h * 0.4) +
+      ' ' + cx + ',' + (cy - h) +
+      'Z" fill="' + outerColor + '" opacity="0.9">' +
+      '<animateTransform attributeName="transform" type="scale" values="1,1;1.05,1.08;0.97,1.02;1,1" dur="' + animDur + '" repeatCount="indefinite" additive="sum" origin="' + cx + ' ' + (cy + 3) + '"/>' +
+      '</path>';
+    // Inner flame
+    var ih = h * 0.65, iw = w * 0.55;
+    svg += '<path d="M' + cx + ',' + (cy - ih) +
+      ' C' + (cx - iw) + ',' + (cy - ih * 0.3) +
+      ' ' + (cx - iw) + ',' + (cy + 1) +
+      ' ' + cx + ',' + (cy + 2) +
+      ' C' + (cx + iw) + ',' + (cy + 1) +
+      ' ' + (cx + iw) + ',' + (cy - ih * 0.3) +
+      ' ' + cx + ',' + (cy - ih) +
+      'Z" fill="' + innerColor + '" opacity="0.95">' +
+      '<animateTransform attributeName="transform" type="scale" values="1,1;0.95,1.1;1.06,0.96;1,1" dur="' + animDur + '" repeatCount="indefinite" additive="sum"/>' +
+      '</path>';
+    // Core (only visible at 7+ days)
+    if (days >= 7) {
+      var ch = ih * 0.45, cw = iw * 0.5;
+      svg += '<ellipse cx="' + cx + '" cy="' + (cy - ch * 0.3) + '" rx="' + cw + '" ry="' + ch + '" fill="' + coreColor + '" opacity="0.85">' +
+        '<animate attributeName="ry" values="' + ch + ';' + (ch * 1.15) + ';' + (ch * 0.9) + ';' + ch + '" dur="' + animDur + '" repeatCount="indefinite"/>' +
+        '</ellipse>';
+    }
+    // Sparks at 14+ days
+    if (days >= 14) {
+      svg += '<circle cx="' + (cx - w * 0.4) + '" cy="' + (cy - h * 0.8) + '" r="0.8" fill="#fef08a" opacity="0.8">' +
+        '<animate attributeName="cy" values="' + (cy - h * 0.8) + ';' + (cy - h * 1.2) + ';' + (cy - h * 0.8) + '" dur="0.6s" repeatCount="indefinite"/>' +
+        '<animate attributeName="opacity" values="0.8;0;0.8" dur="0.6s" repeatCount="indefinite"/>' +
+        '</circle>';
+      svg += '<circle cx="' + (cx + w * 0.3) + '" cy="' + (cy - h * 0.7) + '" r="0.6" fill="#fef08a" opacity="0.7">' +
+        '<animate attributeName="cy" values="' + (cy - h * 0.7) + ';' + (cy - h * 1.1) + ';' + (cy - h * 0.7) + '" dur="0.8s" repeatCount="indefinite"/>' +
+        '<animate attributeName="opacity" values="0.7;0;0.7" dur="0.8s" repeatCount="indefinite"/>' +
+        '</circle>';
+    }
+    // Extra sparks at 30+ days
+    if (days >= 30) {
+      svg += '<circle cx="' + (cx + w * 0.5) + '" cy="' + (cy - h * 0.9) + '" r="0.7" fill="#93c5fd" opacity="0.9">' +
+        '<animate attributeName="cy" values="' + (cy - h * 0.9) + ';' + (cy - h * 1.4) + ';' + (cy - h * 0.9) + '" dur="0.5s" repeatCount="indefinite"/>' +
+        '<animate attributeName="opacity" values="0.9;0;0.9" dur="0.5s" repeatCount="indefinite"/>' +
+        '</circle>';
+    }
+    return svg;
+  }
+
   // ── Badge pin helper ─────────────────────────────────────────
   function _buildBadgePins(scientist) {
     var pins = (scientist && scientist.displayBadges) || [];
@@ -19,9 +102,22 @@ const WLScientist = (() => {
     var svgParts = [];
     for (var i = 0; i < Math.min(pins.length, 3); i++) {
       var badgeId = pins[i];
+      var px = positions[i].x, py = positions[i].y;
+
+      // Special: streak flame badge
+      if (badgeId === 'streak_flame') {
+        var streakDays = 0;
+        try {
+          if (typeof WordLabData !== 'undefined') {
+            streakDays = WordLabData.updateDailyStreak().count || 0;
+          }
+        } catch(e) {}
+        svgParts.push(_buildStreakFlame(px, py, Math.max(streakDays, 1)));
+        continue;
+      }
+
       var badge = allBadges.find(function(b) { return b.id === badgeId; });
       if (!badge) continue;
-      var px = positions[i].x, py = positions[i].y;
       svgParts.push(
         '<circle cx="' + px + '" cy="' + py + '" r="5.5" fill="#eef2ff" stroke="#a5b4fc" stroke-width="0.8"/>' +
         '<text x="' + px + '" y="' + (py + 2.5) + '" text-anchor="middle" font-size="6.5" dominant-baseline="middle">' + badge.icon + '</text>'
