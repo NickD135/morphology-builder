@@ -660,22 +660,20 @@
       font-family: 'Lexend', sans-serif;
     }
 
-    /* ── Hub Mini Challenges (top-left of lab scene) ── */
-    .hub-challenges-mini {
-      position: absolute;
-      top: 12px; left: 12px;
-      z-index: 12;
+    /* ── Strip Challenges Block (inline in status strip) ── */
+    .strip-challenges-block {
       display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      pointer-events: auto;
-      background: rgba(15,23,42,0.45);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border: 1px solid rgba(99,102,241,0.2);
-      border-radius: 18px;
-      padding: 12px 14px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06);
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 160px;
+    }
+    .strip-challenges-list {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      flex: 1;
+      min-width: 0;
     }
     .hub-flame-wrap {
       position: relative;
@@ -695,12 +693,6 @@
       color: #fef08a;
       text-shadow: 0 0 6px rgba(239,68,68,0.8), 0 1px 2px rgba(0,0,0,0.5);
       margin-top: -4px;
-    }
-    .hub-challenges-list {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      max-width: 220px;
     }
     .hub-ch-row {
       display: flex;
@@ -745,9 +737,9 @@
     }
     .hub-ch-claim:hover { background: #3730a3; }
     @media (max-width: 480px) {
-      .hub-challenges-mini { top: 8px; left: 8px; gap: 6px; }
-      .hub-challenges-list { max-width: 170px; }
+      .strip-challenges-block { min-width: 120px; gap: 5px; }
       .hub-ch-label { font-size: 8px; }
+      .hub-flame-wrap svg { width: 24px; height: 32px; }
     }
 
     /* ── Daily Challenges Panel ─────────────────── */
@@ -1510,17 +1502,6 @@
     </g>
   </svg>
 
-  <!-- Mini challenges overlay (top-left of lab scene) -->
-  <div class="hub-challenges-mini" id="hubChallengesMini" style="display:none;">
-    <div class="hub-flame-wrap" id="hubFlameWrap">
-      <svg id="hubFlameSVG" viewBox="0 0 40 50" width="40" height="50" xmlns="http://www.w3.org/2000/svg" style="overflow:visible;"></svg>
-      <div class="hub-flame-days" id="hubFlameDays">0</div>
-    </div>
-    <div class="hub-challenges-list" id="hubMiniChallenges">
-      <!-- Filled by JS -->
-    </div>
-  </div>
-
   <!-- Status strip -->
   <div class="student-status-strip">
     <div class="student-info-block">
@@ -1536,12 +1517,14 @@
       <div class="stat-pill-item">⚛️ <span id="hubQuarks">0</span> quarks</div>
       <div class="stat-pill-item">🏆 <span id="hubBadges">0</span> badges</div>
     </div>
-    <div class="daily-goal-block">
-      <div class="daily-goal-heading">Daily goal</div>
-      <div class="daily-goal-track">
-        <div class="daily-goal-fill" id="hubGoalFill" style="width:0%"></div>
+    <div class="strip-challenges-block" id="stripChallengesBlock">
+      <div class="hub-flame-wrap" id="hubFlameWrap">
+        <svg id="hubFlameSVG" viewBox="0 0 40 50" width="32" height="40" xmlns="http://www.w3.org/2000/svg" style="overflow:visible;"></svg>
+        <div class="hub-flame-days" id="hubFlameDays">0</div>
       </div>
-      <div class="daily-goal-text" id="hubGoalText" aria-live="polite">0 / 20 questions today</div>
+      <div class="strip-challenges-list" id="hubMiniChallenges">
+        <!-- Filled by JS -->
+      </div>
     </div>
     <div class="top3-block">
       <div class="top3-heading">Class top 3</div>
@@ -1952,8 +1935,6 @@ async function initStudentLayout(session) {
   var streakEl  = document.getElementById('hubStreak');
   var quarksEl  = document.getElementById('hubQuarks');
   var badgesEl  = document.getElementById('hubBadges');
-  var goalFillEl= document.getElementById('hubGoalFill');
-  var goalTextEl= document.getElementById('hubGoalText');
   var top3El    = document.getElementById('hubTop3');
   var avatarEl  = document.getElementById('hubSciAvatar');
 
@@ -1997,16 +1978,6 @@ async function initStudentLayout(session) {
       }
     }
 
-    // Daily goal
-    var dailyLimit = 20;
-    try {
-      var today = new Date().toISOString().slice(0,10);
-      var goalRes = await _lsb().from('daily_usage').select('question_count').eq('student_id', session.studentId).eq('usage_date', today).maybeSingle();
-      var count = (goalRes.data && goalRes.data.question_count) || 0;
-      var pct = Math.min(Math.round((count / dailyLimit) * 100), 100);
-      if(goalFillEl) goalFillEl.style.width = pct + '%';
-      if(goalTextEl) goalTextEl.textContent = count + ' / ' + dailyLimit + ' questions today';
-    } catch(e) {}
 
     // Top 3 leaderboard
     var classId = session.classId;
@@ -2128,14 +2099,11 @@ function renderDailyChallenges() {
 }
 
 function renderHubMiniChallenges(cData, streak) {
-  var mini = document.getElementById('hubChallengesMini');
   var miniList = document.getElementById('hubMiniChallenges');
   var flameSvg = document.getElementById('hubFlameSVG');
   var flameDays = document.getElementById('hubFlameDays');
   var flameWrap = document.getElementById('hubFlameWrap');
-  if (!mini || !miniList) return;
-
-  mini.style.display = '';
+  if (!miniList) return;
   var days = (streak && streak.count) || 0;
 
   // Render streak flame SVG
