@@ -335,6 +335,7 @@
       <div id="gameArea"></div>
       <div class="feedback" id="feedback" aria-live="assertive"></div>
       <div class="sub-feedback" id="subFeedback" aria-live="polite"></div>
+      <div id="ealdTranslation" aria-live="polite"></div>
       <div class="action-row">
         <button class="sec-btn" onclick="backToSetup()">← Change Mode</button>
         <button class="sec-btn" onclick="skipQuestion()">Skip →</button>
@@ -1002,6 +1003,20 @@ function showFeedback(correct, main, sub) {
   feedbackEl.className = 'feedback ' + (correct ? 'ok' : 'bad');
   feedbackEl.textContent = (correct ? '✓ ' : '✗ ') + (main || (correct ? 'Correct!' : 'Not quite!'));
   subFeedEl.textContent = sub || '';
+  // EALD translation
+  var ealdEl=document.getElementById('ealdTranslation');if(ealdEl)ealdEl.innerHTML='';
+  if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&questions&&questions[currentQ]){
+    WordLabData.injectEALDStyles();
+    var q=questions[currentQ];
+    var words=q.words||[q.word||''];var defs=q.definitions||[];
+    var toTranslate=[];var contexts=[];
+    words.forEach(function(w,i){toTranslate.push(w);contexts.push('word');if(defs[i]){toTranslate.push(defs[i]);contexts.push('definition');}});
+    WordLabData.getTranslations(toTranslate,contexts).then(function(t){
+      if(!t||!ealdEl)return;
+      var pairs=words.filter(function(w){return t[w];}).map(function(w){return '<b>'+WordLabData.escapeHtml(w)+'</b> = '+WordLabData.escapeHtml(t[w]);});
+      if(pairs.length){ealdEl.innerHTML='<div class="eald-translation-pill"><span class="eald-flag">🌐</span> '+pairs.join(' · ')+'</div>';}
+    });
+  }
 }
 
 // ── End game / results ─────────────────────────────────────

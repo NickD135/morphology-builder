@@ -525,6 +525,7 @@
 
     <div class="feedback" id="feedback" aria-live="assertive"></div>
     <div class="subFeedback" id="subFeedback" aria-live="polite"></div>
+    <div id="ealdTranslation" aria-live="polite"></div>
 
     <div class="actionRow">
       <button class="secondaryBtn" onclick="restartGame()">Restart</button>
@@ -873,6 +874,17 @@ function checkSynonymAntonym(choice){
     setTimeout(() => gameCardEl.classList.remove('flashFail'), 600);
   }
   updateHud();
+  // EALD
+  var ealdEl=document.getElementById('ealdTranslation');if(ealdEl)ealdEl.innerHTML='';
+  if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&q){
+    WordLabData.injectEALDStyles();
+    var words=[q.word,q.correct].filter(Boolean);var contexts=words.map(function(){return 'word';});
+    WordLabData.getTranslations(words,contexts).then(function(t){
+      if(!t||!ealdEl)return;
+      var pairs=words.filter(function(w){return t[w];}).map(function(w){return '<b>'+WordLabData.escapeHtml(w)+'</b> = '+WordLabData.escapeHtml(t[w]);});
+      if(pairs.length){ealdEl.innerHTML='<div class="eald-translation-pill"><span class="eald-flag">🌐</span> '+pairs.join(' · ')+'</div>';}
+    });
+  }
   if(fuel <= 0){ setTimeout(endGame, 800); return; }
   setTimeout(loadQuestion, 1600);
 }
@@ -1067,6 +1079,18 @@ function checkSpectrum(){
   }
 
   updateHud();
+  // EALD - translate all spectrum words
+  var ealdEl=document.getElementById('ealdTranslation');if(ealdEl)ealdEl.innerHTML='';
+  if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&q){
+    WordLabData.injectEALDStyles();
+    var allW=(q.words||[]).slice();if(q.leftAnchor)allW.unshift(q.leftAnchor);if(q.rightAnchor)allW.push(q.rightAnchor);
+    var contexts=allW.map(function(){return 'word';});
+    WordLabData.getTranslations(allW,contexts).then(function(t){
+      if(!t||!ealdEl)return;
+      var pairs=allW.filter(function(w){return t[w];}).map(function(w){return WordLabData.escapeHtml(w)+' = '+WordLabData.escapeHtml(t[w]);});
+      if(pairs.length){ealdEl.innerHTML='<div class="eald-translation-pill"><span class="eald-flag">🌐</span> '+pairs.join(' · ')+'</div>';}
+    });
+  }
   if(fuel <= 0){ setTimeout(endGame, 800); return; }
   document.getElementById('checkSpectrumBtn').style.display = 'none';
   setTimeout(loadQuestion, 2200);

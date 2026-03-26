@@ -91,6 +91,17 @@
 
     .emptyState{ color:var(--muted); font-size:14px; font-weight:700; text-align:center; padding:32px; }
 
+    /* EALD language selector */
+    .eald-select-wrap{ position:relative; display:inline-flex; align-items:center; }
+    .studentActionBtn.eald-btn{ gap:4px; }
+    .studentActionBtn.eald-btn.active-flag{ border-color:#a5b4fc; background:rgba(99,102,241,.08); color:#4338ca; }
+    .eald-lang-select{ position:absolute; top:100%; left:0; z-index:100; background:#fff; border:2px solid #c7d2fe; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.12); padding:8px 4px; min-width:220px; max-height:260px; overflow-y:auto; display:none; }
+    .eald-lang-select.open{ display:block; }
+    .eald-lang-option{ padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer; border-radius:8px; font-family:'Lexend',sans-serif; color:#334155; }
+    .eald-lang-option:hover{ background:var(--indigo-soft); color:var(--indigo); }
+    .eald-lang-option.selected{ background:var(--indigo-soft); color:var(--indigo); }
+    .eald-lang-option.off{ color:var(--bad); }
+
     /* Crown toggle */
     .crownRow{ display:flex; align-items:center; gap:10px; padding-top:12px; margin-top:12px; border-top:1px solid var(--line); flex-wrap:wrap; }
     .crownToggleWrap{ display:flex; align-items:center; gap:10px; }
@@ -328,6 +339,15 @@
                     id="ext-btn-${s.id}"
                     title="${s.extension_mode ? 'Extension mode ON — click to turn off' : 'Extension mode OFF — click to turn on harder content'}"
                   >Extension mode</button>
+                  <span class="eald-select-wrap" id="eald-wrap-${s.id}">
+                    <button
+                      onclick="toggleEALDDropdown('${s.id}')"
+                      class="studentActionBtn eald-btn ${s.eald_language ? 'active-flag' : ''}"
+                      id="eald-btn-${s.id}" data-lang="${s.eald_language || ''}"
+                      title="${s.eald_language ? 'EALD: ' + (WordLabData.EALD_LANGUAGES[s.eald_language] || s.eald_language) + ' — click to change' : 'Enable EALD translation support'}"
+                    >🌐 ${s.eald_language ? (WordLabData.EALD_LANGUAGES[s.eald_language] || s.eald_language).split(' (')[0] : 'EALD'}</button>
+                    <div class="eald-lang-select" id="eald-dropdown-${s.id}"></div>
+                  </span>
                   <button class="studentActionBtn" onclick="regenerateCode('${cls.id}','${s.id}')" title="Generate a new 3-letter login code">Change login code</button>
                   <button class="studentActionBtn danger" onclick="removeStudent('${cls.id}','${s.id}')" title="Remove this student from the class">Remove from class</button>
                 </span>
@@ -579,6 +599,67 @@
     } catch(e) {
       console.error('Extension toggle failed:', e);
       alert('Could not update extension mode. Please try again.');
+    }
+  }
+
+  // ── EALD language toggle ──────────────────────────────────────
+  function toggleEALDDropdown(studentId) {
+    var dropdown = document.getElementById('eald-dropdown-' + studentId);
+    var isOpen = dropdown.classList.contains('open');
+
+    // Close all other dropdowns first
+    document.querySelectorAll('.eald-lang-select.open').forEach(function(d) { d.classList.remove('open'); });
+
+    if (isOpen) return;
+
+    // Build the dropdown options
+    var langs = WordLabData.EALD_LANGUAGES;
+    var btn = document.getElementById('eald-btn-' + studentId);
+    var currentLang = btn.dataset.lang || '';
+
+    var html = '<div class="eald-lang-option off" onclick="setEALDLanguage(\'' + studentId + '\', null)">✕ Turn off EALD</div>';
+    Object.keys(langs).forEach(function(code) {
+      var selected = code === currentLang ? ' selected' : '';
+      html += '<div class="eald-lang-option' + selected + '" onclick="setEALDLanguage(\'' + studentId + '\', \'' + code + '\')">' + WordLabData.escapeHtml(langs[code]) + '</div>';
+    });
+    dropdown.innerHTML = html;
+    dropdown.classList.add('open');
+  }
+
+  // Close EALD dropdown when clicking elsewhere
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.eald-select-wrap')) {
+      document.querySelectorAll('.eald-lang-select.open').forEach(function(d) { d.classList.remove('open'); });
+    }
+  });
+
+  async function setEALDLanguage(studentId, langCode) {
+    var dropdown = document.getElementById('eald-dropdown-' + studentId);
+    dropdown.classList.remove('open');
+
+    var btn = document.getElementById('eald-btn-' + studentId);
+    try {
+      var { data: updated, error } = await _csSb
+        .from('students')
+        .update({ eald_language: langCode })
+        .eq('id', studentId)
+        .select('id');
+      if (error) throw error;
+
+      btn.dataset.lang = langCode || '';
+      if (langCode) {
+        var langName = (WordLabData.EALD_LANGUAGES[langCode] || langCode).split(' (')[0];
+        btn.innerHTML = '🌐 ' + WordLabData.escapeHtml(langName);
+        btn.classList.add('active-flag');
+        btn.title = 'EALD: ' + WordLabData.EALD_LANGUAGES[langCode] + ' — click to change';
+      } else {
+        btn.innerHTML = '🌐 EALD';
+        btn.classList.remove('active-flag');
+        btn.title = 'Enable EALD translation support';
+      }
+    } catch(e) {
+      console.error('EALD update failed:', e);
+      alert('Could not update EALD language. Make sure the eald_language column exists.\nRun: ALTER TABLE students ADD COLUMN IF NOT EXISTS eald_language text DEFAULT NULL;');
     }
   }
 

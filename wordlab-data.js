@@ -315,7 +315,7 @@ const WordLabData = (() => {
     const { data: { session: _sess } } = await sb().auth.getSession();
     let query = sb()
       .from('classes')
-      .select('id, name, class_code, created_at, students!students_class_id_fkey(id, name, student_code, extension_mode)')
+      .select('id, name, class_code, created_at, students!students_class_id_fkey(id, name, student_code, extension_mode, eald_language)')
       .order('name');
     if (_sess) {
       const teacher = await getTeacherRecord();
@@ -334,7 +334,7 @@ const WordLabData = (() => {
         name: c.name,
         class_code: c.class_code || '',
         created: new Date(c.created_at).getTime(),
-        students: (c.students || []).map(function(s) { return { id: s.id, name: s.name, student_code: s.student_code || '', extension_mode: !!s.extension_mode }; })
+        students: (c.students || []).map(function(s) { return { id: s.id, name: s.name, student_code: s.student_code || '', extension_mode: !!s.extension_mode, eald_language: s.eald_language || null }; })
       };
     });
   }
@@ -349,7 +349,7 @@ const WordLabData = (() => {
 
     const { data: studs, error: stuErr } = await sb()
       .from('students')
-      .select('id, name, student_code, extension_mode')
+      .select('id, name, student_code, extension_mode, eald_language')
       .eq('class_id', id)
       .order('name');
     if (stuErr) throw stuErr;
@@ -399,6 +399,7 @@ const WordLabData = (() => {
       name: s.name,
       student_code: s.student_code || '',
       extension_mode: !!s.extension_mode,
+      eald_language: s.eald_language || null,
       results: progressMap[s.id] || {},
       lastActive: lastActiveMap[s.id] || null
     }));
@@ -498,12 +499,12 @@ const WordLabData = (() => {
   async function verifyStudentCode(studentId, code) {
     var { data } = await sb()
       .from('students')
-      .select('student_code, extension_mode')
+      .select('student_code, extension_mode, eald_language')
       .eq('id', studentId)
       .maybeSingle();
-    if (!data || !data.student_code) return { ok: false, extensionMode: false };
+    if (!data || !data.student_code) return { ok: false, extensionMode: false, ealdLanguage: null };
     var ok = data.student_code.toUpperCase() === code.toUpperCase();
-    return { ok, extensionMode: ok ? !!data.extension_mode : false };
+    return { ok, extensionMode: ok ? !!data.extension_mode : false, ealdLanguage: ok ? (data.eald_language || null) : null };
   }
 
   // ── Session ───────────────────────────────────────────────────
@@ -594,7 +595,7 @@ const WordLabData = (() => {
     const session = loadSession();
     if (!session) return null;
     const [stuResult, charResult, isTeacher] = await Promise.all([
-      sb().from('students').select('extension_mode').eq('id', session.studentId).maybeSingle(),
+      sb().from('students').select('extension_mode, eald_language').eq('id', session.studentId).maybeSingle(),
       sb().from('student_character').select('*').eq('student_id', session.studentId).maybeSingle(),
       isStudentTeacher(session.classId, session.studentId)
     ]);
@@ -603,6 +604,9 @@ const WordLabData = (() => {
       if (!sessionStorage.getItem('wl_ext_pinned')) {
         sessionStorage.setItem('wl_extension_mode', data.extension_mode ? 'true' : 'false');
       }
+    }
+    if (data && data.eald_language) {
+      sessionStorage.setItem('wl_eald_language', data.eald_language);
     }
     const char = ensureCharFields(charResult.data ? { ...charResult.data } : {});
     return {
@@ -851,6 +855,11 @@ const WordLabData = (() => {
         // Clear any previous student choice so the DB value is used as the fresh default on login
         sessionStorage.removeItem('wl_ext_pinned');
         sessionStorage.setItem('wl_extension_mode', result.extensionMode ? 'true' : 'false');
+        if (result.ealdLanguage) {
+          sessionStorage.setItem('wl_eald_language', result.ealdLanguage);
+        } else {
+          sessionStorage.removeItem('wl_eald_language');
+        }
         // Success
         startSession(_loginClassId, _loginStudentId, _loginStudentName);
         document.getElementById('wlOverlay').classList.add('wl-hide');
@@ -931,6 +940,7 @@ const WordLabData = (() => {
     sessionStorage.removeItem('wl_extension_mode');
     sessionStorage.removeItem('wl_ext_pinned');
     sessionStorage.removeItem('wl_teacher_preview');
+    sessionStorage.removeItem('wl_eald_language');
     _updatePill(null);
     var btn = document.getElementById('wlLoginBtn');
     if (btn) { btn.style.display = ''; btn.textContent = '👤 Log in'; }
@@ -1286,6 +1296,113 @@ const WordLabData = (() => {
     return _customMorphemesPriorityCache[gameName] || 'mixed';
   }
 
+  // ── EALD (English as an Additional Language or Dialect) ─────
+  const EALD_LANGUAGES = {
+    bo: 'Tibetan (བོད་སྐད)',
+    ar: 'Arabic (العربية)',
+    zh: 'Mandarin Chinese (中文)',
+    'zh-yue': 'Cantonese (廣東話)',
+    vi: 'Vietnamese (Tiếng Việt)',
+    hi: 'Hindi (हिन्दी)',
+    pa: 'Punjabi (ਪੰਜਾਬੀ)',
+    tl: 'Filipino/Tagalog',
+    ko: 'Korean (한국어)',
+    sm: 'Samoan (Gagana Sāmoa)',
+    ja: 'Japanese (日本語)',
+    th: 'Thai (ภาษาไทย)',
+    ne: 'Nepali (नेपाली)',
+    fa: 'Farsi/Persian (فارسی)',
+    ur: 'Urdu (اردو)',
+    sw: 'Swahili (Kiswahili)',
+    my: 'Burmese (မြန်မာစာ)',
+    km: 'Khmer (ភាសាខ្មែរ)',
+    dz: 'Dzongkha (རྫོང་ཁ)',
+  };
+
+  function getEALDLanguage() {
+    return sessionStorage.getItem('wl_eald_language') || null;
+  }
+
+  function getEALDLanguageName() {
+    var lang = getEALDLanguage();
+    return lang ? (EALD_LANGUAGES[lang] || lang) : null;
+  }
+
+  // Translation cache (in-memory for current session)
+  var _translationCache = {};
+
+  async function getTranslations(words, contexts) {
+    var lang = getEALDLanguage();
+    if (!lang || !words || words.length === 0) return null;
+
+    // Check in-memory cache first
+    var uncachedWords = [];
+    var uncachedContexts = [];
+    var results = {};
+    for (var i = 0; i < words.length; i++) {
+      var key = (words[i] || '').toLowerCase().trim() + '::' + ((contexts && contexts[i]) || 'word') + '::' + lang;
+      if (_translationCache[key]) {
+        results[words[i]] = _translationCache[key];
+      } else {
+        uncachedWords.push(words[i]);
+        uncachedContexts.push((contexts && contexts[i]) || 'word');
+      }
+    }
+
+    if (uncachedWords.length === 0) return results;
+
+    try {
+      var resp = await fetch(SUPABASE_URL + '/functions/v1/translate-words', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ words: uncachedWords, language: lang, contexts: uncachedContexts }),
+      });
+      if (!resp.ok) return results;
+      var data = await resp.json();
+      if (data.translations) {
+        data.translations.forEach(function(t) {
+          if (t.translation) {
+            var cacheKey = (t.word || '').toLowerCase().trim() + '::' + (t.context || 'word') + '::' + lang;
+            _translationCache[cacheKey] = t.translation;
+            results[t.word] = t.translation;
+          }
+        });
+      }
+      return results;
+    } catch(e) {
+      console.warn('getTranslations error:', e);
+      return results;
+    }
+  }
+
+  // Shared UI: create an EALD translation pill element
+  function createEALDPill(translation, extraClass) {
+    if (!translation) return null;
+    var pill = document.createElement('div');
+    pill.className = 'eald-translation-pill' + (extraClass ? ' ' + extraClass : '');
+    pill.setAttribute('aria-label', 'Translation: ' + translation);
+    pill.innerHTML = '<span class="eald-flag">🌐</span> ' + escapeHtml(translation);
+    return pill;
+  }
+
+  // Inject shared EALD CSS into the page (called once per page)
+  var _ealdCssInjected = false;
+  function injectEALDStyles() {
+    if (_ealdCssInjected) return;
+    _ealdCssInjected = true;
+    var style = document.createElement('style');
+    style.textContent = [
+      '.eald-translation-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(99,102,241,.1);border:1.5px solid rgba(99,102,241,.25);border-radius:10px;padding:5px 12px;font-size:14px;font-weight:600;color:#4338ca;font-family:"Lexend",sans-serif;margin-top:6px;animation:ealdFadeIn .3s ease;}',
+      '.eald-translation-pill .eald-flag{font-size:15px;}',
+      '.eald-translation-pill.eald-large{font-size:17px;padding:8px 16px;border-radius:12px;}',
+      '.eald-translation-pill.eald-inline{display:inline-flex;margin:0 0 0 8px;font-size:12px;padding:3px 8px;vertical-align:middle;}',
+      '.eald-translation-pill.eald-dark{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2);color:#c7d2fe;}',
+      '@keyframes ealdFadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}',
+      '.eald-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;color:#6366f1;}',
+    ].join('\n');
+    document.head.appendChild(style);
+  }
+
   // ── Lazy-load extension data ────────────────────────────────
   let _extLoaded = false;
   let _extLoading = null;
@@ -1322,6 +1439,7 @@ const WordLabData = (() => {
     checkDailyLimit, incrementDailyUsage,
     getCustomWords, getCustomWordPriority,
     getCustomMorphemes, getCustomMorphemePriority,
+    getEALDLanguage, getEALDLanguageName, getTranslations, createEALDPill, injectEALDStyles, EALD_LANGUAGES,
     escapeHtml
   };
 

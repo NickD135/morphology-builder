@@ -342,6 +342,7 @@
                 <div class="info"><span class="label">Origin / category</span><div class="value" id="originText"></div></div>
                 <div class="info full"><span class="label">Example / hint</span><div class="value" id="sentenceText"></div></div>
                 <div class="info full"><span class="label">Word examples</span><div class="value" id="examplesList"></div></div>
+                <div class="info full" id="ealdRow" style="display:none"><span class="label">🌐 Translation</span><div class="value" id="ealdTranslation"></div></div>
               </div>
             </div>
           </div>
@@ -604,6 +605,25 @@
     $("sentenceText").textContent = card.sentence || "No extra note added yet.";
     $("emojiBox").textContent = showEmoji.checked ? (card.emoji || "🧠") : "";
     renderExamples(card);
+
+    // EALD translation
+    var ealdRow = $("ealdRow"), ealdEl = $("ealdTranslation");
+    if (ealdRow) ealdRow.style.display = 'none';
+    if (ealdEl) ealdEl.textContent = '';
+    if (typeof WordLabData !== 'undefined' && WordLabData.getEALDLanguage()) {
+      WordLabData.injectEALDStyles();
+      var morpheme = card.morpheme || '', meaning = card.meaning || '';
+      WordLabData.getTranslations([morpheme, meaning], ['word', 'morpheme_meaning']).then(function(t) {
+        if (!t) return;
+        var parts = [];
+        if (t[morpheme]) parts.push(WordLabData.escapeHtml(t[morpheme]));
+        if (t[meaning]) parts.push(WordLabData.escapeHtml(t[meaning]));
+        if (parts.length && ealdEl && ealdRow) {
+          ealdEl.innerHTML = parts.join(' — ');
+          ealdRow.style.display = '';
+        }
+      });
+    }
 
     emptyState.style.display = "none";
     cardWrap.style.display = "block";

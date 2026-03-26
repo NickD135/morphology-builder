@@ -268,6 +268,7 @@
     <div class="options" id="options"></div>
     <div class="feedback" id="feedback" aria-live="assertive"></div>
     <div class="subFeedback" id="subFeedback" aria-live="polite"></div>
+    <div id="ealdTranslation" aria-live="polite"></div>
     <div class="actionRow">
       <button class="secondaryBtn" id="recalibrateBtn" type="button">Restart</button>
       <button class="primaryBtn" id="skipBtn" type="button">Skip →</button>
@@ -411,7 +412,23 @@
       subFeedbackEl.textContent=`Correct answer: ${getPrefixLabel(q.correct)} — ${q.correct.meaning}`;
       dropZoneTextEl.style.color="var(--bad)";dropZoneEl.classList.add("flashFail");
     }
-    updateHud();if(fuel<=0){setTimeout(endGame,800);return;}setTimeout(loadQuestion,1400);
+    updateHud();
+    // EALD translation
+    var ealdEl=document.getElementById('ealdTranslation');ealdEl.innerHTML='';
+    if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()){
+      WordLabData.injectEALDStyles();
+      var meaning=q.correct.meaning||'';
+      var label=getPrefixLabel(q.correct);
+      WordLabData.getTranslations([meaning,label],['morpheme_meaning','word']).then(function(t){
+        if(t){
+          var parts=[];
+          if(t[label]) parts.push('<b>'+WordLabData.escapeHtml(label)+'</b> = '+WordLabData.escapeHtml(t[label]));
+          if(t[meaning]) parts.push('"'+WordLabData.escapeHtml(meaning)+'" = '+WordLabData.escapeHtml(t[meaning]));
+          if(parts.length){var pill=document.createElement('div');pill.className='eald-translation-pill';pill.innerHTML='<span class="eald-flag">🌐</span> '+parts.join(' · ');ealdEl.appendChild(pill);}
+        }
+      });
+    }
+    if(fuel<=0){setTimeout(endGame,800);return;}setTimeout(loadQuestion,1400);
   }
   function startFuelDrain(){clearInterval(fuelInterval);fuelInterval=setInterval(()=>{fuel-=.25;if(fuel<=0){fuel=0;updateHud();endGame();clearInterval(fuelInterval);return;}updateHud();},220);}
   function endGame(){buttonsLocked=true;optionsEl.innerHTML="";feedbackEl.textContent="Mission over";feedbackEl.className="feedback bad";subFeedbackEl.textContent=`Final score: ${score} XP`;}

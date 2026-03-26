@@ -1417,6 +1417,7 @@
           <div class="word" id="wordOut">Choose a base word</div>
           <div class="gloss" id="meaningOut">Then add a prefix or suffix to change the meaning.</div>
           <div class="status warn" id="statusOut"></div>
+          <div id="ealdTranslation" aria-live="polite" style="text-align:center;margin-top:4px;"></div>
         </div>
 
         <div class="spellBox" id="spellBox" style="display:none;">
@@ -2813,6 +2814,22 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       els.statusOut.textContent = "Not a real word. Choose a different enabled option.";
       els.statusOut.className   = "status bad";
+    }
+
+    // EALD translation for built word + meaning
+    var ealdEl=document.getElementById('ealdTranslation');if(ealdEl)ealdEl.innerHTML='';
+    if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&w){
+      WordLabData.injectEALDStyles();
+      var meaning=els.meaningOut.textContent||'';
+      var toTranslate=[w];var contexts=['word'];
+      if(meaning&&meaning.trim()){toTranslate.push(meaning);contexts.push('definition');}
+      WordLabData.getTranslations(toTranslate,contexts).then(function(t){
+        if(!t||!ealdEl)return;
+        var parts=[];
+        if(t[w])parts.push('<b>'+WordLabData.escapeHtml(w)+'</b> = '+WordLabData.escapeHtml(t[w]));
+        if(meaning&&t[meaning])parts.push(WordLabData.escapeHtml(t[meaning]));
+        if(parts.length){ealdEl.innerHTML='<div class="eald-translation-pill eald-inline"><span class="eald-flag">🌐</span> '+parts.join(' · ')+'</div>';}
+      });
     }
   }
 

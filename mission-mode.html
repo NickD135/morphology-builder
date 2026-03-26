@@ -725,6 +725,7 @@
     <div class="options"     id="options"></div>
     <div class="feedback"    id="feedback" aria-live="assertive"></div>
     <div class="subFeedback" id="subFeedback" aria-live="polite"></div>
+    <div id="ealdTranslation" aria-live="polite"></div>
 
     <div class="actionRow">
       <button class="secondaryBtn" id="recalibrateBtn" type="button">Restart</button>
@@ -1164,7 +1165,16 @@
       subFeedbackEl.textContent=`Better answer: ${_correctLabel} — "${q.targetMeaning}"`;
       dropZoneTextEl.style.color="var(--bad)";dropZoneEl.classList.add("flashFail");
     }
-    updateHud();if(fuel<=0){setTimeout(endGame,800);return;}setTimeout(loadQuestion,1500);
+    updateHud();
+    var ealdEl=document.getElementById('ealdTranslation');ealdEl.innerHTML='';
+    if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()){
+      WordLabData.injectEALDStyles();
+      var meaning=q.targetMeaning||'';
+      WordLabData.getTranslations([meaning],['morpheme_meaning']).then(function(t){
+        if(t&&t[meaning]){var pill=document.createElement('div');pill.className='eald-translation-pill';pill.innerHTML='<span class="eald-flag">🌐</span> "'+WordLabData.escapeHtml(meaning)+'" = '+WordLabData.escapeHtml(t[meaning]);ealdEl.appendChild(pill);}
+      });
+    }
+    if(fuel<=0){setTimeout(endGame,800);return;}setTimeout(loadQuestion,1500);
   }
   function startFuelDrain(){clearInterval(fuelInterval);fuelInterval=setInterval(()=>{fuel-=getDiff().drainRate;if(fuel<=0){fuel=0;updateHud();endGame();clearInterval(fuelInterval);return;}updateHud();},220);}
   function endGame(){buttonsLocked=true;optionsEl.innerHTML="";feedbackEl.textContent="Mission over";feedbackEl.className="feedback bad";subFeedbackEl.textContent=`Final score: ${score} XP`;}
