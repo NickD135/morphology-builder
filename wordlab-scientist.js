@@ -92,32 +92,31 @@ const WLScientist = (() => {
   function _buildBadgePins(scientist) {
     var pins = (scientist && scientist.displayBadges) || [];
     if (!pins.length) return '';
-    // Look up badge icons
     var allBadges = [];
     if (typeof WordLabData !== 'undefined') {
       allBadges = [].concat(WordLabData.ALL_BADGES || [], WordLabData.LEGENDARY_BADGES || []);
     }
-    // Pin positions on right side of coat chest
-    var positions = [{x:48, y:70}, {x:56, y:78}, {x:48, y:86}];
     var svgParts = [];
-    for (var i = 0; i < Math.min(pins.length, 3); i++) {
-      var badgeId = pins[i];
-      var px = positions[i].x, py = positions[i].y;
 
-      // Special: streak flame badge
-      if (badgeId === 'streak_flame') {
-        var streakDays = 0;
-        try {
-          if (typeof WordLabData !== 'undefined') {
-            streakDays = WordLabData.updateDailyStreak().count || 0;
-          }
-        } catch(e) {}
-        svgParts.push(_buildStreakFlame(px, py, Math.max(streakDays, 1)));
-        continue;
-      }
+    // Streak flame — rendered separately at a dedicated spot (upper-right coat)
+    var hasFlame = pins.indexOf('streak_flame') !== -1;
+    if (hasFlame) {
+      var streakDays = 0;
+      try {
+        if (typeof WordLabData !== 'undefined') {
+          streakDays = WordLabData.updateDailyStreak().count || 0;
+        }
+      } catch(e) {}
+      svgParts.push(_buildStreakFlame(56, 72, Math.max(streakDays, 1)));
+    }
 
-      var badge = allBadges.find(function(b) { return b.id === badgeId; });
+    // Regular badge pins (excluding streak_flame)
+    var regularPins = pins.filter(function(id) { return id !== 'streak_flame'; });
+    var positions = [{x:24, y:70}, {x:24, y:80}, {x:24, y:90}];
+    for (var i = 0; i < Math.min(regularPins.length, 3); i++) {
+      var badge = allBadges.find(function(b) { return b.id === regularPins[i]; });
       if (!badge) continue;
+      var px = positions[i].x, py = positions[i].y;
       svgParts.push(
         '<circle cx="' + px + '" cy="' + py + '" r="5.5" fill="#eef2ff" stroke="#a5b4fc" stroke-width="0.8"/>' +
         '<text x="' + px + '" y="' + (py + 2.5) + '" text-anchor="middle" font-size="6.5" dominant-baseline="middle">' + badge.icon + '</text>'
