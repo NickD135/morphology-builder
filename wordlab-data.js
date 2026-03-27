@@ -1748,15 +1748,20 @@ const WordLabData = (() => {
     dz: 'Dzongkha (རྫོང་ཁ)',
     my: 'Burmese (မြန်မာစာ)',
     km: 'Khmer (ភាសាខ្មែរ)',
+    lo: 'Lao (ພາສາລາວ)',
     // — Southeast Asian & Pacific —
     id: 'Indonesian (Bahasa Indonesia)',
     ms: 'Malay (Bahasa Melayu)',
     sm: 'Samoan (Gagana Sāmoa)',
+    to: 'Tongan (Lea Fakatonga)',
     // — Middle Eastern & African —
     tr: 'Turkish (Türkçe)',
     he: 'Hebrew (עברית)',
     sw: 'Swahili (Kiswahili)',
+    so: 'Somali (Soomaali)',
     af: 'Afrikaans',
+    si: 'Sinhala (සිංහල)',
+    hr: 'Croatian (Hrvatski)',
     // — European —
     es: 'Spanish (Español)',
     pt: 'Portuguese (Português)',

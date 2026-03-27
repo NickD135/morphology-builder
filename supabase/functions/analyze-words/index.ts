@@ -138,17 +138,34 @@ ${words.map((w, i) => `${i + 1}. ${w}`).join('\n')}`;
     }
 
     const data = await anthropicResp.json();
+    console.log('Anthropic response stop_reason:', data.stop_reason, 'content blocks:', data.content?.length);
     const text: string = data.content?.[0]?.text || '';
+    console.log('Raw AI text length:', text.length, 'first 200:', text.slice(0, 200));
+
+    if (!text) {
+      return json({ error: 'AI returned empty response (stop_reason: ' + (data.stop_reason || 'unknown') + ')' }, 500);
+    }
 
     // Extract JSON from response (may be wrapped in markdown code blocks)
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
-      return json({ error: 'Could not parse AI response', raw: text }, 500);
+      return json({ error: 'Could not extract JSON array from AI response. First 300 chars: ' + text.slice(0, 300) }, 500);
     }
 
-    const analyzed = JSON.parse(jsonMatch[0]);
+    let analyzed;
+    try {
+      analyzed = JSON.parse(jsonMatch[0]);
+    } catch (parseErr) {
+      return json({ error: 'JSON parse failed: ' + (parseErr as Error).message + '. First 300 chars: ' + jsonMatch[0].slice(0, 300) }, 500);
+    }
+
+    if (!Array.isArray(analyzed) || analyzed.length === 0) {
+      return json({ error: 'AI returned empty array. Raw text length: ' + text.length }, 500);
+    }
+
     return json({ words: analyzed });
   } catch (err) {
+    console.error('analyze-words error:', err);
     return json({ error: (err as Error).message || 'Internal error' }, 500);
   }
 });
