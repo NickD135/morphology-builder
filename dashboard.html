@@ -1057,6 +1057,13 @@ function accClass(pct){
   if(pct >= 30)  return 'acc-30';
   return 'acc-low';
 }
+function accBg(pct){
+  if(pct >= 100) return '#166534';
+  if(pct >= 80)  return '#4ade80';
+  if(pct >= 70)  return '#86efac';
+  if(pct >= 50)  return '#fde047';
+  return '#ef4444';
+}
 
 function timeClass(avgMs){
   if(!avgMs) return '';
@@ -1309,6 +1316,59 @@ function makeProfileCell(result, hasTime){
   return `<div class="profileCell ${ac}${timeCls}" style="${flagStyle}" title="${title}">${flagged ? '<span aria-hidden="true" style="font-size:7px;line-height:1;position:absolute;top:0;right:1px;">⚠</span>' : ''}${pct}%</div>`;
 }
 
+function buildProfileSpellingSets(studentId) {
+  if (!_spellingSets || !_spellingSets.length) return '';
+  var progress = _spellingProgress[studentId] || {};
+  var html = '<div class="sectionGroup">📊 Spelling Sets</div>';
+  var hasAny = false;
+
+  _spellingSets.forEach(function(set) {
+    var assigns = (_spellingAssignments[set.id] || []);
+    var assign = assigns.find(function(a) { return a.student_id === studentId; });
+    if (!assign) return; // not assigned (current or historical)
+    hasAny = true;
+
+    var isActive = assign.active;
+    var words = (set.words || []).map(function(w) { return typeof w === 'string' ? w : (w.word || ''); });
+    var statusBadge = isActive
+      ? '<span style="background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:8px;font-weight:800;padding:1px 6px;border-radius:4px;">Active</span>'
+      : '<span style="background:#f1f5f9;border:1px solid #cbd5e1;color:#64748b;font-size:8px;font-weight:800;padding:1px 6px;border-radius:4px;">Completed' + (assign.completed_at ? ' ' + new Date(assign.completed_at).toLocaleDateString('en-AU', {day:'numeric',month:'short'}) : '') + '</span>';
+
+    var totalCorrect = 0, totalAttempts = 0;
+    var wordCells = words.map(function(word) {
+      var key = 'ss:' + set.id.slice(0,8) + ':' + word.toLowerCase();
+      var result = progress[key] || null;
+      if (result && result.total > 0) {
+        totalCorrect += result.correct;
+        totalAttempts += result.total;
+        var pct = WordLabData.getAccuracy(result);
+        var ac = accClass(pct);
+        var flagged = WordLabData.isIntervention(result, THRESHOLD_PCT, THRESHOLD_ATTEMPTS);
+        return '<div title="' + word + ': ' + pct + '% (' + result.correct + '/' + result.total + ')">' +
+          '<div class="profileCell ' + ac + '"' + (flagged ? ' style="outline:2px solid var(--bad);outline-offset:-1px;"' : '') + '>' +
+          (flagged ? '<span aria-hidden="true" style="font-size:7px;line-height:1;position:absolute;top:0;right:1px;">⚠</span>' : '') +
+          pct + '%</div>' +
+          '<div style="font-size:7px;color:var(--muted);font-weight:700;text-align:center;margin-top:1px;width:30px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + WordLabData.escapeHtml(word) + '</div></div>';
+      }
+      return '<div title="' + word + ': no data"><div class="profileCell" style="background:#f1f5f9;color:#94a3b8;">–</div>' +
+        '<div style="font-size:7px;color:var(--muted);font-weight:700;text-align:center;margin-top:1px;width:30px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + WordLabData.escapeHtml(word) + '</div></div>';
+    }).join('');
+
+    var overallPct = totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : null;
+    var overallLabel = overallPct !== null ? ' · ' + overallPct + '% overall' : '';
+
+    html += '<div class="profileSection">' +
+      '<div class="profileSectionLabel" style="background:#eef2ff;color:#4338ca;border-color:#c7d2fe;">' + WordLabData.escapeHtml(set.name) + '<br>' + statusBadge + overallLabel + '</div>' +
+      '<div class="profileSectionCells">' + wordCells + '</div>' +
+      '</div>';
+  });
+
+  if (!hasAny) {
+    html += '<div style="padding:8px 14px;font-size:12px;color:#94a3b8;font-weight:600;">Not assigned to any spelling sets.</div>';
+  }
+  return html;
+}
+
 function showStudentProfile(studentId){
   const student = _studentMap[studentId];
   if(!student) return;
@@ -1469,6 +1529,7 @@ function showStudentProfile(studentId){
       ${profileSection('Homophones',                'red', 'homophone-hunter',  COLUMNS['homophone-hunter'],  false)}
       ${profileSection('Word Spectrum',             'red', 'word-spectrum',     COLUMNS['word-spectrum'],     false)}
       ${profileSection('The Refinery',              'red', 'word-refinery',     COLUMNS['word-refinery'],     false)}
+      ${buildProfileSpellingSets(studentId)}
     </div>
     <div id="profilePageExt" class="hidden">${extPageHtml}</div>
   `;
@@ -2759,6 +2820,7 @@ async function dashSaveMorphemePriority(setId){
 var _spellingSets = [];
 var _spellingAssignments = {};
 var _spellingProgress = {};
+var _checkInResults = {};
 var _activeSpellingSetId = null;
 
 async function loadSpellingSetsData() {
@@ -2797,6 +2859,21 @@ async function loadSpellingSetsData() {
         _spellingProgress[r.student_id][r.category] = {
           correct: r.correct || 0, total: r.total || 0, totalTime: r.total_time || 0
         };
+      });
+    }
+    // Load check-in session results for pre/post comparison
+    _checkInResults = {};
+    if (_spellingSets.length && studentIds.length) {
+      var setIds2 = _spellingSets.map(function(s) { return s.id; });
+      var { data: checkIns } = await dbSb().from('spelling_check_in_results')
+        .select('spelling_set_id, student_id, score, total, created_at')
+        .in('spelling_set_id', setIds2)
+        .in('student_id', studentIds)
+        .order('created_at', { ascending: true });
+      (checkIns || []).forEach(function(ci) {
+        var key = ci.spelling_set_id + ':' + ci.student_id;
+        if (!_checkInResults[key]) _checkInResults[key] = [];
+        _checkInResults[key].push({ score: ci.score, total: ci.total, date: ci.created_at });
       });
     }
   } catch (e) { console.warn('loadSpellingSetsData error', e); }
@@ -2919,22 +2996,62 @@ function buildSpellingSetHeatmap(set) {
       '<button onclick="ssEditWords(\'' + set.id + '\')" style="border:1.5px solid var(--line);background:#fff;color:var(--slate);border-radius:8px;padding:5px 12px;font-size:10px;font-weight:800;cursor:pointer;font-family:\'Lexend\',sans-serif;">✏️ Edit Words</button>' +
       '<button onclick="ssEditName(\'' + set.id + '\')" style="border:1.5px solid var(--line);background:#fff;color:var(--slate);border-radius:8px;padding:5px 12px;font-size:10px;font-weight:800;cursor:pointer;font-family:\'Lexend\',sans-serif;">📝 Rename</button>' +
       (!isAI ? '<button onclick="ssRunAI(\'' + set.id + '\')" style="border:1.5px solid var(--indigo);background:var(--indigo-soft);color:var(--indigo);border-radius:8px;padding:5px 12px;font-size:10px;font-weight:800;cursor:pointer;font-family:\'Lexend\',sans-serif;">🤖 Run AI Analysis</button>' : '') +
+      '<button onclick="ssCompleteAll(\'' + set.id + '\')" style="border:1.5px solid #bbf7d0;background:#f0fdf4;color:#166534;border-radius:8px;padding:5px 12px;font-size:10px;font-weight:800;cursor:pointer;font-family:\'Lexend\',sans-serif;">✅ Complete All</button>' +
+      '<button onclick="ssAdvanceAll(\'' + set.id + '\')" style="border:1.5px solid var(--indigo);background:var(--indigo-soft);color:var(--indigo);border-radius:8px;padding:5px 12px;font-size:10px;font-weight:800;cursor:pointer;font-family:\'Lexend\',sans-serif;">⏩ Advance All to Next Set</button>' +
       '<button onclick="deleteSpellingSet(\'' + set.id + '\')" style="border:1.5px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:8px;padding:5px 12px;font-size:10px;font-weight:800;cursor:pointer;font-family:\'Lexend\',sans-serif;margin-left:auto;">🗑️ Delete Set</button>' +
     '</div>';
+
+  // Check if any student has check-in data for this set
+  var hasCheckInData = currentClass.students.some(function(s) {
+    var ciKey = set.id + ':' + s.id;
+    return _checkInResults[ciKey] && _checkInResults[ciKey].length > 0;
+  });
 
   // Heatmap
   var headerCols = words.map(function(w) {
     return '<th class="rotate"><span>' + WordLabData.escapeHtml(w) + '</span></th>';
   }).join('');
+  if (hasCheckInData) {
+    headerCols += '<th class="rotate" style="border-left:2px solid var(--indigo);"><span>Check-In</span></th>';
+  }
 
   var rows = currentClass.students.map(function(student) {
     var isAssigned = activeStudentIds.indexOf(student.id) !== -1;
     var isHistorical = historicalStudentIds.indexOf(student.id) !== -1;
     var progress = _spellingProgress[student.id] || {};
 
+    // Check-in comparison cell
+    var checkInCell = '';
+    if (hasCheckInData) {
+      var ciKey = set.id + ':' + student.id;
+      var sessions = _checkInResults[ciKey] || [];
+      if (sessions.length === 0) {
+        checkInCell = '<td style="border-left:2px solid var(--indigo);"><div class="cell no-data" title="No check-in taken">–</div></td>';
+      } else if (sessions.length === 1) {
+        var s1 = sessions[0];
+        var pct1 = s1.total > 0 ? Math.round((s1.score / s1.total) * 100) : 0;
+        checkInCell = '<td style="border-left:2px solid var(--indigo);"><div class="cell ' + accClass(pct1) + '" title="Check-In: ' + pct1 + '% (' + s1.score + '/' + s1.total + ')&#10;' + new Date(s1.date).toLocaleDateString('en-AU',{day:'numeric',month:'short'}) + '">' + pct1 + '%</div></td>';
+      } else {
+        var first = sessions[0];
+        var latest = sessions[sessions.length - 1];
+        var pctFirst = first.total > 0 ? Math.round((first.score / first.total) * 100) : 0;
+        var pctLatest = latest.total > 0 ? Math.round((latest.score / latest.total) * 100) : 0;
+        var diff = pctLatest - pctFirst;
+        var arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
+        var diffColor = diff > 0 ? '#166534' : diff < 0 ? '#dc2626' : '#64748b';
+        var diffStr = diff > 0 ? '+' + diff : '' + diff;
+        checkInCell = '<td style="border-left:2px solid var(--indigo);"><div class="cell" style="background:linear-gradient(135deg,' + (accBg(pctFirst)) + ' 50%,' + (accBg(pctLatest)) + ' 50%);position:relative;min-width:52px;" title="Pre: ' + pctFirst + '% (' + first.score + '/' + first.total + ') — ' + new Date(first.date).toLocaleDateString('en-AU',{day:'numeric',month:'short'}) + '&#10;Post: ' + pctLatest + '% (' + latest.score + '/' + latest.total + ') — ' + new Date(latest.date).toLocaleDateString('en-AU',{day:'numeric',month:'short'}) + '&#10;Change: ' + diffStr + '%">' +
+          '<span style="font-size:8px;">' + pctFirst + '</span>' +
+          '<span style="color:' + diffColor + ';font-weight:900;font-size:9px;">' + arrow + '</span>' +
+          '<span style="font-size:8px;">' + pctLatest + '</span>' +
+          '</div></td>';
+      }
+    }
+
     if (!isAssigned && !isHistorical) {
       return '<tr style="opacity:0.3;"><td class="student-name">' + WordLabData.escapeHtml(student.name) + '</td>' +
-        words.map(function() { return '<td><div class="cell no-data" title="Not assigned">–</div></td>'; }).join('') + '</tr>';
+        words.map(function() { return '<td><div class="cell no-data" title="Not assigned">–</div></td>'; }).join('') +
+        (hasCheckInData ? '<td style="border-left:2px solid var(--indigo);"><div class="cell no-data">–</div></td>' : '') + '</tr>';
     }
 
     var rowStyle = isHistorical && !isAssigned ? 'opacity:0.6;' : '';
@@ -2951,8 +3068,20 @@ function buildSpellingSetHeatmap(set) {
         '>' + (flagged ? '<span aria-hidden="true" style="font-size:9px;position:absolute;top:1px;right:2px;">⚠</span>' : '') + pct + '%</div></td>';
     }).join('');
 
-    var badge = isHistorical && !isAssigned ? ' <span style="font-size:8px;background:#94a3b8;color:#fff;padding:1px 5px;border-radius:4px;">completed</span>' : '';
-    return '<tr style="' + rowStyle + '"><td class="student-name" onclick="showStudentProfile(\'' + student.id + '\')">' + WordLabData.escapeHtml(student.name) + badge + '</td>' + cells + '</tr>';
+    var badge = '';
+    var actions = '';
+    if (isHistorical && !isAssigned) {
+      badge = ' <span style="font-size:8px;background:#94a3b8;color:#fff;padding:1px 5px;border-radius:4px;">completed</span>';
+      actions = '<div style="display:flex;gap:3px;margin-top:2px;">' +
+        '<button onclick="event.stopPropagation();ssReassignStudent(\'' + set.id + '\',\'' + student.id + '\')" title="Re-assign" style="border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:4px;padding:1px 5px;font-size:8px;font-weight:700;cursor:pointer;font-family:\'Lexend\',sans-serif;">↩ Re-assign</button>' +
+        '</div>';
+    } else if (isAssigned) {
+      actions = '<div style="display:flex;gap:3px;margin-top:2px;">' +
+        '<button onclick="event.stopPropagation();ssAdvanceStudent(\'' + set.id + '\',\'' + student.id + '\')" title="Complete & advance to next set" style="border:1px solid #bbf7d0;background:#f0fdf4;color:#166534;border-radius:4px;padding:1px 5px;font-size:8px;font-weight:700;cursor:pointer;font-family:\'Lexend\',sans-serif;">⏩ Advance</button>' +
+        '<button onclick="event.stopPropagation();ssCompleteStudent(\'' + set.id + '\',\'' + student.id + '\')" title="Mark completed" style="border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:4px;padding:1px 5px;font-size:8px;font-weight:700;cursor:pointer;font-family:\'Lexend\',sans-serif;">✅</button>' +
+        '</div>';
+    }
+    return '<tr style="' + rowStyle + '"><td class="student-name" onclick="showStudentProfile(\'' + student.id + '\')">' + WordLabData.escapeHtml(student.name) + badge + actions + '</td>' + cells + checkInCell + '</tr>';
   }).join('');
 
   var legend = '<div class="legend"><span>Accuracy:</span>' +
@@ -2961,7 +3090,9 @@ function buildSpellingSetHeatmap(set) {
     '<span class="legendCell" style="background:#86efac;"></span><span>70%+</span>' +
     '<span class="legendCell" style="background:#fde047;"></span><span>50%+</span>' +
     '<span class="legendCell" style="background:#ef4444;"></span><span>&lt;50%</span>' +
-    '<span class="legendCell" style="background:#f1f5f9;border:1px solid #cbd5e1;"></span><span>No data</span></div>';
+    '<span class="legendCell" style="background:#f1f5f9;border:1px solid #cbd5e1;"></span><span>No data</span>' +
+    (hasCheckInData ? '<span style="margin-left:8px;font-size:10px;font-weight:700;color:var(--indigo);">Check-In: Pre→Post (hover for details)</span>' : '') +
+    '</div>';
 
   return '<div class="panel"><div class="panelInner">' +
     '<div class="panelTitle">' + WordLabData.escapeHtml(set.name) + ' — ' + words.length + ' words ' + aiLabel + '</div>' +
@@ -3163,12 +3294,18 @@ async function ssSaveAssignments(setId) {
       });
       await dbSb().from('spelling_set_assignments').upsert(rows, { onConflict: 'spelling_set_id,student_id' });
     }
-    // Deactivate unselected
+    // Soft-deactivate unselected (preserve history)
     var unselected = allStudentIds.filter(function(id) { return selected.indexOf(id) === -1; });
     if (unselected.length) {
-      await dbSb().from('spelling_set_assignments').delete()
-        .eq('spelling_set_id', setId)
-        .in('student_id', unselected);
+      // Only deactivate students who currently have an active assignment
+      var currentAssigns = (_spellingAssignments[setId] || []).filter(function(a) { return a.active; });
+      var toDeactivate = currentAssigns.filter(function(a) { return unselected.indexOf(a.student_id) !== -1; }).map(function(a) { return a.student_id; });
+      if (toDeactivate.length) {
+        await dbSb().from('spelling_set_assignments')
+          .update({ active: false, completed_at: new Date().toISOString() })
+          .eq('spelling_set_id', setId)
+          .in('student_id', toDeactivate);
+      }
     }
     await renderSpellingSetsTab();
   } catch(e) { alert('Error saving assignments: ' + (e.message || e)); }
@@ -3264,6 +3401,102 @@ async function ssRunAI(setId) {
     alert('AI analysis complete — ' + data.words.length + ' words processed!');
     await renderSpellingSetsTab();
   } catch(e) { alert('AI error: ' + (e.message || e)); }
+}
+
+// Complete a student's assignment on a set (soft-deactivate, preserve history)
+async function ssCompleteStudent(setId, studentId) {
+  try {
+    await dbSb().from('spelling_set_assignments')
+      .update({ active: false, completed_at: new Date().toISOString() })
+      .eq('spelling_set_id', setId)
+      .eq('student_id', studentId);
+    await renderSpellingSetsTab();
+  } catch(e) { alert('Error: ' + (e.message || e)); }
+}
+
+// Advance a student: complete current set and assign to next set
+async function ssAdvanceStudent(setId, studentId) {
+  var currentSet = _spellingSets.find(function(s) { return s.id === setId; });
+  if (!currentSet) return;
+  var currentNum = currentSet.set_number || 0;
+  // Find next set by set_number
+  var nextSet = _spellingSets
+    .filter(function(s) { return (s.set_number || 0) > currentNum; })
+    .sort(function(a, b) { return (a.set_number || 0) - (b.set_number || 0); })[0];
+  if (!nextSet) {
+    // No higher set_number — try next in creation order
+    var idx = _spellingSets.findIndex(function(s) { return s.id === setId; });
+    nextSet = _spellingSets[idx + 1];
+  }
+  if (!nextSet) { alert('No next set available to advance to.'); return; }
+  if (!confirm('Complete this student on "' + currentSet.name + '" and assign to "' + nextSet.name + '"?')) return;
+  try {
+    // Complete current
+    await dbSb().from('spelling_set_assignments')
+      .update({ active: false, completed_at: new Date().toISOString() })
+      .eq('spelling_set_id', setId)
+      .eq('student_id', studentId);
+    // Assign next
+    await dbSb().from('spelling_set_assignments')
+      .upsert([{ spelling_set_id: nextSet.id, student_id: studentId, active: true, assigned_at: new Date().toISOString(), completed_at: null }], { onConflict: 'spelling_set_id,student_id' });
+    await renderSpellingSetsTab();
+  } catch(e) { alert('Error: ' + (e.message || e)); }
+}
+
+// Bulk complete all active students on a set
+async function ssCompleteAll(setId) {
+  var assigns = (_spellingAssignments[setId] || []).filter(function(a) { return a.active; });
+  if (!assigns.length) { alert('No active assignments to complete.'); return; }
+  if (!confirm('Mark all ' + assigns.length + ' assigned students as completed on this set?')) return;
+  try {
+    await dbSb().from('spelling_set_assignments')
+      .update({ active: false, completed_at: new Date().toISOString() })
+      .eq('spelling_set_id', setId)
+      .eq('active', true);
+    await renderSpellingSetsTab();
+  } catch(e) { alert('Error: ' + (e.message || e)); }
+}
+
+// Bulk advance all active students to next set
+async function ssAdvanceAll(setId) {
+  var currentSet = _spellingSets.find(function(s) { return s.id === setId; });
+  if (!currentSet) return;
+  var currentNum = currentSet.set_number || 0;
+  var nextSet = _spellingSets
+    .filter(function(s) { return (s.set_number || 0) > currentNum; })
+    .sort(function(a, b) { return (a.set_number || 0) - (b.set_number || 0); })[0];
+  if (!nextSet) {
+    var idx = _spellingSets.findIndex(function(s) { return s.id === setId; });
+    nextSet = _spellingSets[idx + 1];
+  }
+  if (!nextSet) { alert('No next set available to advance to.'); return; }
+  var assigns = (_spellingAssignments[setId] || []).filter(function(a) { return a.active; });
+  if (!assigns.length) { alert('No active assignments to advance.'); return; }
+  if (!confirm('Complete ' + assigns.length + ' students on "' + currentSet.name + '" and assign them to "' + nextSet.name + '"?')) return;
+  try {
+    var studentIds = assigns.map(function(a) { return a.student_id; });
+    // Complete current
+    await dbSb().from('spelling_set_assignments')
+      .update({ active: false, completed_at: new Date().toISOString() })
+      .eq('spelling_set_id', setId)
+      .eq('active', true);
+    // Assign next
+    var rows = studentIds.map(function(sid) {
+      return { spelling_set_id: nextSet.id, student_id: sid, active: true, assigned_at: new Date().toISOString(), completed_at: null };
+    });
+    await dbSb().from('spelling_set_assignments').upsert(rows, { onConflict: 'spelling_set_id,student_id' });
+    _activeSpellingSetId = nextSet.id;
+    await renderSpellingSetsTab();
+  } catch(e) { alert('Error: ' + (e.message || e)); }
+}
+
+// Re-assign a completed student back to a set
+async function ssReassignStudent(setId, studentId) {
+  try {
+    await dbSb().from('spelling_set_assignments')
+      .upsert([{ spelling_set_id: setId, student_id: studentId, active: true, assigned_at: new Date().toISOString(), completed_at: null }], { onConflict: 'spelling_set_id,student_id' });
+    await renderSpellingSetsTab();
+  } catch(e) { alert('Error: ' + (e.message || e)); }
 }
 
 async function deleteSpellingSet(setId) {

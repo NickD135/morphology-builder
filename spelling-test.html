@@ -319,6 +319,28 @@ function showResults() {
       '</div>';
   }).join('');
   document.getElementById('resultsList').innerHTML = html;
+
+  // Save complete check-in session for pre/post comparison
+  saveCheckInSession(correctCount, results.length);
+}
+
+async function saveCheckInSession(score, total) {
+  if (!currentSetId) return;
+  try {
+    var session = WordLabData.loadSession ? WordLabData.loadSession() : null;
+    if (!session || !session.studentId) return;
+    var sb = window.supabase.createClient(
+      'https://kdpavfrzmmzknqfpodrl.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkcGF2ZnJ6bW16a25xZnBvZHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjgzOTIsImV4cCI6MjA5MDAwNDM5Mn0.n5fe7HvXWMsM4xN_iaU_N4xLkC5xD4y9Uoer_DG-dlg'
+    );
+    await sb.from('spelling_check_in_results').insert({
+      spelling_set_id: currentSetId,
+      student_id: session.studentId,
+      results: results,
+      score: score,
+      total: total
+    });
+  } catch(e) { console.warn('Could not save check-in session:', e); }
 }
 
 // Enter key submits or advances

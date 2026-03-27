@@ -336,6 +336,60 @@
       merge(SUFFIXES, cSfx, _origMeanSfx);
       merge(BASES, cBas, _origMeanBas);
     } catch(e) { console.warn('Custom morphemes load error:', e); }
+
+    // ── Spelling set morphemes — extract and prioritise ──
+    try {
+      if (typeof WordLabData !== 'undefined' && WordLabData.getSpellingSetWords) {
+        var ssWords = await WordLabData.getSpellingSetWords();
+        if (ssWords && ssWords.length) {
+          // Extract unique morphemes from spelling set words and match against existing pools
+          var existPfxMap = {}; PREFIXES.forEach(function(p){ existPfxMap[p.form.toLowerCase()] = true; });
+          var existSfxMap = {}; SUFFIXES.forEach(function(s){ existSfxMap[s.form.toLowerCase()] = true; });
+          var existBasMap = {}; BASES.forEach(function(b){ existBasMap[b.form.toLowerCase()] = true; });
+
+          var ssPfx = [], ssSfx = [], ssBas = [];
+          var seenPfx = {}, seenSfx = {}, seenBas = {};
+
+          ssWords.forEach(function(w) {
+            if (w.prefix && !seenPfx[w.prefix.toLowerCase()]) {
+              seenPfx[w.prefix.toLowerCase()] = true;
+              // Find matching morpheme in existing data for its meaning
+              var match = PREFIXES.find(function(p){ return p.form.toLowerCase() === w.prefix.toLowerCase(); }) || _origMeanPfx.find(function(p){ return p.form.toLowerCase() === w.prefix.toLowerCase(); });
+              if (match) ssPfx.push(match);
+            }
+            if (w.base && !seenBas[w.base.toLowerCase()]) {
+              seenBas[w.base.toLowerCase()] = true;
+              var match = BASES.find(function(b){ return b.form.toLowerCase() === w.base.toLowerCase(); }) || _origMeanBas.find(function(b){ return b.form.toLowerCase() === w.base.toLowerCase(); });
+              if (match) ssBas.push(match);
+            }
+            var sfx = w.suffix1 || w.suffix;
+            if (sfx && !seenSfx[sfx.toLowerCase()]) {
+              seenSfx[sfx.toLowerCase()] = true;
+              var match = SUFFIXES.find(function(s){ return s.form.toLowerCase() === sfx.toLowerCase(); }) || _origMeanSfx.find(function(s){ return s.form.toLowerCase() === sfx.toLowerCase(); });
+              if (match) ssSfx.push(match);
+            }
+            if (w.suffix2 && !seenSfx[w.suffix2.toLowerCase()]) {
+              seenSfx[w.suffix2.toLowerCase()] = true;
+              var match = SUFFIXES.find(function(s){ return s.form.toLowerCase() === w.suffix2.toLowerCase(); }) || _origMeanSfx.find(function(s){ return s.form.toLowerCase() === w.suffix2.toLowerCase(); });
+              if (match) ssSfx.push(match);
+            }
+          });
+
+          // Prepend spelling set morphemes (highest priority)
+          function prepend(target, items) {
+            if (!items.length) return;
+            var ids = new Set(items.map(function(m){ return m.id; }));
+            var rest = target.filter(function(m){ return !ids.has(m.id); });
+            target.splice(0, target.length);
+            items.forEach(function(m){ target.push(m); });
+            rest.forEach(function(m){ target.push(m); });
+          }
+          prepend(PREFIXES, ssPfx);
+          prepend(SUFFIXES, ssSfx);
+          prepend(BASES, ssBas);
+        }
+      }
+    } catch(e) { console.warn('Spelling set morphemes load error:', e); }
   })();
   let morphemeMode = 'prefix';
   function setMorphemeMode(mode){

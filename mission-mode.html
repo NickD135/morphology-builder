@@ -1083,6 +1083,55 @@
         uniqueSfxBases.forEach(function(m){ if (typeof SUFFIX_BASES !== 'undefined') SUFFIX_BASES.push(m); });
       }
     } catch(e) { console.warn('Custom morphemes load error:', e); }
+
+    // ── Spelling set morphemes — extract and prioritise ──
+    try {
+      if (typeof WordLabData !== 'undefined' && WordLabData.getSpellingSetWords) {
+        var ssWords = await WordLabData.getSpellingSetWords();
+        if (ssWords && ssWords.length) {
+          var seenPfx = {}, seenSfx = {};
+          var ssPfxIds = [], ssSfxIds = [];
+
+          ssWords.forEach(function(w) {
+            if (w.prefix && !seenPfx[w.prefix.toLowerCase()]) {
+              seenPfx[w.prefix.toLowerCase()] = true;
+              var match = PREFIXES.find(function(p){ return p.form.toLowerCase() === w.prefix.toLowerCase(); });
+              if (match) ssPfxIds.push(match.id);
+            }
+            var sfx = w.suffix1 || w.suffix;
+            if (sfx && !seenSfx[sfx.toLowerCase()]) {
+              seenSfx[sfx.toLowerCase()] = true;
+              var match = SUFFIXES.find(function(s){ return s.form.toLowerCase() === sfx.toLowerCase(); });
+              if (match) ssSfxIds.push(match.id);
+            }
+            if (w.suffix2 && !seenSfx[w.suffix2.toLowerCase()]) {
+              seenSfx[w.suffix2.toLowerCase()] = true;
+              var match = SUFFIXES.find(function(s){ return s.form.toLowerCase() === w.suffix2.toLowerCase(); });
+              if (match) ssSfxIds.push(match.id);
+            }
+          });
+
+          // Move spelling set prefixes to front
+          if (ssPfxIds.length) {
+            var ssSet = new Set(ssPfxIds);
+            var front = PREFIXES.filter(function(p){ return ssSet.has(p.id); });
+            var rest = PREFIXES.filter(function(p){ return !ssSet.has(p.id); });
+            PREFIXES.splice(0, PREFIXES.length);
+            front.forEach(function(p){ PREFIXES.push(p); });
+            rest.forEach(function(p){ PREFIXES.push(p); });
+          }
+          // Move spelling set suffixes to front
+          if (ssSfxIds.length) {
+            var ssSet2 = new Set(ssSfxIds);
+            var front2 = SUFFIXES.filter(function(s){ return ssSet2.has(s.id); });
+            var rest2 = SUFFIXES.filter(function(s){ return !ssSet2.has(s.id); });
+            SUFFIXES.splice(0, SUFFIXES.length);
+            front2.forEach(function(s){ SUFFIXES.push(s); });
+            rest2.forEach(function(s){ SUFFIXES.push(s); });
+          }
+        }
+      }
+    } catch(e) { console.warn('Spelling set morphemes load error:', e); }
   })();
   let score=0,streak=0,fuel=100,currentQuestion=null,buttonsLocked=false,fuelInterval=null,dictWords=null;
   async function loadDictionary(){try{const resp=await fetch('dictionary.txt');const text=await resp.text();dictWords=new Set(text.toLowerCase().split(/\s+/).filter(w=>w.length>0));}catch(e){dictWords=new Set();}}
