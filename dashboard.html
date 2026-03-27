@@ -2861,22 +2861,30 @@ async function loadSpellingSetsData() {
         };
       });
     }
-    // Load check-in session results for pre/post comparison
-    _checkInResults = {};
-    if (_spellingSets.length && studentIds.length) {
-      var setIds2 = _spellingSets.map(function(s) { return s.id; });
-      var { data: checkIns } = await dbSb().from('spelling_check_in_results')
-        .select('spelling_set_id, student_id, score, total, created_at')
-        .in('spelling_set_id', setIds2)
-        .in('student_id', studentIds)
-        .order('created_at', { ascending: true });
-      (checkIns || []).forEach(function(ci) {
-        var key = ci.spelling_set_id + ':' + ci.student_id;
-        if (!_checkInResults[key]) _checkInResults[key] = [];
-        _checkInResults[key].push({ score: ci.score, total: ci.total, date: ci.created_at });
-      });
-    }
   } catch (e) { console.warn('loadSpellingSetsData error', e); }
+
+  // Load check-in session results for pre/post comparison (separate try/catch so it can't break the tab)
+  _checkInResults = {};
+  try {
+    if (_spellingSets.length) {
+      var studentIds2 = currentClass.students.map(function(s) { return s.id; });
+      var setIds2 = _spellingSets.map(function(s) { return s.id; });
+      if (studentIds2.length) {
+        var { data: checkIns, error: ciErr } = await dbSb().from('spelling_check_in_results')
+          .select('spelling_set_id, student_id, score, total, created_at')
+          .in('spelling_set_id', setIds2)
+          .in('student_id', studentIds2)
+          .order('created_at', { ascending: true });
+        if (!ciErr) {
+          (checkIns || []).forEach(function(ci) {
+            var key = ci.spelling_set_id + ':' + ci.student_id;
+            if (!_checkInResults[key]) _checkInResults[key] = [];
+            _checkInResults[key].push({ score: ci.score, total: ci.total, date: ci.created_at });
+          });
+        }
+      }
+    }
+  } catch (e) { console.warn('Check-in results load skipped:', e.message || e); }
 }
 
 async function renderSpellingSetsTab() {
