@@ -164,6 +164,19 @@
       </div>
 
       <div class="section">
+        <div class="sectionLabel">Morpheme Focus</div>
+        <div class="radioGroup">
+          <label><input type="radio" name="morphfocus" value="none" checked onchange="toggleMorphFocus()"> All words (randomised)</label>
+          <label><input type="radio" name="morphfocus" value="prefix" onchange="toggleMorphFocus()"> Prefix focus <span class="hint">e.g. un-, re-</span></label>
+          <label><input type="radio" name="morphfocus" value="suffix" onchange="toggleMorphFocus()"> Suffix focus <span class="hint">e.g. -ful, -ness</span></label>
+        </div>
+        <div id="morphPickerWrap" style="display:none;margin-top:8px;">
+          <select id="morphSelect" onchange="updateMorphMatchCount()" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;"></select>
+          <div id="morphMatchCount" style="font-size:10px;font-weight:600;color:#94a3b8;margin-top:4px;"></div>
+        </div>
+      </div>
+
+      <div class="section">
         <div class="sectionLabel">Gaps to fill</div>
         <div class="radioGroup">
           <label><input type="radio" name="gaps" value="middle" checked> Middle words <span class="hint">T2 words blank</span></label>
@@ -227,6 +240,7 @@
   </div>
 </div>
 
+<script src="data.js"></script>
 <script>
 const CLINES = [
   {category:"Talking",       leftAnchor:"say",     rightAnchor:"enunciate",   words:["say","speak","state","communicate","articulate","enunciate"],   gaps:[2,3,4], clue:"From a quick word to precise speech"},
@@ -304,6 +318,37 @@ function stepCount(d) {
   el.value = Math.min(8, Math.max(2, parseInt(el.value) + d));
 }
 
+// ── Morpheme focus ──────────────────────────────────────────
+function toggleMorphFocus() {
+  var val = document.querySelector('input[name=morphfocus]:checked').value;
+  document.getElementById('morphPickerWrap').style.display = val === 'none' ? 'none' : '';
+  if (val !== 'none') populateMorphSelect(val);
+}
+
+function populateMorphSelect(type) {
+  var sel = document.getElementById('morphSelect');
+  var items = type === 'prefix' ? (window.PREFIXES || []) : (window.SUFFIXES || []);
+  sel.innerHTML = items.map(function(m) {
+    return '<option value="' + m.form + '">' + (m.display || m.form) + ' — ' + m.meaning + '</option>';
+  }).join('');
+  updateMorphMatchCount();
+}
+
+function updateMorphMatchCount() {
+  var el = document.getElementById('morphMatchCount');
+  var focusVal = document.querySelector('input[name=morphfocus]:checked').value;
+  if (focusVal === 'none') { el.textContent = ''; return; }
+  var morphForm = document.getElementById('morphSelect').value.toLowerCase();
+  var all = CLINES.concat(EXT_CLINES);
+  var count = all.filter(function(c) {
+    return c.words.some(function(w) {
+      return focusVal === 'prefix' ? w.toLowerCase().startsWith(morphForm) : w.toLowerCase().endsWith(morphForm);
+    });
+  }).length;
+  el.textContent = count + ' matching cline' + (count !== 1 ? 's' : '') + ' in built-in pool';
+  el.style.color = count > 0 ? '#16a34a' : '#dc2626';
+}
+
 async function generateWorksheet() {
   const pool      = document.querySelector('input[name=pool]:checked').value;
   const gapsMode  = document.querySelector('input[name=gaps]:checked').value;
@@ -315,6 +360,19 @@ async function generateWorksheet() {
   let src = pool === 'standard'  ? [...CLINES]
           : pool === 'extension' ? [...EXT_CLINES]
           : [...CLINES, ...EXT_CLINES];
+
+  // Apply morpheme focus filter
+  var morphFocus = document.querySelector('input[name=morphfocus]:checked').value;
+  if (morphFocus !== 'none') {
+    var morphForm = document.getElementById('morphSelect').value.toLowerCase();
+    src = src.filter(function(c) {
+      return c.words.some(function(w) {
+        return morphFocus === 'prefix' ? w.toLowerCase().startsWith(morphForm) : w.toLowerCase().endsWith(morphForm);
+      });
+    });
+    if (!src.length) { alert('No clines match the selected ' + morphFocus + '. Try a different morpheme or use "All words".'); return; }
+  }
+
   const bank = shuffle(src).slice(0, count);
 
   // EALD translations

@@ -116,6 +116,18 @@
         </div>
       </div>
       <div class="section">
+        <div class="sectionLabel">Morpheme Focus</div>
+        <div class="radioGroup">
+          <label><input type="radio" name="morphfocus" value="none" checked onchange="toggleMorphFocus()"> All words (randomised)</label>
+          <label><input type="radio" name="morphfocus" value="prefix" onchange="toggleMorphFocus()"> Prefix focus <span class="hint">e.g. un-, re-</span></label>
+          <label><input type="radio" name="morphfocus" value="suffix" onchange="toggleMorphFocus()"> Suffix focus <span class="hint">e.g. -ful, -ness</span></label>
+        </div>
+        <div id="morphPickerWrap" style="display:none;margin-top:8px;">
+          <select id="morphSelect" onchange="updateMorphMatchCount()" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;"></select>
+          <div id="morphMatchCount" style="font-size:10px;font-weight:600;color:#94a3b8;margin-top:4px;"></div>
+        </div>
+      </div>
+      <div class="section">
         <div class="sectionLabel">Difficulty</div>
         <div class="radioGroup">
           <label><input type="radio" name="diff" value="Starter" checked> Starter <span class="hint">sh, ch, th, wh</span></label>
@@ -169,6 +181,7 @@
     <div id="worksheetOutput" style="display:none;"></div>
   </div>
 </div>
+<script src="data.js"></script>
 <script>
 const WORDS = [
   {word:"cat",phonemes:["c","a","t"],diff:"Starter",clue:"a furry pet"},{word:"ship",phonemes:["sh","i","p"],diff:"Starter",clue:"a large boat"},{word:"chat",phonemes:["ch","a","t"],diff:"Starter",clue:"a friendly talk"},{word:"thin",phonemes:["th","i","n"],diff:"Starter",clue:"not thick"},{word:"fish",phonemes:["f","i","sh"],diff:"Starter",clue:"swims in water"},{word:"rich",phonemes:["r","i","ch"],diff:"Starter",clue:"having a lot of money"},{word:"bath",phonemes:["b","a","th"],diff:"Starter",clue:"you wash in this"},{word:"shop",phonemes:["sh","o","p"],diff:"Starter",clue:"a place to buy things"},{word:"chip",phonemes:["ch","i","p"],diff:"Starter",clue:"a fried potato slice"},{word:"rush",phonemes:["r","u","sh"],diff:"Starter",clue:"to hurry"},{word:"much",phonemes:["m","u","ch"],diff:"Starter",clue:"a large amount"},{word:"then",phonemes:["th","e","n"],diff:"Starter",clue:"after that"},{word:"when",phonemes:["wh","e","n"],diff:"Starter",clue:"at what time"},{word:"shed",phonemes:["sh","e","d"],diff:"Starter",clue:"a small outdoor building"},{word:"chin",phonemes:["ch","i","n"],diff:"Starter",clue:"below your mouth"},{word:"with",phonemes:["w","i","th"],diff:"Starter",clue:"accompanied by"},{word:"chop",phonemes:["ch","o","p"],diff:"Starter",clue:"to cut with force"},{word:"shut",phonemes:["sh","u","t"],diff:"Starter",clue:"to close"},{word:"thud",phonemes:["th","u","d"],diff:"Starter",clue:"a dull heavy sound"},{word:"whip",phonemes:["wh","i","p"],diff:"Starter",clue:"to beat quickly"},{word:"path",phonemes:["p","a","th"],diff:"Starter",clue:"a track to walk on"},{word:"wish",phonemes:["w","i","sh"],diff:"Starter",clue:"a hope or desire"},{word:"lash",phonemes:["l","a","sh"],diff:"Starter",clue:"to strike sharply"},
@@ -246,6 +259,34 @@ async function fetchTranslations(words, lang){
 function shuffle(arr){return [...arr].sort(()=>Math.random()-.5);}
 function stepCount(d){const el=document.getElementById('countInput');el.value=Math.min(20,Math.max(5,parseInt(el.value)+d));}
 
+// ── Morpheme focus ──────────────────────────────────────────
+function toggleMorphFocus() {
+  var val = document.querySelector('input[name=morphfocus]:checked').value;
+  document.getElementById('morphPickerWrap').style.display = val === 'none' ? 'none' : '';
+  if (val !== 'none') populateMorphSelect(val);
+}
+
+function populateMorphSelect(type) {
+  var sel = document.getElementById('morphSelect');
+  var items = type === 'prefix' ? (window.PREFIXES || []) : (window.SUFFIXES || []);
+  sel.innerHTML = items.map(function(m) {
+    return '<option value="' + m.form + '">' + (m.display || m.form) + ' — ' + m.meaning + '</option>';
+  }).join('');
+  updateMorphMatchCount();
+}
+
+function updateMorphMatchCount() {
+  var el = document.getElementById('morphMatchCount');
+  var focusVal = document.querySelector('input[name=morphfocus]:checked').value;
+  if (focusVal === 'none') { el.textContent = ''; return; }
+  var morphForm = document.getElementById('morphSelect').value.toLowerCase();
+  var count = WORDS.filter(function(w) {
+    return focusVal === 'prefix' ? w.word.toLowerCase().startsWith(morphForm) : w.word.toLowerCase().endsWith(morphForm);
+  }).length;
+  el.textContent = count + ' matching word' + (count !== 1 ? 's' : '') + ' in built-in pool';
+  el.style.color = count > 0 ? '#16a34a' : '#dc2626';
+}
+
 async function generateWorksheet(){
   const src     = document.querySelector('input[name=src]:checked').value;
   const diff    = document.querySelector('input[name=diff]:checked').value;
@@ -262,8 +303,23 @@ async function generateWorksheet(){
   } else {
     pool = diff==='mixed' ? [...WORDS] : WORDS.filter(w=>w.diff===diff);
   }
+
+  // Apply morpheme focus filter
+  var morphFocus = document.querySelector('input[name=morphfocus]:checked').value;
+  if (morphFocus !== 'none' && src !== 'custom') {
+    var morphForm = document.getElementById('morphSelect').value.toLowerCase();
+    pool = pool.filter(function(w) {
+      return morphFocus === 'prefix' ? w.word.toLowerCase().startsWith(morphForm) : w.word.toLowerCase().endsWith(morphForm);
+    });
+    if (!pool.length) { alert('No words match the selected ' + morphFocus + '. Try a different morpheme or use "All words".'); return; }
+  }
+
   const bank = shuffle(pool).slice(0,count);
-  const diffLabel = src === 'custom' ? 'Custom List' : (diff==='mixed'?'Mixed':diff);
+  var diffLabel = src === 'custom' ? 'Custom List' : (diff==='mixed'?'Mixed':diff);
+  if (morphFocus !== 'none') {
+    var morphDisplay = document.getElementById('morphSelect').options[document.getElementById('morphSelect').selectedIndex].text.split(' — ')[0];
+    diffLabel += ' · ' + (morphFocus === 'prefix' ? 'Prefix' : 'Suffix') + ': ' + morphDisplay;
+  }
 
   // Fetch translations if enabled
   var translations = {};

@@ -73,22 +73,26 @@ The JSON must match this EXACT schema. "t_" prefixed fields contain ${languageNa
     "punctuationCount": 1,
     "words": [
       {
-        "word": "focusword1",
+        "word": "reconstruction",
         "t_word": "${languageName} translation",
         "morphemes": [
-          {"part": "prefix", "meaning": "English meaning", "t_meaning": "${languageName} translation"}
+          {"part": "re", "meaning": "again", "t_meaning": "${languageName} translation"},
+          {"part": "con", "meaning": "with/together", "t_meaning": "${languageName} translation"},
+          {"part": "struct", "meaning": "build", "t_meaning": "${languageName} translation"},
+          {"part": "ion", "meaning": "act of", "t_meaning": "${languageName} translation"}
         ],
-        "syllables": "syl/la/bles",
-        "phonemes": [{"g":"ph"},{"g":"o"},{"g":"n"},{"g":"e"},{"g":"m"},{"g":"es"}]
+        "syllables": "re/con/struc/tion",
+        "phonemes": [{"g":"r"},{"g":"e"},{"g":"c"},{"g":"o"},{"g":"n"},{"g":"s"},{"g":"t"},{"g":"r"},{"g":"u"},{"g":"c"},{"g":"t"},{"g":"io","s":"/sh/"},{"g":"n"}]
       },
       {
-        "word": "focusword2",
+        "word": "structure",
         "t_word": "${languageName} translation",
         "morphemes": [
-          {"part": "root", "meaning": "English meaning", "t_meaning": "${languageName} translation"}
+          {"part": "struct", "meaning": "build", "t_meaning": "${languageName} translation"},
+          {"part": "ure", "meaning": "result of", "t_meaning": "${languageName} translation"}
         ],
-        "syllables": "syl/la/bles",
-        "phonemes": [{"g":"ph"},{"g":"o"},{"g":"n"},{"g":"e"},{"g":"m"},{"g":"es"}]
+        "syllables": "struc/ture",
+        "phonemes": [{"g":"s"},{"g":"t"},{"g":"r"},{"g":"u"},{"g":"c"},{"g":"t"},{"g":"u"},{"g":"re"}]
       }
     ]
   },
@@ -97,25 +101,37 @@ The JSON must match this EXACT schema. "t_" prefixed fields contain ${languageNa
     "punctuationCount": 2,
     "words": [
       {
-        "word": "focusword1",
+        "word": "microstructure",
         "t_word": "${languageName} translation",
-        "morphemes": [{"part": "morpheme_part", "meaning": "English meaning", "t_meaning": "${languageName} translation"}],
-        "syllables": "syl/la/bles",
-        "phonemes": [{"g":"g1"},{"g":"g2"}]
+        "morphemes": [
+          {"part": "micro", "meaning": "small", "t_meaning": "${languageName} translation"},
+          {"part": "struct", "meaning": "build", "t_meaning": "${languageName} translation"},
+          {"part": "ure", "meaning": "result of", "t_meaning": "${languageName} translation"}
+        ],
+        "syllables": "mi/cro/struc/ture",
+        "phonemes": [{"g":"m"},{"g":"i"},{"g":"c"},{"g":"r"},{"g":"o"},{"g":"s"},{"g":"t"},{"g":"r"},{"g":"u"},{"g":"c"},{"g":"t"},{"g":"u"},{"g":"re"}]
       },
       {
-        "word": "focusword2",
+        "word": "destructive",
         "t_word": "${languageName} translation",
-        "morphemes": [{"part": "morpheme_part", "meaning": "English meaning", "t_meaning": "${languageName} translation"}],
-        "syllables": "syl/la/bles",
-        "phonemes": [{"g":"g1"},{"g":"g2"}]
+        "morphemes": [
+          {"part": "de", "meaning": "down/away", "t_meaning": "${languageName} translation"},
+          {"part": "struct", "meaning": "build", "t_meaning": "${languageName} translation"},
+          {"part": "ive", "meaning": "having quality of", "t_meaning": "${languageName} translation"}
+        ],
+        "syllables": "de/struc/tive",
+        "phonemes": [{"g":"d"},{"g":"e"},{"g":"s"},{"g":"t"},{"g":"r"},{"g":"u"},{"g":"c"},{"g":"t"},{"g":"i"},{"g":"ve"}]
       },
       {
-        "word": "focusword3",
+        "word": "constructed",
         "t_word": "${languageName} translation",
-        "morphemes": [{"part": "morpheme_part", "meaning": "English meaning", "t_meaning": "${languageName} translation"}],
-        "syllables": "syl/la/bles",
-        "phonemes": [{"g":"g1"},{"g":"g2"}]
+        "morphemes": [
+          {"part": "con", "meaning": "with/together", "t_meaning": "${languageName} translation"},
+          {"part": "struct", "meaning": "build", "t_meaning": "${languageName} translation"},
+          {"part": "ed", "meaning": "past tense", "t_meaning": "${languageName} translation"}
+        ],
+        "syllables": "con/struc/ted",
+        "phonemes": [{"g":"c"},{"g":"o"},{"g":"n"},{"g":"s"},{"g":"t"},{"g":"r"},{"g":"u"},{"g":"c"},{"g":"t"},{"g":"e"},{"g":"d"}]
       }
     ]
   }
@@ -128,6 +144,10 @@ TRANSLATION RULES:
 - t_meaning on morphemes: translate each morpheme's meaning (e.g. "again" → ${languageName} for "again")
 - If ${languageName} uses non-Latin script, provide BOTH native script AND romanisation: "native_script (romanisation)"
 - Keep translations concise and age-appropriate (9-12 year olds)
+
+MORPHEME BREAKDOWN RULES:
+- In the "morphemes" arrays for day2/day3 focus words, "part" must be the ACTUAL MORPHEME TEXT (e.g. "re", "struct", "ion"), NEVER the morpheme type label (e.g. "prefix", "root", "suffix"). The parts must join together to spell the word.
+- Example: "application" → [{"part":"ap","meaning":"toward"},{"part":"plic","meaning":"fold"},{"part":"at","meaning":"connecting vowel"},{"part":"ion","meaning":"act of"}] — NOT [{"part":"prefix","meaning":"toward"},{"part":"root","meaning":"fold"}]
 
 CONTENT RULES:
 - All example words MUST contain the ${typeLabel} "${morpheme}" as a morpheme

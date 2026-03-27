@@ -117,6 +117,18 @@
         </div>
       </div>
       <div class="section">
+        <div class="sectionLabel">Morpheme Focus</div>
+        <div class="radioGroup">
+          <label><input type="radio" name="morphfocus" value="none" checked onchange="toggleMorphFocus()"> All words (randomised)</label>
+          <label><input type="radio" name="morphfocus" value="prefix" onchange="toggleMorphFocus()"> Prefix focus <span class="hint">e.g. un-, re-</span></label>
+          <label><input type="radio" name="morphfocus" value="suffix" onchange="toggleMorphFocus()"> Suffix focus <span class="hint">e.g. -ful, -ness</span></label>
+        </div>
+        <div id="morphPickerWrap" style="display:none;margin-top:8px;">
+          <select id="morphSelect" onchange="updateMorphMatchCount()" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;"></select>
+          <div id="morphMatchCount" style="font-size:10px;font-weight:600;color:#94a3b8;margin-top:4px;"></div>
+        </div>
+      </div>
+      <div class="section">
         <div class="sectionLabel">Syllable count</div>
         <div class="radioGroup">
           <label><input type="radio" name="sylcount" value="2" checked> 2 syllables <span class="hint">e.g. butter</span></label>
@@ -166,6 +178,7 @@
     <div id="worksheetOutput" style="display:none;"></div>
   </div>
 </div>
+<script src="data.js"></script>
 <script>
 const WORDS = [
   {word:"butter",syllables:["but","ter"]},{word:"open",syllables:["o","pen"]},{word:"paper",syllables:["pa","per"]},{word:"happy",syllables:["hap","py"]},{word:"garden",syllables:["gar","den"]},{word:"pencil",syllables:["pen","cil"]},{word:"basket",syllables:["bas","ket"]},{word:"window",syllables:["win","dow"]},{word:"carpet",syllables:["car","pet"]},{word:"helmet",syllables:["hel","met"]},{word:"rabbit",syllables:["rab","bit"]},{word:"market",syllables:["mar","ket"]},{word:"parrot",syllables:["par","rot"]},{word:"mitten",syllables:["mit","ten"]},{word:"expand",syllables:["ex","pand"]},{word:"protect",syllables:["pro","tect"]},{word:"connect",syllables:["con","nect"]},{word:"perform",syllables:["per","form"]},{word:"reflect",syllables:["re","flect"]},{word:"subtract",syllables:["sub","tract"]},{word:"morning",syllables:["mor","ning"]},{word:"sunshine",syllables:["sun","shine"]},{word:"kingdom",syllables:["king","dom"]},{word:"signal",syllables:["sig","nal"]},{word:"captain",syllables:["cap","tain"]},{word:"carbon",syllables:["car","bon"]},{word:"orbit",syllables:["or","bit"]},{word:"vertex",syllables:["ver","tex"]},{word:"splendid",syllables:["splen","did"]},{word:"blanket",syllables:["blan","ket"]},
@@ -243,6 +256,34 @@ async function fetchTranslations(words, lang){
 function shuffle(arr){return [...arr].sort(()=>Math.random()-.5);}
 function stepCount(d){const el=document.getElementById('countInput');el.value=Math.min(20,Math.max(5,parseInt(el.value)+d));}
 
+// ── Morpheme focus ──────────────────────────────────────────
+function toggleMorphFocus() {
+  var val = document.querySelector('input[name=morphfocus]:checked').value;
+  document.getElementById('morphPickerWrap').style.display = val === 'none' ? 'none' : '';
+  if (val !== 'none') populateMorphSelect(val);
+}
+
+function populateMorphSelect(type) {
+  var sel = document.getElementById('morphSelect');
+  var items = type === 'prefix' ? (window.PREFIXES || []) : (window.SUFFIXES || []);
+  sel.innerHTML = items.map(function(m) {
+    return '<option value="' + m.form + '">' + (m.display || m.form) + ' — ' + m.meaning + '</option>';
+  }).join('');
+  updateMorphMatchCount();
+}
+
+function updateMorphMatchCount() {
+  var el = document.getElementById('morphMatchCount');
+  var focusVal = document.querySelector('input[name=morphfocus]:checked').value;
+  if (focusVal === 'none') { el.textContent = ''; return; }
+  var morphForm = document.getElementById('morphSelect').value.toLowerCase();
+  var count = WORDS.filter(function(w) {
+    return focusVal === 'prefix' ? w.word.toLowerCase().startsWith(morphForm) : w.word.toLowerCase().endsWith(morphForm);
+  }).length;
+  el.textContent = count + ' matching word' + (count !== 1 ? 's' : '') + ' in built-in pool';
+  el.style.color = count > 0 ? '#16a34a' : '#dc2626';
+}
+
 async function generateWorksheet(){
   const src      = document.querySelector('input[name=src]:checked').value;
   const sylcount = document.querySelector('input[name=sylcount]:checked').value;
@@ -262,8 +303,22 @@ async function generateWorksheet(){
     else pool=[...WORDS];
   }
 
+  // Apply morpheme focus filter
+  var morphFocus = document.querySelector('input[name=morphfocus]:checked').value;
+  if (morphFocus !== 'none' && src !== 'custom') {
+    var morphForm = document.getElementById('morphSelect').value.toLowerCase();
+    pool = pool.filter(function(w) {
+      return morphFocus === 'prefix' ? w.word.toLowerCase().startsWith(morphForm) : w.word.toLowerCase().endsWith(morphForm);
+    });
+    if (!pool.length) { alert('No words match the selected ' + morphFocus + '. Try a different morpheme or use "All words".'); return; }
+  }
+
   const bank=shuffle(pool).slice(0,count);
-  const sylLabel = src === 'custom' ? 'Custom List' : {2:'2 syllables',3:'3 syllables',4:'4+ syllables',mixed:'Mixed'}[sylcount];
+  var sylLabel = src === 'custom' ? 'Custom List' : {2:'2 syllables',3:'3 syllables',4:'4+ syllables',mixed:'Mixed'}[sylcount];
+  if (morphFocus !== 'none') {
+    var morphDisplay = document.getElementById('morphSelect').options[document.getElementById('morphSelect').selectedIndex].text.split(' — ')[0];
+    sylLabel += ' · ' + (morphFocus === 'prefix' ? 'Prefix' : 'Suffix') + ': ' + morphDisplay;
+  }
 
   // Fetch translations if enabled
   var translations = {};

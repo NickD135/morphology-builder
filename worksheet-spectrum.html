@@ -192,6 +192,19 @@
         </div>
       </div>
 
+      <div class="section">
+        <div class="sectionLabel">Morpheme Focus</div>
+        <div class="radioGroup">
+          <label><input type="radio" name="morphfocus" value="none" checked onchange="toggleMorphFocus()"> All words (randomised)</label>
+          <label><input type="radio" name="morphfocus" value="prefix" onchange="toggleMorphFocus()"> Prefix focus <span class="hint">e.g. un-, re-</span></label>
+          <label><input type="radio" name="morphfocus" value="suffix" onchange="toggleMorphFocus()"> Suffix focus <span class="hint">e.g. -ful, -ness</span></label>
+        </div>
+        <div id="morphPickerWrap" style="display:none;margin-top:8px;">
+          <select id="morphSelect" onchange="updateMorphMatchCount()" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;"></select>
+          <div id="morphMatchCount" style="font-size:10px;font-weight:600;color:#94a3b8;margin-top:4px;"></div>
+        </div>
+      </div>
+
       <!-- Count -->
       <div class="section" id="countSection">
         <div class="sectionLabel" id="countLabel">Number of pairs</div>
@@ -254,6 +267,7 @@
   </div>
 </div>
 
+<script src="data.js"></script>
 <script>
 const SUPABASE_URL  = 'https://kdpavfrzmmzknqfpodrl.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkcGF2ZnJ6bW16a25xZnBvZHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjgzOTIsImV4cCI6MjA5MDAwNDM5Mn0.n5fe7HvXWMsM4xN_iaU_N4xLkC5xD4y9Uoer_DG-dlg';
@@ -415,6 +429,40 @@ function stepCount(d) {
 
 function shuffle(arr) { return [...arr].sort(() => Math.random() - .5); }
 
+// ── Morpheme focus ──────────────────────────────────────────
+function toggleMorphFocus() {
+  var val = document.querySelector('input[name=morphfocus]:checked').value;
+  document.getElementById('morphPickerWrap').style.display = val === 'none' ? 'none' : '';
+  if (val !== 'none') populateMorphSelect(val);
+}
+
+function populateMorphSelect(type) {
+  var sel = document.getElementById('morphSelect');
+  var items = type === 'prefix' ? (window.PREFIXES || []) : (window.SUFFIXES || []);
+  sel.innerHTML = items.map(function(m) {
+    return '<option value="' + m.form + '">' + (m.display || m.form) + ' — ' + m.meaning + '</option>';
+  }).join('');
+  updateMorphMatchCount();
+}
+
+function updateMorphMatchCount() {
+  var el = document.getElementById('morphMatchCount');
+  var focusVal = document.querySelector('input[name=morphfocus]:checked').value;
+  if (focusVal === 'none') { el.textContent = ''; return; }
+  var morphForm = document.getElementById('morphSelect').value.toLowerCase();
+  var allPools = [SYNONYM_PAIRS, ANTONYM_PAIRS, SPECTRUM_SETS].flat();
+  function wordMatches(word) {
+    var w = word.toLowerCase();
+    return focusVal === 'prefix' ? w.startsWith(morphForm) : w.endsWith(morphForm);
+  }
+  var count = allPools.filter(function(item) {
+    if (item.words) return item.words.some(wordMatches);
+    return wordMatches(item.word) || (item.options || []).some(wordMatches);
+  }).length;
+  el.textContent = count + ' matching item' + (count !== 1 ? 's' : '') + ' in built-in pool';
+  el.style.color = count > 0 ? '#16a34a' : '#dc2626';
+}
+
 async function generateWorksheet() {
   const pool      = document.querySelector('input[name=pool]:checked').value;
   const format    = document.querySelector('input[name=format]:checked')?.value || 'options';
@@ -447,6 +495,22 @@ async function renderPairs(pool, format, count, showExpl, showKey, poolLabel, mo
   let src = isSyn ? [...SYNONYM_PAIRS] : [...ANTONYM_PAIRS];
   if (pool === 'extension') src = isSyn ? [...EXT_SYNONYM_PAIRS] : [...EXT_ANTONYM_PAIRS];
   if (pool === 'mixed')     src = isSyn ? [...SYNONYM_PAIRS,...EXT_SYNONYM_PAIRS] : [...ANTONYM_PAIRS,...EXT_ANTONYM_PAIRS];
+
+  // Apply morpheme focus filter
+  var morphFocus = document.querySelector('input[name=morphfocus]:checked').value;
+  if (morphFocus !== 'none') {
+    var morphForm = document.getElementById('morphSelect').value.toLowerCase();
+    function wordMatchesMorph(word) {
+      var w = word.toLowerCase();
+      return morphFocus === 'prefix' ? w.startsWith(morphForm) : w.endsWith(morphForm);
+    }
+    src = src.filter(function(item) {
+      if (item.words) return item.words.some(wordMatchesMorph);
+      return wordMatchesMorph(item.word) || (item.options || []).some(wordMatchesMorph);
+    });
+    if (!src.length) { alert('No items match the selected ' + morphFocus + '. Try a different morpheme or use "All words".'); return; }
+  }
+
   const capped = Math.min(count, src.length);
   const bank = shuffle(src).slice(0, capped);
   const cls  = isSyn ? 'syn' : 'ant';
@@ -530,6 +594,22 @@ async function renderSpectrum(pool, count, showKey, poolLabel, modeLabel, wantTr
   let src = [...SPECTRUM_SETS];
   if (pool === 'extension') src = [...EXT_SPECTRUM_SETS];
   if (pool === 'mixed')     src = [...SPECTRUM_SETS, ...EXT_SPECTRUM_SETS];
+
+  // Apply morpheme focus filter
+  var morphFocus = document.querySelector('input[name=morphfocus]:checked').value;
+  if (morphFocus !== 'none') {
+    var morphForm = document.getElementById('morphSelect').value.toLowerCase();
+    function wordMatchesMorph(word) {
+      var w = word.toLowerCase();
+      return morphFocus === 'prefix' ? w.startsWith(morphForm) : w.endsWith(morphForm);
+    }
+    src = src.filter(function(item) {
+      if (item.words) return item.words.some(wordMatchesMorph);
+      return wordMatchesMorph(item.word) || (item.options || []).some(wordMatchesMorph);
+    });
+    if (!src.length) { alert('No items match the selected ' + morphFocus + '. Try a different morpheme or use "All words".'); return; }
+  }
+
   const capped = Math.min(count, src.length);
   const bank = shuffle(src).slice(0, capped);
 

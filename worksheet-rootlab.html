@@ -191,6 +191,19 @@
       </div>
 
       <div class="section">
+        <div class="sectionLabel">Morpheme Focus</div>
+        <div class="radioGroup">
+          <label><input type="radio" name="morphfocus" value="none" checked onchange="toggleMorphFocus()"> All words (randomised)</label>
+          <label><input type="radio" name="morphfocus" value="prefix" onchange="toggleMorphFocus()"> Prefix focus <span class="hint">e.g. un-, re-</span></label>
+          <label><input type="radio" name="morphfocus" value="suffix" onchange="toggleMorphFocus()"> Suffix focus <span class="hint">e.g. -ful, -ness</span></label>
+        </div>
+        <div id="morphPickerWrap" style="display:none;margin-top:8px;">
+          <select id="morphSelect" onchange="updateMorphMatchCount()" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;"></select>
+          <div id="morphMatchCount" style="font-size:10px;font-weight:600;color:#94a3b8;margin-top:4px;"></div>
+        </div>
+      </div>
+
+      <div class="section">
         <div class="sectionLabel">Difficulty</div>
         <div class="radioGroup">
           <label><input type="radio" name="level" value="starter" checked> Starter <span class="hint">2-morpheme words</span></label>
@@ -259,6 +272,7 @@
   </div>
 </div>
 
+<script src="data.js"></script>
 <script>
 // ── Supabase ─────────────────────────────────────────────────
 const SUPABASE_URL  = 'https://kdpavfrzmmzknqfpodrl.supabase.co';
@@ -400,6 +414,35 @@ function stepCount(d) {
   el.value = Math.min(12, Math.max(3, parseInt(el.value) + d));
 }
 
+// ── Morpheme focus ──────────────────────────────────────────
+function toggleMorphFocus() {
+  var val = document.querySelector('input[name=morphfocus]:checked').value;
+  document.getElementById('morphPickerWrap').style.display = val === 'none' ? 'none' : '';
+  if (val !== 'none') populateMorphSelect(val);
+}
+
+function populateMorphSelect(type) {
+  var sel = document.getElementById('morphSelect');
+  var items = type === 'prefix' ? (window.PREFIXES || []) : (window.SUFFIXES || []);
+  sel.innerHTML = items.map(function(m) {
+    return '<option value="' + m.form + '">' + (m.display || m.form) + ' — ' + m.meaning + '</option>';
+  }).join('');
+  updateMorphMatchCount();
+}
+
+function updateMorphMatchCount() {
+  var el = document.getElementById('morphMatchCount');
+  var focusVal = document.querySelector('input[name=morphfocus]:checked').value;
+  if (focusVal === 'none') { el.textContent = ''; return; }
+  var morphForm = document.getElementById('morphSelect').value.toLowerCase();
+  var count = WORDS.filter(function(w) {
+    if (focusVal === 'prefix') return w.parts.prefix && w.parts.prefix.toLowerCase() === morphForm;
+    return w.parts.suffix && w.parts.suffix.toLowerCase() === morphForm;
+  }).length;
+  el.textContent = count + ' matching word' + (count !== 1 ? 's' : '') + ' in built-in pool';
+  el.style.color = count > 0 ? '#16a34a' : '#dc2626';
+}
+
 async function generateWorksheet() {
   const src      = document.querySelector('input[name=src]:checked').value;
   const level    = document.querySelector('input[name=level]:checked').value;
@@ -417,6 +460,17 @@ async function generateWorksheet() {
   } else {
     pool = level === 'mixed' ? WORDS : WORDS.filter(w => w.level === level);
   }
+  // Apply morpheme focus filter
+  var morphFocus = document.querySelector('input[name=morphfocus]:checked').value;
+  if (morphFocus !== 'none' && src !== 'custom') {
+    var morphForm = document.getElementById('morphSelect').value.toLowerCase();
+    pool = pool.filter(function(w) {
+      if (morphFocus === 'prefix') return w.parts.prefix && w.parts.prefix.toLowerCase() === morphForm;
+      return w.parts.suffix && w.parts.suffix.toLowerCase() === morphForm;
+    });
+    if (!pool.length) { alert('No words match the selected ' + morphFocus + '. Try a different morpheme or use "All words".'); return; }
+  }
+
   const capped = Math.min(count, pool.length);
   const bank = shuffle(pool).slice(0, capped);
 

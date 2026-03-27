@@ -150,6 +150,19 @@
       </div>
 
       <div class="section">
+        <div class="sectionLabel">Morpheme Focus</div>
+        <div class="radioGroup">
+          <label><input type="radio" name="morphfocus" value="none" checked onchange="toggleMorphFocus()"> All words (randomised)</label>
+          <label><input type="radio" name="morphfocus" value="prefix" onchange="toggleMorphFocus()"> Prefix focus <span class="hint">e.g. un-, re-</span></label>
+          <label><input type="radio" name="morphfocus" value="suffix" onchange="toggleMorphFocus()"> Suffix focus <span class="hint">e.g. -ful, -ness</span></label>
+        </div>
+        <div id="morphPickerWrap" style="display:none;margin-top:8px;">
+          <select id="morphSelect" onchange="updateMorphMatchCount()" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;"></select>
+          <div id="morphMatchCount" style="font-size:10px;font-weight:600;color:#94a3b8;margin-top:4px;"></div>
+        </div>
+      </div>
+
+      <div class="section">
         <div class="sectionLabel">Sentences per pair</div>
         <div class="stepper">
           <button class="stepperBtn" onclick="stepSentences(-1)">−</button>
@@ -218,6 +231,7 @@
   </div>
 </div>
 
+<script src="data.js"></script>
 <script>
 const HOMOPHONES = [
   {group:['there','their',"they're"], explain:"there = place, their = belonging to them, they're = they are", sentences:[
@@ -451,6 +465,37 @@ function stepSentences(d) {
   el.value = Math.min(6, Math.max(2, parseInt(el.value) + d));
 }
 
+// ── Morpheme focus ──────────────────────────────────────────
+function toggleMorphFocus() {
+  var val = document.querySelector('input[name=morphfocus]:checked').value;
+  document.getElementById('morphPickerWrap').style.display = val === 'none' ? 'none' : '';
+  if (val !== 'none') populateMorphSelect(val);
+}
+
+function populateMorphSelect(type) {
+  var sel = document.getElementById('morphSelect');
+  var items = type === 'prefix' ? (window.PREFIXES || []) : (window.SUFFIXES || []);
+  sel.innerHTML = items.map(function(m) {
+    return '<option value="' + m.form + '">' + (m.display || m.form) + ' — ' + m.meaning + '</option>';
+  }).join('');
+  updateMorphMatchCount();
+}
+
+function updateMorphMatchCount() {
+  var el = document.getElementById('morphMatchCount');
+  var focusVal = document.querySelector('input[name=morphfocus]:checked').value;
+  if (focusVal === 'none') { el.textContent = ''; return; }
+  var morphForm = document.getElementById('morphSelect').value.toLowerCase();
+  var all = HOMOPHONES.concat(EXT_HOMOPHONES || []);
+  var count = all.filter(function(h) {
+    return h.group.some(function(w) {
+      return focusVal === 'prefix' ? w.toLowerCase().startsWith(morphForm) : w.toLowerCase().endsWith(morphForm);
+    });
+  }).length;
+  el.textContent = count + ' matching pair' + (count !== 1 ? 's' : '') + ' in built-in pool';
+  el.style.color = count > 0 ? '#16a34a' : '#dc2626';
+}
+
 async function generateWorksheet() {
   const pool       = document.querySelector('input[name=pool]:checked').value;
   const format     = document.querySelector('input[name=format]:checked').value;
@@ -462,6 +507,18 @@ async function generateWorksheet() {
   let allPairs = pool === 'standard' ? [...HOMOPHONES]
                : pool === 'extension' ? [...EXT_HOMOPHONES]
                : [...HOMOPHONES, ...EXT_HOMOPHONES];
+
+  // Apply morpheme focus filter
+  var morphFocus = document.querySelector('input[name=morphfocus]:checked').value;
+  if (morphFocus !== 'none') {
+    var morphForm = document.getElementById('morphSelect').value.toLowerCase();
+    allPairs = allPairs.filter(function(h) {
+      return h.group.some(function(w) {
+        return morphFocus === 'prefix' ? w.toLowerCase().startsWith(morphForm) : w.toLowerCase().endsWith(morphForm);
+      });
+    });
+    if (!allPairs.length) { alert('No homophone pairs match the selected ' + morphFocus + '. Try a different morpheme or use "All words".'); return; }
+  }
 
   const pairs = shuffle(allPairs).slice(0, pairCount);
 
