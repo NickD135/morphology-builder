@@ -19,7 +19,7 @@ privacy-law-compliant, multi-tenant, with proper teacher auth and a payment laye
 **Legal jurisdiction:** Australian Privacy Act 1988 + Australian Consumer Law (not GDPR, though
   similar principles apply — worth being GDPR-compatible for future UK/EU expansion)
 **Key compliance:** Australian Privacy Principles (APPs), notifiable data breaches scheme
-**School pricing:** ~AUD $299/school/year (adjust based on market feedback)
+**Pricing model:** Teacher subscription (individual) + custom school quotes (no fixed price)
 **Supabase region:** Should be `ap-southeast-2` (Sydney) for data sovereignty —
   current project may be in US; check and migrate if needed
 

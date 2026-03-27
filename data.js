@@ -350,3 +350,5 @@ window.MORPHEMES = {
     ...GREEK_BASES.map(b => ({ ...b, group:"greek" }))
   ]
 };
+window.PREFIXES = PREFIXES;
+window.SUFFIXES = SUFFIXES;
