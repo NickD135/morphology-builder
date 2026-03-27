@@ -1288,7 +1288,10 @@ async function loadCustomShopItems(sd) {
 
   // Populate cache so equipCustomItem can find image_data without another DB call
   _customItemsData = {};
-  items.forEach(item => { _customItemsData[item.id] = { item_type: item.item_type, image_data: item.image_url || item.image_data }; });
+  items.forEach(item => {
+    const url = item.image_url && item.image_url.trim() !== 'null' && item.image_url.startsWith('http') ? item.image_url.trim() : null;
+    _customItemsData[item.id] = { item_type: item.item_type, image_data: url || item.image_data };
+  });
 
   const today   = new Date();
   const dayOfWk = today.getDay(); // 0=Sun, 6=Sat
@@ -1329,7 +1332,8 @@ async function loadCustomShopItems(sd) {
     const canAfford = isTeacher || sd.quarks >= (item.quark_cost || 0);
 
     let preview = '';
-    const imgSrc = item.image_url || item.image_data;
+    const rawUrl = item.image_url && item.image_url.trim() !== 'null' && item.image_url.startsWith('http') ? item.image_url.trim() : null;
+    const imgSrc = rawUrl || item.image_data;
     if (imgSrc) {
       preview = `<img src="${imgSrc}" style="width:60px;height:60px;object-fit:contain;border-radius:6px;" alt="${item.name}">`;
     } else {
