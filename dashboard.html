@@ -2826,11 +2826,20 @@ var _activeSpellingSetId = null;
 async function loadSpellingSetsData() {
   if (!currentClass) return;
   try {
-    var { data: sets } = await dbSb().from('class_spelling_sets')
+    var { data: sets, error: setsErr } = await dbSb().from('class_spelling_sets')
       .select('id, name, set_number, words, created_at, assessment_active, assessment_scheduled_at')
       .eq('class_id', currentClass.id)
       .order('set_number', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: true });
+    // Fallback if assessment columns not yet in schema cache
+    if (setsErr && setsErr.code === '42703') {
+      var fallback = await dbSb().from('class_spelling_sets')
+        .select('id, name, set_number, words, created_at')
+        .eq('class_id', currentClass.id)
+        .order('set_number', { ascending: true, nullsFirst: false })
+        .order('created_at', { ascending: true });
+      sets = fallback.data;
+    }
     _spellingSets = sets || [];
 
     // Load assignments
