@@ -1703,6 +1703,28 @@ const WordLabData = (() => {
         });
       });
 
+      // Prioritise words the student got wrong or hasn't practised
+      try {
+        var { data: prog } = await sb().from('student_progress')
+          .select('category, correct, total')
+          .eq('student_id', session.studentId)
+          .eq('activity', 'spelling-set');
+        if (prog && prog.length) {
+          var progMap = {};
+          prog.forEach(function(p) { progMap[p.category] = p; });
+          words.sort(function(a, b) {
+            var keyA = 'ss:' + a._spellingSetId.slice(0, 8) + ':' + a.word.toLowerCase();
+            var keyB = 'ss:' + b._spellingSetId.slice(0, 8) + ':' + b.word.toLowerCase();
+            var pA = progMap[keyA];
+            var pB = progMap[keyB];
+            // No data = highest priority (never practised)
+            var accA = pA && pA.total > 0 ? pA.correct / pA.total : -1;
+            var accB = pB && pB.total > 0 ? pB.correct / pB.total : -1;
+            return accA - accB; // lowest accuracy first
+          });
+        }
+      } catch(e) { /* non-critical — unsorted is fine */ }
+
       _spellingSetWordsCache = words;
       return words;
     } catch(e) {
