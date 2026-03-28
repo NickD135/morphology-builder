@@ -2556,8 +2556,12 @@ function buildWordRow(){
 
   const { before, after, grapheme } = currentWord;
 
+  // Split digraphs (a_e, i_e, etc.): show before + _ + after + _
+  // e.g. "gate" with a_e: g _ t e  →  display as g [?] t e
+  const isSplitDigraph = grapheme.includes('_');
+
   // Show blank width proportional to grapheme length
-  const blankWidth = Math.max(80, grapheme.length * 36) + 'px';
+  const blankWidth = isSplitDigraph ? '60px' : Math.max(80, grapheme.length * 36) + 'px';
 
   if(before){
     const b = document.createElement('span');
@@ -2594,6 +2598,16 @@ function buildWordRow(){
     a.className = 'wordPart';
     a.textContent = after;
     row.appendChild(a);
+  }
+
+  // For split digraphs, show the trailing letter (e.g. the 'e' in a_e)
+  if(isSplitDigraph){
+    const parts = grapheme.split('_');
+    const trailing = document.createElement('span');
+    trailing.className = 'wordPart';
+    trailing.style.opacity = '0.4';
+    trailing.textContent = parts[1];
+    row.appendChild(trailing);
   }
 }
 
@@ -2643,7 +2657,26 @@ function checkAnswer(grapheme){
 
   // Show the answer in the zone
   zoneText.className = 'dropZoneAnswer';
+  // For split digraphs (a_e, i_e, etc.), show the grapheme label in the zone
+  // but rebuild the full word display so it reads correctly
   zoneText.textContent = grapheme;
+  if(grapheme.includes('_')){
+    // Split digraph: rebuild entire word row to show the full word
+    var parts = grapheme.split('_');
+    var row = document.getElementById('wordRow');
+    row.innerHTML = '';
+    var fullWord = document.createElement('span');
+    fullWord.className = 'wordPart';
+    var beforeText = currentWord.before || '';
+    var afterText = currentWord.after || '';
+    // Construct: before + first_part + after + last_part
+    fullWord.innerHTML = beforeText +
+      '<span class="dropZoneAnswer" style="display:inline;color:var(--indigo-2);font-weight:900;">' + parts[0] + '</span>' +
+      afterText +
+      '<span class="dropZoneAnswer" style="display:inline;color:var(--indigo-2);font-weight:900;">' + parts[1] + '</span>' +
+      ' <span style="font-size:13px;color:var(--muted);font-weight:700;">(' + grapheme + ')</span>';
+    row.appendChild(fullWord);
+  }
 
   // Mark tile
   document.querySelectorAll('.tile').forEach(t => {
