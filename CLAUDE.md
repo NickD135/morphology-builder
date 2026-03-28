@@ -714,6 +714,47 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 
 ---
 
+### PHASE 7.8 — Session 2026-03-28
+
+#### Game variety & engagement system
+- [x] Variety bonus: bonus quarks/XP for playing different games each day (2nd game=+10q, 3rd=+15q, etc.)
+- [x] "Try me!" nudges: green badges on game cards for games the student has never played
+- [x] Variety explorer badges: Explorer (5 games/week), Adventurer (8), Grand Explorer (all 11)
+- [x] Weekly game variety tracked in challenge data (`weekGames` array, resets each Monday)
+- [x] Compact bonus pill strip on landing page (replaces full-width banners)
+- [x] Bonus days: 2x XP & 1.5x quarks on weekends (Sat/Sun) and Wednesdays
+- [x] Bonus day banner pill + toast notification on first correct answer
+
+#### Featured Game system (unified)
+- [x] Replaced separate "Game of the Week" (calendar rotation) and "Teacher Focus" (+50%) with one system
+- [x] Auto mode: picks game each student has played least or has lowest accuracy in (personalised)
+- [x] Teacher override: Focus Game selector on dashboard overrides auto-pick for the whole class
+- [x] Both give 2x quarks & XP, same gold pulsing glow + "2x" badge on card
+- [x] `getFeaturedGame()` / `loadFeaturedGame()` in wordlab-data.js (cached in localStorage, 5-min TTL)
+- [x] Auto-pick queries `student_progress` table, scores by: never played > lowest accuracy > least played
+- [x] Teacher focus stored in `classes.settings.focusGame` via `saveClassSettings()`
+- [x] Gold pill in bonus strip shows "⭐ 2x [Game]" (auto) or "🎯 2x [Game] (teacher pick)"
+
+#### Item creator improvements
+- [x] Removed highlight zone overlay (dashed rectangle barrier) for all item types
+- [x] True eraser: uses `destination-out` compositing instead of white paint
+- [x] Eraser strokes preserved in undo/redo history (`globalCompositeOperation` serialized)
+- [x] Brush size/colour preview dot next to size slider (updates in real-time)
+- [x] Text tool preview: shows sample text in current font size and colour before clicking
+- [x] Text tool edit fix: clicking existing text enters edit mode instead of creating duplicate
+
+#### Landing page changes
+- [x] Root Lab moved from Explore doorway cards to Play game grid
+- [x] Spelling Test card removed — only appears via full-screen takeover when teacher starts check-in
+
+#### Speed Builder end-of-round overlay
+- [x] Full-screen overlay with score, word count, longest word
+- [x] Contextual icon/title based on performance (🔬/⚡/⭐/🏆)
+- [x] "Play Again" and "Home" buttons
+- [x] Animated card pop-in with blurred backdrop
+
+---
+
 ### PHASE 10 — NSW Spelling Diagnostic Integration
 
 Integrating the NSW Department of Education Spelling Diagnostic Assessment (Sets 1–7)
@@ -883,3 +924,7 @@ At the start of each working session, do this:
 | Pet system hidden | Built full pet companion system but visual quality needs work; code preserved for later |
 | Active plan for PL demo | Temporary: new signups get `active` plan so teachers don't see trial banners during PL session |
 | Supabase Singapore → Sydney migration | NSW DoE requires Australian data centres; migrated 2026-03-25 with full data transfer |
+| Unified Featured Game system | Replaced separate GOTW (calendar) + teacher focus (+50%) with one system — auto-picks per student's weakest game, teacher can override; both give 2x |
+| Bonus days on Wed/Sat/Sun | Encourages play on quieter days; Wednesday breaks up the school week; weekends reward voluntary practice |
+| Spelling Test card hidden by default | Only relevant during active check-ins; avoids confusion when no assessment is running |
+| True eraser (destination-out) | White paint eraser left visible marks on transparent exports; compositing eraser removes pixels properly |
