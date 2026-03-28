@@ -262,6 +262,18 @@
     .focusBar-info{ font-size:11px; font-weight:600; color:#a16207; }
     .focusBar-saved{ font-size:11px; font-weight:800; color:#059669; opacity:0; transition:opacity .3s; }
 
+    /* ── Low-stim toggle ── */
+    .lowStimBar{ background:linear-gradient(135deg,#f0f9ff,#e0f2fe); border:2px solid #0ea5e9; border-radius:14px; padding:12px 16px; margin-bottom:14px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    .lowStimBar-label{ font-size:12px; font-weight:900; color:#0c4a6e; white-space:nowrap; }
+    .lowStimBar-info{ font-size:11px; font-weight:600; color:#0369a1; flex:1; }
+    .lowStimBar-saved{ font-size:11px; font-weight:800; color:#059669; opacity:0; transition:opacity .3s; }
+    .lowStimToggle{ position:relative; width:44px; height:24px; flex-shrink:0; }
+    .lowStimToggle input{ opacity:0; width:0; height:0; }
+    .lowStimToggle .slider{ position:absolute; inset:0; background:#cbd5e1; border-radius:24px; cursor:pointer; transition:background .2s; }
+    .lowStimToggle .slider::before{ content:''; position:absolute; left:3px; top:3px; width:18px; height:18px; background:#fff; border-radius:50%; transition:transform .2s; }
+    .lowStimToggle input:checked + .slider{ background:#0ea5e9; }
+    .lowStimToggle input:checked + .slider::before{ transform:translateX(20px); }
+
     /* ── Reward modal ── */
     .rewardModal{ position:fixed; inset:0; z-index:60; background:rgba(15,23,42,.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:20px; overflow-y:auto; }
     .rewardCard{ background:#fff; border-radius:24px; width:100%; max-width:500px; box-shadow:0 40px 80px rgba(0,0,0,.3); border:4px solid var(--line); margin:auto; }
@@ -467,6 +479,16 @@
     </select>
     <span class="focusBar-info">Students earn 2x quarks &amp; XP in the focus game (overrides auto-pick)</span>
     <span class="focusBar-saved" id="focusSaved">Saved!</span>
+  </div>
+
+  <div class="lowStimBar" id="lowStimBar">
+    <span class="lowStimBar-label">Low-stim mode:</span>
+    <label class="lowStimToggle">
+      <input type="checkbox" id="lowStimToggle" onchange="saveLowStim()" aria-label="Toggle low-stim mode for this class">
+      <span class="slider"></span>
+    </label>
+    <span class="lowStimBar-info">Turns off sounds, animations, effects, streaks, leaderboards, and gamification rewards for this class</span>
+    <span class="lowStimBar-saved" id="lowStimSaved">Saved!</span>
   </div>
 
   <div class="viewTabs" role="tablist" aria-label="Dashboard views">
@@ -902,6 +924,17 @@ async function toggleStudentMode() {
   }
 }
 
+async function saveLowStim() {
+  if (!currentClass) return;
+  var on = document.getElementById('lowStimToggle').checked;
+  try {
+    await WordLabData.saveClassSettings(currentClass.id, { lowStimMode: on });
+    var saved = document.getElementById('lowStimSaved');
+    saved.style.opacity = '1';
+    setTimeout(function() { saved.style.opacity = '0'; }, 2000);
+  } catch(e) { console.warn('Save low-stim error:', e); }
+}
+
 // ── Render ───────────────────────────────────────────────────────
 async function saveFocusGame() {
   if (!currentClass) return;
@@ -917,11 +950,13 @@ async function saveFocusGame() {
 async function renderDashboard(){
   if(!currentClass) return;
 
-  // Load focus game setting
+  // Load focus game + low-stim settings
   try {
     var cls = await WordLabData._sb().from('classes').select('settings').eq('id', currentClass.id).maybeSingle();
     var focusVal = (cls.data && cls.data.settings && cls.data.settings.focusGame) || '';
     document.getElementById('focusGameSelect').value = focusVal;
+    var lowStimVal = !!(cls.data && cls.data.settings && cls.data.settings.lowStimMode);
+    document.getElementById('lowStimToggle').checked = lowStimVal;
   } catch(e) {}
 
   // Crown leader

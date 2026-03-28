@@ -861,6 +861,7 @@ const WLEffects = (() => {
   // ── Public API ────────────────────────────────────────────────
   function start(effectId, el) {
     if (!el || !_fns[effectId]) return;
+    if (typeof WordLabData !== 'undefined' && WordLabData.isLowStimMode()) return;
     stop(el);
     _state(el); // initialise state
     _fns[effectId](el, false);

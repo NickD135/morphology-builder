@@ -550,6 +550,35 @@ const WordLabData = (() => {
     } catch(e) { console.warn('startSession character update failed', e); }
   }
 
+  // ── Low-stim mode ─────────────────────────────────────────────
+  // Suppresses sounds, animations, effects, gamification UI.
+  // Set per-class by teacher in dashboard, stored in classes.settings.lowStimMode.
+  function isLowStimMode() {
+    return sessionStorage.getItem('wl_low_stim') === 'true';
+  }
+
+  // Load low-stim setting from class and store in sessionStorage.
+  // Called after login and on page load.
+  async function loadLowStimMode(classId) {
+    classId = classId || (loadSession() || {}).classId;
+    if (!classId) return false;
+    try {
+      var { data } = await sb().from('classes').select('settings').eq('id', classId).maybeSingle();
+      var on = !!(data && data.settings && data.settings.lowStimMode);
+      sessionStorage.setItem('wl_low_stim', on ? 'true' : 'false');
+      _applyLowStimClass(on);
+      return on;
+    } catch(e) { return false; }
+  }
+
+  function _applyLowStimClass(on) {
+    var targets = [document.documentElement, document.body].filter(Boolean);
+    targets.forEach(function(el) {
+      if (on) el.classList.add('low-stim');
+      else el.classList.remove('low-stim');
+    });
+  }
+
   // ── Extension mode ────────────────────────────────────────────
   function isExtensionMode() {
     return sessionStorage.getItem('wl_extension_mode') === 'true';
@@ -942,7 +971,8 @@ const WordLabData = (() => {
         } else {
           sessionStorage.removeItem('wl_eald_language');
         }
-        // Success
+        // Success — load low-stim mode from class settings
+        loadLowStimMode(_loginClassId);
         startSession(_loginClassId, _loginStudentId, _loginStudentName);
         document.getElementById('wlOverlay').classList.add('wl-hide');
         _updatePill(_loginStudentName);
@@ -1023,6 +1053,8 @@ const WordLabData = (() => {
     sessionStorage.removeItem('wl_ext_pinned');
     sessionStorage.removeItem('wl_teacher_preview');
     sessionStorage.removeItem('wl_eald_language');
+    sessionStorage.removeItem('wl_low_stim');
+    _applyLowStimClass(false);
     _updatePill(null);
     var btn = document.getElementById('wlLoginBtn');
     if (btn) { btn.style.display = ''; btn.textContent = '👤 Log in'; }
@@ -2283,6 +2315,7 @@ const WordLabData = (() => {
     getClassTeacherIds, isStudentTeacher, setStudentTeacher, saveClassSettings,
     createTeacherStudent, getTeacherStudent, enterStudentMode, exitStudentMode, isTeacherPreview,
     isExtensionMode, loadExtensionData,
+    isLowStimMode, loadLowStimMode,
     checkDailyLimit, incrementDailyUsage,
     getDailyChallenges, updateChallengeProgress, claimChallengeReward, updateDailyStreak, CHALLENGE_GAMES,
     getFeaturedGame, loadFeaturedGame, getLeastPlayedGames, getBonusDayMultiplier,
@@ -2320,4 +2353,44 @@ const WordLabData = (() => {
 // (same as the old static <script> tag, but only when needed).
 if (sessionStorage.getItem('wl_extension_mode') === 'true') {
   document.write('<script src="wordlab-extension-data.js"><\/script>');
+}
+
+// Auto-apply low-stim mode CSS class and inject suppression stylesheet.
+// Runs synchronously during parse so styles are present before first paint.
+if (sessionStorage.getItem('wl_low_stim') === 'true') {
+  document.documentElement.classList.add('low-stim');
+  document.write('<style id="wlLowStimCSS">' +
+    /* Hide gamification UI across all pages */
+    '.low-stim .pill.score,' +
+    '.low-stim .pill.streak,' +
+    '.low-stim .bonus-strip,' +
+    '.low-stim .tryme-badge,' +
+    '.low-stim .top3-block,' +
+    '.low-stim .strip-challenges-block,' +
+    '.low-stim .hub-flame-wrap { display:none !important; }' +
+
+    /* Suppress scientist animations but keep character visible */
+    '.low-stim #sciCharWrap { animation:none !important; }' +
+    '.low-stim #sciCharWrap.sci-correct,' +
+    '.low-stim #sciCharWrap.sci-wrong,' +
+    '.low-stim #sciCharWrap.sci-streak { animation:none !important; }' +
+
+    /* Suppress focus game glow */
+    '.low-stim .act-card.focus-glow { box-shadow:none !important; animation:none !important; }' +
+    '.low-stim .act-card { animation:none !important; }' +
+
+    /* Tone down correct/wrong feedback to simple subtle bg */
+    '.low-stim .correct-flash { animation:none !important; }' +
+    '.low-stim .wrong-flash { animation:none !important; }' +
+
+    /* Hide quarks/XP stat pills on landing hub */
+    '.low-stim .stat-pill-item:nth-child(1),' +
+    '.low-stim .stat-pill-item:nth-child(2) { display:none !important; }' +
+
+    /* Hide scientist avatar in landing status strip */
+    '.low-stim .student-sci-avatar { display:none !important; }' +
+
+    /* Suppress confetti canvas */
+    '.low-stim canvas.confetti-canvas { display:none !important; }' +
+  '<\/style>');
 }

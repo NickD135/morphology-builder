@@ -839,7 +839,12 @@ const WLScientist = (() => {
     }, duration);
   }
 
+  function _isLowStim() {
+    return typeof WordLabData !== 'undefined' && WordLabData.isLowStimMode();
+  }
+
   function react(type, extras) {
+    if (_isLowStim()) return; // suppress all animations in low-stim mode
     extras = extras || {};
     var streak = extras.streak || 0;
     var avatar = document.getElementById('wlSciAvatar');
@@ -900,7 +905,7 @@ const WLScientist = (() => {
   }
 
   function _showQuarkPop(n) {
-    if (!_widgetEl) return;
+    if (!_widgetEl || _isLowStim()) return;
     const rect = _widgetEl.getBoundingClientRect();
     const pop = document.createElement('div');
     pop.textContent = `+${n} ⚛️`;
@@ -910,6 +915,7 @@ const WLScientist = (() => {
   }
 
   function _showBadgeToast(badgeId) {
+    if (_isLowStim()) return;
     const all = [...(WordLabData.ALL_BADGES||[]), ...(WordLabData.LEGENDARY_BADGES||[])];
     const badge = all.find(b => b.id === badgeId);
     if (!badge) return;

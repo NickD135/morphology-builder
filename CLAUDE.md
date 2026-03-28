@@ -753,6 +753,15 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 - [x] "Play Again" and "Home" buttons
 - [x] Animated card pop-in with blurred backdrop
 
+#### Low-stim mode
+- [x] Per-class toggle on teacher dashboard (stored in `classes.settings.lowStimMode`)
+- [x] Suppresses: sounds, particle effects, scientist reactions/dances, confetti, streak flames
+- [x] Hides: bonus pills, leaderboard, daily challenges, quark/streak counters, try-me badges
+- [x] Central guards in `wordlab-audio.js`, `wordlab-effects.js`, `wordlab-scientist.js`
+- [x] Global CSS injected from `wordlab-data.js` via `body.low-stim` class
+- [x] Setting loaded from DB on login + refreshed on landing page load
+- [x] Game mechanics and progress tracking continue normally (data still recorded)
+
 ---
 
 ### PHASE 10 — NSW Spelling Diagnostic Integration
@@ -928,3 +937,4 @@ At the start of each working session, do this:
 | Bonus days on Wed/Sat/Sun | Encourages play on quieter days; Wednesday breaks up the school week; weekends reward voluntary practice |
 | Spelling Test card hidden by default | Only relevant during active check-ins; avoids confusion when no assessment is running |
 | True eraser (destination-out) | White paint eraser left visible marks on transparent exports; compositing eraser removes pixels properly |
+| Low-stim mode per-class | Sensory accommodations for neurodiverse students; schools expect this for procurement; per-class is simpler than per-student and teachers can split into groups |

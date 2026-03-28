@@ -56,9 +56,13 @@ const WLAudio = (() => {
     notes.forEach((freq, i) => tone(freq, type, gainVal, duration, now + i * 0.06, true));
   }
 
+  function _lowStim() {
+    return typeof WordLabData !== 'undefined' && WordLabData.isLowStimMode();
+  }
+
   // ── Sound effects ─────────────────────────────────────────────
   function correct() {
-    if (!enabled) return;
+    if (!enabled || _lowStim()) return;
     const c = getCtx(); if (!c) return;
     const now = c.currentTime;
     // Bright ascending two-tone ding
@@ -67,7 +71,7 @@ const WLAudio = (() => {
   }
 
   function wrong() {
-    if (!enabled) return;
+    if (!enabled || _lowStim()) return;
     const c = getCtx(); if (!c) return;
     const now = c.currentTime;
     // Low descending thud
@@ -76,7 +80,7 @@ const WLAudio = (() => {
   }
 
   function streak(n) {
-    if (!enabled) return;
+    if (!enabled || _lowStim()) return;
     const c = getCtx(); if (!c) return;
     const now = c.currentTime;
     if (n >= 10) {
@@ -97,7 +101,7 @@ const WLAudio = (() => {
 
   // ── Ticking (fuel bar tension) ────────────────────────────────
   function tick() {
-    if (!enabled || tickPlaying) return;
+    if (!enabled || _lowStim() || tickPlaying) return;
     tickPlaying = true;
     _doTick();
     tickInterval = setInterval(_doTick, 600);
@@ -137,6 +141,7 @@ const WLAudio = (() => {
   }
 
   function confetti(type) {
+    if (_lowStim()) return;
     // type: 'correct' | 'streak' | 'perfect'
     if (type === 'perfect') {
       confettiBurst({ particleCount: 150, spread: 100, origin: { y: 0.5 } });
