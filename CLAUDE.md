@@ -764,6 +764,47 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 
 ---
 
+### PHASE 7.9 — Session 2026-03-28 (continued)
+
+#### Low-stim mode (extended)
+- [x] Dances and Effects tabs hidden on scientist page in low-stim mode
+- [x] Particle Effect section hidden on My Scientist customisation panel
+- [x] Pricing/upgrade links hidden for students on active school plans
+
+#### Dashboard visual refactor
+- [x] Slim dark topbar with class name, email, labelled icon buttons (Setup, Account, Home, Export, Sign Out)
+- [x] Horizontal stats bar: class accuracy, most played, most missed, active today, students
+- [x] Compact settings strip: Focus Game selector, Low-stim toggle, Base/Extension toggle, Word Lists button
+- [x] Game subtabs restyled as pills (larger, 12px font, wrap naturally)
+- [x] Summary table: Extension/Reward/Last Active collapsed into sticky name cell
+- [x] Lighter blue header row across summary table columns
+- [x] Full navy dark theme matching landing page
+- [x] Spelling set tabs as pill buttons with word count badges
+- [x] Spelling set student assignment: clickable name pills (replaces checkboxes)
+- [x] Spelling set action buttons: plain white text links
+- [x] Heatmap cells tightened (42x22px)
+- [x] All modals, inputs, panels updated for dark backgrounds
+
+#### Data & performance fixes
+- [x] Batched student_progress queries (5 students per batch, 50k limit) — fixes data loss for large classes
+- [x] Morpheme Builder: in-place bank tile patching via `patchBanks()` — eliminates innerHTML rebuild lag
+- [x] Morpheme Builder: deferred viability computation via requestAnimationFrame
+- [x] Total XP shown under XP bar on My Scientist page
+- [x] Fixed corrupted `<meta charset>` tag in word-refinery.html
+
+#### Documentation updates
+- [x] Privacy policy: fixed 3-char code, added Google Cloud TTS + Resend as sub-processors
+- [x] Data handling agreement: fixed ABN, 3-char codes, added Google Cloud + Resend sub-processors
+- [x] FAQ: complete rewrite (Getting Started, Features, Pricing, Students sections)
+- [x] Pricing: updated to 13 activities, added all missing feature highlights
+- [x] Terms: updated service description with current feature set
+- [x] Teacher guide: added Low-stim, EALD, Spelling Sets sections; fixed custom word list scope (6 games)
+- [x] About page: added Teacher Resources section (254 slide decks, 9 worksheet generators, EALD translations)
+- [x] About page: added Low-stim mode description under Differentiation
+- [x] About page: corrected 3-day slide deck breakdown (dictation + morpheme/syllable/phoneme splits)
+
+---
+
 ### PHASE 10 — NSW Spelling Diagnostic Integration
 
 Integrating the NSW Department of Education Spelling Diagnostic Assessment (Sets 1–7)
@@ -938,3 +979,7 @@ At the start of each working session, do this:
 | Spelling Test card hidden by default | Only relevant during active check-ins; avoids confusion when no assessment is running |
 | True eraser (destination-out) | White paint eraser left visible marks on transparent exports; compositing eraser removes pixels properly |
 | Low-stim mode per-class | Sensory accommodations for neurodiverse students; schools expect this for procurement; per-class is simpler than per-student and teachers can split into groups |
+| Dashboard navy dark theme | Matches landing page aesthetic; provides visual consistency across the product |
+| Batched progress queries (5 per batch) | Single query with .limit(10000) was silently dropping data for large classes; batching by 5 students with 50k limit per batch scales to any class size |
+| patchBanks() in-place tile updates | Full innerHTML rebuild of 300+ tiles on every morpheme add/remove caused visible lag; patching CSS classes in-place eliminates DOM destruction |
+| Summary table columns collapsed | Extension toggle, reward button, last active moved into sticky name cell; removes 3 columns of horizontal scroll |
