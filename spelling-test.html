@@ -157,9 +157,16 @@ async function init() {
     var setIds = [];
     ssWords.forEach(function(w) { if (w._spellingSetId && setIds.indexOf(w._spellingSetId) === -1) setIds.push(w._spellingSetId); });
 
-    var { data: sets } = await sb.from('class_spelling_sets')
+    var { data: sets, error: setsErr } = await sb.from('class_spelling_sets')
       .select('id, name, assessment_active, assessment_scheduled_at')
       .in('id', setIds);
+    // Fallback if assessment columns not yet in schema cache
+    if (setsErr && setsErr.code === '42703') {
+      var fallback = await sb.from('class_spelling_sets')
+        .select('id, name')
+        .in('id', setIds);
+      sets = (fallback.data || []).map(function(s) { s.assessment_active = false; return s; });
+    }
 
     var activeSet = null;
     (sets || []).forEach(function(s) {
