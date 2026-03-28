@@ -2905,15 +2905,95 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ─── STATE REFRESH ───────────────────────────────────────────────────────────
 
+  var _refreshRAF = 0;
   function refreshState(){
-    currentViableSets = computeViableSets();
+    // Render zones and output immediately (cheap)
     renderZones();
-    renderBanks();
     updateOutput();
+    // Defer viability computation + bank patching to next frame (expensive)
+    cancelAnimationFrame(_refreshRAF);
+    _refreshRAF = requestAnimationFrame(function(){
+      currentViableSets = computeViableSets();
+      patchBanks();
+    });
   }
 
   function refreshFiltersOnly(){
     renderBanks();
+  }
+
+  // ─── FAST IN-PLACE BANK UPDATE (no innerHTML rebuild) ──────────────────────
+  // Instead of regenerating all tile HTML, just toggle classes on existing tiles.
+  // Falls back to full renderBanks() if tile count changed (search/filter).
+
+  function patchBanks(){
+    var sets = currentViableSets;
+    var banks = [
+      { el: els.prefixBank, items: ALL_PREFIXES, type: 'prefix', viableSet: sets.viablePrefixes, countEl: els.prefixCount },
+      { el: els.suffixBank, items: ALL_SUFFIXES, type: 'suffix', viableSet: null, countEl: els.suffixCount }
+    ];
+
+    var needsFullRender = false;
+
+    for (var bi = 0; bi < banks.length; bi++){
+      var bank = banks[bi];
+      var tiles = bank.el.querySelectorAll('.tile');
+      var itemCount = bank.items.filter(matchesSearch).length;
+      if (tiles.length !== Math.min(itemCount, PREFIX_SUFFIX_CAP)){ needsFullRender = true; break; }
+
+      var enabledCount = 0;
+      for (var ti = 0; ti < tiles.length; ti++){
+        var tile = tiles[ti];
+        var uid = tile.dataset.uid;
+        var isViable;
+        if (bank.type === 'suffix'){
+          var fillingSuffix1 = !current.suffix1;
+          var fillingSuffix2 = !!current.suffix1 && !current.suffix2;
+          if (fillingSuffix1) isViable = sets.viableSuffix1.has(uid);
+          else if (fillingSuffix2) isViable = sets.viableSuffix2.has(uid);
+          else isViable = sets.viableSuffix1.has(uid) || sets.viableSuffix2.has(uid);
+          if (GLOBAL_VIABLE_READY && !GLOBAL_VIABLE.suffixes.has(uid)) isViable = false;
+        } else {
+          isViable = sets[bank.type === 'prefix' ? 'viablePrefixes' : 'viableBases'].has(uid);
+          if (GLOBAL_VIABLE_READY){
+            var gSet = bank.type === 'prefix' ? GLOBAL_VIABLE.prefixes : GLOBAL_VIABLE.bases;
+            if (!gSet.has(uid)) isViable = false;
+          }
+        }
+        var isSelected = false;
+        if (bank.type === 'prefix') isSelected = !!(current.prefix && current.prefix.uid === uid);
+        else isSelected = !!((current.suffix1 && current.suffix1.uid === uid) || (current.suffix2 && current.suffix2.uid === uid));
+
+        if (isViable) enabledCount++;
+        tile.classList.toggle('disabled', !isViable);
+        tile.classList.toggle('selected', isSelected);
+        tile.draggable = isViable;
+        tile.tabIndex = isViable ? 0 : -1;
+        tile.setAttribute('aria-disabled', isViable ? 'false' : 'true');
+        tile.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+      }
+      bank.countEl.textContent = String(enabledCount);
+    }
+
+    // Bases — more complex due to filtering/sorting, so also patch in-place
+    if (!needsFullRender){
+      var baseTiles = els.baseBank.querySelectorAll('.tile');
+      for (var bti = 0; bti < baseTiles.length; bti++){
+        var bt = baseTiles[bti];
+        var buid = bt.dataset.uid;
+        var bViable = sets.viableBases.has(buid);
+        if (GLOBAL_VIABLE_READY && !GLOBAL_VIABLE.bases.has(buid)) bViable = false;
+        var bSelected = !!(current.base && current.base.uid === buid);
+        bt.classList.toggle('disabled', !bViable);
+        bt.classList.toggle('selected', bSelected);
+        bt.draggable = bViable;
+        bt.tabIndex = bViable ? 0 : -1;
+        bt.setAttribute('aria-disabled', bViable ? 'false' : 'true');
+        bt.setAttribute('aria-selected', bSelected ? 'true' : 'false');
+      }
+    }
+
+    if (needsFullRender) renderBanks();
   }
 
   // ─── BUILDER LOGIC ───────────────────────────────────────────────────────────
