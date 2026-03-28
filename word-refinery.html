@@ -653,6 +653,7 @@
 <script src="wordlab-extension-data.js"></script>
 <script src="wordlab-scientist.js"></script>
 <script src="wordlab-audio.js"></script>
+<script src="wordlab-teacher.js"></script>
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
 // THE REFINERY — Data
@@ -1028,6 +1029,8 @@ const ORDER_CLINES = [
 // ─────────────────────────────────────────────────────────────────────────────
 // GAME STATE
 // ─────────────────────────────────────────────────────────────────────────────
+var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+
 let gameMode = 'fill';
 let score = 0, streak = 0, fuel = 100;
 let currentCline = null, buttonsLocked = false, fuelInterval = null;
@@ -1050,6 +1053,7 @@ const wallPurityEl  = document.getElementById('wallPurity');
 function shuffleArray(arr){ return [...arr].sort(()=>Math.random()-.5); }
 
 function updateHud(){
+  if(_wltActive) return;
   scorePillEl.textContent = `${score} XP`;
   streakPillEl.textContent = `🔥 Streak: ${streak}`;
   fuelBarEl.style.width = `${Math.max(fuel,0)}%`;
@@ -1070,7 +1074,7 @@ function setMode(m){
   ['fill','order'].forEach(x => {
     document.getElementById('mode'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('active', x===m);
   });
-  score=0; streak=0; fuel=100; updateHud();
+  if(!_wltActive){ score=0; streak=0; fuel=100; updateHud(); }
   loadQuestion();
 }
 
@@ -1079,7 +1083,8 @@ function setMode(m){
 // ─────────────────────────────────────────────────────────────────────────────
 function loadQuestion(){
   gameCardEl.classList.remove('flashSuccess','flashFail');
-  if(fuel<=0) return;
+  if(!_wltActive && fuel<=0) return;
+  if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
   buttonsLocked = false;
   selectedWord = null;
   placed = {};
@@ -1361,7 +1366,7 @@ function placeInSlot(slotIndex, slotEl, wordLblEl){
 // CHECK ANSWER
 // ─────────────────────────────────────────────────────────────────────────────
 function checkCline(){
-  if(buttonsLocked || fuel<=0) return;
+  if(buttonsLocked || (!_wltActive && fuel<=0)) return;
   buttonsLocked = true;
 
   const c = currentCline;
@@ -1393,33 +1398,45 @@ function checkCline(){
   const allCorrect = correct === total;
   const cat = 'cline:' + c.category.toLowerCase().replace(/\s+/g,'-');
 
+  // Build tier labels for feedback
+  function _tierLabel(idx, n){ if(idx < n/3) return 'Tier 1 (everyday)'; if(idx < 2*n/3) return 'Tier 2 (academic)'; return 'Tier 3 (specialist)'; }
+
   if(allCorrect){
-    score += 70 + (streak*10); streak++; fuel = Math.min(fuel+10,100);
+    if(!_wltActive){ score += 70 + (streak*10); streak++; fuel = Math.min(fuel+10,100); }
     setPurityMeter(95);
-    if(typeof WordLabData !== 'undefined' && WordLabData.getSession()){
+    if(!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()){
       const res = WordLabData.recordAttempt('word-refinery', cat, true, 0);
       if(typeof WLScientist !== 'undefined') WLScientist.react('correct', res);
     }
-    if(typeof WLAudio !== 'undefined'){ WLAudio.correct(); if(streak>=3) WLAudio.streak(streak); }
+    if(_wltActive && typeof WLScientist !== 'undefined') WLScientist.react('correct');
+    if(!_wltActive && typeof WLAudio !== 'undefined'){ WLAudio.correct(); if(streak>=3) WLAudio.streak(streak); }
     feedbackEl.textContent = '✅ Perfectly refined!';
     feedbackEl.className = 'feedback ok';
     subFeedbackEl.textContent = c.explain;
     gameCardEl.classList.add('flashSuccess');
     setTimeout(()=>gameCardEl.classList.remove('flashSuccess'),600);
+    if(_wltActive){
+      var _fb = 'Correctly ordered! ' + c.words.map(function(w,i){ return '<b>' + _tierLabel(i,c.words.length) + '</b>: "' + w + '"'; }).join(' → ');
+      WLTeacher.onAnswer(true, _fb);
+    }
   } else {
-    streak=0; fuel=Math.max(fuel-10,0);
+    streak=0; if(!_wltActive){ fuel=Math.max(fuel-10,0); }
     setPurityMeter(20);
-    if(typeof WordLabData !== 'undefined' && WordLabData.getSession()) WordLabData.recordAttempt('word-refinery', cat, false, 0);
+    if(!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()) WordLabData.recordAttempt('word-refinery', cat, false, 0);
     if(typeof WLScientist !== 'undefined') WLScientist.react('wrong');
-    if(typeof WLAudio !== 'undefined') WLAudio.wrong();
+    if(!_wltActive && typeof WLAudio !== 'undefined') WLAudio.wrong();
     feedbackEl.textContent = `❌ ${correct} of ${total} correct`;
     feedbackEl.className = 'feedback bad';
     subFeedbackEl.textContent = `Correct order: ${c.explain}`;
     gameCardEl.classList.add('flashFail');
     setTimeout(()=>gameCardEl.classList.remove('flashFail'),600);
+    if(_wltActive){
+      var _fb2 = 'The correct order from everyday to specialist is:<br>' + c.words.map(function(w,i){ return '<b>' + _tierLabel(i,c.words.length) + '</b>: "' + w + '"'; }).join(' → ');
+      WLTeacher.onAnswer(false, _fb2);
+    }
   }
 
-  updateHud();
+  if(!_wltActive) updateHud();
   checkBtnEl.style.display = 'none';
   // EALD: translate the cline words
   var ealdEl=document.getElementById('ealdTranslation');if(ealdEl)ealdEl.innerHTML='';
@@ -1435,6 +1452,7 @@ function checkCline(){
       if(pairs.length){contentEl.innerHTML='<div class="eald-translation-pill"><span class="eald-flag">🌐</span> '+pairs.join(' · ')+'</div>';}
     });
   }
+  if(_wltActive) return; // Teacher mode: wait for Next click
   if(fuel<=0){ setTimeout(endGame,800); return; }
   setTimeout(loadQuestion, 2200);
 }
@@ -1443,6 +1461,7 @@ function checkCline(){
 // GAME FLOW
 // ─────────────────────────────────────────────────────────────────────────────
 function startFuelDrain(){
+  if(_wltActive) return;
   clearInterval(fuelInterval);
   fuelInterval = setInterval(()=>{
     fuel -= 0.18;
@@ -1463,20 +1482,31 @@ function endGame(){
 
 function restartGame(){
   score=0; streak=0; fuel=100;
-  updateHud(); startFuelDrain(); loadQuestion();
-}
-
-function skipQuestion(){
-  if(fuel<=0) return;
-  streak=0; fuel=Math.max(fuel-8,0);
-  updateHud();
-  if(fuel<=0){ endGame(); return; }
+  if(!_wltActive){ updateHud(); startFuelDrain(); }
   loadQuestion();
 }
 
-updateHud();
-startFuelDrain();
-loadQuestion();
+function skipQuestion(){
+  if(!_wltActive && fuel<=0) return;
+  streak=0;
+  if(!_wltActive){ fuel=Math.max(fuel-8,0); updateHud(); if(fuel<=0){ endGame(); return; } }
+  if(_wltActive){ WLTeacher.clearFeedback(); var nb=document.getElementById('wltNextBtn'); if(nb) nb.style.display='none'; }
+  loadQuestion();
+}
+
+if(_wltActive){
+  WLTeacher.init({game:'refinery'}).then(function(){ loadQuestion(); });
+  // Add teacher Next button
+  var _nBtn=document.createElement('button');_nBtn.textContent='Next Cline →';_nBtn.className='primaryBtn';_nBtn.style.cssText='margin:12px auto;display:none;padding:10px 24px;font-size:15px;font-weight:800;cursor:pointer;';_nBtn.id='wltNextBtn';
+  var _anchor=document.getElementById('feedback');if(_anchor&&_anchor.parentNode)_anchor.parentNode.insertBefore(_nBtn,_anchor.nextSibling);
+  _nBtn.addEventListener('click',function(){_nBtn.style.display='none';loadQuestion();});
+  // Poll to show Next button when answer is locked
+  setInterval(function(){if(buttonsLocked&&_wltActive){var nb=document.getElementById('wltNextBtn');if(nb)nb.style.display='block';}},200);
+} else {
+  updateHud();
+  startFuelDrain();
+  loadQuestion();
+}
 </script>
 
 <!-- Particles — warm smoke/steam -->

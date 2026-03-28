@@ -543,6 +543,7 @@
 <script src="wordlab-scientist.js"></script>
 <script src="wordlab-effects.js"></script>
 <script src="wordlab-audio.js"></script>
+<script src="wordlab-teacher.js"></script>
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
 // WORD SPECTRUM — Data
@@ -724,6 +725,8 @@ const EXT_SPECTRUM_SETS = [
 // ─────────────────────────────────────────────────────────────────────────────
 // GAME STATE
 // ─────────────────────────────────────────────────────────────────────────────
+var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+
 let mode = 'synonym';
 let score = 0, streak = 0, fuel = 100;
 let currentQuestion = null, buttonsLocked = false, fuelInterval = null;
@@ -794,7 +797,7 @@ function setMode(m){
   ['synonym','antonym','spectrum'].forEach(x => {
     document.getElementById('mode'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('active', x===m);
   });
-  score = 0; streak = 0; fuel = 100; updateHud();
+  score = 0; streak = 0; fuel = 100; if(!_wltActive) updateHud();
   loadQuestion();
 }
 
@@ -866,37 +869,42 @@ function loadSynonymAntonym(){
 function lockButtons(){ optionsEl.querySelectorAll('button').forEach(b => b.disabled = true); }
 
 function checkSynonymAntonym(choice){
-  if(buttonsLocked || fuel <= 0) return;
+  if(buttonsLocked || (!_wltActive && fuel <= 0)) return;
   buttonsLocked = true;
   lockButtons();
   const q = currentQuestion;
   const correct = choice === q.correct;
   const cat = mode + ':' + q.word;
+  var _modeLabel = mode === 'synonym' ? 'synonym' : 'antonym';
+  var _relLabel = mode === 'synonym' ? 'words with similar meaning' : 'words with opposite meaning';
 
   if(correct){
-    score += 50 + (streak * 10); streak++; fuel = Math.min(fuel + 8, 100);
-    if(typeof WordLabData !== 'undefined' && WordLabData.getSession()){
+    if(!_wltActive){ score += 50 + (streak * 10); streak++; fuel = Math.min(fuel + 8, 100); }
+    if(!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()){
       const res = WordLabData.recordAttempt('word-spectrum', cat, true, 0);
       if(typeof WLScientist !== 'undefined') WLScientist.react('correct', res);
     }
-    if(typeof WLAudio !== 'undefined'){ WLAudio.correct(); if(streak >= 3) WLAudio.streak(streak); }
+    if(_wltActive && typeof WLScientist !== 'undefined') WLScientist.react('correct');
+    if(!_wltActive && typeof WLAudio !== 'undefined'){ WLAudio.correct(); if(streak >= 3) WLAudio.streak(streak); }
     feedbackEl.textContent = '✅ Correct!';
     feedbackEl.className = 'feedback ok';
     subFeedbackEl.textContent = q.explain;
     gameCardEl.classList.add('flashSuccess');
     setTimeout(() => gameCardEl.classList.remove('flashSuccess'), 600);
+    if(_wltActive) WLTeacher.onAnswer(true, '\'<b>'+choice+'</b>\' is the '+_modeLabel+' of \'<b>'+q.word+'</b>\'. They are '+_relLabel+'.');
   } else {
-    streak = 0; fuel = Math.max(fuel - 12, 0);
-    if(typeof WordLabData !== 'undefined' && WordLabData.getSession()) WordLabData.recordAttempt('word-spectrum', cat, false, 0);
+    streak = 0; if(!_wltActive){ fuel = Math.max(fuel - 12, 0); }
+    if(!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()) WordLabData.recordAttempt('word-spectrum', cat, false, 0);
     if(typeof WLScientist !== 'undefined') WLScientist.react('wrong');
-    if(typeof WLAudio !== 'undefined') WLAudio.wrong();
+    if(!_wltActive && typeof WLAudio !== 'undefined') WLAudio.wrong();
     feedbackEl.textContent = '❌ Not quite';
     feedbackEl.className = 'feedback bad';
     subFeedbackEl.textContent = `${mode === 'synonym' ? 'Synonym' : 'Antonym'} of "${q.word.toUpperCase()}" is "${q.correct.toUpperCase()}" — ${q.explain}`;
     gameCardEl.classList.add('flashFail');
     setTimeout(() => gameCardEl.classList.remove('flashFail'), 600);
+    if(_wltActive) WLTeacher.onAnswer(false, 'The correct '+_modeLabel+' of \'<b>'+q.word+'</b>\' is \'<b>'+q.correct+'</b>\'. '+q.explain+'<br>You selected \'<b>'+choice+'</b>\'.');
   }
-  updateHud();
+  if(!_wltActive) updateHud();
   // EALD
   var ealdEl=document.getElementById('ealdTranslation');if(ealdEl)ealdEl.innerHTML='';
   if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&q){
@@ -911,7 +919,8 @@ function checkSynonymAntonym(choice){
       if(pairs.length){contentEl.innerHTML='<div class="eald-translation-pill"><span class="eald-flag">🌐</span> '+pairs.join(' · ')+'</div>';}
     });
   }
-  if(fuel <= 0){ setTimeout(endGame, 800); return; }
+  if(!_wltActive && fuel <= 0){ setTimeout(endGame, 800); return; }
+  if(_wltActive) return; // Teacher mode: wait for Next click
   setTimeout(loadQuestion, 1600);
 }
 
@@ -1082,7 +1091,7 @@ function placeWordInSlot(slotIndex){
 }
 
 function checkSpectrum(){
-  if(buttonsLocked || fuel <= 0) return;
+  if(buttonsLocked || (!_wltActive && fuel <= 0)) return;
   buttonsLocked = true;
   const q = currentQuestion;
   let allCorrect = true;
@@ -1104,30 +1113,33 @@ function checkSpectrum(){
   const cat = 'spectrum:' + q.label.toLowerCase().replace(/\s+/g,'-');
 
   if(allCorrect){
-    score += 80 + (streak * 10); streak++; fuel = Math.min(fuel + 10, 100);
-    if(typeof WordLabData !== 'undefined' && WordLabData.getSession()){
+    if(!_wltActive){ score += 80 + (streak * 10); streak++; fuel = Math.min(fuel + 10, 100); }
+    if(!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()){
       const res = WordLabData.recordAttempt('word-spectrum', cat, true, 0);
       if(typeof WLScientist !== 'undefined') WLScientist.react('correct', res);
     }
-    if(typeof WLAudio !== 'undefined'){ WLAudio.correct(); if(streak >= 3) WLAudio.streak(streak); }
+    if(_wltActive && typeof WLScientist !== 'undefined') WLScientist.react('correct');
+    if(!_wltActive && typeof WLAudio !== 'undefined'){ WLAudio.correct(); if(streak >= 3) WLAudio.streak(streak); }
     feedbackEl.textContent = '✅ Perfect spectrum!';
     feedbackEl.className = 'feedback ok';
     subFeedbackEl.textContent = `${q.leftAnchor} → ${q.words.join(' → ')} → ${q.rightAnchor}`;
     gameCardEl.classList.add('flashSuccess');
     setTimeout(() => gameCardEl.classList.remove('flashSuccess'), 600);
+    if(_wltActive) WLTeacher.onAnswer(true, 'The correct order from <b>'+q.leftAnchor.toLowerCase()+'</b> to <b>'+q.rightAnchor.toLowerCase()+'</b> is: <b>'+q.words.join(' &rarr; ')+'</b>');
   } else {
-    streak = 0; fuel = Math.max(fuel - 10, 0);
-    if(typeof WordLabData !== 'undefined' && WordLabData.getSession()) WordLabData.recordAttempt('word-spectrum', cat, false, 0);
+    streak = 0; if(!_wltActive){ fuel = Math.max(fuel - 10, 0); }
+    if(!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()) WordLabData.recordAttempt('word-spectrum', cat, false, 0);
     if(typeof WLScientist !== 'undefined') WLScientist.react('wrong');
-    if(typeof WLAudio !== 'undefined') WLAudio.wrong();
+    if(!_wltActive && typeof WLAudio !== 'undefined') WLAudio.wrong();
     feedbackEl.textContent = `❌ ${wrongCount} word${wrongCount>1?'s':''} out of order`;
     feedbackEl.className = 'feedback bad';
     subFeedbackEl.textContent = `Correct order: ${q.words.join(' → ')}`;
     gameCardEl.classList.add('flashFail');
     setTimeout(() => gameCardEl.classList.remove('flashFail'), 600);
+    if(_wltActive) WLTeacher.onAnswer(false, wrongCount+' word'+(wrongCount>1?'s were':' was')+' out of order. The correct order from <b>'+q.leftAnchor.toLowerCase()+'</b> to <b>'+q.rightAnchor.toLowerCase()+'</b> is: <b>'+q.words.join(' &rarr; ')+'</b>');
   }
 
-  updateHud();
+  if(!_wltActive) updateHud();
   // EALD - translate all spectrum words
   var ealdEl=document.getElementById('ealdTranslation');if(ealdEl)ealdEl.innerHTML='';
   if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&q){
@@ -1143,8 +1155,9 @@ function checkSpectrum(){
       if(pairs.length){contentEl.innerHTML='<div class="eald-translation-pill"><span class="eald-flag">🌐</span> '+pairs.join(' · ')+'</div>';}
     });
   }
-  if(fuel <= 0){ setTimeout(endGame, 800); return; }
+  if(!_wltActive && fuel <= 0){ setTimeout(endGame, 800); return; }
   document.getElementById('checkSpectrumBtn').style.display = 'none';
+  if(_wltActive) return; // Teacher mode: wait for Next click
   setTimeout(loadQuestion, 2200);
 }
 
@@ -1153,7 +1166,8 @@ function checkSpectrum(){
 // ─────────────────────────────────────────────────────────────────────────────
 function loadQuestion(){
   gameCardEl.classList.remove('flashSuccess','flashFail');
-  if(fuel <= 0) return;
+  if(!_wltActive && fuel <= 0) return;
+  if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
   if(mode === 'spectrum'){
     loadSpectrum();
   } else {
@@ -1162,6 +1176,7 @@ function loadQuestion(){
 }
 
 function startFuelDrain(){
+  if(_wltActive) return;
   clearInterval(fuelInterval);
   fuelInterval = setInterval(() => {
     fuel -= 0.2;
@@ -1181,23 +1196,39 @@ function endGame(){
 
 function restartGame(){
   score = 0; streak = 0; fuel = 100;
-  updateHud(); startFuelDrain(); loadQuestion();
+  if(!_wltActive){ updateHud(); startFuelDrain(); }
+  loadQuestion();
 }
 
 function skipQuestion(){
-  if(fuel <= 0) return;
-  streak = 0; fuel = Math.max(fuel - 8, 0);
-  updateHud();
-  if(fuel <= 0){ endGame(); return; }
+  if(!_wltActive && fuel <= 0) return;
+  streak = 0;
+  if(!_wltActive){ fuel = Math.max(fuel - 8, 0); updateHud(); if(fuel <= 0){ endGame(); return; } }
+  if(_wltActive){ WLTeacher.clearFeedback(); var nb=document.getElementById('wltNextBtn'); if(nb) nb.style.display='none'; }
   loadQuestion();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────────────────────────────────────
-updateHud();
-startFuelDrain();
-loadQuestion();
+if(_wltActive){
+  WLTeacher.init({game:'spectrum'}).then(function(){ loadQuestion(); });
+  // Create Next button
+  var _nb = document.createElement('button');
+  _nb.id = 'wltNextBtn';
+  _nb.className = 'primaryBtn';
+  _nb.textContent = 'Next \u2192';
+  _nb.style.cssText = 'display:none;margin:12px auto 0;';
+  _nb.addEventListener('click', function(){ _nb.style.display='none'; loadQuestion(); });
+  var _actionRow = document.querySelector('.actionRow');
+  if(_actionRow) _actionRow.parentNode.insertBefore(_nb, _actionRow.nextSibling);
+  // Poll to show Next button when answer is locked
+  setInterval(function(){ if(buttonsLocked && _wltActive){ var nb=document.getElementById('wltNextBtn'); if(nb) nb.style.display='block'; } }, 200);
+} else {
+  updateHud();
+  startFuelDrain();
+  loadQuestion();
+}
 </script>
 
 <!-- Particles -->

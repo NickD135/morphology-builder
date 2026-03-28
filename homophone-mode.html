@@ -363,6 +363,7 @@
 <script src="wordlab-scientist.js"></script>
 <script src="wordlab-effects.js"></script>
 <script src="wordlab-audio.js"></script>
+<script src="wordlab-teacher.js"></script>
 <script>
 
 // ══════════════════════════════════════════════════════════════
@@ -633,6 +634,8 @@ let buttonsLocked = false;
 let questionStart = 0;
 let isExt = false;
 
+var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+
 const feedbackEl  = document.getElementById('feedback');
 const subFeedEl   = document.getElementById('subFeedback');
 const scorePillEl = document.getElementById('scorePill');
@@ -696,7 +699,7 @@ function buildMode3() {
 }
 
 // ── Start game ─────────────────────────────────────────────
-function startGame() {
+function _doStartGame() {
   score = 0; streak = 0; bestStreak = 0; totalCorrect = 0; totalAttempts = 0;
   currentQ = 0; fuel = 100; buttonsLocked = false;
 
@@ -707,14 +710,48 @@ function startGame() {
   document.getElementById('setupScreen').classList.add('hidden');
   document.getElementById('resultsScreen').classList.add('hidden');
   document.getElementById('gameScreen').classList.remove('hidden');
-  document.getElementById('fuelPill').style.display = '';
+  if (!_wltActive) document.getElementById('fuelPill').style.display = '';
 
-  updateHud();
+  if (!_wltActive) updateHud();
   startFuelDrain();
   showQuestion();
 }
 
+function startGame() {
+  if (_wltActive) {
+    WLTeacher.init({ game: 'homophone-hunter' }).then(function() {
+      _doStartGame();
+      // Add Next button for teacher mode
+      var actionRow = document.querySelector('#gameScreen .action-row');
+      if (actionRow && !document.getElementById('wltNextBtn')) {
+        var nextBtn = document.createElement('button');
+        nextBtn.className = 'pri-btn';
+        nextBtn.id = 'wltNextBtn';
+        nextBtn.textContent = 'Next →';
+        nextBtn.style.display = 'none';
+        nextBtn.onclick = function() {
+          nextBtn.style.display = 'none';
+          WLTeacher.clearFeedback();
+          currentQ++;
+          showQuestion();
+        };
+        actionRow.appendChild(nextBtn);
+      }
+      // Poll to show Next button after answer
+      setInterval(function() {
+        if (buttonsLocked && _wltActive) {
+          var nb = document.getElementById('wltNextBtn');
+          if (nb) nb.style.display = 'block';
+        }
+      }, 200);
+    });
+  } else {
+    _doStartGame();
+  }
+}
+
 function startFuelDrain() {
+  if (_wltActive) return;
   clearInterval(fuelInterval);
   fuelInterval = setInterval(() => {
     fuel -= 0.2;
@@ -732,17 +769,20 @@ function updateHud() {
 }
 
 function skipQuestion() {
-  if (fuel <= 0 || buttonsLocked) return;
-  streak = 0; fuel = Math.max(fuel - 8, 0);
-  updateHud();
-  if (fuel <= 0) { endGame(); return; }
+  if (!_wltActive && fuel <= 0) return;
+  if (buttonsLocked) return;
+  streak = 0;
+  if (!_wltActive) { fuel = Math.max(fuel - 8, 0); updateHud(); if (fuel <= 0) { endGame(); return; } }
+  if (_wltActive) { WLTeacher.clearFeedback(); var nb = document.getElementById('wltNextBtn'); if (nb) nb.style.display = 'none'; }
   currentQ++;
   showQuestion();
 }
 
 // ── Show question ──────────────────────────────────────────
 function showQuestion() {
-  if (currentQ >= questions.length || fuel <= 0) { endGame(); return; }
+  if (!_wltActive && fuel <= 0) { endGame(); return; }
+  if (_wltActive) { WLTeacher.clearFeedback(); if (WLTeacher.shouldEnd()) { WLTeacher.showEndScreen(); return; } }
+  if (currentQ >= questions.length) { endGame(); return; }
   feedbackEl.textContent = ''; feedbackEl.className = 'feedback';
   subFeedEl.textContent = '';
   buttonsLocked = false;
@@ -814,6 +854,7 @@ function checkMode1(chosen, btn) {
   gap.classList.add(correct ? 'correct' : 'wrong');
 
   handleResult(correct, timeMs, q.why, q.explain, q.answer);
+  if (_wltActive) return; // Teacher mode: wait for Next click
   setTimeout(() => { currentQ++; showQuestion(); }, correct ? 1400 : 2200);
 }
 
@@ -896,6 +937,7 @@ function doDrop(dropId, word, tileId) {
 
     const whyText = correct ? q.s1.why + ' / ' + q.s2.why : 'A: "' + q.s1.a + '" — ' + q.s1.why + ' · B: "' + q.s2.a + '" — ' + q.s2.why;
     handleResult(correct, timeMs, whyText, q.explain);
+    if (_wltActive) return; // Teacher mode: wait for Next click
     setTimeout(() => { currentQ++; showQuestion(); }, correct ? 1400 : 2800);
   }
 }
@@ -945,7 +987,7 @@ function fixWord(el) {
     el.style.animation = 'sciShake .4s ease-out';
     setTimeout(() => el.style.animation = '', 400);
     showFeedback(false, 'That word is already correct!', '');
-    streak = 0; updateHud();
+    streak = 0; if (!_wltActive) updateHud();
     return;
   }
 
@@ -982,6 +1024,7 @@ function applyFix(btn, chosen, correct) {
     handleResult(true, timeMs, correct + ' is correct' + (explainText ? ' — ' + explainText : ''), '', correct, true);
 
     if (m3State.fixed >= m3State.totalErrors) {
+      if (_wltActive) return; // Teacher mode: wait for Next click
       setTimeout(() => { currentQ++; showQuestion(); }, 1500);
     }
   } else {
@@ -997,34 +1040,68 @@ function handleResult(correct, timeMs, why, explain, word, skipCount) {
   const cat = selectedMode;
 
   if (correct) {
-    const pts = 50 + (streak * 10);
-    score += pts;
-    streak++;
-    if (streak > bestStreak) bestStreak = streak;
-    fuel = Math.min(fuel + 8, 100);
+    if (!_wltActive) {
+      const pts = 50 + (streak * 10);
+      score += pts;
+      streak++;
+      if (streak > bestStreak) bestStreak = streak;
+      fuel = Math.min(fuel + 8, 100);
+    }
 
-    if (typeof WordLabData !== 'undefined' && WordLabData.getSession()) {
+    if (!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()) {
       const res = WordLabData.recordAttempt('homophone-hunter', cat, true, timeMs, streak);
       if (typeof WLScientist !== 'undefined') WLScientist.react('correct', res);
     }
-    if (typeof WLAudio !== 'undefined') { WLAudio.correct(); if (streak >= 3) WLAudio.streak(streak); }
+    if (_wltActive && typeof WLScientist !== 'undefined') WLScientist.react('correct');
+    if (!_wltActive && typeof WLAudio !== 'undefined') { WLAudio.correct(); if (streak >= 3) WLAudio.streak(streak); }
 
     showFeedback(true, why || '', explain || '');
+
+    if (_wltActive) {
+      var q = questions[currentQ];
+      var fbHTML = _buildRichFeedback(true, q, why, explain, word);
+      WLTeacher.onAnswer(true, fbHTML);
+    }
   } else {
     streak = 0;
-    fuel = Math.max(fuel - 12, 0);
+    if (!_wltActive) { fuel = Math.max(fuel - 12, 0); }
 
-    if (typeof WordLabData !== 'undefined' && WordLabData.getSession()) {
+    if (!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()) {
       WordLabData.recordAttempt('homophone-hunter', cat, false, timeMs, 0);
     }
     if (typeof WLScientist !== 'undefined') WLScientist.react('wrong');
-    if (typeof WLAudio !== 'undefined') WLAudio.wrong();
+    if (!_wltActive && typeof WLAudio !== 'undefined') WLAudio.wrong();
 
     showFeedback(false, why || '', explain || '');
 
-    if (fuel <= 0) { clearInterval(fuelInterval); setTimeout(endGame, 800); }
+    if (_wltActive) {
+      var q = questions[currentQ];
+      var fbHTML = _buildRichFeedback(false, q, why, explain, word);
+      WLTeacher.onAnswer(false, fbHTML);
+    }
+
+    if (!_wltActive && fuel <= 0) { clearInterval(fuelInterval); setTimeout(endGame, 800); }
   }
-  updateHud();
+  if (!_wltActive) updateHud();
+}
+
+function _buildRichFeedback(correct, q, why, explain, word) {
+  var html = '';
+  if (correct) {
+    html += '<b>' + (word || q.answer || '') + '</b> is correct.';
+    if (why) html += '<br>' + why;
+  } else {
+    html += 'The correct answer is <b>' + (word || q.answer || '') + '</b>.';
+    if (why) html += '<br>' + why;
+  }
+  // Show full group explanation
+  var groupExplain = explain || (q && q.explain) || '';
+  if (groupExplain) {
+    html += '<br><br><b>Homophone group:</b> ' + groupExplain;
+  } else if (q && q.group) {
+    html += '<br><br><b>Homophones:</b> ' + q.group.join(', ');
+  }
+  return html;
 }
 
 function showFeedback(correct, main, sub) {

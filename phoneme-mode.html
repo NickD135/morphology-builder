@@ -484,6 +484,7 @@
 <script src="wordlab-scientist.js"></script>
 <script src="wordlab-effects.js"></script>
 <script src="wordlab-audio.js"></script>
+<script src="wordlab-teacher.js"></script>
 <script>
 const WORDS = [
   // Starter
@@ -612,6 +613,8 @@ function _ssTrack(question, correct) {
   }
 }
 
+var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+
 let currentWord = null;
 let currentDiff = "Starter";
 let usedWords   = new Set();
@@ -638,6 +641,7 @@ function getPool(){
 
 function loadWord(){
   clearTimeout(autoNextTimer); autoNextTimer = null;
+  if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
   const pool = getPool();
   if(!pool || pool.length === 0) return;
   currentWord = pool[Math.floor(Math.random() * pool.length)];
@@ -832,36 +836,48 @@ function checkAnswer(){
   const banner = document.getElementById('feedbackBanner');
 
   if(ok){
-    const pts = 10 + (streak >= 3 ? 5 : 0);
-    score += pts; streak++; correctCount++;
-    if(streak > bestStreak) bestStreak = streak;
-    const _wlResult=typeof WordLabData!=='undefined'&&WordLabData.getSession()?WordLabData.recordAttempt('phoneme-splitter',currentWord.diff,true,0):null;
-    _ssTrack(currentWord, true);
-    if(typeof WLScientist!=='undefined') WLScientist.react('correct',_wlResult);
-    if(typeof WLAudio!=='undefined') WLAudio.correct();
-    if(streak>=3&&typeof WLScientist!=='undefined') WLScientist.react('streak',{streak:streak});
-    if(streak>=3&&typeof WLAudio!=='undefined') WLAudio.streak(streak);
+    if(!_wltActive){
+      const pts = 10 + (streak >= 3 ? 5 : 0);
+      score += pts; streak++; correctCount++;
+      if(streak > bestStreak) bestStreak = streak;
+    } else { correctCount++; }
+    if(!_wltActive && typeof WordLabData!=='undefined'&&WordLabData.getSession()){const _wlResult=WordLabData.recordAttempt('phoneme-splitter',currentWord.diff,true,0);if(typeof WLScientist!=='undefined') WLScientist.react('correct',_wlResult);}
+    if(!_wltActive) _ssTrack(currentWord, true);
+    if(!_wltActive && typeof WLAudio!=='undefined') WLAudio.correct();
+    if(!_wltActive && streak>=3&&typeof WLScientist!=='undefined') WLScientist.react('streak',{streak:streak});
+    if(!_wltActive && streak>=3&&typeof WLAudio!=='undefined') WLAudio.streak(streak);
+    if(_wltActive){
+      WLTeacher.onAnswer(true,'Perfect! The word \'<b>'+currentWord.word+'</b>\' has '+correct.length+' phonemes: <b>'+correctStr+'</b>.');
+    }
     banner.className = 'feedbackBanner correct';
-    banner.innerHTML = `✅ Perfect! <b>${currentWord.word}</b> → ${correctStr} (${correct.length} phonemes)${streak>=3?` <span style="color:var(--orange-text)">🔥 +5 streak bonus!</span>`:''}`;
+    banner.innerHTML = `✅ Perfect! <b>${currentWord.word}</b> → ${correctStr} (${correct.length} phonemes)${!_wltActive && streak>=3?` <span style="color:var(--orange-text)">🔥 +5 streak bonus!</span>`:''}`;
   } else {
-    score = Math.max(0, score-2); streak = 0; wrongCount++;
-    if(typeof WordLabData!=='undefined'&&WordLabData.getSession()){WordLabData.recordAttempt('phoneme-splitter',currentWord.diff,false,0);_ssTrack(currentWord, false);}
-    if(typeof WLScientist!=='undefined') WLScientist.react('wrong');
-    if(typeof WLAudio!=='undefined') WLAudio.wrong();
+    if(!_wltActive){ score = Math.max(0, score-2); streak = 0; } wrongCount++;
+    if(!_wltActive && typeof WordLabData!=='undefined'&&WordLabData.getSession()){WordLabData.recordAttempt('phoneme-splitter',currentWord.diff,false,0);_ssTrack(currentWord, false);}
+    if(!_wltActive && typeof WLScientist!=='undefined') WLScientist.react('wrong');
+    if(!_wltActive && typeof WLAudio!=='undefined') WLAudio.wrong();
+    if(_wltActive){
+      WLTeacher.onAnswer(false,'The correct phoneme split is: <b>'+correctStr+'</b> ('+correct.length+' phonemes). Green lines show where you should have split.');
+    }
     banner.className = 'feedbackBanner wrong';
     banner.innerHTML = `❌ Not quite. Answer: <b>${correctStr}</b> (${correct.length} phonemes)<br><span style="font-size:13px;font-weight:700;color:#64748b;">You had: ${userStr}</span>`;
     document.getElementById('chopContainer').classList.add('shake');
     setTimeout(() => {
       document.getElementById('chopContainer').classList.remove('shake');
-      // Show the correct answer on the word by rebuilding units/splits from correct phonemes
-      units  = currentWord.phonemes.slice();
-      splits = new Array(units.length - 1).fill(true); // split between every phoneme
-      render();
+      if(_wltActive){
+        // Teacher mode: freeze student's attempt, overlay green/red markers on gaps
+        _wltShowCorrectOverlay(user, correct);
+      } else {
+        // Normal mode: rebuild with correct phonemes
+        units  = currentWord.phonemes.slice();
+        splits = new Array(units.length - 1).fill(true);
+        render();
+      }
     }, 400);
   }
 
   banner.style.display = 'block';
-  updateStats();
+  if(!_wltActive) updateStats();
   addHistory(currentWord.word, correctStr, ok);
   // EALD reveal button
   var ealdEl=document.getElementById('ealdTranslation');if(ealdEl)ealdEl.innerHTML='';
@@ -877,8 +893,88 @@ function checkAnswer(){
   }
   document.getElementById('nextBtn').classList.add('visible');
   document.getElementById('checkBtn').disabled = true;
+  if(_wltActive) return; // Teacher mode: wait for Next click
   var _ealdExtra=(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage())?1500:0;
   autoNextTimer = setTimeout(nextWord, (ok ? 1400 : 3000)+_ealdExtra);
+}
+
+// ── Teacher mode: green overlay on wrong answers ──────────────────────────────
+function _wltShowCorrectOverlay(userPhonemes, correctPhonemes){
+  // Compute where the correct split boundaries should be within the full word letters
+  var word = currentWord.word;
+  // Build a flat list of letter positions where correct boundaries fall
+  var correctBoundaries = new Set();
+  var pos = 0;
+  for(var ci = 0; ci < correctPhonemes.length - 1; ci++){
+    pos += correctPhonemes[ci].length;
+    correctBoundaries.add(pos);
+  }
+  // Build the same for user boundaries from current units/splits state
+  // Each gap between units sits at a letter-offset boundary
+  // First, compute the letter offset for each unitGap
+  var gapEls = document.getElementById('chopContainer').querySelectorAll('.unitGap');
+  var letterOffset = 0;
+  for(var gi = 0; gi < units.length - 1; gi++){
+    letterOffset += units[gi].length;
+    var gapEl = gapEls[gi];
+    if(!gapEl) continue;
+    gapEl.style.position = 'relative';
+    var shouldSplit = correctBoundaries.has(letterOffset);
+    var isSplit = splits[gi];
+    var gLine = gapEl.querySelector('.gLine');
+    if(shouldSplit && isSplit){
+      // Correct split — color line green to confirm
+      if(gLine){ gLine.style.background = '#16a34a'; gLine.style.boxShadow = '0 0 0 4px rgba(22,163,74,.18)'; }
+    } else if(shouldSplit && !isSplit){
+      // Missed split — add green "split here" marker + color line green
+      if(gLine){ gLine.style.background = '#16a34a'; gLine.style.boxShadow = '0 0 0 4px rgba(22,163,74,.18)'; }
+      var label = document.createElement('div');
+      label.className = 'wlt-correct-label';
+      label.textContent = 'split here';
+      gapEl.appendChild(label);
+      var arrow = document.createElement('div');
+      arrow.className = 'wlt-correct-bracket';
+      gapEl.appendChild(arrow);
+    } else if(!shouldSplit && isSplit){
+      // Wrong split — add red marker + color line red
+      if(gLine){ gLine.style.background = '#dc2626'; gLine.style.boxShadow = '0 0 0 4px rgba(220,38,38,.18)'; }
+      var label = document.createElement('div');
+      label.className = 'wlt-correct-label';
+      label.style.background = '#dc2626';
+      label.textContent = 'no split';
+      gapEl.appendChild(label);
+      var arrow = document.createElement('div');
+      arrow.className = 'wlt-correct-bracket';
+      arrow.style.borderTopColor = '#dc2626';
+      gapEl.appendChild(arrow);
+    }
+  }
+  // Also check innerGaps inside merged units — if a boundary should be there
+  var innerGaps = document.getElementById('chopContainer').querySelectorAll('.innerGap');
+  var innerOffset = 0;
+  var innerIdx = 0;
+  for(var ui = 0; ui < units.length; ui++){
+    if(units[ui].length > 1){
+      for(var li = 0; li < units[ui].length - 1; li++){
+        var charOffset = innerOffset + li + 1;
+        var ig = innerGaps[innerIdx];
+        if(ig && correctBoundaries.has(charOffset)){
+          ig.style.position = 'relative';
+          var iLine = ig.querySelector('.iLine');
+          if(iLine){ iLine.style.background = '#16a34a'; iLine.style.boxShadow = '0 0 0 3px rgba(22,163,74,.18)'; }
+          var label = document.createElement('div');
+          label.className = 'wlt-correct-label';
+          label.textContent = 'split here';
+          ig.appendChild(label);
+          var arrow = document.createElement('div');
+          arrow.className = 'wlt-correct-bracket';
+          ig.appendChild(arrow);
+        }
+        innerIdx++;
+      }
+    }
+    innerOffset += units[ui].length;
+  }
 }
 
 function hideFeedback(){
@@ -918,11 +1014,18 @@ function addHistory(word, answer, ok){
 function startGame(){
   document.getElementById('startScreen').classList.add('hidden');
   document.getElementById('gameScreen').classList.remove('hidden');
-  loadWord();
+  if(_wltActive){
+    WLTeacher.init({game:'phoneme'}).then(function(){ loadWord(); });
+  } else {
+    loadWord();
+  }
 }
 
 document.getElementById('checkBtn').addEventListener('click', checkAnswer);
-document.getElementById('nextBtn').addEventListener('click', nextWord);
+document.getElementById('nextBtn').addEventListener('click', function(){
+  if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
+  nextWord();
+});
 </script>
 
 <script>

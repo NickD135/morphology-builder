@@ -497,6 +497,7 @@
 <script src="wordlab-scientist.js"></script>
 <script src="wordlab-effects.js"></script>
 <script src="wordlab-audio.js"></script>
+<script src="wordlab-teacher.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════
 // WORD DATA
@@ -1138,6 +1139,7 @@ let usedWords        = new Set();
 let checked          = false;
 let attempts         = 0;
 let autoNextTimer    = null;
+var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
 
 // ═══════════════════════════════════════════════════════════════
 // SETUP UI
@@ -1201,7 +1203,11 @@ function startGame(){
   const soundLabel = selectedSound === 'all' ? typeLabel : (SOUND_GROUPS[selectedType === 'mixed' ? 'vowel' : selectedType] || [...SOUND_GROUPS.vowel,...SOUND_GROUPS.consonant]).find(g=>g.id===selectedSound)?.label || selectedSound;
   document.getElementById('soundBadge').textContent = soundLabel;
 
-  loadWord();
+  if(_wltActive){
+    WLTeacher.init({ game: 'sound-sorter' }).then(function(){ loadWord(); });
+  } else {
+    loadWord();
+  }
 }
 
 function getPool(){
@@ -1229,6 +1235,7 @@ function getPool(){
 
 function loadWord(){
   clearTimeout(autoNextTimer); autoNextTimer = null;
+  if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
   const pool = getPool();
   if(!pool.length){
     document.getElementById('wordRow').innerHTML = '<div style="color:var(--muted);font-weight:700;font-size:15px;">No words found for this selection. Try changing your settings.</div>';
@@ -1409,32 +1416,42 @@ function checkAnswer(grapheme){
     checked = true;
     zone.classList.add('correct');
 
-    const pts = 10 + (streak >= 3 ? 5 : 0) - (attempts - 1) * 3;
-    score += Math.max(pts, 2);
-    streak++;
-    correctCount++;
-    if(typeof WordLabData !== 'undefined' && WordLabData.getSession()){
+    if(!_wltActive){
+      const pts = 10 + (streak >= 3 ? 5 : 0) - (attempts - 1) * 3;
+      score += Math.max(pts, 2);
+      streak++;
+      correctCount++;
+    }
+    if(!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()){
       const _wlResult = WordLabData.recordAttempt('sound-sorter', currentWord.soundLabel, true, Date.now() - (window._questionStart||Date.now()));
       _ssTrack(currentWord, true);
       if(typeof WLScientist!=='undefined') WLScientist.react('correct',_wlResult);
     }
-    if(typeof WLAudio!=='undefined') WLAudio.correct();
-    if(streak >= 3 && typeof WLScientist!=='undefined') WLScientist.react('streak',{streak:streak});
-    if(streak >= 3 && typeof WLAudio!=='undefined') WLAudio.streak(streak);
-    if(streak > bestStreak) bestStreak = streak;
+    if(_wltActive && typeof WLScientist!=='undefined') WLScientist.react('correct');
+    if(!_wltActive && typeof WLAudio!=='undefined') WLAudio.correct();
+    if(!_wltActive && streak >= 3 && typeof WLScientist!=='undefined') WLScientist.react('streak',{streak:streak});
+    if(!_wltActive && streak >= 3 && typeof WLAudio!=='undefined') WLAudio.streak(streak);
+    if(!_wltActive && streak > bestStreak) bestStreak = streak;
+
+    var _explainExtra = currentWord.explain ? ' ' + currentWord.explain : '';
+    if(_wltActive){
+      var _tmFeedback = 'The /' + currentWord.soundLabel + '/ sound in \'' + currentWord.word + '\' is spelled \'' + currentWord.grapheme + '\'.' + _explainExtra;
+      WLTeacher.onAnswer(true, _tmFeedback);
+    }
 
     showFeedback('correct',
       `✅ ${currentWord.word} — the ${currentWord.soundLabel} sound is spelled "${currentWord.grapheme}"`,
       currentWord.explain
     );
 
-    updateStats();
+    if(!_wltActive) updateStats();
     addHistory(currentWord.word, currentWord.grapheme, true);
     document.getElementById('nextBtn').classList.add('visible');
     document.getElementById('tryAgainBtn').classList.remove('visible');
 
     window._questionStart = Date.now();
     speakWord();
+    if(_wltActive) return;
     var _ealdExtra=(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage())?1500:0;
     autoNextTimer = setTimeout(nextWord, 1500+_ealdExtra);
   } else {
@@ -1447,21 +1464,29 @@ function checkAnswer(grapheme){
       zoneText.textContent = '?';
     }, 600);
 
-    if(selectedLevel === 'starter' && attempts < 3){
+    if(!_wltActive && selectedLevel === 'starter' && attempts < 3){
       // On starter, let them try again
       showFeedback('wrong', `❌ Not quite — try again!`, '');
       document.getElementById('tryAgainBtn').classList.add('visible');
     } else {
       checked = true;
-      score = Math.max(score - 2, 0);
-      streak = 0;
-      wrongCount++;
-      if(typeof WordLabData !== 'undefined' && WordLabData.getSession()){
+      if(!_wltActive){
+        score = Math.max(score - 2, 0);
+        streak = 0;
+        wrongCount++;
+      }
+      if(!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()){
         WordLabData.recordAttempt('sound-sorter', currentWord.soundLabel, false, Date.now() - (window._questionStart||Date.now()));
         _ssTrack(currentWord, false);
       }
       if(typeof WLScientist!=='undefined') WLScientist.react('wrong');
-      if(typeof WLAudio!=='undefined') WLAudio.wrong();
+      if(!_wltActive && typeof WLAudio!=='undefined') WLAudio.wrong();
+
+      var _wrongExplain = currentWord.explain ? ' ' + currentWord.explain : '';
+      if(_wltActive){
+        var _tmWrongFeedback = 'Not \'' + grapheme + '\' — the correct grapheme for the /' + currentWord.soundLabel + '/ sound in \'' + currentWord.word + '\' is \'' + currentWord.grapheme + '\'.' + _wrongExplain;
+        WLTeacher.onAnswer(false, _tmWrongFeedback);
+      }
 
       showFeedback('wrong',
         `❌ The ${currentWord.soundLabel} sound in "${currentWord.word}" is spelled "${currentWord.grapheme}"`,
@@ -1478,15 +1503,16 @@ function checkAnswer(grapheme){
         if(t.dataset.grapheme === currentWord.grapheme) t.classList.add('correct-tile');
       });
 
-      updateStats();
+      if(!_wltActive) updateStats();
       addHistory(currentWord.word, currentWord.grapheme, false);
       document.getElementById('nextBtn').classList.add('visible');
       document.getElementById('tryAgainBtn').classList.remove('visible');
+      if(_wltActive) return;
       var _ealdExtra2=(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage())?1500:0;
       autoNextTimer = setTimeout(nextWord, 3000+_ealdExtra2);
     }
 
-    updateStats();
+    if(!_wltActive) updateStats();
   }
 }
 

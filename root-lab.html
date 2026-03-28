@@ -926,6 +926,7 @@
 <script src="wordlab-scientist.js"></script>
 <script src="wordlab-effects.js"></script>
 <script src="wordlab-audio.js"></script>
+<script src="wordlab-teacher.js"></script>
 <script>
 // ── Word data ─────────────────────────────────────────────────────────────────
 const WORDS = [
@@ -1202,6 +1203,8 @@ let selSuffix  = null;
 let selMeaning = null;
 let selCloze   = null;
 
+var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function shuffle(arr){
   const a = [...arr];
@@ -1249,6 +1252,7 @@ function startGame(){
 
 function loadWord(){
   clearTimeout(autoNextTimer); autoNextTimer = null;
+  if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
   const pool = getPool();
   if(!pool.length) return;
   const pick = pool[Math.floor(Math.random() * pool.length)];
@@ -1509,18 +1513,20 @@ function checkAnswer(){
   if(clozeOk && isChallenge && w.cloze) pts += 20;
   if(allCorrect) pts += 50;
 
-  if(allCorrect){
-    streak++;
-    if(streak > bestStreak) bestStreak = streak;
-    if(streak === 3){ pts += 15; showBonus('🔥 Streak x3! +15'); }
-    else if(streak === 5){ pts += 25; showBonus('⚡ Streak x5! +25'); }
-    else if(streak > 5 && streak % 5 === 0){ pts += 25; showBonus('🔥 Streak x' + streak + '! +25'); }
-    totalCorrect++;
-  } else {
-    streak = 0;
-    totalWrong++;
+  if(!_wltActive){
+    if(allCorrect){
+      streak++;
+      if(streak > bestStreak) bestStreak = streak;
+      if(streak === 3){ pts += 15; showBonus('🔥 Streak x3! +15'); }
+      else if(streak === 5){ pts += 25; showBonus('⚡ Streak x5! +25'); }
+      else if(streak > 5 && streak % 5 === 0){ pts += 25; showBonus('🔥 Streak x' + streak + '! +25'); }
+      totalCorrect++;
+    } else {
+      streak = 0;
+      totalWrong++;
+    }
+    score += pts;
   }
-  score += pts;
 
   // Zone card colours
   ['prefix','base','suffix'].forEach((z, i) => {
@@ -1558,16 +1564,37 @@ function checkAnswer(){
   const breakdown = buildBreakdown(w);
   const timeMs    = Date.now() - roundStartMs;
 
+  // Build rich teacher feedback
+  var _teacherFeedback = '';
+  if(_wltActive){
+    var _parts = [];
+    if(w.parts.prefix) _parts.push("prefix '<b>" + escHtml(w.parts.prefix) + "</b>' meaning '<b>" + escHtml(w.meanings.prefix) + "</b>'");
+    _parts.push("base '<b>" + escHtml(w.parts.base) + "</b>' meaning '<b>" + escHtml(w.meanings.base) + "</b>'");
+    if(w.parts.suffix) _parts.push("suffix '<b>" + escHtml(w.parts.suffix) + "</b>' meaning '<b>" + escHtml(w.meanings.suffix) + "</b>'");
+    _teacherFeedback = "The word '<b>" + escHtml(w.word) + "</b>' breaks down to: " + _parts.join(' + ') + ". Together it means '<b>" + escHtml(w.fullMeaning) + "</b>'.";
+    if(!allCorrect){
+      var _wrongParts = [];
+      if(!prefixOk)  _wrongParts.push('Prefix');
+      if(!baseOk)    _wrongParts.push('Base');
+      if(!suffixOk)  _wrongParts.push('Suffix');
+      if(!meaningOk) _wrongParts.push('Meaning');
+      if(!clozeOk && isChallenge && w.cloze) _wrongParts.push('Context sentence');
+      _teacherFeedback = '<b>Incorrect:</b> ' + _wrongParts.join(', ') + '.<br>' + _teacherFeedback;
+    }
+  }
+
   if(allCorrect){
     banner.className = 'feedbackBanner correct';
     banner.innerHTML = '✅ Excellent! +' + pts + ' pts &nbsp;·&nbsp; ' + breakdown;
-    const _wlResult = (typeof WordLabData !== 'undefined' && WordLabData.getSession())
-      ? WordLabData.recordAttempt('root-lab', levelLabel(currentLevel === 'mixed' ? w.level : currentLevel), true, timeMs)
-      : null;
-    if(typeof WLScientist !== 'undefined') WLScientist.react('correct', _wlResult);
-    if(streak >= 3 && typeof WLScientist !== 'undefined') WLScientist.react('streak',{streak:streak});
-    if(typeof WLAudio !== 'undefined') WLAudio.correct();
-    if(streak >= 3 && typeof WLAudio !== 'undefined') WLAudio.streak(streak);
+    if(!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()){
+      const _wlResult = WordLabData.recordAttempt('root-lab', levelLabel(currentLevel === 'mixed' ? w.level : currentLevel), true, timeMs);
+      if(typeof WLScientist !== 'undefined') WLScientist.react('correct', _wlResult);
+    }
+    if(_wltActive && typeof WLScientist !== 'undefined') WLScientist.react('correct');
+    if(!_wltActive && streak >= 3 && typeof WLScientist !== 'undefined') WLScientist.react('streak',{streak:streak});
+    if(!_wltActive && typeof WLAudio !== 'undefined') WLAudio.correct();
+    if(!_wltActive && streak >= 3 && typeof WLAudio !== 'undefined') WLAudio.streak(streak);
+    if(_wltActive) WLTeacher.onAnswer(true, _teacherFeedback);
   } else {
     const wrongNames = [];
     if(!prefixOk)  wrongNames.push('Prefix');
@@ -1577,13 +1604,14 @@ function checkAnswer(){
     if(!clozeOk && isChallenge && w.cloze) wrongNames.push('Context sentence');
     banner.className = 'feedbackBanner wrong';
     banner.innerHTML = '❌ ' + wrongNames.join(', ') + ' — see breakdown &nbsp;·&nbsp; ' + breakdown;
-    if(typeof WordLabData !== 'undefined' && WordLabData.getSession())
+    if(!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession())
       WordLabData.recordAttempt('root-lab', levelLabel(currentLevel === 'mixed' ? w.level : currentLevel), false, timeMs);
     if(typeof WLScientist !== 'undefined') WLScientist.react('wrong');
-    if(typeof WLAudio !== 'undefined') WLAudio.wrong();
+    if(!_wltActive && typeof WLAudio !== 'undefined') WLAudio.wrong();
+    if(_wltActive) WLTeacher.onAnswer(false, _teacherFeedback);
   }
 
-  updateStats();
+  if(!_wltActive) updateStats();
   addHistory(w.word, allCorrect, breakdown);
 
   // EALD
@@ -1606,6 +1634,7 @@ function checkAnswer(){
 
   document.getElementById('checkBtn').disabled = true;
   document.getElementById('nextBtn').classList.add('visible');
+  if(_wltActive) return; // Teacher mode: wait for Next click
   if(allCorrect) autoNextTimer = setTimeout(nextWord, 1500);
 }
 
@@ -1686,7 +1715,19 @@ window.addEventListener('DOMContentLoaded', function(){
     var hud = document.querySelector('.hud, .headerInner, header .innerHud');
     if(hud) hud.appendChild(extPill);
   }
-  updateStats();
+  if(_wltActive){
+    document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('gameScreen').classList.remove('hidden');
+    WLTeacher.init({game:'root-lab'}).then(function(){ loadWord(); });
+    // Create teacher Next button
+    var _nBtn=document.createElement('button');_nBtn.textContent='Next Word →';_nBtn.className='checkBtn';_nBtn.style.cssText='margin:12px auto;display:none;padding:10px 24px;font-size:15px;font-weight:800;cursor:pointer;';_nBtn.id='wltNextBtn';
+    var _anchor=document.querySelector('.actionRow');if(_anchor)_anchor.appendChild(_nBtn);
+    _nBtn.addEventListener('click',function(){_nBtn.style.display='none';loadWord();});
+    // Show Next button after check in teacher mode
+    setInterval(function(){if(checked&&_wltActive){var nb=document.getElementById('wltNextBtn');if(nb)nb.style.display='block';}},200);
+  } else {
+    updateStats();
+  }
 });
 </script>
 

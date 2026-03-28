@@ -618,6 +618,7 @@
 <script src="wordlab-scientist.js"></script>
 <script src="wordlab-effects.js"></script>
 <script src="wordlab-audio.js"></script>
+<script src="wordlab-teacher.js"></script>
 <script>
 // ── Word list ────────────────────────────────────────────────────────────────
 // Format: { word, syllables: ["syl","la","bles"] }
@@ -753,6 +754,9 @@ function _ssTrack(question, correct) {
   }
 }
 
+// ── Teacher mode flag ────────────────────────────────────────────────────────
+var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+
 // ── State ────────────────────────────────────────────────────────────────────
 let currentWord = null;
 let choppedGaps = new Set();
@@ -793,6 +797,7 @@ function getPool(){
 
 // ── Render word ───────────────────────────────────────────────────────────────
 function renderWord(){
+  if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
   clearTimeout(autoNextTimer); autoNextTimer = null;
   const pool = getPool();
   if(!pool || pool.length === 0) return;
@@ -935,31 +940,41 @@ function checkAnswer(){
   const correctSylls = currentWord.syllables.join(' · ');
 
   if(isCorrect){
-    const pts = 10 + (streak >= 3 ? 5 : 0);
-    score += pts;
-    streak++;
-    correct++;
-    if(streak > bestStreak) bestStreak = streak;
+    if(!_wltActive){
+      const pts = 10 + (streak >= 3 ? 5 : 0);
+      score += pts;
+      streak++;
+      correct++;
+      if(streak > bestStreak) bestStreak = streak;
+    }
 
     const _sylCat=(currentWord.syllables.length>=4?'4+':currentWord.syllables.length)+' syllables';
-    const _wlResult=typeof WordLabData!=='undefined'&&WordLabData.getSession()?WordLabData.recordAttempt('syllable-splitter',_sylCat,true,0):null;
-    _ssTrack(currentWord, true);
-    if(typeof WLScientist!=='undefined') WLScientist.react('correct',_wlResult);
-    if(typeof WLAudio!=='undefined') WLAudio.correct();
-    if(streak>=3&&typeof WLScientist!=='undefined') WLScientist.react('streak',{streak:streak});
-    if(streak>=3&&typeof WLAudio!=='undefined') WLAudio.streak(streak);
+    if(!_wltActive && typeof WordLabData!=='undefined'&&WordLabData.getSession()){var _wlResult=WordLabData.recordAttempt('syllable-splitter',_sylCat,true,0);if(typeof WLScientist!=='undefined') WLScientist.react('correct',_wlResult);}
+    if(!_wltActive) _ssTrack(currentWord, true);
+    if(_wltActive && typeof WLScientist!=='undefined') WLScientist.react('correct');
+    if(!_wltActive && typeof WLAudio!=='undefined') WLAudio.correct();
+    if(!_wltActive && streak>=3&&typeof WLScientist!=='undefined') WLScientist.react('streak',{streak:streak});
+    if(!_wltActive && streak>=3&&typeof WLAudio!=='undefined') WLAudio.streak(streak);
+    if(_wltActive){
+      // Enhanced green overlay: show syllable labels above word
+      _wltShowSyllableLabels();
+      WLTeacher.onAnswer(true,"Perfect! '<b>"+currentWord.word+"</b>' has "+currentWord.syllables.length+" syllables: <b>"+correctSylls+"</b>");
+    }
     banner.className = 'feedbackBanner correct';
-    banner.innerHTML = `✅ Perfect! <b>${currentWord.word}</b> = ${correctSylls}${streak >= 3 ? ` <span style="color:var(--orange-text)">🔥 +5 streak bonus!</span>` : ''}`;
+    banner.innerHTML = `✅ Perfect! <b>${currentWord.word}</b> = ${correctSylls}${!_wltActive && streak >= 3 ? ` <span style="color:var(--orange-text)">🔥 +5 streak bonus!</span>` : ''}`;
   } else {
-    score = Math.max(0, score - 2);
-    streak = 0;
-    wrong++;
-    if(typeof WordLabData!=='undefined'&&WordLabData.getSession()){const _sylCatW=(currentWord.syllables.length>=4?'4+':currentWord.syllables.length)+' syllables';WordLabData.recordAttempt('syllable-splitter',_sylCatW,false,0);_ssTrack(currentWord, false);}
+    if(!_wltActive){ score = Math.max(0, score - 2); streak = 0; } wrong++;
+    if(!_wltActive && typeof WordLabData!=='undefined'&&WordLabData.getSession()){const _sylCatW=(currentWord.syllables.length>=4?'4+':currentWord.syllables.length)+' syllables';WordLabData.recordAttempt('syllable-splitter',_sylCatW,false,0);_ssTrack(currentWord, false);}
     if(typeof WLScientist!=='undefined') WLScientist.react('wrong');
-    if(typeof WLAudio!=='undefined') WLAudio.wrong();
+    if(!_wltActive && typeof WLAudio!=='undefined') WLAudio.wrong();
 
     // Show correct breaks on word
     markCorrectBreaks(correct_breaks);
+    if(_wltActive){
+      // Enhanced green overlay: show syllable labels above word
+      _wltShowSyllableLabels();
+      WLTeacher.onAnswer(false,"The correct syllable split is: <b>"+correctSylls+"</b>. Green lines show correct breaks, red lines show incorrect breaks.");
+    }
 
     banner.className = 'feedbackBanner wrong';
     banner.innerHTML = `❌ Not quite. <b>${currentWord.word}</b> = ${correctSylls}<br><span style="font-size:12px;font-weight:700;opacity:.8;">Green lines show the correct splits. Click Reset to try again.</span>`;
@@ -969,7 +984,7 @@ function checkAnswer(){
   }
 
   banner.style.display = 'block';
-  updateStats();
+  if(!_wltActive) updateStats();
   addHistory(currentWord.word, correctSylls, isCorrect);
 
   // EALD reveal button
@@ -987,6 +1002,7 @@ function checkAnswer(){
 
   document.getElementById('nextBtn').classList.add('visible');
   document.getElementById('checkBtn').disabled = true;
+  if(_wltActive) return; // Teacher mode: wait for Next click
   var _ealdExtra=(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage())?1500:0;
   autoNextTimer = setTimeout(nextWord, (isCorrect ? 1400 : 3000)+_ealdExtra);
 }
@@ -1015,6 +1031,35 @@ function markCorrectBreaks(breaks){
       if(line) line.style.background = 'var(--bad)';
     }
   });
+}
+
+// ── Teacher mode: enhanced green overlay with syllable labels ────────────────
+function _wltShowSyllableLabels(){
+  if(!_wltActive || !currentWord) return;
+  var syllables = currentWord.syllables;
+  var container = document.getElementById('chopContainer');
+  var letterBlocks = container.querySelectorAll('.letterBlock');
+  // Group letterBlocks by syllable boundaries
+  var letterIdx = 0;
+  for(var si = 0; si < syllables.length; si++){
+    var sylLen = syllables[si].length;
+    var startIdx = letterIdx;
+    var endIdx = letterIdx + sylLen - 1;
+    // Find the middle letterBlock for positioning
+    var midIdx = Math.floor((startIdx + endIdx) / 2);
+    var midBlock = letterBlocks[midIdx];
+    if(midBlock){
+      midBlock.style.position = 'relative';
+      var label = document.createElement('div');
+      label.className = 'wlt-correct-label';
+      label.textContent = syllables[si];
+      midBlock.appendChild(label);
+      var arrow = document.createElement('div');
+      arrow.className = 'wlt-correct-bracket';
+      midBlock.appendChild(arrow);
+    }
+    letterIdx += sylLen;
+  }
 }
 
 function arraysEqual(a, b){
@@ -1061,11 +1106,18 @@ function addHistory(word, answer, isCorrect){
 function startGame(){
   document.getElementById('startScreen').classList.add('hidden');
   document.getElementById('gameScreen').classList.remove('hidden');
-  renderWord();
+  if(_wltActive){
+    WLTeacher.init({game:'syllable'}).then(function(){ renderWord(); });
+  } else {
+    renderWord();
+  }
 }
 
 document.getElementById('checkBtn').addEventListener('click', checkAnswer);
-document.getElementById('nextBtn').addEventListener('click', nextWord);
+document.getElementById('nextBtn').addEventListener('click', function(){
+  if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
+  nextWord();
+});
 </script>
 
 <script>

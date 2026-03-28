@@ -580,6 +580,8 @@
         summaryBox: document.getElementById("summaryBox")
       };
 
+      var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+
       function mkUid(type, id){ return `${type}:${id}`; }
 
       const ALL_PREFIXES = PREFIXES.map(p => ({ ...p, uid:mkUid("prefix", p.id) }));
@@ -772,13 +774,14 @@
       }
 
       function updateHud(){
-        els.timerPill.textContent = `Time: ${formatTime(state.timeLeft)}`;
-        els.scorePill.textContent = `Score: ${state.score}`;
+        if (!_wltActive) {
+          els.timerPill.textContent = `Time: ${formatTime(state.timeLeft)}`;
+          els.scorePill.textContent = `Score: ${state.score}`;
+        }
         els.basePill.textContent = `Base: ${state.current.base ? state.current.base.form : "none"}`;
-        els.summaryBox.innerHTML = `
-          <strong>Words found:</strong> ${state.foundWords.size}<br>
-          <strong>Best word:</strong> ${state.bestWord || "—"}
-        `;
+        els.summaryBox.innerHTML = _wltActive
+          ? `<strong>Words found:</strong> ${state.foundWords.size}<br><strong>Best word:</strong> ${state.bestWord || "—"}`
+          : `<strong>Words found:</strong> ${state.foundWords.size}<br><strong>Score:</strong> ${state.score}<br><strong>Best word:</strong> ${state.bestWord || "—"}`;
       }
 
       async function loadDictionary(){
@@ -993,7 +996,7 @@
           <div class="foundItem">
             <div class="foundWord">${entry.word}</div>
             <div class="foundMeta">
-              Score: ${entry.score}<br>
+              ${_wltActive ? '' : 'Score: ' + entry.score + '<br>'}
               ${entry.breakdown}
             </div>
           </div>
@@ -1117,14 +1120,17 @@
         }
 
         const points = scoreWord(word);
-        state.score += points;
+        if (!_wltActive) state.score += points;
         if (!state.bestWord || word.length > state.bestWord.length) state.bestWord = word;
 
-        if (typeof WordLabData !== 'undefined' && WordLabData.getSession()) {
+        if (!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()) {
           const _wlResult = WordLabData.recordAttempt('speed-mode', state.current.base.form, true, 0);
           Promise.resolve(_wlResult).then(r => {
             if (typeof WLScientist !== 'undefined') WLScientist.react('correct', r);
           });
+        }
+        if (_wltActive && typeof WLScientist !== 'undefined') {
+          WLScientist.react('correct', null);
         }
 
         const breakdown = [
@@ -1140,7 +1146,9 @@
           breakdown
         });
 
-        els.statusOut.textContent = `Scored ${points} point${points === 1 ? "" : "s"} for ${word}.`;
+        els.statusOut.textContent = _wltActive
+          ? `Found: ${word}`
+          : `Scored ${points} point${points === 1 ? "" : "s"} for ${word}.`;
         els.statusOut.className = "statusOut ok";
         // EALD: speak buttons + flip reveal
         var ealdSpeakEl=document.getElementById('ealdSpeakBtns');
@@ -1209,7 +1217,9 @@
 
         els.fixedBaseWord.textContent = chosenBase.form;
         els.fixedBaseMeaning.textContent = chosenBase.meaning || "No base meaning supplied in data.js.";
-        els.setupStatus.textContent = `Round started with base "${chosenBase.form}". Build as many real words as you can before time runs out.`;
+        els.setupStatus.textContent = _wltActive
+          ? `Round started with base "${chosenBase.form}". Explore word building — click End Round when finished.`
+          : `Round started with base "${chosenBase.form}". Build as many real words as you can before time runs out.`;
 
         renderZones();
         renderBanks();
@@ -1217,14 +1227,20 @@
         updateHud();
         updateOutput();
 
-        timerId = setInterval(() => {
-          state.timeLeft -= 1;
-          updateHud();
+        if (!_wltActive) {
+          timerId = setInterval(() => {
+            state.timeLeft -= 1;
+            updateHud();
 
-          if (state.timeLeft <= 0){
-            endRound();
-          }
-        }, 1000);
+            if (state.timeLeft <= 0){
+              endRound();
+            }
+          }, 1000);
+        } else {
+          // Show End Round button in teacher mode
+          var erb = document.getElementById('wltEndRoundBtn');
+          if (erb) erb.style.display = 'inline-flex';
+        }
       }
 
       function endRound(){
@@ -1232,19 +1248,29 @@
         if (!state.running) return;
         state.running = false;
 
+        // Hide End Round button when round ends
+        var endRoundTeacher = document.getElementById('wltEndRoundBtn');
+        if (endRoundTeacher) endRoundTeacher.style.display = 'none';
+
         const totalWords = state.foundWords.size;
-        els.setupStatus.textContent = `Round finished. You found ${totalWords} word${totalWords === 1 ? "" : "s"} and scored ${state.score} point${state.score === 1 ? "" : "s"}.`;
+        if (_wltActive) {
+          els.setupStatus.textContent = `Round finished. ${totalWords} word${totalWords === 1 ? "" : "s"} explored.`;
+        } else {
+          els.setupStatus.textContent = `Round finished. You found ${totalWords} word${totalWords === 1 ? "" : "s"} and scored ${state.score} point${state.score === 1 ? "" : "s"}.`;
+        }
 
         if (!totalWords){
           els.statusOut.textContent = "Round over. No words were submitted this time.";
           els.statusOut.className = "statusOut warn";
         } else {
-          els.statusOut.textContent = `Round over. Best word: ${state.bestWord || "—"}.`;
+          els.statusOut.textContent = _wltActive
+            ? `Round over. Best word: ${state.bestWord || "—"}.`
+            : `Round over. Best word: ${state.bestWord || "—"}.`;
           els.statusOut.className = "statusOut ok";
         }
 
         renderBanks();
-        showEndOverlay(totalWords, state.score, state.bestWord);
+        if (!_wltActive) showEndOverlay(totalWords, state.score, state.bestWord);
       }
 
       function showEndOverlay(words, score, bestWord) {
@@ -1306,6 +1332,31 @@
       renderFoundWords();
       updateOutput();
       loadDictionary();
+
+      // ── Teacher Mode init ──
+      if (_wltActive) {
+        // Hide timer select and difficulty buttons (not needed in untimed mode)
+        els.timerSelect.closest('.field').style.display = 'none';
+        var diffField = document.querySelector('.field:has(button[onclick^="setDifficulty"])');
+        if (diffField) diffField.style.display = 'none';
+
+        // Create End Round button in the HUD area
+        var endRoundBtn = document.createElement('button');
+        endRoundBtn.id = 'wltEndRoundBtn';
+        endRoundBtn.textContent = 'End Round';
+        endRoundBtn.style.cssText = 'display:none;border:none;background:#4338ca;color:#fff;font-family:Lexend,sans-serif;font-weight:900;font-size:14px;padding:12px 28px;border-radius:999px;cursor:pointer;text-transform:uppercase;letter-spacing:.1em;box-shadow:0 8px 20px rgba(67,56,202,.3);transition:all .15s;margin-left:8px;flex-shrink:0;';
+        endRoundBtn.addEventListener('mouseenter', function(){ this.style.background='#3730a3'; });
+        endRoundBtn.addEventListener('mouseleave', function(){ this.style.background='#4338ca'; });
+        endRoundBtn.addEventListener('click', endRound);
+        var hud = document.querySelector('.hud');
+        if (hud) hud.appendChild(endRoundBtn);
+
+        // Update setup status for teacher mode
+        els.setupStatus.textContent = 'Teacher Mode — choose a base and start. No timer, no scoring. Click End Round when finished.';
+
+        // Init teacher mode — skip word count picker (speed-mode uses End Round button instead)
+        WLTeacher.init({ game: 'speed', skipPicker: true });
+      }
     });
   </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1313,6 +1364,7 @@
 <script src="wordlab-scientist.js"></script>
 <script src="wordlab-effects.js"></script>
 <script src="wordlab-audio.js"></script>
+<script src="wordlab-teacher.js"></script>
 <script>
 (function(){var w=document.getElementById('particles');if(!w)return;var cs=['rgba(59,130,246,.3)','rgba(96,165,250,.25)','rgba(147,197,253,.2)'];for(var i=0;i<18;i++){var p=document.createElement('div');p.className='particle';p.style.cssText='left:'+(Math.random()*100)+'%;width:'+(6+Math.random()*8)+'px;height:'+(6+Math.random()*8)+'px;background:'+cs[Math.floor(Math.random()*cs.length)]+';animation-duration:'+(8+Math.random()*12)+'s;animation-delay:'+(-Math.random()*20)+'s;';w.appendChild(p);}})();
 (async function(){var w=document.getElementById('sciCharWrap');if(!w||typeof WLScientist==='undefined')return;var sd=typeof WordLabData!=='undefined'?await WordLabData.getStudentData():null;w.innerHTML=WLScientist.buildSVG(sd?sd.scientist:{},'neutral');})();
