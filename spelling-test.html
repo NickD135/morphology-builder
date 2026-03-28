@@ -287,22 +287,28 @@ function speakWord() {
   var word = getCurrentWord();
   if (!word) return;
 
-  // Speak slowly and clearly, then repeat after a pause
-  if ('speechSynthesis' in window) {
+  // Use cloud TTS first (high-quality Australian Neural2 voice), speak twice with pause
+  if (typeof WordLabData !== 'undefined' && WordLabData.speakInLanguage) {
+    WordLabData.speakInLanguage(word, 'en-AU');
+    // Repeat after a pause
+    setTimeout(function() {
+      WordLabData.speakInLanguage(word, 'en-AU');
+    }, 1800);
+  } else if ('speechSynthesis' in window) {
+    // Fallback: browser TTS with best Australian voice
     window.speechSynthesis.cancel();
     var utter1 = new SpeechSynthesisUtterance(word);
     utter1.lang = 'en-AU';
     utter1.rate = 0.7;
     utter1.pitch = 1.0;
 
-    // Pick a clear voice if available
     var voices = window.speechSynthesis.getVoices();
     var auVoice = voices.find(function(v) { return v.lang === 'en-AU' && v.name.indexOf('Google') !== -1; }) ||
+                  voices.find(function(v) { return v.lang === 'en-AU' && v.name.indexOf('Enhanced') !== -1; }) ||
                   voices.find(function(v) { return v.lang === 'en-AU'; }) ||
                   voices.find(function(v) { return v.lang.startsWith('en'); });
     if (auVoice) { utter1.voice = auVoice; }
 
-    // Speak once, then repeat after a pause
     var utter2 = new SpeechSynthesisUtterance(word);
     utter2.lang = utter1.lang;
     utter2.rate = 0.7;
@@ -316,8 +322,6 @@ function speakWord() {
     };
 
     window.speechSynthesis.speak(utter1);
-  } else if (typeof WordLabData !== 'undefined' && WordLabData.speakInLanguage) {
-    WordLabData.speakInLanguage(word, 'en-AU');
   }
 
   // Show replay button after first listen

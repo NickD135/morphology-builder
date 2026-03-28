@@ -1530,10 +1530,20 @@ document.getElementById('tryAgainBtn').addEventListener('click', tryAgain);
 // HELPERS
 // ═══════════════════════════════════════════════════════════════
 function speakWord(){
-  if(!currentWord || !('speechSynthesis' in window)) return;
+  if(!currentWord) return;
+  // Use cloud TTS via WordLabData if available (high-quality Australian voice)
+  if(typeof WordLabData !== 'undefined' && WordLabData.speakInLanguage){
+    WordLabData.speakInLanguage(currentWord.word, 'en-AU'); return;
+  }
+  if(!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
   const utt = new SpeechSynthesisUtterance(currentWord.word);
   utt.lang = 'en-AU'; utt.rate = 0.85;
+  var voices = window.speechSynthesis.getVoices();
+  var auVoice = voices.find(v => v.lang === 'en-AU' && v.name.indexOf('Google') !== -1) ||
+                voices.find(v => v.lang === 'en-AU' && v.name.indexOf('Enhanced') !== -1) ||
+                voices.find(v => v.lang === 'en-AU');
+  if(auVoice) utt.voice = auVoice;
   window.speechSynthesis.speak(utt);
 }
 

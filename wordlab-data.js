@@ -2214,6 +2214,15 @@ const WordLabData = (() => {
     var u = new SpeechSynthesisUtterance(text);
     u.lang = langCode || 'en-AU';
     u.rate = 0.85;
+    // Pick the best Australian voice available
+    var voices = window.speechSynthesis.getVoices();
+    if (voices.length && (!langCode || langCode === 'en-AU' || langCode === 'en')) {
+      var auVoice = voices.find(function(v){ return v.lang === 'en-AU' && v.name.indexOf('Google') !== -1; }) ||
+                    voices.find(function(v){ return v.lang === 'en-AU' && v.name.indexOf('Neural') !== -1; }) ||
+                    voices.find(function(v){ return v.lang === 'en-AU' && v.name.indexOf('Enhanced') !== -1; }) ||
+                    voices.find(function(v){ return v.lang === 'en-AU'; });
+      if (auVoice) u.voice = auVoice;
+    }
     window.speechSynthesis.speak(u);
   }
 
