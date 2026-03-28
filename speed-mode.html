@@ -215,6 +215,24 @@
     button,input[type="text"]{min-height:44px;font-size:14px!important;}
     .startBtn,.morphBtn{padding:14px 20px!important;min-height:44px;}
   }
+  /* ── End-of-round overlay ── */
+  .speed-end-overlay{position:fixed;inset:0;z-index:200;background:rgba(4,8,20,.85);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;animation:endFadeIn .4s ease;}
+  @keyframes endFadeIn{from{opacity:0}to{opacity:1}}
+  .speed-end-card{background:linear-gradient(135deg,#0f172a,#1e3a5f);border:3px solid rgba(96,165,250,.4);border-radius:28px;padding:36px 40px;max-width:440px;width:90%;text-align:center;font-family:'Lexend',sans-serif;box-shadow:0 30px 80px rgba(0,0,0,.5);animation:endCardPop .5s cubic-bezier(.17,.67,.35,1.15);}
+  @keyframes endCardPop{from{opacity:0;transform:scale(.85) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+  .speed-end-icon{font-size:56px;margin-bottom:8px;}
+  .speed-end-title{font-size:24px;font-weight:900;color:#e0e7ff;margin-bottom:4px;}
+  .speed-end-sub{font-size:13px;font-weight:600;color:#93c5fd;margin-bottom:20px;}
+  .speed-end-stats{display:flex;justify-content:center;gap:16px;margin-bottom:24px;}
+  .speed-end-stat{background:rgba(59,130,246,.12);border:1.5px solid rgba(96,165,250,.25);border-radius:14px;padding:12px 16px;min-width:80px;}
+  .speed-end-stat-val{font-size:28px;font-weight:900;color:#60a5fa;}
+  .speed-end-stat-label{font-size:10px;font-weight:800;color:#93c5fd;text-transform:uppercase;letter-spacing:.08em;margin-top:2px;}
+  .speed-end-best{font-size:13px;font-weight:700;color:#94a3b8;margin-bottom:20px;}
+  .speed-end-best strong{color:#60a5fa;}
+  .speed-end-btn{border:none;border-radius:14px;padding:14px 28px;font-size:15px;font-weight:900;font-family:'Lexend',sans-serif;cursor:pointer;transition:transform .15s;}
+  .speed-end-btn:hover{transform:scale(1.04);}
+  .speed-end-btn.primary{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;margin-right:8px;}
+  .speed-end-btn.secondary{background:rgba(96,165,250,.15);color:#93c5fd;border:1.5px solid rgba(96,165,250,.3);}
   .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;}
   .tile:focus{outline:3px solid #4338ca;outline-offset:2px;}
   .dropzone:focus{outline:3px solid #4338ca;outline-offset:2px;}
@@ -1226,6 +1244,35 @@
         }
 
         renderBanks();
+        showEndOverlay(totalWords, state.score, state.bestWord);
+      }
+
+      function showEndOverlay(words, score, bestWord) {
+        var old = document.getElementById('speedEndOverlay');
+        if (old) old.remove();
+
+        var icon = score === 0 ? '🔬' : score >= 100 ? '🏆' : score >= 50 ? '⭐' : '⚡';
+        var title = score === 0 ? 'Round Over' : score >= 100 ? 'Outstanding!' : score >= 50 ? 'Great Job!' : 'Round Complete!';
+
+        var overlay = document.createElement('div');
+        overlay.id = 'speedEndOverlay';
+        overlay.className = 'speed-end-overlay';
+        overlay.innerHTML =
+          '<div class="speed-end-card">' +
+            '<div class="speed-end-icon">' + icon + '</div>' +
+            '<div class="speed-end-title">' + title + '</div>' +
+            '<div class="speed-end-sub">Time\'s up — here\'s how you did</div>' +
+            '<div class="speed-end-stats">' +
+              '<div class="speed-end-stat"><div class="speed-end-stat-val">' + score + '</div><div class="speed-end-stat-label">Points</div></div>' +
+              '<div class="speed-end-stat"><div class="speed-end-stat-val">' + words + '</div><div class="speed-end-stat-label">Words</div></div>' +
+            '</div>' +
+            (bestWord ? '<div class="speed-end-best">Longest word: <strong>' + (typeof WordLabData !== 'undefined' ? WordLabData.escapeHtml(bestWord) : bestWord) + '</strong></div>' : '') +
+            '<div>' +
+              '<button class="speed-end-btn primary" onclick="document.getElementById(\'speedEndOverlay\').remove();">Play Again</button>' +
+              '<a href="landing.html" class="speed-end-btn secondary">Home</a>' +
+            '</div>' +
+          '</div>';
+        document.body.appendChild(overlay);
       }
 
       function populateBaseDropdown(){
