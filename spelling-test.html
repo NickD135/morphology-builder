@@ -32,16 +32,11 @@
   .inputWrap{margin-bottom:16px;}
   .wordInput{width:100%;border:2.5px solid var(--line);border-radius:14px;padding:14px 18px;font-size:20px;font-weight:800;text-align:center;font-family:'Lexend',sans-serif;letter-spacing:.05em;outline:none;transition:border-color .15s;}
   .wordInput:focus{border-color:var(--indigo2);}
-  .wordInput.correct{border-color:var(--ok);background:#f0fdf4;}
-  .wordInput.wrong{border-color:var(--bad);background:#fef2f2;}
+  .wordInput.submitted{border-color:var(--indigo2);background:var(--indigo-soft);}
   .submitBtn{background:var(--indigo);color:#fff;border:none;border-radius:12px;padding:12px 32px;font-size:14px;font-weight:900;cursor:pointer;font-family:'Lexend',sans-serif;transition:all .15s;}
   .submitBtn:hover{background:#3730a3;}
   .submitBtn:disabled{opacity:.5;cursor:default;}
   .feedback{margin-top:14px;font-size:13px;font-weight:700;min-height:20px;}
-  .feedback.ok{color:var(--ok);}
-  .feedback.bad{color:var(--bad);}
-  .correction{background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;padding:10px 16px;margin-top:10px;font-size:13px;font-weight:700;color:#dc2626;}
-  .correction strong{color:#991b1b;}
   .nextBtn{background:var(--indigo2);color:#fff;border:none;border-radius:10px;padding:10px 24px;font-size:13px;font-weight:800;cursor:pointer;font-family:'Lexend',sans-serif;margin-top:12px;}
   .results{text-align:left;}
   .resultRow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);}
@@ -51,6 +46,10 @@
   .scoreCard{background:var(--indigo-soft);border:2px solid var(--indigo2);border-radius:16px;padding:20px;margin-bottom:20px;text-align:center;}
   .scoreNum{font-size:42px;font-weight:900;color:var(--indigo);}
   .scoreLbl{font-size:12px;font-weight:700;color:var(--muted);}
+  .waitingCard{background:#fef3c7;border:2px solid #fcd34d;border-radius:16px;padding:20px;margin-bottom:20px;text-align:center;}
+  .waitingCard .icon{font-size:36px;margin-bottom:8px;}
+  .waitingCard .msg{font-size:14px;font-weight:800;color:#92400e;}
+  .waitingCard .sub{font-size:11px;font-weight:600;color:#b45309;margin-top:4px;}
   .doneBtn{background:var(--indigo);color:#fff;border:none;border-radius:12px;padding:12px 32px;font-size:14px;font-weight:900;cursor:pointer;font-family:'Lexend',sans-serif;width:100%;}
   .hidden{display:none!important;}
   @media(max-width:480px){.card{padding:20px;}.wordNum{font-size:36px;}.wordInput{font-size:16px;}}
@@ -81,6 +80,14 @@
     <a href="landing.html" class="submitBtn" style="display:inline-block;text-decoration:none;margin-top:16px;">← Back to activities</a>
   </div>
 
+  <!-- Already completed -->
+  <div class="card hidden" id="doneAlreadyCard">
+    <div style="font-size:36px;margin-bottom:12px;">✅</div>
+    <div class="testTitle">Check-In Complete</div>
+    <div class="testSub">You've already completed this spelling check-in. Your teacher will share results with you soon.</div>
+    <a href="landing.html" class="submitBtn" style="display:inline-block;text-decoration:none;margin-top:16px;">← Back to activities</a>
+  </div>
+
   <!-- Test in progress -->
   <div class="card hidden" id="testCard">
     <div class="testTitle" id="testSetName">Spelling Check-In</div>
@@ -98,15 +105,26 @@
     <div class="inputWrap">
       <input type="text" class="wordInput" id="wordInput" placeholder="Type the word..." autocomplete="off" autocapitalize="off" spellcheck="false">
     </div>
-    <button class="submitBtn" id="submitBtn" onclick="checkWord()">Check</button>
+    <button class="submitBtn" id="submitBtn" onclick="checkWord()">Submit</button>
     <div class="feedback" id="feedback"></div>
-    <div id="correctionWrap"></div>
     <button class="nextBtn hidden" id="nextBtn" onclick="nextWord()">Next word →</button>
   </div>
 
-  <!-- Results -->
-  <div class="card hidden" id="resultsCard">
+  <!-- Waiting for teacher to release results -->
+  <div class="card hidden" id="waitingCard">
     <div class="testTitle">Check-In Complete!</div>
+    <div class="testSub" id="waitingSetName"></div>
+    <div class="waitingCard">
+      <div class="icon">⏳</div>
+      <div class="msg">Your answers have been submitted</div>
+      <div class="sub">Your teacher will share the results with you soon</div>
+    </div>
+    <a href="landing.html" class="doneBtn" style="display:inline-block;text-decoration:none;">← Back to activities</a>
+  </div>
+
+  <!-- Results (shown after teacher stops check-in) -->
+  <div class="card hidden" id="resultsCard">
+    <div class="testTitle">Check-In Results</div>
     <div class="testSub" id="resultsSetName"></div>
     <div class="scoreCard">
       <div class="scoreNum" id="scoreNum">0/0</div>
@@ -122,22 +140,38 @@
 <script src="wordlab-scientist.js"></script>
 <script src="wordlab-audio.js"></script>
 <script>
-var testWords = [];   // Array of { word, clue, ... } objects
+var testWords = [];
 var currentIndex = 0;
 var results = [];
 var currentSetId = null;
 var currentSetName = '';
+var _checkInComplete = false;
 
 function getCurrentWord() {
   var w = testWords[currentIndex];
   if (!w) return '';
-  return typeof w === 'string' ? w : (w.word || w);
+  return typeof w === 'string' ? w : (w.word || '');
 }
-
 function getCurrentClue() {
   var w = testWords[currentIndex];
   if (!w || typeof w === 'string') return '';
   return w.clue || '';
+}
+
+// Check if this student already completed this check-in
+function getCompletionKey(setId) {
+  var session = WordLabData.getSession ? WordLabData.getSession() : null;
+  if (!session) return null;
+  return 'wl_checkin_done_' + setId + '_' + (session.studentId || '');
+}
+function hasCompletedCheckIn(setId) {
+  var key = getCompletionKey(setId);
+  if (!key) return false;
+  return sessionStorage.getItem(key) === 'true';
+}
+function markCheckInComplete(setId) {
+  var key = getCompletionKey(setId);
+  if (key) sessionStorage.setItem(key, 'true');
 }
 
 async function init() {
@@ -152,7 +186,7 @@ async function init() {
     var ssWords = await WordLabData.getSpellingSetWords();
     if (!ssWords.length) { showNoTest(); return; }
 
-    // Find the set that has an active assessment (or scheduled and due)
+    // Find the set that has an active assessment
     var sb = WordLabData._sb();
     var setIds = [];
     ssWords.forEach(function(w) { if (w._spellingSetId && setIds.indexOf(w._spellingSetId) === -1) setIds.push(w._spellingSetId); });
@@ -179,6 +213,12 @@ async function init() {
     currentSetId = activeSet.id;
     currentSetName = activeSet.name || 'Spelling Check-In';
 
+    // Check if already completed this check-in
+    if (hasCompletedCheckIn(currentSetId)) {
+      showDoneAlready();
+      return;
+    }
+
     // Keep full word objects (for clue access)
     testWords = ssWords.filter(function(w) { return w._spellingSetId === currentSetId; });
     testWords.sort(function() { return Math.random() - 0.5; });
@@ -200,6 +240,11 @@ function showNoTest() {
   document.getElementById('noTestCard').classList.remove('hidden');
 }
 
+function showDoneAlready() {
+  document.getElementById('loadingCard').classList.add('hidden');
+  document.getElementById('doneAlreadyCard').classList.remove('hidden');
+}
+
 function showTest() {
   document.getElementById('loadingCard').classList.add('hidden');
   document.getElementById('testCard').classList.remove('hidden');
@@ -219,7 +264,6 @@ function updateProgress() {
   document.getElementById('wordInput').disabled = false;
   document.getElementById('feedback').textContent = '';
   document.getElementById('feedback').className = 'feedback';
-  document.getElementById('correctionWrap').innerHTML = '';
   document.getElementById('submitBtn').classList.remove('hidden');
   document.getElementById('nextBtn').classList.add('hidden');
   document.getElementById('listenBtn').classList.remove('hidden');
@@ -243,16 +287,37 @@ function speakWord() {
   var word = getCurrentWord();
   if (!word) return;
 
-  // Use Google Cloud TTS via speak-word edge function for clear audio
-  if (typeof WordLabData !== 'undefined' && WordLabData.speakInLanguage) {
-    WordLabData.speakInLanguage(word, 'en-AU');
-  } else if ('speechSynthesis' in window) {
-    // Fallback to browser TTS
+  // Speak slowly and clearly, then repeat after a pause
+  if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
-    var utter = new SpeechSynthesisUtterance(word);
-    utter.lang = 'en-AU';
-    utter.rate = 0.85;
-    window.speechSynthesis.speak(utter);
+    var utter1 = new SpeechSynthesisUtterance(word);
+    utter1.lang = 'en-AU';
+    utter1.rate = 0.7;
+    utter1.pitch = 1.0;
+
+    // Pick a clear voice if available
+    var voices = window.speechSynthesis.getVoices();
+    var auVoice = voices.find(function(v) { return v.lang === 'en-AU' && v.name.indexOf('Google') !== -1; }) ||
+                  voices.find(function(v) { return v.lang === 'en-AU'; }) ||
+                  voices.find(function(v) { return v.lang.startsWith('en'); });
+    if (auVoice) { utter1.voice = auVoice; }
+
+    // Speak once, then repeat after a pause
+    var utter2 = new SpeechSynthesisUtterance(word);
+    utter2.lang = utter1.lang;
+    utter2.rate = 0.7;
+    utter2.pitch = 1.0;
+    if (auVoice) { utter2.voice = auVoice; }
+
+    utter1.onend = function() {
+      setTimeout(function() {
+        window.speechSynthesis.speak(utter2);
+      }, 800);
+    };
+
+    window.speechSynthesis.speak(utter1);
+  } else if (typeof WordLabData !== 'undefined' && WordLabData.speakInLanguage) {
+    WordLabData.speakInLanguage(word, 'en-AU');
   }
 
   // Show replay button after first listen
@@ -271,64 +336,97 @@ function checkWord() {
   var isCorrect = typed === correct;
   results.push({ word: correct, typed: typed, correct: isCorrect });
 
+  // No correct/wrong feedback — just confirm submission
   input.disabled = true;
+  input.className = 'wordInput submitted';
   document.getElementById('submitBtn').classList.add('hidden');
-  document.getElementById('nextBtn').classList.remove('hidden');
-
-  if (isCorrect) {
-    input.className = 'wordInput correct';
-    document.getElementById('feedback').textContent = '✅ Correct!';
-    document.getElementById('feedback').className = 'feedback ok';
-    if (typeof WLAudio !== 'undefined') WLAudio.correct();
-    if (typeof WLScientist !== 'undefined') WLScientist.react('correct', { quarksEarned: 0 });
-  } else {
-    input.className = 'wordInput wrong';
-    document.getElementById('feedback').textContent = '❌ Not quite';
-    document.getElementById('feedback').className = 'feedback bad';
-    document.getElementById('correctionWrap').innerHTML = '<div class="correction">The correct spelling is: <strong>' + correct + '</strong></div>';
-    if (typeof WLAudio !== 'undefined') WLAudio.wrong();
-    if (typeof WLScientist !== 'undefined') WLScientist.react('wrong');
-  }
+  document.getElementById('feedback').textContent = '✓ Answer submitted';
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('feedback').style.color = 'var(--indigo)';
 
   // Record to spelling set heatmap
   if (currentSetId && typeof WordLabData !== 'undefined' && WordLabData.recordSpellingAttempt) {
     WordLabData.recordSpellingAttempt(currentSetId, correct, isCorrect, 0);
   }
 
-  // Auto-advance after correct
-  if (isCorrect && currentIndex < testWords.length - 1) {
-    setTimeout(nextWord, 1200);
+  // Auto-advance after brief pause
+  if (currentIndex < testWords.length - 1) {
+    setTimeout(nextWord, 800);
+  } else {
+    document.getElementById('nextBtn').classList.remove('hidden');
+    document.getElementById('nextBtn').textContent = 'Finish →';
   }
 }
 
 function nextWord() {
   currentIndex++;
   if (currentIndex >= testWords.length) {
-    showResults();
+    finishCheckIn();
     return;
   }
   updateProgress();
 }
 
-function showResults() {
-  document.getElementById('testCard').classList.add('hidden');
-  document.getElementById('resultsCard').classList.remove('hidden');
+function finishCheckIn() {
+  // Mark as completed so student won't be prompted again
+  markCheckInComplete(currentSetId);
+  _checkInComplete = true;
 
   var correctCount = results.filter(function(r) { return r.correct; }).length;
+
+  // Save session for pre/post comparison
+  saveCheckInSession(correctCount, results.length);
+
+  // Show waiting screen — results hidden until teacher stops check-in
+  document.getElementById('testCard').classList.add('hidden');
+  document.getElementById('waitingCard').classList.remove('hidden');
+  document.getElementById('waitingSetName').textContent = currentSetName;
+
+  // Poll to check if teacher has stopped the check-in (every 10s)
+  pollForResults(correctCount);
+}
+
+async function pollForResults(correctCount) {
+  try {
+    var sb = WordLabData._sb();
+    var { data } = await sb.from('class_spelling_sets')
+      .select('assessment_active')
+      .eq('id', currentSetId)
+      .single();
+
+    if (data && !data.assessment_active) {
+      // Teacher stopped the check-in — show results
+      showFullResults(correctCount);
+      return;
+    }
+  } catch(e) { /* ignore polling errors */ }
+
+  // Keep polling
+  setTimeout(function() { pollForResults(correctCount); }, 10000);
+}
+
+function showFullResults(correctCount) {
+  document.getElementById('waitingCard').classList.add('hidden');
+  document.getElementById('resultsCard').classList.remove('hidden');
+
   document.getElementById('scoreNum').textContent = correctCount + '/' + results.length;
   document.getElementById('resultsSetName').textContent = currentSetName;
 
   var html = results.map(function(r) {
-    return '<div class="resultRow">' +
-      '<div class="resultIcon">' + (r.correct ? '✅' : '❌') + '</div>' +
-      '<div class="resultWord">' + r.word + '</div>' +
-      (r.correct ? '' : '<div class="resultTyped">wrote: ' + r.typed + '</div>') +
-      '</div>';
+    if (r.correct) {
+      return '<div class="resultRow">' +
+        '<div class="resultIcon">✅</div>' +
+        '<div class="resultWord">' + r.word + '</div>' +
+        '</div>';
+    } else {
+      return '<div class="resultRow">' +
+        '<div class="resultIcon">❌</div>' +
+        '<div class="resultWord" style="color:var(--ok);">' + r.word + '</div>' +
+        '<div class="resultTyped">you wrote: <span style="text-decoration:line-through;">' + r.typed + '</span></div>' +
+        '</div>';
+    }
   }).join('');
   document.getElementById('resultsList').innerHTML = html;
-
-  // Save complete check-in session for pre/post comparison
-  saveCheckInSession(correctCount, results.length);
 }
 
 async function saveCheckInSession(score, total) {
@@ -336,10 +434,7 @@ async function saveCheckInSession(score, total) {
   try {
     var session = WordLabData.loadSession ? WordLabData.loadSession() : null;
     if (!session || !session.studentId) return;
-    var sb = window.supabase.createClient(
-      'https://kdpavfrzmmzknqfpodrl.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkcGF2ZnJ6bW16a25xZnBvZHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjgzOTIsImV4cCI6MjA5MDAwNDM5Mn0.n5fe7HvXWMsM4xN_iaU_N4xLkC5xD4y9Uoer_DG-dlg'
-    );
+    var sb = WordLabData._sb();
     await sb.from('spelling_check_in_results').insert({
       spelling_set_id: currentSetId,
       student_id: session.studentId,
