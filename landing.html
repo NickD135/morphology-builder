@@ -843,7 +843,6 @@
     }
     .bonus-pill-icon { font-size:14px; flex-shrink:0; }
     .bonus-pill--gotw   { background:#fef9c3; border-color:#f59e0b; color:#92400e; }
-    .bonus-pill--focus  { background:#ede9fe; border-color:#7c3aed; color:#5b21b6; }
     .bonus-pill--day    { background:#fee2e2; border-color:#ef4444; color:#991b1b; }
     .bonus-pill--variety{ background:#d1fae5; border-color:#10b981; color:#065f46; }
 
@@ -1939,8 +1938,8 @@ async function initStudentLayout(session) {
     try { renderDailyChallenges(); } catch(e) { console.warn('challenges render error', e); }
 
     // ── Game of the Week + Try Something New nudges ──
-    // Load focus game setting (caches for 5 min)
-    try { await WordLabData.loadFocusGame(); } catch(e) {}
+    // Load featured game (teacher focus or auto-pick, caches for 5 min)
+    try { await WordLabData.loadFeaturedGame(); } catch(e) {}
 
     try { renderGameNudges(sd); } catch(e) { console.warn('nudge render error', e); }
 
@@ -1999,33 +1998,20 @@ function renderGameNudges(sd) {
   var pills = [];
   var playGrids = document.querySelectorAll('#layoutStudent .play-hub-container');
 
-  // Game of the Week
-  var gotwInfo = WordLabData.getGameOfTheWeekInfo();
-  if (gotwInfo) {
-    pills.push('<span class="bonus-pill bonus-pill--gotw"><span class="bonus-pill-icon">⭐</span>2x ' + WordLabData.escapeHtml(gotwInfo.name) + ' this week</span>');
-    var gotwHref = keyToHref[gotwInfo.key];
-    if (gotwHref) {
-      document.querySelectorAll('#layoutStudent .act-card[href="' + gotwHref + '"]').forEach(function(card) {
-        var badge = document.createElement('div'); badge.className = 'gotw-badge'; badge.textContent = '2x'; card.appendChild(badge);
-      });
-    }
-  }
+  // Featured Game (teacher focus OR auto-picked)
+  var featured = WordLabData.getFeaturedGame();
+  if (featured) {
+    var featHref = keyToHref[featured.key];
+    var pillLabel = featured.source === 'teacher'
+      ? '🎯 2x ' + WordLabData.escapeHtml(featured.name) + ' (teacher pick)'
+      : '⭐ 2x ' + WordLabData.escapeHtml(featured.name);
+    pills.push('<span class="bonus-pill bonus-pill--gotw"><span class="bonus-pill-icon">' + (featured.source === 'teacher' ? '🎯' : '⭐') + '</span>' + pillLabel + '</span>');
 
-  // Teacher Focus Game
-  var focusGame = WordLabData.getFocusGame();
-  if (focusGame) {
-    var focusHref = keyToHref[focusGame];
-    var focusInfo = null;
-    WordLabData.CHALLENGE_GAMES.forEach(function(g) { if (g.key === focusGame) focusInfo = g; });
-    if (focusInfo) {
-      pills.push('<span class="bonus-pill bonus-pill--focus"><span class="bonus-pill-icon">🎯</span>+50% ' + WordLabData.escapeHtml(focusInfo.name) + '</span>');
-    }
-    if (focusHref) {
-      document.querySelectorAll('#layoutStudent .act-card[href="' + focusHref + '"]').forEach(function(card) {
+    // Gold glow + badge on matching cards
+    if (featHref) {
+      document.querySelectorAll('#layoutStudent .act-card[href="' + featHref + '"]').forEach(function(card) {
         card.classList.add('focus-glow');
-        var badge = document.createElement('div');
-        badge.style.cssText = 'position:absolute;top:6px;left:6px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-size:8px;font-weight:900;padding:2px 6px;border-radius:5px;text-transform:uppercase;z-index:2;line-height:1.2;';
-        badge.textContent = '🎯 FOCUS'; card.appendChild(badge);
+        var badge = document.createElement('div'); badge.className = 'gotw-badge'; badge.textContent = '2x'; card.appendChild(badge);
       });
     }
   }

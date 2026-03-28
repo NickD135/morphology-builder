@@ -589,7 +589,7 @@ const WordLabData = (() => {
     if (!char.stats.activitiesPlayed.includes(activity)) char.stats.activitiesPlayed.push(activity);
 
     let quarksEarned = 0, xpEarned = 0;
-    var varietyBonus = 0, varietyXpBonus = 0, gotwBonus = false, focusBonus = false, dayBonus = false;
+    var varietyBonus = 0, varietyXpBonus = 0, featuredBonus = false, dayBonus = false;
     if (correct) {
       quarksEarned = 2;
       if (streak >= 10) quarksEarned += 25;
@@ -610,23 +610,16 @@ const WordLabData = (() => {
         }
       } catch(e) {}
 
-      // ── Teacher Focus Game: +50% quarks & XP ──
+      // ── Featured Game: 2× quarks & XP ──
+      // Teacher focus overrides auto-pick; both give the same 2x bonus
       try {
-        var focusGame = getFocusGame();
-        if (focusGame && activity === focusGame) {
-          quarksEarned = Math.round(quarksEarned * 1.5);
-          xpEarned = Math.round(xpEarned * 1.5);
-          focusBonus = true;
+        var featured = getFeaturedGame();
+        if (featured && activity === featured.key) {
+          quarksEarned = quarksEarned * 2;
+          xpEarned = xpEarned * 2;
+          featuredBonus = true;
         }
       } catch(e) {}
-
-      // ── Game of the Week: 2× quarks & XP ──
-      var gotwKey = getGameOfTheWeek();
-      if (gotwKey && activity === gotwKey) {
-        quarksEarned = quarksEarned * 2;
-        xpEarned = xpEarned * 2;
-        gotwBonus = true;
-      }
 
       // ── Bonus day: weekends & Wednesdays ──
       var dayMult = getBonusDayMultiplier();
@@ -661,14 +654,14 @@ const WordLabData = (() => {
     if (varietyBonus > 0) {
       try { _showBonusToast('🧭', 'Variety Bonus!', 'Playing a new game today', '+' + varietyBonus + ' quarks · +' + varietyXpBonus + ' XP', '#059669', '#d1fae5'); } catch(e) {}
     }
-    // Show GOTW toast (only on first correct answer)
-    if (gotwBonus && streak <= 1) {
-      var gotwName = (getGameOfTheWeekInfo() || {}).name || 'this game';
-      try { _showBonusToast('⭐', 'Game of the Week!', gotwName + ' — 2x rewards', 'Double quarks & XP all week', '#d97706', '#fef3c7'); } catch(e) {}
-    }
-    // Show focus game toast (only on first correct answer)
-    if (focusBonus && streak <= 1) {
-      try { _showBonusToast('🎯', 'Teacher Focus!', 'Your teacher boosted this game', '+50% quarks & XP', '#7c3aed', '#ede9fe'); } catch(e) {}
+    // Show featured game toast (only on first correct answer)
+    if (featuredBonus && streak <= 1) {
+      try {
+        var feat = getFeaturedGame();
+        var featLabel = feat && feat.source === 'teacher' ? 'Teacher Focus — 2x Rewards!' : 'Featured Game — 2x Rewards!';
+        var featSub = feat && feat.source === 'teacher' ? 'Your teacher boosted this game' : 'This game was picked for you';
+        _showBonusToast('⭐', featLabel, featSub, 'Double quarks & XP', '#d97706', '#fef3c7');
+      } catch(e) {}
     }
     // Show bonus day toast (only on first correct answer of the session)
     if (dayBonus && streak <= 1 && char.stats.totalCorrect <= 1) {
@@ -676,7 +669,7 @@ const WordLabData = (() => {
       try { _showBonusToast('🎉', dayLabel + ' Bonus!', '2x XP & 1.5x quarks today', 'Play more to earn extra rewards!', '#dc2626', '#fee2e2'); } catch(e) {}
     }
 
-    return { quarks: char.quarks, xp: char.xp, quarksEarned, xpEarned, varietyBonus, gotwBonus, focusBonus, dayBonus, newBadges, level: getLevel(char.xp), challengeResult };
+    return { quarks: char.quarks, xp: char.xp, quarksEarned, xpEarned, varietyBonus, featuredBonus, dayBonus, newBadges, level: getLevel(char.xp), challengeResult };
   }
 
   // ── Student data ──────────────────────────────────────────────
@@ -1315,39 +1308,101 @@ const WordLabData = (() => {
     { key: 'word-spectrum',     name: 'Word Spectrum',    icon: '🌈' },
   ];
 
-  // ── Game of the Week ──────────────────────────────────────────
-  // Deterministic weekly rotation — all students see the same featured game
-  function getGameOfTheWeek() {
-    var d = new Date();
-    var day = d.getDay();
-    var monday = new Date(d);
-    monday.setDate(d.getDate() - ((day + 6) % 7));
-    // Week number since epoch — deterministic rotation
-    var weekNum = Math.floor(monday.getTime() / (7 * 24 * 60 * 60 * 1000));
-    var idx = weekNum % CHALLENGE_GAMES.length;
-    return CHALLENGE_GAMES[idx].key;
-  }
+  // ── Featured Game system ────────────────────────────────────
+  // Teacher focus overrides auto-pick. Auto-pick chooses the game
+  // the student has played least or has lowest accuracy in.
+  // Both give the same 2x reward and gold glow.
 
-  function getGameOfTheWeekInfo() {
-    var key = getGameOfTheWeek();
+  function _findGameInfo(key) {
     for (var i = 0; i < CHALLENGE_GAMES.length; i++) {
       if (CHALLENGE_GAMES[i].key === key) return CHALLENGE_GAMES[i];
     }
     return null;
   }
 
-  // ── Least-played games for a student ──────────────────────────
+  // Synchronous — reads from cache set by loadFeaturedGame()
+  function getFeaturedGame() {
+    var session = loadSession();
+    if (!session) return null;
+    try {
+      var cached = JSON.parse(localStorage.getItem('wl_featured_' + session.studentId) || '{}');
+      if (cached.key && cached.ts && (Date.now() - cached.ts) < 300000) return cached;
+    } catch(e) {}
+    return null;
+  }
+
+  // Async — loads teacher focus + student progress, caches result
+  async function loadFeaturedGame() {
+    var session = loadSession();
+    if (!session) return null;
+
+    // 1. Check teacher focus (overrides auto)
+    var teacherFocus = null;
+    try {
+      var { data } = await sb().from('classes').select('settings').eq('id', session.classId).maybeSingle();
+      teacherFocus = (data && data.settings && data.settings.focusGame) || null;
+    } catch(e) {}
+
+    if (teacherFocus) {
+      var info = _findGameInfo(teacherFocus);
+      var result = { key: teacherFocus, source: 'teacher', name: info ? info.name : teacherFocus, icon: info ? info.icon : '🎯' };
+      try { localStorage.setItem('wl_featured_' + session.studentId, JSON.stringify({ ...result, ts: Date.now() })); } catch(e) {}
+      return result;
+    }
+
+    // 2. Auto-pick: least played or lowest accuracy
+    try {
+      var { data: progRows } = await sb().from('student_progress')
+        .select('activity, correct, total')
+        .eq('student_id', session.studentId);
+
+      // Aggregate per activity
+      var actStats = {};
+      CHALLENGE_GAMES.forEach(function(g) { actStats[g.key] = { correct: 0, total: 0 }; });
+      (progRows || []).forEach(function(r) {
+        if (actStats[r.activity]) {
+          actStats[r.activity].correct += r.correct || 0;
+          actStats[r.activity].total += r.total || 0;
+        }
+      });
+
+      // Score each game: never played = highest priority, then lowest accuracy, then least played
+      var scored = CHALLENGE_GAMES.map(function(g) {
+        var s = actStats[g.key];
+        var acc = s.total > 0 ? s.correct / s.total : -1; // -1 = never played
+        return { key: g.key, name: g.name, icon: g.icon, total: s.total, acc: acc };
+      });
+
+      scored.sort(function(a, b) {
+        // Never played first
+        if (a.acc === -1 && b.acc !== -1) return -1;
+        if (b.acc === -1 && a.acc !== -1) return 1;
+        // Both never played — random tiebreak
+        if (a.acc === -1 && b.acc === -1) return 0;
+        // Lowest accuracy first
+        if (a.acc !== b.acc) return a.acc - b.acc;
+        // Least played as tiebreak
+        return a.total - b.total;
+      });
+
+      var pick = scored[0];
+      var result = { key: pick.key, source: 'auto', name: pick.name, icon: pick.icon };
+      try { localStorage.setItem('wl_featured_' + session.studentId, JSON.stringify({ ...result, ts: Date.now() })); } catch(e) {}
+      return result;
+    } catch(e) {
+      return null;
+    }
+  }
+
+  // ── Least-played games for "Try me" nudges ────────────────────
   function getLeastPlayedGames(activitiesPlayed) {
-    // Returns game keys sorted by play count (least played first)
-    // activitiesPlayed is the array from student stats
     var counts = {};
     CHALLENGE_GAMES.forEach(function(g) { counts[g.key] = 0; });
     (activitiesPlayed || []).forEach(function(a) {
       if (counts[a] !== undefined) counts[a]++;
       else counts[a] = 1;
     });
-    var sorted = CHALLENGE_GAMES.slice().sort(function(a, b) { return counts[a.key] - counts[b.key]; });
-    return sorted.filter(function(g) { return counts[g.key] === 0; });
+    return CHALLENGE_GAMES.filter(function(g) { return counts[g.key] === 0; });
   }
 
   const CHALLENGE_TEMPLATES = {
@@ -2230,8 +2285,7 @@ const WordLabData = (() => {
     isExtensionMode, loadExtensionData,
     checkDailyLimit, incrementDailyUsage,
     getDailyChallenges, updateChallengeProgress, claimChallengeReward, updateDailyStreak, CHALLENGE_GAMES,
-    getGameOfTheWeek, getGameOfTheWeekInfo, getLeastPlayedGames,
-    getFocusGame, loadFocusGame, getBonusDayMultiplier,
+    getFeaturedGame, loadFeaturedGame, getLeastPlayedGames, getBonusDayMultiplier,
     getCustomWords, getCustomWordPriority,
     getCustomMorphemes, getCustomMorphemePriority,
     getSpellingSetWords, recordSpellingAttempt,
