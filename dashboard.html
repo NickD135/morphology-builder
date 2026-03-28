@@ -254,6 +254,14 @@
     .rewardBtn{ border:2px solid #e0e7ff; background:#eef2ff; color:var(--indigo); font-size:11px; font-weight:800; border-radius:8px; padding:5px 10px; cursor:pointer; white-space:nowrap; transition:all .15s; }
     .rewardBtn:hover{ background:#e0e7ff; }
 
+    /* ── Focus Game bar ── */
+    .focusBar{ background:linear-gradient(135deg,#fef3c7,#fde68a); border:2px solid #f59e0b; border-radius:14px; padding:12px 16px; margin-bottom:14px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    .focusBar-label{ font-size:12px; font-weight:900; color:#92400e; white-space:nowrap; }
+    .focusBar select{ padding:6px 10px; border:2px solid #f59e0b; border-radius:10px; font-size:12px; font-weight:800; font-family:inherit; outline:none; background:#fff; color:#92400e; cursor:pointer; }
+    .focusBar select:focus{ border-color:#d97706; }
+    .focusBar-info{ font-size:11px; font-weight:600; color:#a16207; }
+    .focusBar-saved{ font-size:11px; font-weight:800; color:#059669; opacity:0; transition:opacity .3s; }
+
     /* ── Reward modal ── */
     .rewardModal{ position:fixed; inset:0; z-index:60; background:rgba(15,23,42,.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:20px; overflow-y:auto; }
     .rewardCard{ background:#fff; border-radius:24px; width:100%; max-width:500px; box-shadow:0 40px 80px rgba(0,0,0,.3); border:4px solid var(--line); margin:auto; }
@@ -440,6 +448,26 @@
   <div class="classInfo" id="classInfo"></div>
 
   <div class="summaryRow" id="summaryRow"></div>
+
+  <div class="focusBar" id="focusBar">
+    <span class="focusBar-label">🎯 Focus Game:</span>
+    <select id="focusGameSelect" onchange="saveFocusGame()" aria-label="Select focus game for this class">
+      <option value="">None — no focus bonus</option>
+      <option value="phoneme-splitter">🔊 Phoneme Splitter</option>
+      <option value="syllable-splitter">✂️ Syllable Splitter</option>
+      <option value="breakdown-blitz">🧩 Breakdown Blitz</option>
+      <option value="mission-mode">🚀 Mission Mode</option>
+      <option value="meaning-mode">💡 Meaning Mode</option>
+      <option value="sound-sorter">🎧 Sound Sorter</option>
+      <option value="speed-mode">⚡ Speed Builder</option>
+      <option value="root-lab">🌿 Root Lab</option>
+      <option value="homophone-hunter">👯 Homophone Hunter</option>
+      <option value="word-refinery">🏭 The Refinery</option>
+      <option value="word-spectrum">🌈 Word Spectrum</option>
+    </select>
+    <span class="focusBar-info">Students earn +50% quarks &amp; XP in the focus game</span>
+    <span class="focusBar-saved" id="focusSaved">Saved!</span>
+  </div>
 
   <div class="viewTabs" role="tablist" aria-label="Dashboard views">
     <button class="viewTab active" onclick="switchView('games',this)" role="tab" aria-selected="true">Game Data</button>
@@ -875,8 +903,26 @@ async function toggleStudentMode() {
 }
 
 // ── Render ───────────────────────────────────────────────────────
+async function saveFocusGame() {
+  if (!currentClass) return;
+  var val = document.getElementById('focusGameSelect').value;
+  try {
+    await WordLabData.saveClassSettings(currentClass.id, { focusGame: val || null });
+    var saved = document.getElementById('focusSaved');
+    saved.style.opacity = '1';
+    setTimeout(function() { saved.style.opacity = '0'; }, 2000);
+  } catch(e) { console.warn('Save focus game error:', e); }
+}
+
 async function renderDashboard(){
   if(!currentClass) return;
+
+  // Load focus game setting
+  try {
+    var cls = await WordLabData._sb().from('classes').select('settings').eq('id', currentClass.id).maybeSingle();
+    var focusVal = (cls.data && cls.data.settings && cls.data.settings.focusGame) || '';
+    document.getElementById('focusGameSelect').value = focusVal;
+  } catch(e) {}
 
   // Crown leader
   currentCrownLeaderId = null;

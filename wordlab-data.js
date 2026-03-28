@@ -63,6 +63,9 @@ const WordLabData = (() => {
     {id:'sessions_30',     label:'Committed Learner',    icon:'🗓️', desc:'Complete 30 sessions'},
     // ── Exploration ──
     {id:'all_activities',  label:'Polymath',             icon:'🌟',  desc:'Play every activity at least once'},
+    {id:'variety_5',       label:'Explorer',             icon:'🧭',  desc:'Play 5 different games in one week'},
+    {id:'variety_8',       label:'Adventurer',           icon:'🗺️', desc:'Play 8 different games in one week'},
+    {id:'variety_11',      label:'Grand Explorer',       icon:'🏅',  desc:'Play all 11 games in one week'},
     // ── Levels ──
     {id:'xp_level3',       label:'Apprentice',           icon:'🧪',  desc:'Reach Level 3'},
     {id:'xp_level5',       label:'Rising Scientist',     icon:'📈',  desc:'Reach Level 5'},
@@ -179,6 +182,9 @@ const WordLabData = (() => {
       {id:'sessions_30',     ok: () => s.sessions >= 30},
       // Exploration
       {id:'all_activities',  ok: () => (s.activitiesPlayed||[]).length >= 6},
+      {id:'variety_5',       ok: () => { try { var d = _loadChallengeData(student.student_id); return (d.weekGames||[]).length >= 5; } catch(e) { return false; } }},
+      {id:'variety_8',       ok: () => { try { var d = _loadChallengeData(student.student_id); return (d.weekGames||[]).length >= 8; } catch(e) { return false; } }},
+      {id:'variety_11',      ok: () => { try { var d = _loadChallengeData(student.student_id); return (d.weekGames||[]).length >= 11; } catch(e) { return false; } }},
       // Levels
       {id:'xp_level3',       ok: () => lvl >= 3},
       {id:'xp_level5',       ok: () => lvl >= 5},
@@ -583,13 +589,56 @@ const WordLabData = (() => {
     if (!char.stats.activitiesPlayed.includes(activity)) char.stats.activitiesPlayed.push(activity);
 
     let quarksEarned = 0, xpEarned = 0;
+    var varietyBonus = 0, varietyXpBonus = 0, gotwBonus = false, focusBonus = false, dayBonus = false;
     if (correct) {
       quarksEarned = 2;
       if (streak >= 10) quarksEarned += 25;
       else if (streak >= 5) quarksEarned += 10;
       else if (streak >= 3) quarksEarned += 5;
-      char.quarks += quarksEarned;
       xpEarned = 10 + (streak >= 3 ? 5 : 0);
+
+      // ── Variety bonus: reward playing different games today ──
+      try {
+        var chData = _loadChallengeData(studentId);
+        var todayGames = chData.todayGames || [];
+        if (todayGames.indexOf(activity) === -1) {
+          var gamesCount = todayGames.length + 1;
+          if (gamesCount >= 2) {
+            varietyBonus = gamesCount * 5;
+            varietyXpBonus = gamesCount * 5;
+          }
+        }
+      } catch(e) {}
+
+      // ── Teacher Focus Game: +50% quarks & XP ──
+      try {
+        var focusGame = getFocusGame();
+        if (focusGame && activity === focusGame) {
+          quarksEarned = Math.round(quarksEarned * 1.5);
+          xpEarned = Math.round(xpEarned * 1.5);
+          focusBonus = true;
+        }
+      } catch(e) {}
+
+      // ── Game of the Week: 2× quarks & XP ──
+      var gotwKey = getGameOfTheWeek();
+      if (gotwKey && activity === gotwKey) {
+        quarksEarned = quarksEarned * 2;
+        xpEarned = xpEarned * 2;
+        gotwBonus = true;
+      }
+
+      // ── Bonus day: weekends & Wednesdays ──
+      var dayMult = getBonusDayMultiplier();
+      if (dayMult.active) {
+        quarksEarned = Math.round(quarksEarned * dayMult.quarkMult);
+        xpEarned = Math.round(xpEarned * dayMult.xpMult);
+        dayBonus = true;
+      }
+
+      quarksEarned += varietyBonus;
+      xpEarned += varietyXpBonus;
+      char.quarks += quarksEarned;
       char.xp += xpEarned;
     }
 
@@ -608,7 +657,26 @@ const WordLabData = (() => {
     var challengeResult = null;
     try { challengeResult = updateChallengeProgress(activity, correct, streak); } catch(e) {}
 
-    return { quarks: char.quarks, xp: char.xp, quarksEarned, xpEarned, newBadges, level: getLevel(char.xp), challengeResult };
+    // Show variety bonus toast (only on first answer in a new game)
+    if (varietyBonus > 0) {
+      try { _showBonusToast('🧭', 'Variety Bonus!', 'Playing a new game today', '+' + varietyBonus + ' quarks · +' + varietyXpBonus + ' XP', '#059669', '#d1fae5'); } catch(e) {}
+    }
+    // Show GOTW toast (only on first correct answer)
+    if (gotwBonus && streak <= 1) {
+      var gotwName = (getGameOfTheWeekInfo() || {}).name || 'this game';
+      try { _showBonusToast('⭐', 'Game of the Week!', gotwName + ' — 2x rewards', 'Double quarks & XP all week', '#d97706', '#fef3c7'); } catch(e) {}
+    }
+    // Show focus game toast (only on first correct answer)
+    if (focusBonus && streak <= 1) {
+      try { _showBonusToast('🎯', 'Teacher Focus!', 'Your teacher boosted this game', '+50% quarks & XP', '#7c3aed', '#ede9fe'); } catch(e) {}
+    }
+    // Show bonus day toast (only on first correct answer of the session)
+    if (dayBonus && streak <= 1 && char.stats.totalCorrect <= 1) {
+      var dayLabel = getBonusDayMultiplier().label || 'Bonus Day';
+      try { _showBonusToast('🎉', dayLabel + ' Bonus!', '2x XP & 1.5x quarks today', 'Play more to earn extra rewards!', '#dc2626', '#fee2e2'); } catch(e) {}
+    }
+
+    return { quarks: char.quarks, xp: char.xp, quarksEarned, xpEarned, varietyBonus, gotwBonus, focusBonus, dayBonus, newBadges, level: getLevel(char.xp), challengeResult };
   }
 
   // ── Student data ──────────────────────────────────────────────
@@ -1190,6 +1258,45 @@ const WordLabData = (() => {
     } catch(e) { console.warn('incrementDailyUsage error', e); }
   }
 
+  // ── Focus Game (teacher-set) ────────────────────────────────
+  // Cached in localStorage to avoid DB call on every recordAttempt
+  function _getFocusGameCacheKey() {
+    var session = loadSession();
+    return session ? 'wl_focus_game_' + session.classId : null;
+  }
+
+  function getFocusGame() {
+    var key = _getFocusGameCacheKey();
+    if (!key) return null;
+    try {
+      var cached = JSON.parse(localStorage.getItem(key) || '{}');
+      // Cache for 5 minutes
+      if (cached.game !== undefined && cached.ts && (Date.now() - cached.ts) < 300000) return cached.game;
+    } catch(e) {}
+    return null; // will be loaded async
+  }
+
+  async function loadFocusGame() {
+    var session = loadSession();
+    if (!session) return null;
+    var key = _getFocusGameCacheKey();
+    try {
+      var { data } = await sb().from('classes').select('settings').eq('id', session.classId).maybeSingle();
+      var game = (data && data.settings && data.settings.focusGame) || null;
+      if (key) localStorage.setItem(key, JSON.stringify({ game: game, ts: Date.now() }));
+      return game;
+    } catch(e) { return null; }
+  }
+
+  // ── Bonus day check (weekends + Wednesdays) ───────────────
+  function getBonusDayMultiplier() {
+    var day = new Date().getDay(); // 0=Sun, 3=Wed, 6=Sat
+    if (day === 0 || day === 6 || day === 3) {
+      return { active: true, xpMult: 2, quarkMult: 1.5, label: day === 3 ? 'Wednesday' : 'Weekend' };
+    }
+    return { active: false, xpMult: 1, quarkMult: 1, label: null };
+  }
+
   // ── Daily Challenges System ─────────────────────────────────
   // Generates 3 daily challenges (easy/medium/hard) + 1 weekly challenge
   // Tracks daily play streak (consecutive days with 10+ min activity)
@@ -1207,6 +1314,41 @@ const WordLabData = (() => {
     { key: 'word-refinery',     name: 'The Refinery',     icon: '🏭' },
     { key: 'word-spectrum',     name: 'Word Spectrum',    icon: '🌈' },
   ];
+
+  // ── Game of the Week ──────────────────────────────────────────
+  // Deterministic weekly rotation — all students see the same featured game
+  function getGameOfTheWeek() {
+    var d = new Date();
+    var day = d.getDay();
+    var monday = new Date(d);
+    monday.setDate(d.getDate() - ((day + 6) % 7));
+    // Week number since epoch — deterministic rotation
+    var weekNum = Math.floor(monday.getTime() / (7 * 24 * 60 * 60 * 1000));
+    var idx = weekNum % CHALLENGE_GAMES.length;
+    return CHALLENGE_GAMES[idx].key;
+  }
+
+  function getGameOfTheWeekInfo() {
+    var key = getGameOfTheWeek();
+    for (var i = 0; i < CHALLENGE_GAMES.length; i++) {
+      if (CHALLENGE_GAMES[i].key === key) return CHALLENGE_GAMES[i];
+    }
+    return null;
+  }
+
+  // ── Least-played games for a student ──────────────────────────
+  function getLeastPlayedGames(activitiesPlayed) {
+    // Returns game keys sorted by play count (least played first)
+    // activitiesPlayed is the array from student stats
+    var counts = {};
+    CHALLENGE_GAMES.forEach(function(g) { counts[g.key] = 0; });
+    (activitiesPlayed || []).forEach(function(a) {
+      if (counts[a] !== undefined) counts[a]++;
+      else counts[a] = 1;
+    });
+    var sorted = CHALLENGE_GAMES.slice().sort(function(a, b) { return counts[a.key] - counts[b.key]; });
+    return sorted.filter(function(g) { return counts[g.key] === 0; });
+  }
 
   const CHALLENGE_TEMPLATES = {
     easy: [
@@ -1374,6 +1516,12 @@ const WordLabData = (() => {
     // Update daily tracking
     if (!data.todayGames) data.todayGames = [];
     if (data.todayGames.indexOf(activity) === -1) data.todayGames.push(activity);
+
+    // Track weekly game variety (for variety badges)
+    var weekStr = _getWeekStr();
+    if (data.weekGamesWeek !== weekStr) { data.weekGames = []; data.weekGamesWeek = weekStr; }
+    if (!data.weekGames) data.weekGames = [];
+    if (data.weekGames.indexOf(activity) === -1) data.weekGames.push(activity);
     if (correct) data.todayCorrect = (data.todayCorrect || 0) + 1;
     if (!data.todayBestStreaks) data.todayBestStreaks = {};
     if (streak > (data.todayBestStreaks[activity] || 0)) data.todayBestStreaks[activity] = streak;
@@ -1464,6 +1612,32 @@ const WordLabData = (() => {
       '</div>';
     document.body.appendChild(toast);
     setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 4200);
+  }
+
+  function _showBonusToast(icon, title, body, reward, color, bgColor) {
+    if (!document.getElementById('wlBonusToastStyle')) {
+      var s = document.createElement('style');
+      s.id = 'wlBonusToastStyle';
+      s.textContent =
+        '.wl-bonus-toast{position:fixed;top:80px;right:20px;z-index:99997;border-radius:14px;padding:12px 18px;font-family:Lexend,sans-serif;box-shadow:0 12px 30px rgba(0,0,0,0.2);animation:wlToastIn .4s ease,wlToastOut .4s ease 3.1s forwards;display:flex;align-items:center;gap:10px;max-width:320px;}' +
+        '.wl-bonus-toast-icon{font-size:24px;flex-shrink:0;}' +
+        '.wl-bonus-toast-title{font-size:12px;font-weight:900;margin-bottom:1px;}' +
+        '.wl-bonus-toast-body{font-size:11px;font-weight:600;opacity:.8;}' +
+        '.wl-bonus-toast-reward{font-size:10px;font-weight:800;margin-top:2px;}';
+      document.head.appendChild(s);
+    }
+    var toast = document.createElement('div');
+    toast.className = 'wl-bonus-toast';
+    toast.style.cssText = 'background:' + bgColor + ';border:2px solid ' + color + ';color:' + color + ';';
+    toast.innerHTML =
+      '<div class="wl-bonus-toast-icon">' + icon + '</div>' +
+      '<div>' +
+        '<div class="wl-bonus-toast-title">' + escapeHtml(title) + '</div>' +
+        '<div class="wl-bonus-toast-body">' + escapeHtml(body) + '</div>' +
+        '<div class="wl-bonus-toast-reward">' + escapeHtml(reward) + '</div>' +
+      '</div>';
+    document.body.appendChild(toast);
+    setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 3700);
   }
 
   async function claimChallengeReward(challengeId) {
@@ -2056,6 +2230,8 @@ const WordLabData = (() => {
     isExtensionMode, loadExtensionData,
     checkDailyLimit, incrementDailyUsage,
     getDailyChallenges, updateChallengeProgress, claimChallengeReward, updateDailyStreak, CHALLENGE_GAMES,
+    getGameOfTheWeek, getGameOfTheWeekInfo, getLeastPlayedGames,
+    getFocusGame, loadFocusGame, getBonusDayMultiplier,
     getCustomWords, getCustomWordPriority,
     getCustomMorphemes, getCustomMorphemePriority,
     getSpellingSetWords, recordSpellingAttempt,

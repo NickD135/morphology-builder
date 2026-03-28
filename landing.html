@@ -816,6 +816,46 @@
     }
     .act-card:hover { transform: translateY(-4px) rotate(0.3deg) !important; }
 
+    /* Game of the Week badge */
+    .gotw-badge {
+      position:absolute; top:6px; right:6px; background:linear-gradient(135deg,#f59e0b,#d97706);
+      color:#fff; font-size:9px; font-weight:900; padding:3px 7px; border-radius:6px;
+      text-transform:uppercase; letter-spacing:.04em; z-index:2; line-height:1.2;
+      box-shadow:0 2px 8px rgba(217,119,6,.4); animation: gotwPulse 2s ease-in-out infinite;
+    }
+    @keyframes gotwPulse { 0%,100%{box-shadow:0 2px 8px rgba(217,119,6,.3)} 50%{box-shadow:0 2px 16px rgba(217,119,6,.6)} }
+
+    /* Try me nudge badge */
+    .tryme-badge {
+      position:absolute; top:6px; left:6px; background:linear-gradient(135deg,#10b981,#059669);
+      color:#fff; font-size:9px; font-weight:900; padding:3px 7px; border-radius:6px;
+      text-transform:uppercase; letter-spacing:.04em; z-index:2; line-height:1.2;
+      box-shadow:0 2px 8px rgba(16,185,129,.4); animation: tryMePulse 2.5s ease-in-out infinite;
+    }
+    @keyframes tryMePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+
+    /* GOTW banner */
+    .gotw-banner {
+      background:linear-gradient(135deg,#fef3c7,#fde68a); border:2px solid #f59e0b;
+      border-radius:14px; padding:12px 16px; margin-bottom:16px;
+      display:flex; align-items:center; gap:10px; font-family:Lexend,sans-serif;
+    }
+    .gotw-banner-icon { font-size:28px; }
+    .gotw-banner-text { flex:1; }
+    .gotw-banner-title { font-size:13px; font-weight:900; color:#92400e; }
+    .gotw-banner-sub { font-size:11px; font-weight:600; color:#a16207; margin-top:2px; }
+
+    /* Variety bonus toast */
+    .variety-banner {
+      background:linear-gradient(135deg,#d1fae5,#a7f3d0); border:2px solid #10b981;
+      border-radius:14px; padding:12px 16px; margin-bottom:16px;
+      display:flex; align-items:center; gap:10px; font-family:Lexend,sans-serif;
+    }
+    .variety-banner-icon { font-size:24px; }
+    .variety-banner-text { flex:1; }
+    .variety-banner-title { font-size:13px; font-weight:900; color:#065f46; }
+    .variety-banner-sub { font-size:11px; font-weight:600; color:#047857; margin-top:2px; }
+
     /* Scientist hub animations */
     @keyframes hubSciBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
     @keyframes hubBeakerBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
@@ -1904,6 +1944,12 @@ async function initStudentLayout(session) {
     // ── Daily Challenges ──
     try { renderDailyChallenges(); } catch(e) { console.warn('challenges render error', e); }
 
+    // ── Game of the Week + Try Something New nudges ──
+    // Load focus game setting (caches for 5 min)
+    try { await WordLabData.loadFocusGame(); } catch(e) {}
+
+    try { renderGameNudges(sd); } catch(e) { console.warn('nudge render error', e); }
+
     // ── Check for active spelling assessment ──
     try {
       var ssWords = await WordLabData.getSpellingSetWords();
@@ -1934,6 +1980,142 @@ async function initStudentLayout(session) {
   } catch(e) {
     console.warn('Student layout init failed', e);
     if(nameEl) nameEl.textContent = session.studentName || 'Scientist';
+  }
+}
+
+function renderGameNudges(sd) {
+  if (typeof WordLabData === 'undefined') return;
+
+  // Map activity keys to card href fragments
+  var keyToHref = {
+    'phoneme-splitter': 'phoneme-mode.html',
+    'syllable-splitter': 'syllable-mode.html',
+    'breakdown-blitz': 'breakdown-mode.html',
+    'mission-mode': 'mission-mode.html',
+    'meaning-mode': 'meaning-mode.html',
+    'sound-sorter': 'sound-sorter.html',
+    'speed-mode': 'speed-mode.html',
+    'root-lab': 'root-lab.html',
+    'homophone-hunter': 'homophone-mode.html',
+    'word-refinery': 'word-refinery.html',
+    'word-spectrum': 'word-spectrum.html'
+  };
+
+  // Game of the Week — add badge + banner
+  var gotwInfo = WordLabData.getGameOfTheWeekInfo();
+  if (gotwInfo) {
+    var gotwHref = keyToHref[gotwInfo.key];
+    // Add GOTW banner above the Play section
+    var playHeading = document.getElementById('layoutStudent');
+    if (playHeading) {
+      var playGrids = playHeading.querySelectorAll('.play-hub-container');
+      if (playGrids.length > 0) {
+        var banner = document.createElement('div');
+        banner.className = 'gotw-banner';
+        banner.innerHTML = '<div class="gotw-banner-icon">⭐</div>' +
+          '<div class="gotw-banner-text">' +
+          '<div class="gotw-banner-title">Game of the Week: ' + WordLabData.escapeHtml(gotwInfo.name) + '</div>' +
+          '<div class="gotw-banner-sub">Earn 2x quarks and XP in ' + WordLabData.escapeHtml(gotwInfo.name) + ' this week!</div>' +
+          '</div>';
+        playGrids[0].parentNode.insertBefore(banner, playGrids[0]);
+      }
+    }
+
+    // Add "2x" badge to matching cards
+    if (gotwHref) {
+      var cards = document.querySelectorAll('#layoutStudent .act-card[href="' + gotwHref + '"]');
+      cards.forEach(function(card) {
+        var badge = document.createElement('div');
+        badge.className = 'gotw-badge';
+        badge.textContent = '2x THIS WEEK';
+        card.appendChild(badge);
+      });
+    }
+  }
+
+  // ── Teacher Focus Game — banner + badge ──
+  var focusGame = WordLabData.getFocusGame();
+  if (focusGame) {
+    var focusHref = keyToHref[focusGame];
+    // Find game name from CHALLENGE_GAMES
+    var focusInfo = null;
+    WordLabData.CHALLENGE_GAMES.forEach(function(g) { if (g.key === focusGame) focusInfo = g; });
+    if (focusInfo) {
+      var playGrids = document.querySelectorAll('#layoutStudent .play-hub-container');
+      if (playGrids.length > 0) {
+        var fBanner = document.createElement('div');
+        fBanner.style.cssText = 'background:linear-gradient(135deg,#ede9fe,#ddd6fe);border:2px solid #7c3aed;border-radius:14px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;font-family:Lexend,sans-serif;';
+        fBanner.innerHTML = '<div style="font-size:28px;">🎯</div>' +
+          '<div style="flex:1;">' +
+          '<div style="font-size:13px;font-weight:900;color:#5b21b6;">Teacher Focus: ' + WordLabData.escapeHtml(focusInfo.name) + '</div>' +
+          '<div style="font-size:11px;font-weight:600;color:#7c3aed;margin-top:2px;">Your teacher wants you to practise this — earn +50% quarks &amp; XP!</div>' +
+          '</div>';
+        playGrids[0].parentNode.insertBefore(fBanner, playGrids[0]);
+      }
+    }
+    // Add badge to matching cards
+    if (focusHref) {
+      var fCards = document.querySelectorAll('#layoutStudent .act-card[href="' + focusHref + '"]');
+      fCards.forEach(function(card) {
+        var badge = document.createElement('div');
+        badge.style.cssText = 'position:absolute;top:6px;left:6px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;font-size:9px;font-weight:900;padding:3px 7px;border-radius:6px;text-transform:uppercase;letter-spacing:.04em;z-index:2;line-height:1.2;box-shadow:0 2px 8px rgba(124,58,237,.4);';
+        badge.textContent = '🎯 FOCUS';
+        card.appendChild(badge);
+      });
+    }
+  }
+
+  // ── Bonus Day banner (weekends & Wednesdays) ──
+  var dayMult = WordLabData.getBonusDayMultiplier();
+  if (dayMult.active) {
+    var playGrids = document.querySelectorAll('#layoutStudent .play-hub-container');
+    if (playGrids.length > 0) {
+      var dBanner = document.createElement('div');
+      dBanner.style.cssText = 'background:linear-gradient(135deg,#fee2e2,#fecaca);border:2px solid #ef4444;border-radius:14px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;font-family:Lexend,sans-serif;';
+      dBanner.innerHTML = '<div style="font-size:28px;">🎉</div>' +
+        '<div style="flex:1;">' +
+        '<div style="font-size:13px;font-weight:900;color:#991b1b;">' + WordLabData.escapeHtml(dayMult.label) + ' Bonus Active!</div>' +
+        '<div style="font-size:11px;font-weight:600;color:#dc2626;margin-top:2px;">2x XP &amp; 1.5x quarks on every correct answer today</div>' +
+        '</div>';
+      playGrids[0].parentNode.insertBefore(dBanner, playGrids[0]);
+    }
+  }
+
+  // "Try something new" — tag games the student has never played
+  if (sd && sd.stats) {
+    var neverPlayed = WordLabData.getLeastPlayedGames(sd.stats.activitiesPlayed);
+    // Only show nudges if they have some games played (not brand new)
+    if ((sd.stats.activitiesPlayed || []).length >= 1 && neverPlayed.length > 0) {
+      // Show variety bonus reminder
+      var gamesPlayedCount = (sd.stats.activitiesPlayed || []).length;
+      var neverCount = neverPlayed.length;
+      if (neverCount > 0 && neverCount <= 8) {
+        var playGrids = document.querySelectorAll('#layoutStudent .play-hub-container');
+        if (playGrids.length > 0) {
+          var vBanner = document.createElement('div');
+          vBanner.className = 'variety-banner';
+          vBanner.innerHTML = '<div class="variety-banner-icon">🧭</div>' +
+            '<div class="variety-banner-text">' +
+            '<div class="variety-banner-title">' + neverCount + ' game' + (neverCount > 1 ? 's' : '') + ' still to explore!</div>' +
+            '<div class="variety-banner-sub">Try a new game for bonus quarks — the more variety, the bigger the bonus</div>' +
+            '</div>';
+          playGrids[0].parentNode.insertBefore(vBanner, playGrids[0]);
+        }
+      }
+
+      // Tag individual cards
+      neverPlayed.forEach(function(game) {
+        var href = keyToHref[game.key];
+        if (!href) return;
+        var cards = document.querySelectorAll('#layoutStudent .act-card[href="' + href + '"]');
+        cards.forEach(function(card) {
+          var badge = document.createElement('div');
+          badge.className = 'tryme-badge';
+          badge.textContent = 'TRY ME!';
+          card.appendChild(badge);
+        });
+      });
+    }
   }
 }
 

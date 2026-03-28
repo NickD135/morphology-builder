@@ -96,7 +96,6 @@
       background:#fff; flex-shrink:0;
     }
     .canvasWrapper canvas{ border-radius:14px; }
-    #highlightSVG{ position:absolute; top:0; left:0; width:400px; height:480px; pointer-events:none; z-index:5; }
 
     /* AI polish */
     .aiBtn{
@@ -271,12 +270,18 @@
         <label for="brushSize">Size</label>
         <input type="range" id="brushSize" min="2" max="40" value="8" oninput="updateBrushSize(this.value)">
         <span id="brushSizeVal">8</span>
+        <span id="brushPreview" style="display:inline-block;width:24px;height:24px;flex-shrink:0;position:relative;">
+          <span id="brushDot" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;background:#4338ca;"></span>
+        </span>
       </div>
 
       <div id="fontSizeRow" class="sliderRow" style="display:none;">
         <label for="fontSize">Font</label>
         <input type="range" id="fontSize" min="10" max="60" value="20" oninput="updateFontSize(this.value)">
         <span id="fontSizeVal">20</span>
+      </div>
+      <div id="textPreview" style="display:none;margin-top:6px;padding:8px 10px;background:#f8fafc;border:2px solid var(--line);border-radius:8px;text-align:center;overflow:hidden;">
+        <span id="textPreviewSample" style="font-family:'Lexend',sans-serif;font-weight:700;font-size:20px;color:#4338ca;">Sample Text</span>
       </div>
 
       <div id="fillStrokeRow" class="toggleRow">
@@ -336,9 +341,6 @@
 
     <div class="canvasWrapper" id="canvasWrapper">
       <canvas id="drawingCanvas"></canvas>
-      <svg id="highlightSVG" viewBox="0 0 400 480" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect id="highlightRect" x="0" y="0" width="0" height="0" rx="8" fill="rgba(99,102,241,0.08)" stroke="#6366f1" stroke-width="2.5" stroke-dasharray="8 4"/>
-      </svg>
     </div>
 
     <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
@@ -581,7 +583,13 @@ window.addEventListener('DOMContentLoaded', function() {
   canvas.on('mouse:down',  onMouseDown);
   canvas.on('mouse:move',  onMouseMove);
   canvas.on('mouse:up',    onMouseUp);
-  canvas.on('path:created', saveHistory);
+  canvas.on('path:created', function(e) {
+    if (currentTool === 'eraser') {
+      e.path.globalCompositeOperation = 'destination-out';
+      canvas.renderAll();
+    }
+    saveHistory();
+  });
 
   saveHistory();
   renderPreview();
@@ -636,12 +644,25 @@ function setTool(tool) {
   if (btn) btn.classList.add('active');
 
   document.getElementById('fontSizeRow').style.display  = tool === 'text'   ? 'flex' : 'none';
+  document.getElementById('textPreview').style.display  = tool === 'text'   ? 'block' : 'none';
   document.getElementById('fillStrokeRow').style.display= ['rect','circle'].includes(tool) ? 'flex' : 'none';
+  updateBrushPreview();
+  if (tool === 'text') updateTextPreview();
 
   canvas.isDrawingMode = (tool === 'brush' || tool === 'eraser');
   canvas.selection = (tool === 'select');
-  if (tool === 'select') {
-    canvas.getObjects().forEach(function(obj) { if (obj !== canvas.backgroundImage) obj.set({ selectable: true, evented: true }); });
+  if (tool === 'select' || tool === 'text') {
+    canvas.getObjects().forEach(function(obj) {
+      if (obj !== canvas.backgroundImage) {
+        if (tool === 'text') {
+          // Only make existing text objects interactive in text mode
+          const isText = obj.type === 'i-text';
+          obj.set({ selectable: isText, evented: isText });
+        } else {
+          obj.set({ selectable: true, evented: true });
+        }
+      }
+    });
     canvas.renderAll();
   } else {
     canvas.discardActiveObject();
@@ -653,13 +674,12 @@ function setTool(tool) {
     canvas.freeDrawingBrush.color = getRGBA(currentColor, currentOpacity);
     canvas.freeDrawingBrush.width = currentSize;
   } else if (tool === 'eraser') {
-    canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-    canvas.freeDrawingBrush.color = '#ffffff';
-    canvas.freeDrawingBrush.width = currentSize * 1.5;
+    const eraser = new fabric.PencilBrush(canvas);
+    eraser.width = currentSize * 1.5;
+    eraser.color = 'rgba(0,0,0,1)';
+    canvas.freeDrawingBrush = eraser;
   }
 
-  // Update highlight overlay based on selected type
-  updateHighlight();
 }
 
 // ── Mouse events for shape tools ──────────────────────────────
@@ -670,6 +690,14 @@ function onMouseDown(opt) {
     return;
   }
   if (currentTool === 'text') {
+    // If clicking on an existing text object, edit it instead of creating a new one
+    const target = canvas.findTarget(opt.e);
+    if (target && target.type === 'i-text') {
+      canvas.setActiveObject(target);
+      target.enterEditing();
+      canvas.renderAll();
+      return;
+    }
     const t = new fabric.IText('Text', {
       left: pointer.x, top: pointer.y,
       fontSize: currentFontSize,
@@ -872,17 +900,39 @@ function updateBrushColor() {
   if (currentTool === 'brush' && canvas.freeDrawingBrush) {
     canvas.freeDrawingBrush.color = getRGBA(currentColor, currentOpacity);
   }
+  updateBrushPreview();
+  updateTextPreview();
 }
 
 function updateBrushSize(val) {
   currentSize = parseInt(val);
   document.getElementById('brushSizeVal').textContent = val;
   if (canvas.freeDrawingBrush) canvas.freeDrawingBrush.width = currentSize;
+  updateBrushPreview();
 }
 
 function updateFontSize(val) {
   currentFontSize = parseInt(val);
   document.getElementById('fontSizeVal').textContent = val;
+  updateTextPreview();
+}
+
+function updateBrushPreview() {
+  const dot = document.getElementById('brushDot');
+  if (!dot) return;
+  const sz = Math.max(4, Math.min(currentSize, 24));
+  dot.style.width = sz + 'px';
+  dot.style.height = sz + 'px';
+  dot.style.background = currentTool === 'eraser' ? '#e2e8f0' : getRGBA(currentColor, currentOpacity);
+  dot.style.border = currentTool === 'eraser' ? '1.5px dashed #94a3b8' : 'none';
+  dot.style.borderRadius = '50%';
+}
+
+function updateTextPreview() {
+  const sample = document.getElementById('textPreviewSample');
+  if (!sample) return;
+  sample.style.fontSize = Math.min(currentFontSize, 40) + 'px';
+  sample.style.color = getRGBA(currentColor, currentOpacity);
 }
 
 function setFillMode(mode) {
@@ -901,7 +951,7 @@ function setPattern(p) {
 // ── History ───────────────────────────────────────────────────
 function saveHistory() {
   history.splice(histIdx + 1);
-  history.push(JSON.stringify(canvas.toJSON()));
+  history.push(JSON.stringify(canvas.toJSON(['globalCompositeOperation'])));
   if (history.length > MAX_HIST) history.shift();
   else histIdx++;
 }
@@ -978,23 +1028,8 @@ function setType(btn) {
   document.querySelectorAll('.typeBtn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   currentItemType = btn.dataset.type;
-  updateHighlight();
 }
 
-function updateHighlight() {
-  const rect = document.getElementById('highlightRect');
-  const areas = {
-    coat:       { x:96,  y:240, w:208, h:232 },
-    head:       { x:112, y:32,  w:176, h:216 },
-    face:       { x:144, y:112, w:112, h:120 },
-    background: { x:0,   y:0,   w:400, h:480 },
-  };
-  const a = areas[currentItemType] || areas.coat;
-  rect.setAttribute('x', a.x);
-  rect.setAttribute('y', a.y);
-  rect.setAttribute('width', a.w);
-  rect.setAttribute('height', a.h);
-}
 
 // ── Unlock config ─────────────────────────────────────────────
 function showUnlockConfig() {
