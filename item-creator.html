@@ -341,7 +341,10 @@
       </svg>
     </div>
 
-    <button class="aiBtn" id="aiPolishBtn" onclick="aiPolish()">✨ AI Polish — Send to Claude</button>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+      <button class="aiBtn" id="aiPolishBtn" onclick="aiPolish()">✨ AI Polish — Improve Drawing</button>
+      <button class="aiBtn" id="aiGenerateBtn" onclick="aiGenerate()" style="background:linear-gradient(135deg,#0d9488,#0891b2);">🎨 Generate from Description</button>
+    </div>
 
     <div id="aiResult">
       <div class="aiResultTitle">✨ AI Polish Result</div>
@@ -1112,6 +1115,59 @@ function useAIVersion() {
 function dismissAI() {
   document.getElementById('aiResult').style.display = 'none';
   aiSvgContent = '';
+}
+
+// Generate item from description only (no drawing needed)
+async function aiGenerate() {
+  const name = document.getElementById('itemName').value.trim();
+  const desc = document.getElementById('itemDescription').value.trim();
+
+  if (!name && !desc) {
+    alert('Please enter an item name or description first so the AI knows what to create.');
+    return;
+  }
+
+  const btn = document.getElementById('aiGenerateBtn');
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Generating…';
+
+  try {
+    // Send with a blank 1x1 transparent pixel so the API has an image field
+    const blankPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
+
+    const resp = await fetch(POLISH_EDGE_FN, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: blankPng,
+        name: name || undefined,
+        itemType: currentItemType,
+        description: desc || name || undefined,
+      }),
+    });
+
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => ({}));
+      throw new Error(errData.error || 'Edge Function error ' + resp.status);
+    }
+
+    const data = await resp.json();
+    const text = data.text;
+
+    const svgMatch = text.match(/<svg[\s\S]*?<\/svg>/i);
+    aiSvgContent = svgMatch ? svgMatch[0] : '';
+
+    document.getElementById('aiSvgPreview').innerHTML = aiSvgContent ||
+      '<div style="padding:20px;color:#64748b;font-size:12px;font-weight:700;text-align:center;">No SVG generated — try adding more detail to your description</div>';
+    document.getElementById('aiResultText').textContent = text.replace(/<svg[\s\S]*?<\/svg>/gi, '').trim().slice(0, 400);
+    document.getElementById('aiResult').style.display = 'block';
+
+  } catch(e) {
+    alert('AI generation failed:\n\n' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🎨 Generate from Description';
+  }
 }
 
 // ── Publish ───────────────────────────────────────────────────
