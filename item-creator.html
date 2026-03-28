@@ -1086,29 +1086,75 @@ function useAIVersion() {
   if (!aiSvgContent) { dismissAI(); return; }
   const svgDataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(aiSvgContent)));
   const zones = {
-    coat:       { x:96,  y:240, w:208, h:232 },
-    head:       { x:112, y:32,  w:176, h:216 },
-    face:       { x:144, y:112, w:112, h:120 },
+    coat:       { x:80,  y:220, w:240, h:260 },
+    head:       { x:100, y:0,   w:200, h:200 },
+    face:       { x:120, y:100, w:160, h:140 },
     background: { x:0,   y:0,   w:400, h:480 },
   };
   const zone = zones[currentItemType] || zones.coat;
-  fabric.Image.fromURL(svgDataUrl, function(img) {
-    const scale = Math.min(zone.w / img.width, zone.h / img.height);
-    img.scale(scale);
-    img.set({
-      left: zone.x + (zone.w - img.getScaledWidth())  / 2,
-      top:  zone.y + (zone.h - img.getScaledHeight()) / 2,
-      selectable: true,
-      evented: true,
+
+  if (currentItemType === 'background') {
+    // Background: set as canvas background, then put scientist on top as an object
+    fabric.Image.fromURL(svgDataUrl, function(bgImg) {
+      const scale = Math.max(400 / bgImg.width, 480 / bgImg.height);
+      bgImg.scale(scale);
+      bgImg.set({ left: 0, top: 0 });
+      canvas.clear();
+      canvas.setBackgroundImage(bgImg, function() {
+        // Add scientist as a non-selectable object ON TOP of the background
+        if (typeof WLScientist !== 'undefined') {
+          let svgStr = WLScientist.buildSVG({}, 'neutral');
+          svgStr = svgStr.replace('<svg viewBox="0 0 80 120"', '<svg viewBox="0 0 80 120" width="320" height="480"');
+          const sciUrl = 'data:image/svg+xml;base64,' + btoa(svgStr);
+          fabric.Image.fromURL(sciUrl, function(sciImg) {
+            sciImg.set({ left: 40, top: 0, selectable: false, evented: false, opacity: 0.5 });
+            canvas.add(sciImg);
+            canvas.renderAll();
+            saveHistory();
+          });
+        } else {
+          canvas.renderAll();
+          saveHistory();
+        }
+      });
     });
+  } else {
+    // Item types (coat/head/face): load scientist as background first, then place item on top
     canvas.clear();
-    loadScientistBackground();
-    canvas.add(img);
-    canvas.setActiveObject(img);
-    setTool('select');
-    canvas.renderAll();
-    saveHistory();
-  });
+    fabric.Image.fromURL(svgDataUrl, function(itemImg) {
+      const scale = Math.min(zone.w / itemImg.width, zone.h / itemImg.height);
+      itemImg.scale(scale);
+      itemImg.set({
+        left: zone.x + (zone.w - itemImg.getScaledWidth())  / 2,
+        top:  zone.y + (zone.h - itemImg.getScaledHeight()) / 2,
+        selectable: true,
+        evented: true,
+      });
+
+      // Load scientist background first, then add item on top
+      if (typeof WLScientist !== 'undefined') {
+        let svgStr = WLScientist.buildSVG({}, 'neutral');
+        svgStr = svgStr.replace('<svg viewBox="0 0 80 120"', '<svg viewBox="0 0 80 120" width="320" height="480"');
+        const sciUrl = 'data:image/svg+xml;base64,' + btoa(svgStr);
+        fabric.Image.fromURL(sciUrl, function(sciImg) {
+          sciImg.set({ left: 40, top: 0, selectable: false, evented: false });
+          canvas.setBackgroundImage(sciImg, function() {
+            canvas.add(itemImg);
+            canvas.setActiveObject(itemImg);
+            setTool('select');
+            canvas.renderAll();
+            saveHistory();
+          });
+        });
+      } else {
+        canvas.add(itemImg);
+        canvas.setActiveObject(itemImg);
+        setTool('select');
+        canvas.renderAll();
+        saveHistory();
+      }
+    });
+  }
   dismissAI();
 }
 
