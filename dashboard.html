@@ -2822,6 +2822,55 @@ var _spellingAssignments = {};
 var _spellingProgress = {};
 var _checkInResults = {};
 var _activeSpellingSetId = null;
+var _ssDragId = null;
+
+// ── Drag-and-drop reorder for spelling set tabs ──
+function ssTabDragStart(e) {
+  _ssDragId = e.currentTarget.dataset.setId;
+  e.currentTarget.style.opacity = '0.4';
+  e.dataTransfer.effectAllowed = 'move';
+}
+function ssTabDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  var btn = e.currentTarget;
+  if (btn.dataset.setId && btn.dataset.setId !== _ssDragId) {
+    btn.style.borderLeft = '3px solid var(--indigo)';
+  }
+}
+function ssTabDragEnd(e) {
+  _ssDragId = null;
+  document.querySelectorAll('.ssSetTab').forEach(function(b) {
+    b.style.opacity = '1';
+    b.style.borderLeft = '';
+  });
+}
+async function ssTabDrop(e) {
+  e.preventDefault();
+  var targetId = e.currentTarget.dataset.setId;
+  if (!_ssDragId || !targetId || _ssDragId === targetId) { ssTabDragEnd(e); return; }
+
+  // Reorder in memory
+  var dragIdx = _spellingSets.findIndex(function(s) { return s.id === _ssDragId; });
+  var targetIdx = _spellingSets.findIndex(function(s) { return s.id === targetId; });
+  if (dragIdx === -1 || targetIdx === -1) { ssTabDragEnd(e); return; }
+
+  var moved = _spellingSets.splice(dragIdx, 1)[0];
+  _spellingSets.splice(targetIdx, 0, moved);
+
+  // Update set_number for all sets to match new order
+  try {
+    var updates = _spellingSets.map(function(s, i) {
+      return dbSb().from('class_spelling_sets').update({ set_number: i + 1 }).eq('id', s.id);
+    });
+    await Promise.all(updates);
+    // Update local data
+    _spellingSets.forEach(function(s, i) { s.set_number = i + 1; });
+  } catch(err) { console.warn('Reorder save error:', err); }
+
+  ssTabDragEnd(e);
+  await renderSpellingSetsTab();
+}
 
 async function loadSpellingSetsData() {
   if (!currentClass) return;
@@ -2903,10 +2952,15 @@ async function renderSpellingSetsTab() {
   container.innerHTML = '<div class="panel"><div class="panelInner"><div class="panelTitle">Loading...</div></div></div>';
   await loadSpellingSetsData();
 
-  // Set sub-tabs
+  // Set sub-tabs (draggable for reordering)
   var tabsHtml = _spellingSets.map(function(set, i) {
     var isActive = _activeSpellingSetId ? set.id === _activeSpellingSetId : i === 0;
-    return '<button class="navTab ssSetTab' + (isActive ? ' active' : '') + '" onclick="showSpellingSet(\'' + set.id + '\',this)" style="font-size:11px;padding:6px 12px;">' +
+    return '<button class="navTab ssSetTab' + (isActive ? ' active' : '') + '" ' +
+      'draggable="true" data-set-id="' + set.id + '" ' +
+      'ondragstart="ssTabDragStart(event)" ondragover="ssTabDragOver(event)" ondrop="ssTabDrop(event)" ondragend="ssTabDragEnd(event)" ' +
+      'onclick="showSpellingSet(\'' + set.id + '\',this)" ' +
+      'style="font-size:11px;padding:6px 12px;cursor:grab;">' +
+      '<span style="font-size:9px;opacity:.5;margin-right:3px;">⠿</span>' +
       WordLabData.escapeHtml(set.name) + ' <span style="font-size:9px;color:' + (isActive ? '#e0e7ff' : '#94a3b8') + ';">(' + (set.words || []).length + ')</span></button>';
   }).join('');
   tabsHtml += '<button class="navTab ssSetTab" onclick="showSpellingSetCreate()" style="font-size:11px;padding:6px 12px;border-style:dashed;">+ New Set</button>';
