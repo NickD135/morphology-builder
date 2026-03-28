@@ -1,18 +1,40 @@
 /* ──────────────────────────────────────────────────────────────
    wordlab-teacher.js  —  Teacher Mode for game pages
    Loaded AFTER wordlab-data.js on every game page.
-   When a teacher is in preview mode, this module:
+   When a teacher opens a game from the teacher landing (not "View as
+   Student" preview), this module activates classroom teaching mode:
      - Hides gamified UI (score, streak, fuel, timer)
      - Shows a word-count picker before the game starts
      - Disables auto-advance (teacher clicks Next)
      - Skips recordAttempt (no XP/quarks)
      - Shows rich feedback explaining why answers are right/wrong
      - Tracks word count and shows a non-gamified end screen
+   "View as Student" shows the normal gamified student experience.
    ────────────────────────────────────────────────────────────── */
 var WLTeacher = (function() {
   'use strict';
 
-  var _active = (typeof WordLabData !== 'undefined' && WordLabData.isTeacherPreview());
+  // Teacher mode activates when:
+  //  1. A Supabase auth session exists (teacher is logged in), AND
+  //  2. They are NOT in "View as Student" preview mode
+  // This means the teacher landing activity cards open games in teaching mode,
+  // while "View as Student" shows the real student experience.
+  function _detectTeacherMode() {
+    // If in student preview, always return false — show normal student game
+    if (typeof WordLabData !== 'undefined' && WordLabData.isTeacherPreview()) return false;
+    // Check for Supabase auth token in localStorage (synchronous)
+    try {
+      var keys = Object.keys(localStorage);
+      for (var i = 0; i < keys.length; i++) {
+        if (keys[i].indexOf('sb-') === 0 && keys[i].indexOf('-auth-token') > 0) {
+          var val = localStorage.getItem(keys[i]);
+          if (val && val.indexOf('"access_token"') > 0) return true;
+        }
+      }
+    } catch(e) {}
+    return false;
+  }
+  var _active = _detectTeacherMode();
   var _wordLimit = Infinity;
   var _wordsDone = 0;
   var _wordsCorrect = 0;
