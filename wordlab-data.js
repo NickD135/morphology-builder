@@ -377,19 +377,29 @@ const WordLabData = (() => {
     let charRows = [];
 
     if (studentIds.length) {
-      const [progResult, charResult] = await Promise.all([
-        sb().from('student_progress')
-          .select('student_id, activity, category, correct, total, total_time, updated_at, is_extension')
-          .in('student_id', studentIds)
-          .limit(10000),
+      // Fetch progress in batches to avoid Supabase row limits
+      const BATCH = 5;
+      const progBatches = [];
+      for (let i = 0; i < studentIds.length; i += BATCH) {
+        progBatches.push(studentIds.slice(i, i + BATCH));
+      }
+      const [charResult, ...progResults] = await Promise.all([
         sb().from('student_character')
           .select('student_id, quarks, xp, badges, scientist, stats')
-          .in('student_id', studentIds)
+          .in('student_id', studentIds),
+        ...progBatches.map(batch =>
+          sb().from('student_progress')
+            .select('student_id, activity, category, correct, total, total_time, updated_at, is_extension')
+            .in('student_id', batch)
+            .limit(50000)
+        )
       ]);
-      if (progResult.error) throw progResult.error;
       if (charResult.error) throw charResult.error;
-      progressRows = progResult.data || [];
       charRows = charResult.data || [];
+      for (const pr of progResults) {
+        if (pr.error) throw pr.error;
+        progressRows = progressRows.concat(pr.data || []);
+      }
     }
 
     const charMap = {};
