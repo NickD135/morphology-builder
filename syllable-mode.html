@@ -620,6 +620,7 @@
 <script src="wordlab-audio.js"></script>
 <script src="wordlab-teacher.js"></script>
 <script src="wordlab-help.js"></script>
+<script src="wordlab-hints.js"></script>
 <script>
 // ── Word list ────────────────────────────────────────────────────────────────
 // Format: { word, syllables: ["syl","la","bles"] }
@@ -757,6 +758,7 @@ function _ssTrack(question, correct) {
 
 // ── Teacher mode flag ────────────────────────────────────────────────────────
 var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+var _supportMode = (typeof WordLabData !== 'undefined' && WordLabData.isSupportMode());
 
 // ── State ────────────────────────────────────────────────────────────────────
 let currentWord = null;
@@ -807,6 +809,7 @@ function renderWord(){
   currentWord = pick;
   choppedGaps.clear();
   checked = false;
+  if(typeof WLHints!=='undefined') WLHints.resetHints();
   // Clear any correct-break markers from previous word
   document.querySelectorAll('.chopGap').forEach(g => {
     g.classList.remove('chopped','correct-break');
@@ -852,6 +855,19 @@ function renderWord(){
   hideFeedback();
   document.getElementById('nextBtn').classList.remove('visible');
   document.getElementById('checkBtn').disabled = false;
+  // Support mode: show expected syllable count badge
+  var _smBadge = document.getElementById('supportSyllableCount');
+  if(_supportMode && currentWord){
+    if(!_smBadge){
+      _smBadge = document.createElement('div');
+      _smBadge.id = 'supportSyllableCount';
+      _smBadge.style.cssText = 'text-align:center;margin:6px 0 2px;font-size:12px;font-weight:800;color:#b45309;letter-spacing:.04em;';
+      var chopC = document.getElementById('chopContainer');
+      if(chopC && chopC.parentNode) chopC.parentNode.insertBefore(_smBadge, chopC);
+    }
+    _smBadge.textContent = 'This word has ' + currentWord.syllables.length + ' syllables';
+    _smBadge.style.display = '';
+  } else if(_smBadge){ _smBadge.style.display = 'none'; }
   // EALD: speak buttons + definition on load
   var ealdSpeakEl=document.getElementById('ealdSpeakRow');
   var ealdDefEl=document.getElementById('ealdDefinition');
@@ -1129,6 +1145,13 @@ if(typeof WLHelp!=='undefined') WLHelp.init({
     {icon:'✅',title:'Check your answer',desc:'Press Check. Green lines show correct chops, red lines show mistakes.'}
   ],
   audioText:'In Syllable Splitter, you chop words into syllables. Each syllable has one vowel sound. Click between letters to add a chop. Click a line again to undo it. Press Check to see your result. Green lines mean correct, red lines mean that chop was wrong.'
+});
+if(typeof WLHints!=='undefined') WLHints.register({
+  getStrategyHint: function(){ return 'Clap the word out \u2014 each clap is a syllable. Every syllable needs a vowel sound.'; },
+  getSpecificHint: function(){
+    if(!currentWord) return 'Try clapping the word.';
+    return 'This word has ' + currentWord.syllables.length + ' syllables.';
+  }
 });
 </script>
 

@@ -365,7 +365,9 @@
 <script src="wordlab-audio.js"></script>
 <script src="wordlab-teacher.js"></script>
 <script src="wordlab-help.js"></script>
+<script src="wordlab-hints.js"></script>
 <script>
+var _supportMode = (typeof WordLabData !== 'undefined' && WordLabData.isSupportMode());
 
 // ══════════════════════════════════════════════════════════════
 // HOMOPHONE DATA — Standard
@@ -755,7 +757,7 @@ function startFuelDrain() {
   if (_wltActive) return;
   clearInterval(fuelInterval);
   fuelInterval = setInterval(() => {
-    fuel -= 0.2;
+    fuel -= (_supportMode ? 0.1 : 0.2);
     if (fuel <= 0) { fuel = 0; updateHud(); clearInterval(fuelInterval); endGame(); return; }
     updateHud();
   }, 250);
@@ -773,7 +775,7 @@ function skipQuestion() {
   if (!_wltActive && fuel <= 0) return;
   if (buttonsLocked) return;
   streak = 0;
-  if (!_wltActive) { fuel = Math.max(fuel - 8, 0); updateHud(); if (fuel <= 0) { endGame(); return; } }
+  if (!_wltActive) { fuel = Math.max(fuel - (_supportMode ? 4 : 8), 0); updateHud(); if (fuel <= 0) { endGame(); return; } }
   if (_wltActive) { WLTeacher.clearFeedback(); var nb = document.getElementById('wltNextBtn'); if (nb) nb.style.display = 'none'; }
   currentQ++;
   showQuestion();
@@ -784,6 +786,7 @@ function showQuestion() {
   if (!_wltActive && fuel <= 0) { endGame(); return; }
   if (_wltActive) { WLTeacher.clearFeedback(); if (WLTeacher.shouldEnd()) { WLTeacher.showEndScreen(); return; } }
   if (currentQ >= questions.length) { endGame(); return; }
+  if(typeof WLHints!=='undefined') WLHints.resetHints();
   feedbackEl.textContent = ''; feedbackEl.className = 'feedback';
   subFeedEl.textContent = '';
   buttonsLocked = false;
@@ -794,6 +797,10 @@ function showQuestion() {
   if (selectedMode === 'mode1') renderMode1(area, q);
   else if (selectedMode === 'mode2') renderMode2(area, q);
   else renderMode3(area, q);
+  // Support mode scaffold: highlight gap more prominently
+  if(_supportMode){ var _gap=document.getElementById('gapSpan'); if(_gap) _gap.style.cssText='background:#4338ca;color:#e0e7ff;padding:2px 12px;border-radius:8px;font-weight:900;font-size:1.15em;'; }
+  // Update hints for this question
+  if(typeof WLHints!=='undefined'){ var _hQ=q; WLHints.updateHints(function(){return 'Read the sentence carefully \u2014 the meaning tells you which spelling to use.';},function(){if(!_hQ||!_hQ.why)return'';return _hQ.why;}); }
   // EALD: speak buttons + flip reveal on load
   var ealdSpeakEl=document.getElementById('ealdSpeakBtns');
   var ealdDefEl=document.getElementById('ealdDefinition');
@@ -832,7 +839,7 @@ function renderMode1(area, q) {
       <div class="monitor-label">📡 Incoming signal — ${currentQ+1} of ${questions.length}</div>
       <div class="sentence-text">${html}</div>
     </div>
-    <div class="options-row">${q.group.map(w =>
+    <div class="options-row">${(_supportMode && q.group.length > 2 ? [q.answer].concat(q.group.filter(function(w){return w!==q.answer;}).slice(0,1)).sort(function(){return Math.random()-.5;}) : q.group).map(w =>
       `<button class="opt-btn" onclick="checkMode1('${w.replace(/'/g,"\\'")}',this)">${w}</button>`
     ).join('')}</div>`;
 }
@@ -1046,7 +1053,7 @@ function handleResult(correct, timeMs, why, explain, word, skipCount) {
       score += pts;
       streak++;
       if (streak > bestStreak) bestStreak = streak;
-      fuel = Math.min(fuel + 8, 100);
+      fuel = Math.min(fuel + (_supportMode ? 12 : 8), 100);
     }
 
     if (!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()) {
@@ -1065,7 +1072,7 @@ function handleResult(correct, timeMs, why, explain, word, skipCount) {
     }
   } else {
     streak = 0;
-    if (!_wltActive) { fuel = Math.max(fuel - 12, 0); }
+    if (!_wltActive) { fuel = Math.max(fuel - (_supportMode ? 6 : 12), 0); }
 
     if (!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()) {
       WordLabData.recordAttempt('homophone-hunter', cat, false, timeMs, 0);
@@ -1217,6 +1224,14 @@ if(typeof WLHelp!=='undefined') WLHelp.init({
     {icon:'⚡',title:'Keep your signal',desc:'Your signal strength drops over time. Correct answers boost it.'}
   ],
   audioText:'In Homophone Hunter, you read a sentence with a gap and pick the correct homophone. Homophones sound the same but have different spellings and meanings. Choose the spelling that fits the sentence. After each answer you will learn what each spelling means. Your signal strength drops over time, so try to answer quickly.'
+});
+if(typeof WLHints!=='undefined') WLHints.register({
+  getStrategyHint: function(){ return 'Read the sentence carefully \u2014 the meaning tells you which spelling to use.'; },
+  getSpecificHint: function(){
+    if(!questions||currentQ>=questions.length) return '';
+    var q=questions[currentQ];
+    return q.why||'Think about the meaning of each spelling.';
+  }
 });
 </script>
 

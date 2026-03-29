@@ -499,6 +499,7 @@
 <script src="wordlab-audio.js"></script>
 <script src="wordlab-teacher.js"></script>
 <script src="wordlab-help.js"></script>
+<script src="wordlab-hints.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════
 // WORD DATA
@@ -2386,6 +2387,7 @@ let checked          = false;
 let attempts         = 0;
 let autoNextTimer    = null;
 var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+var _supportMode = (typeof WordLabData !== 'undefined' && WordLabData.isSupportMode());
 
 // ═══════════════════════════════════════════════════════════════
 // SETUP UI
@@ -2492,6 +2494,7 @@ function loadWord(){
   usedWords.add(currentWord.word);
   checked = false;
   attempts = 0;
+  if(typeof WLHints!=='undefined') WLHints.resetHints();
 
   // Clue — always shown at every level to avoid homophone confusion,
   // but presented differently by difficulty
@@ -2582,6 +2585,12 @@ function buildWordRow(){
   zoneText.id = 'dropZoneText';
   zone.appendChild(zoneText);
 
+  // Support mode: highlight the drop zone with a pulsing border
+  if(_supportMode){
+    zone.style.borderColor = '#6366f1';
+    zone.style.boxShadow = '0 0 8px rgba(99,102,241,.4)';
+  }
+
   // Drag events
   zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
   zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
@@ -2616,11 +2625,13 @@ function buildTiles(){
   const container = document.getElementById('tilesRow');
   container.innerHTML = '';
 
-  // Build distractor set based on level
+  // Build distractor set based on level (support mode: always 2 options)
   let options = [currentWord.grapheme];
   const distractors = currentWord.distractors || [];
 
-  if(selectedLevel === 'starter' || currentWord.level === 'starter'){
+  if(_supportMode){
+    options = options.concat(distractors.slice(0,1));
+  } else if(selectedLevel === 'starter' || currentWord.level === 'starter'){
     options = options.concat(distractors.slice(0,2));
   } else if(selectedLevel === 'levelup' || currentWord.level === 'levelup'){
     options = options.concat(distractors.slice(0,3));
@@ -2886,6 +2897,16 @@ if(typeof WLHelp!=='undefined') WLHelp.init({
     {icon:'💡',title:'Read the explanation',desc:'After each answer, you will see why that grapheme spells the sound.'}
   ],
   audioText:'In Sound Sorter, you listen to a word and find which letters spell a particular sound. The word plays automatically. Look at the sound hint, then pick the correct spelling from the tiles below. Click or drag the tile into the blank. After each answer you will see an explanation of why that grapheme spells the sound.'
+});
+if(typeof WLHints!=='undefined') WLHints.register({
+  getStrategyHint: function(){ return 'Say the word slowly and listen for the sound.'; },
+  getSpecificHint: function(){
+    if(!currentWord) return 'Listen carefully to the word.';
+    var before = currentWord.before || '';
+    var after = currentWord.after || '';
+    var pos = !before ? 'beginning' : !after ? 'end' : 'middle';
+    return 'The ' + currentWord.soundLabel + ' sound is at the ' + pos + ' of the word "' + currentWord.word + '".';
+  }
 });
 
 (function(){var w=document.getElementById('particles');if(!w)return;var cs=['rgba(234,179,8,.3)','rgba(250,204,21,.25)','rgba(255,255,255,.2)',

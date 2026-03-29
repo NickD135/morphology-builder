@@ -3205,7 +3205,9 @@ document.addEventListener("DOMContentLoaded", () => {
 <script src="wordlab-effects.js"></script>
 <script src="wordlab-audio.js"></script>
 <script src="wordlab-help.js"></script>
+<script src="wordlab-hints.js"></script>
 <script>
+var _supportMode = (typeof WordLabData !== 'undefined' && WordLabData.isSupportMode());
 // ── Word Labs login ────────────────────────────────────────────────
 // ── Side menu ────────────────────────────────────────────────────
 function toggleMenu(){
@@ -3237,6 +3239,33 @@ document.addEventListener('DOMContentLoaded', function() {
     ],
     audioText:'In Morpheme Builder, you drag prefixes, bases, and suffixes from the tile banks into the build zone. Combine them to create real English words. Valid words light up green. See how adding prefixes and suffixes changes the meaning of a base word. Click tiles to remove them, or press Clear to start over.'
   });
+  // Register hint system
+  if(typeof WLHints !== 'undefined') WLHints.register({
+    getStrategyHint: function(){ return 'Try combining a base word with a prefix or suffix to make a real word.'; },
+    getSpecificHint: function(){
+      // Suggest a valid prefix from the enabled set
+      var prefixBank = document.getElementById('prefixBank');
+      if(prefixBank){
+        var enabled = prefixBank.querySelectorAll('.tile:not(.disabled)');
+        if(enabled.length){
+          var pick = enabled[Math.floor(Math.random() * enabled.length)];
+          var form = pick.querySelector('.form');
+          if(form) return 'Try adding \u201c' + form.textContent + '\u201d to a base word.';
+        }
+      }
+      return 'Look for green-highlighted tiles \u2014 those can combine into real words.';
+    }
+  });
+  // Support mode scaffold: colour-code tile banks by type
+  if(_supportMode){
+    var sty = document.createElement('style');
+    sty.textContent = [
+      '#prefixBank .tile:not(.disabled) { border-left:3px solid #7c3aed !important; }',
+      '#baseBank .tile:not(.disabled) { border-left:3px solid #4338ca !important; }',
+      '#suffixBank .tile:not(.disabled) { border-left:3px solid #ea580c !important; }',
+    ].join('\n');
+    document.head.appendChild(sty);
+  }
   if (typeof WordLabData === 'undefined') return;
   WordLabData.initLoginUI({
     accentColor: '#4338ca',

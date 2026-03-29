@@ -1756,6 +1756,7 @@ function renderSummary(){
   // ── Student rows ───────────────────────────────────────────
   const rows = currentClass.students.map(student => {
     const extOn = !!student.extension_mode;
+    const supOn = !!student.support_mode;
     const isCrown = currentCrownLeaderId && student.id === currentCrownLeaderId;
     const cells = ACTS.map(a => {
       const res = actAcc(student, a.key);
@@ -1779,6 +1780,7 @@ function renderSummary(){
         <div style="display:flex;align-items:center;gap:6px;">
           <span style="cursor:pointer;flex:1;" onclick="showStudentProfile('${student.id}')">${isCrown?'🍩 ':''}${WordLabData.escapeHtml(student.name)}</span>
           ${extOn?'<span style="background:var(--indigo);color:#e0e7ff;font-size:7px;font-weight:900;padding:1px 5px;border-radius:6px;letter-spacing:.06em;cursor:pointer;" onclick="event.stopPropagation();toggleExtensionFromDashboard(\''+student.id+'\',true)" title="Extension ON — click to disable">EXT</span>':'<span style="font-size:7px;font-weight:800;color:var(--muted);padding:1px 5px;border-radius:6px;border:1px solid var(--line);cursor:pointer;opacity:.5;" onclick="event.stopPropagation();toggleExtensionFromDashboard(\''+student.id+'\',false)" title="Extension OFF — click to enable">EXT</span>'}
+          ${supOn?'<span style="background:#0d9488;color:#e0e7ff;font-size:7px;font-weight:900;padding:1px 5px;border-radius:6px;letter-spacing:.06em;cursor:pointer;" onclick="event.stopPropagation();toggleSupportFromDashboard(\''+student.id+'\',true)" title="Support ON — click to disable">SUP</span>':'<span style="font-size:7px;font-weight:800;color:var(--muted);padding:1px 5px;border-radius:6px;border:1px solid var(--line);cursor:pointer;opacity:.5;" onclick="event.stopPropagation();toggleSupportFromDashboard(\''+student.id+'\',false)" title="Support OFF — click to enable">SUP</span>'}
           <span style="cursor:pointer;font-size:12px;opacity:.5;transition:opacity .15s;" onclick="event.stopPropagation();openRewardModal('${student.id}')" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.5'" title="Give reward">🎁</span>
         </div>
         <div style="font-size:9px;font-weight:700;color:${student.lastActive ? 'var(--muted)' : 'rgba(148,163,184,.4)'};margin-top:1px;">${lastActiveStr}</div>
@@ -1827,6 +1829,20 @@ async function toggleExtensionFromDashboard(studentId, currentVal){
     renderFlags();
   } catch(e){
     alert('Could not update extension mode: ' + (e.message||e));
+  }
+}
+
+async function toggleSupportFromDashboard(studentId, currentVal){
+  const newVal = !currentVal;
+  try {
+    const { error } = await dbSb().from('students').update({ support_mode: newVal }).eq('id', studentId);
+    if(error) throw error;
+    const student = _studentMap[studentId];
+    if(student) student.support_mode = newVal;
+    renderSummary();
+    renderFlags();
+  } catch(e){
+    alert('Could not update support mode: ' + (e.message||e));
   }
 }
 

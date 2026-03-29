@@ -284,7 +284,9 @@
 <script src="wordlab-audio.js"></script>
 <script src="wordlab-teacher.js"></script>
 <script src="wordlab-help.js"></script>
+<script src="wordlab-hints.js"></script>
 <script>
+  var _supportMode = (typeof WordLabData !== 'undefined' && WordLabData.isSupportMode());
   let PREFIXES=[{id:"ad",form:"ad",meaning:"towards or to"},{id:"anti",form:"anti",meaning:"against"},{id:"de",form:"de",meaning:"undo or remove"},{id:"dis",form:"dis",meaning:"not or opposite"},{id:"in",form:"in",meaning:"not or into"},{id:"inter",form:"inter",meaning:"between"},{id:"mis",form:"mis",meaning:"wrongly"},{id:"non",form:"non",meaning:"not"},{id:"over",form:"over",meaning:"too much"},{id:"post",form:"post",meaning:"after"},{id:"pre",form:"pre",meaning:"before"},{id:"re",form:"re",meaning:"again"},{id:"sub",form:"sub",meaning:"under or below"},{id:"super",form:"super",meaning:"above or beyond"},{id:"trans",form:"trans",meaning:"across"},{id:"un",form:"un",meaning:"not"},{id:"under",form:"under",meaning:"below"},{id:"con",form:"con",meaning:"with or together"},{id:"contra",form:"contra",meaning:"against or opposite"},{id:"en",form:"en",meaning:"cause to or make"},{id:"em",form:"em",meaning:"cause to or make"},{id:"ex",form:"ex",meaning:"out of or former"},{id:"e",form:"e",meaning:"out of"},{id:"extra",form:"extra",meaning:"beyond or outside"},{id:"fore",form:"fore",meaning:"before or in front"},{id:"hyper",form:"hyper",meaning:"over or excessive"},{id:"mal",form:"mal",meaning:"bad or badly"},{id:"mega",form:"mega",meaning:"large or great"},{id:"micro",form:"micro",meaning:"small or tiny"},{id:"mid",form:"mid",meaning:"middle"},{id:"multi",form:"multi",meaning:"many"},{id:"pro",form:"pro",meaning:"in favour of or forward"},{id:"semi",form:"semi",meaning:"half or partly"},{id:"ob",form:"ob",meaning:"against or towards"},{id:"a",form:"a",meaning:"not or without"}];
   let SUFFIXES=[{id:"s",form:"s",meaning:"plural"},{id:"es",form:"es",meaning:"plural"},{id:"ed",form:"ed",meaning:"past tense"},{id:"ing",form:"ing",meaning:"happening now"},{id:"en",form:"en",meaning:"made of; to make"},{id:"er",form:"er",meaning:"person who; more"},{id:"or",form:"or",meaning:"person who"},{id:"est",form:"est",meaning:"most"},{id:"ly",form:"ly",meaning:"in a way"},{id:"ion",form:"ion",meaning:"act or result of"},{id:"able",form:"able",meaning:"able to be"},{id:"ible",form:"ible",meaning:"able to be"},{id:"y",form:"y",meaning:"characterised by"},{id:"ful",form:"ful",meaning:"full of"},{id:"less",form:"less",meaning:"without"},{id:"ish",form:"ish",meaning:"somewhat; like"},{id:"ness",form:"ness",meaning:"state of being"},{id:"ment",form:"ment",meaning:"result of an action"},{id:"al",form:"al",meaning:"related to"},{id:"ial",form:"ial",meaning:"related to"},{id:"ty",form:"ty",meaning:"state or quality"},{id:"ity",form:"ity",meaning:"state or quality"},{id:"ous",form:"ous",meaning:"full of"},{id:"ee",form:"ee",meaning:"person who receives"},{id:"ist",form:"ist",meaning:"person who"},{id:"ance",form:"ance",meaning:"state of"},{id:"ence",form:"ence",meaning:"state of"},{id:"ant",form:"ant",meaning:"person or thing that"},{id:"ent",form:"ent",meaning:"person or thing that"},{id:"ate",form:"ate",meaning:"to make or become"},{id:"eer",form:"eer",meaning:"person who"},{id:"fy",form:"fy",meaning:"make"},{id:"ify",form:"ify",meaning:"make"},{id:"ific",form:"ific",meaning:"making or doing"},{id:"hood",form:"hood",meaning:"state of"},{id:"ian",form:"ian",meaning:"person connected to"},{id:"ic",form:"ic",meaning:"related to"},{id:"ive",form:"ive",meaning:"having the quality of"},{id:"ize",form:"ize",meaning:"make"},{id:"like",form:"like",meaning:"similar to"},{id:"logy",form:"logy",meaning:"study of"},{id:"ologist",form:"ologist",meaning:"person who studies"},{id:"ship",form:"ship",meaning:"state or skill"},{id:"ure",form:"ure",meaning:"result of"}];
   (function(){
@@ -422,7 +424,7 @@
   function generateQuestion(){
     const pool=getActiveMorphemePool();
     const correct=pool[Math.floor(Math.random()*pool.length)];
-    const wrong=shuffleArray(pool.filter(p=>p.id!==correct.id)).slice(0,2);
+    const wrong=shuffleArray(pool.filter(p=>p.id!==correct.id)).slice(0,_supportMode?1:2);
     return{correct,options:shuffleArray([correct,...wrong])};
   }
   function resetDropZone(){dropZoneEl.classList.remove("flashSuccess","flashFail");dropZoneTextEl.textContent="?";dropZoneTextEl.style.color="#a5b4fc";}
@@ -430,16 +432,28 @@
   function loadQuestion(){
     if(!_wltActive && fuel<=0)return;
     if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
+    if(typeof WLHints!=='undefined') WLHints.resetHints();
     buttonsLocked=false;
     currentQuestion=generateQuestion();
     const q=currentQuestion;
+    var _typeLabel='';
     if(morphemeMode==='base'){
       wordEl.textContent="BASE";
+      _typeLabel='base';
       baseMeaningEl.innerHTML=`<strong>Which base word means:</strong><br>"${q.correct.meaning}"`;
     } else {
       wordEl.textContent="MEANING";
-      const typeLabel=PREFIXES.some(x=>x.id===q.correct.id)?'prefix':'suffix';
-      baseMeaningEl.innerHTML=`<strong>Which ${typeLabel} means:</strong><br>"${q.correct.meaning}"`;
+      _typeLabel=PREFIXES.some(x=>x.id===q.correct.id)?'prefix':'suffix';
+      var _scaffoldLabel = _supportMode ? ' <span style="font-size:10px;font-weight:900;color:'+(_typeLabel==='prefix'?'#7c3aed':'#ea580c')+';text-transform:uppercase;letter-spacing:.08em;">'+_typeLabel+'</span>' : '';
+      baseMeaningEl.innerHTML=`<strong>Which ${_typeLabel} means:</strong>${_scaffoldLabel}<br>"${q.correct.meaning}"`;
+    }
+    // Register hints for this question
+    if(typeof WLHints!=='undefined'){
+      var _hintQ=q, _hintType=_typeLabel;
+      WLHints.updateHints(
+        function(){ return 'Think about what this morpheme means \u2014 does it go at the start, middle, or end of a word?'; },
+        function(){ return 'It is a '+_hintType+' and starts with "'+(_hintQ.correct.form||'').charAt(0).toUpperCase()+'".'; }
+      );
     }
     feedbackEl.textContent="";feedbackEl.className="feedback";subFeedbackEl.textContent="";
     resetDropZone();optionsEl.innerHTML="";
@@ -484,7 +498,7 @@
     const isBase=morphemeMode==='base';
     const _cat=isBase?'base:'+q.correct.id:(PREFIXES.some(x=>x.id===q.correct.id)?'prefix:':'suffix:')+q.correct.id;
     if(choice.id===q.correct.id){
-      if(!_wltActive){ score+=50+(streak*10); fuel=Math.min(fuel+8,100); }
+      if(!_wltActive){ score+=50+(streak*10); fuel=Math.min(fuel+(_supportMode?12:8),100); }
       streak++;
       if(!_wltActive && typeof WordLabData!=='undefined'&&WordLabData.getSession()){const _wlResult=WordLabData.recordAttempt('meaning-mode',_cat,true,0);if(typeof WLScientist!=='undefined') WLScientist.react('correct',_wlResult);}
       if(_wltActive && typeof WLScientist!=='undefined') WLScientist.react('correct');
@@ -494,7 +508,7 @@
       dropZoneTextEl.style.color="var(--ok)";dropZoneEl.classList.add("flashSuccess");
       if(_wltActive){var _type=isBase?'base':PREFIXES.some(x=>x.id===q.correct.id)?'prefix':'suffix';WLTeacher.onAnswer(true,'<b>'+getPrefixLabel(q.correct)+'</b> is a '+_type+' meaning "<b>'+q.correct.meaning+'</b>".');}
     } else {
-      streak=0;if(!_wltActive){fuel=Math.max(fuel-12,0);}
+      streak=0;if(!_wltActive){fuel=Math.max(fuel-(_supportMode?6:12),0);}
       if(!_wltActive && typeof WordLabData!=='undefined'&&WordLabData.getSession()){WordLabData.recordAttempt('meaning-mode',_cat,false,0);}
       if(typeof WLScientist!=='undefined') WLScientist.react('wrong');
       if(!_wltActive && typeof WLAudio!=='undefined') WLAudio.wrong();
@@ -524,7 +538,7 @@
     if(_wltActive) return; // Teacher mode: wait for Next click
     if(fuel<=0){setTimeout(endGame,800);return;}setTimeout(loadQuestion,1400);
   }
-  function startFuelDrain(){clearInterval(fuelInterval);fuelInterval=setInterval(()=>{fuel-=.25;if(fuel<=0){fuel=0;updateHud();endGame();clearInterval(fuelInterval);return;}updateHud();},220);}
+  function startFuelDrain(){clearInterval(fuelInterval);fuelInterval=setInterval(()=>{fuel-=(_supportMode?.12:.25);if(fuel<=0){fuel=0;updateHud();endGame();clearInterval(fuelInterval);return;}updateHud();},220);}
   function endGame(){buttonsLocked=true;optionsEl.innerHTML="";feedbackEl.textContent="Mission over";feedbackEl.className="feedback bad";subFeedbackEl.textContent=`Final score: ${score} XP`;}
   document.getElementById("recalibrateBtn").addEventListener("click",()=>{score=0;streak=0;fuel=100;if(!_wltActive){updateHud();startFuelDrain();}loadQuestion();});
   document.getElementById("skipBtn").addEventListener("click",()=>{if(!_wltActive&&fuel<=0)return;streak=0;if(!_wltActive){fuel=Math.max(fuel-8,0);updateHud();if(fuel<=0){endGame();return;}}if(_wltActive){WLTeacher.clearFeedback();var nb=document.getElementById('wltNextBtn');if(nb)nb.style.display='none';}loadQuestion();});
@@ -554,6 +568,14 @@
       {icon:'🔄',title:'Switch modes',desc:'Use the tabs to practise prefixes, suffixes, bases, or mixed.'}
     ],
     audioText:'In Meaning Match-Up, a meaning is shown and you pick the morpheme that matches. Choose from the options below. The energy bar drains over time, so try to answer quickly. Correct answers refill your energy. Use the tabs at the top to switch between prefixes, suffixes, bases, or mixed mode.'
+  });
+  if(typeof WLHints!=='undefined') WLHints.register({
+    getStrategyHint: function(){ return 'Think about what this morpheme means \u2014 does it go at the start, middle, or end of a word?'; },
+    getSpecificHint: function(){
+      if(!currentQuestion) return '';
+      var _t = PREFIXES.some(function(x){ return x.id===currentQuestion.correct.id; }) ? 'prefix' : (BASES.some(function(x){ return x.id===currentQuestion.correct.id; }) ? 'base' : 'suffix');
+      return 'It is a '+_t+' and starts with "'+(currentQuestion.correct.form||'').charAt(0).toUpperCase()+'".';
+    }
   });
 </script>
 <script>

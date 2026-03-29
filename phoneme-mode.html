@@ -486,6 +486,7 @@
 <script src="wordlab-audio.js"></script>
 <script src="wordlab-teacher.js"></script>
 <script src="wordlab-help.js"></script>
+<script src="wordlab-hints.js"></script>
 <script>
 const WORDS = [
   // Starter
@@ -615,6 +616,7 @@ function _ssTrack(question, correct) {
 }
 
 var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+var _supportMode = (typeof WordLabData !== 'undefined' && WordLabData.isSupportMode());
 
 let currentWord = null;
 let currentDiff = "Starter";
@@ -648,6 +650,7 @@ function loadWord(){
   currentWord = pool[Math.floor(Math.random() * pool.length)];
   usedWords.add(currentWord.word);
   checked = false;
+  if(typeof WLHints!=='undefined') WLHints.resetHints();
   // Start: every letter is its own unit, no splits
   units  = currentWord.word.split("");
   splits = new Array(units.length - 1).fill(false);
@@ -656,6 +659,19 @@ function loadWord(){
   hideFeedback();
   document.getElementById('nextBtn').classList.remove('visible');
   document.getElementById('checkBtn').disabled = false;
+  // Support mode: show expected phoneme count badge
+  var _smBadge = document.getElementById('supportPhonemeCount');
+  if(_supportMode && currentWord){
+    if(!_smBadge){
+      _smBadge = document.createElement('div');
+      _smBadge.id = 'supportPhonemeCount';
+      _smBadge.style.cssText = 'text-align:center;margin:6px 0 2px;font-size:12px;font-weight:800;color:#6366f1;letter-spacing:.04em;';
+      var chopC = document.getElementById('chopContainer');
+      if(chopC && chopC.parentNode) chopC.parentNode.insertBefore(_smBadge, chopC);
+    }
+    _smBadge.textContent = 'This word has ' + currentWord.phonemes.length + ' phonemes';
+    _smBadge.style.display = '';
+  } else if(_smBadge){ _smBadge.style.display = 'none'; }
   // EALD: speak buttons + definition on load
   var ealdSpeakEl=document.getElementById('ealdSpeakBtns');
   var ealdDefEl=document.getElementById('ealdDefinition');
@@ -1047,6 +1063,13 @@ if(typeof WLHelp!=='undefined') WLHelp.init({
     {icon:'✅',title:'Check your answer',desc:'Press Check to see if you split the sounds correctly. The correct answer will show if you get it wrong.'}
   ],
   audioText:'In Phoneme Splitter, you split words into their individual sounds called phonemes. Click between letters to add a split. Some sounds use two letters, like sh or th. Click the orange line to merge them back together into one sound. Press Check when you are ready to see if you got it right.'
+});
+if(typeof WLHints!=='undefined') WLHints.register({
+  getStrategyHint: function(){ return 'Say the word slowly \u2014 each mouth movement is a different sound.'; },
+  getSpecificHint: function(){
+    if(!currentWord) return 'Try saying the word out loud.';
+    return 'This word has ' + currentWord.phonemes.length + ' phonemes.';
+  }
 });
 </script>
 

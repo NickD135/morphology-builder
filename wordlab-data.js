@@ -333,7 +333,7 @@ const WordLabData = (() => {
     const { data: { session: _sess } } = await sb().auth.getSession();
     let query = sb()
       .from('classes')
-      .select('id, name, class_code, created_at, students!students_class_id_fkey(id, name, student_code, extension_mode, eald_language)')
+      .select('id, name, class_code, created_at, students!students_class_id_fkey(id, name, student_code, extension_mode, eald_language, support_mode, support_mode, support_mode)')
       .order('name');
     if (_sess) {
       const teacher = await getTeacherRecord();
@@ -352,7 +352,7 @@ const WordLabData = (() => {
         name: c.name,
         class_code: c.class_code || '',
         created: new Date(c.created_at).getTime(),
-        students: (c.students || []).map(function(s) { return { id: s.id, name: s.name, student_code: s.student_code || '', extension_mode: !!s.extension_mode, eald_language: s.eald_language || null }; })
+        students: (c.students || []).map(function(s) { return { id: s.id, name: s.name, student_code: s.student_code || '', extension_mode: !!s.extension_mode, eald_language: s.eald_language || null, support_mode: !!s.support_mode }; })
       };
     });
   }
@@ -367,7 +367,7 @@ const WordLabData = (() => {
 
     const { data: studs, error: stuErr } = await sb()
       .from('students')
-      .select('id, name, student_code, extension_mode, eald_language')
+      .select('id, name, student_code, extension_mode, eald_language, support_mode, support_mode, support_mode')
       .eq('class_id', id)
       .order('name');
     if (stuErr) throw stuErr;
@@ -433,6 +433,7 @@ const WordLabData = (() => {
       student_code: s.student_code || '',
       extension_mode: !!s.extension_mode,
       eald_language: s.eald_language || null,
+      support_mode: !!s.support_mode,
       results: progressMap[s.id] || {},
       lastActive: lastActiveMap[s.id] || null
     }));
@@ -532,7 +533,7 @@ const WordLabData = (() => {
   async function verifyStudentCode(studentId, code) {
     var { data } = await sb()
       .from('students')
-      .select('student_code, extension_mode, eald_language')
+      .select('student_code, extension_mode, eald_language, support_mode, support_mode')
       .eq('id', studentId)
       .maybeSingle();
     if (!data || !data.student_code) return { ok: false, extensionMode: false, ealdLanguage: null };
@@ -586,6 +587,38 @@ const WordLabData = (() => {
     targets.forEach(function(el) {
       if (on) el.classList.add('low-stim');
       else el.classList.remove('low-stim');
+    });
+  }
+
+  // ── Support mode ───────────────────────────────────────────────
+  // Per-student scaffolding: slower timers, fewer options, hints, visual scaffolds.
+  // Set by teacher in dashboard (stored in students.support_mode) or toggled by student.
+  function isSupportMode() {
+    return sessionStorage.getItem('wl_support_mode') === 'true';
+  }
+
+  function setSupportMode(on) {
+    sessionStorage.setItem('wl_support_mode', on ? 'true' : 'false');
+    _applySupportClass(on);
+  }
+
+  async function loadSupportMode(studentId) {
+    studentId = studentId || (loadSession() || {}).studentId;
+    if (!studentId) return false;
+    try {
+      var { data } = await sb().from('students').select('support_mode').eq('id', studentId).maybeSingle();
+      var on = !!(data && data.support_mode);
+      sessionStorage.setItem('wl_support_mode', on ? 'true' : 'false');
+      _applySupportClass(on);
+      return on;
+    } catch(e) { return false; }
+  }
+
+  function _applySupportClass(on) {
+    var targets = [document.documentElement, document.body].filter(Boolean);
+    targets.forEach(function(el) {
+      if (on) el.classList.add('support-mode');
+      else el.classList.remove('support-mode');
     });
   }
 
@@ -716,7 +749,7 @@ const WordLabData = (() => {
     const session = loadSession();
     if (!session) return null;
     const [stuResult, charResult, isTeacher] = await Promise.all([
-      sb().from('students').select('extension_mode, eald_language').eq('id', session.studentId).maybeSingle(),
+      sb().from('students').select('extension_mode, eald_language, support_mode').eq('id', session.studentId).maybeSingle(),
       sb().from('student_character').select('*').eq('student_id', session.studentId).maybeSingle(),
       isStudentTeacher(session.classId, session.studentId)
     ]);
@@ -981,8 +1014,9 @@ const WordLabData = (() => {
         } else {
           sessionStorage.removeItem('wl_eald_language');
         }
-        // Success — load low-stim mode from class settings
+        // Success — load per-class and per-student settings
         loadLowStimMode(_loginClassId);
+        loadSupportMode(_loginStudentId);
         startSession(_loginClassId, _loginStudentId, _loginStudentName);
         document.getElementById('wlOverlay').classList.add('wl-hide');
         _updatePill(_loginStudentName);
@@ -1064,7 +1098,9 @@ const WordLabData = (() => {
     sessionStorage.removeItem('wl_teacher_preview');
     sessionStorage.removeItem('wl_eald_language');
     sessionStorage.removeItem('wl_low_stim');
+    sessionStorage.removeItem('wl_support_mode');
     _applyLowStimClass(false);
+    _applySupportClass(false);
     _updatePill(null);
     var btn = document.getElementById('wlLoginBtn');
     if (btn) { btn.style.display = ''; btn.textContent = '👤 Log in'; }
@@ -2335,6 +2371,7 @@ const WordLabData = (() => {
     createTeacherStudent, getTeacherStudent, enterStudentMode, exitStudentMode, isTeacherPreview,
     isExtensionMode, loadExtensionData,
     isLowStimMode, loadLowStimMode,
+    isSupportMode, setSupportMode, loadSupportMode,
     checkDailyLimit, incrementDailyUsage,
     getDailyChallenges, updateChallengeProgress, claimChallengeReward, updateDailyStreak, CHALLENGE_GAMES,
     getFeaturedGame, loadFeaturedGame, getLeastPlayedGames, getBonusDayMultiplier,
@@ -2412,4 +2449,9 @@ if (sessionStorage.getItem('wl_low_stim') === 'true') {
     /* Suppress confetti canvas */
     '.low-stim canvas.confetti-canvas { display:none !important; }' +
   '<\/style>');
+}
+
+// Auto-apply support mode CSS class on page load.
+if (sessionStorage.getItem('wl_support_mode') === 'true') {
+  document.documentElement.classList.add('support-mode');
 }

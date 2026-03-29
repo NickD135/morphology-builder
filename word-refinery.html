@@ -655,6 +655,7 @@
 <script src="wordlab-audio.js"></script>
 <script src="wordlab-teacher.js"></script>
 <script src="wordlab-help.js"></script>
+<script src="wordlab-hints.js"></script>
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
 // THE REFINERY — Data
@@ -1031,6 +1032,7 @@ const ORDER_CLINES = [
 // GAME STATE
 // ─────────────────────────────────────────────────────────────────────────────
 var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+var _supportMode = (typeof WordLabData !== 'undefined' && WordLabData.isSupportMode());
 
 let gameMode = 'fill';
 let score = 0, streak = 0, fuel = 100;
@@ -1086,6 +1088,7 @@ function loadQuestion(){
   gameCardEl.classList.remove('flashSuccess','flashFail');
   if(!_wltActive && fuel<=0) return;
   if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
+  if(typeof WLHints!=='undefined') WLHints.resetHints();
   buttonsLocked = false;
   selectedWord = null;
   placed = {};
@@ -1403,7 +1406,7 @@ function checkCline(){
   function _tierLabel(idx, n){ if(idx < n/3) return 'Tier 1 (everyday)'; if(idx < 2*n/3) return 'Tier 2 (academic)'; return 'Tier 3 (specialist)'; }
 
   if(allCorrect){
-    if(!_wltActive){ score += 70 + (streak*10); streak++; fuel = Math.min(fuel+10,100); }
+    if(!_wltActive){ score += 70 + (streak*10); streak++; fuel = Math.min(fuel+(_supportMode?15:10),100); }
     setPurityMeter(95);
     if(!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()){
       const res = WordLabData.recordAttempt('word-refinery', cat, true, 0);
@@ -1421,7 +1424,7 @@ function checkCline(){
       WLTeacher.onAnswer(true, _fb);
     }
   } else {
-    streak=0; if(!_wltActive){ fuel=Math.max(fuel-10,0); }
+    streak=0; if(!_wltActive){ fuel=Math.max(fuel-(_supportMode?5:10),0); }
     setPurityMeter(20);
     if(!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()) WordLabData.recordAttempt('word-refinery', cat, false, 0);
     if(typeof WLScientist !== 'undefined') WLScientist.react('wrong');
@@ -1465,7 +1468,7 @@ function startFuelDrain(){
   if(_wltActive) return;
   clearInterval(fuelInterval);
   fuelInterval = setInterval(()=>{
-    fuel -= 0.18;
+    fuel -= _supportMode ? 0.09 : 0.18;
     if(fuel<=0){ fuel=0; updateHud(); endGame(); clearInterval(fuelInterval); return; }
     updateHud();
   }, 220);
@@ -1490,7 +1493,7 @@ function restartGame(){
 function skipQuestion(){
   if(!_wltActive && fuel<=0) return;
   streak=0;
-  if(!_wltActive){ fuel=Math.max(fuel-8,0); updateHud(); if(fuel<=0){ endGame(); return; } }
+  if(!_wltActive){ fuel=Math.max(fuel-(_supportMode?4:8),0); updateHud(); if(fuel<=0){ endGame(); return; } }
   if(_wltActive){ WLTeacher.clearFeedback(); var nb=document.getElementById('wltNextBtn'); if(nb) nb.style.display='none'; }
   loadQuestion();
 }
@@ -1571,6 +1574,38 @@ if(typeof WLHelp!=='undefined') WLHelp.init({
   ],
   audioText:'In The Refinery, you sort words from everyday language to specialist vocabulary. Drag or tap words into the correct slots. Tier 1 means everyday words, Tier 2 means academic words, and Tier 3 means specialist or technical words. Your energy drains over time. Correct placements refill it.'
 });
+if(typeof WLHints!=='undefined') WLHints.register({
+  getStrategyHint: function(){ return 'Think about which words you\'d hear every day vs in a textbook vs in a science class.'; },
+  getSpecificHint: function(){
+    if(!currentCline) return 'Look at the category for clues.';
+    var gapSet = new Set(currentCline.gaps);
+    var firstGap = currentCline.gaps[0];
+    if(typeof firstGap==='number'){
+      var word = currentCline.words[firstGap];
+      var n = currentCline.words.length;
+      var tier = firstGap < n/3 ? 'Tier 1 (everyday)' : firstGap < 2*n/3 ? 'Tier 2 (academic)' : 'Tier 3 (specialist)';
+      return '"' + word + '" belongs in ' + tier + '.';
+    }
+    return 'Read the anchor words at each end for clues about the order.';
+  }
+});
+// Support mode: show tier labels more prominently
+if(_supportMode){
+  var _smStyle = document.createElement('style');
+  _smStyle.textContent = '.fixed-word::after{content:attr(data-tier);display:block;font-size:9px;font-weight:900;color:var(--amber-2);letter-spacing:.08em;text-transform:uppercase;margin-top:2px;}';
+  document.head.appendChild(_smStyle);
+  // Patch buildClineTrack to add tier data attributes
+  var _origBuildClineTrack = buildClineTrack;
+  buildClineTrack = function(c){
+    _origBuildClineTrack(c);
+    var n = c.words.length;
+    clineTrackEl.querySelectorAll('.fixed-word').forEach(function(el){
+      var word = el.textContent;
+      var idx = c.words.indexOf(word);
+      if(idx >= 0) el.dataset.tier = idx < n/3 ? 'T1' : idx < 2*n/3 ? 'T2' : 'T3';
+    });
+  };
+}
 </script>
 
 <footer style="text-align:center;padding:12px 16px;font-size:11px;color:#64748b;border-top:1px solid #e2e8f0;margin-top:auto;font-family:Lexend,sans-serif;">&#129514; Word Labs &middot; <a href="about.html" style="color:#64748b;">About</a> &middot; <a href="privacy.html" style="color:#64748b;">Privacy Policy</a> &middot; <a href="terms.html" style="color:#64748b;">Terms of Service</a> &middot; <a href="mailto:nick@wordlabs.app" style="color:#64748b;">Contact</a></footer>

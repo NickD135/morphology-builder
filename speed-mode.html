@@ -581,6 +581,7 @@
       };
 
       var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+      var _supportMode = (typeof WordLabData !== 'undefined' && WordLabData.isSupportMode());
 
       function mkUid(type, id){ return `${type}:${id}`; }
 
@@ -1202,11 +1203,13 @@
 
         stopTimer();
         resetRoundState();
+        if(typeof WLHints!=='undefined') WLHints.resetHints();
 
         const chosenBase = chooseBase();
         state.current.base = chosenBase;
 
         state.roundSeconds = Number(els.timerSelect.value);
+        if(_supportMode) state.roundSeconds = Math.round(state.roundSeconds * 1.5);
         state.timeLeft = state.roundSeconds;
 
         const viable = computeViableAffixesForBase(chosenBase);
@@ -1366,6 +1369,7 @@
 <script src="wordlab-audio.js"></script>
 <script src="wordlab-teacher.js"></script>
 <script src="wordlab-help.js"></script>
+<script src="wordlab-hints.js"></script>
 <script>
 (function(){var w=document.getElementById('particles');if(!w)return;var cs=['rgba(59,130,246,.3)','rgba(96,165,250,.25)','rgba(147,197,253,.2)'];for(var i=0;i<18;i++){var p=document.createElement('div');p.className='particle';p.style.cssText='left:'+(Math.random()*100)+'%;width:'+(6+Math.random()*8)+'px;height:'+(6+Math.random()*8)+'px;background:'+cs[Math.floor(Math.random()*cs.length)]+';animation-duration:'+(8+Math.random()*12)+'s;animation-delay:'+(-Math.random()*20)+'s;';w.appendChild(p);}})();
 (async function(){var w=document.getElementById('sciCharWrap');if(!w||typeof WLScientist==='undefined')return;var sd=typeof WordLabData!=='undefined'?await WordLabData.getStudentData():null;w.innerHTML=WLScientist.buildSVG(sd?sd.scientist:{},'neutral');})();
@@ -1416,6 +1420,35 @@ if(typeof WLHelp!=='undefined') WLHelp.init({
   ],
   audioText:'In Speed Builder, you drag morpheme tiles together to build real words before time runs out. Click Submit or press Enter when you have a valid word. You have limited time each round, so build as many words as you can. Longer words score more points.'
 });
+if(typeof WLHints!=='undefined') WLHints.register({
+  getStrategyHint: function(){ return 'Start with a base word, then try adding a prefix or suffix.'; },
+  getSpecificHint: function(){
+    // Find one valid word that can be built from current tiles
+    if(typeof state==='undefined' || !state.current.base || typeof DICT_SET==='undefined' || !DICT_SET) return 'Try combining the base with different affixes.';
+    var base = state.current.base;
+    // Try base alone first
+    if(isRealWord(base.form) && !state.foundWords.has(base.form)) return '"' + base.form + '" is a valid word on its own!';
+    // Try prefix + base
+    for(var p of ALL_PREFIXES){
+      if(!state.viablePrefixes.has(p.uid)) continue;
+      var w = computeWord(p, base, null, null);
+      if(w && isRealWord(w) && !state.foundWords.has(w)) return 'Try adding "' + p.form + '" as a prefix.';
+    }
+    // Try base + suffix
+    for(var s of ALL_SUFFIXES){
+      if(!state.viableSuffixes.has(s.uid)) continue;
+      var w2 = computeWord(null, base, s, null);
+      if(w2 && isRealWord(w2) && !state.foundWords.has(w2)) return 'Try adding "' + s.form + '" as a suffix.';
+    }
+    return 'Try different combinations of prefixes and suffixes with the base "' + base.form + '".';
+  }
+});
+// Support mode: colour-code tiles by type
+if(_supportMode){
+  var _smStyle = document.createElement('style');
+  _smStyle.textContent = '.prefixTile{border-left:4px solid #7c3aed !important;} .suffixTile{border-left:4px solid #ea580c !important;} .baseTile{border-left:4px solid #2563eb !important;} .prefixTile .form{color:#7c3aed;} .suffixTile .form{color:#ea580c;}';
+  document.head.appendChild(_smStyle);
+}
 </script>
 
 <footer style="text-align:center;padding:12px 16px;font-size:11px;color:#64748b;border-top:1px solid #e2e8f0;margin-top:auto;font-family:Lexend,sans-serif;">&#129514; Word Labs &middot; <a href="about.html" style="color:#64748b;">About</a> &middot; <a href="privacy.html" style="color:#64748b;">Privacy Policy</a> &middot; <a href="terms.html" style="color:#64748b;">Terms of Service</a> &middot; <a href="mailto:nick@wordlabs.app" style="color:#64748b;">Contact</a></footer>
