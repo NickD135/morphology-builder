@@ -49,6 +49,9 @@
 
     .divider{ border:none; border-top:1px solid rgba(255,255,255,.06); margin:20px 0; }
 
+    .confirmed-banner{ background:rgba(22,163,74,.15); border:1px solid rgba(74,222,128,.2); border-radius:12px; padding:12px 16px; font-size:13px; font-weight:700; color:#4ade80; text-align:center; margin-bottom:20px; display:none; }
+    .confirmed-banner.show{ display:block; }
+
     .alt-link{ display:block; text-align:center; color:#94a3b8; font-size:13px; font-weight:700; }
     .alt-link a{ color:#a5b4fc; text-decoration:none; font-weight:800; }
     .alt-link a:hover{ text-decoration:underline; }
@@ -80,6 +83,8 @@
     <div class="auth-icon">🔬</div>
     <div class="auth-title">Teacher Access</div>
     <div class="auth-sub">Log in or create an account to manage your classes</div>
+
+    <div class="confirmed-banner" id="confirmedBanner">Email verified! You can now log in.</div>
 
     <div class="tabs" role="navigation" aria-label="Login or register">
       <button class="tab active" onclick="showTab('login')">Log In</button>
@@ -148,6 +153,11 @@ const SUPABASE_URL  = 'https://kdpavfrzmmzknqfpodrl.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkcGF2ZnJ6bW16a25xZnBvZHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjgzOTIsImV4cCI6MjA5MDAwNDM5Mn0.n5fe7HvXWMsM4xN_iaU_N4xLkC5xD4y9Uoer_DG-dlg';
 const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
+// Show confirmation banner if redirected from email verification
+if (new URLSearchParams(window.location.search).get('confirmed') === '1') {
+  document.getElementById('confirmedBanner').classList.add('show');
+}
+
 function showTab(tab) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   if (tab === 'login') {
@@ -182,10 +192,14 @@ async function ensureSchoolAndTeacher(authUserId, email) {
     .maybeSingle();
   if (existing?.school_id) return; // already set up
 
-  // Create school
+  // Pull school name from signup metadata if available
+  const { data: { user } } = await _sb.auth.getUser();
+  const schoolName = user?.user_metadata?.school_name || 'My School';
+
+  // Create school — active plan with 1-year window (matches teacher-signup.html)
   const { data: school, error: schoolErr } = await _sb
     .from('schools')
-    .insert({ name: 'My School', plan: 'trial', trial_ends_at: new Date(Date.now() + 30 * 86400000).toISOString() })
+    .insert({ name: schoolName, plan: 'active', trial_ends_at: new Date(Date.now() + 365 * 86400000).toISOString() })
     .select('id')
     .single();
   if (schoolErr) { console.warn('School creation failed:', schoolErr); return; }
@@ -256,7 +270,10 @@ async function doRegister() {
     const { data, error } = await _sb.auth.signUp({
       email,
       password,
-      options: { data: { full_name: name, school_name: schoolName } }
+      options: {
+        data: { full_name: name, school_name: schoolName },
+        emailRedirectTo: window.location.origin + '/teacher-login.html?confirmed=1'
+      }
     });
     if (error) throw error;
 

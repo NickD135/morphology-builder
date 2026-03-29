@@ -302,9 +302,10 @@ const WordLabData = (() => {
     // where signup created the auth user but records weren't created yet)
     if (!data) {
       try {
+        var schoolName = session.user.user_metadata?.school_name || 'My School';
         var { data: school } = await sb()
           .from('schools')
-          .insert({ name: 'My School', plan: 'active', trial_ends_at: new Date(Date.now() + 365 * 86400000).toISOString() })
+          .insert({ name: schoolName, plan: 'active', trial_ends_at: new Date(Date.now() + 365 * 86400000).toISOString() })
           .select('id')
           .single();
         if (school) {
