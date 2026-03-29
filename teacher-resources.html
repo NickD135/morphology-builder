@@ -536,6 +536,7 @@
 
 <!-- ── Scripts ── -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <script src="data.js"></script>
 <script src="wordlab-data.js"></script>
@@ -1314,63 +1315,240 @@ async function generateTranslatedDeck(morpheme, type, cardId) {
   }
 }
 
-/* ── PPT Viewer ── */
-function viewDeck(relativeUrl) {
-  var absoluteUrl = window.location.origin + '/' + relativeUrl;
-  // Try Google Docs viewer (more permissive with public URLs)
-  var viewerUrl = 'https://docs.google.com/gview?url=' + encodeURIComponent(absoluteUrl) + '&embedded=true';
+/* ── PPT Viewer (client-side via JSZip) ── */
+var _pptViewer = { slides: [], current: 0, images: {}, modal: null };
 
-  // Create/show modal
+async function viewDeck(relativeUrl) {
+  // Show loading modal immediately
   var existing = document.getElementById('pptViewerModal');
   if (existing) existing.remove();
 
   var modal = document.createElement('div');
   modal.id = 'pptViewerModal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;padding:16px;';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.9);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;padding:16px;';
 
+  // Top bar
   var topBar = document.createElement('div');
-  topBar.style.cssText = 'width:100%;max-width:1100px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;';
-
+  topBar.style.cssText = 'width:100%;max-width:960px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-shrink:0;';
   var title = document.createElement('span');
+  title.id = 'pptViewerTitle';
   title.style.cssText = 'color:#e0e7ff;font-weight:800;font-size:14px;';
-  title.textContent = 'Slide Deck Viewer';
-
-  var btnRow = document.createElement('div');
-  btnRow.style.cssText = 'display:flex;gap:8px;';
-
-  var openBtn = document.createElement('a');
-  openBtn.href = 'https://docs.google.com/gview?url=' + encodeURIComponent(absoluteUrl);
-  openBtn.target = '_blank';
-  openBtn.style.cssText = 'background:#334155;color:#e0e7ff;border:none;border-radius:10px;padding:8px 16px;font-family:Lexend,sans-serif;font-weight:800;font-size:12px;cursor:pointer;text-decoration:none;';
-  openBtn.textContent = 'Open in new tab';
-
+  title.textContent = 'Loading slides...';
   var closeBtn = document.createElement('button');
   closeBtn.style.cssText = 'background:#dc2626;color:#fff;border:none;border-radius:10px;padding:8px 16px;font-family:Lexend,sans-serif;font-weight:800;font-size:12px;cursor:pointer;';
   closeBtn.textContent = 'Close';
-  closeBtn.onclick = function() { modal.remove(); };
-
-  btnRow.appendChild(openBtn);
-  btnRow.appendChild(closeBtn);
+  closeBtn.onclick = function() { modal.remove(); _pptViewer.modal = null; };
   topBar.appendChild(title);
-  topBar.appendChild(btnRow);
+  topBar.appendChild(closeBtn);
 
-  var iframe = document.createElement('iframe');
-  iframe.src = viewerUrl;
-  iframe.style.cssText = 'width:100%;max-width:1100px;flex:1;border:none;border-radius:16px;background:#1e293b;';
-  iframe.setAttribute('allowfullscreen', 'true');
+  // Slide area
+  var slideWrap = document.createElement('div');
+  slideWrap.id = 'pptSlideWrap';
+  slideWrap.style.cssText = 'width:100%;max-width:960px;flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;min-height:0;';
+  var slideEl = document.createElement('div');
+  slideEl.id = 'pptSlide';
+  slideEl.style.cssText = 'width:100%;aspect-ratio:16/9;max-height:100%;background:#fff;border-radius:12px;position:relative;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;color:#64748b;font-weight:700;font-size:16px;';
+  slideEl.textContent = 'Loading...';
+  slideWrap.appendChild(slideEl);
+
+  // Nav bar
+  var navBar = document.createElement('div');
+  navBar.style.cssText = 'width:100%;max-width:960px;display:flex;justify-content:center;align-items:center;gap:16px;padding:12px 0;flex-shrink:0;';
+  navBar.innerHTML = '<button id="pptPrev" style="background:#334155;color:#e0e7ff;border:none;border-radius:10px;padding:10px 20px;font-family:Lexend,sans-serif;font-weight:800;font-size:13px;cursor:pointer;">← Prev</button>' +
+    '<span id="pptPageNum" style="color:#94a3b8;font-weight:800;font-size:13px;">0 / 0</span>' +
+    '<button id="pptNext" style="background:#4338ca;color:#fff;border:none;border-radius:10px;padding:10px 20px;font-family:Lexend,sans-serif;font-weight:800;font-size:13px;cursor:pointer;">Next →</button>';
 
   modal.appendChild(topBar);
-  modal.appendChild(iframe);
-
-  // Close on backdrop click
-  modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
-  // Close on Escape
-  document.addEventListener('keydown', function handler(e) {
-    if (e.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', handler); }
-  });
-
+  modal.appendChild(slideWrap);
+  modal.appendChild(navBar);
   document.body.appendChild(modal);
+  _pptViewer.modal = modal;
+
+  // Close handlers
+  modal.addEventListener('click', function(e) { if (e.target === modal) { modal.remove(); _pptViewer.modal = null; } });
+  document.addEventListener('keydown', function handler(e) {
+    if (!_pptViewer.modal) { document.removeEventListener('keydown', handler); return; }
+    if (e.key === 'Escape') { modal.remove(); _pptViewer.modal = null; document.removeEventListener('keydown', handler); }
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); pptNav(1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); pptNav(-1); }
+  });
+  document.getElementById('pptPrev').onclick = function() { pptNav(-1); };
+  document.getElementById('pptNext').onclick = function() { pptNav(1); };
+
+  // Fetch and parse PPTX
+  try {
+    var resp = await fetch(relativeUrl);
+    if (!resp.ok) throw new Error('File not found');
+    var buf = await resp.arrayBuffer();
+    var zip = await JSZip.loadAsync(buf);
+
+    // Extract images
+    _pptViewer.images = {};
+    var imgFiles = Object.keys(zip.files).filter(function(f) { return f.match(/ppt\/media\//i); });
+    for (var i = 0; i < imgFiles.length; i++) {
+      var imgData = await zip.files[imgFiles[i]].async('base64');
+      var ext = imgFiles[i].split('.').pop().toLowerCase();
+      var mime = ext === 'png' ? 'image/png' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : ext === 'gif' ? 'image/gif' : ext === 'svg' ? 'image/svg+xml' : 'image/png';
+      _pptViewer.images[imgFiles[i].split('/').pop()] = 'data:' + mime + ';base64,' + imgData;
+    }
+
+    // Extract slide XML files (sorted)
+    var slideFiles = Object.keys(zip.files)
+      .filter(function(f) { return f.match(/^ppt\/slides\/slide\d+\.xml$/i); })
+      .sort(function(a, b) {
+        var na = parseInt(a.match(/slide(\d+)/)[1]);
+        var nb = parseInt(b.match(/slide(\d+)/)[1]);
+        return na - nb;
+      });
+
+    // Extract relationship files for image references
+    var slideRels = {};
+    for (var si = 0; si < slideFiles.length; si++) {
+      var relPath = slideFiles[si].replace('ppt/slides/', 'ppt/slides/_rels/') + '.rels';
+      if (zip.files[relPath]) {
+        var relXml = await zip.files[relPath].async('text');
+        var relParser = new DOMParser();
+        var relDoc = relParser.parseFromString(relXml, 'application/xml');
+        var rels = relDoc.getElementsByTagName('Relationship');
+        var relMap = {};
+        for (var ri = 0; ri < rels.length; ri++) {
+          relMap[rels[ri].getAttribute('Id')] = rels[ri].getAttribute('Target').split('/').pop();
+        }
+        slideRels[si] = relMap;
+      }
+    }
+
+    // Parse each slide
+    _pptViewer.slides = [];
+    var parser = new DOMParser();
+    for (var si = 0; si < slideFiles.length; si++) {
+      var xml = await zip.files[slideFiles[si]].async('text');
+      var doc = parser.parseFromString(xml, 'application/xml');
+      _pptViewer.slides.push({ xml: doc, rels: slideRels[si] || {} });
+    }
+
+    _pptViewer.current = 0;
+    renderPptSlide();
+    document.getElementById('pptViewerTitle').textContent = 'Slide Deck (' + _pptViewer.slides.length + ' slides)';
+  } catch(err) {
+    document.getElementById('pptSlide').innerHTML = '<div style="text-align:center;padding:32px;"><div style="font-size:18px;font-weight:800;color:#dc2626;margin-bottom:8px;">Could not load slides</div><div style="font-size:13px;color:#94a3b8;">' + err.message + '</div></div>';
+  }
 }
+
+function pptNav(dir) {
+  var next = _pptViewer.current + dir;
+  if (next < 0 || next >= _pptViewer.slides.length) return;
+  _pptViewer.current = next;
+  renderPptSlide();
+}
+
+function renderPptSlide() {
+  var slide = _pptViewer.slides[_pptViewer.current];
+  if (!slide) return;
+  var el = document.getElementById('pptSlide');
+  var pageNum = document.getElementById('pptPageNum');
+  pageNum.textContent = (_pptViewer.current + 1) + ' / ' + _pptViewer.slides.length;
+
+  // Extract text and images from slide XML
+  var xml = slide.xml;
+  var rels = slide.rels;
+  var ns = 'http://schemas.openxmlformats.org/drawingml/2006/main';
+  var rns = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+  var pns = 'http://schemas.openxmlformats.org/presentationml/2006/main';
+
+  // Get slide background colour
+  var bgColor = '#ffffff';
+  var bgEls = xml.getElementsByTagNameNS(ns, 'solidFill');
+  // Check spTree for shapes
+  var spTree = xml.getElementsByTagNameNS(pns, 'spTree')[0];
+  if (!spTree) { el.innerHTML = '<div style="color:#94a3b8;">Empty slide</div>'; return; }
+
+  // Collect all text blocks with position info
+  var elements = [];
+  var shapes = spTree.children;
+  for (var i = 0; i < shapes.length; i++) {
+    var shape = shapes[i];
+    // Get position (xfrm)
+    var xfrm = shape.getElementsByTagNameNS(ns, 'xfrm')[0];
+    var x = 0, y = 0, w = 100, h = 50;
+    if (xfrm) {
+      var off = xfrm.getElementsByTagNameNS(ns, 'off')[0];
+      var ext = xfrm.getElementsByTagNameNS(ns, 'ext')[0];
+      if (off) { x = parseInt(off.getAttribute('x')) || 0; y = parseInt(off.getAttribute('y')) || 0; }
+      if (ext) { w = parseInt(ext.getAttribute('cx')) || 0; h = parseInt(ext.getAttribute('cy')) || 0; }
+    }
+
+    // Check for image (blipFill)
+    var blip = shape.getElementsByTagNameNS(ns, 'blip')[0];
+    if (blip) {
+      var rId = blip.getAttributeNS(rns, 'embed') || blip.getAttribute('r:embed');
+      var imgName = rels[rId];
+      if (imgName && _pptViewer.images[imgName]) {
+        elements.push({ type: 'image', x: x, y: y, w: w, h: h, src: _pptViewer.images[imgName] });
+        continue;
+      }
+    }
+
+    // Check for text
+    var txBody = shape.getElementsByTagNameNS(ns, 'txBody')[0];
+    if (!txBody) continue;
+    var paragraphs = txBody.getElementsByTagNameNS(ns, 'p');
+    var htmlParts = [];
+    for (var pi = 0; pi < paragraphs.length; pi++) {
+      var runs = paragraphs[pi].getElementsByTagNameNS(ns, 'r');
+      var pText = [];
+      for (var ri = 0; ri < runs.length; ri++) {
+        var t = runs[ri].getElementsByTagNameNS(ns, 't')[0];
+        if (!t) continue;
+        var text = t.textContent;
+        // Get run properties for bold/italic/size/color
+        var rPr = runs[ri].getElementsByTagNameNS(ns, 'rPr')[0];
+        var styles = [];
+        if (rPr) {
+          if (rPr.getAttribute('b') === '1') styles.push('font-weight:900');
+          if (rPr.getAttribute('i') === '1') styles.push('font-style:italic');
+          var sz = rPr.getAttribute('sz');
+          if (sz) styles.push('font-size:' + (parseInt(sz) / 100) + 'pt');
+          // Color
+          var solidFill = rPr.getElementsByTagNameNS(ns, 'solidFill')[0];
+          if (solidFill) {
+            var srgb = solidFill.getElementsByTagNameNS(ns, 'srgbClr')[0];
+            if (srgb) styles.push('color:#' + srgb.getAttribute('val'));
+          }
+        }
+        if (styles.length) {
+          pText.push('<span style="' + styles.join(';') + '">' + escapeH(text) + '</span>');
+        } else {
+          pText.push(escapeH(text));
+        }
+      }
+      if (pText.length) htmlParts.push('<p style="margin:2px 0;">' + pText.join('') + '</p>');
+    }
+    if (htmlParts.length) {
+      elements.push({ type: 'text', x: x, y: y, w: w, h: h, html: htmlParts.join('') });
+    }
+  }
+
+  // Render elements scaled to the slide container
+  // PPTX uses EMUs: 1 inch = 914400 EMU. Standard slide = 12192000 x 6858000 EMU (10x7.5 inch)
+  var slideW = 12192000, slideH = 6858000;
+  var html = '';
+  for (var ei = 0; ei < elements.length; ei++) {
+    var e = elements[ei];
+    var left = (e.x / slideW * 100).toFixed(2) + '%';
+    var top = (e.y / slideH * 100).toFixed(2) + '%';
+    var width = (e.w / slideW * 100).toFixed(2) + '%';
+    var height = (e.h / slideH * 100).toFixed(2) + '%';
+    if (e.type === 'image') {
+      html += '<img src="' + e.src + '" style="position:absolute;left:' + left + ';top:' + top + ';width:' + width + ';height:' + height + ';object-fit:contain;">';
+    } else {
+      html += '<div style="position:absolute;left:' + left + ';top:' + top + ';width:' + width + ';height:' + height + ';overflow:hidden;font-family:Lexend,Calibri,sans-serif;line-height:1.3;display:flex;flex-direction:column;justify-content:flex-start;padding:4px;">' + e.html + '</div>';
+    }
+  }
+  el.innerHTML = html || '<div style="color:#94a3b8;font-size:14px;">No visible content on this slide</div>';
+}
+
+function escapeH(t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 
 </script>
 </body>
