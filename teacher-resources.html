@@ -1334,12 +1334,21 @@ async function viewDeck(relativeUrl) {
   title.id = 'pptViewerTitle';
   title.style.cssText = 'color:#e0e7ff;font-weight:800;font-size:14px;';
   title.textContent = 'Loading slides...';
+  var topBtns = document.createElement('div');
+  topBtns.style.cssText = 'display:flex;gap:8px;align-items:center;';
+  var fsBtn = document.createElement('button');
+  fsBtn.id = 'pptFullscreenBtn';
+  fsBtn.style.cssText = 'background:#334155;color:#e0e7ff;border:none;border-radius:10px;padding:8px 16px;font-family:Lexend,sans-serif;font-weight:800;font-size:12px;cursor:pointer;';
+  fsBtn.textContent = '⛶ Fullscreen';
+  fsBtn.onclick = function() { togglePptFullscreen(); };
   var closeBtn = document.createElement('button');
   closeBtn.style.cssText = 'background:#dc2626;color:#fff;border:none;border-radius:10px;padding:8px 16px;font-family:Lexend,sans-serif;font-weight:800;font-size:12px;cursor:pointer;';
   closeBtn.textContent = 'Close';
-  closeBtn.onclick = function() { modal.remove(); _pptViewer.modal = null; };
+  closeBtn.onclick = function() { exitPptFullscreen(); modal.remove(); _pptViewer.modal = null; };
+  topBtns.appendChild(fsBtn);
+  topBtns.appendChild(closeBtn);
   topBar.appendChild(title);
-  topBar.appendChild(closeBtn);
+  topBar.appendChild(topBtns);
 
   // Slide area
   var slideWrap = document.createElement('div');
@@ -1349,7 +1358,16 @@ async function viewDeck(relativeUrl) {
   slideEl.id = 'pptSlide';
   slideEl.style.cssText = 'width:100%;aspect-ratio:16/9;max-height:100%;background:#fff;border-radius:12px;position:relative;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;color:#64748b;font-weight:700;font-size:16px;';
   slideEl.textContent = 'Loading...';
+  // Click zones: left half = back, right half = forward
+  var clickLeft = document.createElement('div');
+  clickLeft.style.cssText = 'position:absolute;left:0;top:0;width:50%;height:100%;cursor:w-resize;z-index:2;';
+  clickLeft.onclick = function() { pptNav(-1); };
+  var clickRight = document.createElement('div');
+  clickRight.style.cssText = 'position:absolute;right:0;top:0;width:50%;height:100%;cursor:e-resize;z-index:2;';
+  clickRight.onclick = function() { pptNav(1); };
   slideWrap.appendChild(slideEl);
+  slideWrap.appendChild(clickLeft);
+  slideWrap.appendChild(clickRight);
 
   // Nav bar
   var navBar = document.createElement('div');
@@ -1365,10 +1383,10 @@ async function viewDeck(relativeUrl) {
   _pptViewer.modal = modal;
 
   // Close handlers
-  modal.addEventListener('click', function(e) { if (e.target === modal) { modal.remove(); _pptViewer.modal = null; } });
+  modal.addEventListener('click', function(e) { if (e.target === modal) { if (document.fullscreenElement) return; modal.remove(); _pptViewer.modal = null; } });
   document.addEventListener('keydown', function handler(e) {
     if (!_pptViewer.modal) { document.removeEventListener('keydown', handler); return; }
-    if (e.key === 'Escape') { modal.remove(); _pptViewer.modal = null; document.removeEventListener('keydown', handler); }
+    if (e.key === 'Escape') { if (document.fullscreenElement) { document.exitFullscreen(); } else { modal.remove(); _pptViewer.modal = null; document.removeEventListener('keydown', handler); } }
     if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); pptNav(1); }
     if (e.key === 'ArrowLeft') { e.preventDefault(); pptNav(-1); }
   });
@@ -1616,6 +1634,31 @@ function renderPptSlide() {
   el.style.background = bgColor;
   el.innerHTML = html || '<div style="color:#94a3b8;font-size:14px;">No visible content on this slide</div>';
 }
+
+function togglePptFullscreen() {
+  var modal = _pptViewer.modal;
+  if (!modal) return;
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+  } else {
+    modal.requestFullscreen().catch(function() {});
+  }
+}
+
+function exitPptFullscreen() {
+  if (document.fullscreenElement) document.exitFullscreen().catch(function() {});
+}
+
+// Update button label on fullscreen change
+document.addEventListener('fullscreenchange', function() {
+  var btn = document.getElementById('pptFullscreenBtn');
+  if (!btn) return;
+  if (document.fullscreenElement) {
+    btn.textContent = '⛶ Exit Fullscreen';
+  } else {
+    btn.textContent = '⛶ Fullscreen';
+  }
+});
 
 function escapeH(t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 
