@@ -1442,6 +1442,29 @@ function pptNav(dir) {
   renderPptSlide();
 }
 
+// Helper: find elements by local name (ignoring namespace prefixes)
+function _byLocal(parent, localName) {
+  var results = [];
+  if (!parent || !parent.children) return results;
+  for (var i = 0; i < parent.children.length; i++) {
+    if (parent.children[i].localName === localName) results.push(parent.children[i]);
+  }
+  return results;
+}
+function _byLocalDeep(parent, localName) {
+  if (!parent) return [];
+  // Use getElementsByTagName with wildcard namespace
+  var all = parent.getElementsByTagName('*');
+  var results = [];
+  for (var i = 0; i < all.length; i++) {
+    if (all[i].localName === localName) results.push(all[i]);
+  }
+  return results;
+}
+function _firstLocal(parent, localName) {
+  return _byLocalDeep(parent, localName)[0] || null;
+}
+
 function renderPptSlide() {
   var slide = _pptViewer.slides[_pptViewer.current];
   if (!slide) return;
@@ -1449,70 +1472,106 @@ function renderPptSlide() {
   var pageNum = document.getElementById('pptPageNum');
   pageNum.textContent = (_pptViewer.current + 1) + ' / ' + _pptViewer.slides.length;
 
-  // Extract text and images from slide XML
   var xml = slide.xml;
   var rels = slide.rels;
-  var ns = 'http://schemas.openxmlformats.org/drawingml/2006/main';
-  var rns = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
-  var pns = 'http://schemas.openxmlformats.org/presentationml/2006/main';
 
   // Get slide background colour
   var bgColor = '#ffffff';
-  var bgEls = xml.getElementsByTagNameNS(ns, 'solidFill');
-  // Check spTree for shapes
-  var spTree = xml.getElementsByTagNameNS(pns, 'spTree')[0];
+  var cSld = _firstLocal(xml, 'cSld');
+  var bgPr = _firstLocal(cSld, 'bgPr');
+  if (bgPr) {
+    var bgFill = _firstLocal(bgPr, 'srgbClr');
+    if (bgFill) bgColor = '#' + bgFill.getAttribute('val');
+  }
+
+  // Find spTree
+  var spTree = _firstLocal(xml, 'spTree');
   if (!spTree) { el.innerHTML = '<div style="color:#94a3b8;">Empty slide</div>'; return; }
 
-  // Collect all text blocks with position info
+  // Find all sp (shape) elements within spTree
+  var shapes = _byLocalDeep(spTree, 'sp');
   var elements = [];
-  var shapes = spTree.children;
+
   for (var i = 0; i < shapes.length; i++) {
     var shape = shapes[i];
-    // Get position (xfrm)
-    var xfrm = shape.getElementsByTagNameNS(ns, 'xfrm')[0];
-    var x = 0, y = 0, w = 100, h = 50;
+
+    // Get position from spPr > xfrm
+    var spPr = _firstLocal(shape, 'spPr');
+    var xfrm = spPr ? _firstLocal(spPr, 'xfrm') : null;
+    var x = 0, y = 0, w = 0, h = 0;
     if (xfrm) {
-      var off = xfrm.getElementsByTagNameNS(ns, 'off')[0];
-      var ext = xfrm.getElementsByTagNameNS(ns, 'ext')[0];
+      var off = _firstLocal(xfrm, 'off');
+      var ext = _firstLocal(xfrm, 'ext');
       if (off) { x = parseInt(off.getAttribute('x')) || 0; y = parseInt(off.getAttribute('y')) || 0; }
       if (ext) { w = parseInt(ext.getAttribute('cx')) || 0; h = parseInt(ext.getAttribute('cy')) || 0; }
     }
 
-    // Check for image (blipFill)
-    var blip = shape.getElementsByTagNameNS(ns, 'blip')[0];
-    if (blip) {
-      var rId = blip.getAttributeNS(rns, 'embed') || blip.getAttribute('r:embed');
-      var imgName = rels[rId];
-      if (imgName && _pptViewer.images[imgName]) {
-        elements.push({ type: 'image', x: x, y: y, w: w, h: h, src: _pptViewer.images[imgName] });
-        continue;
+    // Get shape fill colour (for rectangles used as backgrounds)
+    var shapeFill = null;
+    if (spPr) {
+      var sf = _firstLocal(spPr, 'solidFill');
+      if (sf) {
+        var sfClr = _firstLocal(sf, 'srgbClr');
+        if (sfClr) shapeFill = '#' + sfClr.getAttribute('val');
       }
     }
 
-    // Check for text
-    var txBody = shape.getElementsByTagNameNS(ns, 'txBody')[0];
-    if (!txBody) continue;
-    var paragraphs = txBody.getElementsByTagNameNS(ns, 'p');
+    // Check for image (blipFill > blip)
+    var blipFill = _firstLocal(shape, 'blipFill');
+    if (blipFill) {
+      var blip = _firstLocal(blipFill, 'blip');
+      if (blip) {
+        var rId = blip.getAttribute('r:embed') || blip.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'embed');
+        var imgName = rels[rId];
+        if (imgName && _pptViewer.images[imgName]) {
+          elements.push({ type: 'image', x: x, y: y, w: w, h: h, src: _pptViewer.images[imgName] });
+          continue;
+        }
+      }
+    }
+
+    // Check for text (txBody)
+    var txBody = _firstLocal(shape, 'txBody');
+    if (!txBody) {
+      // Shape with fill but no text = background rectangle
+      if (shapeFill && w > 0 && h > 0) {
+        elements.push({ type: 'rect', x: x, y: y, w: w, h: h, fill: shapeFill });
+      }
+      continue;
+    }
+
+    // Parse paragraphs
+    var paragraphs = _byLocalDeep(txBody, 'p');
     var htmlParts = [];
     for (var pi = 0; pi < paragraphs.length; pi++) {
-      var runs = paragraphs[pi].getElementsByTagNameNS(ns, 'r');
+      var p = paragraphs[pi];
+      // Get paragraph alignment
+      var pPr = _firstLocal(p, 'pPr');
+      var align = pPr ? (pPr.getAttribute('algn') || 'l') : 'l';
+      var alignCss = align === 'ctr' ? 'center' : align === 'r' ? 'right' : 'left';
+
+      var runs = _byLocalDeep(p, 'r');
       var pText = [];
       for (var ri = 0; ri < runs.length; ri++) {
-        var t = runs[ri].getElementsByTagNameNS(ns, 't')[0];
-        if (!t) continue;
-        var text = t.textContent;
-        // Get run properties for bold/italic/size/color
-        var rPr = runs[ri].getElementsByTagNameNS(ns, 'rPr')[0];
+        var run = runs[ri];
+        var tEl = _firstLocal(run, 't');
+        if (!tEl) continue;
+        var text = tEl.textContent;
+        if (!text) continue;
+
+        var rPr = _firstLocal(run, 'rPr');
         var styles = [];
         if (rPr) {
           if (rPr.getAttribute('b') === '1') styles.push('font-weight:900');
           if (rPr.getAttribute('i') === '1') styles.push('font-style:italic');
           var sz = rPr.getAttribute('sz');
           if (sz) styles.push('font-size:' + (parseInt(sz) / 100) + 'pt');
-          // Color
-          var solidFill = rPr.getElementsByTagNameNS(ns, 'solidFill')[0];
-          if (solidFill) {
-            var srgb = solidFill.getElementsByTagNameNS(ns, 'srgbClr')[0];
+          var spc = rPr.getAttribute('spc');
+          if (spc) styles.push('letter-spacing:' + (parseInt(spc) / 100) + 'pt');
+          // Colour
+          var runFill = _firstLocal(rPr, 'solidFill');
+          if (runFill) {
+            var srgb = _firstLocal(runFill, 'srgbClr');
             if (srgb) styles.push('color:#' + srgb.getAttribute('val'));
           }
         }
@@ -1522,29 +1581,34 @@ function renderPptSlide() {
           pText.push(escapeH(text));
         }
       }
-      if (pText.length) htmlParts.push('<p style="margin:2px 0;">' + pText.join('') + '</p>');
+      if (pText.length) {
+        htmlParts.push('<p style="margin:2px 0;text-align:' + alignCss + ';">' + pText.join('') + '</p>');
+      }
     }
     if (htmlParts.length) {
-      elements.push({ type: 'text', x: x, y: y, w: w, h: h, html: htmlParts.join('') });
+      elements.push({ type: 'text', x: x, y: y, w: w, h: h, html: htmlParts.join(''), fill: shapeFill });
     }
   }
 
-  // Render elements scaled to the slide container
-  // PPTX uses EMUs: 1 inch = 914400 EMU. Standard slide = 12192000 x 6858000 EMU (10x7.5 inch)
-  var slideW = 12192000, slideH = 6858000;
+  // Render — PPTX EMUs. Standard slide = 9144000 x 5143500 EMU (10x5.63 inch for widescreen)
+  var slideW = 9144000, slideH = 5143500;
   var html = '';
   for (var ei = 0; ei < elements.length; ei++) {
     var e = elements[ei];
     var left = (e.x / slideW * 100).toFixed(2) + '%';
     var top = (e.y / slideH * 100).toFixed(2) + '%';
-    var width = (e.w / slideW * 100).toFixed(2) + '%';
-    var height = (e.h / slideH * 100).toFixed(2) + '%';
-    if (e.type === 'image') {
+    var width = Math.min(e.w / slideW * 100, 100).toFixed(2) + '%';
+    var height = Math.min(e.h / slideH * 100, 100).toFixed(2) + '%';
+    if (e.type === 'rect') {
+      html += '<div style="position:absolute;left:' + left + ';top:' + top + ';width:' + width + ';height:' + height + ';background:' + e.fill + ';"></div>';
+    } else if (e.type === 'image') {
       html += '<img src="' + e.src + '" style="position:absolute;left:' + left + ';top:' + top + ';width:' + width + ';height:' + height + ';object-fit:contain;">';
     } else {
-      html += '<div style="position:absolute;left:' + left + ';top:' + top + ';width:' + width + ';height:' + height + ';overflow:hidden;font-family:Lexend,Calibri,sans-serif;line-height:1.3;display:flex;flex-direction:column;justify-content:flex-start;padding:4px;">' + e.html + '</div>';
+      var bg = e.fill ? 'background:' + e.fill + ';' : '';
+      html += '<div style="position:absolute;left:' + left + ';top:' + top + ';width:' + width + ';height:' + height + ';overflow:hidden;font-family:Lexend,Trebuchet MS,Calibri,sans-serif;line-height:1.3;display:flex;flex-direction:column;justify-content:flex-start;padding:4px;' + bg + '">' + e.html + '</div>';
     }
   }
+  el.style.background = bgColor;
   el.innerHTML = html || '<div style="color:#94a3b8;font-size:14px;">No visible content on this slide</div>';
 }
 
