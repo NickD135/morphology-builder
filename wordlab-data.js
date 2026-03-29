@@ -2382,7 +2382,9 @@ const WordLabData = (() => {
     getSpellingSetWords, recordSpellingAttempt,
     getEALDLanguage, getEALDLanguageName, getTranslations, createEALDPill, injectEALDStyles, EALD_LANGUAGES, EALD_TTS_CODES,
     speakInLanguage, buildEALDSpeakButtons, buildEALDRevealButton, _speakEALD,
-
+    escapeHtml,
+    getWordOfTheWeek
+  };
 
   // ── Word of the Week ─────────────────────────────────────────
   // 52 curated words, one per week, cycling yearly.
@@ -2450,10 +2452,6 @@ const WordLabData = (() => {
     var idx = ((weekNum % WOTW_LIST.length) + WOTW_LIST.length) % WOTW_LIST.length;
     return WOTW_LIST[idx];
   }
-
-    escapeHtml,
-    getWordOfTheWeek
-  };
 
 })();
 
