@@ -85,6 +85,9 @@ privacy-law-compliant, multi-tenant, with proper teacher auth and a payment laye
 | `wordlab-effects.js` | Visual particle effects for the scientist (aura, galaxy, electric, etc.) |
 | `wordlab-audio.js` | Sound effects |
 | `wordlab-extension-data.js` | Extended content for extension mode students |
+| `wordlab-teacher.js` | Teacher Mode for game pages — no XP, no timer, word count picker, rich feedback, Next button |
+| `wordlab-help.js` | First-visit instruction popup + floating ? help button on all game pages |
+| `wordlab-hints.js` | "Need Advice" scientist hints + support mode toggle + speech bubble UI |
 | `data.js` | Static morpheme/word content data |
 
 ---
@@ -805,6 +808,86 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 
 ---
 
+### PHASE 7.10 — Session 2026-03-28 (evening)
+
+#### Teacher Mode for game pages
+- [x] New `wordlab-teacher.js` shared module
+- [x] Activates when teacher opens games from teacher landing (NOT "View as Student")
+- [x] No XP/quarks awarded (recordAttempt skipped)
+- [x] No timers (fuel drain and countdowns disabled)
+- [x] Word count picker at start (5/10/15/20/30/All)
+- [x] No auto-advance — teacher clicks Next to proceed (for class discussion)
+- [x] Rich feedback explaining why answers are right or wrong on every game
+- [x] Scientist reactions preserved for visual engagement
+- [x] Gamified UI hidden (score, streak, fuel bar, bonus pills)
+- [x] Phoneme Splitter: green overlay shows correct split positions on wrong answers
+- [x] Syllable Splitter: green labels above correct syllable groups on wrong answers
+- [x] Speed Builder: untimed exploration with End Round button
+
+#### Teacher landing page updates
+- [x] All 13 activity cards added to teacher landing (was only 3 classroom tools)
+- [x] Heading: "Activities to Use With Your Class"
+- [x] Custom activity card ordering matching teacher preference
+- [x] Root Lab description: "Identify morphemes, then unlock the meaning"
+- [x] Mission Mode description: "Match morphemes to the rest of their word"
+
+#### Audio improvements
+- [x] All TTS now uses Google Cloud Australian voice (en-AU-Neural2-A) first
+- [x] Browser TTS fallback picks best Australian voice available
+- [x] Spelling test upgraded to cloud TTS for clearer dictation
+
+#### Content expansion
+- [x] Sound Sorter: 344 → 1,662 words across all 33 sounds (~20 per level per sound)
+- [x] Root Lab Challenge tier: 8 → 20 words (Latin/Greek roots)
+- [x] Worksheet generators synced with expanded word pools
+- [x] Split digraph display fix (a_e, i_e etc. show correctly in Sound Sorter)
+
+#### Instruction popups + help system
+- [x] New `wordlab-help.js` shared module
+- [x] Automatic instruction popup on first visit to each game (localStorage tracked)
+- [x] Floating ? help button always visible during gameplay
+- [x] 4-step instruction cards per game with custom content
+- [x] "Listen to instructions" TTS button for accessibility
+
+#### Support Mode (differentiation & scaffolding)
+- [x] New `support_mode` column on students table (migration SQL)
+- [x] `isSupportMode()` / `setSupportMode()` / `loadSupportMode()` in wordlab-data.js
+- [x] Teacher per-student SUP toggle on dashboard (like EXT badge)
+- [x] Teacher-set support can't be disabled by students
+- [x] Student self-serve toggle on game pages (sessionStorage, resets on logout)
+- [x] Fuel drain rate × 0.5 (half speed) in support mode
+- [x] Correct answer refill × 1.5, wrong penalty × 0.5
+- [x] Speed Builder: +50% time per round
+- [x] Multi-choice games: 2 options instead of 3-4
+- [x] Visual scaffolds: phoneme/syllable count badges, colour-coded tiles, part count hints
+- [x] New `wordlab-hints.js` shared module
+- [x] "Need Advice" button below scientist character
+- [x] First click: general strategy hint in speech bubble
+- [x] Second click: specific clue about current question
+- [x] TTS option on each hint (speaker icon)
+- [x] Hint counter resets per question
+
+#### Word of the Week
+- [x] Curated list of 52 morphology-rich words in wordlab-data.js
+- [x] Auto-rotates weekly (one per week, cycling yearly)
+- [x] Showcase card in student Explore section (doorway-card style)
+- [x] Colour-coded morpheme pills + syllable breakdown
+- [x] Feeds into Breakdown Blitz, Syllable Splitter, Phoneme Splitter as priority word
+
+#### PPT viewer for Teacher Resources
+- [x] Client-side PPTX viewer using JSZip (no external services)
+- [x] View button on each slide deck card
+- [x] Extracts text with formatting + images from PPTX
+- [x] Arrow key navigation, Escape to close
+
+#### Other fixes
+- [x] Active Today counter: fixed UTC vs local timezone mismatch
+- [x] New signups: plan changed to 'active' with 1-year window
+- [x] Worksheet Generators tab moved beside Teaching Slides in Teacher Resources
+- [x] Dashboard: Word Lists button renamed to "Custom Word Lists for Practise"
+
+---
+
 ### PHASE 10 — NSW Spelling Diagnostic Integration
 
 Integrating the NSW Department of Education Spelling Diagnostic Assessment (Sets 1–7)
@@ -983,3 +1066,9 @@ At the start of each working session, do this:
 | Batched progress queries (5 per batch) | Single query with .limit(10000) was silently dropping data for large classes; batching by 5 students with 50k limit per batch scales to any class size |
 | patchBanks() in-place tile updates | Full innerHTML rebuild of 300+ tiles on every morpheme add/remove caused visible lag; patching CSS classes in-place eliminates DOM destruction |
 | Summary table columns collapsed | Extension toggle, reward button, last active moved into sticky name cell; removes 3 columns of horizontal scroll |
+| Teacher Mode on game pages (not preview) | "View as Student" shows normal gamified experience; teacher landing opens games in teaching tool mode — clearer distinction for teachers |
+| Client-side PPTX viewer | External viewers (Google Docs, Office Online) blocked by Vercel headers and school firewalls; JSZip parses PPTX locally with zero external dependencies |
+| Sound Sorter ~20 words per level | Was only 3-5 per sound per level — students were seeing the same words repeatedly; expanded to 1,662 total |
+| Support mode per-student + self-serve | Teachers can pre-set it (persists in DB, student can't disable); students can also toggle it on themselves (sessionStorage only, temporary) |
+| WOTW curated 52-word list | Auto-rotates weekly; teacher doesn't need to manage it; feeds into games as priority word |
+| New signups get active plan for 1 year | Temporary — free access during early adoption phase |
