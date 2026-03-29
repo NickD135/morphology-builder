@@ -1093,6 +1093,7 @@ Full checklist document: `docs/nsw-doe-approval-checklist.md`
 - [ ] Public marketing site (separate from the app) with demo video, testimonials, pricing
 - [ ] In-app "refer a colleague" flow (free month for referrals)
 - [ ] Analytics dashboard for Nicholas — see which schools are active, churn signals, popular activities
+- [ ] Automated security monitoring edge function (`security-audit`) — daily/weekly cron via pg_cron, checks failed login spikes, unusual data volume, RLS violations, emails summary via Resend. Build when reaching 20+ schools.
 
 ---
 
