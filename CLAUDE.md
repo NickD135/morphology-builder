@@ -943,6 +943,83 @@ into Word Labs as a structured spelling progression system.
 
 ---
 
+### PHASE 7.11 — Session 2026-03-29
+
+#### Signup & onboarding fixes
+- [x] Fixed new signups getting `trial` instead of `active` plan (teacher-login.html `ensureSchoolAndTeacher` was using wrong plan)
+- [x] School name from signup metadata now used (was hardcoded to 'My School')
+- [x] Email verification redirect now goes to `teacher-login.html?confirmed=1` with green success banner
+- [x] Both signup paths (teacher-signup.html and teacher-login.html) pass `emailRedirectTo` and `school_name` metadata
+- [x] wordlab-data.js auto-create fallback also reads school name from user metadata
+- [x] Signup notification email sent to nick@wordlabs.app via send-feedback edge function (fire-and-forget)
+
+#### Dashboard & class setup improvements
+- [x] Summary table header: "Toggle EXT / SUP · Give rewards" label under Student column
+- [x] Support mode toggle button added to class-setup.html (teal when active, beside Extension button)
+
+#### Teacher resources
+- [x] PPT viewer: fullscreen mode via Fullscreen API
+- [x] PPT viewer: click left half = back, right half = forward (PowerPoint-style navigation)
+- [x] Escape exits fullscreen first, then closes viewer
+
+#### Landing page refresh (logged-out visitors)
+- [x] Updated pitch cards: 13 activities, differentiation (ext/sup/low-stim), customisable worksheets, Australian compliance
+- [x] All 13 activity cards in "Try the Activities" section
+- [x] New "Find Out More" section: About, FAQ, Teacher Guide, Parent Privacy, Pricing, Data Agreement
+- [x] Updated footer with full info links
+- [x] CTA updated to "Get Started Free"
+
+#### Site-wide consistency audit
+- [x] Consistent headers across 8 info pages (brand + Home link)
+- [x] FAQ side drawer replaced with simple header
+- [x] Pricing page: replaced 30-day trial with free early access (12 months)
+- [x] upgrade.html: replaced with redirect to pricing.html
+- [x] Terms: updated trial language to early access, fixed malformed Privacy Policy link
+- [x] Page titles standardised to en dash (–) separator across all pages
+- [x] Fixed wrong titles: Mission Mode (was "Prefix Power-Up"), Morpheme Builder (was "Morphology Builder")
+- [x] Worksheet titles standardised to "Word Labs – X Worksheet"
+- [x] Footer fixes: parent-privacy, privacy, pricing, landing (student + teacher footers)
+- [x] spelling-test.html: added skip-to-content link
+- [x] Fixed 2 missing .html extensions on redirects (pricing → teacher-login, teacher-login → onboarding)
+- [x] feedback.html header updated to new standard
+
+#### FAQ & documentation updates
+- [x] Added "What is Support Mode?" to FAQ
+- [x] Added "How do I set up translations for a student?" to FAQ
+- [x] Updated pricing FAQ to reflect free early access
+- [x] Added Teacher Mode, Featured Game, Spelling Check-In to FAQ
+- [x] Updated resource count to 254 decks
+- [x] Support Mode section added to teacher guide (new section 7)
+- [x] General support response time softened (no specific time commitment)
+
+#### Support mode & extension mode fixes
+- [x] meaning-mode.html: skip penalty now halved in support mode (was hardcoded)
+- [x] breakdown-mode.html: skip penalty now halved in support mode (was hardcoded)
+- [x] homophone-mode.html: Mode 3 fix modal now caps at 2 options in support mode
+- [x] root-lab.html: extension mode now adds 10 harder academic words (was cosmetic badge only)
+- [x] 10 extension root-lab words added to wordlab-extension-data.js (circumnavigation, pseudoscience, etc.)
+
+#### Need Advice button & support toggle
+- [x] Need Advice button: attaches under scientist when visible, floats fixed bottom-right on mobile
+- [x] Support toggle: no longer reloads the page (updates CSS class live)
+- [x] Both available to all users, not just support mode
+
+#### Round-based word count system
+- [x] Students choose 10/15/20/25/30 words per round (default 15)
+- [x] Added to 7 games: phoneme, syllable, sound-sorter, root-lab, mission, meaning, breakdown
+- [x] Untimed games: completion overlay after N answers with accuracy + Play Again / Try Another Game
+- [x] Fuel-bar games: completing round = win condition, fuel out = loss
+- [x] Round picker hidden in Teacher Mode (teacher has own word count picker)
+- [x] Skips don't count toward round total
+- [x] Instructions updated (WLHelp popup + audioText) in all 7 games
+- [x] Teacher guide, FAQ, and About page updated to document the round system
+
+#### Fuel drain adjustments
+- [x] Word Spectrum: slowed by 20% (0.2 → 0.167/tick, ~110s → ~132s)
+- [x] Word Refinery: slowed by 20% (0.18 → 0.15/tick, ~122s → ~147s)
+
+---
+
 ### PHASE 9 — NSW Department of Education Approval
 
 Full checklist document: `docs/nsw-doe-approval-checklist.md`
@@ -1072,3 +1149,10 @@ At the start of each working session, do this:
 | Support mode per-student + self-serve | Teachers can pre-set it (persists in DB, student can't disable); students can also toggle it on themselves (sessionStorage only, temporary) |
 | WOTW curated 52-word list | Auto-rotates weekly; teacher doesn't need to manage it; feeds into games as priority word |
 | New signups get active plan for 1 year | Temporary — free access during early adoption phase |
+| Round-based word count (10–30) | Gives every game a natural end point; encourages students to explore different activities instead of sitting in one forever; student choice of round length supports autonomy |
+| Need Advice button for all users | Originally support-mode only; making it universal helps all students without stigma; floats fixed on mobile when scientist is hidden |
+| Support toggle no reload | Page reload disrupted gameplay mid-round; now toggles CSS class live; some features (option counts, drain rates) apply from next question onwards |
+| Fuel drain +20% for Spectrum/Refinery | These games require more reading and thinking time than other fuel-bar games; students were running out before engaging properly |
+| Signup notification email | Fire-and-forget via existing send-feedback edge function; lets Nick know immediately when a teacher signs up without adding infrastructure |
+| Consistent info page headers | All info pages use same layout (brand + Home link); dark pages match teacher-guide blur style; light pages use clean white header |
+| upgrade.html → pricing.html redirect | upgrade.html was orphaned with completely wrong plan names and prices; redirect avoids confusion |
