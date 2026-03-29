@@ -978,6 +978,121 @@ const EXT_VALID_COMBOS = [
 
 ];
 
+// ── ROOT LAB EXTENSION WORDS ─────────────────────────────────────────────────
+// Harder academic vocabulary with Latin/Greek roots for extension students
+
+const EXT_ROOT_LAB_WORDS = [
+  {word:'circumnavigation', parts:{prefix:'circum', base:'navigate', suffix:'ion'},
+   meanings:{prefix:'around', base:'to steer / sail', suffix:'the act of'},
+   fullMeaning:'the act of sailing around',
+   distractors:['steering in one direction','navigating backwards','unable to navigate'],
+   level:'challenge',
+   cloze:{question:'Which sentence uses "circumnavigation" correctly?',
+    options:[
+     {text:'Magellan\'s circumnavigation of the globe proved the Earth was round.', correct:true},
+     {text:'She circumnavigation the answer on her test paper.', correct:false},
+     {text:'The circumnavigation told the class to sit down quietly.', correct:false}]}},
+
+  {word:'pseudoscience',    parts:{prefix:'pseudo', base:'science', suffix:null},
+   meanings:{prefix:'false / fake', base:'knowledge / study', suffix:null},
+   fullMeaning:'false or fake science',
+   distractors:['advanced science','the study of names','science done in a lab'],
+   level:'challenge',
+   cloze:{question:'Which sentence uses "pseudoscience" correctly?',
+    options:[
+     {text:'Astrology is often considered pseudoscience because it lacks evidence.', correct:true},
+     {text:'The pseudoscience experiment produced accurate results every time.', correct:false},
+     {text:'She pseudoscience her homework before going out to play.', correct:false}]}},
+
+  {word:'malnutrition',     parts:{prefix:'mal', base:'nutrition', suffix:null},
+   meanings:{prefix:'bad / poor', base:'nourishment / food', suffix:null},
+   fullMeaning:'poor or bad nourishment',
+   distractors:['eating too much food','good quality nutrition','a type of meal'],
+   level:'challenge',
+   cloze:{question:'Which sentence uses "malnutrition" correctly?',
+    options:[
+     {text:'Malnutrition is a serious problem in regions affected by drought.', correct:true},
+     {text:'She malnutrition the cake and shared it with her friends.', correct:false},
+     {text:'The malnutrition played happily in the park after school.', correct:false}]}},
+
+  {word:'biodegradable',    parts:{prefix:'bio', base:'degrade', suffix:'able'},
+   meanings:{prefix:'life / living', base:'to break down', suffix:'able to be'},
+   fullMeaning:'able to be broken down by living organisms',
+   distractors:['impossible to break','built from plastic','breaking things on purpose'],
+   level:'challenge',
+   cloze:{question:'Which sentence uses "biodegradable" correctly?',
+    options:[
+     {text:'The company switched to biodegradable packaging to reduce waste.', correct:true},
+     {text:'He biodegradable the test and got every answer correct.', correct:false},
+     {text:'The biodegradable swam quickly across the river to the other side.', correct:false}]}},
+
+  {word:'ambidextrous',     parts:{prefix:'ambi', base:'dexter', suffix:'ous'},
+   meanings:{prefix:'both', base:'right hand / skill', suffix:'having the quality of'},
+   fullMeaning:'having skill with both hands',
+   distractors:['unable to use hands','right-handed only','clumsy with tools'],
+   level:'challenge',
+   cloze:{question:'Which sentence uses "ambidextrous" correctly?',
+    options:[
+     {text:'The ambidextrous artist could paint equally well with either hand.', correct:true},
+     {text:'She ambidextrous the door and walked into the classroom.', correct:false},
+     {text:'The ambidextrous fell off the table and broke into pieces.', correct:false}]}},
+
+  {word:'telecommunications', parts:{prefix:'tele', base:'communicate', suffix:'ion'},
+   meanings:{prefix:'far / distant', base:'to share information', suffix:'the act of'},
+   fullMeaning:'the act of communicating over distance',
+   distractors:['talking face to face','writing by hand','listening to music'],
+   level:'challenge',
+   cloze:{question:'Which sentence uses "telecommunications" correctly?',
+    options:[
+     {text:'Advances in telecommunications made video calls possible from anywhere in the world.', correct:true},
+     {text:'She telecommunications her lunch and then went outside to play.', correct:false},
+     {text:'The telecommunications sat quietly on the shelf gathering dust.', correct:false}]}},
+
+  {word:'antidisestablishment', parts:{prefix:'anti', base:'establish', suffix:'ment'},
+   meanings:{prefix:'against', base:'to set up / found', suffix:'the result of'},
+   fullMeaning:'opposition to the removal of an established institution',
+   distractors:['setting up something new','establishing a school','building a monument'],
+   level:'challenge',
+   cloze:{question:'Which sentence uses "antidisestablishment" correctly?',
+    options:[
+     {text:'The antidisestablishment movement fought to keep the national church.', correct:true},
+     {text:'She antidisestablishment the sandcastle before the tide came in.', correct:false},
+     {text:'The antidisestablishment bounced twice and rolled under the table.', correct:false}]}},
+
+  {word:'extraterrestrial',  parts:{prefix:'extra', base:'terrestrial', suffix:null},
+   meanings:{prefix:'beyond / outside', base:'of the earth', suffix:null},
+   fullMeaning:'from beyond the earth',
+   distractors:['living underground','from the ocean floor','related to earthquakes'],
+   level:'challenge',
+   cloze:{question:'Which sentence uses "extraterrestrial" correctly?',
+    options:[
+     {text:'Scientists searched for extraterrestrial life on Mars.', correct:true},
+     {text:'The extraterrestrial garden grew tomatoes and beans.', correct:false},
+     {text:'She extraterrestrial the maths problem in less than a minute.', correct:false}]}},
+
+  {word:'hyperventilation',  parts:{prefix:'hyper', base:'ventilate', suffix:'ion'},
+   meanings:{prefix:'over / excessive', base:'to breathe', suffix:'the act of'},
+   fullMeaning:'the act of breathing excessively',
+   distractors:['breathing very slowly','holding your breath','sleeping deeply'],
+   level:'challenge',
+   cloze:{question:'Which sentence uses "hyperventilation" correctly?',
+    options:[
+     {text:'Anxiety can sometimes cause hyperventilation, making it hard to catch your breath.', correct:true},
+     {text:'She hyperventilation the ball over the fence into the neighbour\'s yard.', correct:false},
+     {text:'The hyperventilation was the tallest building in the city.', correct:false}]}},
+
+  {word:'microorganism',     parts:{prefix:'micro', base:'organism', suffix:null},
+   meanings:{prefix:'very small', base:'a living thing', suffix:null},
+   fullMeaning:'a very small living thing',
+   distractors:['a large animal','a type of plant','an organ in the body'],
+   level:'challenge',
+   cloze:{question:'Which sentence uses "microorganism" correctly?',
+    options:[
+     {text:'A microorganism like bacteria can only be seen under a microscope.', correct:true},
+     {text:'The microorganism ran across the playground and climbed the tree.', correct:false},
+     {text:'She microorganism her test paper and handed it to the teacher.', correct:false}]}},
+];
+
 // ── EXPORT ────────────────────────────────────────────────────────────────────
 
 window.WL_EXTENSION = {
@@ -994,6 +1109,7 @@ window.WL_EXTENSION = {
   syllableWords:   EXT_SYLLABLE_WORDS,
   phonemeWords:    EXT_PHONEME_WORDS,
   soundWords:      EXT_SOUND_WORDS,
+  rootLabWords:    EXT_ROOT_LAB_WORDS,
 };
 
 console.log("[Word Lab] Extension data loaded — " +
