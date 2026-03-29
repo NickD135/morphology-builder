@@ -82,39 +82,28 @@ var WLHints = (function() {
 
   // ── Need Advice button ─────────────────────────────────────
   function createAdviceBtn() {
-    // Remove stale elements if they exist (scientist rebuild destroys them)
+    // Remove stale elements if they exist
     var oldBubble = document.getElementById('wlhBubble');
     if (oldBubble) oldBubble.remove();
     var oldBtn = document.getElementById('wlhAdviceBtn');
     if (oldBtn) oldBtn.remove();
 
-    // Prefer scientist-stage, but fall back to a fixed-position floating button
-    // when scientist is hidden (e.g. mobile) or missing
-    var stage = document.querySelector('.scientist-stage');
-    var useFloat = !stage || getComputedStyle(stage).display === 'none';
-
-    var parent = useFloat ? document.body : stage;
-
-    // Create bubble (hidden initially)
+    // Always use fixed-position floating elements for reliability
+    // (scientist-stage is hidden on mobile and in some viewport sizes)
     _bubbleEl = document.createElement('div');
     _bubbleEl.className = 'wlh-bubble';
     _bubbleEl.id = 'wlhBubble';
-    if (useFloat) {
-      _bubbleEl.style.cssText = 'position:fixed;bottom:62px;right:16px;left:auto;transform:none;z-index:10001;max-width:240px;';
-    }
-    parent.appendChild(_bubbleEl);
+    _bubbleEl.style.cssText = 'position:fixed;bottom:62px;right:16px;left:auto;transform:none;z-index:10001;max-width:240px;';
+    document.body.appendChild(_bubbleEl);
 
-    // Create button
     _adviceBtnEl = document.createElement('button');
     _adviceBtnEl.className = 'wlh-advice-btn';
     _adviceBtnEl.id = 'wlhAdviceBtn';
     _adviceBtnEl.textContent = '💡 Need Advice';
     _adviceBtnEl.setAttribute('aria-label', 'Get a hint from the scientist');
+    _adviceBtnEl.style.cssText += 'position:fixed;bottom:16px;right:16px;z-index:10000;margin:0;box-shadow:0 4px 16px rgba(67,56,202,.4);';
     _adviceBtnEl.onclick = function() { giveHint(); };
-    if (useFloat) {
-      _adviceBtnEl.style.cssText += 'position:fixed;bottom:16px;right:16px;z-index:10000;margin:0;box-shadow:0 4px 16px rgba(67,56,202,.4);';
-    }
-    parent.appendChild(_adviceBtnEl);
+    document.body.appendChild(_adviceBtnEl);
   }
 
   // Re-attach if DOM elements were destroyed (e.g. by scientist SVG rebuild)
@@ -153,7 +142,14 @@ var WLHints = (function() {
           WordLabData.setSupportMode(nowOn);
         }
         btn.classList.toggle('active', nowOn);
-        window.location.reload();
+        // Update body class for CSS-driven support scaffolds
+        if (nowOn) {
+          document.body.classList.add('support-mode');
+          document.documentElement.classList.add('support-mode');
+        } else {
+          document.body.classList.remove('support-mode');
+          document.documentElement.classList.remove('support-mode');
+        }
       };
     }
     document.body.appendChild(btn);
