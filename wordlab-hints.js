@@ -88,22 +88,33 @@ var WLHints = (function() {
     var oldBtn = document.getElementById('wlhAdviceBtn');
     if (oldBtn) oldBtn.remove();
 
-    // Always use fixed-position floating elements for reliability
-    // (scientist-stage is hidden on mobile and in some viewport sizes)
+    // Try to place inside scientist-stage (below the scientist character)
+    // Fall back to fixed floating button if stage is hidden or missing
+    var stage = document.querySelector('.scientist-stage');
+    var stageVisible = stage && stage.offsetParent !== null;
+
     _bubbleEl = document.createElement('div');
     _bubbleEl.className = 'wlh-bubble';
     _bubbleEl.id = 'wlhBubble';
-    _bubbleEl.style.cssText = 'position:fixed;bottom:62px;right:16px;left:auto;transform:none;z-index:10001;max-width:240px;';
-    document.body.appendChild(_bubbleEl);
 
     _adviceBtnEl = document.createElement('button');
     _adviceBtnEl.className = 'wlh-advice-btn';
     _adviceBtnEl.id = 'wlhAdviceBtn';
     _adviceBtnEl.textContent = '💡 Need Advice';
     _adviceBtnEl.setAttribute('aria-label', 'Get a hint from the scientist');
-    _adviceBtnEl.style.cssText += 'position:fixed;bottom:16px;right:16px;z-index:10000;margin:0;box-shadow:0 4px 16px rgba(67,56,202,.4);';
     _adviceBtnEl.onclick = function() { giveHint(); };
-    document.body.appendChild(_adviceBtnEl);
+
+    if (stageVisible) {
+      // Place under the scientist in the side panel
+      stage.appendChild(_bubbleEl);
+      stage.appendChild(_adviceBtnEl);
+    } else {
+      // Floating fixed fallback
+      _bubbleEl.style.cssText = 'position:fixed;bottom:62px;right:16px;left:auto;transform:none;z-index:10001;max-width:240px;';
+      _adviceBtnEl.style.cssText += 'position:fixed;bottom:16px;right:16px;z-index:10000;margin:0;box-shadow:0 4px 16px rgba(67,56,202,.4);';
+      document.body.appendChild(_bubbleEl);
+      document.body.appendChild(_adviceBtnEl);
+    }
   }
 
   // Re-attach if DOM elements were destroyed (e.g. by scientist SVG rebuild)
@@ -217,6 +228,15 @@ var WLHints = (function() {
     // Create UI elements (delay to ensure scientist is rendered)
     setTimeout(function() {
       createAdviceBtn();
+      // Re-check after longer delay — if scientist rendered late and we fell back
+      // to floating, try again to attach to the stage
+      setTimeout(function() {
+        var btn = document.getElementById('wlhAdviceBtn');
+        var stage = document.querySelector('.scientist-stage');
+        if (btn && stage && stage.offsetParent !== null && btn.style.position === 'fixed') {
+          createAdviceBtn(); // Re-create attached to stage
+        }
+      }, 1500);
     }, 600);
     if (!_supportToggleEl) {
       createSupportToggle();
