@@ -164,6 +164,9 @@
       return;
     }
 
+    // Notify Nick of new signup (fire-and-forget)
+    notifySignup(email, school);
+
     // If session is returned immediately (email confirmation disabled), create school + teacher records
     if (data.session) {
       await createSchoolAndTeacher(data.session.user.id, email, school);
@@ -175,6 +178,20 @@
     document.getElementById('formSection').style.display = 'none';
     document.getElementById('confirmedEmail').textContent = email;
     document.getElementById('successBox').style.display = 'block';
+  }
+
+  function notifySignup(email, school) {
+    fetch(SUPABASE_URL + '/functions/v1/send-feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: school,
+        email: email,
+        role: 'Teacher',
+        category: 'New signup',
+        message: 'New teacher signup: ' + email + ' from ' + school + ' via teacher-signup page.'
+      })
+    }).catch(function() {});
   }
 
   async function createSchoolAndTeacher(authUserId, email, schoolName) {
