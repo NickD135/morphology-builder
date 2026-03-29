@@ -2355,37 +2355,6 @@ const WordLabData = (() => {
     return _extLoading;
   }
 
-  return {
-    getTeacherSession, getTeacherRecord, requireTeacherAuth, teacherSignOut, _sb: sb,
-    createClass, getClasses, getClass, verifyPassword,
-    addStudent, addStudentsBulk, removeStudent, deleteClass, regenerateStudentCode,
-    lookupClassByCode, verifyStudentCode,
-    startSession, getSession, endSession,
-    recordAttempt,
-    getAccuracy, getAvgTime, isIntervention,
-    exportCSV, initLoginUI,
-    _loadStudents, _pick, _pickStudent, _stepClassCode, _stepStudentCode,
-    _backToStep1, _backToStep2, _skip, _toggleAudio, _logoutStudent,
-    getStudentData, getLevel, ALL_BADGES, LEGENDARY_BADGES,
-    getScientist, saveScientist, purchase,
-    getClassLeader, getClassCrownEnabled, setClassCrownEnabled,
-    getClassTeacherIds, isStudentTeacher, setStudentTeacher, saveClassSettings,
-    createTeacherStudent, getTeacherStudent, enterStudentMode, exitStudentMode, isTeacherPreview,
-    isExtensionMode, loadExtensionData,
-    isLowStimMode, loadLowStimMode,
-    isSupportMode, setSupportMode, loadSupportMode,
-    checkDailyLimit, incrementDailyUsage,
-    getDailyChallenges, updateChallengeProgress, claimChallengeReward, updateDailyStreak, CHALLENGE_GAMES,
-    getFeaturedGame, loadFeaturedGame, getLeastPlayedGames, getBonusDayMultiplier,
-    getCustomWords, getCustomWordPriority,
-    getCustomMorphemes, getCustomMorphemePriority,
-    getSpellingSetWords, recordSpellingAttempt,
-    getEALDLanguage, getEALDLanguageName, getTranslations, createEALDPill, injectEALDStyles, EALD_LANGUAGES, EALD_TTS_CODES,
-    speakInLanguage, buildEALDSpeakButtons, buildEALDRevealButton, _speakEALD,
-    escapeHtml,
-    getWordOfTheWeek
-  };
-
   // ── Word of the Week ─────────────────────────────────────────
   // 52 curated words, one per week, cycling yearly.
   // Each entry feeds into Breakdown Blitz, Syllable Splitter, Phoneme Splitter, and Sound Sorter.
@@ -2445,15 +2414,46 @@ const WordLabData = (() => {
   ];
 
   function getWordOfTheWeek() {
-    // Week number since epoch Monday — rotates through 52 words
     var now = new Date();
-    var start = new Date(2026, 0, 5); // Monday 5 Jan 2026 as week 0
+    var start = new Date(2026, 0, 5);
     var weekNum = Math.floor((now - start) / (7 * 86400000));
     var idx = ((weekNum % WOTW_LIST.length) + WOTW_LIST.length) % WOTW_LIST.length;
     return WOTW_LIST[idx];
   }
 
+  return {
+    getTeacherSession, getTeacherRecord, requireTeacherAuth, teacherSignOut, _sb: sb,
+    createClass, getClasses, getClass, verifyPassword,
+    addStudent, addStudentsBulk, removeStudent, deleteClass, regenerateStudentCode,
+    lookupClassByCode, verifyStudentCode,
+    startSession, getSession, endSession,
+    recordAttempt,
+    getAccuracy, getAvgTime, isIntervention,
+    exportCSV, initLoginUI,
+    _loadStudents, _pick, _pickStudent, _stepClassCode, _stepStudentCode,
+    _backToStep1, _backToStep2, _skip, _toggleAudio, _logoutStudent,
+    getStudentData, getLevel, ALL_BADGES, LEGENDARY_BADGES,
+    getScientist, saveScientist, purchase,
+    getClassLeader, getClassCrownEnabled, setClassCrownEnabled,
+    getClassTeacherIds, isStudentTeacher, setStudentTeacher, saveClassSettings,
+    createTeacherStudent, getTeacherStudent, enterStudentMode, exitStudentMode, isTeacherPreview,
+    isExtensionMode, loadExtensionData,
+    isLowStimMode, loadLowStimMode,
+    isSupportMode, setSupportMode, loadSupportMode,
+    checkDailyLimit, incrementDailyUsage,
+    getDailyChallenges, updateChallengeProgress, claimChallengeReward, updateDailyStreak, CHALLENGE_GAMES,
+    getFeaturedGame, loadFeaturedGame, getLeastPlayedGames, getBonusDayMultiplier,
+    getCustomWords, getCustomWordPriority,
+    getCustomMorphemes, getCustomMorphemePriority,
+    getSpellingSetWords, recordSpellingAttempt,
+    getEALDLanguage, getEALDLanguageName, getTranslations, createEALDPill, injectEALDStyles, EALD_LANGUAGES, EALD_TTS_CODES,
+    speakInLanguage, buildEALDSpeakButtons, buildEALDRevealButton, _speakEALD,
+    escapeHtml,
+    getWordOfTheWeek
+  };
+
 })();
+
 
 // ── Offline / connection detection ────────────────────────────
 (function() {
