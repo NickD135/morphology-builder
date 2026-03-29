@@ -2382,8 +2382,76 @@ const WordLabData = (() => {
     getSpellingSetWords, recordSpellingAttempt,
     getEALDLanguage, getEALDLanguageName, getTranslations, createEALDPill, injectEALDStyles, EALD_LANGUAGES, EALD_TTS_CODES,
     speakInLanguage, buildEALDSpeakButtons, buildEALDRevealButton, _speakEALD,
-    escapeHtml
+    escapeHtml,
+    getWordOfTheWeek
   };
+
+  // ── Word of the Week ─────────────────────────────────────────
+  // 52 curated words, one per week, cycling yearly.
+  // Each entry feeds into Breakdown Blitz, Syllable Splitter, Phoneme Splitter, and Sound Sorter.
+  var WOTW_LIST = [
+    { word:'extraordinary', prefix:'extra', base:'ordinary', suffix1:'', suffix2:'', meaning:'Beyond what is ordinary or usual', syllables:['ex','tra','or','di','na','ry'], phonemes:['e','x','t','r','a','or','d','i','n','a','r','y'], clue:'Far beyond what is normal' },
+    { word:'misconception', prefix:'mis', base:'concept', suffix1:'ion', suffix2:'', meaning:'A wrong or mistaken idea about something', syllables:['mis','con','cep','tion'], phonemes:['m','i','s','c','o','n','c','e','p','sh','u','n'], clue:'A misunderstanding or wrong belief' },
+    { word:'unforgettable', prefix:'un', base:'forget', suffix1:'able', suffix2:'', meaning:'Impossible to forget; very memorable', syllables:['un','for','get','ta','ble'], phonemes:['u','n','f','or','g','e','tt','a','b','l'], clue:'So amazing you will always remember it' },
+    { word:'transportation', prefix:'trans', base:'port', suffix1:'ation', suffix2:'', meaning:'The act of carrying people or goods from place to place', syllables:['trans','por','ta','tion'], phonemes:['t','r','a','n','s','p','or','t','ay','sh','u','n'], clue:'Moving things from one place to another' },
+    { word:'disagreement', prefix:'dis', base:'agree', suffix1:'ment', suffix2:'', meaning:'A difference of opinion; not agreeing', syllables:['dis','a','gree','ment'], phonemes:['d','i','s','a','g','r','ee','m','e','n','t'], clue:'When people do not see eye to eye' },
+    { word:'encouragement', prefix:'en', base:'courage', suffix1:'ment', suffix2:'', meaning:'Words or actions that give someone confidence', syllables:['en','cour','age','ment'], phonemes:['e','n','k','u','r','i','j','m','e','n','t'], clue:'Giving someone support and confidence' },
+    { word:'international', prefix:'inter', base:'nation', suffix1:'al', suffix2:'', meaning:'Involving two or more countries', syllables:['in','ter','na','tion','al'], phonemes:['i','n','t','er','n','a','sh','u','n','a','l'], clue:'Between different countries' },
+    { word:'uncomfortable', prefix:'un', base:'comfort', suffix1:'able', suffix2:'', meaning:'Not physically or mentally at ease', syllables:['un','com','for','ta','ble'], phonemes:['u','n','k','u','m','f','t','a','b','l'], clue:'Not feeling relaxed or at ease' },
+    { word:'independence', prefix:'in', base:'depend', suffix1:'ence', suffix2:'', meaning:'The state of being free and self-reliant', syllables:['in','de','pen','dence'], phonemes:['i','n','d','i','p','e','n','d','e','n','s'], clue:'Freedom to take care of yourself' },
+    { word:'responsibility', prefix:'', base:'response', suffix1:'ible', suffix2:'ity', meaning:'A duty to deal with something or take care of someone', syllables:['re','spon','si','bil','i','ty'], phonemes:['r','i','s','p','o','n','s','i','b','i','l','i','t','y'], clue:'Being trusted to do the right thing' },
+    { word:'disappearance', prefix:'dis', base:'appear', suffix1:'ance', suffix2:'', meaning:'The act of vanishing or ceasing to be visible', syllables:['dis','ap','pear','ance'], phonemes:['d','i','s','a','p','ear','a','n','s'], clue:'When something vanishes from sight' },
+    { word:'environment', prefix:'en', base:'viron', suffix1:'ment', suffix2:'', meaning:'The natural world around us, or surrounding conditions', syllables:['en','vi','ron','ment'], phonemes:['e','n','v','i','r','o','n','m','e','n','t'], clue:'The world of nature around us' },
+    { word:'communication', prefix:'', base:'communicate', suffix1:'ion', suffix2:'', meaning:'The sharing of information between people', syllables:['com','mu','ni','ca','tion'], phonemes:['k','o','m','y','oo','n','i','k','ay','sh','u','n'], clue:'Sharing ideas with others' },
+    { word:'overreaction', prefix:'over', base:'react', suffix1:'ion', suffix2:'', meaning:'A more emotional response than the situation calls for', syllables:['o','ver','re','ac','tion'], phonemes:['oa','v','er','r','ee','a','k','sh','u','n'], clue:'Responding too strongly to something' },
+    { word:'prediction', prefix:'pre', base:'dict', suffix1:'ion', suffix2:'', meaning:'A statement about what will happen in the future', syllables:['pre','dic','tion'], phonemes:['p','r','i','d','i','k','sh','u','n'], clue:'Saying what you think will happen next' },
+    { word:'submarine', prefix:'sub', base:'marine', suffix1:'', suffix2:'', meaning:'A vessel that travels underwater', syllables:['sub','ma','rine'], phonemes:['s','u','b','m','a','r','ee','n'], clue:'A boat that goes under the sea' },
+    { word:'microscope', prefix:'micro', base:'scope', suffix1:'', suffix2:'', meaning:'An instrument for seeing very small things', syllables:['mi','cro','scope'], phonemes:['m','i','k','r','o','s','k','oa','p'], clue:'A tool for looking at tiny things' },
+    { word:'telephone', prefix:'tele', base:'phone', suffix1:'', suffix2:'', meaning:'A device for speaking to someone far away', syllables:['tel','e','phone'], phonemes:['t','e','l','i','f','oa','n'], clue:'A device for talking across distances' },
+    { word:'invisible', prefix:'in', base:'vis', suffix1:'ible', suffix2:'', meaning:'Unable to be seen', syllables:['in','vis','i','ble'], phonemes:['i','n','v','i','z','i','b','l'], clue:'Something you cannot see' },
+    { word:'supermarket', prefix:'super', base:'market', suffix1:'', suffix2:'', meaning:'A large shop selling food and household items', syllables:['su','per','mar','ket'], phonemes:['s','oo','p','er','m','ar','k','i','t'], clue:'A big store where you buy groceries' },
+    { word:'unhappiness', prefix:'un', base:'happy', suffix1:'ness', suffix2:'', meaning:'The state of not being happy; sadness', syllables:['un','hap','pi','ness'], phonemes:['u','n','h','a','p','ee','n','e','s'], clue:'The feeling of being sad' },
+    { word:'reconstruction', prefix:'re', base:'construct', suffix1:'ion', suffix2:'', meaning:'Building something again after it was damaged', syllables:['re','con','struc','tion'], phonemes:['r','ee','k','o','n','s','t','r','u','k','sh','u','n'], clue:'Putting something back together' },
+    { word:'autobiography', prefix:'auto', base:'bio', suffix1:'graphy', suffix2:'', meaning:'A book someone writes about their own life', syllables:['au','to','bi','og','ra','phy'], phonemes:['or','t','o','b','i','o','g','r','a','f','y'], clue:'The story of your life, written by you' },
+    { word:'malfunction', prefix:'mal', base:'function', suffix1:'', suffix2:'', meaning:'A failure to work correctly', syllables:['mal','func','tion'], phonemes:['m','a','l','f','u','ng','k','sh','u','n'], clue:'When something stops working properly' },
+    { word:'hyperactive', prefix:'hyper', base:'active', suffix1:'', suffix2:'', meaning:'Extremely active or energetic beyond normal levels', syllables:['hy','per','ac','tive'], phonemes:['h','i','p','er','a','k','t','i','v'], clue:'Being extremely full of energy' },
+    { word:'semicircle', prefix:'semi', base:'circle', suffix1:'', suffix2:'', meaning:'Half of a circle', syllables:['se','mi','cir','cle'], phonemes:['s','e','m','i','s','er','k','l'], clue:'Exactly half of a round shape' },
+    { word:'multicoloured', prefix:'multi', base:'colour', suffix1:'ed', suffix2:'', meaning:'Having many different colours', syllables:['mul','ti','col','oured'], phonemes:['m','u','l','t','i','k','u','l','er','d'], clue:'Made up of lots of different colours' },
+    { word:'nonfiction', prefix:'non', base:'fiction', suffix1:'', suffix2:'', meaning:'Writing based on real facts, not made-up stories', syllables:['non','fic','tion'], phonemes:['n','o','n','f','i','k','sh','u','n'], clue:'Books about real things, not stories' },
+    { word:'forewarning', prefix:'fore', base:'warn', suffix1:'ing', suffix2:'', meaning:'Advance notice of something bad that might happen', syllables:['fore','warn','ing'], phonemes:['f','or','w','or','n','i','ng'], clue:'Letting someone know danger is coming' },
+    { word:'prehistoric', prefix:'pre', base:'histor', suffix1:'ic', suffix2:'', meaning:'From a time before written records', syllables:['pre','his','tor','ic'], phonemes:['p','r','ee','h','i','s','t','o','r','i','k'], clue:'From a very, very long time ago' },
+    { word:'export', prefix:'ex', base:'port', suffix1:'', suffix2:'', meaning:'To send goods to another country for sale', syllables:['ex','port'], phonemes:['e','x','p','or','t'], clue:'Sending products to other countries' },
+    { word:'construct', prefix:'con', base:'struct', suffix1:'', suffix2:'', meaning:'To build or put together', syllables:['con','struct'], phonemes:['k','o','n','s','t','r','u','k','t'], clue:'To build something from parts' },
+    { word:'transform', prefix:'trans', base:'form', suffix1:'', suffix2:'', meaning:'To change completely in form or appearance', syllables:['trans','form'], phonemes:['t','r','a','n','s','f','or','m'], clue:'To change into something different' },
+    { word:'incredible', prefix:'in', base:'cred', suffix1:'ible', suffix2:'', meaning:'Too extraordinary to be believed; amazing', syllables:['in','cred','i','ble'], phonemes:['i','n','k','r','e','d','i','b','l'], clue:'So amazing it is hard to believe' },
+    { word:'discovery', prefix:'dis', base:'cover', suffix1:'y', suffix2:'', meaning:'The act of finding something for the first time', syllables:['dis','cov','er','y'], phonemes:['d','i','s','k','u','v','er','y'], clue:'Finding something new or unknown' },
+    { word:'impossible', prefix:'im', base:'possible', suffix1:'', suffix2:'', meaning:'Not able to happen or be done', syllables:['im','pos','si','ble'], phonemes:['i','m','p','o','s','i','b','l'], clue:'Something that cannot be done' },
+    { word:'adventure', prefix:'ad', base:'venture', suffix1:'', suffix2:'', meaning:'An exciting or unusual experience', syllables:['ad','ven','ture'], phonemes:['a','d','v','e','n','ch','er'], clue:'An exciting journey or experience' },
+    { word:'photograph', prefix:'', base:'photo', suffix1:'graph', suffix2:'', meaning:'An image captured by a camera', syllables:['pho','to','graph'], phonemes:['f','oa','t','o','g','r','a','f'], clue:'A picture taken with a camera' },
+    { word:'benevolent', prefix:'bene', base:'vol', suffix1:'ent', suffix2:'', meaning:'Well-meaning and kind; wanting to help others', syllables:['be','nev','o','lent'], phonemes:['b','e','n','e','v','o','l','e','n','t'], clue:'Kind and wanting to do good' },
+    { word:'unbreakable', prefix:'un', base:'break', suffix1:'able', suffix2:'', meaning:'Impossible to break', syllables:['un','break','a','ble'], phonemes:['u','n','b','r','ay','k','a','b','l'], clue:'So strong it cannot be broken' },
+    { word:'misbehave', prefix:'mis', base:'behave', suffix1:'', suffix2:'', meaning:'To behave badly or break the rules', syllables:['mis','be','have'], phonemes:['m','i','s','b','i','h','ay','v'], clue:'To act badly or break rules' },
+    { word:'recycle', prefix:'re', base:'cycle', suffix1:'', suffix2:'', meaning:'To process used materials so they can be used again', syllables:['re','cy','cle'], phonemes:['r','ee','s','i','k','l'], clue:'Using materials again instead of throwing them away' },
+    { word:'anticlockwise', prefix:'anti', base:'clock', suffix1:'wise', suffix2:'', meaning:'In the opposite direction to clock hands', syllables:['an','ti','clock','wise'], phonemes:['a','n','t','i','k','l','o','k','w','i','z'], clue:'The opposite direction to a clock' },
+    { word:'underestimate', prefix:'under', base:'estimate', suffix1:'', suffix2:'', meaning:'To think something is less than it really is', syllables:['un','der','es','ti','mate'], phonemes:['u','n','d','er','e','s','t','i','m','ay','t'], clue:'Guessing too low about something' },
+    { word:'proactive', prefix:'pro', base:'active', suffix1:'', suffix2:'', meaning:'Creating or controlling a situation rather than just reacting', syllables:['pro','ac','tive'], phonemes:['p','r','oa','a','k','t','i','v'], clue:'Taking action before problems happen' },
+    { word:'contradict', prefix:'contra', base:'dict', suffix1:'', suffix2:'', meaning:'To say the opposite of what someone else said', syllables:['con','tra','dict'], phonemes:['k','o','n','t','r','a','d','i','k','t'], clue:'To say the opposite of another person' },
+    { word:'midpoint', prefix:'mid', base:'point', suffix1:'', suffix2:'', meaning:'The exact middle of something', syllables:['mid','point'], phonemes:['m','i','d','p','oy','n','t'], clue:'Exactly halfway between two things' },
+    { word:'empowerment', prefix:'em', base:'power', suffix1:'ment', suffix2:'', meaning:'The process of becoming stronger and more confident', syllables:['em','pow','er','ment'], phonemes:['e','m','p','ow','er','m','e','n','t'], clue:'Gaining strength and confidence' },
+    { word:'inspection', prefix:'in', base:'spect', suffix1:'ion', suffix2:'', meaning:'A careful examination or check of something', syllables:['in','spec','tion'], phonemes:['i','n','s','p','e','k','sh','u','n'], clue:'Looking closely to check something' },
+    { word:'destruction', prefix:'de', base:'struct', suffix1:'ion', suffix2:'', meaning:'The act of destroying or being destroyed', syllables:['de','struc','tion'], phonemes:['d','i','s','t','r','u','k','sh','u','n'], clue:'Completely breaking or ruining something' },
+    { word:'bilingual', prefix:'bi', base:'lingu', suffix1:'al', suffix2:'', meaning:'Able to speak two languages fluently', syllables:['bi','lin','gual'], phonemes:['b','i','l','i','ng','g','w','a','l'], clue:'Speaking two languages well' },
+    { word:'megaphone', prefix:'mega', base:'phone', suffix1:'', suffix2:'', meaning:'A cone-shaped device for making your voice louder', syllables:['meg','a','phone'], phonemes:['m','e','g','a','f','oa','n'], clue:'A device that makes your voice louder' },
+  ];
+
+  function getWordOfTheWeek() {
+    // Week number since epoch Monday — rotates through 52 words
+    var now = new Date();
+    var start = new Date(2026, 0, 5); // Monday 5 Jan 2026 as week 0
+    var weekNum = Math.floor((now - start) / (7 * 86400000));
+    var idx = ((weekNum % WOTW_LIST.length) + WOTW_LIST.length) % WOTW_LIST.length;
+    return WOTW_LIST[idx];
+  }
 
 })();
 

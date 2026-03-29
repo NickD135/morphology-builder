@@ -1500,6 +1500,23 @@
 <!-- Student content -->
 <div class="sections-bg">
   <div class="layout-section">
+    <!-- Word of the Week -->
+    <div id="wotwCard" style="display:none;background:linear-gradient(135deg,#1e1b4b,#312e81);border:1.5px solid rgba(99,102,241,.25);border-radius:20px;padding:24px;margin-bottom:24px;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#4338ca,#7c3aed,#0d9488);"></div>
+      <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:200px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span style="font-size:22px;">📖</span>
+            <span style="font-size:11px;font-weight:900;color:#a5b4fc;letter-spacing:.1em;text-transform:uppercase;">Word of the Week</span>
+          </div>
+          <div id="wotwWord" style="font-size:32px;font-weight:900;color:#e0e7ff;margin-bottom:4px;"></div>
+          <div id="wotwMeaning" style="font-size:14px;font-weight:600;color:#94a3b8;line-height:1.4;margin-bottom:12px;"></div>
+          <div id="wotwBreakdown" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"></div>
+          <div id="wotwDetails" style="font-size:11px;font-weight:600;color:#64748b;line-height:1.5;"></div>
+        </div>
+      </div>
+    </div>
+
     <h2 class="section-heading">Explore</h2>
     <p style="font-size:13px;font-weight:600;color:#6366f1;margin-bottom:14px;letter-spacing:.02em;">Deep-dive activities</p>
     <div class="explore-doorways">
@@ -1903,6 +1920,33 @@ async function initStudentLayout(session) {
     var previewBanner = document.getElementById('teacherPreviewBanner');
     if (previewBanner) previewBanner.style.display = 'flex';
   }
+
+  // Word of the Week card
+  try {
+    if (typeof WordLabData !== 'undefined' && WordLabData.getWordOfTheWeek) {
+      var wotw = WordLabData.getWordOfTheWeek();
+      if (wotw) {
+        var card = document.getElementById('wotwCard');
+        if (card) {
+          card.style.display = 'block';
+          document.getElementById('wotwWord').textContent = wotw.word;
+          document.getElementById('wotwMeaning').textContent = wotw.meaning;
+          // Morpheme breakdown pills
+          var parts = [];
+          if (wotw.prefix) parts.push('<span style="background:#7c3aed;color:#fff;padding:3px 10px;border-radius:8px;font-size:13px;font-weight:800;">' + WordLabData.escapeHtml(wotw.prefix) + '-</span>');
+          if (wotw.base) parts.push('<span style="background:#4338ca;color:#fff;padding:3px 10px;border-radius:8px;font-size:13px;font-weight:800;">' + WordLabData.escapeHtml(wotw.base) + '</span>');
+          if (wotw.suffix1) parts.push('<span style="background:#ea580c;color:#fff;padding:3px 10px;border-radius:8px;font-size:13px;font-weight:800;">-' + WordLabData.escapeHtml(wotw.suffix1) + '</span>');
+          if (wotw.suffix2) parts.push('<span style="background:#b45309;color:#fff;padding:3px 10px;border-radius:8px;font-size:13px;font-weight:800;">-' + WordLabData.escapeHtml(wotw.suffix2) + '</span>');
+          document.getElementById('wotwBreakdown').innerHTML = parts.join('<span style="color:#475569;font-weight:900;font-size:16px;">+</span>');
+          // Syllable + phoneme details
+          var details = [];
+          if (wotw.syllables) details.push('Syllables: ' + wotw.syllables.join(' · ') + ' (' + wotw.syllables.length + ')');
+          if (wotw.phonemes) details.push('Phonemes: ' + wotw.phonemes.join(' · ') + ' (' + wotw.phonemes.length + ')');
+          document.getElementById('wotwDetails').innerHTML = details.join('<br>');
+        }
+      }
+    }
+  } catch(e) { console.warn('WOTW error:', e); }
 
   // Update header login button
   var btn = document.getElementById('wlLoginBtn');
