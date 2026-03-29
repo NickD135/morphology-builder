@@ -87,7 +87,7 @@ var WLHints = (function() {
     var stage = document.querySelector('.scientist-stage');
     if (!stage) return;
 
-    stage.style.position = 'relative';
+    // Don't override position — stage is already position:fixed in game CSS
 
     // Remove stale elements if they exist (scientist rebuild destroys them)
     var oldBubble = document.getElementById('wlhBubble');
