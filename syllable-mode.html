@@ -318,6 +318,10 @@
       transition:all .15s;
     }
     .startBtn:hover{ background:#3730a3; transform:translateY(-2px); }
+    .round-picker{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;}
+    .round-btn{background:rgba(67,56,202,.06);border:2px solid rgba(67,56,202,.15);color:var(--muted);font-family:'Lexend',sans-serif;font-weight:800;font-size:13px;padding:6px 14px;border-radius:10px;cursor:pointer;transition:all .15s;}
+    .round-btn:hover{border-color:rgba(67,56,202,.4);color:#312e81;}
+    .round-btn.active{background:var(--indigo);border-color:var(--indigo);color:#fff;}
 
     .hidden{ display:none !important; }
 
@@ -524,6 +528,16 @@
             <button class="diffBtn" data-diff="2" onclick="setDiff(2)">3 syllables</button>
             <button class="diffBtn" data-diff="3" onclick="setDiff(3)">4+ syllables</button>
             <button class="diffBtn" data-diff="0" onclick="setDiff(0)">Mixed</button>
+          </div>
+          <div id="roundPickerWrap" style="margin:16px 0 8px;text-align:center;">
+            <div style="font-size:11px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;">Words this round</div>
+            <div class="round-picker" id="roundPicker">
+              <button class="round-btn" data-count="10" onclick="setRoundCount(10,this)">10</button>
+              <button class="round-btn active" data-count="15" onclick="setRoundCount(15,this)">15</button>
+              <button class="round-btn" data-count="20" onclick="setRoundCount(20,this)">20</button>
+              <button class="round-btn" data-count="25" onclick="setRoundCount(25,this)">25</button>
+              <button class="round-btn" data-count="30" onclick="setRoundCount(30,this)">30</button>
+            </div>
           </div>
           <button class="startBtn" onclick="startGame()">Start Chopping!</button>
         </div>
@@ -782,6 +796,40 @@ let usedWords = new Set();
 let checked = false;
 let autoNextTimer = null;
 
+var _roundTotal = 15;
+var _roundAnswered = 0;
+
+function setRoundCount(n, btn) {
+  _roundTotal = n;
+  document.querySelectorAll('.round-btn').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+}
+
+function showRoundComplete() {
+  var total = correct + wrong;
+  var accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
+  var overlay = document.createElement('div');
+  overlay.id = 'roundCompleteOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(13,11,26,.95);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = '<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:40px 36px;max-width:400px;width:90%;text-align:center;">' +
+    '<div style="font-size:48px;margin-bottom:12px;">' + (accuracy >= 80 ? '🏆' : accuracy >= 60 ? '⭐' : '🔬') + '</div>' +
+    '<div style="font-size:22px;font-weight:900;color:#e0e7ff;margin-bottom:6px;">Round Complete!</div>' +
+    '<div style="font-size:14px;font-weight:600;color:#94a3b8;margin-bottom:20px;">' + _roundAnswered + ' words · ' + accuracy + '% accuracy</div>' +
+    '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">' +
+    '<button onclick="document.getElementById(\'roundCompleteOverlay\').remove();restartRound();" style="background:#4338ca;color:#fff;border:none;border-radius:14px;padding:12px 24px;font-family:Lexend,sans-serif;font-weight:800;font-size:14px;cursor:pointer;">Play Again</button>' +
+    '<a href="landing.html" style="background:rgba(255,255,255,.06);color:#94a3b8;border:2px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 24px;font-family:Lexend,sans-serif;font-weight:800;font-size:14px;cursor:pointer;text-decoration:none;">Try Another Game</a>' +
+    '</div></div>';
+  document.body.appendChild(overlay);
+}
+
+function restartRound() {
+  _roundAnswered = 0;
+  score = 0; streak = 0; bestStreak = 0; correct = 0; wrong = 0;
+  usedWords.clear();
+  updateStats();
+  renderWord();
+}
+
 // ── Difficulty helpers ────────────────────────────────────────────────────────
 function setDiff(d){
   currentDiff = d;
@@ -1012,6 +1060,7 @@ function checkAnswer(){
   banner.style.display = 'block';
   if(!_wltActive) updateStats();
   addHistory(currentWord.word, correctSylls, isCorrect);
+  if(!_wltActive){ _roundAnswered++; if(_roundAnswered >= _roundTotal){ clearTimeout(autoNextTimer); autoNextTimer = null; setTimeout(showRoundComplete, 800); return; } }
 
   // EALD reveal button
   var ealdEl=document.getElementById('ealdTranslation');if(ealdEl){
@@ -1132,12 +1181,16 @@ function addHistory(word, answer, isCorrect){
 function startGame(){
   document.getElementById('startScreen').classList.add('hidden');
   document.getElementById('gameScreen').classList.remove('hidden');
+  _roundAnswered = 0;
   if(_wltActive){
     WLTeacher.init({game:'syllable'}).then(function(){ renderWord(); });
   } else {
     renderWord();
   }
 }
+
+// Hide round picker in teacher mode
+if(_wltActive){ var _rpw = document.getElementById('roundPickerWrap'); if(_rpw) _rpw.style.display = 'none'; }
 
 document.getElementById('checkBtn').addEventListener('click', checkAnswer);
 document.getElementById('nextBtn').addEventListener('click', function(){
