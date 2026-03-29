@@ -609,6 +609,8 @@ const WordLabData = (() => {
       var { data } = await sb().from('students').select('support_mode').eq('id', studentId).maybeSingle();
       var on = !!(data && data.support_mode);
       sessionStorage.setItem('wl_support_mode', on ? 'true' : 'false');
+      // Track whether teacher set it (so student can't disable)
+      sessionStorage.setItem('wl_support_teacher', on ? 'true' : 'false');
       _applySupportClass(on);
       return on;
     } catch(e) { return false; }

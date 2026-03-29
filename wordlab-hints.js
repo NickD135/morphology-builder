@@ -120,23 +120,35 @@ var WLHints = (function() {
   // ── Support mode toggle ────────────────────────────────────
   function createSupportToggle() {
     if (_supportToggleEl) return;
+    var isOn = typeof WordLabData !== 'undefined' && WordLabData.isSupportMode();
+    // Check if teacher locked it on (stored in sessionStorage by loadSupportMode)
+    var teacherSet = false;
+    try { teacherSet = sessionStorage.getItem('wl_support_teacher') === 'true'; } catch(e) {}
+
     var btn = document.createElement('button');
     btn.className = 'wlh-support-toggle';
     btn.id = 'wlhSupportToggle';
-    var isOn = typeof WordLabData !== 'undefined' && WordLabData.isSupportMode();
     if (isOn) btn.classList.add('active');
-    btn.innerHTML = '<span class="wlh-support-dot"></span> Support';
-    btn.title = 'Toggle support mode — slower timers, hints, fewer options';
-    btn.setAttribute('aria-label', 'Toggle support mode');
-    btn.onclick = function() {
-      var nowOn = !(typeof WordLabData !== 'undefined' && WordLabData.isSupportMode());
-      if (typeof WordLabData !== 'undefined' && WordLabData.setSupportMode) {
-        WordLabData.setSupportMode(nowOn);
-      }
-      btn.classList.toggle('active', nowOn);
-      // Reload to apply changes
-      window.location.reload();
-    };
+
+    if (teacherSet) {
+      // Teacher enabled — show as locked on, student can't disable
+      btn.innerHTML = '<span class="wlh-support-dot"></span> Support (set by teacher)';
+      btn.title = 'Support mode is enabled by your teacher';
+      btn.style.cursor = 'default';
+      btn.style.opacity = '0.7';
+    } else {
+      btn.innerHTML = '<span class="wlh-support-dot"></span> Support';
+      btn.title = 'Toggle support mode — slower timers, hints, fewer options';
+      btn.setAttribute('aria-label', 'Toggle support mode');
+      btn.onclick = function() {
+        var nowOn = !(typeof WordLabData !== 'undefined' && WordLabData.isSupportMode());
+        if (typeof WordLabData !== 'undefined' && WordLabData.setSupportMode) {
+          WordLabData.setSupportMode(nowOn);
+        }
+        btn.classList.toggle('active', nowOn);
+        window.location.reload();
+      };
+    }
     document.body.appendChild(btn);
     _supportToggleEl = btn;
   }
