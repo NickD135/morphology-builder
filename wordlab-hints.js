@@ -81,20 +81,24 @@ var WLHints = (function() {
 
   // ── Need Advice button ─────────────────────────────────────
   function createAdviceBtn() {
-    // Find the scientist wrapper
-    var sciWrap = document.getElementById('sciCharWrap') ||
-                  document.querySelector('.scientist-stage') ||
-                  document.querySelector('[id*="sciChar"]');
-    if (!sciWrap) return;
+    // Attach to .scientist-stage (the stable parent), NOT sciCharWrap
+    // (sciCharWrap innerHTML gets replaced on scientist reactions)
+    var stage = document.querySelector('.scientist-stage');
+    if (!stage) return;
 
-    // Make wrapper relative for bubble positioning
-    sciWrap.style.position = 'relative';
+    stage.style.position = 'relative';
+
+    // Remove stale elements if they exist (scientist rebuild destroys them)
+    var oldBubble = document.getElementById('wlhBubble');
+    if (oldBubble) oldBubble.remove();
+    var oldBtn = document.getElementById('wlhAdviceBtn');
+    if (oldBtn) oldBtn.remove();
 
     // Create bubble (hidden initially)
     _bubbleEl = document.createElement('div');
     _bubbleEl.className = 'wlh-bubble';
     _bubbleEl.id = 'wlhBubble';
-    sciWrap.appendChild(_bubbleEl);
+    stage.appendChild(_bubbleEl);
 
     // Create button
     _adviceBtnEl = document.createElement('button');
@@ -103,7 +107,14 @@ var WLHints = (function() {
     _adviceBtnEl.textContent = '💡 Need Advice';
     _adviceBtnEl.setAttribute('aria-label', 'Get a hint from the scientist');
     _adviceBtnEl.onclick = function() { giveHint(); };
-    sciWrap.appendChild(_adviceBtnEl);
+    stage.appendChild(_adviceBtnEl);
+  }
+
+  // Re-attach if DOM elements were destroyed (e.g. by scientist SVG rebuild)
+  function ensureAdviceBtn() {
+    if (!document.getElementById('wlhAdviceBtn')) {
+      createAdviceBtn();
+    }
   }
 
   // ── Support mode toggle ────────────────────────────────────
@@ -188,11 +199,10 @@ var WLHints = (function() {
     _hintCount = 0;
     injectCSS();
 
-    // Create UI elements (once)
-    if (!_adviceBtnEl) {
-      // Delay to ensure scientist is rendered
-      setTimeout(createAdviceBtn, 600);
-    }
+    // Create UI elements (delay to ensure scientist is rendered)
+    setTimeout(function() {
+      createAdviceBtn();
+    }, 600);
     if (!_supportToggleEl) {
       createSupportToggle();
     }
@@ -202,6 +212,7 @@ var WLHints = (function() {
   function resetHints() {
     _hintCount = 0;
     hideBubble();
+    ensureAdviceBtn();
   }
 
   /** Update hint functions (call when question changes) */
