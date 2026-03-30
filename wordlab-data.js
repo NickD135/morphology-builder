@@ -2269,7 +2269,7 @@ const WordLabData = (() => {
     window.speechSynthesis.cancel();
     var u = new SpeechSynthesisUtterance(text);
     u.lang = langCode || 'en-AU';
-    u.rate = 1.0;
+    u.rate = 0.85;
     // Pick the best Australian voice available
     var voices = window.speechSynthesis.getVoices();
     if (voices.length && (!langCode || langCode === 'en-AU' || langCode === 'en')) {
