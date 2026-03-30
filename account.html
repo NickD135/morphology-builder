@@ -110,6 +110,25 @@
       </div>
     </div>
 
+    <!-- Team (multi-teacher / job-share) -->
+    <div class="panel">
+      <div class="panelInner">
+        <div class="panelTitle">Your Team</div>
+        <div style="font-size:13px;color:var(--muted);font-weight:600;margin-bottom:14px;">
+          Share the invite code below with a colleague to let them join your school account. They'll see the same classes and students.
+        </div>
+        <div id="teamInviteCode" style="display:none;margin-bottom:16px;">
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px;">Invite code</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div id="inviteCodeDisplay" style="background:var(--indigo-soft);border:2px solid #c7d2fe;border-radius:12px;padding:10px 18px;font-size:20px;font-weight:900;letter-spacing:.15em;color:var(--indigo);font-family:monospace;"></div>
+            <button onclick="copyInviteCode()" id="copyCodeBtn" style="border:none;background:var(--indigo);color:#fff;font-weight:800;font-size:12px;padding:10px 16px;border-radius:10px;cursor:pointer;font-family:'Lexend',sans-serif;">Copy</button>
+          </div>
+        </div>
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:8px;">Teachers on this account</div>
+        <div id="teamList" style="font-size:13px;color:var(--muted);font-weight:600;">Loading...</div>
+      </div>
+    </div>
+
     <!-- Subscription -->
     <div class="panel">
       <div class="panelInner">
@@ -291,6 +310,9 @@ async function initAccount() {
   // Hide loading, show content
   document.getElementById('loadingState').style.display = 'none';
   document.getElementById('accountContent').style.display = '';
+
+  // Load team info (non-blocking)
+  loadTeamInfo();
 }
 
 async function openPortal() {
@@ -389,6 +411,80 @@ async function editSchoolName() {
   } else {
     document.getElementById('acctSchool').textContent = newName.trim();
   }
+}
+
+async function loadTeamInfo() {
+  if (!_schoolId) return;
+  try {
+    // Get invite code
+    const { data: school } = await WordLabData._sb()
+      .from('schools')
+      .select('invite_code')
+      .eq('id', _schoolId)
+      .maybeSingle();
+
+    if (school?.invite_code) {
+      document.getElementById('inviteCodeDisplay').textContent = school.invite_code;
+      document.getElementById('teamInviteCode').style.display = '';
+    } else {
+      // Generate an invite code if none exists
+      const code = generateInviteCode();
+      const { error } = await WordLabData._sb()
+        .from('schools')
+        .update({ invite_code: code })
+        .eq('id', _schoolId);
+      if (!error) {
+        document.getElementById('inviteCodeDisplay').textContent = code;
+        document.getElementById('teamInviteCode').style.display = '';
+      }
+    }
+
+    // Get all teachers on this school
+    const { data: teachers } = await WordLabData._sb()
+      .from('teachers')
+      .select('id, email, created_at')
+      .eq('school_id', _schoolId)
+      .order('created_at', { ascending: true });
+
+    const listEl = document.getElementById('teamList');
+    if (!teachers || teachers.length === 0) {
+      listEl.textContent = 'No teachers found.';
+      return;
+    }
+
+    const user = await WordLabData.getTeacherSession();
+    listEl.innerHTML = teachers.map(function(t) {
+      const isYou = user && t.email === user.email;
+      return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);">' +
+        '<span style="font-size:14px;font-weight:700;color:var(--text);">' + escHtml(t.email) + '</span>' +
+        (isYou ? '<span style="background:var(--indigo-soft);color:var(--indigo);font-size:10px;font-weight:800;padding:2px 8px;border-radius:6px;">You</span>' : '') +
+        '</div>';
+    }).join('');
+  } catch(e) {
+    console.warn('Team load error:', e);
+    document.getElementById('teamList').textContent = 'Could not load team info.';
+  }
+}
+
+function generateInviteCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+function copyInviteCode() {
+  const code = document.getElementById('inviteCodeDisplay').textContent;
+  navigator.clipboard.writeText(code).then(function() {
+    const btn = document.getElementById('copyCodeBtn');
+    btn.textContent = 'Copied!';
+    setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+  });
+}
+
+function escHtml(s) {
+  if (typeof WordLabData !== 'undefined' && WordLabData.escapeHtml) return WordLabData.escapeHtml(s);
+  var d = document.createElement('div'); d.textContent = s; return d.innerHTML;
 }
 
 async function deleteAccount() {

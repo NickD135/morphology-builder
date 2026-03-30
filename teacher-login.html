@@ -109,6 +109,14 @@
 
     <!-- Register Form -->
     <div id="registerTab" style="display:none;">
+      <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.15);border-radius:12px;padding:12px 14px;margin-bottom:16px;">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#a5b4fc;margin-bottom:6px;">Joining a colleague's school?</div>
+        <div style="font-size:12px;color:#94a3b8;font-weight:600;margin-bottom:8px;">If another teacher has shared an invite code with you, enter it below to join their school account.</div>
+        <div class="field" style="margin-bottom:0;">
+          <label for="regInviteCode">Invite code (optional)</label>
+          <input type="text" id="regInviteCode" placeholder="e.g. ABCD1234" style="text-transform:uppercase;letter-spacing:.1em;font-family:monospace;font-weight:900;" autocomplete="off">
+        </div>
+      </div>
       <div class="field">
         <label for="regSchool">School name</label>
         <input type="text" id="regSchool" placeholder="e.g. Riverside Primary School" autocomplete="organization">
@@ -192,23 +200,32 @@ async function ensureSchoolAndTeacher(authUserId, email) {
     .maybeSingle();
   if (existing?.school_id) return; // already set up
 
-  // Pull school name from signup metadata if available
+  // Pull metadata from signup
   const { data: { user } } = await _sb.auth.getUser();
   const schoolName = user?.user_metadata?.school_name || 'My School';
+  const joinSchoolId = user?.user_metadata?.join_school_id || '';
 
-  // Create school — active plan with 1-year window (matches teacher-signup.html)
-  const { data: school, error: schoolErr } = await _sb
-    .from('schools')
-    .insert({ name: schoolName, plan: 'active', trial_ends_at: new Date(Date.now() + 365 * 86400000).toISOString() })
-    .select('id')
-    .single();
-  if (schoolErr) { console.warn('School creation failed:', schoolErr); return; }
+  var schoolId = null;
+
+  if (joinSchoolId) {
+    // Joining an existing school via invite code
+    schoolId = joinSchoolId;
+  } else {
+    // Create new school — active plan with 1-year window
+    const { data: school, error: schoolErr } = await _sb
+      .from('schools')
+      .insert({ name: schoolName, plan: 'active', trial_ends_at: new Date(Date.now() + 365 * 86400000).toISOString() })
+      .select('id')
+      .single();
+    if (schoolErr) { console.warn('School creation failed:', schoolErr); return; }
+    schoolId = school.id;
+  }
 
   // Create or update teacher record
   if (existing) {
-    await _sb.from('teachers').update({ school_id: school.id, email }).eq('auth_user_id', authUserId);
+    await _sb.from('teachers').update({ school_id: schoolId, email }).eq('auth_user_id', authUserId);
   } else {
-    await _sb.from('teachers').insert({ auth_user_id: authUserId, school_id: school.id, email });
+    await _sb.from('teachers').insert({ auth_user_id: authUserId, school_id: schoolId, email });
   }
 }
 
@@ -247,6 +264,7 @@ async function doLogin() {
 }
 
 async function doRegister() {
+  const inviteCode = (document.getElementById('regInviteCode')?.value || '').trim().toUpperCase();
   const schoolName = document.getElementById('regSchool').value.trim();
   const name = document.getElementById('regName').value.trim();
   const email = document.getElementById('regEmail').value.trim();
@@ -256,11 +274,26 @@ async function doRegister() {
   const successEl = document.getElementById('regSuccess');
   errEl.textContent = ''; successEl.textContent = '';
 
-  if (!schoolName) { errEl.textContent = 'Please enter your school name.'; return; }
+  if (!inviteCode && !schoolName) { errEl.textContent = 'Please enter your school name, or an invite code to join a colleague\'s school.'; return; }
   if (!name) { errEl.textContent = 'Please enter your name.'; return; }
   if (!email) { errEl.textContent = 'Please enter your email.'; return; }
   if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; return; }
   if (password !== confirm) { errEl.textContent = 'Passwords do not match.'; return; }
+
+  // If invite code provided, validate it exists
+  var joinSchoolId = null;
+  if (inviteCode) {
+    const { data: existingSchool, error: lookupErr } = await _sb
+      .from('schools')
+      .select('id, name')
+      .eq('invite_code', inviteCode)
+      .maybeSingle();
+    if (lookupErr || !existingSchool) {
+      errEl.textContent = 'Invalid invite code. Check the code and try again.';
+      return;
+    }
+    joinSchoolId = existingSchool.id;
+  }
 
   const btn = document.getElementById('regBtn');
   btn.disabled = true; btn.textContent = 'Creating account...';
@@ -271,7 +304,7 @@ async function doRegister() {
       email,
       password,
       options: {
-        data: { full_name: name, school_name: schoolName },
+        data: { full_name: name, school_name: schoolName || '', join_school_id: joinSchoolId || '' },
         emailRedirectTo: window.location.origin + '/teacher-login.html?confirmed=1'
       }
     });
@@ -360,7 +393,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // Clear validation errors when user starts typing
-['regName','regEmail','regPassword','regConfirm'].forEach(function(id) {
+['regInviteCode','regName','regEmail','regPassword','regConfirm'].forEach(function(id) {
   var el = document.getElementById(id);
   if (el) el.addEventListener('input', function() { document.getElementById('regErr').textContent = ''; });
 });

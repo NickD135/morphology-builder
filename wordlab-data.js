@@ -303,15 +303,24 @@ const WordLabData = (() => {
     if (!data) {
       try {
         var schoolName = session.user.user_metadata?.school_name || 'My School';
-        var { data: school } = await sb()
-          .from('schools')
-          .insert({ name: schoolName, plan: 'active', trial_ends_at: new Date(Date.now() + 365 * 86400000).toISOString() })
-          .select('id')
-          .single();
-        if (school) {
+        var joinSchoolId = session.user.user_metadata?.join_school_id || '';
+        var schoolId = null;
+
+        if (joinSchoolId) {
+          // Joining an existing school via invite code
+          schoolId = joinSchoolId;
+        } else {
+          var { data: school } = await sb()
+            .from('schools')
+            .insert({ name: schoolName, plan: 'active', trial_ends_at: new Date(Date.now() + 365 * 86400000).toISOString() })
+            .select('id')
+            .single();
+          if (school) schoolId = school.id;
+        }
+        if (schoolId) {
           await sb().from('teachers').insert({
             auth_user_id: session.user.id,
-            school_id: school.id,
+            school_id: schoolId,
             email: session.user.email
           });
           var { data: newTeacher } = await sb()
