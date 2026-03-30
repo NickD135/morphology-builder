@@ -674,12 +674,17 @@ const WordLabData = (() => {
 
     let quarksEarned = 0, xpEarned = 0;
     var varietyBonus = 0, varietyXpBonus = 0, featuredBonus = false, dayBonus = false;
+    // Per-activity reward scaling (default 1.0)
+    var rewardScale = 1.0;
+    if (activity === 'homophone-hunter' || activity === 'breakdown-blitz') rewardScale = 0.5;
     if (correct) {
-      quarksEarned = 2;
-      if (streak >= 10) quarksEarned += 25;
-      else if (streak >= 5) quarksEarned += 10;
-      else if (streak >= 3) quarksEarned += 5;
-      xpEarned = 10 + (streak >= 3 ? 5 : 0);
+      quarksEarned = Math.round(2 * rewardScale);
+      var streakBonus = 0;
+      if (streak >= 10) streakBonus = 25;
+      else if (streak >= 5) streakBonus = 10;
+      else if (streak >= 3) streakBonus = 5;
+      quarksEarned += Math.round(streakBonus * rewardScale);
+      xpEarned = Math.round((10 + (streak >= 3 ? 5 : 0)) * rewardScale);
 
       // ── Variety bonus: reward playing different games today ──
       try {
