@@ -3077,6 +3077,16 @@ async function loadSpellingSetsData() {
           .in('spelling_set_id', setIds2)
           .in('student_id', studentIds2)
           .order('created_at', { ascending: true });
+        // Fallback if 'results' column not in schema cache
+        if (ciErr && ciErr.code === '42703') {
+          var fallback = await dbSb().from('spelling_check_in_results')
+            .select('id, spelling_set_id, student_id, score, total, created_at')
+            .in('spelling_set_id', setIds2)
+            .in('student_id', studentIds2)
+            .order('created_at', { ascending: true });
+          checkIns = fallback.data;
+          ciErr = fallback.error;
+        }
         if (!ciErr) {
           (checkIns || []).forEach(function(ci) {
             var key = ci.spelling_set_id + ':' + ci.student_id;
@@ -3086,7 +3096,7 @@ async function loadSpellingSetsData() {
         }
       }
     }
-  } catch (e) { console.warn('Check-in results load skipped:', e.message || e); }
+  } catch (e) { console.warn('Check-in results load error:', e.message || e); }
 }
 
 async function renderSpellingSetsTab() {
