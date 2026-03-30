@@ -105,22 +105,13 @@ var WLHints = (function() {
     _adviceBtnEl.onclick = function() { giveHint(); };
 
     if (stageVisible) {
-      // Place under the scientist — use a wrapper so we don't disrupt the stage flex layout
-      var sciWrap = stage.querySelector('#sciCharWrap');
-      if (sciWrap) {
-        // Ensure sciCharWrap is positioned so we can anchor to it
-        if (!sciWrap.style.position || sciWrap.style.position === 'static') {
-          sciWrap.style.position = 'relative';
-        }
-        _bubbleEl.style.cssText = 'position:absolute;bottom:100%;left:50%;transform:translateX(-50%);z-index:100;max-width:220px;min-width:160px;';
-        sciWrap.appendChild(_bubbleEl);
-        // Place button just after sciCharWrap (not as a flex child of stage)
-        _adviceBtnEl.style.cssText += 'position:relative;z-index:100;margin-top:8px;';
-        sciWrap.insertAdjacentElement('afterend', _adviceBtnEl);
-      } else {
-        stage.appendChild(_bubbleEl);
-        stage.appendChild(_adviceBtnEl);
-      }
+      // Position absolutely within the stage so we don't disrupt flex layout
+      // The stage is position:fixed with flex center, so we use absolute positioning
+      // to place the button below centre
+      _bubbleEl.style.cssText = 'position:absolute;left:50%;bottom:calc(50% + 80px);transform:translateX(-50%);z-index:100;max-width:220px;min-width:160px;';
+      stage.appendChild(_bubbleEl);
+      _adviceBtnEl.style.cssText += 'position:absolute;left:50%;top:calc(50% + 70px);transform:translateX(-50%);z-index:100;margin:0;white-space:nowrap;';
+      stage.appendChild(_adviceBtnEl);
     } else {
       // Floating fixed fallback
       _bubbleEl.style.cssText = 'position:fixed;bottom:62px;right:16px;left:auto;transform:none;z-index:10001;max-width:240px;';
