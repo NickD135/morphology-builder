@@ -1333,6 +1333,26 @@ async function loadCustomShopItems(sd) {
   const rarityBorder = { common:'#94a3b8', rare:'#3b82f6', epic:'#a855f7', legendary:'#f59e0b' };
   const owned = (sd.scientist||{}).owned || [];
   const isTeacher = sd.is_teacher;
+  const stats = sd.stats || {};
+
+  // Auto-unlock milestone items the student has earned
+  var milestoneUnlocked = [];
+  visible.forEach(function(item) {
+    if (item.unlock_method !== 'milestone') return;
+    if (owned.includes('custom_' + item.id)) return;
+    var mt = item.milestone_type || 'totalCorrect';
+    var thresh = item.milestone_threshold || 0;
+    var val = stats[mt] || 0;
+    if (val >= thresh) milestoneUnlocked.push(item.id);
+  });
+  if (milestoneUnlocked.length > 0) {
+    // Grant all earned milestone items
+    var newOwned = owned.slice();
+    milestoneUnlocked.forEach(function(id) { newOwned.push('custom_' + id); });
+    WordLabData.saveScientist({ owned: newOwned }).catch(function() {});
+    // Update local reference so buttons show correctly
+    milestoneUnlocked.forEach(function(id) { owned.push('custom_' + id); });
+  }
 
   const itemsHtml = visible.map(item => {
     const border = rarityBorder[item.rarity] || '#e2e8f0';
@@ -1358,7 +1378,14 @@ async function loadCustomShopItems(sd) {
     } else if (item.unlock_method === 'gifted') {
       btn = `<span class="shopBtn cantafford">🎁 Teacher gift</span>`;
     } else if (item.unlock_method === 'milestone') {
-      btn = `<span class="shopBtn cantafford">🏅 Milestone ${item.milestone_threshold||'?'}</span>`;
+      var mt = item.milestone_type || 'totalCorrect';
+      var thresh = item.milestone_threshold || 0;
+      var progress = stats[mt] || 0;
+      if (progress >= thresh) {
+        btn = `<button class="shopBtn equip" onclick="equipCustomItem('${item.id}')">🏅 Unlocked! Equip</button>`;
+      } else {
+        btn = `<span class="shopBtn cantafford">🏅 ${progress}/${thresh}</span>`;
+      }
     } else if (canAfford && item.quark_cost > 0) {
       btn = `<button class="shopBtn buy" onclick="buyCustomItem('${item.id}',${item.quark_cost},'${item.item_type}')">⚛️ ${item.quark_cost}</button>`;
     } else if (item.quark_cost === 0) {
