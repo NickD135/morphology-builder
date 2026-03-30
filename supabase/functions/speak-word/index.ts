@@ -118,7 +118,7 @@ Deno.serve(async (req: Request) => {
     },
     audioConfig: {
       audioEncoding: 'MP3',
-      speakingRate: 0.9,
+      speakingRate: 1.0,
       pitch: 0,
     },
   };
