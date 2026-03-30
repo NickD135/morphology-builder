@@ -1979,10 +1979,11 @@ const WordLabData = (() => {
   // Loads AI-analyzed words from the student's assigned spelling set(s)
   var _spellingSetWordsCache = null;
 
-  async function getSpellingSetWords() {
+  async function getSpellingSetWords(opts) {
     var session = loadSession();
     if (!session) return [];
-    if (_spellingSetWordsCache) return _spellingSetWordsCache;
+    var skipRepetition = opts && opts.skipRepetition;
+    if (!skipRepetition && _spellingSetWordsCache) return _spellingSetWordsCache;
     try {
       // Get all spelling sets for this class
       var { data: sets } = await sb().from('class_spelling_sets')
@@ -2013,43 +2014,45 @@ const WordLabData = (() => {
         });
       });
 
-      // Prioritise and repeat words based on accuracy
-      // - Words never practised: appear 3x
-      // - Words below 50% accuracy: appear 3x
-      // - Words 50-79% accuracy: appear 2x
-      // - Words 80%+ accuracy: appear 1x
-      try {
-        var { data: prog } = await sb().from('student_progress')
-          .select('category, correct, total')
-          .eq('student_id', session.studentId)
-          .eq('activity', 'spelling-set');
-        var progMap = {};
-        if (prog && prog.length) {
-          prog.forEach(function(p) { progMap[p.category] = p; });
-        }
+      // Prioritise and repeat words based on accuracy (skip for check-in/assessment mode)
+      if (!skipRepetition) {
+        // - Words never practised: appear 3x
+        // - Words below 50% accuracy: appear 3x
+        // - Words 50-79% accuracy: appear 2x
+        // - Words 80%+ accuracy: appear 1x
+        try {
+          var { data: prog } = await sb().from('student_progress')
+            .select('category, correct, total')
+            .eq('student_id', session.studentId)
+            .eq('activity', 'spelling-set');
+          var progMap = {};
+          if (prog && prog.length) {
+            prog.forEach(function(p) { progMap[p.category] = p; });
+          }
 
-        var boosted = [];
-        words.forEach(function(w) {
-          var key = 'ss:' + w._spellingSetId.slice(0, 8) + ':' + w.word.toLowerCase();
-          var p = progMap[key];
-          var acc = p && p.total > 0 ? (p.correct / p.total) * 100 : -1;
-          var repeats = acc < 0 ? 3 : acc < 50 ? 3 : acc < 80 ? 2 : 1;
-          for (var i = 0; i < repeats; i++) boosted.push(w);
-        });
+          var boosted = [];
+          words.forEach(function(w) {
+            var key = 'ss:' + w._spellingSetId.slice(0, 8) + ':' + w.word.toLowerCase();
+            var p = progMap[key];
+            var acc = p && p.total > 0 ? (p.correct / p.total) * 100 : -1;
+            var repeats = acc < 0 ? 3 : acc < 50 ? 3 : acc < 80 ? 2 : 1;
+            for (var i = 0; i < repeats; i++) boosted.push(w);
+          });
 
-        // Sort: lowest accuracy first
-        boosted.sort(function(a, b) {
-          var keyA = 'ss:' + a._spellingSetId.slice(0, 8) + ':' + a.word.toLowerCase();
-          var keyB = 'ss:' + b._spellingSetId.slice(0, 8) + ':' + b.word.toLowerCase();
-          var pA = progMap[keyA];
-          var pB = progMap[keyB];
-          var accA = pA && pA.total > 0 ? pA.correct / pA.total : -1;
-          var accB = pB && pB.total > 0 ? pB.correct / pB.total : -1;
-          return accA - accB;
-        });
+          // Sort: lowest accuracy first
+          boosted.sort(function(a, b) {
+            var keyA = 'ss:' + a._spellingSetId.slice(0, 8) + ':' + a.word.toLowerCase();
+            var keyB = 'ss:' + b._spellingSetId.slice(0, 8) + ':' + b.word.toLowerCase();
+            var pA = progMap[keyA];
+            var pB = progMap[keyB];
+            var accA = pA && pA.total > 0 ? pA.correct / pA.total : -1;
+            var accB = pB && pB.total > 0 ? pB.correct / pB.total : -1;
+            return accA - accB;
+          });
 
-        words = boosted;
-      } catch(e) { /* non-critical — unsorted is fine */ }
+          words = boosted;
+        } catch(e) { /* non-critical — unsorted is fine */ }
+      }
 
       _spellingSetWordsCache = words;
       return words;

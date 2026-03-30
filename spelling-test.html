@@ -148,6 +148,7 @@ var results = [];
 var currentSetId = null;
 var currentSetName = '';
 var _checkInComplete = false;
+var _checkInMode = 'student'; // 'student' = TTS self-paced, 'teacher' = teacher reads aloud
 
 function getCurrentWord() {
   var w = testWords[currentIndex];
@@ -185,7 +186,7 @@ async function init() {
   }
 
   try {
-    var ssWords = await WordLabData.getSpellingSetWords();
+    var ssWords = await WordLabData.getSpellingSetWords({ skipRepetition: true });
     if (!ssWords.length) { showNoTest(); return; }
 
     // Find the set that has an active assessment
@@ -194,7 +195,7 @@ async function init() {
     ssWords.forEach(function(w) { if (w._spellingSetId && setIds.indexOf(w._spellingSetId) === -1) setIds.push(w._spellingSetId); });
 
     var { data: sets, error: setsErr } = await sb.from('class_spelling_sets')
-      .select('id, name, assessment_active, assessment_scheduled_at')
+      .select('id, name, assessment_active, assessment_scheduled_at, assessment_mode')
       .in('id', setIds);
     // Fallback if assessment columns not yet in schema cache
     if (setsErr && setsErr.code === '42703') {
@@ -214,6 +215,7 @@ async function init() {
 
     currentSetId = activeSet.id;
     currentSetName = activeSet.name || 'Spelling Check-In';
+    _checkInMode = activeSet.assessment_mode || 'student';
 
     // Check if already completed this check-in
     if (hasCompletedCheckIn(currentSetId)) {
@@ -228,7 +230,11 @@ async function init() {
     if (!testWords.length) { showNoTest(); return; }
 
     document.getElementById('testSetName').textContent = currentSetName;
-    document.getElementById('testSetSub').textContent = testWords.length + ' words — listen carefully, then type each word';
+    if (_checkInMode === 'teacher') {
+      document.getElementById('testSetSub').textContent = testWords.length + ' words — your teacher will read each word aloud';
+    } else {
+      document.getElementById('testSetSub').textContent = testWords.length + ' words — listen carefully, then type each word';
+    }
     showTest();
     updateProgress();
   } catch(e) {
@@ -268,8 +274,14 @@ function updateProgress() {
   document.getElementById('feedback').className = 'feedback';
   document.getElementById('submitBtn').classList.remove('hidden');
   document.getElementById('nextBtn').classList.add('hidden');
-  document.getElementById('listenBtn').classList.remove('hidden');
-  document.getElementById('replayBtn').classList.add('hidden');
+  if (_checkInMode === 'teacher') {
+    // Teacher-led: no audio buttons
+    document.getElementById('listenBtn').classList.add('hidden');
+    document.getElementById('replayBtn').classList.add('hidden');
+  } else {
+    document.getElementById('listenBtn').classList.remove('hidden');
+    document.getElementById('replayBtn').classList.add('hidden');
+  }
 
   // Show hint if available
   var clue = getCurrentClue();
@@ -355,9 +367,14 @@ function checkWord() {
     WordLabData.recordSpellingAttempt(currentSetId, correct, isCorrect, 0);
   }
 
-  // Auto-advance after brief pause
+  // In teacher-led mode, always show Next button (no auto-advance)
+  // In student-paced mode, auto-advance after brief pause
   if (currentIndex < testWords.length - 1) {
-    setTimeout(nextWord, 800);
+    if (_checkInMode === 'teacher') {
+      document.getElementById('nextBtn').classList.remove('hidden');
+    } else {
+      setTimeout(nextWord, 800);
+    }
   } else {
     document.getElementById('nextBtn').classList.remove('hidden');
     document.getElementById('nextBtn').textContent = 'Finish →';
@@ -383,13 +400,9 @@ function finishCheckIn() {
   // Save session for pre/post comparison
   saveCheckInSession(correctCount, results.length);
 
-  // Show waiting screen — results hidden until teacher stops check-in
+  // Show results immediately — no waiting for teacher to stop check-in
   document.getElementById('testCard').classList.add('hidden');
-  document.getElementById('waitingCard').classList.remove('hidden');
-  document.getElementById('waitingSetName').textContent = currentSetName;
-
-  // Poll to check if teacher has stopped the check-in (every 10s)
-  pollForResults(correctCount);
+  showFullResults(correctCount);
 }
 
 async function pollForResults(correctCount) {

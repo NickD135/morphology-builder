@@ -2147,6 +2147,9 @@ async function initStudentLayout(session) {
             '<a href="spelling-test.html" style="display:block;background:#4338ca;color:#fff;border:none;border-radius:14px;padding:14px;font-size:16px;font-weight:900;cursor:pointer;font-family:Lexend,sans-serif;text-decoration:none;">Start Spelling Check-In →</a>' +
             '</div>';
           document.body.appendChild(banner);
+        } else {
+          // No active check-in — show results overlay if student has unseen results
+          showUnseenCheckInResults(session, ssSets);
         }
       }
     } catch(e) { console.warn('Assessment check error', e); }
@@ -2155,6 +2158,61 @@ async function initStudentLayout(session) {
     console.warn('Student layout init failed', e);
     if(nameEl) nameEl.textContent = session.studentName || 'Scientist';
   }
+}
+
+async function showUnseenCheckInResults(session, ssSets) {
+  try {
+    if (!session || !session.studentId || !ssSets || !ssSets.length) return;
+    // Fetch student's most recent check-in result
+    var setIds = ssSets.map(function(s) { return s.id; });
+    var { data: ciResults } = await _lsb().from('spelling_check_in_results')
+      .select('id, spelling_set_id, score, total, results, created_at')
+      .eq('student_id', session.studentId)
+      .in('spelling_set_id', setIds)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (!ciResults || !ciResults.length) return;
+    var ci = ciResults[0];
+    // Check if already dismissed
+    var dismissKey = 'wl_checkin_seen_' + ci.id;
+    if (sessionStorage.getItem(dismissKey)) return;
+    // Only show if result is recent (within last 24 hours)
+    var ageMs = Date.now() - new Date(ci.created_at).getTime();
+    if (ageMs > 24 * 60 * 60 * 1000) return;
+    // Find set name
+    var setName = 'Spelling Check-In';
+    ssSets.forEach(function(s) { if (s.id === ci.spelling_set_id) setName = s.name || setName; });
+    // Build results HTML
+    var resArr = ci.results || [];
+    var resHtml = resArr.map(function(r) {
+      if (r.correct) {
+        return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #e2e8f0;">' +
+          '<span style="font-size:16px;">✅</span><span style="font-size:13px;font-weight:800;">' + WordLabData.escapeHtml(r.word) + '</span></div>';
+      } else {
+        return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #e2e8f0;">' +
+          '<span style="font-size:16px;">❌</span><span style="font-size:13px;font-weight:800;color:#16a34a;">' + WordLabData.escapeHtml(r.word) + '</span>' +
+          '<span style="font-size:11px;font-weight:600;color:#64748b;margin-left:auto;">you wrote: <span style="text-decoration:line-through;">' + WordLabData.escapeHtml(r.typed) + '</span></span></div>';
+      }
+    }).join('');
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9990;background:rgba(15,23,42,0.9);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);';
+    overlay.innerHTML = '<div style="background:#fff;border-radius:24px;padding:32px;max-width:480px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);font-family:Lexend,sans-serif;max-height:90vh;overflow-y:auto;">' +
+      '<div style="font-size:40px;margin-bottom:8px;">📝</div>' +
+      '<div style="font-size:18px;font-weight:900;color:#312e81;margin-bottom:4px;">Check-In Results</div>' +
+      '<div style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:16px;">' + WordLabData.escapeHtml(setName) + '</div>' +
+      '<div style="background:#eef2ff;border:2px solid #6366f1;border-radius:14px;padding:16px;margin-bottom:16px;">' +
+        '<div style="font-size:36px;font-weight:900;color:#4338ca;">' + ci.score + '/' + ci.total + '</div>' +
+        '<div style="font-size:11px;font-weight:700;color:#64748b;">words correct</div>' +
+      '</div>' +
+      '<div style="text-align:left;margin-bottom:16px;">' + resHtml + '</div>' +
+      '<button id="ciResultsDismiss" style="background:#4338ca;color:#fff;border:none;border-radius:12px;padding:12px 32px;font-size:14px;font-weight:900;cursor:pointer;font-family:Lexend,sans-serif;width:100%;">Done</button>' +
+    '</div>';
+    document.body.appendChild(overlay);
+    overlay.querySelector('#ciResultsDismiss').onclick = function() {
+      sessionStorage.setItem(dismissKey, 'true');
+      document.body.removeChild(overlay);
+    };
+  } catch(e) { console.warn('Check-in results overlay error', e); }
 }
 
 function renderGameNudges(sd) {

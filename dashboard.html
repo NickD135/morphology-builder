@@ -3020,7 +3020,7 @@ async function loadSpellingSetsData() {
   if (!currentClass) return;
   try {
     var { data: sets, error: setsErr } = await dbSb().from('class_spelling_sets')
-      .select('id, name, set_number, words, created_at, assessment_active, assessment_scheduled_at')
+      .select('id, name, set_number, words, created_at, assessment_active, assessment_scheduled_at, assessment_mode')
       .eq('class_id', currentClass.id)
       .order('set_number', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: true });
@@ -3073,7 +3073,7 @@ async function loadSpellingSetsData() {
       var setIds2 = _spellingSets.map(function(s) { return s.id; });
       if (studentIds2.length) {
         var { data: checkIns, error: ciErr } = await dbSb().from('spelling_check_in_results')
-          .select('spelling_set_id, student_id, score, total, created_at')
+          .select('id, spelling_set_id, student_id, score, total, results, created_at')
           .in('spelling_set_id', setIds2)
           .in('student_id', studentIds2)
           .order('created_at', { ascending: true });
@@ -3081,7 +3081,7 @@ async function loadSpellingSetsData() {
           (checkIns || []).forEach(function(ci) {
             var key = ci.spelling_set_id + ':' + ci.student_id;
             if (!_checkInResults[key]) _checkInResults[key] = [];
-            _checkInResults[key].push({ score: ci.score, total: ci.total, date: ci.created_at });
+            _checkInResults[key].push({ id: ci.id, score: ci.score, total: ci.total, date: ci.created_at, results: ci.results || [] });
           });
         }
       }
@@ -3195,7 +3195,8 @@ function buildSpellingSetHeatmap(set) {
     var isAssessActive = !!set.assessment_active;
     var scheduledAt = set.assessment_scheduled_at ? new Date(set.assessment_scheduled_at) : null;
     var isScheduled = scheduledAt && scheduledAt > new Date();
-    var assessBadge = isAssessActive ? '<span style="background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:9px;font-weight:800;padding:2px 8px;border-radius:6px;">📝 Check-In LIVE</span>'
+    var modeLabel = set.assessment_mode === 'teacher' ? '🎤 Teacher-Led' : '🔊 Student-Paced';
+    var assessBadge = isAssessActive ? '<span style="background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:9px;font-weight:800;padding:2px 8px;border-radius:6px;">📝 Check-In LIVE — ' + modeLabel + '</span>'
       : isScheduled ? '<span style="background:#fef3c7;border:1px solid #fcd34d;color:#92400e;font-size:9px;font-weight:800;padding:2px 8px;border-radius:6px;">⏰ Scheduled ' + scheduledAt.toLocaleDateString('en-AU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) + '</span>'
       : '';
 
@@ -3223,51 +3224,19 @@ function buildSpellingSetHeatmap(set) {
     return _checkInResults[ciKey] && _checkInResults[ciKey].length > 0;
   });
 
-  // Heatmap
+  // Heatmap (check-in data now shown in separate tabs below)
   var headerCols = words.map(function(w) {
     return '<th class="rotate"><span>' + WordLabData.escapeHtml(w) + '</span></th>';
   }).join('');
-  if (hasCheckInData) {
-    headerCols += '<th class="rotate" style="border-left:2px solid var(--indigo);"><span>Check-In</span></th>';
-  }
 
   var rows = currentClass.students.map(function(student) {
     var isAssigned = activeStudentIds.indexOf(student.id) !== -1;
     var isHistorical = historicalStudentIds.indexOf(student.id) !== -1;
     var progress = _spellingProgress[student.id] || {};
 
-    // Check-in comparison cell
-    var checkInCell = '';
-    if (hasCheckInData) {
-      var ciKey = set.id + ':' + student.id;
-      var sessions = _checkInResults[ciKey] || [];
-      if (sessions.length === 0) {
-        checkInCell = '<td style="border-left:2px solid var(--indigo);"><div class="cell no-data" title="No check-in taken">–</div></td>';
-      } else if (sessions.length === 1) {
-        var s1 = sessions[0];
-        var pct1 = s1.total > 0 ? Math.round((s1.score / s1.total) * 100) : 0;
-        checkInCell = '<td style="border-left:2px solid var(--indigo);"><div class="cell ' + accClass(pct1) + '" title="Check-In: ' + pct1 + '% (' + s1.score + '/' + s1.total + ')&#10;' + new Date(s1.date).toLocaleDateString('en-AU',{day:'numeric',month:'short'}) + '">' + pct1 + '%</div></td>';
-      } else {
-        var first = sessions[0];
-        var latest = sessions[sessions.length - 1];
-        var pctFirst = first.total > 0 ? Math.round((first.score / first.total) * 100) : 0;
-        var pctLatest = latest.total > 0 ? Math.round((latest.score / latest.total) * 100) : 0;
-        var diff = pctLatest - pctFirst;
-        var arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
-        var diffColor = diff > 0 ? '#166534' : diff < 0 ? '#dc2626' : '#64748b';
-        var diffStr = diff > 0 ? '+' + diff : '' + diff;
-        checkInCell = '<td style="border-left:2px solid var(--indigo);"><div class="cell" style="background:linear-gradient(135deg,' + (accBg(pctFirst)) + ' 50%,' + (accBg(pctLatest)) + ' 50%);position:relative;min-width:52px;" title="Pre: ' + pctFirst + '% (' + first.score + '/' + first.total + ') — ' + new Date(first.date).toLocaleDateString('en-AU',{day:'numeric',month:'short'}) + '&#10;Post: ' + pctLatest + '% (' + latest.score + '/' + latest.total + ') — ' + new Date(latest.date).toLocaleDateString('en-AU',{day:'numeric',month:'short'}) + '&#10;Change: ' + diffStr + '%">' +
-          '<span style="font-size:8px;">' + pctFirst + '</span>' +
-          '<span style="color:' + diffColor + ';font-weight:900;font-size:9px;">' + arrow + '</span>' +
-          '<span style="font-size:8px;">' + pctLatest + '</span>' +
-          '</div></td>';
-      }
-    }
-
     if (!isAssigned && !isHistorical) {
       return '<tr style="opacity:0.3;"><td class="student-name">' + WordLabData.escapeHtml(student.name) + '</td>' +
-        words.map(function() { return '<td><div class="cell no-data" title="Not assigned">–</div></td>'; }).join('') +
-        (hasCheckInData ? '<td style="border-left:2px solid var(--indigo);"><div class="cell no-data">–</div></td>' : '') + '</tr>';
+        words.map(function() { return '<td><div class="cell no-data" title="Not assigned">–</div></td>'; }).join('') + '</tr>';
     }
 
     var rowStyle = isHistorical && !isAssigned ? 'opacity:0.6;' : '';
@@ -3297,7 +3266,7 @@ function buildSpellingSetHeatmap(set) {
         '<button onclick="event.stopPropagation();ssCompleteStudent(\'' + set.id + '\',\'' + student.id + '\')" title="Mark completed" style="border:1px solid var(--line);background:var(--navy-3);color:var(--text-secondary);border-radius:4px;padding:1px 5px;font-size:8px;font-weight:700;cursor:pointer;font-family:\'Lexend\',sans-serif;">✅</button>' +
         '</div>';
     }
-    return '<tr style="' + rowStyle + '"><td class="student-name" onclick="showStudentProfile(\'' + student.id + '\')">' + WordLabData.escapeHtml(student.name) + badge + actions + '</td>' + cells + checkInCell + '</tr>';
+    return '<tr style="' + rowStyle + '"><td class="student-name" onclick="showStudentProfile(\'' + student.id + '\')">' + WordLabData.escapeHtml(student.name) + badge + actions + '</td>' + cells + '</tr>';
   }).join('');
 
   var legend = '<div class="legend"><span>Accuracy:</span>' +
@@ -3307,8 +3276,144 @@ function buildSpellingSetHeatmap(set) {
     '<span class="legendCell" style="background:#fde047;"></span><span>50%+</span>' +
     '<span class="legendCell" style="background:#ef4444;"></span><span>&lt;50%</span>' +
     '<span class="legendCell" style="background:#f1f5f9;border:1px solid #cbd5e1;"></span><span>No data</span>' +
-    (hasCheckInData ? '<span style="margin-left:8px;font-size:10px;font-weight:700;color:var(--indigo);">Check-In: Pre→Post (hover for details)</span>' : '') +
     '</div>';
+
+  // Build per-check-in session tabs
+  var checkInTabsHtml = '';
+  if (hasCheckInData) {
+    // Collect all unique check-in sessions grouped by approximate time (within 2 hours = same session)
+    var allSessions = [];
+    currentClass.students.forEach(function(s) {
+      var ciKey = set.id + ':' + s.id;
+      var sessions = _checkInResults[ciKey] || [];
+      sessions.forEach(function(ci) {
+        allSessions.push({ studentId: s.id, studentName: s.name, date: ci.date, score: ci.score, total: ci.total, results: ci.results || [] });
+      });
+    });
+    // Group into sessions by date (cluster within 2-hour windows)
+    allSessions.sort(function(a, b) { return new Date(a.date) - new Date(b.date); });
+    var sessionGroups = [];
+    allSessions.forEach(function(ci) {
+      var ciTime = new Date(ci.date).getTime();
+      var matched = false;
+      for (var g = 0; g < sessionGroups.length; g++) {
+        if (Math.abs(ciTime - sessionGroups[g].refTime) < 2 * 60 * 60 * 1000) {
+          sessionGroups[g].entries.push(ci);
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        sessionGroups.push({ refTime: ciTime, entries: [ci] });
+      }
+    });
+
+    if (sessionGroups.length > 0) {
+      var setIdShort = set.id.replace(/-/g,'').slice(0,8);
+      var tabPills = sessionGroups.map(function(g, idx) {
+        var dt = new Date(g.refTime);
+        var label = 'Check-In ' + (idx + 1) + ' — ' + dt.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+        return '<button class="ssCheckInTab' + (idx === 0 ? ' active' : '') + '" onclick="ssShowCheckInSession(\'' + setIdShort + '\',' + idx + ',this)" style="border:none;background:' + (idx === 0 ? 'var(--indigo)' : 'var(--navy-3)') + ';color:' + (idx === 0 ? '#fff' : 'var(--text-secondary)') + ';border-radius:8px;padding:5px 12px;font-size:10px;font-weight:800;cursor:pointer;font-family:\'Lexend\',sans-serif;">' + label + '</button>';
+      }).join('');
+
+      // Comparison tab if 2+ sessions
+      if (sessionGroups.length >= 2) {
+        tabPills += '<button class="ssCheckInTab" onclick="ssShowCheckInSession(\'' + setIdShort + '\',-1,this)" style="border:none;background:var(--navy-3);color:var(--text-secondary);border-radius:8px;padding:5px 12px;font-size:10px;font-weight:800;cursor:pointer;font-family:\'Lexend\',sans-serif;">📊 Compare</button>';
+      }
+
+      var sessionPanels = sessionGroups.map(function(g, idx) {
+        var dt = new Date(g.refTime);
+        var panelRows = currentClass.students.map(function(student) {
+          var entry = g.entries.find(function(e) { return e.studentId === student.id; });
+          if (!entry) {
+            return '<tr style="opacity:0.3;"><td class="student-name">' + WordLabData.escapeHtml(student.name) + '</td>' +
+              words.map(function() { return '<td><div class="cell no-data">–</div></td>'; }).join('') +
+              '<td style="border-left:2px solid var(--indigo);"><div class="cell no-data">–</div></td></tr>';
+          }
+          var wordResults = {};
+          (entry.results || []).forEach(function(r) { wordResults[r.word.toLowerCase()] = r; });
+          var cells = words.map(function(w) {
+            var r = wordResults[w.toLowerCase()];
+            if (!r) return '<td><div class="cell no-data">–</div></td>';
+            if (r.correct) {
+              return '<td><div class="cell acc-100" title="✓ Correct">✓</div></td>';
+            } else {
+              return '<td><div class="cell acc-low" title="✗ Wrote: ' + WordLabData.escapeHtml(r.typed || '') + '">✗</div></td>';
+            }
+          }).join('');
+          var pct = entry.total > 0 ? Math.round((entry.score / entry.total) * 100) : 0;
+          var scoreCell = '<td style="border-left:2px solid var(--indigo);"><div class="cell ' + accClass(pct) + '">' + entry.score + '/' + entry.total + '</div></td>';
+          return '<tr><td class="student-name">' + WordLabData.escapeHtml(student.name) + '</td>' + cells + scoreCell + '</tr>';
+        }).join('');
+
+        var panelHeader = words.map(function(w) {
+          return '<th class="rotate"><span>' + WordLabData.escapeHtml(w) + '</span></th>';
+        }).join('') + '<th class="rotate" style="border-left:2px solid var(--indigo);"><span>Score</span></th>';
+
+        return '<div id="ssCI_' + setIdShort + '_' + idx + '" class="ssCheckInPanel" style="' + (idx === 0 ? '' : 'display:none;') + '">' +
+          '<div style="font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:6px;">' + dt.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) + ' — ' + g.entries.length + ' student' + (g.entries.length !== 1 ? 's' : '') + '</div>' +
+          '<div class="heatmapWrap"><table class="heatmap"><thead><tr><th>Student</th>' + panelHeader + '</tr></thead><tbody>' + panelRows + '</tbody></table></div></div>';
+      }).join('');
+
+      // Comparison panel (first vs last)
+      var comparisonPanel = '';
+      if (sessionGroups.length >= 2) {
+        var firstG = sessionGroups[0];
+        var lastG = sessionGroups[sessionGroups.length - 1];
+        var compRows = currentClass.students.map(function(student) {
+          var e1 = firstG.entries.find(function(e) { return e.studentId === student.id; });
+          var e2 = lastG.entries.find(function(e) { return e.studentId === student.id; });
+          if (!e1 && !e2) {
+            return '<tr style="opacity:0.3;"><td class="student-name">' + WordLabData.escapeHtml(student.name) + '</td>' +
+              words.map(function() { return '<td><div class="cell no-data">–</div></td>'; }).join('') +
+              '<td style="border-left:2px solid var(--indigo);"><div class="cell no-data">–</div></td></tr>';
+          }
+          var r1 = {}; var r2 = {};
+          if (e1) (e1.results || []).forEach(function(r) { r1[r.word.toLowerCase()] = r; });
+          if (e2) (e2.results || []).forEach(function(r) { r2[r.word.toLowerCase()] = r; });
+          var cells = words.map(function(w) {
+            var wl = w.toLowerCase();
+            var pre = r1[wl]; var post = r2[wl];
+            if (!pre && !post) return '<td><div class="cell no-data">–</div></td>';
+            var preOk = pre && pre.correct;
+            var postOk = post && post.correct;
+            var icon = '';
+            var bg = '';
+            if (!pre) { icon = postOk ? '✓' : '✗'; bg = postOk ? 'acc-100' : 'acc-low'; }
+            else if (!post) { icon = preOk ? '✓→?' : '✗→?'; bg = 'no-data'; }
+            else if (!preOk && postOk) { icon = '✗→✓'; bg = 'acc-100'; }
+            else if (preOk && !postOk) { icon = '✓→✗'; bg = 'acc-low'; }
+            else if (preOk && postOk) { icon = '✓→✓'; bg = 'acc-100'; }
+            else { icon = '✗→✗'; bg = 'acc-low'; }
+            return '<td><div class="cell ' + bg + '" style="font-size:9px;" title="Pre: ' + (preOk ? '✓' : '✗') + ' Post: ' + (postOk ? '✓' : '✗') + '">' + icon + '</div></td>';
+          }).join('');
+          var pct1 = e1 && e1.total > 0 ? Math.round((e1.score / e1.total) * 100) : -1;
+          var pct2 = e2 && e2.total > 0 ? Math.round((e2.score / e2.total) * 100) : -1;
+          var diff = (pct1 >= 0 && pct2 >= 0) ? pct2 - pct1 : 0;
+          var arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
+          var diffColor = diff > 0 ? '#4ade80' : diff < 0 ? '#f87171' : 'var(--text-secondary)';
+          var scoreLabel = (pct1 >= 0 ? pct1 + '%' : '–') + ' ' + arrow + ' ' + (pct2 >= 0 ? pct2 + '%' : '–');
+          var scoreBg = pct2 >= 0 ? accClass(pct2) : 'no-data';
+          var scoreCell = '<td style="border-left:2px solid var(--indigo);"><div class="cell ' + scoreBg + '" style="min-width:56px;font-size:9px;"><span style="color:' + diffColor + ';font-weight:900;">' + scoreLabel + '</span></div></td>';
+          return '<tr><td class="student-name">' + WordLabData.escapeHtml(student.name) + '</td>' + cells + scoreCell + '</tr>';
+        }).join('');
+
+        var compHeader = words.map(function(w) {
+          return '<th class="rotate"><span>' + WordLabData.escapeHtml(w) + '</span></th>';
+        }).join('') + '<th class="rotate" style="border-left:2px solid var(--indigo);"><span>Change</span></th>';
+
+        comparisonPanel = '<div id="ssCI_' + setIdShort + '_-1" class="ssCheckInPanel" style="display:none;">' +
+          '<div style="font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:6px;">Comparing Check-In 1 (' + new Date(firstG.refTime).toLocaleDateString('en-AU',{day:'numeric',month:'short'}) + ') vs Check-In ' + sessionGroups.length + ' (' + new Date(lastG.refTime).toLocaleDateString('en-AU',{day:'numeric',month:'short'}) + ')</div>' +
+          '<div class="heatmapWrap"><table class="heatmap"><thead><tr><th>Student</th>' + compHeader + '</tr></thead><tbody>' + compRows + '</tbody></table></div></div>';
+      }
+
+      checkInTabsHtml = '<div style="margin-top:20px;">' +
+        '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;">Check-In Results</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">' + tabPills + '</div>' +
+        sessionPanels + comparisonPanel +
+        '</div>';
+    }
+  }
 
   return '<div class="panel"><div class="panelInner">' +
     '<div class="panelTitle">' + WordLabData.escapeHtml(set.name) + ' — ' + words.length + ' words ' + aiLabel + '</div>' +
@@ -3316,6 +3421,7 @@ function buildSpellingSetHeatmap(set) {
     '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 0 8px;">Word-by-word accuracy — assigned students only</div>' +
     '<div class="heatmapWrap"><table class="heatmap"><thead><tr><th>Student</th>' + headerCols + '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
     '<div style="margin-top:10px;">' + legend + '</div>' +
+    checkInTabsHtml +
     '</div></div>';
 }
 
@@ -3560,14 +3666,43 @@ async function ssEditWords(setId) {
 }
 
 async function ssStartAssessment(setId) {
+  // Ask teacher which mode
+  var modeChoice = await ssChooseMode();
+  if (!modeChoice) return; // cancelled
   try {
     await dbSb().from('class_spelling_sets').update({
       assessment_active: true,
+      assessment_mode: modeChoice,
       assessment_scheduled_at: null,
       updated_at: new Date().toISOString()
     }).eq('id', setId);
     await renderSpellingSetsTab();
   } catch(e) { alert('Error: ' + (e.message || e)); }
+}
+
+function ssChooseMode() {
+  return new Promise(function(resolve) {
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,0.85);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);';
+    overlay.innerHTML = '<div style="background:#1e293b;border:2px solid #334155;border-radius:20px;padding:32px;max-width:440px;width:90%;text-align:center;font-family:Lexend,sans-serif;">' +
+      '<div style="font-size:18px;font-weight:900;color:#e2e8f0;margin-bottom:6px;">How should students do the check-in?</div>' +
+      '<div style="font-size:12px;color:#94a3b8;margin-bottom:20px;">Choose how words are presented to students</div>' +
+      '<button id="ssModeStudent" style="display:block;width:100%;background:#312e81;border:2px solid #4338ca;color:#e2e8f0;border-radius:14px;padding:16px;margin-bottom:10px;cursor:pointer;font-family:Lexend,sans-serif;text-align:left;">' +
+        '<div style="font-size:14px;font-weight:900;">🔊 Student-paced</div>' +
+        '<div style="font-size:11px;font-weight:600;color:#a5b4fc;margin-top:4px;">Students listen to audio and type each word at their own pace</div>' +
+      '</button>' +
+      '<button id="ssModeTeacher" style="display:block;width:100%;background:#312e81;border:2px solid #4338ca;color:#e2e8f0;border-radius:14px;padding:16px;margin-bottom:16px;cursor:pointer;font-family:Lexend,sans-serif;text-align:left;">' +
+        '<div style="font-size:14px;font-weight:900;">🎤 Teacher-led</div>' +
+        '<div style="font-size:11px;font-weight:600;color:#a5b4fc;margin-top:4px;">You read the words aloud — students type and press Next</div>' +
+      '</button>' +
+      '<button id="ssModeCxl" style="border:none;background:none;color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer;font-family:Lexend,sans-serif;">Cancel</button>' +
+    '</div>';
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#ssModeStudent').onclick = function() { document.body.removeChild(overlay); resolve('student'); };
+    overlay.querySelector('#ssModeTeacher').onclick = function() { document.body.removeChild(overlay); resolve('teacher'); };
+    overlay.querySelector('#ssModeCxl').onclick = function() { document.body.removeChild(overlay); resolve(null); };
+  });
 }
 
 async function ssStopAssessment(setId) {
@@ -3594,6 +3729,27 @@ async function ssScheduleAssessment(setId) {
     }).eq('id', setId);
     await renderSpellingSetsTab();
   } catch(e) { alert('Error: ' + (e.message || e)); }
+}
+
+function ssShowCheckInSession(setIdShort, idx, btn) {
+  // Hide all panels for this set, show selected
+  document.querySelectorAll('.ssCheckInPanel').forEach(function(p) {
+    if (p.id.startsWith('ssCI_' + setIdShort + '_')) p.style.display = 'none';
+  });
+  var target = document.getElementById('ssCI_' + setIdShort + '_' + idx);
+  if (target) target.style.display = '';
+  // Update tab button styles
+  if (btn) {
+    var parent = btn.parentElement;
+    parent.querySelectorAll('.ssCheckInTab').forEach(function(b) {
+      b.style.background = 'var(--navy-3)';
+      b.style.color = 'var(--text-secondary)';
+      b.classList.remove('active');
+    });
+    btn.style.background = 'var(--indigo)';
+    btn.style.color = '#fff';
+    btn.classList.add('active');
+  }
 }
 
 async function ssRunAI(setId) {
