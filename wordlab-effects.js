@@ -349,30 +349,57 @@ const WLEffects = (() => {
     _addInterval(el, flashLightning, intense ? 550 : rndInt(900, 1300));
   }
 
-  // rainbow — hue-rotate glow cycles all colours using an oval div
+  // rainbow — rays of rainbow light streaming down around the scientist
   function fxRainbow(el, intense) {
     _ensureRelative(el);
+    var rayCount = intense ? 10 : 7;
+    var colors = [
+      'rgba(239,68,68,0.7)',   // red
+      'rgba(249,115,22,0.7)',  // orange
+      'rgba(234,179,8,0.7)',   // yellow
+      'rgba(34,197,94,0.7)',   // green
+      'rgba(59,130,246,0.7)',  // blue
+      'rgba(99,102,241,0.7)',  // indigo
+      'rgba(168,85,247,0.7)',  // violet
+      'rgba(236,72,153,0.7)',  // pink
+      'rgba(20,184,166,0.7)',  // teal
+      'rgba(245,158,11,0.7)',  // amber
+    ];
     _injectStyle('wlfx-rainbow', `
-      @keyframes wlfxRainbowGlow {
-        0%   { box-shadow:0 0 26px 8px rgba(239,68,68,0.9),  0 0 56px rgba(239,68,68,0.45); }
-        16%  { box-shadow:0 0 26px 8px rgba(249,115,22,0.9), 0 0 56px rgba(249,115,22,0.45); }
-        33%  { box-shadow:0 0 26px 8px rgba(234,179,8,0.9),  0 0 56px rgba(234,179,8,0.45); }
-        50%  { box-shadow:0 0 26px 8px rgba(34,197,94,0.9),  0 0 56px rgba(34,197,94,0.45); }
-        66%  { box-shadow:0 0 26px 8px rgba(99,102,241,0.9), 0 0 56px rgba(99,102,241,0.45); }
-        83%  { box-shadow:0 0 26px 8px rgba(168,85,247,0.9), 0 0 56px rgba(168,85,247,0.45); }
-        100% { box-shadow:0 0 26px 8px rgba(239,68,68,0.9),  0 0 56px rgba(239,68,68,0.45); }
+      @keyframes wlfxRayFall {
+        0%   { opacity:0; transform:translateY(-40px) scaleY(0.3); }
+        15%  { opacity:1; transform:translateY(0) scaleY(1); }
+        85%  { opacity:1; transform:translateY(0) scaleY(1); }
+        100% { opacity:0; transform:translateY(30px) scaleY(0.5); }
+      }
+      @keyframes wlfxRayShimmer {
+        0%, 100% { opacity:0.5; }
+        50%      { opacity:1; }
       }
     `);
-    // Oval div so glow follows the character shape, not the container rectangle
-    const glow = _makeParticle(`
-      left:50%; top:50%;
-      width:148px; height:192px;
-      transform:translate(-50%,-50%);
-      border-radius:50%;
-      animation:wlfxRainbowGlow ${intense ? '2s' : '4s'} linear infinite;
+    var container = _makeParticle(`
+      left:50%; top:0;
+      width:160px; height:100%;
+      transform:translateX(-50%);
       z-index:8;
+      overflow:hidden;
     `);
-    _addNode(el, glow);
+    for (var i = 0; i < rayCount; i++) {
+      var ray = document.createElement('div');
+      var xPos = 10 + (i / (rayCount - 1)) * 80;
+      var color = colors[i % colors.length];
+      var delay = (i * 0.4).toFixed(1);
+      var dur = intense ? '2.5' : '4';
+      ray.style.cssText = 'position:absolute;pointer-events:none;' +
+        'left:' + xPos + '%;top:0;' +
+        'width:3px;height:100%;' +
+        'background:linear-gradient(180deg, transparent 0%, ' + color + ' 20%, ' + color + ' 80%, transparent 100%);' +
+        'border-radius:2px;' +
+        'animation:wlfxRayFall ' + dur + 's ease-in-out ' + delay + 's infinite, wlfxRayShimmer ' + (intense ? '1.5' : '2.5') + 's ease-in-out ' + delay + 's infinite;' +
+        'filter:blur(1px);';
+      container.appendChild(ray);
+    }
+    _addNode(el, container);
   }
 
   // ── EPIC EFFECTS ──────────────────────────────────────────────
