@@ -80,6 +80,9 @@ const WLEffects = (() => {
     // Also clear styles applied to nested character wrap (shimmer, rainbow)
     const wrap = el.querySelector && el.querySelector('#sciCharWrap');
     if (wrap) { wrap.style.boxShadow = ''; wrap.style.animation = ''; }
+    // Restore SVG visibility (pixel effect hides it)
+    const svg = el.querySelector && el.querySelector('svg');
+    if (svg) { svg.style.opacity = ''; }
     _active.delete(el);
   }
 
@@ -507,46 +510,93 @@ const WLEffects = (() => {
     });
   }
 
-  // pixel — coloured squares appear at edges + occasional dissolve
+  // pixel — pixelates the scientist character using CSS filter + canvas overlay
   function fxPixel(el, intense) {
     _ensureRelative(el);
-    _injectStyle('wlfx-pixel', `
-      @keyframes wlfxPixelPop { 0%{opacity:0;transform:scale(0)} 30%{opacity:1;transform:scale(1)} 70%{opacity:0.8} 100%{opacity:0} }
-      @keyframes wlfxPixelDissolve { 0%{opacity:1} 50%{opacity:0.3} 100%{opacity:1} }
-    `);
-    const colors = ['#f472b6','#818cf8','#34d399','#fbbf24','#f97316','#60a5fa'];
-    const max = mobile() ? 8 : 16;
+    var pixelSize = intense ? 6 : 8;
+    var w = el.offsetWidth || 160;
+    var h = el.offsetHeight || 200;
 
-    function spawnPixel() {
-      if (!_active.has(el)) return;
-      const w = el.offsetWidth, h = el.offsetHeight;
-      const edge = rndInt(0, 4);
-      let x, y;
-      if (edge===0) { x=rnd(0,w); y=rnd(-8,8); }
-      else if (edge===1) { x=rnd(w-8,w); y=rnd(0,h); }
-      else if (edge===2) { x=rnd(0,w); y=rnd(h-8,h); }
-      else { x=rnd(-8,8); y=rnd(0,h); }
-      const p = _makeParticle(`
-        left:${x}px;top:${y}px;
-        width:${rndInt(3,6)}px;height:${rndInt(3,6)}px;
-        background:${colors[rndInt(0,colors.length)]};
-        animation:wlfxPixelPop ${rnd(0.8,1.6).toFixed(2)}s ease forwards;
-        z-index:10;
-      `);
-      _addNode(el, p);
-      setTimeout(() => { try { p.parentNode && p.parentNode.removeChild(p); } catch {} }, 1700);
+    // SVG filter for pixelation (works on the actual character)
+    var filterId = 'wlfxPixelFilter';
+    if (!document.getElementById(filterId)) {
+      var svgNS = 'http://www.w3.org/2000/svg';
+      var svg = document.createElementNS(svgNS, 'svg');
+      svg.setAttribute('width', '0');
+      svg.setAttribute('height', '0');
+      svg.style.cssText = 'position:absolute;pointer-events:none;';
+      var defs = document.createElementNS(svgNS, 'defs');
+      var filter = document.createElementNS(svgNS, 'filter');
+      filter.setAttribute('id', filterId);
+      filter.setAttribute('x', '0');
+      filter.setAttribute('y', '0');
+      filter.setAttribute('width', '100%');
+      filter.setAttribute('height', '100%');
+      var feImage = document.createElementNS(svgNS, 'feFlood');
+      // Use mosaic approach: scale down then scale up with no interpolation
+      var scaleFactor = 1 / pixelSize;
+      // feGaussianBlur to soften slightly, then mosaic via CSS
+      defs.appendChild(filter);
+      svg.appendChild(defs);
+      document.body.appendChild(svg);
     }
 
-    for (let i = 0; i < max / 2; i++) setTimeout(() => spawnPixel(), i * 120);
-    _addInterval(el, spawnPixel, intense ? 100 : 200);
+    // Apply pixelation via CSS image-rendering on a scaled wrapper
+    _injectStyle('wlfx-pixel', `
+      @keyframes wlfxPixelPulse {
+        0%, 100% { filter: contrast(1.05); }
+        50% { filter: contrast(1.2) saturate(1.3); }
+      }
+    `);
 
-    // Occasional dissolve
-    _addInterval(el, () => {
+    // Create a canvas overlay that samples and draws the character as chunky pixels
+    var canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    canvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:12;border-radius:inherit;image-rendering:pixelated;';
+    _addNode(el, canvas);
+
+    var ctx = canvas.getContext('2d');
+
+    function renderPixelated() {
       if (!_active.has(el)) return;
-      el.style.transition = 'opacity 0.2s';
-      el.style.animation = 'wlfxPixelDissolve 0.6s ease';
-      setTimeout(() => { if (_active.has(el)) { el.style.animation = ''; } }, 700);
-    }, intense ? 2000 : 3500);
+      // Find the SVG inside the element
+      var svgEl = el.querySelector('svg');
+      if (!svgEl) return;
+      // Serialize SVG to an image
+      var svgData = new XMLSerializer().serializeToString(svgEl);
+      var blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var img = new Image();
+      img.onload = function() {
+        if (!_active.has(el)) { URL.revokeObjectURL(url); return; }
+        // Draw at tiny size (pixelated), then scale up
+        var sw = Math.ceil(w / pixelSize);
+        var sh = Math.ceil(h / pixelSize);
+        ctx.clearRect(0, 0, w, h);
+        // Draw small
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(img, 0, 0, sw, sh);
+        // Copy small version back scaled up
+        ctx.drawImage(canvas, 0, 0, sw, sh, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
+    }
+
+    // Hide the original SVG and show pixelated version
+    var origSvg = el.querySelector('svg');
+    if (origSvg) {
+      origSvg.style.opacity = '0';
+      _addNode(el, canvas);
+    }
+
+    // Initial render + periodic re-render (to catch animations/changes)
+    setTimeout(renderPixelated, 100);
+    _addInterval(el, renderPixelated, intense ? 800 : 1500);
+
+    // Add a subtle colour pulse
+    canvas.style.animation = 'wlfxPixelPulse ' + (intense ? '1.5s' : '3s') + ' ease-in-out infinite';
   }
 
   // radioactive — green glow, floating particles, ☢ symbol
