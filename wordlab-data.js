@@ -2231,17 +2231,15 @@ const WordLabData = (() => {
 
   // Speak a word via Google Cloud TTS (falls back to browser TTS)
   var _ttsAudio = null;
-  function speakInLanguage(text, langCode) {
+  var _ttsCache = {}; // client-side URL cache: "lang:text" → Audio object
+
+  // Preload audio for a word so it's ready when the user clicks speak
+  function preloadTTS(text, langCode) {
     if (!text) return;
-    // Stop any current playback
-    if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio = null; }
-    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-
-    // Map langCode to our EALD code for the API
-    var ealdCode = langCode;
-    if (langCode === 'en-AU' || langCode === 'en') ealdCode = 'en';
-
-    // Try cloud TTS first
+    var ealdCode = (langCode === 'en-AU' || langCode === 'en') ? 'en' : langCode;
+    var key = ealdCode + ':' + text.toLowerCase().trim();
+    if (_ttsCache[key]) return; // already cached or loading
+    _ttsCache[key] = 'loading';
     fetch(SUPABASE_URL + '/functions/v1/speak-word', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2251,17 +2249,42 @@ const WordLabData = (() => {
       return resp.json();
     }).then(function(data) {
       if (data.audioUrl) {
-        _ttsAudio = new Audio(data.audioUrl);
-        _ttsAudio.play().catch(function() {
-          // Autoplay blocked — fall back to browser TTS
-          _fallbackBrowserTTS(text, langCode);
-        });
-      } else {
-        _fallbackBrowserTTS(text, langCode);
+        var a = new Audio();
+        a.preload = 'auto';
+        a.src = data.audioUrl;
+        _ttsCache[key] = a;
       }
     }).catch(function() {
-      _fallbackBrowserTTS(text, langCode);
+      // Preload failed silently — speakInLanguage will use browser TTS
+      delete _ttsCache[key];
     });
+  }
+
+  function speakInLanguage(text, langCode) {
+    if (!text) return;
+    // Stop any current playback
+    if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio = null; }
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+
+    var ealdCode = (langCode === 'en-AU' || langCode === 'en') ? 'en' : langCode;
+    var key = ealdCode + ':' + text.toLowerCase().trim();
+
+    // 1. If preloaded audio is ready, play it instantly
+    var cached = _ttsCache[key];
+    if (cached && cached !== 'loading' && cached.readyState >= 2) {
+      _ttsAudio = cached;
+      _ttsAudio.currentTime = 0;
+      _ttsAudio.play().catch(function() {
+        _fallbackBrowserTTS(text, langCode);
+      });
+      return;
+    }
+
+    // 2. Use browser TTS immediately (no lag)
+    _fallbackBrowserTTS(text, langCode);
+
+    // 3. Warm the cache in the background for next time
+    preloadTTS(text, langCode);
   }
 
   function _fallbackBrowserTTS(text, langCode) {
@@ -2465,7 +2488,7 @@ const WordLabData = (() => {
     getCustomMorphemes, getCustomMorphemePriority,
     getSpellingSetWords, recordSpellingAttempt,
     getEALDLanguage, getEALDLanguageName, getTranslations, createEALDPill, injectEALDStyles, EALD_LANGUAGES, EALD_TTS_CODES,
-    speakInLanguage, buildEALDSpeakButtons, buildEALDRevealButton, _speakEALD,
+    speakInLanguage, preloadTTS, buildEALDSpeakButtons, buildEALDRevealButton, _speakEALD,
     escapeHtml,
     getWordOfTheWeek
   };
