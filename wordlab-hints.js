@@ -113,9 +113,9 @@ var WLHints = (function() {
       _adviceBtnEl.style.cssText += 'position:absolute;left:50%;top:calc(50% + 70px);transform:translateX(-50%);z-index:100;margin:0;white-space:nowrap;';
       stage.appendChild(_adviceBtnEl);
     } else {
-      // Floating fixed fallback
-      _bubbleEl.style.cssText = 'position:fixed;bottom:62px;right:16px;left:auto;transform:none;z-index:10001;max-width:240px;';
-      _adviceBtnEl.style.cssText += 'position:fixed;bottom:16px;right:16px;z-index:10000;margin:0;box-shadow:0 4px 16px rgba(67,56,202,.4);';
+      // Floating fixed fallback — raised above support toggle
+      _bubbleEl.style.cssText = 'position:fixed;bottom:110px;right:16px;left:auto;transform:none;z-index:10001;max-width:240px;';
+      _adviceBtnEl.style.cssText += 'position:fixed;bottom:60px;right:16px;z-index:10000;margin:0;box-shadow:0 4px 16px rgba(67,56,202,.4);';
       document.body.appendChild(_bubbleEl);
       document.body.appendChild(_adviceBtnEl);
     }
