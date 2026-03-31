@@ -85,7 +85,7 @@ function applyPrefixRules(prefixForm, baseForm) {
 }
 
 // ── Suffix rules ─────────────────────────────────────────────────────────────
-function applySuffix(baseForm, suffixForm) {
+function applySuffix(baseForm, suffixForm, skipCVC) {
   const base = String(baseForm || '');
   const suff = String(suffixForm || '');
   if (!suff) return base;
@@ -99,6 +99,10 @@ function applySuffix(baseForm, suffixForm) {
   if (suffLower === 'ing' && base.toLowerCase().endsWith('ie')) {
     return base.slice(0, -2) + 'y' + suff;
   }
+  // -le + -ly → -ly (e.g., responsible + ly → responsibly)
+  if (suffLower === 'ly' && base.toLowerCase().endsWith('le')) {
+    return base.slice(0, -2) + suff;
+  }
   // drop silent e before vowel suffix
   if (last === 'e' && isVowel(first)) {
     return base.slice(0, -1) + suff;
@@ -107,8 +111,8 @@ function applySuffix(baseForm, suffixForm) {
   if (last === 'y' && prev && isConsonant(prev) && suffLower !== 'ing') {
     return base.slice(0, -1) + 'i' + suff;
   }
-  // CVC doubling before vowel suffix
-  if (isCVC(base) && isVowel(first)) {
+  // CVC doubling before vowel suffix (skip for Latin/Greek bound roots)
+  if (!skipCVC && isCVC(base) && isVowel(first)) {
     return base + base.slice(-1) + suff;
   }
   // default: just join
@@ -116,12 +120,37 @@ function applySuffix(baseForm, suffixForm) {
 }
 
 // ── Build word from morpheme combo ───────────────────────────────────────────
-function computeWord(prefix, base, suffix1, suffix2) {
+// Returns array of candidate words (CVC doubling is ambiguous for multi-syllable words)
+function computeWordCandidates(prefix, base, suffix1, suffix2) {
   const pAdj = prefix ? applyPrefixRules(prefix.form, base.form) : '';
-  let word = pAdj + base.form;
-  if (suffix1) word = applySuffix(word, suffix1.form);
-  if (suffix2) word = applySuffix(word, suffix2.form);
-  return word.toLowerCase();
+  const stem = pAdj + base.form;
+  const skipCVC = base.group === 'latin' || base.group === 'greek';
+
+  // For multi-syllable words, try both CVC-doubled and undoubled forms
+  // (English CVC doubling depends on stress, which we can't determine)
+  let words = [stem];
+  if (suffix1) {
+    const next = [];
+    for (const w of words) {
+      next.push(applySuffix(w, suffix1.form, skipCVC));
+      // Also try without CVC doubling for multi-syllable words
+      if (!skipCVC && w.length > 3 && isCVC(w) && isVowel(suffix1.form[0]?.toLowerCase())) {
+        next.push(applySuffix(w, suffix1.form, true));
+      }
+    }
+    words = next;
+  }
+  if (suffix2) {
+    const next = [];
+    for (const w of words) {
+      next.push(applySuffix(w, suffix2.form, skipCVC));
+      if (!skipCVC && w.length > 3 && isCVC(w) && isVowel(suffix2.form[0]?.toLowerCase())) {
+        next.push(applySuffix(w, suffix2.form, true));
+      }
+    }
+    words = next;
+  }
+  return [...new Set(words.map(w => w.toLowerCase()))];
 }
 
 // ── Generate combos ──────────────────────────────────────────────────────────
@@ -143,22 +172,24 @@ function generateCombos(prefixes, bases, suffixes) {
           if (!s1 && s2) continue;
 
           checked++;
-          const word = computeWord(prefix, base, s1, s2);
-          if (!word || word.length < 2) continue;
+          const candidates = computeWordCandidates(prefix, base, s1, s2);
 
-          if (!DICT.has(word)) continue;
+          for (const word of candidates) {
+            if (!word || word.length < 2) continue;
+            if (!DICT.has(word)) continue;
 
-          const key = `${prefix?.id || ''}|${base.id}|${s1?.id || ''}|${s2?.id || ''}`;
-          if (seen.has(key)) continue;
-          seen.add(key);
+            const key = `${prefix?.id || ''}|${base.id}|${s1?.id || ''}|${s2?.id || ''}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
 
-          combos.push({
-            p: prefix?.id || null,
-            b: base.id,
-            s1: s1?.id || null,
-            s2: s2?.id || null,
-            word
-          });
+            combos.push({
+              p: prefix?.id || null,
+              b: base.id,
+              s1: s1?.id || null,
+              s2: s2?.id || null,
+              word
+            });
+          }
         }
       }
     }

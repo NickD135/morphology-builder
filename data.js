@@ -33,7 +33,14 @@ const PREFIXES = [
   { id:"un", form:"un", display:"un-", meaning:"not", allowedPos:["adj","verb"], examples:["<u>un</u>happy","<u>un</u>lock","<u>un</u>fair"] },
   { id:"under", form:"under", display:"under-", meaning:"below", allowedPos:["noun","adj","verb"], examples:["<u>under</u>line","<u>under</u>pay","<u>under</u>ground"] },
   { id:"ob", form:"ob", display:"ob-", meaning:"against; in the way of; towards", allowedPos:["noun","adj","verb"], altForms:["oc","of","op","os","obt"], examples:["<u>ob</u>ject","<u>ob</u>serve","<u>ob</u>struct"] },
-  { id:"a", form:"a", display:"a-", meaning:"not; without", allowedPos:["adj","noun"], examples:["<u>a</u>moral","<u>a</u>typical","<u>a</u>sexual"] }
+  { id:"a", form:"a", display:"a-", meaning:"not; without", allowedPos:["adj","noun"], examples:["<u>a</u>moral","<u>a</u>typical","<u>a</u>sexual"] },
+  { id:"tele", form:"tele", display:"tele-", meaning:"far; distant", allowedPos:["noun","adj","verb"], examples:["<u>tele</u>scope","<u>tele</u>graph","<u>tele</u>gram"] },
+  { id:"peri", form:"peri", display:"peri-", meaning:"around", allowedPos:["noun","adj"], examples:["<u>peri</u>scope","<u>peri</u>meter","<u>peri</u>pheral"] },
+  { id:"gyro", form:"gyro", display:"gyro-", meaning:"circle; spinning", allowedPos:["noun"], examples:["<u>gyro</u>scope","<u>gyro</u>compass"] },
+  { id:"endo", form:"endo", display:"endo-", meaning:"within; inside", allowedPos:["noun","adj"], examples:["<u>endo</u>scope","<u>endo</u>crine","<u>endo</u>skeleton"] },
+  { id:"horo", form:"horo", display:"horo-", meaning:"time; hour", allowedPos:["noun"], examples:["<u>horo</u>scope","<u>horo</u>logy"] },
+  { id:"stetho", form:"stetho", display:"stetho-", meaning:"chest", allowedPos:["noun"], examples:["<u>stetho</u>scope"] },
+  { id:"kaleido", form:"kaleido", display:"kaleido-", meaning:"beautiful form", allowedPos:["noun"], examples:["<u>kaleido</u>scope"] }
 ];
 
 const SUFFIXES = [

@@ -529,7 +529,7 @@
       stepsHtml:ePrefix + "<span class='hlAdd'> + </span>" + eBase + " <span class='hlAdd'>\u2192</span> " + ePrefix + eBase };
   }
 
-  function applySuffixRulesDetailed(baseForm, suffixForm) {
+  function applySuffixRulesDetailed(baseForm, suffixForm, skipCVC) {
     var base = String(baseForm  || "");
     var suff = String(suffixForm|| "");
     if (!suff) return { baseBefore:base, baseAfter:base, suffix:"", ruleId:null, ruleText:null, stepsHtml:"" };
@@ -547,6 +547,13 @@
         stepsHtml:escapeHtml(base.slice(0,-2)) + "<span class='hlChange'>ie</span><span class='hlAdd'> + </span>" + eSuff + " <span class='hlAdd'>\u2192</span> " + escapeHtml(baseAfter) + "<span class='hlAdd'> + </span>" + eSuff + " <span class='hlAdd'>\u2192</span> " + escapeHtml(baseAfter + suff) };
     }
 
+    if (suffixLower === "ly" && base.toLowerCase().endsWith("le")) {
+      var baseAfterLe = base.slice(0, -2);
+      return { baseBefore:base, baseAfter:baseAfterLe, suffix:suff, ruleId:"le_to_ly",
+        ruleText:"Suffix rule: drop le before adding ly (responsible + ly \u2192 responsibly).",
+        stepsHtml:escapeHtml(baseAfterLe) + "<span class='hlDrop'>le</span><span class='hlAdd'> + </span>" + eSuff + " <span class='hlAdd'>\u2192</span> " + escapeHtml(baseAfterLe + suff) };
+    }
+
     if (last === "e" && isVowel(first)) {
       var baseAfter2 = base.slice(0, -1);
       return { baseBefore:base, baseAfter:baseAfter2, suffix:suff, ruleId:"drop_e",
@@ -561,7 +568,7 @@
         stepsHtml:escapeHtml(base.slice(0,-1)) + "<span class='hlChange'>y</span><span class='hlAdd'> + </span>" + eSuff + " <span class='hlAdd'>\u2192</span> " + escapeHtml(baseAfter3) + "<span class='hlAdd'> + </span>" + eSuff + " <span class='hlAdd'>\u2192</span> " + escapeHtml(baseAfter3 + suff) };
     }
 
-    if (isCVC(base) && isVowel(first)) {
+    if (!skipCVC && isCVC(base) && isVowel(first)) {
       var c2 = base.slice(-1);
       var baseAfter4 = base + c2;
       return { baseBefore:base, baseAfter:baseAfter4, suffix:suff, ruleId:"double_consonant",
@@ -580,15 +587,15 @@
       stepsHtml:escapeHtml(base) + "<span class='hlAdd'> + </span>" + eSuff + " <span class='hlAdd'>\u2192</span> " + escapeHtml(base + suff) };
   }
 
-  function applySuffixOnce(baseForm, suffixObj) {
+  function applySuffixOnce(baseForm, suffixObj, skipCVC) {
     if (!suffixObj) return { built: String(baseForm || ""), detail: null };
-    var detail = applySuffixRulesDetailed(baseForm, suffixObj.form);
+    var detail = applySuffixRulesDetailed(baseForm, suffixObj.form, skipCVC);
     return { built: String(detail.baseAfter) + String(suffixObj.form), detail: detail };
   }
 
-  function applySuffixChain(baseForm, suffix1Obj, suffix2Obj) {
-    var first  = applySuffixOnce(baseForm, suffix1Obj);
-    var second = applySuffixOnce(first.built, suffix2Obj);
+  function applySuffixChain(baseForm, suffix1Obj, suffix2Obj, skipCVC) {
+    var first  = applySuffixOnce(baseForm, suffix1Obj, skipCVC);
+    var second = applySuffixOnce(first.built, suffix2Obj, skipCVC);
     return { finalWord: second.built.toLowerCase(), firstDetail: first.detail, secondDetail: second.detail };
   }
 
@@ -675,7 +682,8 @@
 
     var prefixDetail = current.prefix ? applyPrefixRulesDetailed(current.prefix.form, current.base.form) : null;
     var prefixedBase = (prefixDetail ? prefixDetail.prefixAfter : '') + current.base.form;
-    var chain = applySuffixChain(prefixedBase, current.suffix1, current.suffix2);
+    var skipCVC = current.base && (current.base.group === 'latin' || current.base.group === 'greek');
+    var chain = applySuffixChain(prefixedBase, current.suffix1, current.suffix2, skipCVC);
     var computedWord = chain.finalWord;
 
     /* Word display */

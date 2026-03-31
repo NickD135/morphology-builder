@@ -44,6 +44,7 @@ privacy-law-compliant, multi-tenant, with proper teacher auth and a payment laye
 | Hosting | Currently Codespaces only | Needs Vercel deployment |
 | Edge functions | Supabase Edge (Deno) | `polish-item`, `create-checkout`, `stripe-webhook`, `send-feedback`, `create-portal-session`, `get-subscription`, `analyze-words` |
 | Canvas | Fabric.js 5.3.1 | Used in `item-creator.html` only |
+| Build scripts | Node.js (local) | `scripts/build-valid-combos.js` generates morpheme combo JSON |
 | Payments | Stripe (live) | ABN + "Word Labs Education" sole trader |
 | Transactional email | Resend | Free tier, domain verified, sends from notifications@wordlabs.app |
 
@@ -54,7 +55,8 @@ privacy-law-compliant, multi-tenant, with proper teacher auth and a payment laye
 | File | Who uses it | What it does |
 |---|---|---|
 | `landing.html` | Everyone | Home page — activity cards, scientist character display, login UI |
-| `index.html` | Students | Morpheme Builder — drag prefix/base/suffix to build words |
+| `morpheme-builder.html` | Students | Morpheme Builder — click morpheme tiles to explore building words; pre-computed viability, no drag-and-drop |
+| `index.html` | — | Redirects to `landing.html` |
 | `mission-mode.html` | Students | Prefix/suffix drag game with fuel bar, start screen login |
 | `meaning-mode.html` | Students | Match morphemes to their meanings, fuel bar |
 | `breakdown-mode.html` | Students | Type prefix/base/suffix of a given word under time pressure |
@@ -888,6 +890,34 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 
 ---
 
+### PHASE 7.12 — Session 2026-03-31
+
+#### Morpheme Builder content expansion
+- [x] Added 7 new Greek combining-form prefixes: `tele-` (far), `peri-` (around), `gyro-` (circle), `endo-` (within), `horo-` (time), `stetho-` (chest), `kaleido-` (beautiful form)
+- [x] Scope base expanded from 5 → 22 unique words: scope, telescope, microscope, periscope, horoscope, gyroscope, endoscope, stethoscope, kaleidoscope + plurals + derived forms (telescoped, telescoping, telescopic, microscopic)
+- [x] `tele-` prefix generates 21 combos across multiple bases (telegraph, telegram, telephones, telescope, television, etc.)
+- [x] `peri-` prefix generates periscope, perimeter combos
+- [x] Total valid combos: 1,744 → 1,998 (+254 new words, ~15% increase)
+- [x] 81 words added to dictionary.txt for new combos
+
+#### Build script spelling rule fixes
+- [x] Fixed CVC doubling incorrectly applying to Latin/Greek bound roots (phon→phonnes, duc→ducc, vis→viss)
+- [x] Added `skipCVC` parameter to `applySuffix` for latin/greek group bases
+- [x] Added CVC candidate fallback for multi-syllable words (tries both doubled and undoubled, keeps whichever is in dictionary) — fixes visit→visitted, market→marketted etc.
+- [x] Added -le + -ly spelling rule (responsible + ly → responsibly, not responsiblely)
+- [x] All three fixes applied to both `scripts/build-valid-combos.js` and `morpheme-builder.html`
+
+#### Biggest base improvements
+- `vis` (see): 2 → 32 words (vision, visible, invisible, advised, revised, supervised, television, etc.)
+- `scope` (look): 5 → 22 words (all 9 scope instruments + derived forms)
+- `duc` (lead): 1 → 15 words (educate, produce, reduce, conduct, induce, etc.)
+- `behave`: 2 → 10 words
+- `visit`: 3 → 10 words
+- `phon` (sound): 2 → 8 words (phones, telephones, microphones, megaphones, etc.)
+- `sec` (cut): 2 → 8 words (secure, security, etc.)
+
+---
+
 ### PHASE 10 — NSW Spelling Diagnostic Integration
 
 Integrating the NSW Department of Education Spelling Diagnostic Assessment (Sets 1–7)
@@ -1157,3 +1187,6 @@ At the start of each working session, do this:
 | Signup notification email | Fire-and-forget via existing send-feedback edge function; lets Nick know immediately when a teacher signs up without adding infrastructure |
 | Consistent info page headers | All info pages use same layout (brand + Home link); dark pages match teacher-guide blur style; light pages use clean white header |
 | upgrade.html → pricing.html redirect | upgrade.html was orphaned with completely wrong plan names and prices; redirect avoids confusion |
+| Greek combining-form prefixes (tele, peri, gyro, endo, horo, stetho, kaleido) | These are bound morphemes that combine with Greek bases (especially scope); added as prefixes because the build script's dictionary check prevents nonsense combos — only real English words pass |
+| CVC doubling skip for Latin/Greek roots | Bound roots like phon, duc, vis don't follow English CVC doubling (stressed final syllable); skipping prevents "phonnes", "ducc", "viss" |
+| CVC candidate generation for multi-syllable words | English CVC doubling depends on stress (admit→admitted but visit→visited); build script tries both forms and keeps whichever is in dictionary |
