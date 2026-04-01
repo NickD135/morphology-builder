@@ -3301,6 +3301,7 @@ function buildSpellingSetHeatmap(set) {
       (!isAI ? '<button onclick="ssRunAI(\'' + set.id + '\')" style="' + _lnk + 'color:var(--indigo-2);" onmouseover="this.style.color=\'#a5b4fc\'" onmouseout="this.style.color=\'#818cf8\'">🤖 Run AI</button>' : '') +
       '<button onclick="ssCompleteAll(\'' + set.id + '\')" style="' + _lnk + '"' + _lnkHover + '>✅ Complete All</button>' +
       '<button onclick="ssAdvanceAll(\'' + set.id + '\')" style="' + _lnk + 'color:#fff;font-weight:900;" onmouseover="this.style.color=\'#c7d2fe\'" onmouseout="this.style.color=\'#fff\'">⏩ Advance All</button>' +
+      '<button onclick="ssPrintWordList(\'' + set.id + '\')" style="' + _lnk + '"' + _lnkHover + '>📋 Print Word List</button>' +
       '<button onclick="deleteSpellingSet(\'' + set.id + '\')" style="' + _lnk + 'color:var(--bad);margin-left:auto;" onmouseover="this.style.color=\'#fca5a5\'" onmouseout="this.style.color=\'#f87171\'">🗑️ Delete</button>' +
     '</div>';
 
@@ -3786,6 +3787,47 @@ async function ssStopAssessment(setId) {
     }).eq('id', setId);
     await renderSpellingSetsTab();
   } catch(e) { alert('Error: ' + (e.message || e)); }
+}
+
+function ssPrintWordList(setId) {
+  var set = _spellingSets.find(function(s) { return s.id === setId; });
+  if (!set) return;
+  var words = [];
+  if (Array.isArray(set.words)) {
+    set.words.forEach(function(w) {
+      words.push(typeof w === 'string' ? w : (w.word || ''));
+    });
+  }
+  if (!words.length) { alert('No words in this set.'); return; }
+  var className = currentClass ? currentClass.name : '';
+  var win = window.open('', '_blank');
+  if (!win) { alert('Pop-up blocked. Please allow pop-ups for this site.'); return; }
+  var doc = win.document;
+  doc.open();
+  // Build print-ready word list page using safe string construction
+  // All values are escaped to prevent XSS from set names or words
+  var esc = WordLabData.escapeHtml;
+  var lines = [
+    '<!DOCTYPE html><html><head><meta charset="UTF-8">',
+    '<title>Word List</title>',
+    '<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600;700;900&display=swap" rel="stylesheet">',
+    '<style>body{font-family:Lexend,sans-serif;padding:40px;max-width:600px;margin:0 auto;color:#1e293b;}',
+    'h1{font-size:22px;font-weight:900;color:#312e81;margin-bottom:4px;}',
+    '.meta{font-size:12px;color:#64748b;margin-bottom:24px;}',
+    'ol{padding-left:28px;font-size:18px;line-height:2.4;}',
+    'li{border-bottom:1px solid #e2e8f0;padding:4px 0;}',
+    '@media print{body{padding:20px;}.noprint{display:none!important;}}</style>',
+    '</head><body>',
+    '<h1>' + esc(set.name) + '</h1>',
+    '<div class="meta">' + (className ? esc(className) + ' &middot; ' : '') + words.length + ' words &middot; ' + new Date().toLocaleDateString('en-AU') + '</div>',
+    '<ol>'
+  ];
+  words.forEach(function(w) { lines.push('<li>' + esc(w) + '</li>'); });
+  lines.push('</ol>');
+  lines.push('<div class="noprint" style="margin-top:24px;"><button onclick="window.print()" style="background:#4338ca;color:#fff;border:none;border-radius:10px;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:Lexend,sans-serif;">Print</button></div>');
+  lines.push('</body></html>');
+  doc.write(lines.join('\n'));
+  doc.close();
 }
 
 async function ssScheduleAssessment(setId) {

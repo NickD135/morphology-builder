@@ -2145,7 +2145,13 @@ async function initStudentLayout(session) {
         var activeAssess = (ssSets || []).find(function(s) {
           return s.assessment_active || (s.assessment_scheduled_at && new Date(s.assessment_scheduled_at) <= new Date());
         });
-        if (activeAssess) {
+        // Check if student already completed this check-in (don't trap them in a loop)
+        var alreadyDone = false;
+        if (activeAssess && session && session.studentId) {
+          var doneKey = 'wl_checkin_done_' + activeAssess.id + '_' + session.studentId;
+          alreadyDone = sessionStorage.getItem(doneKey) === 'true';
+        }
+        if (activeAssess && !alreadyDone) {
           // Show assessment takeover banner
           var banner = document.createElement('div');
           banner.style.cssText = 'position:fixed;inset:0;z-index:9990;background:rgba(15,23,42,0.9);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);';
