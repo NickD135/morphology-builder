@@ -1085,6 +1085,37 @@ into Word Labs as a structured spelling progression system.
 
 ---
 
+### PHASE 7.14 — Session 2026-04-01 (continued)
+
+#### Morpheme Builder content expansion
+- [x] Added 45 new Anglo bases to `data.js`: play, work, read, think, kind, hope, fear, thank, harm, taste, doubt, count, start, stop, hold, fill, print, heat, paint, load, order, spell, clean, sharp, bright, fair, safe, deep, weak, soft, dark, sweet, quick, slow, warm, fresh, hard, price, cover, land, test, grace, comfort, agree, colour
+- [x] Added 644 missing dictionary words for both new and existing bases
+- [x] Rebuilt `valid-combos.json`: 1,998 → 2,958 valid combos (+48%), 200 → 245 bases, avg 12.1 combos per base
+- [x] Existing weak bases improved: trust 7→21, excite 4→10, friend 4→8, react 6→11, watch 6→9
+- [x] New bases range: 7–29 combos each (count=29, play=23, test=21, cover=19, read=16)
+- [x] Greek combining forms (micro, thermo, chron, aero) remain at 1–2 combos — they're primarily prefixes
+
+#### Game content expansion (new bases pushed into other games)
+- [x] Breakdown Blitz: 122 → 205 words (+68%) — playful, rework, unthinkable, fearless, discount, priceless, discovery, disgraceful, etc.
+- [x] Mission Mode: +25 prefix-compatible bases (cover, test, load, order, heat, count, agree, etc.) + 32 suffix-compatible bases (fear, harm, taste, doubt, sharp, deep, weak, soft, sweet, etc.)
+- [x] Meaning Mode: +38 bases for meaning-matching gameplay
+- [x] Speed Builder: automatically benefits from new bases in data.js
+
+#### AI word analysis — editable preview
+- [x] Preview table cells are now inline-editable inputs (click any cell to correct)
+- [x] Works in both word list creation and spelling check-in set creation
+- [x] Syllables/phonemes edited with · (middle dot) separator
+- [x] Changes update `_wlAnalyzedWords` / `_ssAnalyzedWords` on blur — saved data reflects teacher corrections
+- [x] Built with DOM methods (no innerHTML) for XSS safety
+- [x] Suffix column split into Suffix 1 and Suffix 2 for clarity
+
+#### Spelling check-in fixes
+- [x] Fixed post-completion takeover loop: students who finished the check-in no longer see the full-screen modal when returning to landing page (checks sessionStorage completion key)
+- [x] Added "📋 Print Word List" button on spelling sets — opens numbered word list in new tab with Print button, set name, class, date
+- [ ] Teacher-led mode has no real-time sync — students can advance independently (would need Supabase Realtime for true lockstep)
+
+---
+
 ### PHASE 9 — NSW Department of Education Approval
 
 Full checklist document: `docs/nsw-doe-approval-checklist.md`
@@ -1235,3 +1266,9 @@ At the start of each working session, do this:
 | Unified dark header across all pages | Professional consistency for school procurement review; glassmorphism blur matches the landing page aesthetic; teacher tool pages keep functional nav links in the dark style |
 | Standard footer link set | Home · About · Privacy · Terms · Pricing · Contact on every page; schools and IT teams expect easy access to legal docs from any page |
 | Email sent via EdConnect | NSW DET's public contact point; asked to forward to Cyber Security team since no direct email available |
+| 45 new Anglo bases (play, work, read, kind, hope, etc.) | Common everyday words kids know; highly productive with existing prefix/suffix system (8–29 combos each); fills the gap where many bases had only 1–4 valid words |
+| Dictionary expansion (644 words) | Build script validates against dictionary; many real English words (unfriendly, excitable, chronically, etc.) were missing, artificially limiting combo counts |
+| Editable AI preview table | AI word analysis sometimes gets syllable/phoneme splits wrong; teachers need authority over content before it's saved and practised by students |
+| DOM-based preview rendering | Previous innerHTML approach risked XSS from AI-generated content; DOM methods (createElement/appendChild) are safe by default |
+| Print Word List as new-tab page | Teachers need a numbered word list for teacher-led spelling check-ins; new tab with Print button is simpler than PDF generation and works offline |
+| No real-time sync for teacher-led check-in | True lockstep (teacher controls which word all students see) would need Supabase Realtime subscriptions — significant complexity; current mode works for most classrooms where teacher says "ready, next" verbally |
