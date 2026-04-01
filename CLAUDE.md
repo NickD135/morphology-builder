@@ -1050,6 +1050,41 @@ into Word Labs as a structured spelling progression system.
 
 ---
 
+### PHASE 7.13 — Session 2026-04-01
+
+#### NSW DET Cyber Security submission
+- [x] Drafted and sent SaaS Risk Assessment request email to EdConnect / NSW DET Cyber Security team
+- [x] Email verified against codebase — all 27 factual claims confirmed accurate
+- [x] Created `security-architecture.html` — public HTML version of security architecture doc (printable, PDF-ready)
+- [x] Created `incident-response.html` — public HTML version of incident response plan (printable, PDF-ready)
+- [x] Both pages match `data-agreement.html` styling (Lexend font, print-friendly, A4 @page CSS)
+- [x] Documentation URLs included: privacy, terms, data-agreement, parent-privacy, teacher-guide, security-architecture, incident-response
+
+#### Copyright and branding cleanup
+- [x] Removed all "Spelling Diagnostic Sets" references → "Spelling Check-In Sets" (7 instances across 5 files)
+- [x] Removed all NSW DoE / "Focus on Spelling" / "Triple Word Theory" references from about.html and teacher-resources.html
+- [x] Removed NSW DoE citation from references section (kept NESA syllabus citations — public curriculum documents)
+- [x] NESA syllabus quotes wrapped in `<q>` tags with `(NESA, 2022)` inline citations
+- [x] HPGE policy reference genericised ("schools' obligation" instead of naming NSW DoE policy)
+- [x] Added Fabric.js MIT license attribution comment in item-creator.html
+
+#### About page content additions
+- [x] Added "Teacher-led or student-led" section — explains Teacher Mode vs Student Mode
+- [x] Added "Online and offline, connected" section — ties slide decks, worksheets, and digital activities together
+- [x] Updated slide deck heading to "254 teaching slide decks — one for every morpheme"
+
+#### Site consistency and professionalism overhaul
+- [x] Activity names standardised: "Meaning Mode" → "Meaning Match-Up", "Flashcard Mode" → "Flashcards" (across FAQ, teacher guide, about, dashboard, analytics)
+- [x] Feature names standardised: "Low-stimulation mode" → "Low-stim mode" (across about, terms)
+- [x] Page titles standardised: all non-game pages now "Word Labs – [Page Name]" format (10 pages updated)
+- [x] Unified dark sticky header across all 21 non-game pages (glassmorphism blur, indigo brand icon, consistent nav)
+- [x] Unified footer across all 21 non-game pages: Home · About · Privacy · Terms · Pricing · Contact
+- [x] Added footers to 5 pages that had none (dashboard, item-creator, scientist, onboarding, teacher-signup)
+- [x] Accessibility: skip links confirmed on all pages, spelling-test.html favicon and header fixed
+- [x] Dashboard brand icon standardised to 🧪, header aligned with site-wide glassmorphism style
+
+---
+
 ### PHASE 9 — NSW Department of Education Approval
 
 Full checklist document: `docs/nsw-doe-approval-checklist.md`
@@ -1103,11 +1138,15 @@ Full checklist document: `docs/nsw-doe-approval-checklist.md`
 - [x] Create incident reporting process for teachers — included in teacher guide + incident response plan
 
 #### 9.5 Formal approval process
-- [ ] Contact NSW DoE ICT Directorate — request SaaS Risk Assessment form
+- [x] Email sent to EdConnect / NSW DET Cyber Security team requesting SaaS Risk Assessment (2026-04-01)
+- [x] Email included: product overview, data collection summary, data sovereignty, security measures, compliance frameworks, all 7 documentation URLs, firewall whitelisting domains
+- [x] ABN included: 62 528 046 944
+- [x] Contact emails provided: nick@wordlabs.app, nickdeeney135@gmail.com
+- [ ] Await response from DET Cyber Security team — SaaS Risk Assessment form expected
 - [ ] Complete SaaS Risk Assessment with all supporting documentation
 - [ ] Submit documentation package: privacy policy, security architecture, support plan, data agreement
-- [ ] Undergo technical review by DoE
-- [ ] Complete Privacy Impact Assessment (if required by DoE)
+- [ ] Undergo technical review by DET
+- [ ] Complete Privacy Impact Assessment (if required by DET)
 - [ ] Run formal pilot program with 3–5 NSW teachers (structured feedback collection)
 - [ ] Obtain written approval for wider rollout
 
@@ -1190,3 +1229,9 @@ At the start of each working session, do this:
 | Greek combining-form prefixes (tele, peri, gyro, endo, horo, stetho, kaleido) | These are bound morphemes that combine with Greek bases (especially scope); added as prefixes because the build script's dictionary check prevents nonsense combos — only real English words pass |
 | CVC doubling skip for Latin/Greek roots | Bound roots like phon, duc, vis don't follow English CVC doubling (stressed final syllable); skipping prevents "phonnes", "ducc", "viss" |
 | CVC candidate generation for multi-syllable words | English CVC doubling depends on stress (admit→admitted but visit→visited); build script tries both forms and keeps whichever is in dictionary |
+| Security docs as public HTML pages | Markdown docs in /docs not accessible to NSW DET reviewers; converted to styled HTML pages matching data-agreement.html for direct linking in submission email |
+| Removed NSW DoE branding from site | "Focus on Spelling", "Triple Word Theory", HPGE policy name removed to avoid any appearance of copying or deriving from NSW DoE intellectual property; NESA syllabus citations kept (public curriculum documents) |
+| "Meaning Match-Up" as canonical game name | Was inconsistently called "Meaning Mode" in some places; "Match-Up" is more descriptive and student-friendly |
+| Unified dark header across all pages | Professional consistency for school procurement review; glassmorphism blur matches the landing page aesthetic; teacher tool pages keep functional nav links in the dark style |
+| Standard footer link set | Home · About · Privacy · Terms · Pricing · Contact on every page; schools and IT teams expect easy access to legal docs from any page |
+| Email sent via EdConnect | NSW DET's public contact point; asked to forward to Cyber Security team since no direct email available |
