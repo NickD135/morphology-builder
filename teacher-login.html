@@ -138,12 +138,12 @@
   </div>
 </footer>
 
-<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="wordlab-data.js"></script>
 <script>
 const SUPABASE_URL  = 'https://kdpavfrzmmzknqfpodrl.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkcGF2ZnJ6bW16a25xZnBvZHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjgzOTIsImV4cCI6MjA5MDAwNDM5Mn0.n5fe7HvXWMsM4xN_iaU_N4xLkC5xD4y9Uoer_DG-dlg';
-const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+let _sb; function sb(){ if(!_sb) _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON); return _sb; }
 
 // Show confirmation banner if redirected from email verification
 if (new URLSearchParams(window.location.search).get('confirmed') === '1') {
@@ -185,7 +185,7 @@ async function ensureSchoolAndTeacher(authUserId, email) {
   if (existing?.school_id) return; // already set up
 
   // Pull metadata from signup
-  const { data: { user } } = await _sb.auth.getUser();
+  const { data: { user } } = await sb().auth.getUser();
   const schoolName = user?.user_metadata?.school_name || 'My School';
   const joinSchoolId = user?.user_metadata?.join_school_id || '';
 
@@ -207,9 +207,9 @@ async function ensureSchoolAndTeacher(authUserId, email) {
 
   // Create or update teacher record
   if (existing) {
-    await _sb.from('teachers').update({ school_id: schoolId, email }).eq('auth_user_id', authUserId);
+    await sb().from('teachers').update({ school_id: schoolId, email }).eq('auth_user_id', authUserId);
   } else {
-    await _sb.from('teachers').insert({ auth_user_id: authUserId, school_id: schoolId, email });
+    await sb().from('teachers').insert({ auth_user_id: authUserId, school_id: schoolId, email });
   }
 }
 
@@ -225,7 +225,7 @@ async function doLogin() {
   btn.disabled = true; btn.textContent = 'Logging in...';
 
   try {
-    const { data, error } = await _sb.auth.signInWithPassword({ email, password });
+    const { data, error } = await sb().auth.signInWithPassword({ email, password });
     if (error) throw error;
 
     // Ensure school + teacher records exist (handles email-confirmed signups)
@@ -234,7 +234,7 @@ async function doLogin() {
     // New teachers (no classes) go to onboarding instead of dashboard
     const returnUrl = getReturnUrl();
     if (returnUrl === 'dashboard') {
-      const { data: cls } = await _sb.from('classes').select('id').limit(1);
+      const { data: cls } = await sb().from('classes').select('id').limit(1);
       if (!cls || cls.length === 0) {
         window.location.href = 'onboarding.html';
         return;
@@ -284,7 +284,7 @@ async function doRegister() {
 
   try {
     // Create Supabase auth account
-    const { data, error } = await _sb.auth.signUp({
+    const { data, error } = await sb().auth.signUp({
       email,
       password,
       options: {
@@ -298,7 +298,7 @@ async function doRegister() {
     const trialEnds = new Date();
     trialEnds.setDate(trialEnds.getDate() + 7);
 
-    await _sb.from('teacher_accounts').insert({
+    await sb().from('teacher_accounts').insert({
       email: email,
       name: name,
       school_name: schoolName,
@@ -344,7 +344,7 @@ async function doForgotPassword() {
   if (!email) { errEl.textContent = 'Enter your email above, then click Forgot password.'; return; }
 
   try {
-    const { error } = await _sb.auth.resetPasswordForEmail(email);
+    const { error } = await sb().auth.resetPasswordForEmail(email);
     if (error) throw error;
     successEl.textContent = 'Password reset email sent. Check your inbox.';
   } catch(e) {
@@ -354,11 +354,11 @@ async function doForgotPassword() {
 
 // Check if already logged in
 (async function() {
-  const { data: { session } } = await _sb.auth.getSession();
+  const { data: { session } } = await sb().auth.getSession();
   if (session) {
     const returnUrl = getReturnUrl();
     if (returnUrl === 'dashboard') {
-      const { data: cls } = await _sb.from('classes').select('id').limit(1);
+      const { data: cls } = await sb().from('classes').select('id').limit(1);
       if (!cls || cls.length === 0) {
         window.location.href = 'onboarding.html';
         return;
