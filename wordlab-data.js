@@ -580,7 +580,7 @@ const WordLabData = (() => {
     try {
       const { data: existing } = await sb()
         .from('student_character')
-        .select('*')
+        .select('student_id, quarks, xp, badges, scientist, stats')
         .eq('student_id', studentId)
         .maybeSingle();
       const char = ensureCharFields(existing ? { ...existing } : { student_id: studentId });
@@ -681,7 +681,7 @@ const WordLabData = (() => {
         p_is_extension: isExtensionMode()
       }),
       sb().from('student_character')
-        .select('*')
+        .select('student_id, quarks, xp, badges, scientist, stats')
         .eq('student_id', studentId)
         .maybeSingle()
     ]);
@@ -790,7 +790,7 @@ const WordLabData = (() => {
     if (!session) return null;
     const [stuResult, charResult, isTeacher] = await Promise.all([
       sb().from('students').select('extension_mode, eald_language, support_mode').eq('id', session.studentId).maybeSingle(),
-      sb().from('student_character').select('*').eq('student_id', session.studentId).maybeSingle(),
+      sb().from('student_character').select('student_id, quarks, xp, badges, scientist, stats').eq('student_id', session.studentId).maybeSingle(),
       isStudentTeacher(session.classId, session.studentId)
     ]);
     const data = stuResult.data;
@@ -1853,7 +1853,7 @@ const WordLabData = (() => {
 
     // Award quarks and XP
     var { data: existing } = await sb().from('student_character')
-      .select('*').eq('student_id', studentId).maybeSingle();
+      .select('student_id, quarks, xp, badges, scientist, stats').eq('student_id', studentId).maybeSingle();
     var char = ensureCharFields(existing ? { ...existing } : { student_id: studentId });
     char.quarks += challenge.quarks;
     char.xp += challenge.xp;
