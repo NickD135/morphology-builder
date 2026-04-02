@@ -1139,7 +1139,9 @@ function renderCurrentEffect(sd) {
 }
 
 async function applyEffect(effectId) {
-  await WordLabData.saveScientist({ effect: effectId });
+  try {
+    await WordLabData.saveScientist({ effect: effectId });
+  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
   await render();
   // render() recreates #sciSVGBig so restart effect afterwards
   if (typeof WLScientist !== 'undefined') {
@@ -1149,9 +1151,14 @@ async function applyEffect(effectId) {
 }
 
 async function buyEffect(effectId, cost) {
-  const result = await WordLabData.purchase('effect_' + effectId, cost);
+  let result;
+  try {
+    result = await WordLabData.purchase('effect_' + effectId, cost);
+  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
   if (!result.success) { alert('Not enough quarks!'); return; }
-  await WordLabData.saveScientist({ effect: effectId });
+  try {
+    await WordLabData.saveScientist({ effect: effectId });
+  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
   if (typeof WLEffects !== 'undefined' && document.getElementById('wlScientistWidget')) {
     WLEffects.start(effectId, document.getElementById('wlScientistWidget'));
   }
@@ -1172,26 +1179,36 @@ function switchTab(id, btn) {
 async function applyOption(field, value) {
   const updates = {};
   updates[field] = value === 'null' ? null : value;
-  await WordLabData.saveScientist(updates);
+  try {
+    await WordLabData.saveScientist(updates);
+  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
   const sci = await WordLabData.getScientist();
+  // buildSVG returns trusted SVG markup from internal data only
   document.getElementById('sciSVGBig').innerHTML = WLScientist.buildSVG(sci, 'neutral');
   await render();
 }
 
 async function shopBuy(itemId, cost, field) {
-  const result = await WordLabData.purchase(itemId, cost);
+  let result;
+  try {
+    result = await WordLabData.purchase(itemId, cost);
+  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
   if (!result.success) { alert('Not enough quarks!'); return; }
   const updates = {};
   updates[field] = itemId;
   if (field==='head'||field==='face'||field==='pet') updates[field] = itemId==='none'?null:itemId;
-  await WordLabData.saveScientist(updates);
+  try {
+    await WordLabData.saveScientist(updates);
+  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
   await render();
 }
 
 async function shopEquip(field, itemId) {
   const updates = {};
   updates[field] = (itemId==='none' || itemId==='null') ? null : itemId;
-  await WordLabData.saveScientist(updates);
+  try {
+    await WordLabData.saveScientist(updates);
+  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
   await render();
 }
 
@@ -1201,31 +1218,42 @@ async function pinBadge(badgeId) {
   const pins = (sci.displayBadges || []).slice();
   if (pins.length >= 3 || pins.includes(badgeId)) return;
   pins.push(badgeId);
-  await WordLabData.saveScientist({ displayBadges: pins });
+  try {
+    await WordLabData.saveScientist({ displayBadges: pins });
+  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
   await render();
 }
 async function unpinBadge(badgeId) {
   const sci = await WordLabData.getScientist() || {};
   const pins = (sci.displayBadges || []).filter(function(id) { return id !== badgeId; });
-  await WordLabData.saveScientist({ displayBadges: pins });
+  try {
+    await WordLabData.saveScientist({ displayBadges: pins });
+  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
   await render();
 }
 
 // ── Dance Moves ───────────────────────────────────────────────
 async function shopBuyDance(danceId, cost, tier) {
-  const result = await WordLabData.purchase('dance_' + danceId, cost);
+  let result;
+  try {
+    result = await WordLabData.purchase('dance_' + danceId, cost);
+  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
   if (!result.success) { alert('Not enough quarks!'); return; }
   const sci = await WordLabData.getScientist() || {};
   const dances = Object.assign({}, sci.dances || {});
   dances[tier] = danceId;
-  await WordLabData.saveScientist({ dances: dances });
+  try {
+    await WordLabData.saveScientist({ dances: dances });
+  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
   await render();
 }
 async function shopEquipDance(tier, danceId) {
   const sci = await WordLabData.getScientist() || {};
   const dances = Object.assign({}, sci.dances || {});
   dances[tier] = danceId;
-  await WordLabData.saveScientist({ dances: dances });
+  try {
+    await WordLabData.saveScientist({ dances: dances });
+  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
   await render();
 }
 function previewDance(danceId) {
@@ -1388,7 +1416,10 @@ async function enterSecretCode(itemId, correctCode) {
 }
 
 async function buyCustomItem(itemId, cost, type) {
-  const result = await WordLabData.purchase('custom_' + itemId, cost);
+  let result;
+  try {
+    result = await WordLabData.purchase('custom_' + itemId, cost);
+  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
   if (!result.success) { alert('Not enough quarks!'); return; }
   await render();
 }
@@ -1397,7 +1428,9 @@ async function claimCustomItem(itemId, type) {
   const current = await WordLabData.getScientist();
   const owned = current.owned || [];
   if (!owned.includes('custom_' + itemId)) {
-    await WordLabData.saveScientist({ owned: [...owned, 'custom_' + itemId] });
+    try {
+      await WordLabData.saveScientist({ owned: [...owned, 'custom_' + itemId] });
+    } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
   }
   await render();
 }
@@ -1428,7 +1461,9 @@ async function equipCustomItem(itemId) {
   }
   updates.customSlots = customSlots;
 
-  await WordLabData.saveScientist(updates);
+  try {
+    await WordLabData.saveScientist(updates);
+  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
   await render();
 }
 

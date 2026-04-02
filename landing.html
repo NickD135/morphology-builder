@@ -2089,7 +2089,15 @@ async function initStudentLayout(session) {
       var classId = session.classId;
       if (!classId || !top3El) return Promise.resolve();
       return _lsb().from('students').select('id,name').eq('class_id', classId).then(function(stuRes) {
-        if (!stuRes.data || stuRes.data.length <= 1) return;
+        if (!stuRes.data || stuRes.data.length <= 1) {
+          if (top3El) {
+            var msg = document.createElement('div');
+            msg.style.cssText = 'text-align:center;color:#64748b;padding:12px;font-size:11px;font-weight:600;';
+            msg.textContent = 'Leaderboard unlocks when more classmates join!';
+            top3El.appendChild(msg);
+          }
+          return;
+        }
         var ids = stuRes.data.map(function(s){return s.id;});
         return _lsb().from('student_character').select('student_id,xp').in('student_id', ids).then(function(charRes) {
           var xpMap = {};
@@ -2320,7 +2328,11 @@ function renderDailyChallenges() {
   if (typeof WordLabData === 'undefined') return;
 
   var cData = WordLabData.getDailyChallenges();
-  if (!cData.daily || !cData.daily.length) return;
+  if (!cData.daily || !cData.daily.length) {
+    var miniList = document.getElementById('hubMiniChallenges');
+    if (miniList) { var p = document.createElement('span'); p.style.cssText = 'color:#64748b;font-size:11px;font-weight:600;'; p.textContent = 'No challenges today'; miniList.appendChild(p); }
+    return;
+  }
 
   var streak = WordLabData.updateDailyStreak();
   renderHubMiniChallenges(cData, streak);
