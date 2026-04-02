@@ -1130,13 +1130,49 @@ into Word Labs as a structured spelling progression system.
 - [x] Gap analysis against Australian Curriculum Stage 2 and Stage 3 morphology strand
 - [x] Added 5 new prefixes: `be-` (to make), `hypo-` (under), `circum-` (around), `uni-` (one/single), `arch-` (chief)
 - [x] Added 11 new suffixes: `-age`, `-ory`, `-ary`, `-ise` (Aus spelling), `-ious`, `-eous`, `-ative`, `-tion`, `-sion`, `-ation`, `-pathy`
-- [x] Added 2 Latin roots: `grad` (step/go → 11 combos), `mot` (move → 27 combos)
+- [x] Added 2 Latin roots: `grad` (step/go, 11 combos), `mot` (move, 27 combos)
 - [x] Dictionary expanded by 85 words for new morpheme combinations
-- [x] Morpheme Builder: 2,958 → 3,172 valid combos (+214, +7.2%), 247 bases, 47 prefixes, 55 suffixes
+- [x] Morpheme Builder: 2,958 to 3,172 valid combos (+214, +7.2%), 247 bases, 47 prefixes, 55 suffixes
 - [x] Breakdown Blitz: +29 new words using new morphemes (befriend, uniform, universal, circumspect, coverage, motion, promotion, gradual, informative, etc.)
 - [x] Mission Mode: new prefixes + suffixes + bases with validPrefixes/validSuffixes for matching
 - [x] Meaning Mode: new prefixes + suffixes for meaning matching
 - [x] Flashcards: automatically picks up changes via data.js
+
+#### Full site audit: security (26 of 30 issues fixed)
+- [x] XSS: escaped all innerHTML with user data across 20 files (student names, word clues, morpheme meanings)
+- [x] Edge functions: added auth to 5 unauthenticated functions (polish-item, speak-word, translate-words, generate-translated-deck, send-feedback)
+- [x] Edge functions: restricted CORS from wildcard to 5 allowed origins on all 11 client-facing functions
+- [x] Edge functions: send-feedback rate limiting (1 per email per 5 minutes), HTML injection fix in email template
+- [x] Edge functions: Stripe redirect URL validation in create-checkout and create-portal-session
+- [x] Edge functions: removed API key prefix logging in analyze-words
+- [x] Student login: server-side code verification via verify_student_login Postgres RPC (codes no longer sent to client)
+- [x] CSP: restricted CDN script-src to specific package paths, added form-action self, frame-ancestors none
+- [x] CSP: removed inline event handlers from auth pages (teacher-login, teacher-signup, account) replacing 13 handlers with addEventListener
+- [x] CSP: confirmed zero eval or dynamic code evaluation in codebase
+- [x] Updated security-architecture.html to reflect new CSP posture
+
+#### Full site audit: data integrity
+- [x] purchase() race condition fixed with atomic Postgres RPC using SELECT FOR UPDATE row locking
+- [x] saveScientist() race condition fixed with jsonb_set RPC for targeted field updates
+- [x] speed-mode added to dashboard heatmap tabs with dynamic column discovery
+- [x] Triple-duplicated support_mode in 3 SELECT queries fixed
+- [x] Student localStorage cleaned up on logout (challenges, featured game, crown, check-in keys)
+
+#### Full site audit: performance
+- [x] Landing page: 10 sequential Supabase queries reduced to 2 parallel Promise.all batches (2-3s to 0.5-1s)
+- [x] Cache-control headers: JS 1hr, JSON/TXT 1day, fonts 1yr immutable, HTML must-revalidate
+- [x] Sound Sorter data extracted to shared JS file (sound-sorter.html 529KB to 72KB, worksheet 483KB to 28KB)
+- [x] select(*) replaced with explicit columns on 4 student_character queries
+- [x] 6 game pages: replaced 200ms polling intervals with event-driven _showTeacherNext() calls
+- [x] item-creator: replaced 3s canvas.toDataURL() timer with debounced Fabric.js event listeners
+- [x] Added defer to 166 external script tags across 39 pages
+- [x] Mobile breakpoints added to mission-mode, meaning-mode, root-lab (480px, 44px touch targets)
+
+#### Remaining technical debt (deferred, requires dedicated sessions)
+- [ ] Consolidate morpheme data into single source file (currently duplicated in data.js, mission-mode.html, meaning-mode.html, dashboard.html)
+- [ ] Extract shared CSS to wordlab-common.css (200-400 duplicated lines per page across 40+ pages)
+- [ ] Make deleteClass() atomic via Postgres transaction RPC (currently 4 sequential deletes)
+- [ ] Split wordlab-data.js monolith (2,500+ lines: data, UI, auth, challenges, EALD, shop)
 
 ---
 
