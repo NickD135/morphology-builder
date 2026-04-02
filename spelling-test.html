@@ -149,6 +149,7 @@ var currentSetId = null;
 var currentSetName = '';
 var _checkInComplete = false;
 var _checkInMode = 'student'; // 'student' = TTS self-paced, 'teacher' = teacher reads aloud
+var _checkInStartedAt = ''; // timestamp from when teacher started this check-in (distinguishes repeated check-ins)
 
 function getCurrentWord() {
   var w = testWords[currentIndex];
@@ -165,7 +166,9 @@ function getCurrentClue() {
 function getCompletionKey(setId) {
   var session = WordLabData.getSession ? WordLabData.getSession() : null;
   if (!session) return null;
-  return 'wl_checkin_done_' + setId + '_' + (session.studentId || '');
+  // Include assessment_started_at so each new check-in start resets the completion flag
+  var ts = _checkInStartedAt ? '_' + _checkInStartedAt.replace(/[^0-9]/g, '').slice(0, 12) : '';
+  return 'wl_checkin_done_' + setId + '_' + (session.studentId || '') + ts;
 }
 function hasCompletedCheckIn(setId) {
   var key = getCompletionKey(setId);
@@ -195,7 +198,7 @@ async function init() {
     ssWords.forEach(function(w) { if (w._spellingSetId && setIds.indexOf(w._spellingSetId) === -1) setIds.push(w._spellingSetId); });
 
     var { data: sets, error: setsErr } = await sb.from('class_spelling_sets')
-      .select('id, name, assessment_active, assessment_scheduled_at, assessment_mode')
+      .select('id, name, assessment_active, assessment_scheduled_at, assessment_mode, assessment_started_at')
       .in('id', setIds);
     // Fallback if assessment columns not yet in schema cache
     if (setsErr && setsErr.code === '42703') {
@@ -216,6 +219,7 @@ async function init() {
     currentSetId = activeSet.id;
     currentSetName = activeSet.name || 'Spelling Check-In';
     _checkInMode = activeSet.assessment_mode || 'student';
+    _checkInStartedAt = activeSet.assessment_started_at || '';
 
     // Check if already completed this check-in
     if (hasCompletedCheckIn(currentSetId)) {

@@ -2140,15 +2140,17 @@ async function initStudentLayout(session) {
         var ssSetIds = [];
         ssWords.forEach(function(w) { if (w._spellingSetId && ssSetIds.indexOf(w._spellingSetId) === -1) ssSetIds.push(w._spellingSetId); });
         var { data: ssSets } = await _lsb().from('class_spelling_sets')
-          .select('id, name, assessment_active, assessment_scheduled_at')
+          .select('id, name, assessment_active, assessment_scheduled_at, assessment_started_at')
           .in('id', ssSetIds);
         var activeAssess = (ssSets || []).find(function(s) {
           return s.assessment_active || (s.assessment_scheduled_at && new Date(s.assessment_scheduled_at) <= new Date());
         });
         // Check if student already completed this check-in (don't trap them in a loop)
+        // Uses assessment_started_at so each new check-in start resets the flag
         var alreadyDone = false;
         if (activeAssess && session && session.studentId) {
-          var doneKey = 'wl_checkin_done_' + activeAssess.id + '_' + session.studentId;
+          var ts = activeAssess.assessment_started_at ? '_' + activeAssess.assessment_started_at.replace(/[^0-9]/g, '').slice(0, 12) : '';
+          var doneKey = 'wl_checkin_done_' + activeAssess.id + '_' + session.studentId + ts;
           alreadyDone = sessionStorage.getItem(doneKey) === 'true';
         }
         if (activeAssess && !alreadyDone) {
