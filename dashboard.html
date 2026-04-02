@@ -3311,34 +3311,61 @@ function buildSpellingSetHeatmap(set) {
     return _checkInResults[ciKey] && _checkInResults[ciKey].length > 0;
   });
 
-  // Heatmap (check-in data now shown in separate tabs below)
+  // Heatmap — shows latest check-in session results (✓/✗) when available, falls back to cumulative practice data
   var headerCols = words.map(function(w) {
     return '<th class="rotate"><span>' + WordLabData.escapeHtml(w) + '</span></th>';
-  }).join('');
+  }).join('') + '<th class="rotate" style="border-left:2px solid var(--indigo);"><span>Score</span></th>';
 
   var rows = currentClass.students.map(function(student) {
     var isAssigned = activeStudentIds.indexOf(student.id) !== -1;
     var isHistorical = historicalStudentIds.indexOf(student.id) !== -1;
-    var progress = _spellingProgress[student.id] || {};
 
     if (!isAssigned && !isHistorical) {
       return '<tr style="opacity:0.3;"><td class="student-name">' + WordLabData.escapeHtml(student.name) + '</td>' +
-        words.map(function() { return '<td><div class="cell no-data" title="Not assigned">–</div></td>'; }).join('') + '</tr>';
+        words.map(function() { return '<td><div class="cell no-data" title="Not assigned">–</div></td>'; }).join('') +
+        '<td style="border-left:2px solid var(--indigo);"><div class="cell no-data">–</div></td></tr>';
     }
 
+    // Use latest check-in session if available
+    var ciKey = set.id + ':' + student.id;
+    var ciSessions = _checkInResults[ciKey] || [];
+    var latestSession = ciSessions.length > 0 ? ciSessions[ciSessions.length - 1] : null;
+
     var rowStyle = isHistorical && !isAssigned ? 'opacity:0.6;' : '';
-    var cells = words.map(function(word) {
-      var key = 'ss:' + set.id.slice(0,8) + ':' + word.toLowerCase();
-      var result = progress[key] || null;
-      if (!result || result.total === 0) return '<td><div class="cell no-data" title="No data yet">–</div></td>';
-      var pct = WordLabData.getAccuracy(result);
-      var ac = accClass(pct);
-      var flagged = WordLabData.isIntervention(result, THRESHOLD_PCT, THRESHOLD_ATTEMPTS);
-      var tooltip = WordLabData.escapeHtml(student.name) + ' — ' + word + '\\n' + pct + '% (' + result.correct + '/' + result.total + ')' + (flagged ? '\\n⚠️ Needs support' : '');
-      return '<td><div class="cell ' + ac + '" title="' + tooltip + '"' +
-        (flagged ? ' style="outline:3px solid var(--bad);outline-offset:-2px;"' : '') +
-        '>' + (flagged ? '<span aria-hidden="true" style="font-size:9px;position:absolute;top:1px;right:2px;">⚠</span>' : '') + pct + '%</div></td>';
-    }).join('');
+    var cells, scoreCell;
+
+    if (latestSession && latestSession.results && latestSession.results.length > 0) {
+      // Build lookup from latest session results
+      var wordResults = {};
+      (latestSession.results || []).forEach(function(r) { wordResults[r.word.toLowerCase()] = r; });
+      cells = words.map(function(word) {
+        var r = wordResults[word.toLowerCase()];
+        if (!r) return '<td><div class="cell no-data" title="Not tested">–</div></td>';
+        if (r.correct) {
+          return '<td><div class="cell acc-100" title="✓ Correct">✓</div></td>';
+        } else {
+          return '<td><div class="cell acc-low" title="✗ Wrote: ' + WordLabData.escapeHtml(r.typed || '') + '">✗</div></td>';
+        }
+      }).join('');
+      var pct = latestSession.total > 0 ? Math.round((latestSession.score / latestSession.total) * 100) : 0;
+      scoreCell = '<td style="border-left:2px solid var(--indigo);"><div class="cell ' + accClass(pct) + '">' + latestSession.score + '/' + latestSession.total + '</div></td>';
+    } else {
+      // Fallback to cumulative practice data
+      var progress = _spellingProgress[student.id] || {};
+      cells = words.map(function(word) {
+        var key = 'ss:' + set.id.slice(0,8) + ':' + word.toLowerCase();
+        var result = progress[key] || null;
+        if (!result || result.total === 0) return '<td><div class="cell no-data" title="No data yet">–</div></td>';
+        var pct = WordLabData.getAccuracy(result);
+        var ac = accClass(pct);
+        var flagged = WordLabData.isIntervention(result, THRESHOLD_PCT, THRESHOLD_ATTEMPTS);
+        var tooltip = WordLabData.escapeHtml(student.name) + ' — ' + word + '\\n' + pct + '% (' + result.correct + '/' + result.total + ')' + (flagged ? '\\n⚠️ Needs support' : '');
+        return '<td><div class="cell ' + ac + '" title="' + tooltip + '"' +
+          (flagged ? ' style="outline:3px solid var(--bad);outline-offset:-2px;"' : '') +
+          '>' + (flagged ? '<span aria-hidden="true" style="font-size:9px;position:absolute;top:1px;right:2px;">⚠</span>' : '') + pct + '%</div></td>';
+      }).join('');
+      scoreCell = '<td style="border-left:2px solid var(--indigo);"><div class="cell no-data">–</div></td>';
+    }
 
     var badge = '';
     var actions = '';
@@ -3353,8 +3380,19 @@ function buildSpellingSetHeatmap(set) {
         '<button onclick="event.stopPropagation();ssCompleteStudent(\'' + set.id + '\',\'' + student.id + '\')" title="Mark completed" style="border:1px solid var(--line);background:var(--navy-3);color:var(--text-secondary);border-radius:4px;padding:1px 5px;font-size:8px;font-weight:700;cursor:pointer;font-family:\'Lexend\',sans-serif;">✅</button>' +
         '</div>';
     }
-    return '<tr style="' + rowStyle + '"><td class="student-name" onclick="showStudentProfile(\'' + student.id + '\')">' + WordLabData.escapeHtml(student.name) + badge + actions + '</td>' + cells + '</tr>';
+    return '<tr style="' + rowStyle + '"><td class="student-name" onclick="showStudentProfile(\'' + student.id + '\')">' + WordLabData.escapeHtml(student.name) + badge + actions + '</td>' + cells + scoreCell + '</tr>';
   }).join('');
+
+  // Count how many check-in sessions exist for this set
+  var totalCheckIns = 0;
+  currentClass.students.forEach(function(s) {
+    var ciKey = set.id + ':' + s.id;
+    var n = (_checkInResults[ciKey] || []).length;
+    if (n > totalCheckIns) totalCheckIns = n;
+  });
+  var heatmapLabel = totalCheckIns > 0
+    ? '<span style="font-size:10px;font-weight:700;color:var(--text-secondary);margin-bottom:4px;display:block;">Showing: Latest Check-In (Check-In ' + totalCheckIns + ')' + (totalCheckIns > 1 ? ' · See all sessions below' : '') + '</span>'
+    : '<span style="font-size:10px;font-weight:700;color:var(--text-secondary);margin-bottom:4px;display:block;">Practice Data (no check-ins yet)</span>';
 
   var legend = '<div class="legend"><span>Accuracy:</span>' +
     '<span class="legendCell" style="background:#166534;"></span><span>100%</span>' +
@@ -3505,7 +3543,8 @@ function buildSpellingSetHeatmap(set) {
   return '<div class="panel"><div class="panelInner">' +
     '<div class="panelTitle">' + WordLabData.escapeHtml(set.name) + ' — ' + words.length + ' words ' + aiLabel + '</div>' +
     actionHtml + assignHtml +
-    '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 0 8px;">Word-by-word accuracy — assigned students only</div>' +
+    '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 0 8px;">Check-In Results</div>' +
+    heatmapLabel +
     '<div class="heatmapWrap"><table class="heatmap"><thead><tr><th>Student</th>' + headerCols + '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
     '<div style="margin-top:10px;">' + legend + '</div>' +
     checkInTabsHtml +
