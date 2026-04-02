@@ -1116,6 +1116,30 @@ into Word Labs as a structured spelling progression system.
 
 ---
 
+### PHASE 7.15 — Session 2026-04-02
+
+#### Spelling check-in fixes (from classroom testing)
+- [x] Teacher-led mode: all students now see words in same order (was randomly shuffled per student)
+- [x] Main heatmap shows latest check-in session ✓/✗ results instead of cumulative averages
+- [x] Added `assessment_started_at` column — each new check-in start resets completion flags
+- [x] Students can now take repeated check-ins on the same spelling set
+- [x] Score column added to spelling set heatmap
+- [x] Label shows which check-in is being displayed ("Showing: Latest Check-In")
+
+#### Stage 2/3 curriculum morpheme expansion
+- [x] Gap analysis against Australian Curriculum Stage 2 and Stage 3 morphology strand
+- [x] Added 5 new prefixes: `be-` (to make), `hypo-` (under), `circum-` (around), `uni-` (one/single), `arch-` (chief)
+- [x] Added 11 new suffixes: `-age`, `-ory`, `-ary`, `-ise` (Aus spelling), `-ious`, `-eous`, `-ative`, `-tion`, `-sion`, `-ation`, `-pathy`
+- [x] Added 2 Latin roots: `grad` (step/go → 11 combos), `mot` (move → 27 combos)
+- [x] Dictionary expanded by 85 words for new morpheme combinations
+- [x] Morpheme Builder: 2,958 → 3,172 valid combos (+214, +7.2%), 247 bases, 47 prefixes, 55 suffixes
+- [x] Breakdown Blitz: +29 new words using new morphemes (befriend, uniform, universal, circumspect, coverage, motion, promotion, gradual, informative, etc.)
+- [x] Mission Mode: new prefixes + suffixes + bases with validPrefixes/validSuffixes for matching
+- [x] Meaning Mode: new prefixes + suffixes for meaning matching
+- [x] Flashcards: automatically picks up changes via data.js
+
+---
+
 ### PHASE 9 — NSW Department of Education Approval
 
 Full checklist document: `docs/nsw-doe-approval-checklist.md`
