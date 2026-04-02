@@ -563,15 +563,19 @@ const WordLabData = (() => {
     return data || null;
   }
 
-  async function verifyStudentCode(studentId, code) {
-    var { data } = await sb()
-      .from('students')
-      .select('student_code, extension_mode, eald_language, support_mode')
-      .eq('id', studentId)
-      .maybeSingle();
-    if (!data || !data.student_code) return { ok: false, extensionMode: false, ealdLanguage: null };
-    var ok = data.student_code.toUpperCase() === code.toUpperCase();
-    return { ok, extensionMode: ok ? !!data.extension_mode : false, ealdLanguage: ok ? (data.eald_language || null) : null };
+  async function verifyStudentCode(studentId, code, classId) {
+    // Use server-side RPC to verify code — never exposes student_code to the client
+    var { data, error } = await sb().rpc('verify_student_login', {
+      p_class_id: classId,
+      p_student_id: studentId,
+      p_student_code: code
+    });
+    if (error || !data || !data.success) return { ok: false, extensionMode: false, ealdLanguage: null };
+    return {
+      ok: true,
+      extensionMode: !!data.extension_mode,
+      ealdLanguage: data.eald_language || null
+    };
   }
 
   // ── Session ───────────────────────────────────────────────────
@@ -1058,7 +1062,7 @@ const WordLabData = (() => {
     if (inp) inp.disabled = true;
     (async function() {
       try {
-        var result = await verifyStudentCode(_loginStudentId, code);
+        var result = await verifyStudentCode(_loginStudentId, code, _loginClassId);
         if (!result.ok) {
           if (err) err.textContent = 'Incorrect code \u2014 try again.';
           if (inp) { inp.disabled = false; inp.value = ''; inp.focus(); }
