@@ -1206,6 +1206,16 @@ into Word Labs as a structured spelling progression system.
 - [x] Preconnect hints for Google Fonts, Supabase, jsDelivr on landing page
 - [x] Replaced last `select('*')` in dashboard.html reward function with explicit columns
 - [x] CSS cache headers in vercel.json
+- [x] Teacher resources: search input debounced (200ms) to prevent re-rendering 254 cards on every keystroke
+
+#### Error handling & robustness
+- [x] Scientist page: all 10 saveScientist/purchase functions wrapped in try-catch with user feedback
+- [x] 4 game pages: scientist character loading handles errors gracefully (falls back to default SVG)
+- [x] class-setup.html: addStudent/removeStudent wrapped in try-catch
+- [x] Landing page: leaderboard shows friendly message for single-student classes
+- [x] Landing page: empty daily challenges shows placeholder text
+- [x] Onboarding: role="alert" + aria-live on error messages, Enter key support for forms
+- [x] Onboarding: mobile responsive breakpoints (600px — card padding, font sizes, progress dots)
 
 ---
 
