@@ -819,38 +819,57 @@ const WordLabData = (() => {
   async function saveScientist(updates) {
     const session = loadSession();
     if (!session) return;
-    const { data: existing } = await sb()
-      .from('student_character')
-      .select('*')
-      .eq('student_id', session.studentId)
-      .maybeSingle();
-    const char = ensureCharFields(existing ? { ...existing } : { student_id: session.studentId });
-    Object.assign(char.scientist, updates);
-    await sb().from('student_character').upsert(
-      { student_id: session.studentId, quarks: char.quarks, xp: char.xp,
-        badges: char.badges, scientist: char.scientist, stats: char.stats },
-      { onConflict: 'student_id' }
-    );
+    const keys = Object.keys(updates);
+    // For single-field updates, use atomic RPC to avoid read-modify-write race
+    if (keys.length === 1) {
+      const field = keys[0];
+      const value = updates[field];
+      try {
+        const { error } = await sb().rpc('save_scientist_field', {
+          p_student_id: session.studentId,
+          p_field: field,
+          p_value: value === undefined ? null : value
+        });
+        if (error) console.warn('save_scientist_field RPC error', error);
+        return;
+      } catch (e) {
+        console.warn('save_scientist_field failed, falling back', e);
+      }
+    }
+    // Multi-field update or RPC fallback: use sequential RPC calls per field
+    // This is still better than read-modify-write since each field is set atomically
+    try {
+      for (const field of keys) {
+        const { error } = await sb().rpc('save_scientist_field', {
+          p_student_id: session.studentId,
+          p_field: field,
+          p_value: updates[field]
+        });
+        if (error) console.warn('save_scientist_field error for', field, error);
+      }
+    } catch (e) {
+      console.warn('saveScientist RPC fallback failed', e);
+    }
   }
 
   async function purchase(itemId, cost) {
     const session = loadSession();
     if (!session) return { success: false, reason: 'No session' };
-    const { data: existing } = await sb()
-      .from('student_character')
-      .select('*')
-      .eq('student_id', session.studentId)
-      .maybeSingle();
-    const char = ensureCharFields(existing ? { ...existing } : { student_id: session.studentId });
-    if (char.quarks < cost) return { success: false, reason: 'Not enough quarks' };
-    char.quarks -= cost;
-    if (!char.scientist.owned.includes(itemId)) char.scientist.owned.push(itemId);
-    await sb().from('student_character').upsert(
-      { student_id: session.studentId, quarks: char.quarks, xp: char.xp,
-        badges: char.badges, scientist: char.scientist, stats: char.stats },
-      { onConflict: 'student_id' }
-    );
-    return { success: true, quarks: char.quarks };
+    try {
+      const { data, error } = await sb().rpc('atomic_purchase', {
+        p_student_id: session.studentId,
+        p_item_key: itemId,
+        p_cost: cost
+      });
+      if (error) {
+        console.warn('atomic_purchase RPC error', error);
+        return { success: false, reason: error.message };
+      }
+      return { success: data.success, quarks: data.quarks, reason: data.reason };
+    } catch (e) {
+      console.warn('purchase failed', e);
+      return { success: false, reason: 'Purchase failed' };
+    }
   }
 
   // ── Export ────────────────────────────────────────────────────
