@@ -1013,9 +1013,12 @@ function renderShopSection(title, items, field, sd) {
   const sci   = sd.scientist || {};
   const owned = sci.owned || [];
   const curVal = (field==='head'||field==='face'||field==='pet') ? (sci[field]||null) : sci[field];
+  const esc = WordLabData.escapeHtml;
   return `<div class="shopSection">
     <div class="shopSectionTitle">${title}</div>
     <div class="shopGrid">${items.map(item => {
+      const safeId = esc(item.id);
+      const safeField = esc(field);
       const isOwned   = sd.is_teacher || item.free || owned.includes(item.id) || item.id === '#ffffff' || item.id === 'plain' || item.id === 'none';
       const isEquipped= item.id === curVal || (item.id==='none' && !curVal);
       const canAfford = sd.quarks >= item.cost;
@@ -1027,13 +1030,13 @@ function renderShopSection(title, items, field, sd) {
       if (isEquipped) {
         btn = `<span class="shopBtn equipped">✓ Equipped</span>`;
       } else if (isOwned) {
-        btn = `<button class="shopBtn equip" onclick="shopEquip('${field}','${item.id}')">Equip</button>`;
+        btn = `<button class="shopBtn equip" onclick="shopEquip('${safeField}','${safeId}')">Equip</button>`;
       } else if (!hasReqBadge) {
         btn = `<span class="shopBtn cantafford">🔒 Requires: ${reqBadgeLabel}</span>`;
       } else if (item.cost === 0 && reqBadge) {
-        btn = `<button class="shopBtn buy" onclick="shopBuy('${item.id}',0,'${field}')">🏅 Claim Free</button>`;
+        btn = `<button class="shopBtn buy" onclick="shopBuy('${safeId}',0,'${safeField}')">🏅 Claim Free</button>`;
       } else if (canAfford) {
-        btn = `<button class="shopBtn buy" onclick="shopBuy('${item.id}',${item.cost},'${field}')">⚛️ ${item.cost}</button>`;
+        btn = `<button class="shopBtn buy" onclick="shopBuy('${safeId}',${item.cost},'${safeField}')">⚛️ ${item.cost}</button>`;
       } else {
         btn = `<span class="shopBtn cantafford">Need ${item.cost - sd.quarks} more ⚛️</span>`;
       }
@@ -1051,10 +1054,13 @@ function renderShopSection(title, items, field, sd) {
 function renderDanceSection(title, items, tier, sd) {
   const sci = sd.scientist || {};
   const owned = sci.owned || [];
+  const esc = WordLabData.escapeHtml;
+  const safeTier = esc(tier);
   const equippedId = (sci.dances || {})[tier] || items[0].id;
   return `<div class="shopSection">
     <div class="shopSectionTitle">${title}</div>
     <div class="shopGrid">${items.map(function(item) {
+      const safeId = esc(item.id);
       const isOwned = sd.is_teacher || item.free || owned.includes('dance_' + item.id);
       const isEquipped = item.id === equippedId || (item.free && !((sci.dances||{})[tier]) && item === items[0]);
       const canAfford = sd.quarks >= item.cost;
@@ -1062,9 +1068,9 @@ function renderDanceSection(title, items, tier, sd) {
       if (isEquipped) {
         btn = '<span class="shopBtn equipped">✓ Equipped</span>';
       } else if (isOwned) {
-        btn = '<button class="shopBtn equip" onclick="shopEquipDance(\'' + tier + '\',\'' + item.id + '\')">Equip</button>';
+        btn = '<button class="shopBtn equip" onclick="shopEquipDance(\'' + safeTier + '\',\'' + safeId + '\')">Equip</button>';
       } else if (canAfford) {
-        btn = '<button class="shopBtn buy" onclick="shopBuyDance(\'' + item.id + '\',' + item.cost + ',\'' + tier + '\')">⚛️ ' + item.cost + '</button>';
+        btn = '<button class="shopBtn buy" onclick="shopBuyDance(\'' + safeId + '\',' + item.cost + ',\'' + safeTier + '\')">⚛️ ' + item.cost + '</button>';
       } else {
         btn = '<span class="shopBtn cantafford">Need ' + (item.cost - sd.quarks) + ' more ⚛️</span>';
       }
@@ -1350,8 +1356,12 @@ async function loadCustomShopItems(sd) {
     milestoneUnlocked.forEach(function(id) { owned.push('custom_' + id); });
   }
 
+  const esc = WordLabData.escapeHtml;
   const itemsHtml = visible.map(item => {
     const border = rarityBorder[item.rarity] || '#e2e8f0';
+    const safeId = esc(item.id);
+    const safeName = esc(item.name);
+    const safeType = esc(item.item_type);
     const isOwned = isTeacher || owned.includes('custom_' + item.id);
     const canAfford = isTeacher || sd.quarks >= (item.quark_cost || 0);
 
@@ -1359,7 +1369,7 @@ async function loadCustomShopItems(sd) {
     const rawUrl = item.image_url && item.image_url.trim() !== 'null' && item.image_url.startsWith('http') ? item.image_url.trim() : null;
     const imgSrc = rawUrl || item.image_data;
     if (imgSrc) {
-      preview = `<img src="${imgSrc}" style="width:60px;height:60px;object-fit:contain;border-radius:6px;" alt="${item.name}">`;
+      preview = `<img src="${esc(imgSrc)}" style="width:60px;height:60px;object-fit:contain;border-radius:6px;" alt="${safeName}">`;
     } else {
       preview = `<div style="font-size:28px;">🎨</div>`;
     }
@@ -1368,9 +1378,9 @@ async function loadCustomShopItems(sd) {
     const isEquipped = equippedSlot === item.id;
     let btn = '';
     if (isTeacher || isOwned) {
-      btn = `<button class="shopBtn equip" onclick="equipCustomItem('${item.id}')">${isEquipped ? '✓ Equipped' : 'Equip'}</button>`;
+      btn = `<button class="shopBtn equip" onclick="equipCustomItem('${safeId}')">${isEquipped ? '✓ Equipped' : 'Equip'}</button>`;
     } else if (item.unlock_method === 'secret_code') {
-      btn = `<button class="shopBtn buy" onclick="enterSecretCode('${item.id}','${(item.secret_code||'').replace(/'/g,"\\'")}')">🔑 Enter Code</button>`;
+      btn = `<button class="shopBtn buy" onclick="enterSecretCode('${safeId}','${esc((item.secret_code||'').replace(/'/g,"\\'"))}')">🔑 Enter Code</button>`;
     } else if (item.unlock_method === 'gifted') {
       btn = `<span class="shopBtn cantafford">🎁 Teacher gift</span>`;
     } else if (item.unlock_method === 'milestone') {
@@ -1378,22 +1388,22 @@ async function loadCustomShopItems(sd) {
       var thresh = item.milestone_threshold || 0;
       var progress = stats[mt] || 0;
       if (progress >= thresh) {
-        btn = `<button class="shopBtn equip" onclick="equipCustomItem('${item.id}')">🏅 Unlocked! Equip</button>`;
+        btn = `<button class="shopBtn equip" onclick="equipCustomItem('${safeId}')">🏅 Unlocked! Equip</button>`;
       } else {
         btn = `<span class="shopBtn cantafford">🏅 ${progress}/${thresh}</span>`;
       }
     } else if (canAfford && item.quark_cost > 0) {
-      btn = `<button class="shopBtn buy" onclick="buyCustomItem('${item.id}',${item.quark_cost},'${item.item_type}')">⚛️ ${item.quark_cost}</button>`;
+      btn = `<button class="shopBtn buy" onclick="buyCustomItem('${safeId}',${item.quark_cost},'${safeType}')">⚛️ ${item.quark_cost}</button>`;
     } else if (item.quark_cost === 0) {
-      btn = `<button class="shopBtn equip" onclick="equipCustomItem('${item.id}')">Claim Free</button>`;
+      btn = `<button class="shopBtn equip" onclick="equipCustomItem('${safeId}')">Claim Free</button>`;
     } else {
       btn = `<span class="shopBtn cantafford">Need ${(item.quark_cost||0)-sd.quarks} more ⚛️</span>`;
     }
 
     return `<div class="shopItem" style="border:3px solid ${border};">
       ${preview}
-      <div class="shopItemName">${item.name}</div>
-      <div class="shopItemCost" style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">${item.rarity}</div>
+      <div class="shopItemName">${safeName}</div>
+      <div class="shopItemCost" style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">${esc(item.rarity)}</div>
       ${btn}
     </div>`;
   }).join('');
