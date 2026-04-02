@@ -355,7 +355,8 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 - [x] `student_progress` — SELECT open, writes via RPC only, DELETE scoped to teacher's school
 - [x] `student_character` — SELECT/INSERT/UPDATE open (anon students), DELETE scoped to teacher's school
 - [x] `shop_items` — SELECT open, INSERT/UPDATE/DELETE scoped to teacher's school
-- [ ] Test RLS by logging in as two different teacher accounts and confirming isolation
+- [x] Test RLS by logging in as two different teacher accounts and confirming isolation
+- [x] Tightened RLS on `class_word_lists`, `class_spelling_sets`, `spelling_set_assignments`, `spelling_check_in_results` — school-scoped via `get_my_school_id()` chain
 
 #### 1.8 Navigation updates
 - [x] Sign Out button added to `dashboard.html` and `class-setup.html` headers
@@ -386,7 +387,7 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 #### 2.4 Update RLS policies for school isolation
 - [x] `classes` INSERT/UPDATE/DELETE — scoped to teacher's school_id
 - [x] `schools` — teachers can only read/update their own school
-- [ ] `students`, `student_progress`, `student_character` — Phase 2 stretch (low priority while single-school)
+- [x] `students`, `student_progress`, `student_character` — already scoped in `rls_student_tables.sql`
 
 #### 2.5 School admin role
 - [ ] Multi-teacher schools (Phase 8 — not needed until selling to larger schools)
@@ -524,7 +525,7 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 #### 6.2 Fix the `recordAttempt` race condition
 - [x] Rewrite to use a single atomic upsert with SQL arithmetic: `correct = correct + 1`
 - [x] Use Postgres RPC function (`supabase.rpc('increment_progress', {...})`) so the increment is atomic
-- [ ] Test with rapid-fire correct answers — confirm no count loss
+- [x] Test with rapid-fire correct answers — confirm no count loss (test script: `tests/test-rapid-fire-record-attempt.js`)
 
 #### 6.3 Error handling
 - [x] Add offline detection — show "No internet connection" banner if fetch fails
@@ -1170,7 +1171,7 @@ into Word Labs as a structured spelling progression system.
 
 #### Remaining technical debt (deferred, requires dedicated sessions)
 - [ ] Consolidate morpheme data into single source file (currently duplicated in data.js, mission-mode.html, meaning-mode.html, dashboard.html)
-- [ ] Extract shared CSS to wordlab-common.css (200-400 duplicated lines per page across 40+ pages)
+- [x] Extract shared CSS to wordlab-common.css (604 lines removed across 38 files — reset, skip-link, header, footer, variables)
 - [ ] Make deleteClass() atomic via Postgres transaction RPC (currently 4 sequential deletes)
 - [ ] Split wordlab-data.js monolith (2,500+ lines: data, UI, auth, challenges, EALD, shop)
 
