@@ -105,7 +105,30 @@ const WordLabData = (() => {
     s.extensionMode = sessionStorage.getItem('wl_extension_mode') === 'true';
     return s;
   }
-  function endSession() { try { sessionStorage.removeItem(SESSION_KEY); } catch {} }
+  function endSession() {
+    try {
+      var session = loadSession();
+      var studentId = session ? session.studentId : null;
+      sessionStorage.removeItem(SESSION_KEY);
+      // Clean up student-specific localStorage keys
+      if (studentId) {
+        var keysToRemove = [];
+        for (var i = 0; i < localStorage.length; i++) {
+          var key = localStorage.key(i);
+          if (key && key.indexOf(studentId) !== -1 && (
+            key.indexOf('wl_challenges_') === 0 ||
+            key.indexOf('wl_featured_') === 0 ||
+            key.indexOf('wl_focus_game_') === 0 ||
+            key.indexOf('wl_crown_') === 0 ||
+            key.indexOf('wl_checkin_done_') === 0
+          )) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(function(k) { localStorage.removeItem(k); });
+      }
+    } catch {}
+  }
 
   // ── Pure computation ──────────────────────────────────────────
   function getLevel(xp) {
@@ -343,7 +366,7 @@ const WordLabData = (() => {
     const { data: { session: _sess } } = await sb().auth.getSession();
     let query = sb()
       .from('classes')
-      .select('id, name, class_code, created_at, students!students_class_id_fkey(id, name, student_code, extension_mode, eald_language, support_mode, support_mode, support_mode)')
+      .select('id, name, class_code, created_at, students!students_class_id_fkey(id, name, student_code, extension_mode, eald_language, support_mode)')
       .order('name');
     if (_sess) {
       const teacher = await getTeacherRecord();
@@ -377,7 +400,7 @@ const WordLabData = (() => {
 
     const { data: studs, error: stuErr } = await sb()
       .from('students')
-      .select('id, name, student_code, extension_mode, eald_language, support_mode, support_mode, support_mode')
+      .select('id, name, student_code, extension_mode, eald_language, support_mode')
       .eq('class_id', id)
       .order('name');
     if (stuErr) throw stuErr;
@@ -543,7 +566,7 @@ const WordLabData = (() => {
   async function verifyStudentCode(studentId, code) {
     var { data } = await sb()
       .from('students')
-      .select('student_code, extension_mode, eald_language, support_mode, support_mode')
+      .select('student_code, extension_mode, eald_language, support_mode')
       .eq('id', studentId)
       .maybeSingle();
     if (!data || !data.student_code) return { ok: false, extensionMode: false, ealdLanguage: null };
