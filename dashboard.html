@@ -554,6 +554,7 @@
       <button class="navTab" onclick="showSection('homophone-hunter',this)">📡 Homophones</button>
       <button class="navTab" onclick="showSection('word-spectrum',this)">🧲 Spectrum</button>
       <button class="navTab" onclick="showSection('word-refinery',this)">⚗️ Refinery</button>
+      <button class="navTab" onclick="showSection('speed-mode',this)">🏎️ Speed</button>
     </div>
 
     <div id="sectionSummary"></div>
@@ -568,6 +569,7 @@
     <div id="sectionMeaningMode" class="hidden"></div>
     <div id="sectionMissionMode" class="hidden"></div>
     <div id="sectionRootLab" class="hidden"></div>
+    <div id="sectionSpeedMode" class="hidden"></div>
     <div id="sectionWordLists" class="hidden"></div>
   </div>
 
@@ -676,7 +678,8 @@ const COLUMNS = {
     'cline:stopping','cline:starting','cline:checking','cline:connecting','cline:measuring',
     'cline:hiding','cline:fixing','cline:wanting','cline:eating','cline:running',
     'cline:talking-quietly','cline:being-scared','cline:being-happy','cline:being-angry','cline:teaching'
-  ]
+  ],
+  'speed-mode': []
 };
 
 const THRESHOLD_PCT = 70;
@@ -739,7 +742,7 @@ async function toggleDashboardMode(isExt){
     await loadExtensionData();
   }
   renderSummary();
-  ['sound-sorter','phoneme-splitter','syllable-splitter','breakdown-blitz','meaning-mode','mission-mode','root-lab','homophone-hunter','word-spectrum','word-refinery']
+  ['sound-sorter','phoneme-splitter','syllable-splitter','breakdown-blitz','meaning-mode','mission-mode','root-lab','homophone-hunter','word-spectrum','word-refinery','speed-mode']
     .forEach(a => renderHeatmap(a));
 }
 
@@ -1024,7 +1027,7 @@ async function renderDashboard(){
   let totalAttempts = 0, totalCorrect = 0, flagCount = 0;
   const _actTotals = {};
   const _catMisses = {};
-  const ACTS_KEYS = ['sound-sorter','phoneme-splitter','syllable-splitter','breakdown-blitz','meaning-mode','mission-mode','root-lab','homophone-hunter','word-spectrum','word-refinery'];
+  const ACTS_KEYS = ['sound-sorter','phoneme-splitter','syllable-splitter','breakdown-blitz','meaning-mode','mission-mode','root-lab','homophone-hunter','word-spectrum','word-refinery','speed-mode'];
   ACTS_KEYS.forEach(k => { _actTotals[k] = 0; });
   students.forEach(s => {
     Object.entries(s.results || {}).forEach(([actKey, act]) => {
@@ -1082,6 +1085,7 @@ async function renderDashboard(){
   renderHeatmap('homophone-hunter');
   renderHeatmap('word-spectrum');
   renderHeatmap('word-refinery');
+  renderHeatmap('speed-mode');
 }
 
 function switchView(view, btn) {
@@ -1122,6 +1126,7 @@ function showSection(name, btn){
     'homophone-hunter':'sectionHomophoneHunter',
     'word-spectrum':'sectionWordSpectrum',
     'word-refinery':'sectionWordRefinery',
+    'speed-mode':'sectionSpeedMode',
     'word-lists':'sectionWordLists',
   };
 
@@ -1169,7 +1174,8 @@ function renderFlags(){
     'root-lab':'Root Lab',
     'homophone-hunter':'Homophone Hunter',
     'word-spectrum':'Word Spectrum',
-    'word-refinery':'The Refinery'
+    'word-refinery':'The Refinery',
+    'speed-mode':'Speed Builder'
   };
 
   container.innerHTML = `
@@ -1231,13 +1237,24 @@ function renderHeatmap(activity){
     'homophone-hunter':  'sectionHomophoneHunter',
     'word-spectrum':     'sectionWordSpectrum',
     'word-refinery':     'sectionWordRefinery',
+    'speed-mode':        'sectionSpeedMode',
   };
   const container = document.getElementById(sectionMap[activity]);
   if(!container) return;
 
   const isExt = dashboardMode === 'extension';
-  const allColumns = isExt ? (getExtColumns()[activity] || []) : (COLUMNS[activity] || []);
+  let allColumns = isExt ? (getExtColumns()[activity] || []) : (COLUMNS[activity] || []);
   const students = currentClass.students;
+
+  // For activities with dynamic categories (e.g. speed-mode), discover columns from student data
+  if (allColumns.length === 0 && students.length > 0) {
+    const dynamicCols = new Set();
+    students.forEach(function(s) {
+      var actData = isExt ? ((extensionData[s.id]||{})[activity]||{}) : ((s.results||{})[activity]||{});
+      Object.keys(actData).forEach(function(k) { dynamicCols.add(k); });
+    });
+    allColumns = Array.from(dynamicCols).sort();
+  }
   const isTTR = (activity === 'meaning-mode' || activity === 'mission-mode');
   const isMorpheme = isTTR;
 
@@ -1266,6 +1283,7 @@ function renderHeatmap(activity){
     'homophone-hunter':  '📡 Homophone Hunter — accuracy by mode',
     'word-spectrum':     '🧲 Word Spectrum — accuracy by mode',
     'word-refinery':     '⚗️ The Refinery — accuracy by cline',
+    'speed-mode':        '🏎️ Speed Builder — accuracy by word',
   };
 
   const morphemeFilterUI = isMorpheme ? `
@@ -1293,7 +1311,7 @@ function renderHeatmap(activity){
   `;
 
   const headerCols = columns.map(col =>
-    `<th class="rotate"><span>${colLabel(col)}</span></th>`
+    `<th class="rotate"><span>${WordLabData.escapeHtml(colLabel(col))}</span></th>`
   ).join('');
 
   const rows = students.map(student => {
@@ -1317,7 +1335,7 @@ function renderHeatmap(activity){
       }
 
       const timeStr = avgMs ? `Avg: ${(avgMs/1000).toFixed(1)}s` : '';
-      const tooltip = `${WordLabData.escapeHtml(student.name)} — ${colLabel(col)}\n${pct}% (${result.correct}/${total})${timeStr ? '\n'+timeStr : ''}${flagged ? '\n⚠️ Needs support' : ''}`;
+      const tooltip = `${WordLabData.escapeHtml(student.name)} — ${WordLabData.escapeHtml(colLabel(col))}\n${pct}% (${result.correct}/${total})${timeStr ? '\n'+timeStr : ''}${flagged ? '\n⚠️ Needs support' : ''}`;
 
       return `<td>
         <div class="cell ${ac} ${tc}" 
@@ -1344,7 +1362,8 @@ function renderHeatmap(activity){
   const actNameMap = {
     'sound-sorter':'Sound Sorter','phoneme-splitter':'Phoneme Splitter','syllable-splitter':'Syllable Splitter',
     'breakdown-blitz':'Breakdown Blitz','meaning-mode':'Meaning Match-Up','mission-mode':'Mission Mode',
-    'root-lab':'Root Lab','homophone-hunter':'Homophone Hunter','word-spectrum':'Word Spectrum','word-refinery':'The Refinery'
+    'root-lab':'Root Lab','homophone-hunter':'Homophone Hunter','word-spectrum':'Word Spectrum','word-refinery':'The Refinery',
+    'speed-mode':'Speed Builder'
   };
   students.forEach(student => {
     const actData = isExt
@@ -1536,7 +1555,8 @@ function showStudentProfile(studentId){
   const profileFlags = [];
   const actLabel = {
     'sound-sorter':'Sound Sorter','phoneme-splitter':'Phoneme','syllable-splitter':'Syllable',
-    'meaning-mode':'Meaning','mission-mode':'Mission','breakdown-blitz':'Breakdown','root-lab':'Root Lab','homophone-hunter':'Homophones','word-spectrum':'Spectrum','word-refinery':'Refinery'
+    'meaning-mode':'Meaning','mission-mode':'Mission','breakdown-blitz':'Breakdown','root-lab':'Root Lab','homophone-hunter':'Homophones','word-spectrum':'Spectrum','word-refinery':'Refinery',
+    'speed-mode':'Speed Builder'
   };
   Object.entries(results).forEach(([activity, actData]) => {
     Object.entries(actData).forEach(([category, r]) => {
@@ -1676,6 +1696,7 @@ function showStudentProfile(studentId){
       ${profileSection('Homophones',                'red', 'homophone-hunter',  COLUMNS['homophone-hunter'],  false)}
       ${profileSection('Word Spectrum',             'red', 'word-spectrum',     COLUMNS['word-spectrum'],     false)}
       ${profileSection('The Refinery',              'red', 'word-refinery',     COLUMNS['word-refinery'],     false)}
+      ${profileSection('Speed Builder',             'red', 'speed-mode',       Object.keys((results||{})['speed-mode']||{}).sort(), false)}
       ${buildProfileSpellingSets(studentId)}
     </div>
     <div id="profilePageExt" class="hidden">${extPageHtml}</div>
@@ -1715,6 +1736,7 @@ function renderSummary(){
     { key:'homophone-hunter',  label:'📡 Homophones', short:'Homophones' },
     { key:'word-spectrum',     label:'🧲 Spectrum',   short:'Spectrum'   },
     { key:'word-refinery',     label:'⚗️ Refinery',   short:'Refinery'   },
+    { key:'speed-mode',        label:'🏎️ Speed',      short:'Speed'      },
   ];
 
   const isExt = dashboardMode === 'extension';
@@ -2280,7 +2302,7 @@ function wlPopulateStudentPicker(){
   var students = currentClass.students.slice().sort(function(a,b){ return a.name.localeCompare(b.name); });
   picker.innerHTML = students.map(function(s){
     return '<label style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:13px;font-weight:700;color:#334155;cursor:pointer;">' +
-      '<input type="checkbox" class="wlStudentCb" value="' + s.id + '"> ' + s.name + '</label>';
+      '<input type="checkbox" class="wlStudentCb" value="' + s.id + '"> ' + WordLabData.escapeHtml(s.name) + '</label>';
   }).join('');
 }
 
@@ -2600,7 +2622,7 @@ async function dashAssignWordList(listId){
   var checkboxes = students.map(function(s){
     var checked = assigned.indexOf(s.id) !== -1 ? 'checked' : '';
     return '<label style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:13px;font-weight:700;color:#334155;cursor:pointer;">' +
-      '<input type="checkbox" class="assignCb" value="' + s.id + '" ' + checked + '> ' + s.name + '</label>';
+      '<input type="checkbox" class="assignCb" value="' + s.id + '" ' + checked + '> ' + WordLabData.escapeHtml(s.name) + '</label>';
   }).join('');
 
   var html = '<div style="max-height:300px;overflow-y:auto;margin-bottom:12px;">' +
@@ -2705,7 +2727,7 @@ function mlPopulateStudentPicker(){
   var students = currentClass.students.slice().sort(function(a,b){ return a.name.localeCompare(b.name); });
   picker.innerHTML = students.map(function(s){
     return '<label style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:13px;font-weight:700;color:#334155;cursor:pointer;">' +
-      '<input type="checkbox" class="mlStudentCb" value="' + s.id + '"> ' + s.name + '</label>';
+      '<input type="checkbox" class="mlStudentCb" value="' + s.id + '"> ' + WordLabData.escapeHtml(s.name) + '</label>';
   }).join('');
 }
 
@@ -2945,7 +2967,7 @@ async function dashAssignMorphemeSet(setId){
   var checkboxes = students.map(function(s){
     var checked = assigned.indexOf(s.id) !== -1 ? 'checked' : '';
     return '<label style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:13px;font-weight:700;color:#334155;cursor:pointer;">' +
-      '<input type="checkbox" class="mlAssignCb" value="' + s.id + '" ' + checked + '> ' + s.name + '</label>';
+      '<input type="checkbox" class="mlAssignCb" value="' + s.id + '" ' + checked + '> ' + WordLabData.escapeHtml(s.name) + '</label>';
   }).join('');
 
   var html = '<div style="max-height:300px;overflow-y:auto;margin-bottom:12px;">' +
@@ -3359,7 +3381,7 @@ function buildSpellingSetHeatmap(set) {
         var pct = WordLabData.getAccuracy(result);
         var ac = accClass(pct);
         var flagged = WordLabData.isIntervention(result, THRESHOLD_PCT, THRESHOLD_ATTEMPTS);
-        var tooltip = WordLabData.escapeHtml(student.name) + ' — ' + word + '\\n' + pct + '% (' + result.correct + '/' + result.total + ')' + (flagged ? '\\n⚠️ Needs support' : '');
+        var tooltip = WordLabData.escapeHtml(student.name) + ' — ' + WordLabData.escapeHtml(word) + '\\n' + pct + '% (' + result.correct + '/' + result.total + ')' + (flagged ? '\\n⚠️ Needs support' : '');
         return '<td><div class="cell ' + ac + '" title="' + tooltip + '"' +
           (flagged ? ' style="outline:3px solid var(--bad);outline-offset:-2px;"' : '') +
           '>' + (flagged ? '<span aria-hidden="true" style="font-size:9px;position:absolute;top:1px;right:2px;">⚠</span>' : '') + pct + '%</div></td>';
