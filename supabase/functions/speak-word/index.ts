@@ -1,16 +1,24 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'content-type, authorization',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+const ALLOWED_ORIGINS = [
+  'https://wordlabs.app',
+  'https://morphology-builder.vercel.app',
+  'https://nickd135.github.io',
+  'http://localhost:8080',
+  'http://localhost:3000',
+];
 
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-  });
+function getCorsOrigin(req: Request): string {
+  const origin = req.headers.get('origin') || '';
+  return ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+}
+
+function corsHeaders(req: Request) {
+  return {
+    'Access-Control-Allow-Origin': getCorsOrigin(req),
+    'Access-Control-Allow-Headers': 'content-type, authorization',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
 }
 
 // Google Cloud TTS language codes (BCP-47) and preferred voice names
@@ -74,13 +82,20 @@ const VOICE_MAP: Record<string, { lang: string; voice?: string; gender: string }
 };
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
+  const headers = corsHeaders(req);
+  const json = (data: unknown, status = 200) =>
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   const apiKey = Deno.env.get('GOOGLE_TTS_API_KEY');
   if (!apiKey) return json({ error: 'TTS not configured' }, 500);
 
-  let body: { text: string; language: string };
+  let body: { text: string; language: string; student_id?: string; class_id?: string };
   try {
     body = await req.json();
   } catch {
@@ -91,14 +106,43 @@ Deno.serve(async (req: Request) => {
   if (!text || !language) return json({ error: 'Missing text or language' }, 400);
   if (text.length > 200) return json({ error: 'Text too long (max 200 chars)' }, 400);
 
-  // Build a cache key from text + language
-  const cacheKey = `tts/${language}/${text.toLowerCase().trim().replace(/[^a-z0-9\u0080-\uffff]+/g, '_')}.mp3`;
-
-  // Check Supabase Storage cache first
+  // Auth check: accept either teacher JWT or valid student_id + class_id
+  const authHeader = req.headers.get('Authorization');
   const adminSb = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
+
+  let authenticated = false;
+
+  // Try teacher auth first
+  if (authHeader) {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) authenticated = true;
+  }
+
+  // Fall back to student auth: verify student_id + class_id exist in DB
+  if (!authenticated && body.student_id && body.class_id) {
+    const { data: student } = await adminSb
+      .from('students')
+      .select('id')
+      .eq('id', body.student_id)
+      .eq('class_id', body.class_id)
+      .maybeSingle();
+    if (student) authenticated = true;
+  }
+
+  if (!authenticated) {
+    return json({ error: 'Unauthorized — provide teacher auth or valid student_id + class_id' }, 401);
+  }
+
+  // Build a cache key from text + language
+  const cacheKey = `tts/${language}/${text.toLowerCase().trim().replace(/[^a-z0-9\u0080-\uffff]+/g, '_')}.mp3`;
 
   // Try to get existing cached audio URL
   const { data: existingFile } = await adminSb.storage.from('tts-cache').createSignedUrl(cacheKey, 3600);

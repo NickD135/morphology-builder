@@ -1,10 +1,26 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+const ALLOWED_ORIGINS = [
+  'https://wordlabs.app',
+  'https://morphology-builder.vercel.app',
+  'https://nickd135.github.io',
+  'http://localhost:8080',
+  'http://localhost:3000',
+];
+
+function getCorsOrigin(req: Request): string {
+  const origin = req.headers.get('origin') || '';
+  return ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+}
+
+function corsHeaders(req: Request) {
+  return {
+    'Access-Control-Allow-Origin': getCorsOrigin(req),
+    'Access-Control-Allow-Headers': 'content-type, authorization',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
+}
 
 function buildPrompt(name?: string, itemType?: string, description?: string): string {
   const typeLabels: Record<string, string> = {
@@ -64,15 +80,39 @@ ${descPart ? 'Remember: the teacher specifically asked for "' + description + '"
 }
 
 serve(async (req: Request) => {
+  const headers = corsHeaders(req);
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
+    return new Response(null, { status: 204, headers });
   }
 
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Verify teacher auth
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_ANON_KEY')!,
+    { global: { headers: { Authorization: authHeader } } },
+  );
+  const { data: { user }, error: authErr } = await supabase.auth.getUser();
+  if (authErr || !user) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...headers, 'Content-Type': 'application/json' },
     });
   }
 
@@ -80,7 +120,7 @@ serve(async (req: Request) => {
   if (!apiKey) {
     return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }), {
       status: 500,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      headers: { ...headers, 'Content-Type': 'application/json' },
     });
   }
 
@@ -90,14 +130,14 @@ serve(async (req: Request) => {
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
       status: 400,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      headers: { ...headers, 'Content-Type': 'application/json' },
     });
   }
 
   if (!body.image) {
     return new Response(JSON.stringify({ error: 'Missing image field (base64 PNG)' }), {
       status: 400,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      headers: { ...headers, 'Content-Type': 'application/json' },
     });
   }
 
@@ -130,7 +170,7 @@ serve(async (req: Request) => {
     const err = await anthropicResp.json().catch(() => ({}));
     return new Response(JSON.stringify({ error: (err as any)?.error?.message || 'Anthropic API error ' + anthropicResp.status }), {
       status: 502,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      headers: { ...headers, 'Content-Type': 'application/json' },
     });
   }
 
@@ -139,6 +179,6 @@ serve(async (req: Request) => {
 
   return new Response(JSON.stringify({ text }), {
     status: 200,
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    headers: { ...headers, 'Content-Type': 'application/json' },
   });
 });

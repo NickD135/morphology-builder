@@ -1,23 +1,47 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'content-type, authorization',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+const ALLOWED_ORIGINS = [
+  'https://wordlabs.app',
+  'https://morphology-builder.vercel.app',
+  'https://nickd135.github.io',
+  'http://localhost:8080',
+  'http://localhost:3000',
+];
 
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-  });
+function getCorsOrigin(req: Request): string {
+  const origin = req.headers.get('origin') || '';
+  return ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+}
+
+function corsHeaders(req: Request) {
+  return {
+    'Access-Control-Allow-Origin': getCorsOrigin(req),
+    'Access-Control-Allow-Headers': 'content-type, authorization',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 const GITHUB_REPO = 'NickD135/morphology-builder';
 
 serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
+  const headers = corsHeaders(req);
+  const json = (data: unknown, status = 200) =>
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   let body: Record<string, string>;
@@ -37,6 +61,20 @@ serve(async (req: Request) => {
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
+
+  // Rate limiting: check if the same email submitted feedback in the last 5 minutes
+  if (email) {
+    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const { data: recent } = await supabase
+      .from('feedback')
+      .select('id')
+      .eq('email', email)
+      .gte('created_at', fiveMinAgo)
+      .limit(1);
+    if (recent && recent.length > 0) {
+      return json({ error: 'Please wait a few minutes before submitting again' }, 429);
+    }
+  }
 
   const { error: dbError } = await supabase.from('feedback').insert({
     name: name || null,
@@ -112,16 +150,22 @@ serve(async (req: Request) => {
         ? `School Quote: ${name || 'Unknown'}`
         : `[${category}] New feedback from ${name || 'Anonymous'}`;
 
+      const safeName = name ? escapeHtml(name) : '';
+      const safeEmail = email ? escapeHtml(email) : '';
+      const safeRole = role ? escapeHtml(role) : '';
+      const safeCategory = category ? escapeHtml(category) : '';
+      const safeMessage = escapeHtml(message.trim());
+
       const htmlBody = `
         <h2 style="color:#312e81;">${category === 'School quote' ? 'New School Quote Request' : 'New Feedback'}</h2>
         <table style="border-collapse:collapse;font-family:sans-serif;font-size:14px;">
-          ${name ? `<tr><td style="padding:6px 12px 6px 0;font-weight:bold;color:#334155;">From</td><td style="padding:6px 0;">${name}</td></tr>` : ''}
-          ${email ? `<tr><td style="padding:6px 12px 6px 0;font-weight:bold;color:#334155;">Email</td><td style="padding:6px 0;"><a href="mailto:${email}">${email}</a></td></tr>` : ''}
-          ${role ? `<tr><td style="padding:6px 12px 6px 0;font-weight:bold;color:#334155;">Role</td><td style="padding:6px 0;">${role}</td></tr>` : ''}
-          <tr><td style="padding:6px 12px 6px 0;font-weight:bold;color:#334155;">Category</td><td style="padding:6px 0;">${category}</td></tr>
+          ${safeName ? `<tr><td style="padding:6px 12px 6px 0;font-weight:bold;color:#334155;">From</td><td style="padding:6px 0;">${safeName}</td></tr>` : ''}
+          ${safeEmail ? `<tr><td style="padding:6px 12px 6px 0;font-weight:bold;color:#334155;">Email</td><td style="padding:6px 0;"><a href="mailto:${safeEmail}">${safeEmail}</a></td></tr>` : ''}
+          ${safeRole ? `<tr><td style="padding:6px 12px 6px 0;font-weight:bold;color:#334155;">Role</td><td style="padding:6px 0;">${safeRole}</td></tr>` : ''}
+          <tr><td style="padding:6px 12px 6px 0;font-weight:bold;color:#334155;">Category</td><td style="padding:6px 0;">${safeCategory}</td></tr>
         </table>
         <hr style="border:none;border-top:1px solid #e2e8f0;margin:16px 0;">
-        <pre style="white-space:pre-wrap;font-family:sans-serif;font-size:14px;color:#0f172a;line-height:1.6;">${message.trim()}</pre>
+        <pre style="white-space:pre-wrap;font-family:sans-serif;font-size:14px;color:#0f172a;line-height:1.6;">${safeMessage}</pre>
         ${issueUrl ? `<p style="margin-top:16px;font-size:13px;color:#64748b;">GitHub issue: <a href="${issueUrl}">${issueUrl}</a></p>` : ''}
       `;
 
