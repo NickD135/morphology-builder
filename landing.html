@@ -2019,25 +2019,23 @@ async function initStudentLayout(session) {
   var btn = document.getElementById('wlLoginBtn');
   if (btn) btn.textContent = '👤 ' + session.studentName;
 
-  // Check extension mode availability
+  // ── Batch 1: Three independent DB queries in parallel ──
+  // (extension mode, school_id for plan check, and full student data)
+  var _extPromise = _lsb().from('students').select('extension_mode').eq('id', session.studentId).maybeSingle().catch(function(e){ return null; });
+  var _clsPromise = _lsb().from('classes').select('school_id').eq('id', session.classId).maybeSingle().catch(function(e){ return null; });
+  var _sdPromise = (typeof WordLabData !== 'undefined' && WordLabData.getStudentData) ? WordLabData.getStudentData().catch(function(e){ return null; }) : Promise.resolve(null);
+
+  var _batch1 = await Promise.all([_extPromise, _clsPromise, _sdPromise]);
+  var _extRes = _batch1[0];
+  var _clsRes = _batch1[1];
+  var sd = _batch1[2];
+
+  // Process extension mode result
   try {
-    var res = await _lsb().from('students').select('extension_mode').eq('id', session.studentId).maybeSingle();
-    if (res.data && res.data.extension_mode) showExtToggle();
+    if (_extRes && _extRes.data && _extRes.data.extension_mode) showExtToggle();
   } catch(e){}
 
-  // Hide pricing/upgrade links if the school has an active plan
-  try {
-    var _clsRes = await _lsb().from('classes').select('school_id').eq('id', session.classId).maybeSingle();
-    if (_clsRes.data && _clsRes.data.school_id) {
-      var _schRes = await _lsb().from('schools').select('plan').eq('id', _clsRes.data.school_id).maybeSingle();
-      if (_schRes.data && _schRes.data.plan === 'active') {
-        var _p1 = document.getElementById('hdrPricingLink'); if (_p1) _p1.style.display = 'none';
-        var _p2 = document.getElementById('drawerUpgradeLink'); if (_p2) _p2.style.display = 'none';
-        var _p3 = document.getElementById('infoCardPricing'); if (_p3) _p3.style.display = 'none';
-      }
-    }
-  } catch(e){}
-
+  // DOM element references (no DB needed)
   var nameEl    = document.getElementById('hubStudentName');
   var levelEl   = document.getElementById('hubStudentLevel');
   var xpFillEl  = document.getElementById('hubXpFill');
@@ -2054,14 +2052,14 @@ async function initStudentLayout(session) {
     var ealdName=WordLabData.getEALDLanguageName();
     if(ealdName&&nameEl){
       var badge=document.createElement('span');badge.className='eald-badge';badge.style.marginLeft='8px';
-      badge.innerHTML='🌐 '+WordLabData.escapeHtml(ealdName.split(' (')[0]);
+      var badgeText = document.createTextNode(ealdName.split(' (')[0]);
+      badge.textContent = '\uD83C\uDF10 '; // globe emoji
+      badge.appendChild(badgeText);
       nameEl.parentNode.insertBefore(badge,nameEl.nextSibling);
     }
   }
 
   try {
-    var sd = null;
-    try { sd = await WordLabData.getStudentData(); } catch(e){}
     if(!sd) return;
 
     var lvlData = sd.level || { level: 1, title: 'Quark Cadet', progress: 0 };
@@ -2092,14 +2090,34 @@ async function initStudentLayout(session) {
     if (hubTotalXpEl) hubTotalXpEl.textContent = (sd.xp || 0).toLocaleString() + ' XP total';
 
 
-    // Top 3 leaderboard
-    var classId = session.classId;
-    if(classId && top3El) {
-      try {
-        var stuRes = await _lsb().from('students').select('id,name').eq('class_id', classId);
-        if (stuRes.data && stuRes.data.length > 1) {
-          var ids = stuRes.data.map(function(s){return s.id;});
-          var charRes = await _lsb().from('student_character').select('student_id,xp').in('student_id', ids);
+    // ── Daily Challenges (no DB dependency, uses cached data) ──
+    try { renderDailyChallenges(); } catch(e) { console.warn('challenges render error', e); }
+
+    // ── Batch 2: Five independent async operations in parallel ──
+    // Each is self-contained with its own error handling so one failure cannot block others.
+    // This replaces 6+ sequential awaits with a single parallel wait.
+
+    var _schoolPlanPromise = (function() {
+      // Hide pricing/upgrade links if the school has an active plan
+      // Uses _clsRes.school_id from Batch 1, then needs one more query for plan
+      if (!_clsRes || !_clsRes.data || !_clsRes.data.school_id) return Promise.resolve();
+      return _lsb().from('schools').select('plan').eq('id', _clsRes.data.school_id).maybeSingle().then(function(_schRes) {
+        if (_schRes && _schRes.data && _schRes.data.plan === 'active') {
+          var _p1 = document.getElementById('hdrPricingLink'); if (_p1) _p1.style.display = 'none';
+          var _p2 = document.getElementById('drawerUpgradeLink'); if (_p2) _p2.style.display = 'none';
+          var _p3 = document.getElementById('infoCardPricing'); if (_p3) _p3.style.display = 'none';
+        }
+      }).catch(function(e){});
+    })();
+
+    var _leaderboardPromise = (function() {
+      // Top 5 leaderboard: fetch class roster, then XP for each student
+      var classId = session.classId;
+      if (!classId || !top3El) return Promise.resolve();
+      return _lsb().from('students').select('id,name').eq('class_id', classId).then(function(stuRes) {
+        if (!stuRes.data || stuRes.data.length <= 1) return;
+        var ids = stuRes.data.map(function(s){return s.id;});
+        return _lsb().from('student_character').select('student_id,xp').in('student_id', ids).then(function(charRes) {
           var xpMap = {};
           (charRes.data||[]).forEach(function(c){ xpMap[c.student_id] = c.xp || 0; });
           var ranked = stuRes.data.map(function(s){
@@ -2107,69 +2125,84 @@ async function initStudentLayout(session) {
           }).sort(function(a,b){ return b.xp - a.xp; }).slice(0, 5);
 
           if (ranked.length > 0 && ranked[0].xp > 0) {
-            var ranks = ['👑','2','3','4','5'];
+            var ranks = ['\uD83D\uDC51','2','3','4','5'];
             var colors = ['#fbbf24','#94a3b8','#94a3b8','#94a3b8','#94a3b8'];
-            top3El.innerHTML = ranked.map(function(r,i){
-              return '<div class="top3-row">' +
-                '<div class="top3-rank" style="color:' + colors[i] + '">' + ranks[i] + '</div>' +
-                '<div class="top3-student-name">' + WordLabData.escapeHtml(r.name) + (r.isMe ? ' (you)' : '') + '</div>' +
-                '<div class="top3-xp-val">' + r.xp.toLocaleString() + '</div>' +
-              '</div>';
-            }).join('');
+            var rows = ranked.map(function(r,i){
+              var row = document.createElement('div'); row.className = 'top3-row';
+              var rankDiv = document.createElement('div'); rankDiv.className = 'top3-rank'; rankDiv.style.color = colors[i]; rankDiv.textContent = ranks[i];
+              var nameDiv = document.createElement('div'); nameDiv.className = 'top3-student-name'; nameDiv.textContent = r.name + (r.isMe ? ' (you)' : '');
+              var xpDiv = document.createElement('div'); xpDiv.className = 'top3-xp-val'; xpDiv.textContent = r.xp.toLocaleString();
+              row.appendChild(rankDiv); row.appendChild(nameDiv); row.appendChild(xpDiv);
+              return row;
+            });
+            top3El.textContent = '';
+            rows.forEach(function(row) { top3El.appendChild(row); });
           }
-        }
-      } catch(e) {}
-    }
+        });
+      }).catch(function(e){});
+    })();
 
-    // ── Daily Challenges ──
-    try { renderDailyChallenges(); } catch(e) { console.warn('challenges render error', e); }
+    var _lowStimPromise = (function() {
+      // Low-stim mode refresh (picks up teacher changes)
+      try { return WordLabData.loadLowStimMode(); } catch(e) { return Promise.resolve(); }
+    })();
 
-    // ── Low-stim mode refresh (picks up teacher changes) ──
-    try { await WordLabData.loadLowStimMode(); } catch(e) {}
+    var _featuredPromise = (function() {
+      // Load featured game (teacher focus or auto-pick, caches for 5 min)
+      try { return WordLabData.loadFeaturedGame(); } catch(e) { return Promise.resolve(); }
+    })();
 
-    // ── Game of the Week + Try Something New nudges ──
-    // Load featured game (teacher focus or auto-pick, caches for 5 min)
-    try { await WordLabData.loadFeaturedGame(); } catch(e) {}
-
-    try { renderGameNudges(sd); } catch(e) { console.warn('nudge render error', e); }
-
-    // ── Check for active spelling assessment ──
-    try {
-      var ssWords = await WordLabData.getSpellingSetWords();
-      if (ssWords.length) {
+    var _spellingPromise = (function() {
+      // Check for active spelling assessment
+      return WordLabData.getSpellingSetWords().then(function(ssWords) {
+        if (!ssWords.length) return;
         var ssSetIds = [];
         ssWords.forEach(function(w) { if (w._spellingSetId && ssSetIds.indexOf(w._spellingSetId) === -1) ssSetIds.push(w._spellingSetId); });
-        var { data: ssSets } = await _lsb().from('class_spelling_sets')
+        return _lsb().from('class_spelling_sets')
           .select('id, name, assessment_active, assessment_scheduled_at, assessment_started_at')
-          .in('id', ssSetIds);
-        var activeAssess = (ssSets || []).find(function(s) {
-          return s.assessment_active || (s.assessment_scheduled_at && new Date(s.assessment_scheduled_at) <= new Date());
+          .in('id', ssSetIds).then(function(result) {
+          var ssSets = result.data;
+          var activeAssess = (ssSets || []).find(function(s) {
+            return s.assessment_active || (s.assessment_scheduled_at && new Date(s.assessment_scheduled_at) <= new Date());
+          });
+          // Check if student already completed this check-in (don't trap them in a loop)
+          // Uses assessment_started_at so each new check-in start resets the flag
+          var alreadyDone = false;
+          if (activeAssess && session && session.studentId) {
+            var ts = activeAssess.assessment_started_at ? '_' + activeAssess.assessment_started_at.replace(/[^0-9]/g, '').slice(0, 12) : '';
+            var doneKey = 'wl_checkin_done_' + activeAssess.id + '_' + session.studentId + ts;
+            alreadyDone = sessionStorage.getItem(doneKey) === 'true';
+          }
+          if (activeAssess && !alreadyDone) {
+            // Show assessment takeover banner
+            var banner = document.createElement('div');
+            banner.style.cssText = 'position:fixed;inset:0;z-index:9990;background:rgba(15,23,42,0.9);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);';
+            var inner = document.createElement('div');
+            inner.style.cssText = 'background:#fff;border-radius:24px;padding:40px;max-width:440px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);font-family:Lexend,sans-serif;';
+            var icon = document.createElement('div'); icon.style.cssText = 'font-size:48px;margin-bottom:12px;'; icon.textContent = '\uD83D\uDCDD';
+            var title = document.createElement('div'); title.style.cssText = 'font-size:20px;font-weight:900;color:#312e81;margin-bottom:6px;'; title.textContent = 'Spelling Check-In Ready';
+            var desc = document.createElement('div'); desc.style.cssText = 'font-size:13px;font-weight:600;color:#64748b;margin-bottom:20px;';
+            desc.textContent = 'Your teacher has started a spelling check-in:';
+            var setLabel = document.createElement('strong'); setLabel.style.color = '#312e81'; setLabel.textContent = activeAssess.name || 'Spelling Check-In';
+            desc.appendChild(document.createElement('br')); desc.appendChild(setLabel);
+            var link = document.createElement('a'); link.href = 'spelling-test.html';
+            link.style.cssText = 'display:block;background:#4338ca;color:#fff;border:none;border-radius:14px;padding:14px;font-size:16px;font-weight:900;cursor:pointer;font-family:Lexend,sans-serif;text-decoration:none;';
+            link.textContent = 'Start Spelling Check-In \u2192';
+            inner.appendChild(icon); inner.appendChild(title); inner.appendChild(desc); inner.appendChild(link);
+            banner.appendChild(inner);
+            document.body.appendChild(banner);
+          } else {
+            // No active check-in — show results overlay if student has unseen results
+            showUnseenCheckInResults(session, ssSets);
+          }
         });
-        // Check if student already completed this check-in (don't trap them in a loop)
-        // Uses assessment_started_at so each new check-in start resets the flag
-        var alreadyDone = false;
-        if (activeAssess && session && session.studentId) {
-          var ts = activeAssess.assessment_started_at ? '_' + activeAssess.assessment_started_at.replace(/[^0-9]/g, '').slice(0, 12) : '';
-          var doneKey = 'wl_checkin_done_' + activeAssess.id + '_' + session.studentId + ts;
-          alreadyDone = sessionStorage.getItem(doneKey) === 'true';
-        }
-        if (activeAssess && !alreadyDone) {
-          // Show assessment takeover banner
-          var banner = document.createElement('div');
-          banner.style.cssText = 'position:fixed;inset:0;z-index:9990;background:rgba(15,23,42,0.9);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);';
-          banner.innerHTML = '<div style="background:#fff;border-radius:24px;padding:40px;max-width:440px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);font-family:Lexend,sans-serif;">' +
-            '<div style="font-size:48px;margin-bottom:12px;">📝</div>' +
-            '<div style="font-size:20px;font-weight:900;color:#312e81;margin-bottom:6px;">Spelling Check-In Ready</div>' +
-            '<div style="font-size:13px;font-weight:600;color:#64748b;margin-bottom:20px;">Your teacher has started a spelling check-in:<br><strong style="color:#312e81;">' + WordLabData.escapeHtml(activeAssess.name || 'Spelling Check-In') + '</strong></div>' +
-            '<a href="spelling-test.html" style="display:block;background:#4338ca;color:#fff;border:none;border-radius:14px;padding:14px;font-size:16px;font-weight:900;cursor:pointer;font-family:Lexend,sans-serif;text-decoration:none;">Start Spelling Check-In →</a>' +
-            '</div>';
-          document.body.appendChild(banner);
-        } else {
-          // No active check-in — show results overlay if student has unseen results
-          showUnseenCheckInResults(session, ssSets);
-        }
-      }
-    } catch(e) { console.warn('Assessment check error', e); }
+      }).catch(function(e) { console.warn('Assessment check error', e); });
+    })();
+
+    await Promise.all([_schoolPlanPromise, _leaderboardPromise, _lowStimPromise, _featuredPromise, _spellingPromise]);
+
+    // renderGameNudges needs featured game data loaded, so runs after Batch 2
+    try { renderGameNudges(sd); } catch(e) { console.warn('nudge render error', e); }
 
   } catch(e) {
     console.warn('Student layout init failed', e);
