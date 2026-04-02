@@ -181,6 +181,16 @@
     .drag-tile:active{ cursor:grabbing; }
     .drag-tile.used{ opacity:.25; cursor:default; }
     .drag-tile.selected{ border-color:#f472b6; background:rgba(157,23,77,.25); box-shadow:0 0 12px rgba(244,114,182,.2); }
+    .drag-tile.dragging{ opacity:.4; transform:scale(.95); }
+    .drag-ghost{
+      position:fixed; z-index:9999; pointer-events:none;
+      padding:12px 24px; border-radius:14px;
+      border:2px solid #f472b6; background:rgba(157,23,77,.9);
+      color:#fce7f3; font-size:19px; font-weight:900;
+      font-family:'Lexend',sans-serif;
+      box-shadow:0 8px 24px rgba(0,0,0,.5), 0 0 16px rgba(244,114,182,.3);
+      transform:translate(-50%,-50%);
+    }
 
     /* Mode 3 paragraph */
     .para-text{ font-size:19px; font-weight:700; color:#e0e7ff; line-height:2; }
@@ -890,13 +900,89 @@ function renderMode2(area, q) {
   });
   document.querySelectorAll('.drag-tile').forEach(t => {
     const selectTile = () => {
+      if (_m2TouchMoved) return; // Don't select on touch drag
       document.querySelectorAll('.drag-tile').forEach(x => x.classList.remove('selected'));
       if (!t.classList.contains('used')) { t.classList.add('selected'); m2State.selectedTile = t; }
     };
     t.addEventListener('click', selectTile);
     t.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); selectTile(); } });
+    // Touch drag support
+    t.addEventListener('touchstart', e => {
+      if (t.classList.contains('used')) return;
+      _m2TouchMoved = false;
+      _m2TouchStartX = e.touches[0].clientX;
+      _m2TouchStartY = e.touches[0].clientY;
+      _m2DragWord = t.dataset.word;
+      _m2DragTile = t;
+    }, {passive: true});
   });
 }
+
+// Touch drag state for Mode 2
+let _m2DragWord = null, _m2DragTile = null, _m2TouchMoved = false;
+let _m2TouchStartX = 0, _m2TouchStartY = 0;
+const _M2_DRAG_THRESHOLD = 10;
+
+document.addEventListener('touchmove', function(e) {
+  if (!_m2DragTile || !_m2DragWord) return;
+  const t = e.touches[0];
+  // Start dragging only after moving past threshold
+  if (!_m2TouchMoved) {
+    const dx = t.clientX - _m2TouchStartX, dy = t.clientY - _m2TouchStartY;
+    if (Math.abs(dx) < _M2_DRAG_THRESHOLD && Math.abs(dy) < _M2_DRAG_THRESHOLD) return;
+    _m2TouchMoved = true;
+    _m2DragTile.classList.add('dragging');
+    const ghost = document.createElement('div');
+    ghost.className = 'drag-ghost';
+    ghost.id = 'm2DragGhost';
+    ghost.textContent = _m2DragWord;
+    document.body.appendChild(ghost);
+  }
+  e.preventDefault();
+  const ghost = document.getElementById('m2DragGhost');
+  if (ghost) {
+    ghost.style.left = t.clientX + 'px';
+    ghost.style.top = t.clientY + 'px';
+  }
+  // Highlight drop target under finger
+  document.querySelectorAll('.drop-target').forEach(d => {
+    const r = d.getBoundingClientRect();
+    if (t.clientX >= r.left && t.clientX <= r.right && t.clientY >= r.top && t.clientY <= r.bottom) {
+      d.classList.add('dragover');
+    } else {
+      d.classList.remove('dragover');
+    }
+  });
+}, {passive: false});
+
+document.addEventListener('touchend', function(e) {
+  const ghost = document.getElementById('m2DragGhost');
+  if (ghost) ghost.remove();
+  if (_m2DragTile) _m2DragTile.classList.remove('dragging');
+  if (!_m2TouchMoved || !_m2DragWord) { _m2DragWord = null; _m2DragTile = null; return; }
+  // Find drop target under finger
+  const t = e.changedTouches[0];
+  let hitDrop = null;
+  document.querySelectorAll('.drop-target').forEach(d => {
+    d.classList.remove('dragover');
+    const r = d.getBoundingClientRect();
+    if (t.clientX >= r.left && t.clientX <= r.right && t.clientY >= r.top && t.clientY <= r.bottom) {
+      hitDrop = d;
+    }
+  });
+  if (hitDrop && _m2DragWord) {
+    doDrop(hitDrop.id, _m2DragWord, _m2DragTile ? _m2DragTile.id : '');
+  }
+  _m2DragWord = null; _m2DragTile = null;
+});
+
+document.addEventListener('touchcancel', function() {
+  const ghost = document.getElementById('m2DragGhost');
+  if (ghost) ghost.remove();
+  if (_m2DragTile) _m2DragTile.classList.remove('dragging');
+  _m2DragWord = null; _m2DragTile = null;
+  document.querySelectorAll('.drop-target').forEach(d => d.classList.remove('dragover'));
+});
 
 function dStart(e) { e.dataTransfer.setData('text/plain', e.target.dataset.word); e.dataTransfer.setData('tid', e.target.id); }
 

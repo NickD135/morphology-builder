@@ -575,8 +575,8 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 - [x] Full audit of all game pages on mobile (320px–480px)
 - [x] Added 480px breakpoints to all 8 game pages (grids collapse, touch targets 44px+)
 - [x] Ensure scientist page shop renders cleanly on small screens (grid minmax reduced)
-- [ ] Mission Mode drag-and-drop on touch devices (works via tap-to-select fallback)
-- [ ] Breakdown Blitz keyboard handling on mobile (needs testing)
+- [x] Mission Mode uses click/tap buttons (not drag-and-drop) — works natively on touch devices
+- [x] Breakdown Blitz mobile: smart Enter key progression (prefix→base→suffix1→suffix2→check), scrollIntoView for virtual keyboard
 
 ---
 
@@ -1172,8 +1172,40 @@ into Word Labs as a structured spelling progression system.
 #### Remaining technical debt (deferred, requires dedicated sessions)
 - [ ] Consolidate morpheme data into single source file (currently duplicated in data.js, mission-mode.html, meaning-mode.html, dashboard.html)
 - [x] Extract shared CSS to wordlab-common.css (604 lines removed across 38 files — reset, skip-link, header, footer, variables)
-- [ ] Make deleteClass() atomic via Postgres transaction RPC (currently 4 sequential deletes)
+- [x] Make deleteClass() atomic via Postgres transaction RPC (`atomic_delete_class.sql` + fixed missing CASCADE on daily_usage)
 - [ ] Split wordlab-data.js monolith (2,500+ lines: data, UI, auth, challenges, EALD, shop)
+
+---
+
+### PHASE 7.16 — Session 2026-04-02 (evening)
+
+#### Shared CSS extraction
+- [x] Created `wordlab-common.css` (200 lines): reset, CSS variables, skip-link, header (both naming conventions), footer, buttons, overlay
+- [x] Linked from 37 HTML pages, removed 604 lines of duplicated CSS
+- [x] CSS cache headers added to vercel.json (1hr, matching JS)
+- [x] Worksheet pages intentionally excluded (different UI)
+
+#### Security hardening
+- [x] Tightened RLS on 4 tables: `class_word_lists`, `class_spelling_sets`, `spelling_set_assignments`, `spelling_check_in_results` — all writes now school-scoped via `get_my_school_id()` (migration: `rls_tighten_word_lists_spelling.sql`)
+- [x] Fixed XSS: unescaped class names in landing.html teacher dropdown
+- [x] Removed inline onclick handlers from spelling-test.html (5 handlers → addEventListener)
+- [x] Atomic deleteClass RPC replaces 4 sequential client-side DELETEs (migration: `atomic_delete_class.sql`)
+- [x] Fixed missing ON DELETE CASCADE on `daily_usage.student_id`
+
+#### Accessibility (WCAG 2.1 AA)
+- [x] Universal `focus-visible` indicators added to wordlab-common.css — all buttons, links, inputs, tabindexed elements across all pages
+- [x] Added `aria-live="polite"` to spelling-test feedback area
+- [x] Rapid-fire recordAttempt test script created (`tests/test-rapid-fire-record-attempt.js`)
+
+#### Mobile/touch UX
+- [x] Breakdown Blitz: smart Enter key progression (prefix→base→suffix1→suffix2→check), scrollIntoView for virtual keyboard
+- [x] Homophone Mode: full touch drag support for Mode 2 (ghost element, drop detection, touchcancel cleanup)
+- [x] Mission Mode: documented as click/tap buttons (no drag-and-drop — works natively on touch)
+
+#### Performance
+- [x] Preconnect hints for Google Fonts, Supabase, jsDelivr on landing page
+- [x] Replaced last `select('*')` in dashboard.html reward function with explicit columns
+- [x] CSS cache headers in vercel.json
 
 ---
 

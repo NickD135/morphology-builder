@@ -528,17 +528,8 @@ const WordLabData = (() => {
   }
 
   async function deleteClass(classId) {
-    const { data: studs } = await sb()
-      .from('students')
-      .select('id')
-      .eq('class_id', classId);
-    const studentIds = (studs || []).map(s => s.id);
-    if (studentIds.length) {
-      await sb().from('student_progress').delete().in('student_id', studentIds);
-      await sb().from('student_character').delete().in('student_id', studentIds);
-      await sb().from('students').delete().in('id', studentIds);
-    }
-    await sb().from('classes').delete().eq('id', classId);
+    const { error } = await sb().rpc('delete_class', { p_class_id: classId });
+    if (error) throw error;
   }
 
   async function regenerateStudentCode(classId, studentId) {
