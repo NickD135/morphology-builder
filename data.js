@@ -40,7 +40,12 @@ const PREFIXES = [
   { id:"endo", form:"endo", display:"endo-", meaning:"within; inside", allowedPos:["noun","adj"], examples:["<u>endo</u>scope","<u>endo</u>crine","<u>endo</u>skeleton"] },
   { id:"horo", form:"horo", display:"horo-", meaning:"time; hour", allowedPos:["noun"], examples:["<u>horo</u>scope","<u>horo</u>logy"] },
   { id:"stetho", form:"stetho", display:"stetho-", meaning:"chest", allowedPos:["noun"], examples:["<u>stetho</u>scope"] },
-  { id:"kaleido", form:"kaleido", display:"kaleido-", meaning:"beautiful form", allowedPos:["noun"], examples:["<u>kaleido</u>scope"] }
+  { id:"kaleido", form:"kaleido", display:"kaleido-", meaning:"beautiful form", allowedPos:["noun"], examples:["<u>kaleido</u>scope"] },
+  { id:"be", form:"be", display:"be-", meaning:"to make; cause to be", allowedPos:["verb","adj"], examples:["<u>be</u>friend","<u>be</u>little","<u>be</u>witch"] },
+  { id:"hypo", form:"hypo", display:"hypo-", meaning:"under; below; less than normal", allowedPos:["noun","adj"], examples:["<u>hypo</u>thermia","<u>hypo</u>dermic","<u>hypo</u>thesis"] },
+  { id:"circum", form:"circum", display:"circum-", meaning:"around", allowedPos:["noun","verb","adj"], examples:["<u>circum</u>ference","<u>circum</u>navigate","<u>circum</u>stance"] },
+  { id:"uni", form:"uni", display:"uni-", meaning:"one; single", allowedPos:["noun","adj","verb"], examples:["<u>uni</u>form","<u>uni</u>verse","<u>uni</u>te"] },
+  { id:"arch", form:"arch", display:"arch-", meaning:"chief; most important", allowedPos:["noun","adj"], examples:["<u>arch</u>enemy","<u>arch</u>bishop","<u>arch</u>rival"] }
 ];
 
 const SUFFIXES = [
@@ -87,7 +92,18 @@ const SUFFIXES = [
   { id:"logy", form:"logy", display:"-logy", meaning:"study of", allowedPos:["noun"], hint:"biology pattern", examples:["bio<u>logy</u>","geo<u>logy</u>","techno<u>logy</u>"] },
   { id:"ologist", form:"ologist", display:"-ologist", meaning:"person who studies", allowedPos:["noun"], hint:"biologist pattern", examples:["bi<u>ologist</u>","ge<u>ologist</u>","archae<u>ologist</u>"] },
   { id:"ship", form:"ship", display:"-ship", meaning:"state or skill", allowedPos:["noun"], hint:"friendship", examples:["friend<u>ship</u>","leader<u>ship</u>","partner<u>ship</u>"] },
-  { id:"ure", form:"ure", display:"-ure", meaning:"result of", allowedPos:["verb"], hint:"closure pattern", examples:["clos<u>ure</u>","fract<u>ure</u>","press<u>ure</u>"] }
+  { id:"ure", form:"ure", display:"-ure", meaning:"result of", allowedPos:["verb"], hint:"closure pattern", examples:["clos<u>ure</u>","fract<u>ure</u>","press<u>ure</u>"] },
+  { id:"age", form:"age", display:"-age", meaning:"result of; state of", allowedPos:["verb","noun"], hint:"storage, package", examples:["stor<u>age</u>","pack<u>age</u>","short<u>age</u>"] },
+  { id:"ory", form:"ory", display:"-ory", meaning:"a place of; characterised by", allowedPos:["verb","noun"], hint:"laboratory, factory", examples:["laborat<u>ory</u>","fact<u>ory</u>","satisfact<u>ory</u>"] },
+  { id:"ary", form:"ary", display:"-ary", meaning:"relating to; place associated with", allowedPos:["noun","adj"], hint:"dictionary, library", examples:["diction<u>ary</u>","legend<u>ary</u>","ordin<u>ary</u>"] },
+  { id:"ise", form:"ise", display:"-ise", meaning:"to make; to become", allowedPos:["noun","adj","verb"], hint:"Australian spelling of -ize", examples:["organ<u>ise</u>","hospital<u>ise</u>","stabil<u>ise</u>"] },
+  { id:"ious", form:"ious", display:"-ious", meaning:"having qualities of", allowedPos:["noun","verb"], hint:"curious, precious", examples:["cur<u>ious</u>","prec<u>ious</u>","delic<u>ious</u>"] },
+  { id:"eous", form:"eous", display:"-eous", meaning:"having qualities of", allowedPos:["noun","verb"], hint:"courageous, gorgeous", examples:["courag<u>eous</u>","gorg<u>eous</u>","outrag<u>eous</u>"] },
+  { id:"ative", form:"ative", display:"-ative", meaning:"tendency or quality", allowedPos:["verb","noun"], hint:"creative, talkative", examples:["cre<u>ative</u>","talk<u>ative</u>","imagin<u>ative</u>"] },
+  { id:"tion", form:"tion", display:"-tion", meaning:"act or process of", allowedPos:["verb"], hint:"most common -ion form", examples:["ac<u>tion</u>","crea<u>tion</u>","na<u>tion</u>"] },
+  { id:"sion", form:"sion", display:"-sion", meaning:"act or process of", allowedPos:["verb"], hint:"vision, tension", examples:["vi<u>sion</u>","ten<u>sion</u>","mis<u>sion</u>"] },
+  { id:"ation", form:"ation", display:"-ation", meaning:"act or process of", allowedPos:["verb"], hint:"creation, education", examples:["cre<u>ation</u>","educ<u>ation</u>","inform<u>ation</u>"] },
+  { id:"pathy", form:"pathy", display:"-pathy", meaning:"feeling; suffering", allowedPos:["noun"], hint:"sympathy, empathy", examples:["sym<u>pathy</u>","em<u>pathy</u>","tele<u>pathy</u>"] }
 ];
 
 const CORE_BASES = [
@@ -346,13 +362,16 @@ const LATIN_BASE_INFO = {
   claim:{ meaning:"call out; cry", pos:["verb","noun"], examples:["pro<u>claim</u>","ex<u>claim</u>","re<u>claim</u>"] },
   prove:{ meaning:"test; show", pos:["verb"], examples:["ap<u>prove</u>","im<u>prove</u>","<u>prove</u>n"] },
   ply:{ meaning:"fold; bend", pos:["verb"], examples:["ap<u>ply</u>","re<u>ply</u>","mul<u>tiply</u>"] },
-  spire:{ meaning:"breathe; live", pos:["verb"], examples:["in<u>spire</u>","re<u>spire</u>","con<u>spire</u>"] }
+  spire:{ meaning:"breathe; live", pos:["verb"], examples:["in<u>spire</u>","re<u>spire</u>","con<u>spire</u>"] },
+  grad:{ meaning:"step; go", pos:["verb","noun"], examples:["<u>grad</u>e","<u>grad</u>ual","up<u>grad</u>e"] },
+  mot:{ meaning:"move", pos:["verb","noun"], examples:["<u>mot</u>ion","<u>mot</u>or","pro<u>mot</u>e"] }
 };
 
 const LATIN_BASE_LIST = [
   "rupt","tract","form","cred","dic","dict","struct","scrib","script","port","aud","flex","flect","ject","spec","spect","spic",
   "miss","mit","sci","pend","pens","vis","vid","fer","vers","vert","duc","duct","sec","sect","claus","clos","vit","viv",
-  "cept","cess","fect","fix","sign","tend","press","gress","cede","claim","prove","ply","spire"
+  "cept","cess","fect","fix","sign","tend","press","gress","cede","claim","prove","ply","spire",
+  "grad","mot"
 ];
 
 const LATIN_BASES = LATIN_BASE_LIST.map((w,i)=>({
