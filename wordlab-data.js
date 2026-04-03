@@ -400,7 +400,7 @@ const WordLabData = (() => {
 
     const { data: studs, error: stuErr } = await sb()
       .from('students')
-      .select('id, name, student_code, extension_mode, eald_language, support_mode')
+      .select('id, name, student_code, extension_mode, eald_language, support_mode, extension_activities')
       .eq('class_id', id)
       .order('name');
     if (stuErr) throw stuErr;
@@ -653,8 +653,19 @@ const WordLabData = (() => {
   }
 
   // ── Extension mode ────────────────────────────────────────────
-  function isExtensionMode() {
-    return sessionStorage.getItem('wl_extension_mode') === 'true';
+  // If activity is provided, checks per-activity extension.
+  // extension_activities=[] means all activities (backward compatible).
+  // extension_activities=['phoneme-splitter','root-lab'] means only those.
+  function isExtensionMode(activity) {
+    if (sessionStorage.getItem('wl_extension_mode') !== 'true') return false;
+    if (!activity) return true; // global check
+    var raw = sessionStorage.getItem('wl_extension_activities');
+    if (!raw) return true; // no per-activity data = all
+    try {
+      var activities = JSON.parse(raw);
+      if (!activities || !activities.length) return true; // empty = all
+      return activities.indexOf(activity) !== -1;
+    } catch(e) { return true; }
   }
 
   // ── Record attempt ────────────────────────────────────────────
@@ -784,7 +795,7 @@ const WordLabData = (() => {
     const session = loadSession();
     if (!session) return null;
     const [stuResult, charResult, isTeacher] = await Promise.all([
-      sb().from('students').select('extension_mode, eald_language, support_mode').eq('id', session.studentId).maybeSingle(),
+      sb().from('students').select('extension_mode, eald_language, support_mode, extension_activities').eq('id', session.studentId).maybeSingle(),
       sb().from('student_character').select('student_id, quarks, xp, badges, scientist, stats').eq('student_id', session.studentId).maybeSingle(),
       isStudentTeacher(session.classId, session.studentId)
     ]);
@@ -793,6 +804,11 @@ const WordLabData = (() => {
       if (!sessionStorage.getItem('wl_ext_pinned')) {
         sessionStorage.setItem('wl_extension_mode', data.extension_mode ? 'true' : 'false');
       }
+    }
+    if (data && data.extension_activities && data.extension_activities.length) {
+      sessionStorage.setItem('wl_extension_activities', JSON.stringify(data.extension_activities));
+    } else {
+      sessionStorage.removeItem('wl_extension_activities');
     }
     if (data && data.eald_language) {
       sessionStorage.setItem('wl_eald_language', data.eald_language);
@@ -1148,6 +1164,7 @@ const WordLabData = (() => {
   function _logoutStudent() {
     endSession();
     sessionStorage.removeItem('wl_extension_mode');
+    sessionStorage.removeItem('wl_extension_activities');
     sessionStorage.removeItem('wl_ext_pinned');
     sessionStorage.removeItem('wl_teacher_preview');
     sessionStorage.removeItem('wl_eald_language');

@@ -1844,7 +1844,7 @@ function renderSummary(){
       <td class="sumNameCell">
         <div style="display:flex;align-items:center;gap:6px;">
           <span style="cursor:pointer;flex:1;" onclick="showStudentProfile('${student.id}')">${isCrown?'🍩 ':''}${WordLabData.escapeHtml(student.name)}</span>
-          ${extOn?'<span style="background:var(--indigo);color:#e0e7ff;font-size:7px;font-weight:900;padding:1px 5px;border-radius:6px;letter-spacing:.06em;cursor:pointer;" onclick="event.stopPropagation();toggleExtensionFromDashboard(\''+student.id+'\',true)" title="Extension ON — click to disable">EXT</span>':'<span style="font-size:7px;font-weight:800;color:var(--muted);padding:1px 5px;border-radius:6px;border:1px solid var(--line);cursor:pointer;opacity:.5;" onclick="event.stopPropagation();toggleExtensionFromDashboard(\''+student.id+'\',false)" title="Extension OFF — click to enable">EXT</span>'}
+          ${extOn?'<span style="background:var(--indigo);color:#e0e7ff;font-size:7px;font-weight:900;padding:1px 5px;border-radius:6px;letter-spacing:.06em;cursor:pointer;" onclick="event.stopPropagation();showExtPopover(\''+student.id+'\',this)" title="Extension ON — click to configure">EXT</span>':'<span style="font-size:7px;font-weight:800;color:var(--muted);padding:1px 5px;border-radius:6px;border:1px solid var(--line);cursor:pointer;opacity:.5;" onclick="event.stopPropagation();showExtPopover(\''+student.id+'\',this)" title="Extension OFF — click to configure">EXT</span>'}
           ${supOn?'<span style="background:#0d9488;color:#e0e7ff;font-size:7px;font-weight:900;padding:1px 5px;border-radius:6px;letter-spacing:.06em;cursor:pointer;" onclick="event.stopPropagation();toggleSupportFromDashboard(\''+student.id+'\',true)" title="Support ON — click to disable">SUP</span>':'<span style="font-size:7px;font-weight:800;color:var(--muted);padding:1px 5px;border-radius:6px;border:1px solid var(--line);cursor:pointer;opacity:.5;" onclick="event.stopPropagation();toggleSupportFromDashboard(\''+student.id+'\',false)" title="Support OFF — click to enable">SUP</span>'}
           <span style="cursor:pointer;font-size:12px;opacity:.5;transition:opacity .15s;" onclick="event.stopPropagation();openRewardModal('${student.id}')" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.5'" title="Give reward">🎁</span>
         </div>
@@ -1881,6 +1881,144 @@ function renderSummary(){
       </div>
     </div></div>
   `;
+}
+
+var _EXT_ACTIVITIES = [
+  {id:'phoneme-splitter', label:'Phoneme Splitter'},
+  {id:'syllable-splitter', label:'Syllable Splitter'},
+  {id:'breakdown-blitz', label:'Breakdown Blitz'},
+  {id:'sound-sorter', label:'Sound Sorter'},
+  {id:'mission-mode', label:'Mission Mode'},
+  {id:'meaning-mode', label:'Meaning Match-Up'},
+  {id:'root-lab', label:'Root Lab'},
+  {id:'homophone-hunter', label:'Homophones'},
+  {id:'word-spectrum', label:'Word Spectrum'},
+  {id:'word-refinery', label:'The Refinery'},
+  {id:'speed-mode', label:'Speed Builder'},
+  {id:'morpheme-builder', label:'Morpheme Builder'},
+  {id:'flashcard-mode', label:'Flashcards'}
+];
+
+function showExtPopover(studentId, btnEl) {
+  // Remove existing popover
+  var old = document.getElementById('extPopover');
+  if (old) old.remove();
+
+  var student = _studentMap[studentId];
+  if (!student) return;
+  var extOn = !!student.extension_mode;
+  var perAct = student.extension_activities || [];
+  // If ext is on and no per-activity list, all are on
+  var allOn = extOn && (!perAct.length);
+
+  var pop = document.createElement('div');
+  pop.id = 'extPopover';
+  pop.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);';
+
+  var card = document.createElement('div');
+  card.style.cssText = 'background:var(--navy-2);border:1px solid var(--line);border-radius:14px;padding:20px;max-width:340px;width:90%;font-family:Lexend,sans-serif;';
+
+  var title = document.createElement('div');
+  title.style.cssText = 'font-size:14px;font-weight:900;color:var(--text-primary);margin-bottom:4px;';
+  title.textContent = '\uD83D\uDD2C Extension — ' + (student.name || 'Student');
+  card.appendChild(title);
+
+  var desc = document.createElement('div');
+  desc.style.cssText = 'font-size:10px;color:var(--muted);font-weight:600;margin-bottom:12px;';
+  desc.textContent = 'Toggle extension content globally or per activity.';
+  card.appendChild(desc);
+
+  // Global toggle
+  var globalRow = document.createElement('div');
+  globalRow.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);margin-bottom:8px;';
+  var globalLabel = document.createElement('span');
+  globalLabel.style.cssText = 'flex:1;font-size:12px;font-weight:800;color:var(--text-primary);';
+  globalLabel.textContent = 'All Activities';
+  var globalTrack = document.createElement('div');
+  globalTrack.style.cssText = 'width:36px;height:20px;border-radius:10px;background:' + (extOn ? 'var(--indigo)' : '#475569') + ';position:relative;cursor:pointer;transition:background .2s;';
+  var globalThumb = document.createElement('div');
+  globalThumb.style.cssText = 'width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:3px;left:' + (extOn ? '19px' : '3px') + ';transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.25);';
+  globalTrack.appendChild(globalThumb);
+  globalTrack.addEventListener('click', async function() {
+    var newVal = !student.extension_mode;
+    try {
+      await dbSb().from('students').update({ extension_mode: newVal, extension_activities: [] }).eq('id', studentId);
+      student.extension_mode = newVal;
+      student.extension_activities = [];
+      pop.remove();
+      renderSummary();
+      renderFlags();
+    } catch(e) { alert('Error: ' + (e.message||e)); }
+  });
+  globalRow.appendChild(globalLabel);
+  globalRow.appendChild(globalTrack);
+  card.appendChild(globalRow);
+
+  // Per-activity toggles
+  var actList = document.createElement('div');
+  actList.style.cssText = 'max-height:280px;overflow-y:auto;';
+  _EXT_ACTIVITIES.forEach(function(act) {
+    var isOn = extOn && (allOn || perAct.indexOf(act.id) !== -1);
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 0;';
+    var lbl = document.createElement('span');
+    lbl.style.cssText = 'flex:1;font-size:11px;font-weight:700;color:' + (isOn ? 'var(--text-primary)' : 'var(--muted)') + ';';
+    lbl.textContent = act.label;
+    var track = document.createElement('div');
+    track.style.cssText = 'width:30px;height:16px;border-radius:8px;background:' + (isOn ? 'var(--indigo)' : '#475569') + ';position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;';
+    var thumb = document.createElement('div');
+    thumb.style.cssText = 'width:10px;height:10px;border-radius:50%;background:#fff;position:absolute;top:3px;left:' + (isOn ? '17px' : '3px') + ';transition:left .2s;';
+    track.appendChild(thumb);
+    track.dataset.actId = act.id;
+    track.dataset.on = isOn ? '1' : '0';
+    track.addEventListener('click', function() {
+      var wasOn = this.dataset.on === '1';
+      this.dataset.on = wasOn ? '0' : '1';
+      this.style.background = wasOn ? '#475569' : 'var(--indigo)';
+      this.firstChild.style.left = wasOn ? '3px' : '17px';
+      lbl.style.color = wasOn ? 'var(--muted)' : 'var(--text-primary)';
+    });
+    row.appendChild(lbl);
+    row.appendChild(track);
+    actList.appendChild(row);
+  });
+  card.appendChild(actList);
+
+  // Save + Close
+  var btns = document.createElement('div');
+  btns.style.cssText = 'display:flex;gap:8px;margin-top:14px;';
+  var saveBtn = document.createElement('button');
+  saveBtn.style.cssText = 'border:none;background:var(--indigo);color:#fff;border-radius:8px;padding:7px 16px;font-size:11px;font-weight:900;cursor:pointer;font-family:Lexend,sans-serif;';
+  saveBtn.textContent = 'Save';
+  saveBtn.addEventListener('click', async function() {
+    var toggles = actList.querySelectorAll('[data-act-id]');
+    var onList = [];
+    var anyOn = false;
+    toggles.forEach(function(t) { if (t.dataset.on === '1') { onList.push(t.dataset.actId); anyOn = true; } });
+    var allChecked = onList.length === _EXT_ACTIVITIES.length;
+    try {
+      await dbSb().from('students').update({
+        extension_mode: anyOn,
+        extension_activities: allChecked ? [] : onList
+      }).eq('id', studentId);
+      student.extension_mode = anyOn;
+      student.extension_activities = allChecked ? [] : onList;
+      pop.remove();
+      renderSummary();
+      renderFlags();
+    } catch(e) { alert('Error: ' + (e.message||e)); }
+  });
+  var cancelBtn = document.createElement('button');
+  cancelBtn.style.cssText = 'border:1px solid var(--line);background:none;color:var(--muted);border-radius:8px;padding:7px 16px;font-size:11px;font-weight:800;cursor:pointer;font-family:Lexend,sans-serif;';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', function() { pop.remove(); });
+  btns.appendChild(saveBtn);
+  btns.appendChild(cancelBtn);
+  card.appendChild(btns);
+
+  pop.appendChild(card);
+  pop.addEventListener('click', function(e) { if (e.target === pop) pop.remove(); });
+  document.body.appendChild(pop);
 }
 
 async function toggleExtensionFromDashboard(studentId, currentVal){
