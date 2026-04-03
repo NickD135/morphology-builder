@@ -1076,6 +1076,14 @@
     {id:"vers",       form:"vers",       meaning:"turn",                         pos:["verb"],       validPrefixes:["uni","re","con","in","di"]},
   ];
   if(_EXT_MISSION&&WL_EXTENSION.missionBases) BASES.splice(0,BASES.length,...WL_EXTENSION.missionBases);
+  // ── Spelling set tracking (module-scope, assigned inside IIFE) ──
+  var _ssMorphemeToWords = {};
+  function _ssTrackMorpheme(morphemeForm, correct) {
+    if (!morphemeForm || typeof WordLabData === 'undefined' || !WordLabData.recordSpellingAttempt) return;
+    var entries = _ssMorphemeToWords[morphemeForm.toLowerCase()];
+    if (!entries) return;
+    entries.forEach(function(e) { WordLabData.recordSpellingAttempt(e.setId, e.word, correct, 0); });
+  }
   // ── Custom morphemes ──
   (async function(){
     try {
@@ -1176,7 +1184,6 @@
     } catch(e) { console.warn('Custom morphemes load error:', e); }
 
     // ── Spelling set morphemes — extract, prioritise, and build tracking map ──
-    var _ssMorphemeToWords = {};
     try {
       if (typeof WordLabData !== 'undefined' && WordLabData.getSpellingSetWords) {
         var ssWords = await WordLabData.getSpellingSetWords();
@@ -1237,13 +1244,6 @@
         }
       }
     } catch(e) { console.warn('Spelling set morphemes load error:', e); }
-    // Track spelling set progress when a morpheme from a spelling word is answered
-    function _ssTrackMorpheme(morphemeForm, correct) {
-      if (!morphemeForm || typeof WordLabData === 'undefined' || !WordLabData.recordSpellingAttempt) return;
-      var entries = _ssMorphemeToWords[morphemeForm.toLowerCase()];
-      if (!entries) return;
-      entries.forEach(function(e) { WordLabData.recordSpellingAttempt(e.setId, e.word, correct, 0); });
-    }
   })();
   var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
   // ── Round count system ──

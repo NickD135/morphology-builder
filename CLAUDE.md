@@ -961,13 +961,15 @@ into Word Labs as a structured spelling progression system.
 - [x] Landing page takeover: full-screen modal when check-in is active
 - [x] Activity card on landing page + navigation drawer
 - [x] Pre/post test comparison view on dashboard — Compare tab shows first vs last check-in with ✗→✓ indicators and % change arrows
-- [ ] Automatic set progression (teacher moves student to harder set after post-test)
+- [x] Automatic set progression — green banner when students score 80%+, one-click advance to next set
+- [x] Focus words — wrong check-in words persist in student's practice games until teacher clears them; amber badge on dashboard with view/remove modal
 
-#### 10.5 Per-activity extension toggle (future)
-- [ ] Replace single `extension_mode` boolean with `extension_activities` array on student record
-- [ ] Teachers can toggle extension per activity in class-setup
-- [ ] Each game page checks if its specific activity is in the extension list
-- [ ] Dashboard respects per-activity extension settings
+#### 10.5 Per-activity extension toggle
+- [x] Added `extension_activities` jsonb column on students table (alongside existing `extension_mode` boolean)
+- [x] `isExtensionMode(activity)` checks per-activity when activity param provided; empty array = all (backward compatible)
+- [x] All 13 game pages pass their activity key to `isExtensionMode()`
+- [x] Dashboard EXT badge opens popover with global toggle + 13 per-activity toggles
+- [x] `getStudentData()` and `getClass()` select `extension_activities` from database
 
 #### 10.6 Assimilated prefixes
 - [x] Updated `data.js` altForms: ad (+ag,an,ar), con (+col,cor,co)

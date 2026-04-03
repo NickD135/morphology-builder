@@ -1710,6 +1710,14 @@ function selectCloze(el){
   el.classList.add('selected');
 }
 
+// ── Spelling set tracking (module-scope, populated in DOMContentLoaded) ──
+var _ssWordMap = {};
+function _ssTrack(word, correct){
+  if(!word || typeof WordLabData === 'undefined' || !WordLabData.recordSpellingAttempt) return;
+  var setId = _ssWordMap[word.toLowerCase()];
+  if(setId) WordLabData.recordSpellingAttempt(setId, word, correct, 0);
+}
+
 // ── Check ─────────────────────────────────────────────────────────────────────
 function checkAnswer(){
   if(!currentWord || checked) return;
@@ -1984,7 +1992,6 @@ window.addEventListener('DOMContentLoaded', async function(){
     if(btn && session) btn.textContent = '👤 ' + session.studentName;
   }
   // ── Spelling set words — convert to Root Lab format and add to pool ──
-  var _ssWordMap = {}; // word → spellingSetId for tracking
   if(typeof WordLabData !== 'undefined' && WordLabData.getSpellingSetWords){
     try {
       var ssWords = await WordLabData.getSpellingSetWords();
@@ -2029,13 +2036,6 @@ window.addEventListener('DOMContentLoaded', async function(){
       }
     } catch(e){ console.warn('Spelling set root-lab load error:', e); }
   }
-  // Track spelling set progress
-  function _ssTrack(word, correct){
-    if(!word || typeof WordLabData === 'undefined' || !WordLabData.recordSpellingAttempt) return;
-    var setId = _ssWordMap[word.toLowerCase()];
-    if(setId) WordLabData.recordSpellingAttempt(setId, word, correct, 0);
-  }
-
   if(typeof WordLabData !== 'undefined' && WordLabData.isExtensionMode && WordLabData.isExtensionMode('root-lab')){
     // Add extension words to the pool
     if(typeof WL_EXTENSION !== 'undefined' && WL_EXTENSION.rootLabWords){
