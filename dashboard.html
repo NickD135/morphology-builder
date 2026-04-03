@@ -1477,6 +1477,7 @@ function buildProfileSpellingSets(studentId) {
   var progress = _spellingProgress[studentId] || {};
   var html = '<div class="sectionGroup">📊 Spelling Sets</div>';
   var hasAny = false;
+  var progressTimeline = []; // for cross-set progress summary
 
   _spellingSets.forEach(function(set) {
     var assigns = (_spellingAssignments[set.id] || []);
@@ -1489,6 +1490,26 @@ function buildProfileSpellingSets(studentId) {
     var statusBadge = isActive
       ? '<span style="background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:8px;font-weight:800;padding:1px 6px;border-radius:4px;">Active</span>'
       : '<span style="background:#f1f5f9;border:1px solid #cbd5e1;color:#64748b;font-size:8px;font-weight:800;padding:1px 6px;border-radius:4px;">Completed' + (assign.completed_at ? ' ' + new Date(assign.completed_at).toLocaleDateString('en-AU', {day:'numeric',month:'short'}) : '') + '</span>';
+
+    // Check-in scores for this student on this set
+    var ciKey = set.id + ':' + studentId;
+    var ciSessions = _checkInResults[ciKey] || [];
+    var checkInLabel = '';
+    if (ciSessions.length > 0) {
+      var latest = ciSessions[ciSessions.length - 1];
+      var latestPct = latest.total > 0 ? Math.round((latest.score / latest.total) * 100) : 0;
+      if (ciSessions.length >= 2) {
+        var first = ciSessions[0];
+        var firstPct = first.total > 0 ? Math.round((first.score / first.total) * 100) : 0;
+        var diff = latestPct - firstPct;
+        var arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
+        var diffColor = diff > 0 ? '#4ade80' : diff < 0 ? '#f87171' : '#94a3b8';
+        checkInLabel = ' · <span style="font-size:8px;font-weight:800;">Check-In: ' + firstPct + '% <span style="color:' + diffColor + ';">' + arrow + '</span> ' + latestPct + '% <span style="color:' + diffColor + ';">(' + (diff > 0 ? '+' : '') + diff + '%)</span></span>';
+      } else {
+        checkInLabel = ' · <span style="font-size:8px;font-weight:800;">Check-In: ' + latest.score + '/' + latest.total + ' (' + latestPct + '%)</span>';
+      }
+      progressTimeline.push({ name: set.name, pct: latestPct, active: isActive, sessions: ciSessions.length });
+    }
 
     var totalCorrect = 0, totalAttempts = 0;
     var wordCells = words.map(function(word) {
@@ -1511,13 +1532,38 @@ function buildProfileSpellingSets(studentId) {
     }).join('');
 
     var overallPct = totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : null;
-    var overallLabel = overallPct !== null ? ' · ' + overallPct + '% overall' : '';
+    var overallLabel = overallPct !== null ? ' · ' + overallPct + '% practice' : '';
 
     html += '<div class="profileSection">' +
-      '<div class="profileSectionLabel" style="background:#eef2ff;color:#4338ca;border-color:#c7d2fe;">' + WordLabData.escapeHtml(set.name) + '<br>' + statusBadge + overallLabel + '</div>' +
+      '<div class="profileSectionLabel" style="background:#eef2ff;color:#4338ca;border-color:#c7d2fe;">' + WordLabData.escapeHtml(set.name) + '<br>' + statusBadge + overallLabel + checkInLabel + '</div>' +
       '<div class="profileSectionCells">' + wordCells + '</div>' +
       '</div>';
   });
+
+  // Cross-set progress timeline
+  if (progressTimeline.length >= 2) {
+    var timelineHtml = progressTimeline.map(function(t, i) {
+      var bgColor = t.active ? '#4338ca' : (t.pct >= 80 ? '#16a34a' : t.pct >= 50 ? '#d97706' : '#dc2626');
+      var node = '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">' +
+        '<div style="width:28px;height:28px;border-radius:50%;background:' + bgColor + ';color:#fff;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;">' + t.pct + '%</div>' +
+        '<div style="font-size:7px;font-weight:800;color:var(--muted);max-width:50px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + WordLabData.escapeHtml(t.name) + '</div>' +
+        '<div style="font-size:7px;color:var(--muted);">' + t.sessions + ' check-in' + (t.sessions !== 1 ? 's' : '') + '</div>' +
+        '</div>';
+      if (i < progressTimeline.length - 1) {
+        var nextPct = progressTimeline[i + 1].pct;
+        var diff = nextPct - t.pct;
+        var arrowColor = diff > 0 ? '#4ade80' : diff < 0 ? '#f87171' : '#94a3b8';
+        node += '<div style="font-size:14px;color:' + arrowColor + ';font-weight:900;padding:0 4px;">→</div>';
+      }
+      return node;
+    }).join('');
+    html = '<div class="sectionGroup">📊 Spelling Sets</div>' +
+      '<div style="display:flex;align-items:center;gap:2px;padding:6px 14px;flex-wrap:wrap;margin-bottom:4px;">' +
+        '<div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:6px;">Progress</div>' +
+        timelineHtml +
+      '</div>' +
+      html.replace('<div class="sectionGroup">📊 Spelling Sets</div>', '');
+  }
 
   if (!hasAny) {
     html += '<div style="padding:8px 14px;font-size:12px;color:#94a3b8;font-weight:600;">Not assigned to any spelling sets.</div>';
