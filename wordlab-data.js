@@ -405,12 +405,14 @@ const WordLabData = (() => {
       .order('name');
     if (stuErr) throw stuErr;
     // Load extension_activities separately (column may not be in PostgREST schema cache yet)
-    var { data: extAct, error: extActErr } = await sb().from('students').select('id, extension_activities').eq('class_id', id);
-    if (!extActErr && extAct) {
-      var extMap = {};
-      extAct.forEach(function(s) { extMap[s.id] = s.extension_activities; });
-      studs.forEach(function(s) { s.extension_activities = extMap[s.id] || []; });
-    }
+    try {
+      var _extActRes = await sb().from('students').select('id, extension_activities').eq('class_id', id);
+      if (_extActRes && !_extActRes.error && _extActRes.data) {
+        var extMap = {};
+        _extActRes.data.forEach(function(s) { extMap[s.id] = s.extension_activities; });
+        studs.forEach(function(s) { s.extension_activities = extMap[s.id] || []; });
+      }
+    } catch(e) { /* column not available yet */ }
 
     const studentIds = (studs || []).map(s => s.id);
     let progressRows = [];
@@ -807,11 +809,13 @@ const WordLabData = (() => {
       isStudentTeacher(session.classId, session.studentId)
     ]);
     // Load extension_activities separately (may not be in PostgREST schema cache)
-    var extActResult = await sb().from('students').select('extension_activities').eq('id', session.studentId).maybeSingle();
-    if (!extActResult.error && extActResult.data) {
-      if (!stuResult.data) stuResult.data = {};
-      stuResult.data.extension_activities = extActResult.data.extension_activities;
-    }
+    try {
+      var _extActRes2 = await sb().from('students').select('extension_activities').eq('id', session.studentId).maybeSingle();
+      if (_extActRes2 && !_extActRes2.error && _extActRes2.data) {
+        if (!stuResult.data) stuResult.data = {};
+        stuResult.data.extension_activities = _extActRes2.data.extension_activities;
+      }
+    } catch(e) { /* column not available yet */ }
     const data = stuResult.data;
     if (data && data.extension_mode !== undefined) {
       if (!sessionStorage.getItem('wl_ext_pinned')) {
