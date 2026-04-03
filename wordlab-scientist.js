@@ -139,7 +139,8 @@ const WLScientist = (() => {
     // Coat fill — plain, rainbow gradient, or patterned
     // 'rainbow' is not a valid SVG colour so we build a linearGradient instead
     const isRainbow = coat === 'rainbow';
-    const coatBase  = isRainbow ? 'url(#coatRainbow)' : coat;
+    const isHolo    = coat === 'holographic';
+    const coatBase  = isRainbow ? 'url(#coatRainbow)' : isHolo ? 'url(#coatHolo)' : coat;
 
     const defsContent = [
       isRainbow
@@ -152,6 +153,15 @@ const WLScientist = (() => {
           `<stop offset="100%" stop-color="#a78bfa"/>` +
           `</linearGradient>`
         : '',
+      isHolo
+        ? `<linearGradient id="coatHolo" x1="0%" y1="0%" x2="100%" y2="100%">` +
+          `<stop offset="0%"   stop-color="#c4b5fd"/>` +
+          `<stop offset="25%"  stop-color="#93c5fd"/>` +
+          `<stop offset="50%"  stop-color="#86efac"/>` +
+          `<stop offset="75%"  stop-color="#fde68a"/>` +
+          `<stop offset="100%" stop-color="#fda4af"/>` +
+          `</linearGradient>`
+        : '',
       pattern === 'stripes'
         ? `<pattern id="cp" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="${coatBase}"/><line x1="0" y1="0" x2="8" y2="8" stroke="rgba(0,0,0,0.12)" stroke-width="2"/></pattern>`
         : '',
@@ -161,10 +171,28 @@ const WLScientist = (() => {
       pattern === 'stars'
         ? `<pattern id="cp" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="${coatBase}"/><text x="2" y="10" font-size="8" opacity="0.18">★</text></pattern>`
         : '',
+      pattern === 'dots'
+        ? `<pattern id="cp" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="${coatBase}"/><circle cx="5" cy="5" r="2.5" fill="rgba(0,0,0,0.1)"/></pattern>`
+        : '',
+      pattern === 'chevrons'
+        ? `<pattern id="cp" x="0" y="0" width="12" height="8" patternUnits="userSpaceOnUse"><rect width="12" height="8" fill="${coatBase}"/><path d="M0,4 L6,0 L12,4" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1.5"/></pattern>`
+        : '',
+      pattern === 'hearts'
+        ? `<pattern id="cp" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="${coatBase}"/><path d="M6,10 C2,7 0,4 3,2 C5,1 6,3 6,3 C6,3 7,1 9,2 C12,4 10,7 6,10Z" fill="rgba(0,0,0,0.08)"/></pattern>`
+        : '',
+      pattern === 'lightning'
+        ? `<pattern id="cp" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="${coatBase}"/><path d="M8,1 L5,6 L8,6 L4,13" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="1.2"/></pattern>`
+        : '',
+      pattern === 'dna'
+        ? `<pattern id="cp" x="0" y="0" width="10" height="20" patternUnits="userSpaceOnUse"><rect width="10" height="20" fill="${coatBase}"/><path d="M2,0 Q5,5 8,10 Q5,15 2,20" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1"/><path d="M8,0 Q5,5 2,10 Q5,15 8,20" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1"/><line x1="3" y1="5" x2="7" y2="5" stroke="rgba(0,0,0,0.06)" stroke-width="0.8"/><line x1="3" y1="15" x2="7" y2="15" stroke="rgba(0,0,0,0.06)" stroke-width="0.8"/></pattern>`
+        : '',
+      pattern === 'plaid'
+        ? `<pattern id="cp" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="${coatBase}"/><line x1="0" y1="4" x2="12" y2="4" stroke="rgba(0,0,0,0.08)" stroke-width="2"/><line x1="0" y1="10" x2="12" y2="10" stroke="rgba(0,0,0,0.06)" stroke-width="1"/><line x1="4" y1="0" x2="4" y2="12" stroke="rgba(0,0,0,0.08)" stroke-width="2"/><line x1="10" y1="0" x2="10" y2="12" stroke="rgba(0,0,0,0.06)" stroke-width="1"/></pattern>`
+        : '',
     ].filter(Boolean).join('');
 
     const coatFillDef = defsContent ? `<defs>${defsContent}</defs>` : '';
-    const coatFillRef = ['stripes','molecules','stars'].includes(pattern) ? 'url(#cp)' : coatBase;
+    const coatFillRef = ['stripes','molecules','stars','dots','chevrons','hearts','lightning','dna','plaid'].includes(pattern) ? 'url(#cp)' : coatBase;
 
     // Emotion layers
     const eyes = {
@@ -208,6 +236,18 @@ const WLScientist = (() => {
       flower_crown: `<path d="M21,25 Q31,13 40,13 Q49,13 59,25" stroke="#16a34a" stroke-width="2.5" fill="none"/><circle cx="27" cy="19" r="3.5" fill="#fda4af"/><circle cx="27" cy="19" r="1.6" fill="#fef9c3"/><circle cx="40" cy="13" r="4" fill="#fb923c"/><circle cx="40" cy="13" r="1.8" fill="#fef9c3"/><circle cx="53" cy="19" r="3.5" fill="#c4b5fd"/><circle cx="53" cy="19" r="1.6" fill="#fef9c3"/><circle cx="33" cy="15" r="2.5" fill="#86efac"/><circle cx="33" cy="15" r="1.1" fill="#fef9c3"/><circle cx="47" cy="15" r="2.5" fill="#7dd3fc"/><circle cx="47" cy="15" r="1.1" fill="#fef9c3"/>`,
       halo:         `<ellipse cx="40" cy="11" rx="15" ry="4" fill="none" stroke="#fbbf24" stroke-width="2.5"/><ellipse cx="40" cy="11" rx="15" ry="4" fill="rgba(251,191,36,0.12)"/><line x1="33" y1="11" x2="34" y2="20" stroke="#fbbf24" stroke-width="1.5" opacity="0.45"/><line x1="47" y1="11" x2="46" y2="20" stroke="#fbbf24" stroke-width="1.5" opacity="0.45"/>`,
       ninja_headband:`<rect x="18" y="23" width="44" height="7" rx="3" fill="#1e1b4b"/><rect x="18" y="23" width="44" height="2.5" rx="1.5" fill="#3730a3" opacity="0.6"/><circle cx="40" cy="26.5" r="4" fill="#ef4444"/><circle cx="40" cy="26.5" r="2" fill="#dc2626" opacity="0.7"/><path d="M57,26 Q62,22 61,17" stroke="#1e1b4b" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M57,30 Q63,28 62,23" stroke="#1e1b4b" stroke-width="2.5" fill="none" stroke-linecap="round"/>`,
+      space_helmet: `<ellipse cx="40" cy="32" rx="26" ry="26" fill="rgba(147,197,253,0.15)" stroke="#93c5fd" stroke-width="2"/><ellipse cx="40" cy="32" rx="23" ry="23" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/><ellipse cx="32" cy="24" rx="4" ry="6" fill="rgba(255,255,255,0.15)" transform="rotate(-15 32 24)"/>`,
+      chef_hat:     `<ellipse cx="40" cy="22" rx="14" ry="3" fill="#e2e8f0"/><rect x="28" y="8" width="24" height="16" rx="12" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/><ellipse cx="40" cy="6" rx="10" ry="6" fill="#ffffff"/>`,
+      pirate_hat:   `<path d="M18,24 Q24,8 40,6 Q56,8 62,24 Z" fill="#1e1b4b"/><path d="M20,24 Q40,20 60,24" fill="#1e1b4b"/><rect x="18" y="22" width="44" height="4" rx="2" fill="#374151"/><path d="M36,10 L38,16 L34,16 Z" fill="#fbbf24" opacity="0.9"/><path d="M40,10 L42,16 L38,16 Z" fill="#fbbf24" opacity="0.9"/>`,
+      headphones:   `<path d="M18,36 Q18,16 40,16 Q62,16 62,36" fill="none" stroke="#374151" stroke-width="3"/><rect x="12" y="32" width="10" height="14" rx="5" fill="#1e1b4b"/><rect x="58" y="32" width="10" height="14" rx="5" fill="#1e1b4b"/><rect x="14" y="34" width="6" height="10" rx="3" fill="#6366f1"/><rect x="60" y="34" width="6" height="10" rx="3" fill="#6366f1"/>`,
+      cat_ears:     `<polygon points="22,24 18,8 32,20" fill="#f472b6"/><polygon points="23,22 20,12 30,20" fill="#fda4af"/><polygon points="58,24 62,8 48,20" fill="#f472b6"/><polygon points="57,22 60,12 50,20" fill="#fda4af"/>`,
+      bunny_ears:   `<ellipse cx="30" cy="8" rx="5" ry="14" fill="#fda4af" transform="rotate(-10 30 8)"/><ellipse cx="30" cy="8" rx="3" ry="11" fill="#fce7f3" transform="rotate(-10 30 8)"/><ellipse cx="50" cy="8" rx="5" ry="14" fill="#fda4af" transform="rotate(10 50 8)"/><ellipse cx="50" cy="8" rx="3" ry="11" fill="#fce7f3" transform="rotate(10 50 8)"/>`,
+      dino_spikes:  `<polygon points="28,20 32,6 36,20" fill="#4ade80"/><polygon points="36,18 40,2 44,18" fill="#22c55e"/><polygon points="44,20 48,6 52,20" fill="#4ade80"/>`,
+      unicorn_horn: `<polygon points="40,0 36,18 44,18" fill="#e879f9"/><line x1="38" y1="14" x2="42" y2="12" stroke="#fbbf24" stroke-width="1" opacity="0.7"/><line x1="37" y1="10" x2="43" y2="8" stroke="#c4b5fd" stroke-width="1" opacity="0.7"/><line x1="38" y1="6" x2="42" y2="4" stroke="#fbbf24" stroke-width="1" opacity="0.7"/><circle cx="40" cy="1" r="1.5" fill="#fbbf24"/>`,
+      propeller_cap:`<path d="M23,24 Q23,16 40,16 Q57,16 57,24 Z" fill="#ef4444"/><rect x="20" y="22" width="40" height="4" rx="2" fill="#dc2626"/><circle cx="40" cy="16" r="2" fill="#94a3b8"/><line x1="34" y1="12" x2="46" y2="12" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/><line x1="37" y1="9" x2="43" y2="15" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>`,
+      tiara:        `<path d="M24,22 L28,14 L33,20 L40,10 L47,20 L52,14 L56,22" fill="none" stroke="#e879f9" stroke-width="2"/><circle cx="40" cy="10" r="2.5" fill="#c084fc"/><circle cx="28" cy="14" r="1.5" fill="#f0abfc"/><circle cx="52" cy="14" r="1.5" fill="#f0abfc"/><rect x="24" y="21" width="32" height="3" rx="1.5" fill="#d946ef"/>`,
+      viking_helmet:`<path d="M20,28 Q20,14 40,12 Q60,14 60,28 Z" fill="#78716c"/><rect x="18" y="26" width="44" height="4" rx="2" fill="#57534e"/><path d="M20,24 Q14,16 10,6" stroke="#fef3c7" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M60,24 Q66,16 70,6" stroke="#fef3c7" stroke-width="3" fill="none" stroke-linecap="round"/>`,
+      antenna:      `<line x1="40" y1="18" x2="40" y2="2" stroke="#94a3b8" stroke-width="1.5"/><circle cx="40" cy="2" r="3.5" fill="#4ade80"><animate attributeName="opacity" values="1;0.4;1" dur="1.5s" repeatCount="indefinite"/></circle>`,
     };
     // Face accessories
     const faceAccSVG = {
@@ -218,6 +258,14 @@ const WLScientist = (() => {
       sunglasses:     `<rect x="25" y="32" width="12" height="8" rx="3" fill="#1e1b4b" opacity="0.9"/><rect x="43" y="32" width="12" height="8" rx="3" fill="#1e1b4b" opacity="0.9"/><line x1="37" y1="36" x2="43" y2="36" stroke="#374151" stroke-width="2"/><line x1="19" y1="34" x2="25" y2="36" stroke="#374151" stroke-width="1.8"/><line x1="55" y1="36" x2="61" y2="34" stroke="#374151" stroke-width="1.8"/><rect x="25" y="32" width="12" height="4" rx="2" fill="rgba(255,255,255,0.08)"/>`,
       star_sticker:   `<path d="M51,37 L52.5,41.5 L57.2,41.5 L53.4,44.2 L54.8,48.8 L51,46.1 L47.2,48.8 L48.6,44.2 L44.8,41.5 L49.5,41.5 Z" fill="#fbbf24" opacity="0.95"/>`,
       magnifying_glass:`<circle cx="45" cy="37" r="8" fill="none" stroke="#374151" stroke-width="2.2"/><circle cx="45" cy="37" r="6.5" fill="rgba(147,197,253,0.22)"/><line x1="51" y1="43" x2="58" y2="52" stroke="#374151" stroke-width="3" stroke-linecap="round"/><circle cx="43" cy="34.5" r="1.8" fill="white" opacity="0.65"/>`,
+      eye_patch:      `<ellipse cx="34" cy="36" rx="6" ry="5" fill="#1e1b4b"/><line x1="28" y1="34" x2="18" y2="30" stroke="#1e1b4b" stroke-width="1.5"/><line x1="40" y1="34" x2="62" y2="30" stroke="#1e1b4b" stroke-width="1.5"/>`,
+      moustache:      `<path d="M32,46 Q28,42 24,44 Q28,46 32,46 Z" fill="#78350f"/><path d="M48,46 Q52,42 56,44 Q52,46 48,46 Z" fill="#78350f"/><path d="M32,46 Q40,48 48,46" fill="#78350f"/>`,
+      round_glasses:  `<circle cx="33" cy="36" r="7" fill="none" stroke="#78350f" stroke-width="2"/><circle cx="47" cy="36" r="7" fill="none" stroke="#78350f" stroke-width="2"/><line x1="40" y1="36" x2="40" y2="36" stroke="#78350f" stroke-width="2"/><line x1="26" y1="34" x2="20" y2="32" stroke="#78350f" stroke-width="1.5"/><line x1="54" y1="34" x2="60" y2="32" stroke="#78350f" stroke-width="1.5"/>`,
+      bandaid:        `<rect x="48" y="40" width="12" height="6" rx="2" fill="#fcd34d" transform="rotate(-20 54 43)"/><circle cx="51" cy="42" r="0.6" fill="#92400e" opacity="0.4"/><circle cx="54" cy="42" r="0.6" fill="#92400e" opacity="0.4"/><circle cx="57" cy="42" r="0.6" fill="#92400e" opacity="0.4"/>`,
+      blush:          `<ellipse cx="26" cy="42" rx="5" ry="3" fill="#fda4af" opacity="0.4"/><ellipse cx="54" cy="42" rx="5" ry="3" fill="#fda4af" opacity="0.4"/>`,
+      face_paint:     `<path d="M50,30 L54,36 L50,36 L54,42" stroke="#fbbf24" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+      bubble_gum:     `<circle cx="40" cy="52" r="6" fill="#f472b6" opacity="0.7"/><circle cx="38" cy="50" r="2" fill="rgba(255,255,255,0.3)"/>`,
+      nose_bandage:   `<rect x="33" y="38" width="14" height="6" rx="2" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.8"/>`,
     };
 
     const customImg = t => customSlots['_img_'+t] && customSlots[t]
