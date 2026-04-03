@@ -939,15 +939,16 @@ into Word Labs as a structured spelling progression system.
 - [x] "Run AI Analysis" button on existing plain-word sets
 - [x] AI-analyzed badge vs words-only badge on each set
 - [x] Historical assignments preserved (active/completed tracking)
-- [ ] Historical view UI — see completed set data alongside current set
-- [ ] Progress tracking across sets visible in student profile
+- [x] Historical view UI — completed students shown at 0.6 opacity with "completed" badge + re-assign button; all check-in sessions viewable as tabs
+- [x] Progress tracking across sets visible in student profile — check-in scores, pre→post change, cross-set timeline
 
 #### 10.3 Activity word prioritisation
 - [x] `getSpellingSetWords()` in wordlab-data.js loads assigned set words
 - [x] `recordSpellingAttempt()` dual-tracks progress to game + spelling set heatmap
 - [x] Words feed into: Breakdown Blitz, Phoneme Splitter, Syllable Splitter, Sound Sorter
 - [x] Spelling set words prepended (highest priority) in each game
-- [ ] Feed into Meaning Mode and Mission Mode (needs morpheme ID matching)
+- [x] Feed into Meaning Mode and Mission Mode — morphemes extracted, matched, prioritised; results tracked per morpheme back to spelling set heatmap
+- [x] Feed into Root Lab — words converted to Root Lab format with morpheme meanings; results tracked per word
 
 #### 10.4 Spelling Check-In (audio dictation assessment)
 - [x] New `spelling-test.html` — audio dictation spelling test
@@ -959,7 +960,7 @@ into Word Labs as a structured spelling progression system.
 - [x] Teacher triggers: "Start Check-In Now" / "Schedule" / "Stop Check-In"
 - [x] Landing page takeover: full-screen modal when check-in is active
 - [x] Activity card on landing page + navigation drawer
-- [ ] Pre/post test comparison view on dashboard
+- [x] Pre/post test comparison view on dashboard — Compare tab shows first vs last check-in with ✗→✓ indicators and % change arrows
 - [ ] Automatic set progression (teacher moves student to harder set after post-test)
 
 #### 10.5 Per-activity extension toggle (future)
