@@ -1839,6 +1839,7 @@ function checkAnswer(){
       const _wlResult = WordLabData.recordAttempt('root-lab', levelLabel(currentLevel === 'mixed' ? w.level : currentLevel), true, timeMs, streak);
       if(typeof WLScientist !== 'undefined') WLScientist.react('correct', _wlResult);
     }
+    _ssTrack(w.word, true);
     if(_wltActive && typeof WLScientist !== 'undefined') WLScientist.react('correct');
     if(!_wltActive && streak >= 3 && typeof WLScientist !== 'undefined') WLScientist.react('streak',{streak:streak});
     if(!_wltActive && typeof WLAudio !== 'undefined') WLAudio.correct();
@@ -1855,6 +1856,7 @@ function checkAnswer(){
     banner.innerHTML = '❌ ' + wrongNames.join(', ') + ' — see breakdown &nbsp;·&nbsp; ' + breakdown;
     if(!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession())
       WordLabData.recordAttempt('root-lab', levelLabel(currentLevel === 'mixed' ? w.level : currentLevel), false, timeMs);
+    _ssTrack(w.word, false);
     if(typeof WLScientist !== 'undefined') WLScientist.react('wrong');
     if(!_wltActive && typeof WLAudio !== 'undefined') WLAudio.wrong();
     if(_wltActive) WLTeacher.onAnswer(false, _teacherFeedback);
@@ -1945,7 +1947,7 @@ function wlShowLogin(){
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', function(){
+window.addEventListener('DOMContentLoaded', async function(){
   if(typeof WLHelp!=='undefined') WLHelp.init({
     game:'rootlab', title:'Root Lab', emoji:'🌿',
     steps:[
@@ -1981,6 +1983,59 @@ window.addEventListener('DOMContentLoaded', function(){
     var btn = document.getElementById('wlLoginBtn');
     if(btn && session) btn.textContent = '👤 ' + session.studentName;
   }
+  // ── Spelling set words — convert to Root Lab format and add to pool ──
+  var _ssWordMap = {}; // word → spellingSetId for tracking
+  if(typeof WordLabData !== 'undefined' && WordLabData.getSpellingSetWords){
+    try {
+      var ssWords = await WordLabData.getSpellingSetWords();
+      if(ssWords && ssWords.length){
+        // Collect existing fullMeanings for distractor generation
+        var existingMeanings = WORDS.map(function(w){ return w.fullMeaning; });
+        var existingWordSet = {};
+        WORDS.forEach(function(w){ existingWordSet[w.word.toLowerCase()] = true; });
+
+        // Build a lookup of morpheme meanings from existing WORDS
+        var knownPfxMeaning = {}, knownSfxMeaning = {}, knownBasMeaning = {};
+        WORDS.forEach(function(w){
+          if(w.parts.prefix && w.meanings.prefix) knownPfxMeaning[w.parts.prefix.toLowerCase()] = w.meanings.prefix;
+          if(w.parts.base && w.meanings.base) knownBasMeaning[w.parts.base.toLowerCase()] = w.meanings.base;
+          if(w.parts.suffix && w.meanings.suffix) knownSfxMeaning[w.parts.suffix.toLowerCase()] = w.meanings.suffix;
+        });
+
+        ssWords.forEach(function(sw){
+          if(!sw.word || !sw.base) return;
+          if(existingWordSet[sw.word.toLowerCase()]) return; // skip duplicates
+          var pfxMeaning = sw.prefix ? (knownPfxMeaning[sw.prefix.toLowerCase()] || sw.prefix) : null;
+          var sfxMeaning = (sw.suffix1||sw.suffix) ? (knownSfxMeaning[(sw.suffix1||sw.suffix).toLowerCase()] || (sw.suffix1||sw.suffix)) : null;
+          var basMeaning = knownBasMeaning[sw.base.toLowerCase()] || sw.base;
+          var fullMeaning = sw.clue || sw.word;
+          // Pick 3 random distractors from existing pool
+          var shuffled = existingMeanings.slice().sort(function(){ return Math.random() - 0.5; });
+          var distractors = shuffled.filter(function(m){ return m !== fullMeaning; }).slice(0, 3);
+          while(distractors.length < 3) distractors.push('a different meaning');
+
+          var entry = {
+            word: sw.word,
+            parts: { prefix: sw.prefix || null, base: sw.base, suffix: sw.suffix1 || sw.suffix || null },
+            meanings: { prefix: pfxMeaning, base: basMeaning, suffix: sfxMeaning },
+            fullMeaning: fullMeaning,
+            distractors: distractors,
+            level: 'starter',
+            _spellingSetId: sw._spellingSetId
+          };
+          WORDS.unshift(entry); // highest priority
+          if(sw._spellingSetId) _ssWordMap[sw.word.toLowerCase()] = sw._spellingSetId;
+        });
+      }
+    } catch(e){ console.warn('Spelling set root-lab load error:', e); }
+  }
+  // Track spelling set progress
+  function _ssTrack(word, correct){
+    if(!word || typeof WordLabData === 'undefined' || !WordLabData.recordSpellingAttempt) return;
+    var setId = _ssWordMap[word.toLowerCase()];
+    if(setId) WordLabData.recordSpellingAttempt(setId, word, correct, 0);
+  }
+
   if(typeof WordLabData !== 'undefined' && WordLabData.isExtensionMode && WordLabData.isExtensionMode()){
     // Add extension words to the pool
     if(typeof WL_EXTENSION !== 'undefined' && WL_EXTENSION.rootLabWords){
