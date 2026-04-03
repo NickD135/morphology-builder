@@ -398,11 +398,21 @@ const WordLabData = (() => {
       .single();
     if (clsErr) throw clsErr;
 
-    const { data: studs, error: stuErr } = await sb()
+    var { data: studs, error: stuErr } = await sb()
       .from('students')
       .select('id, name, student_code, extension_mode, eald_language, support_mode, extension_activities')
       .eq('class_id', id)
       .order('name');
+    // Fallback if extension_activities column not yet in schema cache
+    if (stuErr && stuErr.code === '42703') {
+      var fallback = await sb()
+        .from('students')
+        .select('id, name, student_code, extension_mode, eald_language, support_mode')
+        .eq('class_id', id)
+        .order('name');
+      studs = fallback.data;
+      stuErr = fallback.error;
+    }
     if (stuErr) throw stuErr;
 
     const studentIds = (studs || []).map(s => s.id);
@@ -794,11 +804,15 @@ const WordLabData = (() => {
   async function getStudentData() {
     const session = loadSession();
     if (!session) return null;
-    const [stuResult, charResult, isTeacher] = await Promise.all([
+    var [stuResult, charResult, isTeacher] = await Promise.all([
       sb().from('students').select('extension_mode, eald_language, support_mode, extension_activities').eq('id', session.studentId).maybeSingle(),
       sb().from('student_character').select('student_id, quarks, xp, badges, scientist, stats').eq('student_id', session.studentId).maybeSingle(),
       isStudentTeacher(session.classId, session.studentId)
     ]);
+    // Fallback if extension_activities column not yet in schema cache
+    if (stuResult.error && stuResult.error.code === '42703') {
+      stuResult = await sb().from('students').select('extension_mode, eald_language, support_mode').eq('id', session.studentId).maybeSingle();
+    }
     const data = stuResult.data;
     if (data && data.extension_mode !== undefined) {
       if (!sessionStorage.getItem('wl_ext_pinned')) {

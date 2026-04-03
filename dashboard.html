@@ -3363,14 +3363,16 @@ async function loadSpellingSetsData() {
   try {
     var studentIds3 = currentClass.students.map(function(s) { return s.id; });
     if (studentIds3.length) {
-      var { data: stuFocus } = await dbSb().from('students')
+      var { data: stuFocus, error: fwErr } = await dbSb().from('students')
         .select('id, focus_words')
         .in('id', studentIds3);
-      (stuFocus || []).forEach(function(s) {
-        if (s.focus_words && s.focus_words.length) _studentFocusWords[s.id] = s.focus_words;
-      });
+      if (!fwErr && stuFocus) {
+        stuFocus.forEach(function(s) {
+          if (s.focus_words && s.focus_words.length) _studentFocusWords[s.id] = s.focus_words;
+        });
+      }
     }
-  } catch(e) { console.warn('Focus words load error:', e); }
+  } catch(e) { /* focus_words column may not exist yet — non-critical */ }
 }
 
 async function renderSpellingSetsTab() {
