@@ -1222,6 +1222,60 @@ into Word Labs as a structured spelling progression system.
 
 ---
 
+### PHASE 7.17 — Session 2026-04-03
+
+#### Vercel deployment fix
+- [x] Fixed font cache header regex pattern in vercel.json (`(?:woff|woff2|...)` not supported by Vercel path matching)
+- [x] Split into separate `.woff` and `.woff2` entries — Vercel auto-deploy working again
+
+#### Landing page fixes
+- [x] Removed `defer` from Supabase SDK and wordlab-data.js script tags (missed in commit 6572195)
+- [x] Wrapped Supabase query builder in `Promise.resolve()` for `.catch()` support (thenable but not a Promise)
+- [x] "My Scientist" link text colour changed to `#e0e7ff` to match other stat pills
+- [x] Streak stat pill now shows daily play streak only (was falling back to `bestStreak` — answer streak)
+
+#### Spelling set integration — all 9 games
+- [x] Mission Mode: morphemes extracted from spelling words, prioritised, results tracked per morpheme back to heatmap
+- [x] Meaning Match-Up: same morpheme extraction and tracking pattern
+- [x] Root Lab: spelling words converted to Root Lab format with morpheme meanings from existing pool
+- [x] All 3 new integrations use module-scope tracking functions to avoid closure scoping issues
+
+#### Teaching slide decks — 70 new decks (254 → 324 total)
+- [x] 5 new prefixes: be-, hypo-, circum-, uni-, arch-
+- [x] 11 new suffixes: -age, -ory, -ary, -ise, -ious, -eous, -ative, -sion, -ation, -pathy
+- [x] 9 Greek/Latin roots: tele, peri, gyro, endo, horo, stetho, kaleido, grad, mot
+- [x] 45 Anglo bases: play, work, read, think, kind, hope, etc.
+- [x] Updated teacher-resources.html, about.html, faq.html with new counts (324 decks)
+
+#### Student profile — spelling set progress
+- [x] Check-in scores shown per set (latest score, or pre→post with % change arrow)
+- [x] Cross-set progress timeline when 2+ sets have check-in data
+
+#### Focus words system
+- [x] New `focus_words` jsonb column on students table
+- [x] Wrong words from check-ins automatically saved as focus words (spelling-test.html)
+- [x] Focus words feed into all practice games via `getSpellingSetWords()` pipeline
+- [x] Dashboard: amber 🔄 badge with count on student rows in spelling set heatmap
+- [x] Focus words modal: view word list with morpheme parts + dates, remove individual words or clear all
+- [x] `getFocusWords()`, `addFocusWords()`, `removeFocusWords()`, `clearFocusWords()` in wordlab-data.js
+
+#### Auto-progression
+- [x] Green banner on spelling set heatmap when students score 80%+ in latest check-in
+- [x] Shows student names + scores, one-click "Advance to [Next Set]" button
+- [x] Dismiss button to hide banner without action
+- [x] `ssAutoAdvance()` completes current assignments and creates new ones on next set
+
+#### Per-activity extension toggles
+- [x] New `extension_activities` jsonb column on students table
+- [x] `isExtensionMode(activity)` accepts optional activity parameter for per-activity checks
+- [x] Empty `extension_activities` = all activities (backward compatible with existing `extension_mode` boolean)
+- [x] All 13 game pages updated with activity-specific calls (e.g. `isExtensionMode('phoneme-splitter')`)
+- [x] Dashboard EXT badge opens popover with global toggle + 13 per-activity toggles
+- [x] Save writes both `extension_mode` and `extension_activities` to database
+- [x] `getStudentData()` and `getClass()` select `extension_activities`; cleared on logout
+
+---
+
 ### PHASE 9 — NSW Department of Education Approval
 
 Full checklist document: `docs/nsw-doe-approval-checklist.md`
@@ -1378,3 +1432,9 @@ At the start of each working session, do this:
 | DOM-based preview rendering | Previous innerHTML approach risked XSS from AI-generated content; DOM methods (createElement/appendChild) are safe by default |
 | Print Word List as new-tab page | Teachers need a numbered word list for teacher-led spelling check-ins; new tab with Print button is simpler than PDF generation and works offline |
 | No real-time sync for teacher-led check-in | True lockstep (teacher controls which word all students see) would need Supabase Realtime subscriptions — significant complexity; current mode works for most classrooms where teacher says "ready, next" verbally |
+| Focus words as student-level data | Stored on `students.focus_words` (not per-set) so they persist even after advancing sets; teacher controls when to clear them |
+| Auto-progression at 80% threshold | Not fully automatic — shows a suggestion banner that the teacher accepts or dismisses; teachers want control over when students move on |
+| Per-activity extension via popover | EXT badge click opens a modal with global + 13 per-activity toggles; avoids cluttering the summary table with 13 columns |
+| extension_activities empty = all | Backward compatible: existing students with `extension_mode=true` and no `extension_activities` get extension everywhere, same as before |
+| Spelling set morpheme tracking per-morpheme | Mission/Meaning modes quiz on morphemes not words, so results are tracked against all spelling words containing that morpheme (e.g. getting `un-` right counts for unhappy, unkind, unfair) |
+| Vercel font header split | Vercel path matching doesn't support regex alternation `(?:...)` — split into separate entries per format |
