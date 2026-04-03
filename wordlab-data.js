@@ -2065,6 +2065,20 @@ const WordLabData = (() => {
         });
       });
 
+      // Load focus words and prepend (same priority as set words)
+      try {
+        var focusWords = await getFocusWords();
+        if (focusWords && focusWords.length) {
+          var setWordKeys = {};
+          words.forEach(function(w) { setWordKeys[w.word.toLowerCase()] = true; });
+          focusWords.forEach(function(fw) {
+            if (!setWordKeys[fw.word.toLowerCase()]) {
+              words.push({ word: fw.word, base: fw.base || '', prefix: fw.prefix || '', suffix1: fw.suffix1 || '', clue: fw.clue || '', _spellingSetId: fw.source_set || '', _isFocusWord: true });
+            }
+          });
+        }
+      } catch(e) { /* non-critical */ }
+
       // Prioritise and repeat words based on accuracy (skip for check-in/assessment mode)
       if (!skipRepetition) {
         // - Words never practised: appear 3x
@@ -2112,6 +2126,52 @@ const WordLabData = (() => {
       _spellingSetWordsCache = [];
       return [];
     }
+  }
+
+  // ── Focus words (words students got wrong in check-ins) ────────
+  async function getFocusWords() {
+    var session = loadSession();
+    if (!session) return [];
+    try {
+      var { data } = await sb().from('students').select('focus_words').eq('id', session.studentId).maybeSingle();
+      return (data && data.focus_words) || [];
+    } catch(e) { return []; }
+  }
+
+  async function addFocusWords(newWords) {
+    var session = loadSession();
+    if (!session || !newWords || !newWords.length) return;
+    try {
+      var existing = await getFocusWords();
+      var existingSet = {};
+      existing.forEach(function(w) { existingSet[w.word.toLowerCase()] = true; });
+      var toAdd = newWords.filter(function(w) { return w.word && !existingSet[w.word.toLowerCase()]; });
+      if (!toAdd.length) return;
+      var merged = existing.concat(toAdd.map(function(w) {
+        return { word: w.word, base: w.base || '', prefix: w.prefix || '', suffix1: w.suffix1 || '', clue: w.clue || '', source_set: w._spellingSetId || '', added_at: new Date().toISOString() };
+      }));
+      await sb().from('students').update({ focus_words: merged }).eq('id', session.studentId);
+    } catch(e) { console.warn('addFocusWords error:', e); }
+  }
+
+  async function removeFocusWords(wordsToRemove) {
+    var session = loadSession();
+    if (!session) return;
+    try {
+      var existing = await getFocusWords();
+      var removeSet = {};
+      wordsToRemove.forEach(function(w) { removeSet[(typeof w === 'string' ? w : w.word).toLowerCase()] = true; });
+      var filtered = existing.filter(function(w) { return !removeSet[w.word.toLowerCase()]; });
+      await sb().from('students').update({ focus_words: filtered }).eq('id', session.studentId);
+    } catch(e) { console.warn('removeFocusWords error:', e); }
+  }
+
+  async function clearFocusWords() {
+    var session = loadSession();
+    if (!session) return;
+    try {
+      await sb().from('students').update({ focus_words: [] }).eq('id', session.studentId);
+    } catch(e) { console.warn('clearFocusWords error:', e); }
   }
 
   // Record a spelling set attempt — uses special activity key so dashboard heatmap picks it up
@@ -2524,6 +2584,7 @@ const WordLabData = (() => {
     getCustomWords, getCustomWordPriority,
     getCustomMorphemes, getCustomMorphemePriority,
     getSpellingSetWords, recordSpellingAttempt,
+    getFocusWords, addFocusWords, removeFocusWords, clearFocusWords,
     getEALDLanguage, getEALDLanguageName, getTranslations, createEALDPill, injectEALDStyles, EALD_LANGUAGES, EALD_TTS_CODES,
     speakInLanguage, preloadTTS, buildEALDSpeakButtons, buildEALDRevealButton, _speakEALD,
     escapeHtml,

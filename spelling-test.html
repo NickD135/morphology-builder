@@ -410,6 +410,17 @@ function finishCheckIn() {
   // Save session for pre/post comparison
   saveCheckInSession(correctCount, results.length);
 
+  // Add wrong words to focus words for ongoing practice
+  var wrongWords = results.filter(function(r) { return !r.correct; });
+  if (wrongWords.length && typeof WordLabData !== 'undefined' && WordLabData.addFocusWords) {
+    var focusEntries = wrongWords.map(function(r) {
+      // Find the full word data from testWords
+      var tw = testWords.find(function(w) { return w.word.toLowerCase() === r.word.toLowerCase(); });
+      return { word: r.word, base: tw ? tw.base : '', prefix: tw ? tw.prefix : '', suffix1: tw ? tw.suffix1 : '', clue: tw ? tw.clue : '', _spellingSetId: currentSetId };
+    });
+    WordLabData.addFocusWords(focusEntries);
+  }
+
   // Show results immediately — no waiting for teacher to stop check-in
   document.getElementById('testCard').classList.add('hidden');
   showFullResults(correctCount);
