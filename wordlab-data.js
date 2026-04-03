@@ -400,20 +400,17 @@ const WordLabData = (() => {
 
     var { data: studs, error: stuErr } = await sb()
       .from('students')
-      .select('id, name, student_code, extension_mode, eald_language, support_mode, extension_activities')
+      .select('id, name, student_code, extension_mode, eald_language, support_mode')
       .eq('class_id', id)
       .order('name');
-    // Fallback if extension_activities column not yet in schema cache
-    if (stuErr && (stuErr.code === '42703' || (stuErr.message && stuErr.message.indexOf('extension_activities') !== -1))) {
-      var fallback = await sb()
-        .from('students')
-        .select('id, name, student_code, extension_mode, eald_language, support_mode')
-        .eq('class_id', id)
-        .order('name');
-      studs = fallback.data;
-      stuErr = fallback.error;
-    }
     if (stuErr) throw stuErr;
+    // Load extension_activities separately (column may not be in PostgREST schema cache yet)
+    var { data: extAct, error: extActErr } = await sb().from('students').select('id, extension_activities').eq('class_id', id);
+    if (!extActErr && extAct) {
+      var extMap = {};
+      extAct.forEach(function(s) { extMap[s.id] = s.extension_activities; });
+      studs.forEach(function(s) { s.extension_activities = extMap[s.id] || []; });
+    }
 
     const studentIds = (studs || []).map(s => s.id);
     let progressRows = [];
@@ -805,13 +802,15 @@ const WordLabData = (() => {
     const session = loadSession();
     if (!session) return null;
     var [stuResult, charResult, isTeacher] = await Promise.all([
-      sb().from('students').select('extension_mode, eald_language, support_mode, extension_activities').eq('id', session.studentId).maybeSingle(),
+      sb().from('students').select('extension_mode, eald_language, support_mode').eq('id', session.studentId).maybeSingle(),
       sb().from('student_character').select('student_id, quarks, xp, badges, scientist, stats').eq('student_id', session.studentId).maybeSingle(),
       isStudentTeacher(session.classId, session.studentId)
     ]);
-    // Fallback if extension_activities column not yet in schema cache
-    if (stuResult.error && (stuResult.error.code === '42703' || (stuResult.error.message && stuResult.error.message.indexOf('extension_activities') !== -1))) {
-      stuResult = await sb().from('students').select('extension_mode, eald_language, support_mode').eq('id', session.studentId).maybeSingle();
+    // Load extension_activities separately (may not be in PostgREST schema cache)
+    var extActResult = await sb().from('students').select('extension_activities').eq('id', session.studentId).maybeSingle();
+    if (!extActResult.error && extActResult.data) {
+      if (!stuResult.data) stuResult.data = {};
+      stuResult.data.extension_activities = extActResult.data.extension_activities;
     }
     const data = stuResult.data;
     if (data && data.extension_mode !== undefined) {
