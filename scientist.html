@@ -688,6 +688,9 @@ const SHOP = {
     {id:'halo',          name:'Halo',           cost:0,  requiresBadge:'answered_200',   icon:'😇'},
     {id:'ninja_headband',name:'Ninja Headband', cost:0,  requiresBadge:'streak_15',      icon:'🥷'},
     {id:'crown',         name:'Crown',          cost:0,  legendary:true, requiresBadge:'legend_morpheme', icon:'👑'},
+    {id:'flame_crown',   name:'Flame Crown',    cost:600, legendary:true, requiresBadge:'streak_20',       icon:'🔥'},
+    {id:'ice_crown',     name:'Ice Crown',      cost:500, legendary:true, requiresBadge:'answered_500',    icon:'❄️'},
+    {id:'galaxy_halo',   name:'Galaxy Halo',    cost:800, legendary:true, requiresBadge:'legend_sessions', icon:'🌌'},
   ],
   faceAccessories: [
     {id:'none',           name:'None',          cost:0, free:true,  icon:'❌'},
@@ -706,6 +709,16 @@ const SHOP = {
     {id:'bubble_gum',    name:'Bubble Gum',     cost:60,             icon:'🫧'},
     {id:'nose_bandage',  name:'Lab Accident',   cost:40,             icon:'🤕'},
     {id:'magnifying_glass', name:'Magnifying Glass',cost:0, requiresBadge:'answered_100', icon:'🔍'},
+    {id:'laser_eyes',      name:'Laser Eyes',      cost:700, legendary:true, requiresBadge:'legend_streak',    icon:'🔴'},
+    {id:'diamond_monocle', name:'Diamond Monocle', cost:500, legendary:true, requiresBadge:'quarks_1000',      icon:'💎'},
+    {id:'glowing_mask',    name:'Glowing Mask',    cost:400, legendary:true, requiresBadge:'legend_collector', icon:'🎭'},
+  ],
+  wings: [
+    {id:'none',          name:'None',           cost:0,   free:true,  icon:'❌'},
+    {id:'angel_wings',   name:'Angel Wings',    cost:600, legendary:true, requiresBadge:'answered_750',     icon:'🪽'},
+    {id:'fire_wings',    name:'Fire Wings',     cost:800, legendary:true, requiresBadge:'legend_streak',    icon:'🔥'},
+    {id:'crystal_wings', name:'Crystal Wings',  cost:700, legendary:true, requiresBadge:'legend_morpheme',  icon:'💎'},
+    {id:'shadow_wings',  name:'Shadow Wings',   cost:900, legendary:true, requiresBadge:'legend_polymath',  icon:'🖤'},
   ],
   pets: [
     {id:'none',       name:'None',         cost:0,  free:true,  icon:'❌'},
@@ -870,6 +883,13 @@ async function render() {
               return `<button class="optPill${a.id===cur?' active':''}" onclick="applyOption('face',${a.id==='none'?'null':"'"+a.id+"'"})">${a.icon} ${a.name}</button>`;
             }).join('')}</div>
           </div>
+          <div class="custSection">
+            <div class="custLabel">Wings</div>
+            <div class="optRow">${SHOP.wings.filter(a=> sd.is_teacher || a.free || owned.includes(a.id)).map(a=>{
+              const cur = sci.wings||'none';
+              return `<button class="optPill${a.id===cur?' active':''}" onclick="applyOption('wings',${a.id==='none'?'null':"'"+a.id+"'"})">${a.icon} ${a.name}</button>`;
+            }).join('')}</div>
+          </div>
           <!-- Pet companion section hidden for now -->
           <div class="custSection" id="effectCustSection">
             <div class="custLabel">Particle Effect</div>
@@ -971,6 +991,7 @@ async function render() {
       ${renderShopSection('Coat Patterns',      SHOP.coatPatterns,    'coatPattern',  sd)}
       ${renderShopSection('Head Accessories',   SHOP.headAccessories, 'head',         sd)}
       ${renderShopSection('Face Accessories',   SHOP.faceAccessories, 'face',         sd)}
+      ${renderShopSection('Wings',              SHOP.wings,           'wings',        sd)}
       <!-- Pet shop section hidden for now -->
       <div class="shopSection">
         <div class="shopSectionTitle">✨ Particle Effects</div>
@@ -1047,7 +1068,7 @@ async function render() {
 function renderShopSection(title, items, field, sd) {
   const sci   = sd.scientist || {};
   const owned = sci.owned || [];
-  const curVal = (field==='head'||field==='face'||field==='pet') ? (sci[field]||null) : sci[field];
+  const curVal = (field==='head'||field==='face'||field==='pet'||field==='wings') ? (sci[field]||null) : sci[field];
   const esc = WordLabData.escapeHtml;
   return `<div class="shopSection">
     <div class="shopSectionTitle">${title}</div>
@@ -1237,7 +1258,7 @@ async function shopBuy(itemId, cost, field) {
   if (!result.success) { alert('Not enough quarks!'); return; }
   const updates = {};
   updates[field] = itemId;
-  if (field==='head'||field==='face'||field==='pet') updates[field] = itemId==='none'?null:itemId;
+  if (field==='head'||field==='face'||field==='pet'||field==='wings') updates[field] = itemId==='none'?null:itemId;
   try {
     await WordLabData.saveScientist(updates);
   } catch(e) { alert('Could not save: ' + (e.message || e)); return; }

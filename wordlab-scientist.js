@@ -134,6 +134,7 @@ const WLScientist = (() => {
     const pattern    = scientist.coatPattern || 'plain';
     const headAcc    = scientist.head        || null;
     const faceAcc    = scientist.face        || null;
+    const wingsAcc   = scientist.wings       || null;
     const customSlots = scientist.customSlots || {};
 
     // Coat fill — plain, rainbow gradient, or patterned
@@ -191,8 +192,21 @@ const WLScientist = (() => {
         : '',
     ].filter(Boolean).join('');
 
-    const coatFillDef = defsContent ? `<defs>${defsContent}</defs>` : '';
+    // Galaxy halo gradient + any extra defs
+    const galaxyDef = headAcc === 'galaxy_halo'
+      ? `<linearGradient id="galaxyGrad" x1="0%" y1="0%" x2="100%"><stop offset="0%" stop-color="#a78bfa"/><stop offset="33%" stop-color="#f472b6"/><stop offset="66%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#60a5fa"/></linearGradient>` : '';
+    const allDefs = defsContent + galaxyDef;
+    const coatFillDef = allDefs ? `<defs>${allDefs}</defs>` : '';
     const coatFillRef = ['stripes','molecules','stars','dots','chevrons','hearts','lightning','dna','plaid'].includes(pattern) ? 'url(#cp)' : coatBase;
+
+    // Wings (render behind body)
+    const wingsSVG = {
+      angel_wings:  `<g opacity="0.85"><path d="M14,70 Q-8,50 -4,30 Q0,20 10,25 Q16,30 14,50 Z" fill="#e0e7ff" stroke="#c7d2fe" stroke-width="1"><animate attributeName="opacity" values="0.85;0.6;0.85" dur="3s" repeatCount="indefinite"/></path><path d="M66,70 Q88,50 84,30 Q80,20 70,25 Q64,30 66,50 Z" fill="#e0e7ff" stroke="#c7d2fe" stroke-width="1"><animate attributeName="opacity" values="0.85;0.6;0.85" dur="3s" repeatCount="indefinite"/></path><path d="M14,65 Q-2,48 2,35 Q6,28 12,32" fill="#f1f5f9" opacity="0.5"/><path d="M66,65 Q82,48 78,35 Q74,28 68,32" fill="#f1f5f9" opacity="0.5"/></g>`,
+      fire_wings:   `<g><path d="M14,72 Q-6,52 -2,34 Q2,24 12,30 Q16,36 14,55 Z" fill="#f97316" opacity="0.8"><animate attributeName="opacity" values="0.8;0.5;0.8" dur="0.6s" repeatCount="indefinite"/></path><path d="M14,68 Q0,50 4,38 Q8,32 14,38" fill="#fbbf24" opacity="0.6"><animate attributeName="opacity" values="0.6;0.3;0.6" dur="0.4s" repeatCount="indefinite"/></path><path d="M66,72 Q86,52 82,34 Q78,24 68,30 Q64,36 66,55 Z" fill="#f97316" opacity="0.8"><animate attributeName="opacity" values="0.8;0.5;0.8" dur="0.6s" repeatCount="indefinite"/></path><path d="M66,68 Q80,50 76,38 Q72,32 66,38" fill="#fbbf24" opacity="0.6"><animate attributeName="opacity" values="0.6;0.3;0.6" dur="0.4s" repeatCount="indefinite"/></path><path d="M14,70 Q2,56 6,42" fill="none" stroke="#fef08a" stroke-width="1" opacity="0.4"/><path d="M66,70 Q78,56 74,42" fill="none" stroke="#fef08a" stroke-width="1" opacity="0.4"/></g>`,
+      crystal_wings:`<g opacity="0.75"><path d="M14,72 Q-4,48 2,30 Q6,22 14,28 Q18,36 14,56 Z" fill="#c4b5fd" stroke="#a78bfa" stroke-width="1"><animate attributeName="fill-opacity" values="0.7;0.4;0.7" dur="2.5s" repeatCount="indefinite"/></path><path d="M66,72 Q84,48 78,30 Q74,22 66,28 Q62,36 66,56 Z" fill="#c4b5fd" stroke="#a78bfa" stroke-width="1"><animate attributeName="fill-opacity" values="0.7;0.4;0.7" dur="2.5s" repeatCount="indefinite"/></path><circle cx="4" cy="40" r="1.5" fill="#e0e7ff"><animate attributeName="opacity" values="1;0.2;1" dur="1.2s" repeatCount="indefinite"/></circle><circle cx="76" cy="40" r="1.5" fill="#e0e7ff"><animate attributeName="opacity" values="0.2;1;0.2" dur="1.2s" repeatCount="indefinite"/></circle><circle cx="0" cy="50" r="1" fill="#fde68a"><animate attributeName="opacity" values="0.8;0.1;0.8" dur="1.8s" repeatCount="indefinite"/></circle><circle cx="80" cy="50" r="1" fill="#fde68a"><animate attributeName="opacity" values="0.1;0.8;0.1" dur="1.8s" repeatCount="indefinite"/></circle></g>`,
+      shadow_wings: `<g opacity="0.7"><path d="M14,72 Q-8,48 -2,28 Q2,18 12,26 Q18,34 14,54 Z" fill="#1e1b4b" stroke="#312e81" stroke-width="1"><animate attributeName="opacity" values="0.7;0.4;0.7" dur="2s" repeatCount="indefinite"/></path><path d="M66,72 Q88,48 82,28 Q78,18 68,26 Q62,34 66,54 Z" fill="#1e1b4b" stroke="#312e81" stroke-width="1"><animate attributeName="opacity" values="0.7;0.4;0.7" dur="2s" repeatCount="indefinite"/></path><path d="M14,66 Q0,50 6,38" fill="none" stroke="#4338ca" stroke-width="1" opacity="0.4"><animate attributeName="stroke-opacity" values="0.4;0.1;0.4" dur="1.5s" repeatCount="indefinite"/></path><path d="M66,66 Q80,50 74,38" fill="none" stroke="#4338ca" stroke-width="1" opacity="0.4"><animate attributeName="stroke-opacity" values="0.4;0.1;0.4" dur="1.5s" repeatCount="indefinite"/></path></g>`,
+    };
+    const wingsRendered = wingsAcc && wingsSVG[wingsAcc] ? wingsSVG[wingsAcc] : '';
 
     // Emotion layers
     const eyes = {
@@ -248,6 +262,10 @@ const WLScientist = (() => {
       tiara:        `<path d="M24,22 L28,14 L33,20 L40,10 L47,20 L52,14 L56,22" fill="none" stroke="#e879f9" stroke-width="2"/><circle cx="40" cy="10" r="2.5" fill="#c084fc"/><circle cx="28" cy="14" r="1.5" fill="#f0abfc"/><circle cx="52" cy="14" r="1.5" fill="#f0abfc"/><rect x="24" y="21" width="32" height="3" rx="1.5" fill="#d946ef"/>`,
       viking_helmet:`<path d="M20,28 Q20,14 40,12 Q60,14 60,28 Z" fill="#78716c"/><rect x="18" y="26" width="44" height="4" rx="2" fill="#57534e"/><path d="M20,24 Q14,16 10,6" stroke="#fef3c7" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M60,24 Q66,16 70,6" stroke="#fef3c7" stroke-width="3" fill="none" stroke-linecap="round"/>`,
       antenna:      `<line x1="40" y1="18" x2="40" y2="2" stroke="#94a3b8" stroke-width="1.5"/><circle cx="40" cy="2" r="3.5" fill="#4ade80"><animate attributeName="opacity" values="1;0.4;1" dur="1.5s" repeatCount="indefinite"/></circle>`,
+      // ── ANIMATED LEGENDARY HEAD ITEMS ──
+      flame_crown:  `<polygon points="40,4 28,18 32,13 36,18 40,8 44,18 48,13 52,18" fill="#f59e0b"><animate attributeName="d" values="M40,4 L28,18 L32,13 L36,18 L40,8 L44,18 L48,13 L52,18;M40,2 L28,18 L33,11 L37,18 L40,6 L43,18 L47,11 L52,18;M40,4 L28,18 L32,13 L36,18 L40,8 L44,18 L48,13 L52,18" dur="0.4s" repeatCount="indefinite" attributeType="XML"/></polygon><polygon points="40,7 31,18 35,14 40,18 45,14 49,18" fill="#ef4444" opacity="0.8"><animate attributeName="opacity" values="0.8;0.5;0.8" dur="0.3s" repeatCount="indefinite"/></polygon><polygon points="40,10 35,18 40,15 45,18" fill="#fef08a" opacity="0.9"><animate attributeName="opacity" values="0.9;0.6;0.9" dur="0.5s" repeatCount="indefinite"/></polygon>`,
+      ice_crown:    `<polygon points="40,6 26,20 33,16 40,20 47,16 54,20" fill="#93c5fd" opacity="0.8"/><polygon points="40,6 26,20 33,16 40,20 47,16 54,20" fill="none" stroke="#bfdbfe" stroke-width="1.5"><animate attributeName="stroke-opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/></polygon><circle cx="30" cy="16" r="1.5" fill="#e0f2fe"><animate attributeName="r" values="1.5;2;1.5" dur="1.5s" repeatCount="indefinite"/></circle><circle cx="40" cy="8" r="2" fill="#dbeafe"><animate attributeName="r" values="2;2.8;2" dur="2s" repeatCount="indefinite"/></circle><circle cx="50" cy="16" r="1.5" fill="#e0f2fe"><animate attributeName="r" values="1.5;2;1.5" dur="1.8s" repeatCount="indefinite"/></circle><rect x="24" y="19" width="32" height="3" rx="1.5" fill="#60a5fa"/>`,
+      galaxy_halo:  `<ellipse cx="40" cy="14" rx="18" ry="5" fill="none" stroke="url(#galaxyGrad)" stroke-width="2.5"><animateTransform attributeName="transform" type="rotate" values="0 40 14;360 40 14" dur="8s" repeatCount="indefinite"/></ellipse><circle cx="26" cy="14" r="1.5" fill="#fbbf24"><animate attributeName="opacity" values="1;0.2;1" dur="1.2s" repeatCount="indefinite"/></circle><circle cx="54" cy="14" r="1" fill="#a78bfa"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" repeatCount="indefinite"/></circle><circle cx="40" cy="9" r="1.2" fill="#f472b6"><animate attributeName="opacity" values="1;0.4;1" dur="0.9s" repeatCount="indefinite"/></circle>`,
     };
     // Face accessories
     const faceAccSVG = {
@@ -266,6 +284,10 @@ const WLScientist = (() => {
       face_paint:     `<path d="M50,30 L54,36 L50,36 L54,42" stroke="#fbbf24" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
       bubble_gum:     `<circle cx="40" cy="52" r="6" fill="#f472b6" opacity="0.7"/><circle cx="38" cy="50" r="2" fill="rgba(255,255,255,0.3)"/>`,
       nose_bandage:   `<rect x="33" y="38" width="14" height="6" rx="2" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.8"/>`,
+      // ── ANIMATED LEGENDARY FACE ITEMS ──
+      laser_eyes:     `<line x1="34" y1="36" x2="10" y2="50" stroke="#ef4444" stroke-width="2" opacity="0.7"><animate attributeName="opacity" values="0.7;0.2;0.7" dur="0.15s" repeatCount="indefinite"/></line><line x1="46" y1="36" x2="70" y2="50" stroke="#ef4444" stroke-width="2" opacity="0.7"><animate attributeName="opacity" values="0.7;0.2;0.7" dur="0.15s" repeatCount="indefinite"/></line><circle cx="34" cy="36" r="3" fill="#ef4444" opacity="0.5"><animate attributeName="r" values="3;4;3" dur="0.3s" repeatCount="indefinite"/></circle><circle cx="46" cy="36" r="3" fill="#ef4444" opacity="0.5"><animate attributeName="r" values="3;4;3" dur="0.3s" repeatCount="indefinite"/></circle>`,
+      diamond_monocle:`<circle cx="46" cy="36" r="7.5" fill="none" stroke="#fbbf24" stroke-width="2.5"/><circle cx="46" cy="36" r="5" fill="rgba(251,191,36,0.08)"/><line x1="51" y1="42" x2="55" y2="50" stroke="#fbbf24" stroke-width="2"/><path d="M43,33 L46,29 L49,33 L46,37 Z" fill="#e0f2fe" opacity="0.6"><animate attributeName="opacity" values="0.6;0.9;0.6" dur="1.5s" repeatCount="indefinite"/></path><circle cx="43" cy="34" r="0.8" fill="#fff" opacity="0.8"><animate attributeName="opacity" values="0.8;0.3;0.8" dur="1s" repeatCount="indefinite"/></circle>`,
+      glowing_mask:   `<rect x="26" y="42" width="28" height="12" rx="5" fill="#4338ca" opacity="0.85"><animate attributeName="opacity" values="0.85;0.6;0.85" dur="2s" repeatCount="indefinite"/></rect><rect x="26" y="42" width="28" height="12" rx="5" fill="none" stroke="#818cf8" stroke-width="1.5"><animate attributeName="stroke-opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite"/></rect><line x1="30" y1="47" x2="50" y2="47" stroke="#a5b4fc" stroke-width="0.6" opacity="0.5"/><line x1="30" y1="50" x2="50" y2="50" stroke="#a5b4fc" stroke-width="0.6" opacity="0.5"/>`,
     };
 
     const customImg = t => customSlots['_img_'+t] && customSlots[t]
@@ -274,6 +296,8 @@ const WLScientist = (() => {
 
     return `<svg viewBox="0 0 80 120" xmlns="http://www.w3.org/2000/svg" style="overflow:visible">
   ${coatFillDef}
+  <!-- Wings (behind body) -->
+  ${wingsRendered}
   <!-- Body / Lab coat -->
   <rect x="14" y="60" width="52" height="58" rx="10" fill="${coatFillRef}" stroke="#e2e8f0" stroke-width="1"/>
   <!-- Custom coat overlay: on top of coat colour, under collar/pocket/face details -->
