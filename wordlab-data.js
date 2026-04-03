@@ -404,7 +404,7 @@ const WordLabData = (() => {
       .eq('class_id', id)
       .order('name');
     // Fallback if extension_activities column not yet in schema cache
-    if (stuErr && stuErr.code === '42703') {
+    if (stuErr && (stuErr.code === '42703' || (stuErr.message && stuErr.message.indexOf('extension_activities') !== -1))) {
       var fallback = await sb()
         .from('students')
         .select('id, name, student_code, extension_mode, eald_language, support_mode')
@@ -810,7 +810,7 @@ const WordLabData = (() => {
       isStudentTeacher(session.classId, session.studentId)
     ]);
     // Fallback if extension_activities column not yet in schema cache
-    if (stuResult.error && stuResult.error.code === '42703') {
+    if (stuResult.error && (stuResult.error.code === '42703' || (stuResult.error.message && stuResult.error.message.indexOf('extension_activities') !== -1))) {
       stuResult = await sb().from('students').select('extension_mode, eald_language, support_mode').eq('id', session.studentId).maybeSingle();
     }
     const data = stuResult.data;
