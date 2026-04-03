@@ -384,7 +384,8 @@
       merge(BASES, cBas, _origMeanBas);
     } catch(e) { console.warn('Custom morphemes load error:', e); }
 
-    // ── Spelling set morphemes — extract and prioritise ──
+    // ── Spelling set morphemes — extract, prioritise, and build tracking map ──
+    var _ssMorphemeToWords = {};
     try {
       if (typeof WordLabData !== 'undefined' && WordLabData.getSpellingSetWords) {
         var ssWords = await WordLabData.getSpellingSetWords();
@@ -398,9 +399,21 @@
           var seenPfx = {}, seenSfx = {}, seenBas = {};
 
           ssWords.forEach(function(w) {
+            if (!w._spellingSetId) return;
+            // Build morpheme → words map for tracking
+            function mapMorpheme(form) {
+              if (!form) return;
+              var key = form.toLowerCase();
+              if (!_ssMorphemeToWords[key]) _ssMorphemeToWords[key] = [];
+              _ssMorphemeToWords[key].push({ word: w.word, setId: w._spellingSetId });
+            }
+            mapMorpheme(w.prefix);
+            mapMorpheme(w.base);
+            mapMorpheme(w.suffix1 || w.suffix);
+            mapMorpheme(w.suffix2);
+
             if (w.prefix && !seenPfx[w.prefix.toLowerCase()]) {
               seenPfx[w.prefix.toLowerCase()] = true;
-              // Find matching morpheme in existing data for its meaning
               var match = PREFIXES.find(function(p){ return p.form.toLowerCase() === w.prefix.toLowerCase(); }) || _origMeanPfx.find(function(p){ return p.form.toLowerCase() === w.prefix.toLowerCase(); });
               if (match) ssPfx.push(match);
             }
@@ -437,6 +450,13 @@
         }
       }
     } catch(e) { console.warn('Spelling set morphemes load error:', e); }
+    // Track spelling set progress when a morpheme from a spelling word is answered
+    function _ssTrackMorpheme(morphemeForm, correct) {
+      if (!morphemeForm || typeof WordLabData === 'undefined' || !WordLabData.recordSpellingAttempt) return;
+      var entries = _ssMorphemeToWords[morphemeForm.toLowerCase()];
+      if (!entries) return;
+      entries.forEach(function(e) { WordLabData.recordSpellingAttempt(e.setId, e.word, correct, 0); });
+    }
   })();
   let morphemeMode = 'prefix';
   // ── Round count system ──
@@ -577,6 +597,7 @@
       if(!_wltActive && typeof WordLabData!=='undefined'&&WordLabData.getSession()){const _wlResult=WordLabData.recordAttempt('meaning-mode',_cat,true,0,streak);if(typeof WLScientist!=='undefined') WLScientist.react('correct',_wlResult);}
       if(_wltActive && typeof WLScientist!=='undefined') WLScientist.react('correct');
       if(!_wltActive && typeof WLAudio!=='undefined'){WLAudio.correct();if(streak>=3)WLAudio.streak(streak);}
+      _ssTrackMorpheme(q.correct.form, true);
       feedbackEl.textContent="✅ Correct!";feedbackEl.className="feedback ok";
       subFeedbackEl.textContent=isBase?`${getPrefixLabel(choice)} means "${choice.meaning}"`:`${getPrefixLabel(choice)} means "${choice.meaning}"`;
       dropZoneTextEl.style.color="var(--ok)";dropZoneEl.classList.add("flashSuccess");
@@ -584,6 +605,7 @@
     } else {
       streak=0;if(!_wltActive){fuel=Math.max(fuel-(_supportMode?6:12),0);}
       if(!_wltActive && typeof WordLabData!=='undefined'&&WordLabData.getSession()){WordLabData.recordAttempt('meaning-mode',_cat,false,0);}
+      _ssTrackMorpheme(q.correct.form, false);
       if(typeof WLScientist!=='undefined') WLScientist.react('wrong');
       if(!_wltActive && typeof WLAudio!=='undefined') WLAudio.wrong();
       feedbackEl.textContent="❌ Not quite";feedbackEl.className="feedback bad";
