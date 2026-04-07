@@ -559,6 +559,12 @@
     .gd-attentionCard-settings{ font-size:11px; color:var(--text-secondary); font-weight:700; }
     .gd-attentionCard-settings strong{ color:var(--text-primary); font-weight:800; }
     .gd-flagGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:10px; }
+    /* Compact pill row — each flagged student is a single pill with a hover tooltip */
+    .gd-flagPillRow{ display:flex; flex-wrap:wrap; gap:6px; }
+    .gd-flagPill{ display:inline-flex; align-items:center; gap:7px; background:rgba(248,113,113,.08); border:1px solid rgba(248,113,113,.3); color:var(--text-bright); border-radius:999px; padding:6px 8px 6px 13px; font-size:12px; font-weight:800; cursor:pointer; transition:all .15s; font-family:'Lexend',sans-serif; }
+    .gd-flagPill:hover{ background:rgba(248,113,113,.18); border-color:var(--bad); transform:translateY(-1px); }
+    .gd-flagPill-count{ background:var(--bad); color:#fff; border-radius:999px; padding:1px 7px; font-size:10px; font-weight:900; min-width:18px; text-align:center; line-height:1.3; }
+    .gd-flagPill-ext{ background:var(--indigo); color:#fff; border-radius:5px; padding:1px 5px; font-size:8px; font-weight:900; letter-spacing:.04em; text-transform:uppercase; }
     .gd-flagCard{ background:rgba(248,113,113,.05); border:1px solid rgba(248,113,113,.3); border-radius:14px; padding:14px 16px; transition:all .15s ease; cursor:pointer; }
     .gd-flagCard:hover{ background:rgba(248,113,113,.1); border-color:var(--bad); }
     .gd-flagCard-name{ font-size:14px; font-weight:900; color:var(--text-bright); display:flex; align-items:center; gap:8px; margin-bottom:8px; }
@@ -1799,21 +1805,25 @@ function gdBuildAttentionCard() {
     '</section>';
   }
 
-  var cards = flagged.map(function(entry) {
+  // Compact pill row — one pill per student with a hover tooltip of the full
+  // flag breakdown. Keeps the card tight even when every student is flagged.
+  var pills = flagged.map(function(entry) {
     var s = entry.student;
-    var extBadge = s.extension_mode ? ' <span class="gd-flagCard-name-badge">EXT</span>' : '';
-    var chips = entry.flags.slice(0, 4).map(function(f) {
+    // Build native tooltip: student name + one line per flag
+    var tooltipLines = entry.flags.map(function(f) {
       var catLabel = f.category.replace(/^[^:]+:/, '');
-      return '<span class="gd-flagCard-chip"><span class="gd-flagCard-chip-act">' + WordLabData.escapeHtml(f.activityLabel) + '</span> \u00B7 ' + WordLabData.escapeHtml(catLabel) + ': ' + f.pct + '%</span>';
-    }).join('');
-    if (entry.flags.length > 4) chips += '<span class="gd-flagCard-chip">+' + (entry.flags.length - 4) + ' more</span>';
-    return '<div class="gd-flagCard" onclick="showStudentProfile(\'' + s.id + '\')" title="View profile">' +
-      '<div class="gd-flagCard-name">' + WordLabData.escapeHtml(s.name) + extBadge + '</div>' +
-      '<div class="gd-flagCard-chips">' + chips + '</div>' +
-    '</div>';
+      return f.activityLabel + ' \u00B7 ' + catLabel + ': ' + f.pct + '%';
+    });
+    var tooltip = s.name + (s.extension_mode ? ' (EXT)' : '') + '\n' + tooltipLines.join('\n') + '\n\nClick to open profile';
+    var extBadge = s.extension_mode ? '<span class="gd-flagPill-ext">EXT</span>' : '';
+    return '<button class="gd-flagPill" onclick="showStudentProfile(\'' + s.id + '\')" title="' + WordLabData.escapeHtml(tooltip) + '">' +
+      WordLabData.escapeHtml(s.name) +
+      extBadge +
+      '<span class="gd-flagPill-count" aria-label="' + entry.flags.length + ' flags">' + entry.flags.length + '</span>' +
+    '</button>';
   }).join('');
 
-  return '<section class="gd-attentionCard alert">' + header + '<div class="gd-flagGrid">' + cards + '</div></section>';
+  return '<section class="gd-attentionCard alert">' + header + '<div class="gd-flagPillRow">' + pills + '</div></section>';
 }
 
 function gdBuildMatrixCard() {
