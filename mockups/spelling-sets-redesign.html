@@ -1,0 +1,1223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Spelling Check-Ins — Redesign Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  /* ═══════════════════════════════════════════════════════════
+     Design tokens (matching real dashboard exactly)
+     ═══════════════════════════════════════════════════════════ */
+  :root{
+    --bg:#0f172a;
+    --panel:#1e293b;
+    --panel-2:#233149;
+    --panel-3:#1a2438;
+    --line:rgba(255,255,255,.08);
+    --line-strong:rgba(255,255,255,.14);
+    --text:#e2e8f0;
+    --text-bright:#ffffff;
+    --muted:#94a3b8;
+    --muted-2:#64748b;
+
+    --indigo:#6366f1;
+    --indigo-2:#818cf8;
+    --indigo-3:#a5b4fc;
+    --indigo-soft:rgba(99,102,241,.15);
+    --indigo-glow:rgba(99,102,241,.35);
+
+    --green:#4ade80;
+    --green-soft:rgba(74,222,128,.12);
+    --green-line:rgba(74,222,128,.3);
+
+    --cyan:#06b6d4;
+    --cyan-2:#22d3ee;
+    --cyan-soft:rgba(6,182,212,.15);
+
+    --bad:#f87171;
+    --bad-soft:rgba(248,113,113,.12);
+    --bad-line:rgba(248,113,113,.3);
+
+    --amber:#fbbf24;
+    --amber-soft:rgba(251,191,36,.12);
+
+    --navy:#0f172a;
+    --navy-2:#1e293b;
+    --navy-3:#334155;
+
+    --shadow-card:0 4px 12px rgba(0,0,0,.2);
+    --shadow-glow:0 12px 32px rgba(99,102,241,.18);
+    --shadow-live:0 12px 32px rgba(248,113,113,.18);
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{background:var(--bg);color:var(--text);font-family:'Lexend',sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased;}
+  button,input,select,textarea{font:inherit;color:inherit;}
+  button{cursor:pointer;}
+
+  ::selection{background:var(--indigo-soft);color:var(--text-bright);}
+
+  /* ═══════════════════════════════════════════════════════════
+     Mockup chrome — banner at top so Nick knows it's a preview
+     ═══════════════════════════════════════════════════════════ */
+  .mockBanner{
+    background:linear-gradient(135deg,#facc15 0%,#fb923c 100%);
+    color:#1e293b;font-weight:900;font-size:12px;
+    padding:10px 24px;text-align:center;
+    letter-spacing:.04em;text-transform:uppercase;
+    box-shadow:0 2px 8px rgba(0,0,0,.2);
+  }
+  .mockBanner b{font-weight:900;}
+
+  /* State switcher */
+  .stateSwitch{
+    background:#0a1224;border-bottom:1px solid var(--line);
+    padding:14px 24px;
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  }
+  .stateSwitch-lbl{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.16em;color:var(--muted);}
+  .stateBtn{
+    border:1px solid var(--line-strong);background:var(--navy-2);
+    color:var(--muted);font-weight:800;font-size:12px;
+    padding:8px 16px;border-radius:10px;
+    transition:all .15s ease;
+  }
+  .stateBtn:hover{background:var(--navy-3);color:var(--text);}
+  .stateBtn.active{background:var(--indigo);color:#fff;border-color:var(--indigo);box-shadow:0 4px 12px var(--indigo-glow);}
+
+  /* ═══════════════════════════════════════════════════════════
+     Site header (matches real dashboard)
+     ═══════════════════════════════════════════════════════════ */
+  .siteHeader{
+    background:rgba(13,11,26,.85);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line);
+    position:sticky;top:0;z-index:50;
+  }
+  .siteHeaderInner{
+    max-width:1400px;margin:0 auto;
+    padding:14px 24px;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    height:56px;
+  }
+  .siteBrand{display:flex;align-items:center;gap:10px;}
+  .siteBrand-icon{
+    width:36px;height:36px;border-radius:10px;
+    background:#4338ca;color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:17px;
+  }
+  .siteBrand-name{font-size:15px;font-weight:900;color:#e0e7ff;letter-spacing:-.02em;}
+  .siteBrand-sub{font-size:9px;text-transform:uppercase;letter-spacing:.22em;color:var(--muted);font-weight:800;display:block;margin-top:1px;}
+  .siteNav{display:flex;gap:14px;align-items:center;}
+  .siteNav a{color:var(--muted);font-size:13px;font-weight:700;text-decoration:none;transition:color .15s;}
+  .siteNav a:hover{color:#e0e7ff;}
+
+  /* ═══════════════════════════════════════════════════════════
+     Page wrapper
+     ═══════════════════════════════════════════════════════════ */
+  .wrap{
+    max-width:1400px;margin:0 auto;
+    padding:28px 24px 48px;
+  }
+
+  /* Page hero */
+  .pageHero{
+    display:flex;align-items:flex-end;justify-content:space-between;gap:24px;
+    margin-bottom:28px;flex-wrap:wrap;
+  }
+  .pageHero-text h1{
+    font-size:32px;font-weight:900;color:var(--text-bright);
+    letter-spacing:-.02em;line-height:1.1;margin-bottom:8px;
+  }
+  .pageHero-text h1 .accent{
+    background:linear-gradient(135deg,var(--indigo-2) 0%,var(--cyan-2) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .pageHero-text p{
+    font-size:14px;color:var(--muted);font-weight:600;max-width:560px;
+  }
+  .pageHero-cta{
+    border:none;background:var(--indigo);color:#fff;
+    font-weight:900;font-size:13px;text-transform:uppercase;letter-spacing:.06em;
+    padding:14px 22px;border-radius:14px;
+    box-shadow:0 8px 20px var(--indigo-glow);
+    transition:transform .15s ease,box-shadow .15s ease;
+    display:inline-flex;align-items:center;gap:8px;
+  }
+  .pageHero-cta:hover{transform:translateY(-2px);box-shadow:0 12px 28px var(--indigo-glow);}
+  .pageHero-cta-icon{font-size:18px;line-height:1;}
+
+  /* ═══════════════════════════════════════════════════════════
+     Two-column layout
+     ═══════════════════════════════════════════════════════════ */
+  .layout{
+    display:grid;
+    grid-template-columns:280px 1fr;
+    gap:24px;
+    align-items:start;
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     Sidebar — set list
+     ═══════════════════════════════════════════════════════════ */
+  .sidebar{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:18px;
+    box-shadow:var(--shadow-card);
+    position:sticky;top:84px;
+  }
+  .sidebar-title{
+    font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.18em;
+    color:var(--indigo-3);margin-bottom:14px;padding:0 4px;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .sidebar-title .count{
+    background:var(--indigo-soft);color:var(--indigo-2);
+    border-radius:999px;padding:2px 9px;font-size:10px;letter-spacing:.04em;
+  }
+
+  .setList{display:flex;flex-direction:column;gap:4px;}
+  .setItem{
+    display:flex;align-items:center;gap:10px;
+    padding:11px 14px;border-radius:12px;
+    background:transparent;border:1px solid transparent;
+    color:var(--muted);font-weight:700;font-size:13px;
+    transition:all .15s ease;
+    text-align:left;width:100%;
+    position:relative;
+  }
+  .setItem:hover{background:var(--navy-3);color:var(--text);}
+  .setItem.active{
+    background:var(--indigo-soft);
+    border-color:rgba(99,102,241,.35);
+    color:var(--text-bright);
+    box-shadow:0 4px 14px rgba(99,102,241,.12);
+  }
+  .setItem-drag{
+    color:var(--muted-2);font-size:11px;line-height:1;
+    cursor:grab;user-select:none;letter-spacing:-1px;
+  }
+  .setItem-name{
+    flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    font-weight:800;
+  }
+  .setItem-meta{
+    font-size:10px;color:var(--muted);font-weight:700;
+    display:flex;align-items:center;gap:6px;
+  }
+  .setItem.active .setItem-meta{color:var(--indigo-3);}
+  .statusDot{
+    width:8px;height:8px;border-radius:50%;flex-shrink:0;
+    box-shadow:0 0 0 2px var(--panel);
+  }
+  .statusDot.live{background:var(--bad);animation:pulseDot 1.5s ease-in-out infinite;}
+  .statusDot.active{background:var(--green);}
+  .statusDot.scheduled{background:var(--amber);}
+  .statusDot.idle{background:var(--muted-2);}
+  @keyframes pulseDot{
+    0%,100%{box-shadow:0 0 0 2px var(--panel),0 0 0 0 rgba(248,113,113,.5);}
+    50%{box-shadow:0 0 0 2px var(--panel),0 0 0 6px rgba(248,113,113,0);}
+  }
+
+  .sidebar-divider{
+    height:1px;background:var(--line);margin:14px 4px;
+  }
+  .sidebar-newBtn{
+    width:100%;
+    border:1.5px dashed var(--line-strong);
+    background:transparent;color:var(--indigo-2);
+    font-weight:800;font-size:12px;
+    padding:12px;border-radius:12px;
+    transition:all .15s ease;
+    display:flex;align-items:center;justify-content:center;gap:6px;
+  }
+  .sidebar-newBtn:hover{
+    background:var(--indigo-soft);
+    border-color:var(--indigo);
+    color:var(--indigo-3);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     Main column — vertical card flow
+     ═══════════════════════════════════════════════════════════ */
+  .main{display:flex;flex-direction:column;gap:18px;}
+
+  /* Generic card */
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:24px;
+    box-shadow:var(--shadow-card);
+  }
+  .card-header{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    margin-bottom:16px;
+  }
+  .card-title{
+    font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.18em;
+    color:var(--indigo-2);
+    display:flex;align-items:center;gap:8px;
+  }
+  .card-title-icon{font-size:14px;line-height:1;}
+  .card-action{
+    background:none;border:none;
+    color:var(--muted);font-size:11px;font-weight:800;
+    text-transform:uppercase;letter-spacing:.08em;
+    transition:color .15s;
+  }
+  .card-action:hover{color:var(--text);}
+
+  /* ── Status header card ──────────────────────────────────── */
+  .statusCard{
+    background:linear-gradient(135deg,#1e293b 0%,#243352 60%,#1e293b 100%);
+    border:1px solid var(--line-strong);
+    border-radius:24px;
+    padding:28px 32px;
+    box-shadow:var(--shadow-card);
+    position:relative;overflow:hidden;
+  }
+  .statusCard::before{
+    content:'';position:absolute;top:-40%;right:-10%;
+    width:340px;height:340px;border-radius:50%;
+    background:radial-gradient(circle,rgba(99,102,241,.16) 0%,transparent 70%);
+    pointer-events:none;
+  }
+  .statusCard-row{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap;position:relative;z-index:1;}
+  .statusCard-info{flex:1;min-width:240px;}
+  .statusCard-eyebrow{
+    font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.18em;
+    color:var(--indigo-3);margin-bottom:8px;
+  }
+  .statusCard-name{
+    font-size:30px;font-weight:900;color:var(--text-bright);
+    letter-spacing:-.02em;line-height:1.1;margin-bottom:14px;
+  }
+  .statusCard-meta{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  }
+  .metaChip{
+    display:inline-flex;align-items:center;gap:6px;
+    background:rgba(255,255,255,.05);
+    border:1px solid var(--line);
+    color:var(--text);
+    border-radius:999px;
+    padding:6px 12px;
+    font-size:11px;font-weight:700;
+  }
+  .metaChip strong{font-weight:900;color:var(--text-bright);}
+  .metaChip-icon{font-size:12px;line-height:1;}
+  .metaChip.ai{
+    background:var(--cyan-soft);border-color:rgba(6,182,212,.35);color:var(--cyan-2);
+  }
+  .metaChip.live{
+    background:var(--bad-soft);border-color:var(--bad-line);color:var(--bad);
+  }
+  .metaChip.live::before{
+    content:'';width:8px;height:8px;border-radius:50%;background:var(--bad);
+    box-shadow:0 0 0 0 rgba(248,113,113,.5);
+    animation:pulseDot 1.5s ease-in-out infinite;
+  }
+  .metaChip.scheduled{
+    background:var(--amber-soft);border-color:rgba(251,191,36,.3);color:var(--amber);
+  }
+
+  /* ── Next Step card ──────────────────────────────────────── */
+  .nextStep{
+    background:linear-gradient(135deg,var(--panel) 0%,var(--panel-3) 100%);
+    border:1.5px solid rgba(99,102,241,.25);
+    border-radius:20px;
+    padding:22px 26px;
+    box-shadow:var(--shadow-glow);
+    position:relative;overflow:hidden;
+  }
+  .nextStep::before{
+    content:'';position:absolute;left:0;top:0;bottom:0;width:4px;
+    background:linear-gradient(180deg,var(--indigo-2),var(--cyan));
+  }
+  .nextStep--live{
+    border-color:var(--bad-line);
+    box-shadow:var(--shadow-live);
+  }
+  .nextStep--live::before{
+    background:linear-gradient(180deg,var(--bad),#fb923c);
+  }
+  .nextStep-row{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;}
+  .nextStep-info{flex:1;min-width:240px;}
+  .nextStep-eyebrow{
+    font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.18em;
+    color:var(--indigo-3);margin-bottom:6px;
+  }
+  .nextStep--live .nextStep-eyebrow{color:var(--bad);}
+  .nextStep-headline{
+    font-size:18px;font-weight:900;color:var(--text-bright);margin-bottom:4px;
+  }
+  .nextStep-sub{
+    font-size:13px;color:var(--muted);font-weight:600;
+  }
+  .nextStep-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .btnPrimary{
+    border:none;background:var(--indigo);color:#fff;
+    font-weight:900;font-size:14px;letter-spacing:.04em;
+    padding:14px 24px;border-radius:14px;
+    box-shadow:0 8px 20px var(--indigo-glow);
+    transition:transform .15s ease,box-shadow .15s ease;
+    display:inline-flex;align-items:center;gap:8px;
+  }
+  .btnPrimary:hover{transform:translateY(-2px);box-shadow:0 12px 28px var(--indigo-glow);}
+  .btnPrimary--danger{
+    background:var(--bad);
+    box-shadow:0 8px 20px rgba(248,113,113,.3);
+  }
+  .btnPrimary--danger:hover{box-shadow:0 12px 28px rgba(248,113,113,.4);}
+  .btnGhost{
+    border:1.5px solid var(--line-strong);background:transparent;
+    color:var(--text);font-weight:800;font-size:13px;
+    padding:13px 18px;border-radius:14px;
+    transition:all .15s ease;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .btnGhost:hover{background:rgba(255,255,255,.06);border-color:var(--indigo-2);color:var(--text-bright);}
+
+  /* Live progress strip */
+  .liveProgress{
+    margin-top:16px;
+    background:rgba(255,255,255,.04);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:14px 18px;
+  }
+  .liveProgress-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .liveProgress-label{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+  .liveProgress-count{font-size:12px;font-weight:900;color:var(--text-bright);}
+  .liveProgress-bar{
+    height:8px;background:rgba(255,255,255,.06);
+    border-radius:999px;overflow:hidden;position:relative;
+  }
+  .liveProgress-fill{
+    height:100%;width:62%;
+    background:linear-gradient(90deg,var(--green) 0%,var(--cyan) 100%);
+    border-radius:999px;
+    box-shadow:0 0 12px rgba(74,222,128,.4);
+    animation:fillSlide 2.5s ease-in-out infinite;
+  }
+  @keyframes fillSlide{
+    0%,100%{filter:brightness(1);}
+    50%{filter:brightness(1.2);}
+  }
+
+  /* Auto-progression inline notice */
+  .advanceNotice{
+    margin-top:16px;
+    background:linear-gradient(135deg,rgba(74,222,128,.12),rgba(6,182,212,.08));
+    border:1px solid var(--green-line);
+    border-radius:14px;
+    padding:14px 18px;
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  }
+  .advanceNotice-icon{
+    width:36px;height:36px;border-radius:10px;
+    background:var(--green-soft);
+    display:flex;align-items:center;justify-content:center;
+    font-size:17px;flex-shrink:0;
+  }
+  .advanceNotice-text{flex:1;min-width:160px;}
+  .advanceNotice-headline{font-size:13px;font-weight:900;color:#86efac;margin-bottom:2px;}
+  .advanceNotice-sub{font-size:11px;color:var(--muted);font-weight:600;}
+  .advanceNotice-controls{display:flex;align-items:center;gap:8px;}
+  .miniSelect{
+    background:#0a1224;border:1px solid var(--line-strong);
+    color:var(--text);font-size:12px;font-weight:700;
+    padding:8px 12px;border-radius:10px;
+    font-family:inherit;
+  }
+  .miniSelect:focus{outline:none;border-color:var(--green);}
+  .miniBtn{
+    border:none;background:var(--green);color:#0a1224;
+    font-weight:900;font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+    padding:9px 16px;border-radius:10px;
+    transition:transform .15s;
+  }
+  .miniBtn:hover{transform:translateY(-1px);}
+
+  /* ── Manage strip (collapsible) ───────────────────────────── */
+  .manage{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:var(--shadow-card);
+  }
+  .manage-toggle{
+    width:100%;border:none;background:transparent;
+    padding:16px 22px;
+    display:flex;align-items:center;justify-content:space-between;
+    color:var(--text);font-size:12px;font-weight:800;
+    text-transform:uppercase;letter-spacing:.12em;
+    transition:background .15s;
+  }
+  .manage-toggle:hover{background:rgba(255,255,255,.03);}
+  .manage-toggle .label{display:flex;align-items:center;gap:8px;}
+  .manage-toggle .label-icon{font-size:14px;color:var(--muted);}
+  .manage-toggle .chev{font-size:14px;color:var(--muted);transition:transform .25s ease;}
+  .manage.open .manage-toggle .chev{transform:rotate(180deg);}
+  .manage-body{
+    max-height:0;overflow:hidden;
+    transition:max-height .3s ease;
+  }
+  .manage.open .manage-body{max-height:240px;}
+  .manage-grid{
+    padding:0 22px 20px;
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+    gap:8px;
+  }
+  .manageBtn{
+    background:rgba(255,255,255,.04);
+    border:1px solid var(--line);
+    color:var(--text);
+    font-size:12px;font-weight:700;
+    padding:11px 14px;border-radius:11px;
+    text-align:left;
+    display:flex;align-items:center;gap:9px;
+    transition:all .15s ease;
+  }
+  .manageBtn:hover{
+    background:var(--indigo-soft);
+    border-color:rgba(99,102,241,.35);
+    color:var(--text-bright);
+    transform:translateY(-1px);
+  }
+  .manageBtn-icon{font-size:14px;line-height:1;color:var(--indigo-3);}
+
+  /* ── Assigned students card ──────────────────────────────── */
+  .assignCard-header{
+    display:flex;align-items:center;justify-content:space-between;gap:14px;
+    margin-bottom:14px;flex-wrap:wrap;
+  }
+  .assignCard-headline{
+    font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.18em;
+    color:var(--indigo-2);display:flex;align-items:center;gap:8px;
+  }
+  .assignCard-count{
+    background:var(--indigo-soft);color:var(--indigo-2);
+    border-radius:999px;padding:3px 11px;font-size:10px;letter-spacing:.04em;
+    margin-left:4px;
+  }
+  .assignCard-controls{display:flex;align-items:center;gap:6px;}
+  .linkBtn{
+    background:none;border:none;
+    color:var(--muted);font-size:11px;font-weight:800;
+    text-decoration:underline;text-underline-offset:3px;
+    transition:color .15s;
+  }
+  .linkBtn:hover{color:var(--text);}
+  .saveBtn{
+    border:none;background:var(--indigo);color:#fff;
+    font-weight:900;font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+    padding:8px 14px;border-radius:10px;
+    transition:transform .15s;
+  }
+  .saveBtn:hover{transform:translateY(-1px);}
+  .pillGrid{
+    display:flex;flex-wrap:wrap;gap:6px;
+  }
+  .studentPill{
+    border:1px solid var(--line);
+    background:var(--navy-3);
+    color:var(--muted);font-weight:700;font-size:12px;
+    padding:6px 13px;border-radius:999px;
+    transition:all .15s;
+    display:inline-flex;align-items:center;gap:5px;
+  }
+  .studentPill:hover{border-color:rgba(99,102,241,.35);color:var(--text);}
+  .studentPill.active{
+    background:var(--indigo-soft);
+    color:var(--indigo-3);
+    border-color:rgba(99,102,241,.45);
+  }
+  .studentPill.active::before{content:'\2713';font-weight:900;color:var(--indigo-2);}
+
+  /* ── Results card ────────────────────────────────────────── */
+  .resultsCard{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:0;overflow:hidden;
+    box-shadow:var(--shadow-card);
+  }
+  .resultsHeader{
+    padding:22px 24px 0;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  }
+  .resultsHeader-title{
+    font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.18em;
+    color:var(--indigo-2);display:flex;align-items:center;gap:8px;
+  }
+  .resultsHeader-side{display:flex;align-items:center;gap:10px;}
+  .focusToggleMini{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:11px;font-weight:700;color:var(--muted);
+  }
+  .focusToggleMini input{
+    width:32px;height:18px;appearance:none;-webkit-appearance:none;
+    background:rgba(255,255,255,.15);border-radius:999px;position:relative;
+    transition:background .2s;
+  }
+  .focusToggleMini input::before{
+    content:'';position:absolute;left:2px;top:2px;
+    width:14px;height:14px;border-radius:50%;background:#fff;
+    transition:transform .2s;
+  }
+  .focusToggleMini input:checked{background:var(--indigo);}
+  .focusToggleMini input:checked::before{transform:translateX(14px);}
+
+  /* Tab switcher */
+  .tabSwitcher{
+    margin:18px 24px 0;
+    border-bottom:1px solid var(--line);
+    display:flex;gap:0;flex-wrap:wrap;position:relative;
+  }
+  .tabPill{
+    border:none;background:transparent;
+    color:var(--muted);font-weight:800;font-size:12px;
+    padding:12px 18px;
+    border-bottom:3px solid transparent;
+    margin-bottom:-1px;
+    transition:all .2s ease;
+    display:inline-flex;align-items:center;gap:6px;
+    position:relative;
+  }
+  .tabPill:hover{color:var(--text);}
+  .tabPill.active{
+    color:var(--text-bright);
+    border-bottom-color:var(--indigo-2);
+  }
+  .tabPill .badge{
+    background:var(--indigo-soft);color:var(--indigo-2);
+    border-radius:999px;padding:1px 7px;font-size:9px;font-weight:900;
+  }
+  .tabPill.active .badge{background:var(--indigo);color:#fff;}
+
+  .resultsBody{padding:20px 24px 24px;}
+  .resultsBody-meta{
+    font-size:11px;color:var(--muted);font-weight:700;margin-bottom:14px;
+    display:flex;align-items:center;gap:8px;
+  }
+
+  /* Heatmap */
+  .heatmapWrap{overflow-x:auto;border-radius:12px;}
+  .heatmap{border-collapse:separate;border-spacing:3px;font-size:12px;min-width:100%;}
+  .heatmap th{
+    padding:6px 8px;font-weight:900;font-size:10px;text-transform:uppercase;
+    letter-spacing:.08em;color:var(--muted);text-align:left;white-space:nowrap;
+  }
+  .heatmap th.rotate{vertical-align:bottom;padding-bottom:8px;}
+  .heatmap th.rotate span{
+    writing-mode:vertical-rl;text-orientation:mixed;
+    transform:rotate(180deg);display:inline-block;
+  }
+  .heatmap td.studentName{
+    padding:8px 14px;font-weight:800;font-size:13px;color:var(--text);
+    white-space:nowrap;
+    background:var(--panel-3);border-radius:8px;
+    position:sticky;left:0;z-index:2;
+  }
+  .heatmap td{padding:0;}
+  .cell{
+    min-width:42px;height:30px;border-radius:7px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:900;
+    transition:transform .12s ease;
+    cursor:pointer;
+  }
+  .cell:hover{transform:scale(1.12);}
+  .cell.no-data{background:rgba(255,255,255,.04);color:var(--muted-2);}
+  .cell.tick{background:#166534;color:#fff;}
+  .cell.cross{background:#991b1b;color:#fff;}
+  .cell.acc-100{background:#166534;color:#fff;}
+  .cell.acc-90{background:#16a34a;color:#fff;}
+  .cell.acc-80{background:#4ade80;color:#0a1224;}
+  .cell.acc-70{background:#86efac;color:#0a1224;}
+  .cell.acc-50{background:#fde047;color:#3b2a00;}
+  .cell.acc-low{background:#ef4444;color:#fff;}
+  .cell.scoreCell{
+    background:var(--navy-3);color:var(--text-bright);
+    min-width:54px;font-size:11px;
+  }
+
+  /* Legend */
+  .legend{
+    display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+    margin-top:14px;font-size:10px;color:var(--muted);font-weight:800;
+  }
+  .legend-dot{width:18px;height:14px;border-radius:4px;display:inline-block;}
+
+  /* Empty state inside results */
+  .emptyResults{
+    padding:32px 20px;text-align:center;
+  }
+  .emptyResults-icon{font-size:38px;margin-bottom:10px;opacity:.7;}
+  .emptyResults-text{font-size:13px;color:var(--muted);font-weight:600;}
+
+  /* ── Danger zone ──────────────────────────────────────────── */
+  .danger{
+    background:var(--panel-3);
+    border:1px dashed var(--bad-line);
+    border-radius:18px;
+    overflow:hidden;
+  }
+  .danger-toggle{
+    width:100%;border:none;background:transparent;
+    padding:14px 22px;
+    display:flex;align-items:center;justify-content:space-between;
+    color:var(--bad);font-size:11px;font-weight:900;
+    text-transform:uppercase;letter-spacing:.14em;
+  }
+  .danger-toggle:hover{background:var(--bad-soft);}
+  .danger-toggle .chev{font-size:13px;transition:transform .25s ease;}
+  .danger.open .danger-toggle .chev{transform:rotate(180deg);}
+  .danger-body{
+    max-height:0;overflow:hidden;
+    transition:max-height .3s ease;
+  }
+  .danger.open .danger-body{max-height:120px;}
+  .danger-inner{
+    padding:0 22px 18px;
+    display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  }
+  .danger-text{font-size:12px;color:var(--muted);font-weight:600;}
+  .danger-btn{
+    border:1px solid var(--bad-line);background:var(--bad-soft);
+    color:var(--bad);font-weight:900;font-size:12px;
+    padding:10px 18px;border-radius:11px;
+    text-transform:uppercase;letter-spacing:.06em;
+    transition:all .15s;
+  }
+  .danger-btn:hover{background:var(--bad);color:#fff;}
+
+  /* ═══════════════════════════════════════════════════════════
+     Empty state (no sets yet)
+     ═══════════════════════════════════════════════════════════ */
+  .emptyState{
+    background:linear-gradient(135deg,#1e293b 0%,#243352 100%);
+    border:1px solid var(--line-strong);
+    border-radius:24px;
+    padding:60px 32px;
+    text-align:center;
+    box-shadow:var(--shadow-card);
+    position:relative;overflow:hidden;
+  }
+  .emptyState::before{
+    content:'';position:absolute;top:-50%;left:50%;transform:translateX(-50%);
+    width:600px;height:600px;border-radius:50%;
+    background:radial-gradient(circle,rgba(99,102,241,.12) 0%,transparent 60%);
+    pointer-events:none;
+  }
+  .emptyState-illus{
+    width:96px;height:96px;border-radius:24px;
+    background:linear-gradient(135deg,var(--indigo) 0%,var(--cyan) 100%);
+    display:flex;align-items:center;justify-content:center;
+    font-size:46px;margin:0 auto 22px;
+    box-shadow:0 16px 36px var(--indigo-glow);
+    position:relative;z-index:1;
+    animation:floatGentle 4s ease-in-out infinite;
+  }
+  @keyframes floatGentle{
+    0%,100%{transform:translateY(0);}
+    50%{transform:translateY(-6px);}
+  }
+  .emptyState-title{
+    font-size:26px;font-weight:900;color:var(--text-bright);
+    letter-spacing:-.02em;margin-bottom:10px;position:relative;z-index:1;
+  }
+  .emptyState-sub{
+    font-size:14px;color:var(--muted);font-weight:600;
+    max-width:440px;margin:0 auto 28px;line-height:1.6;
+    position:relative;z-index:1;
+  }
+  .emptyState-cta{
+    border:none;background:var(--indigo);color:#fff;
+    font-weight:900;font-size:14px;text-transform:uppercase;letter-spacing:.06em;
+    padding:16px 32px;border-radius:14px;
+    box-shadow:0 12px 28px var(--indigo-glow);
+    transition:transform .15s;
+    position:relative;z-index:1;
+    display:inline-flex;align-items:center;gap:10px;
+  }
+  .emptyState-cta:hover{transform:translateY(-3px);}
+  .emptyState-hint{
+    font-size:11px;color:var(--muted-2);font-weight:700;
+    margin-top:18px;font-style:italic;
+    position:relative;z-index:1;
+  }
+
+  /* State views */
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* Responsive */
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr;}
+    .sidebar{position:static;}
+    .pageHero h1{font-size:24px;}
+    .statusCard-name{font-size:24px;}
+  }
+  @media (max-width:640px){
+    .wrap{padding:18px 14px 32px;}
+    .nextStep{padding:18px;}
+    .statusCard{padding:22px;}
+    .pageHero{flex-direction:column;align-items:flex-start;}
+  }
+</style>
+</head>
+<body>
+
+<div class="mockBanner">
+  ✦ Spelling Sets Redesign — <b>Mockup Preview</b> ✦ Click around. Use the State buttons below to swap between Empty / Active Set / Live Check-In.
+</div>
+
+<div class="stateSwitch">
+  <span class="stateSwitch-lbl">View state:</span>
+  <button class="stateBtn" data-view="empty">Empty (no sets yet)</button>
+  <button class="stateBtn active" data-view="active">Active Set</button>
+  <button class="stateBtn" data-view="live">Live Check-In</button>
+</div>
+
+<header class="siteHeader">
+  <div class="siteHeaderInner">
+    <div class="siteBrand">
+      <div class="siteBrand-icon">🧪</div>
+      <div>
+        <div class="siteBrand-name">Word Labs</div>
+        <span class="siteBrand-sub">Teacher Dashboard</span>
+      </div>
+    </div>
+    <nav class="siteNav">
+      <a href="#">Home</a>
+      <a href="#">Setup</a>
+      <a href="#">Account</a>
+      <a href="#">Sign Out</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- Empty state                                                 -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="view" data-view="empty">
+    <div class="emptyState">
+      <div class="emptyState-illus">📚</div>
+      <div class="emptyState-title">Create your first spelling set</div>
+      <div class="emptyState-sub">
+        A spelling set is a list of words you want your class to learn together. Word Labs will run check-ins, track which words each student has mastered, and feed the trickier ones into practice games until they stick.
+      </div>
+      <button class="emptyState-cta">＋ Create Spelling Set</button>
+      <div class="emptyState-hint">Most teachers start with their weekly spelling list — about 10–15 words.</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- Active set view                                             -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="view active" data-view="active">
+    <div class="pageHero">
+      <div class="pageHero-text">
+        <h1>📊 <span class="accent">Spelling Check-Ins</span></h1>
+        <p>Create sets, run check-ins, and watch students master their words — all in one place.</p>
+      </div>
+      <button class="pageHero-cta"><span class="pageHero-cta-icon">＋</span> New Spelling Set</button>
+    </div>
+
+    <div class="layout">
+      <!-- ── Sidebar ── -->
+      <aside class="sidebar">
+        <div class="sidebar-title">
+          <span>Your Sets</span>
+          <span class="count">5</span>
+        </div>
+        <div class="setList">
+          <button class="setItem" data-set="1">
+            <span class="setItem-drag">⋮⋮</span>
+            <span class="setItem-name">Term 1 — Week 1</span>
+            <span class="setItem-meta"><span class="statusDot idle"></span></span>
+          </button>
+          <button class="setItem" data-set="2">
+            <span class="setItem-drag">⋮⋮</span>
+            <span class="setItem-name">Term 1 — Week 2</span>
+            <span class="setItem-meta"><span class="statusDot idle"></span></span>
+          </button>
+          <button class="setItem active" data-set="3">
+            <span class="setItem-drag">⋮⋮</span>
+            <span class="setItem-name">Term 1 — Week 3</span>
+            <span class="setItem-meta"><span class="statusDot active"></span></span>
+          </button>
+          <button class="setItem" data-set="4">
+            <span class="setItem-drag">⋮⋮</span>
+            <span class="setItem-name">Term 1 — Week 4</span>
+            <span class="setItem-meta"><span class="statusDot scheduled"></span></span>
+          </button>
+          <button class="setItem" data-set="5">
+            <span class="setItem-drag">⋮⋮</span>
+            <span class="setItem-name">Year 5 Diagnostic</span>
+            <span class="setItem-meta"><span class="statusDot idle"></span></span>
+          </button>
+        </div>
+        <div class="sidebar-divider"></div>
+        <button class="sidebar-newBtn">＋ New Set</button>
+      </aside>
+
+      <!-- ── Main ── -->
+      <main class="main">
+
+        <!-- Status header card -->
+        <section class="statusCard">
+          <div class="statusCard-row">
+            <div class="statusCard-info">
+              <div class="statusCard-eyebrow">Spelling Set #3</div>
+              <div class="statusCard-name">Term 1 — Week 3</div>
+              <div class="statusCard-meta">
+                <span class="metaChip"><span class="metaChip-icon">📝</span><strong>12</strong>&nbsp;words</span>
+                <span class="metaChip"><span class="metaChip-icon">👥</span><strong>8</strong>&nbsp;of 24 students</span>
+                <span class="metaChip ai"><span class="metaChip-icon">✨</span>AI analysed</span>
+                <span class="metaChip"><span class="metaChip-icon">📅</span>Last check-in&nbsp;<strong>2 days ago</strong></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Next Step card -->
+        <section class="nextStep">
+          <div class="nextStep-row">
+            <div class="nextStep-info">
+              <div class="nextStep-eyebrow">Next Step</div>
+              <div class="nextStep-headline">Run a check-in with your class</div>
+              <div class="nextStep-sub">8 students assigned · ready when you are</div>
+            </div>
+            <div class="nextStep-actions">
+              <button class="btnPrimary">▶ Start Check-In</button>
+              <button class="btnGhost">⏰ Schedule</button>
+            </div>
+          </div>
+
+          <!-- Auto-progression notice (inline, not floating) -->
+          <div class="advanceNotice">
+            <div class="advanceNotice-icon">🎯</div>
+            <div class="advanceNotice-text">
+              <div class="advanceNotice-headline">5 students scored 80%+ — ready to advance</div>
+              <div class="advanceNotice-sub">Sam, Jess, Riley, Maya, Aanya</div>
+            </div>
+            <div class="advanceNotice-controls">
+              <select class="miniSelect">
+                <option>Term 1 — Week 4</option>
+                <option>Year 5 Diagnostic</option>
+                <option>Term 1 — Week 2</option>
+              </select>
+              <button class="miniBtn">Advance ⏩</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Manage strip (collapsible) -->
+        <section class="manage" id="manage">
+          <button class="manage-toggle" onclick="document.getElementById('manage').classList.toggle('open')">
+            <span class="label"><span class="label-icon">⚙</span>Manage this set</span>
+            <span class="chev">▾</span>
+          </button>
+          <div class="manage-body">
+            <div class="manage-grid">
+              <button class="manageBtn"><span class="manageBtn-icon">✏</span>Edit words</button>
+              <button class="manageBtn"><span class="manageBtn-icon">📝</span>Rename set</button>
+              <button class="manageBtn"><span class="manageBtn-icon">🤖</span>Re-run AI</button>
+              <button class="manageBtn"><span class="manageBtn-icon">📋</span>Print word list</button>
+              <button class="manageBtn"><span class="manageBtn-icon">⏩</span>Advance all students</button>
+              <button class="manageBtn"><span class="manageBtn-icon">✅</span>Complete all</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Assigned students -->
+        <section class="card">
+          <div class="assignCard-header">
+            <div class="assignCard-headline">
+              <span>👥 Assigned Students</span>
+              <span class="assignCard-count">8 of 24</span>
+            </div>
+            <div class="assignCard-controls">
+              <button class="linkBtn">Select all</button>
+              <button class="linkBtn">None</button>
+              <button class="saveBtn">Save</button>
+            </div>
+          </div>
+          <div class="pillGrid">
+            <button class="studentPill active">Sam</button>
+            <button class="studentPill active">Jess</button>
+            <button class="studentPill active">Riley</button>
+            <button class="studentPill active">Maya</button>
+            <button class="studentPill active">Aanya</button>
+            <button class="studentPill active">Hugo</button>
+            <button class="studentPill active">Emi</button>
+            <button class="studentPill active">Theo</button>
+            <button class="studentPill">Ben</button>
+            <button class="studentPill">Chloe</button>
+            <button class="studentPill">Dan</button>
+            <button class="studentPill">Eve</button>
+            <button class="studentPill">Finn</button>
+            <button class="studentPill">Grace</button>
+            <button class="studentPill">Harriet</button>
+            <button class="studentPill">Isla</button>
+            <button class="studentPill">Jonah</button>
+            <button class="studentPill">Kai</button>
+            <button class="studentPill">Liam</button>
+            <button class="studentPill">Mia</button>
+            <button class="studentPill">Noah</button>
+            <button class="studentPill">Olive</button>
+            <button class="studentPill">Pia</button>
+            <button class="studentPill">Quinn</button>
+          </div>
+        </section>
+
+        <!-- Results card -->
+        <section class="resultsCard">
+          <div class="resultsHeader">
+            <div class="resultsHeader-title">📈 Results</div>
+            <div class="resultsHeader-side">
+              <label class="focusToggleMini">
+                <input type="checkbox" checked>
+                Auto-remove mastered focus words
+              </label>
+            </div>
+          </div>
+
+          <div class="tabSwitcher">
+            <button class="tabPill" data-tab="ci1">Check-In 1 <span class="badge">8</span></button>
+            <button class="tabPill active" data-tab="ci2">Check-In 2 <span class="badge">8</span></button>
+            <button class="tabPill" data-tab="compare">📊 Compare</button>
+            <button class="tabPill" data-tab="cumulative">∑ Cumulative</button>
+          </div>
+
+          <div class="resultsBody">
+            <div class="resultsBody-meta">📅 Tuesday, 7 April · 8 students · 12 words</div>
+
+            <div class="heatmapWrap">
+              <table class="heatmap">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th class="rotate"><span>courageous</span></th>
+                    <th class="rotate"><span>knowledge</span></th>
+                    <th class="rotate"><span>separate</span></th>
+                    <th class="rotate"><span>sincerely</span></th>
+                    <th class="rotate"><span>embarrass</span></th>
+                    <th class="rotate"><span>environment</span></th>
+                    <th class="rotate"><span>definitely</span></th>
+                    <th class="rotate"><span>occurrence</span></th>
+                    <th class="rotate"><span>accommodate</span></th>
+                    <th class="rotate"><span>conscience</span></th>
+                    <th class="rotate"><span>parallel</span></th>
+                    <th class="rotate"><span>mischievous</span></th>
+                    <th class="rotate"><span>Score</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="studentName">Sam</td>
+                    <td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell cross">✗</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td>
+                    <td><div class="cell scoreCell acc-90">11/12</div></td>
+                  </tr>
+                  <tr>
+                    <td class="studentName">Jess</td>
+                    <td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell cross">✗</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell cross">✗</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td>
+                    <td><div class="cell scoreCell acc-80">10/12</div></td>
+                  </tr>
+                  <tr>
+                    <td class="studentName">Riley</td>
+                    <td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell cross">✗</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell cross">✗</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td>
+                    <td><div class="cell scoreCell acc-80">10/12</div></td>
+                  </tr>
+                  <tr>
+                    <td class="studentName">Maya</td>
+                    <td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td>
+                    <td><div class="cell scoreCell acc-100">12/12</div></td>
+                  </tr>
+                  <tr>
+                    <td class="studentName">Aanya</td>
+                    <td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell cross">✗</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell cross">✗</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td>
+                    <td><div class="cell scoreCell acc-80">10/12</div></td>
+                  </tr>
+                  <tr>
+                    <td class="studentName">Hugo</td>
+                    <td><div class="cell cross">✗</div></td><td><div class="cell tick">✓</div></td><td><div class="cell cross">✗</div></td><td><div class="cell cross">✗</div></td><td><div class="cell cross">✗</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell cross">✗</div></td><td><div class="cell cross">✗</div></td><td><div class="cell tick">✓</div></td><td><div class="cell cross">✗</div></td><td><div class="cell cross">✗</div></td>
+                    <td><div class="cell scoreCell acc-low">4/12</div></td>
+                  </tr>
+                  <tr>
+                    <td class="studentName">Emi</td>
+                    <td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell cross">✗</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td>
+                    <td><div class="cell scoreCell acc-90">11/12</div></td>
+                  </tr>
+                  <tr>
+                    <td class="studentName">Theo</td>
+                    <td><div class="cell tick">✓</div></td><td><div class="cell cross">✗</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell cross">✗</div></td><td><div class="cell cross">✗</div></td><td><div class="cell tick">✓</div></td><td><div class="cell cross">✗</div></td><td><div class="cell cross">✗</div></td><td><div class="cell tick">✓</div></td><td><div class="cell tick">✓</div></td><td><div class="cell cross">✗</div></td>
+                    <td><div class="cell scoreCell acc-50">6/12</div></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="legend">
+              <span class="legend-dot" style="background:#166534;"></span><span>Correct</span>
+              <span class="legend-dot" style="background:#991b1b;"></span><span>Incorrect</span>
+              <span class="legend-dot" style="background:rgba(255,255,255,.04);"></span><span>Not tested</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Danger zone -->
+        <section class="danger" id="danger">
+          <button class="danger-toggle" onclick="document.getElementById('danger').classList.toggle('open')">
+            <span>⚠ Danger zone</span>
+            <span class="chev">▾</span>
+          </button>
+          <div class="danger-body">
+            <div class="danger-inner">
+              <div class="danger-text">Permanently delete this set. Student progress data will be preserved.</div>
+              <button class="danger-btn">🗑 Delete set</button>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- Live check-in view                                          -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="view" data-view="live">
+    <div class="pageHero">
+      <div class="pageHero-text">
+        <h1>📊 <span class="accent">Spelling Check-Ins</span></h1>
+        <p>Create sets, run check-ins, and watch students master their words — all in one place.</p>
+      </div>
+      <button class="pageHero-cta"><span class="pageHero-cta-icon">＋</span> New Spelling Set</button>
+    </div>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="sidebar-title">
+          <span>Your Sets</span>
+          <span class="count">5</span>
+        </div>
+        <div class="setList">
+          <button class="setItem"><span class="setItem-drag">⋮⋮</span><span class="setItem-name">Term 1 — Week 1</span><span class="setItem-meta"><span class="statusDot idle"></span></span></button>
+          <button class="setItem"><span class="setItem-drag">⋮⋮</span><span class="setItem-name">Term 1 — Week 2</span><span class="setItem-meta"><span class="statusDot idle"></span></span></button>
+          <button class="setItem active"><span class="setItem-drag">⋮⋮</span><span class="setItem-name">Term 1 — Week 3</span><span class="setItem-meta"><span class="statusDot live"></span></span></button>
+          <button class="setItem"><span class="setItem-drag">⋮⋮</span><span class="setItem-name">Term 1 — Week 4</span><span class="setItem-meta"><span class="statusDot scheduled"></span></span></button>
+          <button class="setItem"><span class="setItem-drag">⋮⋮</span><span class="setItem-name">Year 5 Diagnostic</span><span class="setItem-meta"><span class="statusDot idle"></span></span></button>
+        </div>
+        <div class="sidebar-divider"></div>
+        <button class="sidebar-newBtn">＋ New Set</button>
+      </aside>
+
+      <main class="main">
+        <section class="statusCard">
+          <div class="statusCard-row">
+            <div class="statusCard-info">
+              <div class="statusCard-eyebrow">Spelling Set #3</div>
+              <div class="statusCard-name">Term 1 — Week 3</div>
+              <div class="statusCard-meta">
+                <span class="metaChip live">Check-In LIVE</span>
+                <span class="metaChip"><span class="metaChip-icon">🎤</span>Teacher-led mode</span>
+                <span class="metaChip"><span class="metaChip-icon">📝</span><strong>12</strong>&nbsp;words</span>
+                <span class="metaChip"><span class="metaChip-icon">👥</span><strong>8</strong>&nbsp;students</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="nextStep nextStep--live">
+          <div class="nextStep-row">
+            <div class="nextStep-info">
+              <div class="nextStep-eyebrow">Check-in in progress</div>
+              <div class="nextStep-headline">5 of 8 students have finished</div>
+              <div class="nextStep-sub">3 still working · started 4 minutes ago</div>
+            </div>
+            <div class="nextStep-actions">
+              <button class="btnPrimary btnPrimary--danger">⏹ Stop Check-In</button>
+            </div>
+          </div>
+          <div class="liveProgress">
+            <div class="liveProgress-row">
+              <span class="liveProgress-label">Progress</span>
+              <span class="liveProgress-count">5 / 8 finished</span>
+            </div>
+            <div class="liveProgress-bar"><div class="liveProgress-fill"></div></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="card-title-icon">⏱</span>Live Activity</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;">
+            <div style="background:var(--green-soft);border:1px solid var(--green-line);border-radius:12px;padding:12px 14px;"><div style="font-size:11px;color:#86efac;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">✓ Finished</div><div style="font-size:14px;font-weight:900;color:var(--text-bright);margin-top:4px;">Sam, Jess, Maya, Aanya, Emi</div></div>
+            <div style="background:var(--cyan-soft);border:1px solid rgba(6,182,212,.3);border-radius:12px;padding:12px 14px;"><div style="font-size:11px;color:var(--cyan-2);font-weight:800;text-transform:uppercase;letter-spacing:.06em;">⏳ In progress</div><div style="font-size:14px;font-weight:900;color:var(--text-bright);margin-top:4px;">Riley · word 7/12</div><div style="font-size:14px;font-weight:900;color:var(--text-bright);">Hugo · word 4/12</div><div style="font-size:14px;font-weight:900;color:var(--text-bright);">Theo · word 9/12</div></div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ═══════════════════════════════════════════════════════════
+  // State switcher (Empty / Active / Live)
+  // ═══════════════════════════════════════════════════════════
+  document.querySelectorAll('.stateBtn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var view = btn.dataset.view;
+      document.querySelectorAll('.stateBtn').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      document.querySelectorAll('.view').forEach(function(v){
+        v.classList.toggle('active', v.dataset.view === view);
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // Sidebar set switching (visual only)
+  // ═══════════════════════════════════════════════════════════
+  document.querySelectorAll('[data-view="active"] .setItem').forEach(function(item){
+    item.addEventListener('click', function(){
+      document.querySelectorAll('[data-view="active"] .setItem').forEach(function(i){ i.classList.remove('active'); });
+      item.classList.add('active');
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // Tab switcher (visual only)
+  // ═══════════════════════════════════════════════════════════
+  document.querySelectorAll('.tabPill').forEach(function(tab){
+    tab.addEventListener('click', function(){
+      document.querySelectorAll('.tabPill').forEach(function(t){ t.classList.remove('active'); });
+      tab.classList.add('active');
+    });
+  });
+
+  // Open Manage strip on first load so teachers can see what's inside
+  document.getElementById('manage').classList.add('open');
+</script>
+
+</body>
+</html>
