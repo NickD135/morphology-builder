@@ -470,29 +470,22 @@ function showFullResults(correctCount) {
 }
 
 async function saveCheckInSession(score, total) {
-  // ── Temporary diagnostic — remove once per-session tabs are confirmed working
-  console.log('[spelling check-in] saveCheckInSession called', { setId: currentSetId, score: score, total: total, resultsCount: (results || []).length });
-  if (!currentSetId) { console.warn('[spelling check-in] aborting: no currentSetId'); return; }
+  if (!currentSetId) return;
   try {
-    var session = WordLabData.loadSession ? WordLabData.loadSession() : null;
-    if (!session || !session.studentId) { console.warn('[spelling check-in] aborting: no session/studentId'); return; }
+    // WordLabData exports getSession (not loadSession), so the previous
+    // ternary on loadSession was always null → bailing silently → no row.
+    var session = WordLabData.getSession ? WordLabData.getSession() : null;
+    if (!session || !session.studentId) return;
     var sb = WordLabData._sb();
-    var payload = {
+    var insertResult = await sb.from('spelling_check_in_results').insert({
       spelling_set_id: currentSetId,
       student_id: session.studentId,
       results: results,
       score: score,
       total: total
-    };
-    console.log('[spelling check-in] inserting payload:', JSON.stringify(payload).slice(0, 300));
-    var insertResult = await sb.from('spelling_check_in_results').insert(payload).select();
-    console.log('[spelling check-in] insert result:', insertResult);
-    if (insertResult.error) {
-      console.error('[spelling check-in] INSERT FAILED:', insertResult.error);
-    } else {
-      console.log('[spelling check-in] insert succeeded — rows returned:', (insertResult.data || []).length);
-    }
-  } catch(e) { console.warn('[spelling check-in] Could not save check-in session:', e); }
+    });
+    if (insertResult.error) console.warn('Could not save check-in session:', insertResult.error);
+  } catch(e) { console.warn('Could not save check-in session:', e); }
 }
 
 // Enter key submits or advances
