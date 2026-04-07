@@ -474,6 +474,7 @@ const WordLabData = (() => {
       name: s.name,
       student_code: s.student_code || '',
       extension_mode: !!s.extension_mode,
+      extension_activities: s.extension_activities || [],
       eald_language: s.eald_language || null,
       support_mode: !!s.support_mode,
       results: progressMap[s.id] || {},
