@@ -3539,6 +3539,12 @@ function buildSpellingSetHeatmap(set) {
     return _checkInResults[ciKey] && _checkInResults[ciKey].length > 0;
   });
 
+  // Resolve the heatmap view BEFORE the row builder runs — earlier this was
+  // declared further down and the hoisted `var view` was undefined when the
+  // row loop checked it, so the toggle never affected the cells.
+  var view = _heatmapView[set.id] || 'latest';
+  if (!hasCheckInData) view = 'cumulative';
+
   // Heatmap — shows latest check-in session results (✓/✗) when available, falls back to cumulative practice data
   var headerCols = words.map(function(w) {
     return '<th class="rotate"><span>' + WordLabData.escapeHtml(w) + '</span></th>';
@@ -3623,9 +3629,7 @@ function buildSpellingSetHeatmap(set) {
     var n = (_checkInResults[ciKey] || []).length;
     if (n > totalCheckIns) totalCheckIns = n;
   });
-  var view = _heatmapView[set.id] || 'latest';
-  // If no check-in data exists yet, force cumulative view
-  if (!hasCheckInData) view = 'cumulative';
+  // `view` and `hasCheckInData` are computed above (before the row builder)
   var labelText = !hasCheckInData
     ? 'Practice Data (no check-ins yet)'
     : view === 'latest'
@@ -4341,7 +4345,7 @@ function _focusAutoRemoveStripHtml() {
     '<span style="font-size:11px;font-weight:800;color:var(--text-secondary);">\uD83D\uDD04 Focus words</span>' +
     '<label style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--text-primary);cursor:pointer;">' +
       '<input type="checkbox" id="focusAutoRemoveToggle" ' + (on ? 'checked' : '') + ' onchange="ssToggleFocusAutoRemove(this.checked)" style="width:14px;height:14px;cursor:pointer;">' +
-      'Auto-remove when student hits 80%+ in practice (\u22653 attempts)' +
+      'Auto-remove when student hits 80%+ in practice (\u22655 attempts)' +
     '</label>' +
     '<span id="focusAutoSaved" style="font-size:10px;color:#4ade80;font-weight:800;opacity:0;transition:opacity .2s;">Saved</span>' +
   '</div>';
@@ -4387,7 +4391,9 @@ async function _autoRemoveMasteredFocusWordsIfEnabled() {
 
 // Look up cumulative practice accuracy for a focus word.
 // Returns { acc: -1 | percent, total: number, mastered: bool }.
-// "Mastered" = ≥80% accuracy with at least 3 attempts.
+// "Mastered" = ≥80% accuracy with at least 5 practice attempts (focus words
+// only ever appear here because the student missed them in a check-in, so
+// 5 successful practice reps is the bar to consider it relearned).
 function _focusWordAccuracy(studentId, fw) {
   var prog = _spellingProgress[studentId] || {};
   var w = (fw.word || '').toLowerCase();
@@ -4411,7 +4417,7 @@ function _focusWordAccuracy(studentId, fw) {
   }
   if (!total) return { acc: -1, total: 0, mastered: false };
   var acc = (correct / total) * 100;
-  return { acc: acc, total: total, mastered: acc >= 80 && total >= 3 };
+  return { acc: acc, total: total, mastered: acc >= 80 && total >= 5 };
 }
 
 function ssShowFocusWords(studentId) {
@@ -4446,7 +4452,7 @@ function ssShowFocusWords(studentId) {
 
   var desc = document.createElement('div');
   desc.style.cssText = 'font-size:11px;color:var(--muted);font-weight:600;margin-bottom:10px;';
-  desc.textContent = 'Words this student got wrong in check-ins. Red = still needs practice. Green = mastered (\u226580% across \u22653 attempts).';
+  desc.textContent = 'Words this student got wrong in check-ins. Red = still needs practice. Green = mastered (\u226580% across \u22655 practice attempts).';
   inner.appendChild(desc);
 
   var summary = document.createElement('div');
