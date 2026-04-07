@@ -6,7 +6,7 @@
 --   - class_word_lists: any authenticated user could write (no school scoping)
 --   - class_spelling_sets: anon could write (should be teacher-only)
 --   - spelling_set_assignments: anon could write (should be teacher-only)
---   - spelling_check_in_results: anyone could delete (should be teacher-only)
+--   - sling_check_in_results: anyone could delete (should be teacher-only)
 --
 -- Fix: Scope all teacher writes via class_id → classes.school_id chain
 --      using the existing get_my_school_id() helper.
