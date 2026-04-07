@@ -1276,6 +1276,38 @@ into Word Labs as a structured spelling progression system.
 
 ---
 
+### PHASE 7.20 — Session 2026-04-07
+
+#### Phase A site audit continuation (dark theme port)
+- [x] `class-setup.html` — ported to navy + indigo dashboard theme (dark panels, 48px inputs, 52px buttons, indigo accents, pill-tab navigation, dark wlmBtn modals, dark teacher auth gate modal, dark error banners)
+- [x] `account.html` — same treatment plus `dangerBtn` variant on the delete-account card
+- [x] Both pages now consistent with the rest of the teacher journey (landing → teacher-login → teacher-signup → onboarding → dashboard → class-setup → account)
+
+#### Unified design system plan (`docs/superpowers/plans/2026-03-30-unified-design-system.md`)
+Whole plan (Tasks 1–18) closed in one session. Most tasks were already shipped via `wordlab-common.css` (Phase 7.16) — the plan predates that extraction. Actual work was consolidating the chrome CSS on seven game pages that had dual declarations (a clean design-system block AND a legacy `!important` override block that was winning the cascade).
+
+- [x] `phoneme-mode.html` — lifted purple accent tints (`#e9d5ff`, `#c4b5fd`) into the clean block, deleted 11-line legacy `!important` chrome block. `!important` count 54 → 44.
+- [x] `syllable-mode.html` — amber hud tint (`#fde68a`, `#fbbf24`), legacy block deleted. 45 → 35.
+- [x] `sound-sorter.html` — sky hud tint (`#bae6fd`, `#e0f2fe`). 42 → 38.
+- [x] `breakdown-mode.html` — red sub tint (`#fca5a5`). 23 → 19.
+- [x] `meaning-mode.html` — parchment hud tint (`#f5e6c8`, `#c8a060`). 67 → 61.
+- [x] `speed-mode.html` — structural dedupe, no color tinting needed. 40 → 38.
+- [x] `mission-mode.html` — emerald hud tint (`#d1fae5`, `#6ee7b7`), solid `#065f46` for `.pill.score`. 32 → 25.
+- [x] `root-lab.html` — dropped unnecessary `!important` on scene-specific `.headerInner` and `.hud` overrides (cascade order was enough). Chrome `!important` count → 0.
+- [x] `scientist.html` — added `--accent` tokens and tightened inline `.brandSub` override (11px/700/.1em → 9px/800/.22em) so it matches the common.css header.
+- [x] Plan Tasks 7 (flashcard), 9 (homophone), 10 (word-refinery), 11 (word-spectrum), 12 (root-lab), 13 (class-setup), 15 (dashboard), 16 (spelling-test), 17 (teacher-login), 18 (landing) — all verified as already on-spec or no-op (inherited from `wordlab-common.css`).
+- [x] Every remaining `!important` on the swept pages is now either in a mobile `@media` block (legit responsive override) or on a gameplay element (game-zone, bubbleBtn, modeSel, flashSuccess, feedback states, etc.) — explicitly out of scope for the plan.
+- [x] Plan + spec documents committed to `docs/superpowers/{plans,specs}/2026-03-30-unified-design-system.md` as a historical record.
+
+#### Teaching slide decks — 68 missing files committed
+- [x] The Phase 7.14/7.15 expansion (45 new Anglo bases + 5 new prefixes + 11 new suffixes + 7 Greek combining forms) generated 68 new `.pptx` decks via `scripts/generate-all-decks.js`, but the files were only in Codespaces — never committed to git. Teachers clicking Preview or Download from `teacher-resources.html` were hitting 404s on Vercel.
+- [x] All 68 decks committed in `output/` (~68MB). Total tracked deck count now 323, matching the 324 figure displayed in `teacher-resources.html` / `about.html` / `faq.html`.
+
+#### Housekeeping
+- [x] Cleaned `supabase/migrations/secure_student_login.sql` — stripped 23 lines of browser-extension console error output that had been accidentally appended after the final `GRANT`.
+
+---
+
 ### PHASE 9 — NSW Department of Education Approval
 
 Full checklist document: `docs/nsw-doe-approval-checklist.md`
@@ -1438,3 +1470,5 @@ At the start of each working session, do this:
 | extension_activities empty = all | Backward compatible: existing students with `extension_mode=true` and no `extension_activities` get extension everywhere, same as before |
 | Spelling set morpheme tracking per-morpheme | Mission/Meaning modes quiz on morphemes not words, so results are tracked against all spelling words containing that morpheme (e.g. getting `un-` right counts for unhappy, unkind, unfair) |
 | Vercel font header split | Vercel path matching doesn't support regex alternation `(?:...)` — split into separate entries per format |
+| Hardcoded per-page hud tint colours (not new tokens) | When consolidating the chrome CSS in Phase 7.20, each game page wanted its hud text in an accent-tinted off-white (purple `#e9d5ff`, amber `#fde68a`, emerald `#d1fae5`, etc.) that isn't a simple alpha of the page's `--accent`. Introducing new `--hud-text` / `--hud-bg` tokens would either require defining them on every page (just moving the hardcoding one step deeper) or a shared stylesheet rewrite. Hardcoding the 2–3 tinted colours per page inside the page's own `<style>` block is simpler, co-located with the rest of the page, and the "unified" part of the design system is structural (selectors, sizes, spacing) not literal colour values. |
+| Phase A dark theme extends beyond the original scope | Original Phase A was teacher-signup + onboarding (commit 50b6512). On continuation, `class-setup.html` and `account.html` still had light-bg panels that made the teacher journey jump themes. Ported them in Phase 7.20 to close the loop — the whole teacher flow (landing → login → signup → onboarding → dashboard → class-setup → account) is now one continuous navy + indigo surface. |
