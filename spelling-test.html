@@ -477,13 +477,22 @@ async function saveCheckInSession(score, total) {
     var session = WordLabData.getSession ? WordLabData.getSession() : null;
     if (!session || !session.studentId) return;
     var sb = WordLabData._sb();
-    var insertResult = await sb.from('spelling_check_in_results').insert({
+    var payload = {
       spelling_set_id: currentSetId,
       student_id: session.studentId,
       results: results,
       score: score,
       total: total
-    });
+    };
+    // Stamp the session anchor so the dashboard can group results from the same
+    // check-in even when multiple check-ins happen the same morning.
+    if (_checkInStartedAt) payload.session_started_at = _checkInStartedAt;
+    var insertResult = await sb.from('spelling_check_in_results').insert(payload);
+    // Fallback if the column hasn't been added yet
+    if (insertResult.error && insertResult.error.code === 'PGRST204') {
+      delete payload.session_started_at;
+      insertResult = await sb.from('spelling_check_in_results').insert(payload);
+    }
     if (insertResult.error) console.warn('Could not save check-in session:', insertResult.error);
   } catch(e) { console.warn('Could not save check-in session:', e); }
 }

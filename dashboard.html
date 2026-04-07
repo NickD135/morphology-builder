@@ -3225,6 +3225,8 @@ var _spellingAssignments = {};
 var _spellingProgress = {};
 var _checkInResults = {};
 var _studentFocusWords = {};
+// Per-set heatmap view: 'latest' (default) or 'cumulative'
+var _heatmapView = {};
 var _activeSpellingSetId = null;
 var _ssDragId = null;
 
@@ -3278,6 +3280,11 @@ async function ssTabDrop(e) {
 
 async function loadSpellingSetsData() {
   if (!currentClass) return;
+  // Load class settings so we can read focusAutoRemove and any other class-level toggles
+  try {
+    var clsRes = await dbSb().from('classes').select('settings').eq('id', currentClass.id).maybeSingle();
+    currentClass.settings = (clsRes && clsRes.data && clsRes.data.settings) || {};
+  } catch(e) { currentClass.settings = currentClass.settings || {}; }
   try {
     var { data: sets, error: setsErr } = await dbSb().from('class_spelling_sets')
       .select('id, name, set_number, words, created_at, assessment_active, assessment_scheduled_at, assessment_mode')
@@ -3333,10 +3340,20 @@ async function loadSpellingSetsData() {
       var setIds2 = _spellingSets.map(function(s) { return s.id; });
       if (studentIds2.length) {
         var { data: checkIns, error: ciErr } = await dbSb().from('spelling_check_in_results')
-          .select('id, spelling_set_id, student_id, score, total, results, created_at')
+          .select('id, spelling_set_id, student_id, score, total, results, created_at, session_started_at')
           .in('spelling_set_id', setIds2)
           .in('student_id', studentIds2)
           .order('created_at', { ascending: true });
+        // Fallback if session_started_at column not yet in schema cache
+        if (ciErr && ciErr.code === '42703') {
+          var fb1 = await dbSb().from('spelling_check_in_results')
+            .select('id, spelling_set_id, student_id, score, total, results, created_at')
+            .in('spelling_set_id', setIds2)
+            .in('student_id', studentIds2)
+            .order('created_at', { ascending: true });
+          checkIns = fb1.data;
+          ciErr = fb1.error;
+        }
         // Fallback if 'results' column not in schema cache
         if (ciErr && ciErr.code === '42703') {
           var fallback = await dbSb().from('spelling_check_in_results')
@@ -3351,7 +3368,14 @@ async function loadSpellingSetsData() {
           (checkIns || []).forEach(function(ci) {
             var key = ci.spelling_set_id + ':' + ci.student_id;
             if (!_checkInResults[key]) _checkInResults[key] = [];
-            _checkInResults[key].push({ id: ci.id, score: ci.score, total: ci.total, date: ci.created_at, results: ci.results || [] });
+            _checkInResults[key].push({
+              id: ci.id,
+              score: ci.score,
+              total: ci.total,
+              date: ci.created_at,
+              sessionStartedAt: ci.session_started_at || null,
+              results: ci.results || []
+            });
           });
         }
       }
@@ -3381,6 +3405,9 @@ async function renderSpellingSetsTab() {
 
   container.innerHTML = '<div class="panel"><div class="panelInner"><div class="panelTitle">Loading...</div></div></div>';
   await loadSpellingSetsData();
+  // If auto-removal is enabled for this class, prune mastered focus words now
+  // so the dashboard reflects current accuracy without teacher intervention.
+  await _autoRemoveMasteredFocusWordsIfEnabled();
 
   // Set sub-tabs as pills
   var tabsHtml = _spellingSets.map(function(set, i) {
@@ -3420,7 +3447,8 @@ async function renderSpellingSetsTab() {
   container.innerHTML =
     '<div class="panel"><div class="panelInner">' +
       '<div class="panelTitle">📊 Spelling Check-In Sets</div>' +
-      '<p style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:14px;">Create spelling sets, assign students, and track their progress word by word.</p>' +
+      '<p style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:10px;">Create spelling sets, assign students, and track their progress word by word.</p>' +
+      _focusAutoRemoveStripHtml() +
       '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;" id="ssSetTabs">' + tabsHtml + '</div>' +
     '</div></div>' +
     '<div id="ssActiveContent">' + contentHtml + '</div>' +
@@ -3534,7 +3562,7 @@ function buildSpellingSetHeatmap(set) {
     var rowStyle = isHistorical && !isAssigned ? 'opacity:0.6;' : '';
     var cells, scoreCell;
 
-    if (latestSession && latestSession.results && latestSession.results.length > 0) {
+    if (view === 'latest' && latestSession && latestSession.results && latestSession.results.length > 0) {
       // Build lookup from latest session results
       var wordResults = {};
       (latestSession.results || []).forEach(function(r) { wordResults[r.word.toLowerCase()] = r; });
@@ -3595,9 +3623,21 @@ function buildSpellingSetHeatmap(set) {
     var n = (_checkInResults[ciKey] || []).length;
     if (n > totalCheckIns) totalCheckIns = n;
   });
-  var heatmapLabel = totalCheckIns > 0
-    ? '<span style="font-size:10px;font-weight:700;color:var(--text-secondary);margin-bottom:4px;display:block;">Showing: Latest Check-In (Check-In ' + totalCheckIns + ')' + (totalCheckIns > 1 ? ' · See all sessions below' : '') + '</span>'
-    : '<span style="font-size:10px;font-weight:700;color:var(--text-secondary);margin-bottom:4px;display:block;">Practice Data (no check-ins yet)</span>';
+  var view = _heatmapView[set.id] || 'latest';
+  // If no check-in data exists yet, force cumulative view
+  if (!hasCheckInData) view = 'cumulative';
+  var labelText = !hasCheckInData
+    ? 'Practice Data (no check-ins yet)'
+    : view === 'latest'
+      ? 'Showing: Latest Check-In (Check-In ' + totalCheckIns + ')' + (totalCheckIns > 1 ? ' · See all sessions below' : '')
+      : 'Showing: Cumulative Practice Data (' + totalCheckIns + ' check-in' + (totalCheckIns !== 1 ? 's' : '') + ' available below)';
+  var toggleHtml = hasCheckInData
+    ? '<span style="display:inline-flex;gap:4px;margin-left:10px;vertical-align:middle;">' +
+        '<button onclick="ssSetHeatmapView(\'' + set.id + '\',\'latest\')" style="background:' + (view === 'latest' ? 'var(--indigo)' : 'var(--navy-3)') + ';color:#fff;border:1px solid var(--line);border-radius:6px;padding:3px 10px;font-size:9px;font-weight:800;cursor:pointer;font-family:Lexend,sans-serif;">Latest Check-In</button>' +
+        '<button onclick="ssSetHeatmapView(\'' + set.id + '\',\'cumulative\')" style="background:' + (view === 'cumulative' ? 'var(--indigo)' : 'var(--navy-3)') + ';color:#fff;border:1px solid var(--line);border-radius:6px;padding:3px 10px;font-size:9px;font-weight:800;cursor:pointer;font-family:Lexend,sans-serif;">Cumulative Practice</button>' +
+      '</span>'
+    : '';
+  var heatmapLabel = '<div style="font-size:10px;font-weight:700;color:var(--text-secondary);margin-bottom:6px;">' + labelText + toggleHtml + '</div>';
 
   var legend = '<div class="legend"><span>Accuracy:</span>' +
     '<span class="legendCell" style="background:#166534;"></span><span>100%</span>' +
@@ -3617,26 +3657,39 @@ function buildSpellingSetHeatmap(set) {
       var ciKey = set.id + ':' + s.id;
       var sessions = _checkInResults[ciKey] || [];
       sessions.forEach(function(ci) {
-        allSessions.push({ studentId: s.id, studentName: s.name, date: ci.date, score: ci.score, total: ci.total, results: ci.results || [] });
+        allSessions.push({ studentId: s.id, studentName: s.name, date: ci.date, sessionStartedAt: ci.sessionStartedAt || null, score: ci.score, total: ci.total, results: ci.results || [] });
       });
     });
-    // Group into sessions by date (cluster within 2-hour windows)
-    allSessions.sort(function(a, b) { return new Date(a.date) - new Date(b.date); });
+    // Group results from the same check-in session.
+    // - New rows have an exact session_started_at anchor → cluster by that.
+    // - Legacy rows (no anchor) fall back to the old 2-hour time window.
+    allSessions.sort(function(a, b) { return new Date(a.sessionStartedAt || a.date) - new Date(b.sessionStartedAt || b.date); });
     var sessionGroups = [];
+    var sidIndex = {}; // sessionStartedAt → group index
     allSessions.forEach(function(ci) {
+      if (ci.sessionStartedAt) {
+        if (sidIndex[ci.sessionStartedAt] != null) {
+          sessionGroups[sidIndex[ci.sessionStartedAt]].entries.push(ci);
+          return;
+        }
+        sidIndex[ci.sessionStartedAt] = sessionGroups.length;
+        sessionGroups.push({ refTime: new Date(ci.sessionStartedAt).getTime(), entries: [ci], sid: ci.sessionStartedAt });
+        return;
+      }
+      // Legacy row — 2-hour window clustering, but never merge into a sid-anchored group
       var ciTime = new Date(ci.date).getTime();
       var matched = false;
       for (var g = 0; g < sessionGroups.length; g++) {
+        if (sessionGroups[g].sid) continue;
         if (Math.abs(ciTime - sessionGroups[g].refTime) < 2 * 60 * 60 * 1000) {
           sessionGroups[g].entries.push(ci);
           matched = true;
           break;
         }
       }
-      if (!matched) {
-        sessionGroups.push({ refTime: ciTime, entries: [ci] });
-      }
+      if (!matched) sessionGroups.push({ refTime: ciTime, entries: [ci] });
     });
+    sessionGroups.sort(function(a, b) { return a.refTime - b.refTime; });
 
     if (sessionGroups.length > 0) {
       var setIdShort = set.id.replace(/-/g,'').slice(0,8);
@@ -3843,7 +3896,10 @@ async function ssAnalyzeWords() {
 
 async function createSpellingSet() {
   var name = (document.getElementById('ssNewName').value || '').trim();
-  var number = parseInt(document.getElementById('ssNewNumber').value) || null;
+  // Auto-assign next available set_number when teacher leaves the field blank,
+  // so auto-progression and ordering always have something to work with.
+  var maxNum = _spellingSets.reduce(function(m, s) { return Math.max(m, s.set_number || 0); }, 0);
+  var number = parseInt(document.getElementById('ssNewNumber').value) || (maxNum + 1);
 
   if (!name) { ssShowStatus('Please enter a set name.', true); return; }
   if (!currentClass) { ssShowStatus('No class selected.', true); return; }
@@ -3876,7 +3932,10 @@ async function createSpellingSet() {
 
 async function createSpellingSetPlain() {
   var name = (document.getElementById('ssNewName').value || '').trim();
-  var number = parseInt(document.getElementById('ssNewNumber').value) || null;
+  // Auto-assign next available set_number when teacher leaves the field blank,
+  // so auto-progression and ordering always have something to work with.
+  var maxNum = _spellingSets.reduce(function(m, s) { return Math.max(m, s.set_number || 0); }, 0);
+  var number = parseInt(document.getElementById('ssNewNumber').value) || (maxNum + 1);
   var rawWords = (document.getElementById('ssNewWords').value || '').trim();
 
   if (!name) { ssShowStatus('Please enter a set name.', true); return; }
@@ -4154,32 +4213,75 @@ async function ssCompleteStudent(setId, studentId) {
 }
 
 // Advance a student: complete current set and assign to next set
+// Toggle the top heatmap between latest check-in and cumulative practice data.
+// Re-renders via showSpellingSet (which escapes all user input via WordLabData.escapeHtml).
+function ssSetHeatmapView(setId, view) {
+  _heatmapView[setId] = view;
+  var pill = document.querySelector('.ssSetPill[data-set-id="' + setId + '"]');
+  showSpellingSet(setId, pill);
+}
+
+// Reusable destination-set picker. Opens a small modal listing every other set
+// and calls onPick(destinationSetId, destinationSet) when the teacher confirms.
+function _openDestinationPicker(currentSetId, title, onPick) {
+  var others = _otherSpellingSets(currentSetId);
+  if (!others.length) { alert('No other sets available to advance to.'); return; }
+  var currentSet = _spellingSets.find(function(s) { return s.id === currentSetId; });
+  var defaultNext = currentSet ? _defaultNextSet(currentSet) : others[0];
+
+  var modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+
+  var inner = document.createElement('div');
+  inner.style.cssText = 'background:var(--navy-2);border:1px solid var(--line);border-radius:16px;padding:22px;max-width:380px;width:90%;max-height:80vh;overflow-y:auto;font-family:Lexend,sans-serif;';
+
+  var titleEl = document.createElement('div');
+  titleEl.style.cssText = 'font-size:14px;font-weight:900;color:var(--text-primary);margin-bottom:14px;';
+  titleEl.textContent = title || 'Advance to which set?';
+  inner.appendChild(titleEl);
+
+  others.forEach(function(s) {
+    var btn = document.createElement('button');
+    var isDefault = defaultNext && s.id === defaultNext.id;
+    var lbl = (s.set_number ? '#' + s.set_number + ' \u2014 ' : '') + s.name;
+    btn.style.cssText = 'display:block;width:100%;text-align:left;border:1px solid ' + (isDefault ? 'var(--indigo)' : 'var(--line)') + ';background:' + (isDefault ? 'rgba(99,102,241,.15)' : 'var(--navy-3)') + ';color:var(--text-primary);border-radius:10px;padding:10px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:Lexend,sans-serif;margin-bottom:6px;';
+    btn.textContent = lbl + ((s.words && s.words.length) ? '  (' + s.words.length + ' words)' : '');
+    btn.addEventListener('click', function() {
+      modal.remove();
+      onPick(s.id, s);
+    });
+    inner.appendChild(btn);
+  });
+
+  var cancel = document.createElement('button');
+  cancel.style.cssText = 'border:1px solid var(--line);background:none;color:var(--text-secondary);border-radius:8px;padding:6px 14px;font-size:11px;font-weight:800;cursor:pointer;font-family:Lexend,sans-serif;margin-top:6px;';
+  cancel.textContent = 'Cancel';
+  cancel.addEventListener('click', function() { modal.remove(); });
+  inner.appendChild(cancel);
+
+  modal.appendChild(inner);
+  modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+// Advance a student: complete current set and assign them to a chosen destination
 async function ssAdvanceStudent(setId, studentId) {
   var currentSet = _spellingSets.find(function(s) { return s.id === setId; });
   if (!currentSet) return;
-  var currentNum = currentSet.set_number || 0;
-  // Find next set by set_number
-  var nextSet = _spellingSets
-    .filter(function(s) { return (s.set_number || 0) > currentNum; })
-    .sort(function(a, b) { return (a.set_number || 0) - (b.set_number || 0); })[0];
-  if (!nextSet) {
-    // No higher set_number — try next in creation order
-    var idx = _spellingSets.findIndex(function(s) { return s.id === setId; });
-    nextSet = _spellingSets[idx + 1];
-  }
-  if (!nextSet) { alert('No next set available to advance to.'); return; }
-  if (!confirm('Complete this student on "' + currentSet.name + '" and assign to "' + nextSet.name + '"?')) return;
-  try {
-    // Complete current
-    await dbSb().from('spelling_set_assignments')
-      .update({ active: false, completed_at: new Date().toISOString() })
-      .eq('spelling_set_id', setId)
-      .eq('student_id', studentId);
-    // Assign next
-    await dbSb().from('spelling_set_assignments')
-      .upsert([{ spelling_set_id: nextSet.id, student_id: studentId, active: true, assigned_at: new Date().toISOString(), completed_at: null }], { onConflict: 'spelling_set_id,student_id' });
-    await renderSpellingSetsTab();
-  } catch(e) { alert('Error: ' + (e.message || e)); }
+  var student = _studentMap[studentId];
+  var studentName = student ? student.name : 'student';
+  _openDestinationPicker(setId, 'Advance ' + studentName + ' to which set?', async function(nextSetId) {
+    try {
+      await dbSb().from('spelling_set_assignments')
+        .update({ active: false, completed_at: new Date().toISOString() })
+        .eq('spelling_set_id', setId)
+        .eq('student_id', studentId);
+      await dbSb().from('spelling_set_assignments')
+        .upsert([{ spelling_set_id: nextSetId, student_id: studentId, active: true, assigned_at: new Date().toISOString(), completed_at: null }], { onConflict: 'spelling_set_id,student_id' });
+      _activeSpellingSetId = nextSetId;
+      await renderSpellingSetsTab();
+    } catch(e) { alert('Error: ' + (e.message || e)); }
+  });
 }
 
 // Bulk complete all active students on a set
@@ -4196,37 +4298,25 @@ async function ssCompleteAll(setId) {
   } catch(e) { alert('Error: ' + (e.message || e)); }
 }
 
-// Bulk advance all active students to next set
+// Bulk advance all active students on a set to a chosen destination
 async function ssAdvanceAll(setId) {
-  var currentSet = _spellingSets.find(function(s) { return s.id === setId; });
-  if (!currentSet) return;
-  var currentNum = currentSet.set_number || 0;
-  var nextSet = _spellingSets
-    .filter(function(s) { return (s.set_number || 0) > currentNum; })
-    .sort(function(a, b) { return (a.set_number || 0) - (b.set_number || 0); })[0];
-  if (!nextSet) {
-    var idx = _spellingSets.findIndex(function(s) { return s.id === setId; });
-    nextSet = _spellingSets[idx + 1];
-  }
-  if (!nextSet) { alert('No next set available to advance to.'); return; }
   var assigns = (_spellingAssignments[setId] || []).filter(function(a) { return a.active; });
   if (!assigns.length) { alert('No active assignments to advance.'); return; }
-  if (!confirm('Complete ' + assigns.length + ' students on "' + currentSet.name + '" and assign them to "' + nextSet.name + '"?')) return;
-  try {
-    var studentIds = assigns.map(function(a) { return a.student_id; });
-    // Complete current
-    await dbSb().from('spelling_set_assignments')
-      .update({ active: false, completed_at: new Date().toISOString() })
-      .eq('spelling_set_id', setId)
-      .eq('active', true);
-    // Assign next
-    var rows = studentIds.map(function(sid) {
-      return { spelling_set_id: nextSet.id, student_id: sid, active: true, assigned_at: new Date().toISOString(), completed_at: null };
-    });
-    await dbSb().from('spelling_set_assignments').upsert(rows, { onConflict: 'spelling_set_id,student_id' });
-    _activeSpellingSetId = nextSet.id;
-    await renderSpellingSetsTab();
-  } catch(e) { alert('Error: ' + (e.message || e)); }
+  _openDestinationPicker(setId, 'Advance ' + assigns.length + ' student' + (assigns.length !== 1 ? 's' : '') + ' to which set?', async function(nextSetId) {
+    try {
+      var studentIds = assigns.map(function(a) { return a.student_id; });
+      await dbSb().from('spelling_set_assignments')
+        .update({ active: false, completed_at: new Date().toISOString() })
+        .eq('spelling_set_id', setId)
+        .eq('active', true);
+      var rows = studentIds.map(function(sid) {
+        return { spelling_set_id: nextSetId, student_id: sid, active: true, assigned_at: new Date().toISOString(), completed_at: null };
+      });
+      await dbSb().from('spelling_set_assignments').upsert(rows, { onConflict: 'spelling_set_id,student_id' });
+      _activeSpellingSetId = nextSetId;
+      await renderSpellingSetsTab();
+    } catch(e) { alert('Error: ' + (e.message || e)); }
+  });
 }
 
 // Re-assign a completed student back to a set
@@ -4239,21 +4329,110 @@ async function ssReassignStudent(setId, studentId) {
 }
 
 // ── Focus Words management ──
+// Class-level setting: auto-remove mastered focus words on dashboard load.
+function _focusAutoRemoveEnabled() {
+  return !!(currentClass && currentClass.settings && currentClass.settings.focusAutoRemove);
+}
+
+// Top-of-tab strip with the auto-remove toggle so teachers can opt in or out.
+function _focusAutoRemoveStripHtml() {
+  var on = _focusAutoRemoveEnabled();
+  return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:8px 12px;background:var(--navy-3);border:1px solid var(--line);border-radius:10px;flex-wrap:wrap;">' +
+    '<span style="font-size:11px;font-weight:800;color:var(--text-secondary);">\uD83D\uDD04 Focus words</span>' +
+    '<label style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--text-primary);cursor:pointer;">' +
+      '<input type="checkbox" id="focusAutoRemoveToggle" ' + (on ? 'checked' : '') + ' onchange="ssToggleFocusAutoRemove(this.checked)" style="width:14px;height:14px;cursor:pointer;">' +
+      'Auto-remove when student hits 80%+ in practice (\u22653 attempts)' +
+    '</label>' +
+    '<span id="focusAutoSaved" style="font-size:10px;color:#4ade80;font-weight:800;opacity:0;transition:opacity .2s;">Saved</span>' +
+  '</div>';
+}
+
+async function ssToggleFocusAutoRemove(enabled) {
+  if (!currentClass) return;
+  try {
+    await WordLabData.saveClassSettings(currentClass.id, { focusAutoRemove: !!enabled });
+    currentClass.settings = currentClass.settings || {};
+    currentClass.settings.focusAutoRemove = !!enabled;
+    var saved = document.getElementById('focusAutoSaved');
+    if (saved) {
+      saved.style.opacity = '1';
+      setTimeout(function() { saved.style.opacity = '0'; }, 1500);
+    }
+    // If we just enabled it, run a prune pass right away
+    if (enabled) {
+      await _autoRemoveMasteredFocusWordsIfEnabled();
+      await renderSpellingSetsTab();
+    }
+  } catch(e) { console.warn('Save focus auto-remove error:', e); }
+}
+
+// Walks every student with focus words and drops the mastered ones.
+// One UPDATE per affected student. Silently no-op if the toggle is off.
+async function _autoRemoveMasteredFocusWordsIfEnabled() {
+  if (!_focusAutoRemoveEnabled()) return;
+  var updates = [];
+  Object.keys(_studentFocusWords).forEach(function(studentId) {
+    var fw = _studentFocusWords[studentId] || [];
+    if (!fw.length) return;
+    var remaining = fw.filter(function(w) { return !_focusWordAccuracy(studentId, w).mastered; });
+    if (remaining.length !== fw.length) {
+      _studentFocusWords[studentId] = remaining;
+      updates.push(dbSb().from('students').update({ focus_words: remaining }).eq('id', studentId));
+    }
+  });
+  if (updates.length) {
+    try { await Promise.all(updates); } catch(e) { console.warn('Auto-remove focus words error:', e); }
+  }
+}
+
+// Look up cumulative practice accuracy for a focus word.
+// Returns { acc: -1 | percent, total: number, mastered: bool }.
+// "Mastered" = ≥80% accuracy with at least 3 attempts.
+function _focusWordAccuracy(studentId, fw) {
+  var prog = _spellingProgress[studentId] || {};
+  var w = (fw.word || '').toLowerCase();
+  var total = 0, correct = 0;
+  // Try the source-set key first
+  if (fw.source_set) {
+    var key = 'ss:' + String(fw.source_set).slice(0, 8) + ':' + w;
+    var p = prog[key];
+    if (p && p.total > 0) { total = p.total; correct = p.correct || 0; }
+  }
+  // Fallback: any spelling-set category ending in this word (covers focus words
+  // that originated from a different set, or rows with no source_set).
+  if (!total) {
+    Object.keys(prog).forEach(function(k) {
+      if (k.indexOf('ss:') === 0 && k.toLowerCase().endsWith(':' + w)) {
+        var pp = prog[k];
+        total += pp.total || 0;
+        correct += pp.correct || 0;
+      }
+    });
+  }
+  if (!total) return { acc: -1, total: 0, mastered: false };
+  var acc = (correct / total) * 100;
+  return { acc: acc, total: total, mastered: acc >= 80 && total >= 3 };
+}
+
 function ssShowFocusWords(studentId) {
   var student = _studentMap[studentId];
   var fw = _studentFocusWords[studentId] || [];
   if (!fw.length) { alert('No focus words for this student.'); return; }
   var name = student ? student.name : 'Student';
 
+  // Compute accuracy snapshot once for the whole list
+  var fwWithAcc = fw.map(function(w) { return { w: w, info: _focusWordAccuracy(studentId, w) }; });
+  var masteredCount = fwWithAcc.filter(function(r) { return r.info.mastered; }).length;
+
   var modal = document.createElement('div');
   modal.id = 'focusWordsModal';
   modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
 
   var inner = document.createElement('div');
-  inner.style.cssText = 'background:var(--navy-2);border:1px solid var(--line);border-radius:16px;padding:24px;max-width:400px;width:90%;max-height:80vh;overflow-y:auto;font-family:Lexend,sans-serif;';
+  inner.style.cssText = 'background:var(--navy-2);border:1px solid var(--line);border-radius:16px;padding:24px;max-width:440px;width:90%;max-height:80vh;overflow-y:auto;font-family:Lexend,sans-serif;';
 
   var header = document.createElement('div');
-  header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;';
+  header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;';
   var title = document.createElement('div');
   title.style.cssText = 'font-size:15px;font-weight:900;color:var(--text-primary);';
   title.textContent = '\uD83D\uDD04 Focus Words \u2014 ' + name;
@@ -4266,31 +4445,46 @@ function ssShowFocusWords(studentId) {
   inner.appendChild(header);
 
   var desc = document.createElement('div');
-  desc.style.cssText = 'font-size:11px;color:var(--muted);font-weight:600;margin-bottom:12px;';
-  desc.textContent = 'Words this student got wrong in check-ins. They\'ll appear in practice games until you remove them.';
+  desc.style.cssText = 'font-size:11px;color:var(--muted);font-weight:600;margin-bottom:10px;';
+  desc.textContent = 'Words this student got wrong in check-ins. Red = still needs practice. Green = mastered (\u226580% across \u22653 attempts).';
   inner.appendChild(desc);
+
+  var summary = document.createElement('div');
+  summary.style.cssText = 'font-size:10px;color:var(--text-secondary);font-weight:700;margin-bottom:10px;display:flex;gap:10px;';
+  summary.innerHTML =
+    '<span style="background:rgba(248,113,113,.18);border:1px solid #f87171;color:#fca5a5;border-radius:6px;padding:2px 8px;">' +
+      (fw.length - masteredCount) + ' still needed' +
+    '</span>' +
+    '<span style="background:rgba(74,222,128,.18);border:1px solid #4ade80;color:#86efac;border-radius:6px;padding:2px 8px;">' +
+      masteredCount + ' mastered' +
+    '</span>';
+  inner.appendChild(summary);
 
   var list = document.createElement('div');
   list.id = 'focusWordsList';
-  fw.forEach(function(w, i) {
+  fwWithAcc.forEach(function(rec) {
+    var w = rec.w;
+    var info = rec.info;
     var row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);';
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid var(--line);background:' + (info.mastered ? 'rgba(74,222,128,.08)' : 'rgba(248,113,113,.06)') + ';border-left:3px solid ' + (info.mastered ? '#4ade80' : '#f87171') + ';margin-bottom:2px;border-radius:4px;';
+
     var wordEl = document.createElement('span');
-    wordEl.style.cssText = 'font-size:13px;font-weight:700;color:var(--text-primary);flex:1;';
-    wordEl.textContent = w.word;
+    wordEl.style.cssText = 'font-size:13px;font-weight:800;color:' + (info.mastered ? '#86efac' : '#fca5a5') + ';flex:1;';
+    wordEl.textContent = (info.mastered ? '\u2713 ' : '') + w.word;
     row.appendChild(wordEl);
+
     if (w.base) {
       var parts = document.createElement('span');
       parts.style.cssText = 'font-size:10px;color:var(--muted);font-weight:600;';
       parts.textContent = (w.prefix ? w.prefix + ' + ' : '') + w.base + (w.suffix1 ? ' + ' + w.suffix1 : '');
       row.appendChild(parts);
     }
-    if (w.added_at) {
-      var dateEl = document.createElement('span');
-      dateEl.style.cssText = 'font-size:9px;color:var(--muted);';
-      dateEl.textContent = new Date(w.added_at).toLocaleDateString('en-AU', {day:'numeric',month:'short'});
-      row.appendChild(dateEl);
-    }
+
+    var accEl = document.createElement('span');
+    accEl.style.cssText = 'font-size:10px;color:' + (info.mastered ? '#86efac' : '#fca5a5') + ';font-weight:800;min-width:54px;text-align:right;';
+    accEl.textContent = info.total > 0 ? Math.round(info.acc) + '% (' + info.total + ')' : 'no data';
+    row.appendChild(accEl);
+
     var rmBtn = document.createElement('button');
     rmBtn.style.cssText = 'border:none;background:none;color:var(--bad);font-size:14px;cursor:pointer;padding:2px 4px;';
     rmBtn.title = 'Remove';
@@ -4302,22 +4496,49 @@ function ssShowFocusWords(studentId) {
   inner.appendChild(list);
 
   var actions = document.createElement('div');
-  actions.style.cssText = 'margin-top:14px;display:flex;gap:8px;';
+  actions.style.cssText = 'margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;';
+
+  if (masteredCount > 0) {
+    var clearMasteredBtn = document.createElement('button');
+    clearMasteredBtn.style.cssText = 'border:1px solid #4ade80;background:rgba(74,222,128,.12);color:#86efac;border-radius:8px;padding:6px 14px;font-size:11px;font-weight:800;cursor:pointer;font-family:Lexend,sans-serif;';
+    clearMasteredBtn.textContent = 'Remove ' + masteredCount + ' mastered';
+    clearMasteredBtn.addEventListener('click', function() { ssRemoveMasteredFocusWords(studentId); });
+    actions.appendChild(clearMasteredBtn);
+  }
+
   var clearBtn = document.createElement('button');
   clearBtn.style.cssText = 'border:1px solid var(--bad);background:none;color:var(--bad);border-radius:8px;padding:6px 14px;font-size:11px;font-weight:800;cursor:pointer;font-family:Lexend,sans-serif;';
   clearBtn.textContent = 'Clear All';
   clearBtn.addEventListener('click', function() { ssClearAllFocusWords(studentId); });
+  actions.appendChild(clearBtn);
+
   var doneBtn = document.createElement('button');
   doneBtn.style.cssText = 'border:none;background:var(--indigo);color:#fff;border-radius:8px;padding:6px 14px;font-size:11px;font-weight:800;cursor:pointer;font-family:Lexend,sans-serif;margin-left:auto;';
   doneBtn.textContent = 'Done';
   doneBtn.addEventListener('click', function() { modal.remove(); });
-  actions.appendChild(clearBtn);
   actions.appendChild(doneBtn);
   inner.appendChild(actions);
 
   modal.appendChild(inner);
   modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
   document.body.appendChild(modal);
+}
+
+// Remove every mastered focus word for a student in a single update.
+async function ssRemoveMasteredFocusWords(studentId) {
+  var fw = _studentFocusWords[studentId] || [];
+  if (!fw.length) return;
+  var remaining = fw.filter(function(w) { return !_focusWordAccuracy(studentId, w).mastered; });
+  if (remaining.length === fw.length) { alert('No mastered focus words to remove yet.'); return; }
+  if (!confirm('Remove ' + (fw.length - remaining.length) + ' mastered word' + ((fw.length - remaining.length) !== 1 ? 's' : '') + ' from this student\'s focus list?')) return;
+  try {
+    await dbSb().from('students').update({ focus_words: remaining }).eq('id', studentId);
+    _studentFocusWords[studentId] = remaining;
+    var modal = document.getElementById('focusWordsModal');
+    if (modal) modal.remove();
+    if (remaining.length) ssShowFocusWords(studentId);
+    await renderSpellingSetsTab();
+  } catch(e) { alert('Error: ' + (e.message || e)); }
 }
 
 async function ssRemoveFocusWord(studentId, word, rowEl) {
@@ -4346,6 +4567,42 @@ async function ssClearAllFocusWords(studentId) {
 }
 
 // ── Auto-progression banner ──
+// Returns sets the teacher can advance students to (everything except `currentSetId`).
+// Sorted by set_number (nulls last), then by created_at — same order as the tab pills.
+function _otherSpellingSets(currentSetId) {
+  return _spellingSets
+    .filter(function(s) { return s.id !== currentSetId; })
+    .slice()
+    .sort(function(a, b) {
+      var an = (a.set_number == null) ? Infinity : a.set_number;
+      var bn = (b.set_number == null) ? Infinity : b.set_number;
+      if (an !== bn) return an - bn;
+      return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+    });
+}
+
+// Best guess at the "next" set after currentSet — used to pre-select the dropdown.
+function _defaultNextSet(currentSet) {
+  var others = _otherSpellingSets(currentSet.id);
+  if (!others.length) return null;
+  var currentNum = currentSet.set_number || 0;
+  // Prefer the smallest set_number greater than current
+  var byNumber = others.filter(function(s) { return (s.set_number || 0) > currentNum; })[0];
+  if (byNumber) return byNumber;
+  // Fall back to whichever set comes immediately after current in sort order
+  var orderedAll = _otherSpellingSets(currentSet.id).concat([currentSet]).sort(function(a, b) {
+    var an = (a.set_number == null) ? Infinity : a.set_number;
+    var bn = (b.set_number == null) ? Infinity : b.set_number;
+    if (an !== bn) return an - bn;
+    return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+  });
+  var idx = orderedAll.findIndex(function(s) { return s.id === currentSet.id; });
+  for (var i = idx + 1; i < orderedAll.length; i++) {
+    if (orderedAll[i].id !== currentSet.id) return orderedAll[i];
+  }
+  return others[0];
+}
+
 function buildAutoProgressionBanner(set) {
   if (!set || !_checkInResults) return '';
   var assigns = (_spellingAssignments[set.id] || []).filter(function(a) { return a.active; });
@@ -4365,23 +4622,27 @@ function buildAutoProgressionBanner(set) {
 
   if (!readyStudents.length) return '';
 
-  var currentNum = set.set_number || 0;
-  var nextSet = _spellingSets.filter(function(s) { return (s.set_number || 0) > currentNum; }).sort(function(a, b) { return (a.set_number || 0) - (b.set_number || 0); })[0];
-  if (!nextSet) {
-    var idx = _spellingSets.findIndex(function(s) { return s.id === set.id; });
-    nextSet = _spellingSets[idx + 1];
-  }
-  if (!nextSet) return '';
+  var others = _otherSpellingSets(set.id);
+  if (!others.length) return '';
+  var defaultNext = _defaultNextSet(set);
 
   var names = readyStudents.map(function(s) { return WordLabData.escapeHtml(s.name) + ' (' + s.score + '/' + s.total + ')'; }).join(', ');
   var sids = JSON.stringify(readyStudents.map(function(s){return s.id;}));
+  var selectId = 'ssAutoTarget_' + set.id.replace(/-/g,'').slice(0,12);
 
-  return '<div id="ssAutoProgressBanner" style="background:linear-gradient(135deg,#065f46,#047857);border:1px solid #34d399;border-radius:12px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">' +
+  var optionsHtml = others.map(function(s) {
+    var label = (s.set_number ? '#' + s.set_number + ' \u2014 ' : '') + s.name;
+    var sel = defaultNext && s.id === defaultNext.id ? ' selected' : '';
+    return '<option value="' + s.id + '"' + sel + '>' + WordLabData.escapeHtml(label) + '</option>';
+  }).join('');
+
+  return '<div id="ssAutoProgressBanner" style="background:linear-gradient(135deg,#065f46,#047857);border:1px solid #34d399;border-radius:12px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
     '<div style="flex:1;min-width:200px;">' +
       '<div style="font-size:12px;font-weight:900;color:#ecfdf5;">\uD83C\uDFAF ' + readyStudents.length + ' student' + (readyStudents.length !== 1 ? 's' : '') + ' scored 80%+ \u2014 ready to advance</div>' +
       '<div style="font-size:10px;font-weight:600;color:#a7f3d0;margin-top:2px;">' + names + '</div>' +
     '</div>' +
-    '<button onclick="ssAutoAdvance(\'' + set.id + '\',\'' + nextSet.id + '\',' + WordLabData.escapeHtml(sids) + ')" style="border:none;background:#fff;color:#065f46;border-radius:8px;padding:8px 16px;font-size:11px;font-weight:900;cursor:pointer;font-family:Lexend,sans-serif;white-space:nowrap;">\u23E9 Advance to ' + WordLabData.escapeHtml(nextSet.name) + '</button>' +
+    '<select id="' + selectId + '" aria-label="Choose destination set" style="background:#fff;color:#065f46;border:none;border-radius:8px;padding:8px 10px;font-size:11px;font-weight:800;font-family:Lexend,sans-serif;cursor:pointer;">' + optionsHtml + '</select>' +
+    '<button onclick="ssAutoAdvance(\'' + set.id + '\',document.getElementById(\'' + selectId + '\').value,' + WordLabData.escapeHtml(sids) + ')" style="border:none;background:#fff;color:#065f46;border-radius:8px;padding:8px 16px;font-size:11px;font-weight:900;cursor:pointer;font-family:Lexend,sans-serif;white-space:nowrap;">\u23E9 Advance</button>' +
     '<button onclick="this.closest(\'#ssAutoProgressBanner\').remove()" style="border:1px solid rgba(255,255,255,.3);background:none;color:#ecfdf5;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:800;cursor:pointer;font-family:Lexend,sans-serif;">Dismiss</button>' +
   '</div>';
 }
