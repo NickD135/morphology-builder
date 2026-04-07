@@ -511,11 +511,22 @@
 <script>
 let WORDS = window.SOUND_SORTER_WORDS;
 
-(function(){
+// Extension swap is deferred until WordLabData (loaded with defer) is
+// available. The SOUND_GROUPS rebuild below also needs to re-run after
+// the swap, so both happen here.
+document.addEventListener('DOMContentLoaded', function(){
   if(typeof WordLabData !== 'undefined' && WordLabData.isExtensionMode && WordLabData.isExtensionMode('sound-sorter')){
     if(window.WL_EXTENSION) WORDS.splice(0, WORDS.length, ...WL_EXTENSION.soundWords);
   }
-})();
+  // Rebuild SOUND_GROUPS from whatever is now in WORDS
+  const seen = { vowel: new Map(), consonant: new Map() };
+  WORDS.forEach(w => {
+    const t = w.type === 'vowel' ? 'vowel' : 'consonant';
+    if (!seen[t].has(w.sound)) seen[t].set(w.sound, w.soundLabel);
+  });
+  SOUND_GROUPS.vowel     = [...seen.vowel.entries()].map(([id, label]) => ({ id, label }));
+  SOUND_GROUPS.consonant = [...seen.consonant.entries()].map(([id, label]) => ({ id, label }));
+});
 
 // ═══════════════════════════════════════════════════════════════
 // SOUND GROUP DEFINITIONS (for the pill picker)
@@ -559,16 +570,8 @@ let SOUND_GROUPS = {
   ]
 };
 
-// Rebuild SOUND_GROUPS from whatever is in WORDS (works for both base and extension)
-(function(){
-  const seen = { vowel: new Map(), consonant: new Map() };
-  WORDS.forEach(w => {
-    const t = w.type === 'vowel' ? 'vowel' : 'consonant';
-    if (!seen[t].has(w.sound)) seen[t].set(w.sound, w.soundLabel);
-  });
-  SOUND_GROUPS.vowel     = [...seen.vowel.entries()].map(([id, label]) => ({ id, label }));
-  SOUND_GROUPS.consonant = [...seen.consonant.entries()].map(([id, label]) => ({ id, label }));
-})();
+// SOUND_GROUPS is rebuilt inside the DOMContentLoaded handler above
+// (after the extension swap), so no parse-time rebuild is needed.
 
 // ── Custom word list support ──
 var _originalSoundWords = WORDS.slice();
