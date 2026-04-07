@@ -574,77 +574,67 @@ let SOUND_GROUPS = {
 // SOUND_GROUPS is rebuilt inside the DOMContentLoaded handler above
 // (after the extension swap), so no parse-time rebuild is needed.
 
-// ── Custom word list support ──
+// ── Custom word list + spelling set support ──
+// Deferred so WordLabData (loaded with defer) is available.
 var _originalSoundWords = WORDS.slice();
-(async function loadCustomSoundWords(){
+function _ssRebuildSoundGroups(){
+  var seen = { vowel: new Map(), consonant: new Map() };
+  WORDS.forEach(function(w) {
+    var t = w.type === 'consonant' ? 'consonant' : 'vowel';
+    if (!seen[t].has(w.sound)) seen[t].set(w.sound, w.soundLabel);
+  });
+  SOUND_GROUPS.vowel = [];
+  SOUND_GROUPS.consonant = [];
+  seen.vowel.forEach(function(label, id){ SOUND_GROUPS.vowel.push({id:id, label:label}); });
+  seen.consonant.forEach(function(label, id){ SOUND_GROUPS.consonant.push({id:id, label:label}); });
+}
+document.addEventListener('DOMContentLoaded', async function(){
+  if (typeof WordLabData === 'undefined') return;
+  // Custom word list support
   try {
-    if (typeof WordLabData === 'undefined' || !WordLabData.getCustomWords) return;
-    var custom = await WordLabData.getCustomWords('sound-sorter');
-    if (!custom.length) return;
-    var customWords = custom.filter(function(w) {
-      return w.word && w.grapheme && w.sound && w.soundLabel;
-    }).map(function(w) {
-      return {
-        word: w.word,
-        sound: w.sound,
-        soundLabel: w.soundLabel,
-        grapheme: w.grapheme,
-        before: w.before || '',
-        after: w.after || '',
-        clue: w.clue || '',
-        level: w.ssLevel || w.level || 'levelup',
-        type: w.ssType || w.type || 'vowel',
-        distractors: w.distractors || [],
-        explain: w.explain || ''
-      };
-    });
-    if (!customWords.length) return;
-    var priority = WordLabData.getCustomWordPriority('sound-sorter');
-    if (priority === 'custom_only') {
-      WORDS.splice(0, WORDS.length); customWords.forEach(function(w){ WORDS.push(w); });
-    } else if (priority === 'custom_first') {
-      var orig = _originalSoundWords.slice();
-      WORDS.splice(0, WORDS.length);
-      customWords.forEach(function(w){ WORDS.push(w); });
-      orig.forEach(function(w){ WORDS.push(w); });
-    } else {
-      customWords.forEach(function(w){ WORDS.push(w); });
-    }
-    // Rebuild SOUND_GROUPS to include new sounds from custom words
-    var seen = { vowel: new Map(), consonant: new Map() };
-    WORDS.forEach(function(w) {
-      var t = w.type === 'consonant' ? 'consonant' : 'vowel';
-      if (!seen[t].has(w.sound)) seen[t].set(w.sound, w.soundLabel);
-    });
-    SOUND_GROUPS.vowel = [];
-    SOUND_GROUPS.consonant = [];
-    seen.vowel.forEach(function(label, id){ SOUND_GROUPS.vowel.push({id:id, label:label}); });
-    seen.consonant.forEach(function(label, id){ SOUND_GROUPS.consonant.push({id:id, label:label}); });
-  } catch(e) { console.warn('Custom sound-sorter words load error:', e); }
-})();
-// Load spelling set words (prepended — highest priority)
-(async function(){
-  try{
-    if(typeof WordLabData==='undefined'||!WordLabData.getSpellingSetWords) return;
-    var ssWords = await WordLabData.getSpellingSetWords();
-    var ssSounds = ssWords.filter(function(w){ return w.word && w.sound && w.grapheme; }).map(function(w){
-      return {word:w.word, sound:w.sound, soundLabel:w.soundLabel||w.sound, grapheme:w.grapheme, before:w.before||'', after:w.after||'', clue:w.clue||'', level:w.ssLevel||w.level||'levelup', type:w.ssType||w.type||'vowel', distractors:w.distractors||[], explain:w.explain||'', _spellingSetId:w._spellingSetId};
-    });
-    if(ssSounds.length){
-      WORDS.splice(0, 0, ...ssSounds);
-      // Rebuild SOUND_GROUPS to include new sounds from spelling set words
-      var seen = { vowel: new Map(), consonant: new Map() };
-      WORDS.forEach(function(w) {
-        var t = w.type === 'consonant' ? 'consonant' : 'vowel';
-        if (!seen[t].has(w.sound)) seen[t].set(w.sound, w.soundLabel);
+    if (WordLabData.getCustomWords) {
+      var custom = await WordLabData.getCustomWords('sound-sorter');
+      var customWords = custom.filter(function(w) {
+        return w.word && w.grapheme && w.sound && w.soundLabel;
+      }).map(function(w) {
+        return {
+          word: w.word, sound: w.sound, soundLabel: w.soundLabel,
+          grapheme: w.grapheme, before: w.before || '', after: w.after || '',
+          clue: w.clue || '', level: w.ssLevel || w.level || 'levelup',
+          type: w.ssType || w.type || 'vowel',
+          distractors: w.distractors || [], explain: w.explain || ''
+        };
       });
-      SOUND_GROUPS.vowel = [];
-      SOUND_GROUPS.consonant = [];
-      seen.vowel.forEach(function(label, id){ SOUND_GROUPS.vowel.push({id:id, label:label}); });
-      seen.consonant.forEach(function(label, id){ SOUND_GROUPS.consonant.push({id:id, label:label}); });
+      if (customWords.length) {
+        var priority = WordLabData.getCustomWordPriority('sound-sorter');
+        if (priority === 'custom_only') {
+          WORDS.splice(0, WORDS.length); customWords.forEach(function(w){ WORDS.push(w); });
+        } else if (priority === 'custom_first') {
+          var orig = _originalSoundWords.slice();
+          WORDS.splice(0, WORDS.length);
+          customWords.forEach(function(w){ WORDS.push(w); });
+          orig.forEach(function(w){ WORDS.push(w); });
+        } else {
+          customWords.forEach(function(w){ WORDS.push(w); });
+        }
+        _ssRebuildSoundGroups();
+      }
     }
-  }catch(e){}
-})();
+  } catch(e) { console.warn('Custom sound-sorter words load error:', e); }
+  // Spelling set words (prepended — highest priority)
+  try {
+    if (WordLabData.getSpellingSetWords) {
+      var ssWords = await WordLabData.getSpellingSetWords();
+      var ssSounds = ssWords.filter(function(w){ return w.word && w.sound && w.grapheme; }).map(function(w){
+        return {word:w.word, sound:w.sound, soundLabel:w.soundLabel||w.sound, grapheme:w.grapheme, before:w.before||'', after:w.after||'', clue:w.clue||'', level:w.ssLevel||w.level||'levelup', type:w.ssType||w.type||'vowel', distractors:w.distractors||[], explain:w.explain||'', _spellingSetId:w._spellingSetId};
+      });
+      if (ssSounds.length) {
+        WORDS.splice(0, 0, ...ssSounds);
+        _ssRebuildSoundGroups();
+      }
+    }
+  } catch(e) { console.warn('spelling set load error', e); }
+});
 // Helper: also record spelling set progress when a spelling set word is answered
 function _ssTrack(question, correct) {
   if (question && question._spellingSetId && typeof WordLabData !== 'undefined' && WordLabData.recordSpellingAttempt) {

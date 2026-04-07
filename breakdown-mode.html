@@ -348,48 +348,50 @@
       if(window.WL_EXTENSION) MISSIONS.splice(0, MISSIONS.length, ...WL_EXTENSION.missions);
     }
   });
-  // Load custom word lists from teacher (respects priority setting)
+  // Load custom word lists, spelling set words, and Word of the Week.
+  // Deferred so that WordLabData (loaded with defer) is available.
   var _originalMissions = MISSIONS.slice();
-  (async function(){
+  document.addEventListener('DOMContentLoaded', async function(){
+    if(typeof WordLabData === 'undefined') return;
+    // Custom word lists from teacher (respects priority setting)
     try{
-      if(typeof WordLabData==='undefined') return;
       var custom = await WordLabData.getCustomWords('breakdown');
-      if(!custom.length) return;
-      var customMissions = custom.filter(function(w){ return w.word && w.base; }).map(function(w){
-        return {word:w.word, clue:w.clue||'', answers:{prefix:w.prefix||'', base:w.base, suffix1:w.suffix1||'', suffix2:w.suffix2||''}};
-      });
-      if(!customMissions.length) return;
-      var priority = WordLabData.getCustomWordPriority('breakdown');
-      if(priority === 'custom_only'){
-        MISSIONS.splice(0, MISSIONS.length, ...customMissions);
-      } else if(priority === 'custom_first'){
-        MISSIONS.splice(0, MISSIONS.length, ...customMissions, ..._originalMissions);
-      } else {
-        // mixed — shuffle custom into original
-        customMissions.forEach(function(m){ MISSIONS.push(m); });
+      if(custom.length){
+        var customMissions = custom.filter(function(w){ return w.word && w.base; }).map(function(w){
+          return {word:w.word, clue:w.clue||'', answers:{prefix:w.prefix||'', base:w.base, suffix1:w.suffix1||'', suffix2:w.suffix2||''}};
+        });
+        if(customMissions.length){
+          var priority = WordLabData.getCustomWordPriority('breakdown');
+          if(priority === 'custom_only'){
+            MISSIONS.splice(0, MISSIONS.length, ...customMissions);
+          } else if(priority === 'custom_first'){
+            MISSIONS.splice(0, MISSIONS.length, ...customMissions, ..._originalMissions);
+          } else {
+            customMissions.forEach(function(m){ MISSIONS.push(m); });
+          }
+        }
       }
-    }catch(e){}
-  })();
-  // Load spelling set words (prepended — highest priority)
-  (async function(){
+    }catch(e){ console.warn('custom word load error', e); }
+    // Spelling set words (prepended — highest priority)
     try{
-      if(typeof WordLabData==='undefined'||!WordLabData.getSpellingSetWords) return;
-      var ssWords = await WordLabData.getSpellingSetWords();
-      var ssMissions = ssWords.filter(function(w){ return w.word && w.base; }).map(function(w){
-        return {word:w.word, clue:w.clue||'', _spellingSetId:w._spellingSetId, answers:{prefix:w.prefix||'', base:w.base, suffix1:w.suffix1||'', suffix2:w.suffix2||''}};
-      });
-      if(ssMissions.length) MISSIONS.splice(0, 0, ...ssMissions);
-    }catch(e){}
-  })();
-  // Prepend Word of the Week
-  try {
-    if (typeof WordLabData !== 'undefined' && WordLabData.getWordOfTheWeek) {
-      var _wotw = WordLabData.getWordOfTheWeek();
-      if (_wotw && !MISSIONS.some(function(q){ return q.word === _wotw.word; })) {
-        MISSIONS.unshift({ word: _wotw.word, clue: _wotw.clue || '', _wotw: true, answers: { prefix: _wotw.prefix || '', base: _wotw.base || '', suffix1: _wotw.suffix1 || '', suffix2: _wotw.suffix2 || '' } });
+      if(WordLabData.getSpellingSetWords){
+        var ssWords = await WordLabData.getSpellingSetWords();
+        var ssMissions = ssWords.filter(function(w){ return w.word && w.base; }).map(function(w){
+          return {word:w.word, clue:w.clue||'', _spellingSetId:w._spellingSetId, answers:{prefix:w.prefix||'', base:w.base, suffix1:w.suffix1||'', suffix2:w.suffix2||''}};
+        });
+        if(ssMissions.length) MISSIONS.splice(0, 0, ...ssMissions);
       }
-    }
-  } catch(e){}
+    }catch(e){ console.warn('spelling set load error', e); }
+    // Word of the Week (prepended)
+    try {
+      if (WordLabData.getWordOfTheWeek) {
+        var _wotw = WordLabData.getWordOfTheWeek();
+        if (_wotw && !MISSIONS.some(function(q){ return q.word === _wotw.word; })) {
+          MISSIONS.unshift({ word: _wotw.word, clue: _wotw.clue || '', _wotw: true, answers: { prefix: _wotw.prefix || '', base: _wotw.base || '', suffix1: _wotw.suffix1 || '', suffix2: _wotw.suffix2 || '' } });
+        }
+      }
+    } catch(e){ console.warn('WOTW load error', e); }
+  });
   // Helper: also record spelling set progress when a spelling set word is answered
   function _ssTrack(question, correct) {
     if (question && question._spellingSetId && typeof WordLabData !== 'undefined' && WordLabData.recordSpellingAttempt) {

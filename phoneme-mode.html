@@ -600,46 +600,49 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 });
 
-// Load custom word lists for phoneme mode (respects priority setting)
+// Load custom word lists, spelling set words, and Word of the Week.
+// Deferred so WordLabData (loaded with defer) is available.
 var _originalPhonWords = WORDS.slice();
-(async function(){
+document.addEventListener('DOMContentLoaded', async function(){
+  if (typeof WordLabData === 'undefined') return;
+  // Custom word lists for phoneme mode (respects priority setting)
   try {
-    if (typeof WordLabData === 'undefined') return;
     var custom = await WordLabData.getCustomWords('phoneme');
-    if (!custom.length) return;
-    var customWords = custom.filter(function(w) { return w.word && w.phonemes && w.phonemes.length > 0; })
-      .map(function(w) { return { word: w.word, phonemes: w.phonemes, diff: w.phoneme_diff || 'Challenge' }; });
-    if (!customWords.length) return;
-    var priority = WordLabData.getCustomWordPriority('phoneme');
-    if (priority === 'custom_only') {
-      WORDS.splice(0, WORDS.length, ...customWords);
-    } else if (priority === 'custom_first') {
-      WORDS.splice(0, WORDS.length, ...customWords, ..._originalPhonWords);
-    } else {
-      customWords.forEach(function(w) { WORDS.push(w); });
+    if (custom.length) {
+      var customWords = custom.filter(function(w) { return w.word && w.phonemes && w.phonemes.length > 0; })
+        .map(function(w) { return { word: w.word, phonemes: w.phonemes, diff: w.phoneme_diff || 'Challenge' }; });
+      if (customWords.length) {
+        var priority = WordLabData.getCustomWordPriority('phoneme');
+        if (priority === 'custom_only') {
+          WORDS.splice(0, WORDS.length, ...customWords);
+        } else if (priority === 'custom_first') {
+          WORDS.splice(0, WORDS.length, ...customWords, ..._originalPhonWords);
+        } else {
+          customWords.forEach(function(w) { WORDS.push(w); });
+        }
+      }
     }
-  } catch(e) {}
-})();
-// Load spelling set words (prepended — highest priority)
-(async function(){
-  try{
-    if(typeof WordLabData==='undefined'||!WordLabData.getSpellingSetWords) return;
-    var ssWords = await WordLabData.getSpellingSetWords();
-    var ssPhonemes = ssWords.filter(function(w){ return w.word && w.phonemes && w.phonemes.length > 0; }).map(function(w){
-      return {word:w.word, phonemes:w.phonemes, diff:'Custom', clue:w.clue||'', _spellingSetId:w._spellingSetId};
-    });
-    if(ssPhonemes.length) WORDS.splice(0, 0, ...ssPhonemes);
-  }catch(e){}
-})();
-// Prepend Word of the Week
-try {
-  if (typeof WordLabData !== 'undefined' && WordLabData.getWordOfTheWeek) {
-    var _wotw = WordLabData.getWordOfTheWeek();
-    if (_wotw && _wotw.phonemes && !WORDS.some(function(w){ return w.word === _wotw.word; })) {
-      WORDS.unshift({ word: _wotw.word, phonemes: _wotw.phonemes, level: 'mixed', _wotw: true });
+  } catch(e) { console.warn('custom word load error', e); }
+  // Spelling set words (prepended — highest priority)
+  try {
+    if (WordLabData.getSpellingSetWords) {
+      var ssWords = await WordLabData.getSpellingSetWords();
+      var ssPhonemes = ssWords.filter(function(w){ return w.word && w.phonemes && w.phonemes.length > 0; }).map(function(w){
+        return {word:w.word, phonemes:w.phonemes, diff:'Custom', clue:w.clue||'', _spellingSetId:w._spellingSetId};
+      });
+      if (ssPhonemes.length) WORDS.splice(0, 0, ...ssPhonemes);
     }
-  }
-} catch(e){}
+  } catch(e) { console.warn('spelling set load error', e); }
+  // Word of the Week (prepended)
+  try {
+    if (WordLabData.getWordOfTheWeek) {
+      var _wotw = WordLabData.getWordOfTheWeek();
+      if (_wotw && _wotw.phonemes && !WORDS.some(function(w){ return w.word === _wotw.word; })) {
+        WORDS.unshift({ word: _wotw.word, phonemes: _wotw.phonemes, level: 'mixed', _wotw: true });
+      }
+    }
+  } catch(e) { console.warn('WOTW load error', e); }
+});
 // Helper: also record spelling set progress when a spelling set word is answered
 function _ssTrack(question, correct) {
   if (question && question._spellingSetId && typeof WordLabData !== 'undefined' && WordLabData.recordSpellingAttempt) {
