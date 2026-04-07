@@ -2648,13 +2648,6 @@ const WordLabData = (() => {
   if (!navigator.onLine) showOffline();
 })();
 
-// Auto-load extension data if student is in extension mode.
-// Uses document.write during initial page parse so it loads synchronously
-// (same as the old static <script> tag, but only when needed).
-if (sessionStorage.getItem('wl_extension_mode') === 'true') {
-  document.write('<script src="wordlab-extension-data.js"><\/script>');
-}
-
 // Auto-apply low-stim mode CSS class and inject suppression stylesheet.
 // Runs synchronously during parse so styles are present before first paint.
 if (sessionStorage.getItem('wl_low_stim') === 'true') {
