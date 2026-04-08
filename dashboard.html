@@ -1287,7 +1287,56 @@ function showDashboard(){
   document.getElementById('dashboardScreen').classList.remove('hidden');
   document.getElementById('logoutBtn').style.display = 'inline-flex';
   document.getElementById('classNameDisplay').textContent = currentClass.name;
+  // Paint a skeleton heatmap into the main content area immediately so
+  // the dashboard doesn't look frozen during renderDashboard's async
+  // awaits (class settings, crown leader, focus game) — up to 2s on
+  // slow school WiFi.
+  wlPaintDashboardSkeleton();
   renderDashboard();
+}
+
+// Fills #gdMain with a shimmering skeleton that approximates the
+// shape of a heatmap card. Replaced once gdRenderOverview runs.
+function wlPaintDashboardSkeleton(){
+  var main = document.getElementById('gdMain');
+  if(!main) return;
+  while(main.firstChild) main.removeChild(main.firstChild);
+
+  var card = document.createElement('section');
+  card.className = 'gd-heatmapCard';
+
+  var header = document.createElement('div');
+  header.className = 'gd-heatmapCard-header';
+  var titleSk = document.createElement('div');
+  titleSk.className = 'wlSkeleton';
+  titleSk.style.cssText = 'width:200px;height:22px;';
+  header.appendChild(titleSk);
+  card.appendChild(header);
+
+  var body = document.createElement('div');
+  body.className = 'gd-heatmapCard-body';
+  var wrap = document.createElement('div');
+  wrap.className = 'wlSkeletonWrap';
+
+  var students = (currentClass && currentClass.students) ? currentClass.students.length : 6;
+  var rows = Math.max(3, Math.min(students, 10));
+  var cols = 8;
+  for(var r = 0; r < rows; r++){
+    var row = document.createElement('div');
+    row.className = 'wlSkeletonRow';
+    var name = document.createElement('div');
+    name.className = 'wlSkeleton name';
+    row.appendChild(name);
+    for(var c = 0; c < cols; c++){
+      var cell = document.createElement('div');
+      cell.className = 'wlSkeleton cell';
+      row.appendChild(cell);
+    }
+    wrap.appendChild(row);
+  }
+  body.appendChild(wrap);
+  card.appendChild(body);
+  main.appendChild(card);
 }
 
 function backToClassPicker(){
