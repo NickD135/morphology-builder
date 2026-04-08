@@ -412,6 +412,7 @@
 
         <!-- Game screen -->
         <div id="gameScreen" class="hidden">
+          <div class="wlProgressBar" id="roundProgress" hidden><div class="wlProgressBar-fill" id="roundProgressFill"></div></div>
           <div class="diffRow">
             <button class="diffBtn active" data-diff="Starter"   onclick="setDiff('Starter')">Starter</button>
             <button class="diffBtn"        data-diff="Level up" onclick="setDiff('Level up')">Level up</button>
@@ -683,6 +684,9 @@ function showRoundComplete() {
 
 function restartRound() {
   _roundAnswered = 0;
+  wlUpdateRoundProgress();
+  var pb = document.getElementById('roundProgress');
+  if(pb && !_wltActive) pb.hidden = false;
   score = 0; streak = 0; bestStreak = 0; correctCount = 0; wrongCount = 0;
   usedWords.clear();
   updateStats();
@@ -956,7 +960,7 @@ function checkAnswer(){
   banner.style.display = 'block';
   if(!_wltActive) updateStats();
   addHistory(currentWord.word, correctStr, ok);
-  if(!_wltActive){ _roundAnswered++; if(_roundAnswered >= _roundTotal){ clearTimeout(autoNextTimer); autoNextTimer = null; setTimeout(showRoundComplete, 800); return; } }
+  if(!_wltActive){ _roundAnswered++; wlUpdateRoundProgress(); if(_roundAnswered >= _roundTotal){ clearTimeout(autoNextTimer); autoNextTimer = null; setTimeout(showRoundComplete, 800); return; } }
   // EALD reveal button
   var ealdEl=document.getElementById('ealdTranslation');if(ealdEl)ealdEl.innerHTML='';
   if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&currentWord){
@@ -1103,6 +1107,11 @@ function startGame(){
   document.getElementById('startScreen').classList.add('hidden');
   document.getElementById('gameScreen').classList.remove('hidden');
   _roundAnswered = 0;
+  wlUpdateRoundProgress();
+  if(!_wltActive){
+    var pb = document.getElementById('roundProgress');
+    if(pb) pb.hidden = false;
+  }
   if(_wltActive){
     WLTeacher.init({game:'phoneme'}).then(function(){ loadWord(); });
   } else {
@@ -1110,8 +1119,18 @@ function startGame(){
   }
 }
 
-// Hide round picker in teacher mode
-if(_wltActive){ var _rpw = document.getElementById('roundPickerWrap'); if(_rpw) _rpw.style.display = 'none'; }
+function wlUpdateRoundProgress(){
+  var fill = document.getElementById('roundProgressFill');
+  if(!fill || !_roundTotal) return;
+  var pct = Math.min(1, _roundAnswered / _roundTotal);
+  fill.style.transform = 'scaleX(' + pct + ')';
+}
+
+// Hide round picker and round progress bar in teacher mode
+if(_wltActive){
+  var _rpw = document.getElementById('roundPickerWrap'); if(_rpw) _rpw.style.display = 'none';
+  var _rpb = document.getElementById('roundProgress'); if(_rpb) _rpb.hidden = true;
+}
 
 document.getElementById('checkBtn').addEventListener('click', checkAnswer);
 document.getElementById('nextBtn').addEventListener('click', function(){
