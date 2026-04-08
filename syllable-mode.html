@@ -860,23 +860,27 @@ function getPool(){
 }
 
 // ── Render word ───────────────────────────────────────────────────────────────
-// Shrinks the current word to fit its container on narrow viewports.
-// Runs after each word renders and on window resize. Floor of 0.3
-// keeps very long words readable. Deferred via requestAnimationFrame
-// so the newly appended letter DOM has been laid out before we
-// measure its natural width.
+// Deterministic auto-fit: compute the right --wl-fit ratio from the
+// word length and the viewport width, skipping layout measurement
+// entirely. Previous measurement-based version fought a flex min-content
+// issue that prevented clientWidth from ever reflecting the real panel
+// inner width. This version just does the math.
+//
+// Budget = viewport - wrap margin (24) - panel padding (56) - chop
+//          container padding (24) - safety (12) = viewport - 116.
+// Each character at --wl-fit:1 needs ~62px (46px letter + ~22px gap
+// including gap-less last letter approximation and letter kerning).
 function wlAutoFitChop(){
   var c = document.getElementById('chopContainer');
-  if(!c) return;
-  c.style.setProperty('--wl-fit','1');
-  requestAnimationFrame(function(){
-    var sw = c.scrollWidth;
-    var cw = c.clientWidth;
-    if(sw > cw && cw > 0){
-      var ratio = Math.max(0.3, cw / sw);
-      c.style.setProperty('--wl-fit', String(ratio.toFixed(3)));
-    }
-  });
+  if(!c || !currentWord || !currentWord.word) return;
+  var vw = document.documentElement.clientWidth || window.innerWidth;
+  if(vw > 700){ c.style.setProperty('--wl-fit','1'); return; }
+  var budget = Math.max(0, vw - 116);
+  var n = currentWord.word.length;
+  var required = n * 62;
+  var ratio = required > 0 ? Math.min(1, budget / required) : 1;
+  ratio = Math.max(0.3, ratio);
+  c.style.setProperty('--wl-fit', ratio.toFixed(3));
 }
 // Re-fit on resize / orientation change (debounced)
 (function(){

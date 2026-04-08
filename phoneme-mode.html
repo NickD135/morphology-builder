@@ -915,20 +915,20 @@ function render(){
   wlAutoFitChop();
 }
 
-// Shrinks the current word to fit its container on narrow viewports.
-// Deferred via requestAnimationFrame so the new DOM is laid out first.
+// Deterministic auto-fit — see syllable-mode for rationale. Phoneme
+// uses slightly larger per-char budget because the unitGap is wider
+// (34px vs 22px) to accommodate split-here hints.
 function wlAutoFitChop(){
   var c = document.getElementById('chopContainer');
-  if(!c) return;
-  c.style.setProperty('--wl-fit','1');
-  requestAnimationFrame(function(){
-    var sw = c.scrollWidth;
-    var cw = c.clientWidth;
-    if(sw > cw && cw > 0){
-      var ratio = Math.max(0.3, cw / sw);
-      c.style.setProperty('--wl-fit', String(ratio.toFixed(3)));
-    }
-  });
+  if(!c || !currentWord || !currentWord.word) return;
+  var vw = document.documentElement.clientWidth || window.innerWidth;
+  if(vw > 700){ c.style.setProperty('--wl-fit','1'); return; }
+  var budget = Math.max(0, vw - 116);
+  var n = currentWord.word.length;
+  var required = n * 72;
+  var ratio = required > 0 ? Math.min(1, budget / required) : 1;
+  ratio = Math.max(0.3, ratio);
+  c.style.setProperty('--wl-fit', ratio.toFixed(3));
 }
 (function(){
   var _fitT = null;
