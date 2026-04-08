@@ -1495,14 +1495,19 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   // ADD THESE after the existing code:
 
-  // Scene scientist
+  // Scene scientist — paint default immediately, then replace with the
+  // personalised version once student data arrives. Prevents a blank
+  // sciCharWrap while getStudentData() awaits Supabase on slow networks.
   (async function() {
     if (typeof WLScientist === 'undefined') return;
-    const sd = typeof WordLabData !== 'undefined' ? await WordLabData.getStudentData() : null;
     const wrap = document.getElementById('sciCharWrap');
-    if (wrap && typeof WLScientist !== 'undefined') {
-      wrap.innerHTML = WLScientist.buildSVG(sd ? sd.scientist : {}, 'neutral');
-    }
+    if (!wrap) return;
+    function _p(svg){while(wrap.firstChild)wrap.removeChild(wrap.firstChild);wrap.appendChild(document.createRange().createContextualFragment(svg));}
+    _p(WLScientist.buildSVG({}, 'neutral'));
+    try {
+      const sd = typeof WordLabData !== 'undefined' ? await WordLabData.getStudentData() : null;
+      if (sd && sd.scientist) _p(WLScientist.buildSVG(sd.scientist, 'neutral'));
+    } catch(e) { console.error('Scientist load failed', e); }
   })();
 
   // Floating particles
