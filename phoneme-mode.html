@@ -282,28 +282,25 @@
        stay generous-looking. Matches the fix in syllable-mode.html. */
     .chopContainer{
       flex-wrap:nowrap!important;
-      justify-content:flex-start!important;
+      justify-content:center!important;
       align-self:stretch!important;
       width:100%!important;
       max-width:100%!important;
       box-sizing:border-box;
-      overflow-x:auto;
-      overflow-y:visible;
-      -webkit-overflow-scrolling:touch;
+      overflow:hidden;
       padding:8px 12px;
       min-height:auto!important;
-      scrollbar-width:thin;
+      --wl-fit:1;
     }
-    .chopContainer::-webkit-scrollbar{height:3px;}
-    .chopContainer::-webkit-scrollbar-thumb{background:rgba(255,255,255,.25);border-radius:999px;}
-    /* Fixed letter size so short words stay generous and long words
-       horizontally scroll instead of shrinking. Scroll > resize. */
+    /* Letters and gaps scale via --wl-fit, set by JS after each word
+       renders. Short words look generous; long words shrink just
+       enough to fit on one line — no horizontal scroll. */
     .unit,.unitGap,.innerGap{flex-shrink:0;}
-    .lChar{font-size:44px!important;padding:0 1px!important;}
-    .unitGap{width:34px!important;height:66px!important;}
-    .unitGap .gLine{height:40px!important;}
-    .innerGap{width:20px!important;height:48px!important;}
-    .innerGap .iLine{height:30px!important;}
+    .lChar{font-size:calc(44px * var(--wl-fit,1))!important;padding:0 1px!important;}
+    .unitGap{width:calc(34px * var(--wl-fit,1))!important;height:66px!important;}
+    .unitGap .gLine{height:calc(40px * var(--wl-fit,1))!important;}
+    .innerGap{width:calc(20px * var(--wl-fit,1))!important;height:48px!important;}
+    .innerGap .iLine{height:calc(30px * var(--wl-fit,1))!important;}
   }
   @media(max-width:480px){
     .howToGrid{grid-template-columns:1fr!important;}
@@ -911,7 +908,31 @@ function render(){
       c.appendChild(gap);
     }
   });
+  wlAutoFitChop();
 }
+
+// Shrinks the current word to fit its container on narrow viewports.
+// Runs after each render and on window resize. Floor of 0.35 keeps
+// long words readable (44px × 0.35 ≈ 15px).
+function wlAutoFitChop(){
+  var c = document.getElementById('chopContainer');
+  if(!c) return;
+  c.style.setProperty('--wl-fit','1');
+  void c.offsetWidth; // force reflow
+  var sw = c.scrollWidth;
+  var cw = c.clientWidth;
+  if(sw > cw && cw > 0){
+    var ratio = Math.max(0.35, cw / sw);
+    c.style.setProperty('--wl-fit', String(ratio.toFixed(3)));
+  }
+}
+(function(){
+  var _fitT = null;
+  window.addEventListener('resize', function(){
+    clearTimeout(_fitT);
+    _fitT = setTimeout(wlAutoFitChop, 120);
+  });
+})();
 
 // ── Phoneme preview ───────────────────────────────────────────────────────────
 function getPhonemes(){

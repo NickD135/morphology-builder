@@ -385,26 +385,23 @@
        and long words swipe left-right on a single line. */
     .chopContainer{
       flex-wrap:nowrap!important;
-      justify-content:flex-start!important;
+      justify-content:center!important;
       align-self:stretch!important;
       width:100%!important;
       max-width:100%!important;
       box-sizing:border-box;
-      overflow-x:auto;
-      overflow-y:visible;
-      -webkit-overflow-scrolling:touch;
+      overflow:hidden;
       padding:8px 12px;
       min-height:auto!important;
-      scrollbar-width:thin;
+      --wl-fit:1;
     }
-    .chopContainer::-webkit-scrollbar{height:3px;}
-    .chopContainer::-webkit-scrollbar-thumb{background:rgba(255,255,255,.25);border-radius:999px;}
-    /* Fixed letter size so short words stay generous and long words
-       (investigation, responsibility) horizontally scroll instead of
-       shrinking to fit. Scroll > resize for readability. */
-    .letterChar{font-size:46px!important;padding:0 1px!important;}
-    .chopGap{width:22px!important;height:60px!important;flex-shrink:0;}
-    .chopLine{height:40px!important;}
+    /* Letters and gaps scale via --wl-fit, which JS sets after each
+       word renders. Short words keep the generous 46px base size; long
+       words (investigation, responsibility) shrink just enough to fit
+       on one line inside the panel. No horizontal scroll. */
+    .letterChar{font-size:calc(46px * var(--wl-fit,1))!important;padding:0 1px!important;}
+    .chopGap{width:calc(22px * var(--wl-fit,1))!important;height:60px!important;flex-shrink:0;}
+    .chopLine{height:calc(40px * var(--wl-fit,1))!important;}
     .letterBlock{flex-shrink:0;}
   }
   @media(max-width:480px){
@@ -858,6 +855,31 @@ function getPool(){
 }
 
 // ── Render word ───────────────────────────────────────────────────────────────
+// Shrinks the current word to fit its container on narrow viewports.
+// Runs after each word renders and on window resize. Floor of 0.35
+// keeps very long words readable (46px × 0.35 = ~16px).
+function wlAutoFitChop(){
+  var c = document.getElementById('chopContainer');
+  if(!c) return;
+  c.style.setProperty('--wl-fit','1');
+  // Force reflow so scrollWidth reflects the reset scale
+  void c.offsetWidth;
+  var sw = c.scrollWidth;
+  var cw = c.clientWidth;
+  if(sw > cw && cw > 0){
+    var ratio = Math.max(0.35, cw / sw);
+    c.style.setProperty('--wl-fit', String(ratio.toFixed(3)));
+  }
+}
+// Re-fit on resize / orientation change (debounced)
+(function(){
+  var _fitT = null;
+  window.addEventListener('resize', function(){
+    clearTimeout(_fitT);
+    _fitT = setTimeout(wlAutoFitChop, 120);
+  });
+})();
+
 function renderWord(){
   if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
   clearTimeout(autoNextTimer); autoNextTimer = null;
@@ -911,6 +933,7 @@ function renderWord(){
     container.appendChild(block);
   });
 
+  wlAutoFitChop();
   updateSyllablePreview();
   hideFeedback();
   document.getElementById('nextBtn').classList.remove('visible');
