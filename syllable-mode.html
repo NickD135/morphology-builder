@@ -501,6 +501,7 @@
 
         <!-- Game screen -->
         <div id="gameScreen" class="hidden">
+          <div class="wlProgressBar" id="roundProgress" hidden><div class="wlProgressBar-fill" id="roundProgressFill"></div></div>
           <div class="diffRow" id="diffRow">
             <button class="diffBtn active" data-diff="1" onclick="setDiff(1)">2 syllables</button>
             <button class="diffBtn" data-diff="2" onclick="setDiff(2)">3 syllables</button>
@@ -785,8 +786,13 @@ function showRoundComplete() {
   document.body.appendChild(overlay);
 }
 
+function wlUpdateRoundProgress(){var f=document.getElementById('roundProgressFill');if(!f||!_roundTotal)return;var p=Math.min(1,_roundAnswered/_roundTotal);f.style.transform='scaleX('+p+')';}
+
 function restartRound() {
   _roundAnswered = 0;
+  wlUpdateRoundProgress();
+  var pb = document.getElementById('roundProgress');
+  if(pb && !_wltActive) pb.hidden = false;
   score = 0; streak = 0; bestStreak = 0; correct = 0; wrong = 0;
   usedWords.clear();
   updateStats();
@@ -1024,7 +1030,7 @@ function checkAnswer(){
   banner.style.display = 'block';
   if(!_wltActive) updateStats();
   addHistory(currentWord.word, correctSylls, isCorrect);
-  if(!_wltActive){ _roundAnswered++; if(_roundAnswered >= _roundTotal){ clearTimeout(autoNextTimer); autoNextTimer = null; setTimeout(showRoundComplete, 800); return; } }
+  if(!_wltActive){ _roundAnswered++; wlUpdateRoundProgress(); if(_roundAnswered >= _roundTotal){ clearTimeout(autoNextTimer); autoNextTimer = null; setTimeout(showRoundComplete, 800); return; } }
 
   // EALD reveal button
   var ealdEl=document.getElementById('ealdTranslation');if(ealdEl){
@@ -1146,6 +1152,8 @@ function startGame(){
   document.getElementById('startScreen').classList.add('hidden');
   document.getElementById('gameScreen').classList.remove('hidden');
   _roundAnswered = 0;
+  wlUpdateRoundProgress();
+  if(!_wltActive){ var pb = document.getElementById('roundProgress'); if(pb) pb.hidden = false; }
   if(_wltActive){
     WLTeacher.init({game:'syllable'}).then(function(){ renderWord(); });
   } else {
