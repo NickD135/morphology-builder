@@ -435,6 +435,7 @@
   <!-- ── Game screen ───────────────────────────────────────────── -->
   <div id="gameScreen" class="hidden">
 
+    <div class="wlProgressBar" id="roundProgress" hidden><div class="wlProgressBar-fill" id="roundProgressFill"></div></div>
     <div class="panel"><div class="panelInner">
 
       <div class="gameTopRow">
@@ -681,8 +682,12 @@ function showRoundComplete() {
   document.body.appendChild(overlay);
 }
 
+function wlUpdateRoundProgress(){var f=document.getElementById('roundProgressFill');if(!f||!_roundTotal)return;var p=Math.min(1,_roundAnswered/_roundTotal);f.style.transform='scaleX('+p+')';}
+
 function restartRound() {
   _roundAnswered = 0;
+  wlUpdateRoundProgress();
+  var pb = document.getElementById('roundProgress'); if(pb && !_wltActive) pb.hidden = false;
   score = 0; streak = 0; bestStreak = 0; correctCount = 0; wrongCount = 0;
   usedWords.clear();
   updateStats();
@@ -744,8 +749,10 @@ function goToSetup(){
 function startGame(){
   usedWords.clear();
   _roundAnswered = 0;
+  wlUpdateRoundProgress();
   document.getElementById('setupScreen').classList.add('hidden');
   document.getElementById('gameScreen').classList.remove('hidden');
+  if(!_wltActive){ var pb = document.getElementById('roundProgress'); if(pb) pb.hidden = false; }
 
   // Update badges
   const levelLabels = { starter:'🌱 Starter', levelup:'📈 Level Up', challenge:'🔥 Challenge', mixed:'🎲 Mixed' };
@@ -1047,7 +1054,7 @@ function checkAnswer(grapheme){
 
     window._questionStart = Date.now();
     speakWord();
-    if(!_wltActive){ _roundAnswered++; if(_roundAnswered >= _roundTotal){ clearTimeout(autoNextTimer); autoNextTimer = null; setTimeout(showRoundComplete, 800); return; } }
+    if(!_wltActive){ _roundAnswered++; wlUpdateRoundProgress(); if(_roundAnswered >= _roundTotal){ clearTimeout(autoNextTimer); autoNextTimer = null; setTimeout(showRoundComplete, 800); return; } }
     if(_wltActive) return;
     var _ealdExtra=(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage())?1500:0;
     autoNextTimer = setTimeout(nextWord, 1500+_ealdExtra);
@@ -1104,7 +1111,7 @@ function checkAnswer(grapheme){
       addHistory(currentWord.word, currentWord.grapheme, false);
       document.getElementById('nextBtn').classList.add('visible');
       document.getElementById('tryAgainBtn').classList.remove('visible');
-      if(!_wltActive){ _roundAnswered++; if(_roundAnswered >= _roundTotal){ clearTimeout(autoNextTimer); autoNextTimer = null; setTimeout(showRoundComplete, 800); return; } }
+      if(!_wltActive){ _roundAnswered++; wlUpdateRoundProgress(); if(_roundAnswered >= _roundTotal){ clearTimeout(autoNextTimer); autoNextTimer = null; setTimeout(showRoundComplete, 800); return; } }
       if(_wltActive) return;
       var _ealdExtra2=(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage())?1500:0;
       autoNextTimer = setTimeout(nextWord, 3000+_ealdExtra2);
