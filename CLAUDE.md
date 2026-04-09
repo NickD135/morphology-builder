@@ -1380,11 +1380,16 @@ Full checklist document: `docs/nsw-doe-approval-checklist.md`
 #### Principal landing page (`for-schools.html`)
 - [x] `for-schools.html` principal landing page shipped — hero, dual panel, trust pillars, pack download, pricing cards
 - [x] School Information Pack ZIP (7 PDFs) committed at `edbuy-docs/school-information-pack.zip`
-- [x] "For schools" header link added to `landing.html` logged-out nav
 - [x] "For schools" footer link added across 17 marketing/info pages (10 pattern-A + 7 pattern-B)
+- [x] "For schools" card added to landing.html Find Out More (logged-out) and Information (teacher) sections
 - [x] Accessibility: skip link, ARIA landmarks, alt text, aria-current, single h1
 - [x] Mobile: single-column layout at <= 700px, no horizontal scroll at 360px
 - [x] Open Graph / Twitter Card meta tags for social sharing
+- [x] Hero layout: stacked (centred text + full-width dashboard screenshot below)
+- [x] CTA buttons use neutral "Start your free trial" (no conflicting trial length)
+
+#### Landing page fixes
+- [x] Teacher name in header changed from dark indigo (#312e81) to readable white (#e0e7ff)
 
 ---
 
