@@ -1375,6 +1375,19 @@ Full checklist document: `docs/nsw-doe-approval-checklist.md`
 
 ---
 
+### PHASE 7.21 — Session 2026-04-09
+
+#### Principal landing page (`for-schools.html`)
+- [x] `for-schools.html` principal landing page shipped — hero, dual panel, trust pillars, pack download, pricing cards
+- [x] School Information Pack ZIP (7 PDFs) committed at `edbuy-docs/school-information-pack.zip`
+- [x] "For schools" header link added to `landing.html` logged-out nav
+- [x] "For schools" footer link added across 17 marketing/info pages (10 pattern-A + 7 pattern-B)
+- [x] Accessibility: skip link, ARIA landmarks, alt text, aria-current, single h1
+- [x] Mobile: single-column layout at <= 700px, no horizontal scroll at 360px
+- [x] Open Graph / Twitter Card meta tags for social sharing
+
+---
+
 ### PHASE 8 — Growth & Integrations (Later)
 
 - [ ] Google Classroom integration (roster import via Google API)
@@ -1472,3 +1485,4 @@ At the start of each working session, do this:
 | Vercel font header split | Vercel path matching doesn't support regex alternation `(?:...)` — split into separate entries per format |
 | Hardcoded per-page hud tint colours (not new tokens) | When consolidating the chrome CSS in Phase 7.20, each game page wanted its hud text in an accent-tinted off-white (purple `#e9d5ff`, amber `#fde68a`, emerald `#d1fae5`, etc.) that isn't a simple alpha of the page's `--accent`. Introducing new `--hud-text` / `--hud-bg` tokens would either require defining them on every page (just moving the hardcoding one step deeper) or a shared stylesheet rewrite. Hardcoding the 2–3 tinted colours per page inside the page's own `<style>` block is simpler, co-located with the rest of the page, and the "unified" part of the design system is structural (selectors, sizes, spacing) not literal colour values. |
 | Phase A dark theme extends beyond the original scope | Original Phase A was teacher-signup + onboarding (commit 50b6512). On continuation, `class-setup.html` and `account.html` still had light-bg panels that made the teacher journey jump themes. Ported them in Phase 7.20 to close the loop — the whole teacher flow (landing → login → signup → onboarding → dashboard → class-setup → account) is now one continuous navy + indigo surface. |
+| Principal landing page (for-schools.html) | Direct-to-principal sales page with pack download + trial CTA. Marketing copy says "3-month trial" but backend still grants 12 months; see project_trial_period_change.md for the planned flip. |
