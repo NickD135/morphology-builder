@@ -161,6 +161,7 @@
   <table>
     <tr><td class="label">Method</td><td>Class code (6-char alphanumeric) + student name + 3-character student code</td></tr>
     <tr><td class="label">Password</td><td>None — students are children (ages 9–12); codes are generated and managed by teachers</td></tr>
+    <tr><td class="label">Verification</td><td>Codes are verified server-side via the <code>verify_student_login</code> Postgres RPC. Student codes are never sent to the client for comparison — the client passes the entered code to the RPC, which performs a constant-time lookup and returns a session token if valid. This prevents enumeration of student codes via direct table access.</td></tr>
     <tr><td class="label">Session</td><td>Stored in sessionStorage (not persistent across browser sessions)</td></tr>
     <tr><td class="label">PII</td><td>Student records contain first name only — no email, no date of birth, no photo</td></tr>
   </table>
@@ -186,7 +187,11 @@
       <tr><td><strong>student_progress</strong></td><td>Open (students view own progress)</td><td>Via increment_progress RPC only</td></tr>
       <tr><td><strong>student_character</strong></td><td>Open (students view own character)</td><td>Open (students update own character)</td></tr>
       <tr><td><strong>shop_items</strong></td><td>Open (all students browse shop)</td><td>Teacher's school only</td></tr>
-      <tr><td><strong>class_word_lists</strong></td><td>Open (students load word lists)</td><td>Teacher's school only</td></tr>
+      <tr><td><strong>class_word_lists</strong></td><td>Open (students load word lists)</td><td>Teacher's school only (via <code>get_my_school_id()</code>)</td></tr>
+      <tr><td><strong>class_spelling_sets</strong></td><td>Open (students load assigned sets)</td><td>Teacher's school only (via <code>get_my_school_id()</code>)</td></tr>
+      <tr><td><strong>spelling_set_assignments</strong></td><td>Open (students load their assignments)</td><td>Teacher's school only (via <code>get_my_school_id()</code>)</td></tr>
+      <tr><td><strong>spelling_check_in_results</strong></td><td>Open (students view own results)</td><td>Teacher's school only (via <code>get_my_school_id()</code>)</td></tr>
+      <tr><td><strong>feedback</strong></td><td>Own record only</td><td>Insert-only via edge function</td></tr>
     </tbody>
   </table>
 
@@ -194,9 +199,25 @@
   <ul>
     <li>Teachers can only modify data belonging to their own school</li>
     <li>Students can read class-level data but cannot modify other students' records</li>
-    <li>Progress writes use an atomic RPC function (increment_progress) to prevent race conditions</li>
+    <li>All cross-school access is denied at the database level — even a compromised client cannot read another school's data</li>
+    <li>School scoping for spelling sets, word lists, and their assignments is enforced via the <code>get_my_school_id()</code> helper which chains teacher → school in a single RLS check</li>
     <li>The Supabase anon key is intentionally public — RLS is the security boundary, not key secrecy</li>
   </ul>
+
+  <h3>Atomic write operations (race condition prevention)</h3>
+  <p>State-changing operations that could race under concurrent requests are implemented as Postgres RPCs rather than client-side read-modify-write sequences. This guarantees atomicity at the database level and eliminates lost-update bugs.</p>
+  <table>
+    <thead>
+      <tr><th>RPC</th><th>Purpose</th><th>Mechanism</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>increment_progress</code></td><td>Game answer recording (most frequent write)</td><td>Single atomic UPSERT with SQL arithmetic (<code>correct = correct + 1</code>)</td></tr>
+      <tr><td><code>purchase</code></td><td>Shop item purchase (debit quarks, grant item)</td><td><code>SELECT FOR UPDATE</code> row lock on student_character</td></tr>
+      <tr><td><code>saveScientist</code></td><td>Character customisation saves</td><td>Targeted <code>jsonb_set</code> update (no full-row overwrite)</td></tr>
+      <tr><td><code>atomic_delete_class</code></td><td>Teacher deletes a class</td><td>Server-side transaction deleting class + students + progress in one statement</td></tr>
+      <tr><td><code>verify_student_login</code></td><td>Student login code verification</td><td>Server-side code comparison; codes never exposed to client</td></tr>
+    </tbody>
+  </table>
 
   <h2>5. Encryption</h2>
 
@@ -369,7 +390,28 @@ base-uri 'self'</div>
     <li>Functions run in Deno isolates with limited permissions</li>
   </ul>
 
-  <h2>11. Vulnerability Management</h2>
+  <h2>11. Edge Function Security</h2>
+  <p>Word Labs runs 10 Supabase Edge Functions for server-side operations that cannot safely run in the client (Stripe checkout, AI word analysis, TTS generation, email delivery, etc.). Every client-facing edge function is hardened to the following standard.</p>
+
+  <h3>Authentication</h3>
+  <p>Every edge function that handles teacher-scoped or school-scoped data validates the caller's Supabase JWT before executing any work. Functions that accept public requests (student-facing TTS, for example) still validate that the request originates from an allowed origin via the CORS check below.</p>
+
+  <h3>CORS allowlist</h3>
+  <p>Client-facing edge functions restrict <code>Access-Control-Allow-Origin</code> to an explicit allowlist of five origins (production, Vercel preview deployments, and local development). Previously these returned the wildcard <code>*</code>, which was tightened to an allowlist as part of a full security audit.</p>
+
+  <h3>Rate limiting</h3>
+  <p>The <code>send-feedback</code> function enforces application-level rate limiting (1 submission per email address per 5 minutes) on top of Supabase's built-in platform limits. This prevents abuse of the feedback channel for spam or denial-of-wallet on the Resend mail delivery provider.</p>
+
+  <h3>Redirect validation</h3>
+  <p>The <code>create-checkout</code> and <code>create-portal-session</code> functions validate the Stripe redirect URL against an allowlist before constructing the checkout session. This prevents open-redirect vulnerabilities where an attacker could construct a checkout URL pointing at a phishing page.</p>
+
+  <h3>Secrets hygiene</h3>
+  <p>API keys and webhook secrets are stored in Supabase Edge Function environment variables, never in source code or version control. Logs are scrubbed of key prefixes — previously the <code>analyze-words</code> function logged the first few characters of its API key for debugging, which was removed to prevent key-prefix exposure through log aggregation.</p>
+
+  <h3>Email template safety</h3>
+  <p>The <code>send-feedback</code> function's email template HTML-escapes all user-supplied content before interpolating it into the email body, preventing HTML injection in feedback notifications delivered via Resend.</p>
+
+  <h2>12. Vulnerability Management</h2>
 
   <h3>Current mitigations</h3>
   <ul>
@@ -392,10 +434,10 @@ base-uri 'self'</div>
     <li><code>'unsafe-inline'</code> in CSP script-src (required by architecture — no build system)</li>
     <li>No external penetration testing conducted yet (planned)</li>
     <li>No Web Application Firewall (WAF) in front of the application</li>
-    <li>Rate limiting relies on Supabase's built-in limits (no custom rate limiting on edge functions)</li>
+    <li>Rate limiting is applied to the public feedback channel but otherwise relies on Supabase's built-in platform limits</li>
   </ul>
 
-  <h2>12. Compliance Summary</h2>
+  <h2>13. Compliance Summary</h2>
   <table>
     <thead>
       <tr><th>Requirement</th><th>Status</th></tr>
@@ -414,7 +456,7 @@ base-uri 'self'</div>
     </tbody>
   </table>
 
-  <h2>13. Contact</h2>
+  <h2>14. Contact</h2>
   <table>
     <tr><td class="label">Security contact</td><td>Nicholas Deeney</td></tr>
     <tr><td class="label">Email</td><td>nick@wordlabs.app</td></tr>
@@ -422,7 +464,7 @@ base-uri 'self'</div>
     <tr><td class="label">Incident response plan</td><td>wordlabs.app/incident-response</td></tr>
   </table>
 
-  <p style="margin-top:32px; font-size:12px; color:#64748b; font-weight:700; font-style:italic;">This document should be reviewed and updated whenever the architecture changes. Last reviewed: March 2026.</p>
+  <p style="margin-top:32px; font-size:12px; color:#64748b; font-weight:700; font-style:italic;">This document should be reviewed and updated whenever the architecture changes. Last reviewed: April 2026.</p>
 
 </div>
 
