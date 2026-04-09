@@ -31,69 +31,6 @@ const WordLabData = (() => {
     return _sbClient;
   }
 
-  // ── Supabase retry wrapper ───────────────────────────────────
-  // Wraps a Supabase query builder or RPC call with retry-on-transient-failure.
-  // Only retries errors that are likely to succeed on a second attempt:
-  //   - Raw network/fetch failures (flaky wifi, brief DNS hiccup, edge restart)
-  //   - HTTP 5xx responses from Supabase
-  //   - PostgREST transient error codes
-  // Never retries:
-  //   - 4xx errors (auth, validation, not found — retrying won't help)
-  //   - Offline state (detected via navigator.onLine — fast-fail)
-  //   - The final attempt (always propagates the last error)
-  //
-  // Caller pattern:
-  //   const { data, error } = await sbCall(() => sb().from('students').select('*').eq(...));
-  //
-  // Safe for: reads, atomic RPCs, idempotent writes with server-side dedup.
-  // NOT safe for: client-composed .insert() / .update() without idempotency keys,
-  // where a partial success followed by a retry could duplicate rows.
-  function _sbIsTransient(err) {
-    if (!err) return false;
-    // Offline: retry is futile
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) return false;
-    // Raw fetch errors throw TypeError
-    if (typeof TypeError !== 'undefined' && err instanceof TypeError) return true;
-    const msg = String(err.message || '').toLowerCase();
-    if (msg.indexOf('fetch') !== -1) return true;
-    if (msg.indexOf('network') !== -1) return true;
-    if (msg.indexOf('timeout') !== -1) return true;
-    if (msg.indexOf('timed out') !== -1) return true;
-    if (msg.indexOf('econnreset') !== -1) return true;
-    // HTTP status (Supabase JS client surfaces this on some error paths)
-    const status = err.status || (err.code && /^\d+$/.test(String(err.code)) ? parseInt(err.code, 10) : null);
-    if (status !== null && status >= 500 && status < 600) return true;
-    // PostgREST occasional transient — connection exhausted, statement timeout
-    if (err.code === '57014' || err.code === '57P03' || err.code === '08006') return true;
-    return false;
-  }
-  function _sbSleep(ms) {
-    return new Promise(function(resolve) { setTimeout(resolve, ms); });
-  }
-  async function sbCall(builderFn, opts) {
-    opts = opts || {};
-    const maxAttempts = opts.maxAttempts || 3;
-    const baseDelay = opts.baseDelay || 300;
-    let lastErr;
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      try {
-        const result = await builderFn();
-        // Supabase returns errors in the .error field rather than throwing.
-        // If it's a transient error and we have retries left, back off and try again.
-        if (result && result.error && _sbIsTransient(result.error) && attempt < maxAttempts - 1) {
-          await _sbSleep(baseDelay * Math.pow(3, attempt));
-          continue;
-        }
-        return result;
-      } catch (e) {
-        lastErr = e;
-        if (!_sbIsTransient(e) || attempt === maxAttempts - 1) throw e;
-        await _sbSleep(baseDelay * Math.pow(3, attempt));
-      }
-    }
-    throw lastErr;
-  }
-
   // ── HTML escaping (XSS prevention) ───────────────────────────
   const _ESC_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
   function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) { return _ESC_MAP[c]; }); }
@@ -454,18 +391,18 @@ const WordLabData = (() => {
   }
 
   async function getClass(id) {
-    const { data: cls, error: clsErr } = await sbCall(() => sb()
+    const { data: cls, error: clsErr } = await sb()
       .from('classes')
       .select('id, name, teacher_password, created_at')
       .eq('id', id)
-      .single());
+      .single();
     if (clsErr) throw clsErr;
 
-    var { data: studs, error: stuErr } = await sbCall(() => sb()
+    var { data: studs, error: stuErr } = await sb()
       .from('students')
       .select('id, name, student_code, extension_mode, eald_language, support_mode')
       .eq('class_id', id)
-      .order('name'));
+      .order('name');
     if (stuErr) throw stuErr;
     // Load extension_activities separately (column may not be in PostgREST schema cache yet)
     try {
@@ -489,14 +426,14 @@ const WordLabData = (() => {
         progBatches.push(studentIds.slice(i, i + BATCH));
       }
       const [charResult, ...progResults] = await Promise.all([
-        sbCall(() => sb().from('student_character')
+        sb().from('student_character')
           .select('student_id, quarks, xp, badges, scientist, stats')
-          .in('student_id', studentIds)),
+          .in('student_id', studentIds),
         ...progBatches.map(batch =>
-          sbCall(() => sb().from('student_progress')
+          sb().from('student_progress')
             .select('student_id, activity, category, correct, total, total_time, updated_at, is_extension')
             .in('student_id', batch)
-            .limit(50000))
+            .limit(50000)
         )
       ]);
       if (charResult.error) throw charResult.error;
@@ -707,7 +644,7 @@ const WordLabData = (() => {
     studentId = studentId || (loadSession() || {}).studentId;
     if (!studentId) return false;
     try {
-      var { data } = await sbCall(() => sb().from('students').select('support_mode').eq('id', studentId).maybeSingle());
+      var { data } = await sb().from('students').select('support_mode').eq('id', studentId).maybeSingle();
       var on = !!(data && data.support_mode);
       sessionStorage.setItem('wl_support_mode', on ? 'true' : 'false');
       // Track whether teacher set it (so student can't disable)
@@ -749,22 +686,20 @@ const WordLabData = (() => {
     const studentId = session.studentId;
 
     // Atomic progress increment via Postgres RPC (no race condition)
-    // and fetch character data in parallel. Both wrapped in sbCall for
-    // retry on transient network failures — the RPC is atomic so retry
-    // is safe, and the character fetch is a pure read.
+    // and fetch character data in parallel
     const [_rpcResult, charResult] = await Promise.all([
-      sbCall(() => sb().rpc('increment_progress', {
+      sb().rpc('increment_progress', {
         p_student_id: studentId,
         p_activity: activity,
         p_category: category,
         p_correct: !!correct,
         p_time_ms: timeMs || 0,
         p_is_extension: isExtensionMode()
-      })),
-      sbCall(() => sb().from('student_character')
+      }),
+      sb().from('student_character')
         .select('student_id, quarks, xp, badges, scientist, stats')
         .eq('student_id', studentId)
-        .maybeSingle())
+        .maybeSingle()
     ]);
     const existingChar = charResult.data;
     const char = ensureCharFields(existingChar ? { ...existingChar } : { student_id: studentId });
@@ -870,8 +805,8 @@ const WordLabData = (() => {
     const session = loadSession();
     if (!session) return null;
     var [stuResult, charResult, isTeacher] = await Promise.all([
-      sbCall(() => sb().from('students').select('extension_mode, eald_language, support_mode').eq('id', session.studentId).maybeSingle()),
-      sbCall(() => sb().from('student_character').select('student_id, quarks, xp, badges, scientist, stats').eq('student_id', session.studentId).maybeSingle()),
+      sb().from('students').select('extension_mode, eald_language, support_mode').eq('id', session.studentId).maybeSingle(),
+      sb().from('student_character').select('student_id, quarks, xp, badges, scientist, stats').eq('student_id', session.studentId).maybeSingle(),
       isStudentTeacher(session.classId, session.studentId)
     ]);
     // Load extension_activities separately (may not be in PostgREST schema cache)
@@ -950,11 +885,11 @@ const WordLabData = (() => {
     const session = loadSession();
     if (!session) return { success: false, reason: 'No session' };
     try {
-      const { data, error } = await sbCall(() => sb().rpc('atomic_purchase', {
+      const { data, error } = await sb().rpc('atomic_purchase', {
         p_student_id: session.studentId,
         p_item_key: itemId,
         p_cost: cost
-      }));
+      });
       if (error) {
         console.warn('atomic_purchase RPC error', error);
         return { success: false, reason: error.message };
@@ -2010,16 +1945,16 @@ const WordLabData = (() => {
     try {
       // Cache all lists for this class on first call
       if (!_customWordsCache) {
-        var { data: lists } = await sbCall(() => sb().from('class_word_lists')
+        var { data: lists } = await sb().from('class_word_lists')
           .select('id, words, games, priority')
-          .eq('class_id', session.classId));
+          .eq('class_id', session.classId);
         if (!lists || lists.length === 0) { _customWordsCache = []; _customWordsPriorityCache = {}; return []; }
 
         // Check assignments for each list
         var listIds = lists.map(function(l) { return l.id; });
-        var { data: assignments } = await sbCall(() => sb().from('word_list_assignments')
+        var { data: assignments } = await sb().from('word_list_assignments')
           .select('word_list_id, student_id')
-          .in('word_list_id', listIds));
+          .in('word_list_id', listIds);
         var assignMap = {};
         (assignments || []).forEach(function(a) {
           if (!assignMap[a.word_list_id]) assignMap[a.word_list_id] = [];
@@ -2688,8 +2623,7 @@ const WordLabData = (() => {
     getEALDLanguage, getEALDLanguageName, getTranslations, createEALDPill, injectEALDStyles, EALD_LANGUAGES, EALD_TTS_CODES,
     speakInLanguage, preloadTTS, buildEALDSpeakButtons, buildEALDRevealButton, _speakEALD,
     escapeHtml,
-    getWordOfTheWeek,
-    sbCall
+    getWordOfTheWeek
   };
 
 })();
