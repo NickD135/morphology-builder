@@ -35,14 +35,129 @@
     .panelInner{ padding:24px; }
     .panelTitle{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.22em; color:var(--indigo-2); margin:0 0 16px; }
 
-    /* Login screen */
-    #loginScreen{ max-width:480px; margin:60px auto; }
-    .loginCard{ background:var(--panel); border:1px solid var(--line); border-radius:20px; padding:32px; box-shadow:0 8px 24px rgba(0,0,0,.3); text-align:center; }
-    .loginIcon{ font-size:48px; margin-bottom:16px; }
-    @keyframes wlBounce{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-    .loginScientist{ width:80px; height:120px; margin:0 auto 12px; animation:wlBounce 1.8s ease-in-out infinite; }
-    .loginScientist svg{ width:100%; height:100%; }
-    .loginTitle{ font-size:24px; font-weight:900; color:var(--text-primary); margin:0 0 8px; }
+    /* Login / loading screen — lab analysis room */
+    #loginScreen{
+      position:fixed; inset:0; z-index:200;
+      display:flex; align-items:center; justify-content:center;
+      background:#0a0f1e;
+      overflow:hidden;
+    }
+    /* Animated background — subtle grid + radial glow */
+    #loginScreen::before{
+      content:''; position:absolute; inset:0; z-index:0;
+      background:
+        radial-gradient(ellipse 900px 500px at 30% 60%, rgba(99,102,241,.12), transparent 70%),
+        radial-gradient(ellipse 600px 400px at 75% 30%, rgba(6,182,212,.08), transparent 60%),
+        linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+      animation: labGridDrift 20s linear infinite;
+    }
+    @keyframes labGridDrift {
+      0%   { background-position: 0 0, 0 0, 0 0, 0 0; }
+      100% { background-position: 0 0, 0 0, 40px 40px, 40px 40px; }
+    }
+    /* Floating particles */
+    .labParticle{
+      position:absolute; border-radius:50%; pointer-events:none; z-index:1;
+      animation: labFloat linear infinite;
+    }
+    @keyframes labFloat {
+      0%   { transform:translateY(0) scale(1); opacity:0; }
+      10%  { opacity:1; }
+      90%  { opacity:1; }
+      100% { transform:translateY(-120vh) scale(.4); opacity:0; }
+    }
+    /* Lab equipment silhouettes */
+    .labEquip{
+      position:absolute; z-index:1; opacity:.06;
+      font-size:clamp(48px,8vw,96px); color:#fff;
+      pointer-events:none; user-select:none;
+    }
+    /* Central card */
+    .loginCard{
+      position:relative; z-index:10;
+      background:rgba(30,41,59,.65);
+      backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+      border:1px solid rgba(99,102,241,.2);
+      border-radius:28px; padding:44px 40px 36px;
+      box-shadow:
+        0 0 80px rgba(99,102,241,.08),
+        0 24px 48px rgba(0,0,0,.4),
+        inset 0 1px 0 rgba(255,255,255,.06);
+      text-align:center; max-width:440px; width:90%;
+    }
+    /* Scientist container with glow */
+    .loginScientistWrap{
+      position:relative; width:120px; height:160px; margin:0 auto 20px;
+    }
+    .loginScientistWrap::before{
+      content:''; position:absolute;
+      inset:-20px; border-radius:50%;
+      background:radial-gradient(circle, rgba(99,102,241,.2) 0%, transparent 70%);
+      animation:labGlow 3s ease-in-out infinite alternate;
+    }
+    @keyframes labGlow {
+      0%   { opacity:.5; transform:scale(.95); }
+      100% { opacity:1;  transform:scale(1.05); }
+    }
+    .loginScientistSvg{
+      position:relative; z-index:2; width:100%; height:100%;
+      animation:labBob 2.4s ease-in-out infinite;
+      filter:drop-shadow(0 8px 16px rgba(0,0,0,.3));
+    }
+    @keyframes labBob {
+      0%,100% { transform:translateY(0) rotate(-.5deg); }
+      50%     { transform:translateY(-8px) rotate(.5deg); }
+    }
+    /* Text */
+    .loginTitle{
+      font-size:26px; font-weight:900; margin:0 0 6px;
+      background:linear-gradient(135deg, #e2e8f0 0%, #a5b4fc 50%, #818cf8 100%);
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      letter-spacing:-.01em;
+    }
+    .loginSubLabel{
+      font-size:10px; font-weight:800; text-transform:uppercase;
+      letter-spacing:.2em; color:var(--indigo-2); margin-bottom:16px;
+    }
+    /* Cycling message with fade */
+    .loginSub{
+      color:#94a3b8; font-size:13px; font-weight:600; margin-bottom:24px;
+      min-height:20px; transition:opacity .3s;
+    }
+    /* Progress bar */
+    .labProgress{
+      width:100%; height:3px; border-radius:2px;
+      background:rgba(255,255,255,.06); overflow:hidden; margin-bottom:20px;
+    }
+    .labProgressBar{
+      height:100%; border-radius:2px; width:0%;
+      background:linear-gradient(90deg, #4338ca, #6366f1, #06b6d4);
+      background-size:200% 100%;
+      animation:labProgressShimmer 2s linear infinite;
+      transition:width .6s ease;
+    }
+    @keyframes labProgressShimmer {
+      0%   { background-position:200% 0; }
+      100% { background-position:-200% 0; }
+    }
+    /* Bottle/flask animation at bottom */
+    .labFlasks{
+      display:flex; justify-content:center; gap:16px; margin-top:8px; opacity:.5;
+    }
+    .labFlask{
+      width:18px; height:28px; position:relative;
+    }
+    .labFlask .liquid{
+      position:absolute; bottom:0; left:2px; right:2px;
+      border-radius:0 0 4px 4px;
+      animation:labBubble 2s ease-in-out infinite alternate;
+    }
+    @keyframes labBubble {
+      0%   { height:40%; }
+      100% { height:65%; }
+    }
     .loginSub{ color:var(--muted); font-size:14px; margin-bottom:24px; }
     .loginField{ margin-bottom:14px; text-align:left; }
     .loginField label{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); display:block; margin-bottom:6px; }
@@ -839,38 +954,22 @@
 <!-- ── Class picker ── -->
 <div id="main-content">
 <div id="loginScreen" role="main">
+  <!-- Lab equipment silhouettes -->
+  <div class="labEquip" style="top:12%;left:6%;transform:rotate(-8deg);">🔬</div>
+  <div class="labEquip" style="top:18%;right:8%;transform:rotate(5deg);font-size:clamp(36px,6vw,72px);">🧪</div>
+  <div class="labEquip" style="bottom:15%;left:10%;transform:rotate(12deg);font-size:clamp(32px,5vw,64px);">⚗️</div>
+  <div class="labEquip" style="bottom:20%;right:12%;transform:rotate(-6deg);">🧬</div>
+  <div class="labEquip" style="top:55%;left:3%;font-size:clamp(28px,4vw,52px);">📊</div>
+  <div class="labEquip" style="top:40%;right:4%;font-size:clamp(28px,4vw,52px);transform:rotate(8deg);">📋</div>
+
   <div class="loginCard">
-    <div class="loginScientist" id="loadingScientist">
-      <svg viewBox="0 0 80 120" xmlns="http://www.w3.org/2000/svg">
-        <!-- head -->
-        <circle cx="40" cy="22" r="14" fill="#fcd9b6"/>
-        <!-- hair -->
-        <ellipse cx="40" cy="13" rx="13" ry="6" fill="#5b3e31"/>
-        <!-- eyes -->
-        <circle cx="35" cy="22" r="2" fill="#1e293b"/><circle cx="45" cy="22" r="2" fill="#1e293b"/>
-        <!-- smile -->
-        <path d="M36 27 Q40 31 44 27" stroke="#1e293b" stroke-width="1.2" fill="none" stroke-linecap="round"/>
-        <!-- lab coat -->
-        <path d="M24 36 L22 90 H58 L56 36 Q48 32 40 34 Q32 32 24 36Z" fill="#fff" stroke="#cbd5e1" stroke-width="1"/>
-        <!-- coat lapels -->
-        <path d="M34 36 L38 52 L40 36" fill="#e2e8f0"/><path d="M46 36 L42 52 L40 36" fill="#e2e8f0"/>
-        <!-- pocket -->
-        <rect x="44" y="58" width="10" height="8" rx="2" fill="none" stroke="#94a3b8" stroke-width=".8"/>
-        <!-- clipboard -->
-        <rect x="16" y="50" width="14" height="18" rx="2" fill="#fef3c7" stroke="#d97706" stroke-width=".8"/>
-        <rect x="20" y="48" width="6" height="4" rx="1" fill="#d97706"/>
-        <line x1="19" y1="56" x2="27" y2="56" stroke="#d97706" stroke-width=".6"/>
-        <line x1="19" y1="59" x2="27" y2="59" stroke="#d97706" stroke-width=".6"/>
-        <line x1="19" y1="62" x2="24" y2="62" stroke="#d97706" stroke-width=".6"/>
-        <!-- legs -->
-        <rect x="30" y="90" width="8" height="18" rx="3" fill="#334155"/>
-        <rect x="42" y="90" width="8" height="18" rx="3" fill="#334155"/>
-        <!-- shoes -->
-        <ellipse cx="34" cy="110" rx="7" ry="4" fill="#1e293b"/><ellipse cx="46" cy="110" rx="7" ry="4" fill="#1e293b"/>
-      </svg>
+    <div class="loginScientistWrap" id="loadingScientist">
+      <div class="loginScientistSvg" id="loginScientistSvg"></div>
     </div>
     <div class="loginTitle">Teacher Dashboard</div>
-    <div class="loginSub" id="loginSub" aria-live="polite">Checking the lab equipment...</div>
+    <div class="loginSubLabel">Lab Analysis Room</div>
+    <div class="labProgress"><div class="labProgressBar" id="labProgressBar"></div></div>
+    <div class="loginSub" id="loginSub" aria-live="polite">Initialising lab systems...</div>
     <div class="loginField" id="classSelectField" style="display:none;">
       <label for="classSelect">Class</label>
       <select id="classSelect"><option value="">Select a class...</option></select>
@@ -878,6 +977,11 @@
     <div class="loginError" id="loginError" style="display:none;" aria-live="assertive">Please select a class.</div>
     <button class="loginBtn" id="loginBtn" onclick="login()" style="display:none;">View Dashboard →</button>
     <div id="noClassHint" style="display:none;margin-top:16px;font-size:12px;color:var(--muted);">Don't have a class yet? <a href="class-setup.html" style="color:var(--indigo);font-weight:800;">Set one up here →</a></div>
+    <div class="labFlasks">
+      <div class="labFlask"><svg viewBox="0 0 18 28"><path d="M6 0h6v10l5 16H1L6 10Z" fill="none" stroke="rgba(148,163,184,.4)" stroke-width=".8"/></svg><div class="liquid" style="background:#6366f1;animation-delay:0s;"></div></div>
+      <div class="labFlask"><svg viewBox="0 0 18 28"><path d="M6 0h6v10l5 16H1L6 10Z" fill="none" stroke="rgba(148,163,184,.4)" stroke-width=".8"/></svg><div class="liquid" style="background:#06b6d4;animation-delay:.6s;"></div></div>
+      <div class="labFlask"><svg viewBox="0 0 18 28"><path d="M6 0h6v10l5 16H1L6 10Z" fill="none" stroke="rgba(148,163,184,.4)" stroke-width=".8"/></svg><div class="liquid" style="background:#f59e0b;animation-delay:1.2s;"></div></div>
+    </div>
   </div>
 </div>
 
@@ -970,6 +1074,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="wordlab-data.js"></script>
+<script src="wordlab-scientist.js"></script>
 <script defer src="wordlab-extension-data.js"></script>
 <script>
 // ── Column definitions for each activity ────────────────────────
@@ -1257,25 +1362,86 @@ async function startCheckout() {
 
 // ── Auth + class picker ───────────────────────────────────────────
 var _loadingMsgTimer = null;
+var _labParticleTimer = null;
+
 function startLoadingMessages() {
   var msgs = [
-    'Checking the lab equipment...',
-    'Gathering student data...',
-    'Polishing the microscopes...',
+    'Initialising lab systems...',
+    'Calibrating the microscopes...',
+    'Warming up the word scanner...',
     'Sorting the morpheme tiles...',
-    'Sharpening the pencils...',
-    'Calibrating the word scanner...',
-    'Preparing your dashboard...'
+    'Loading student progress data...',
+    'Analysing spelling patterns...',
+    'Polishing the test tubes...',
+    'Cross-referencing the heatmaps...',
+    'Preparing your analysis room...'
   ];
   var idx = 0;
   var sub = document.getElementById('loginSub');
   _loadingMsgTimer = setInterval(function() {
-    idx = (idx + 1) % msgs.length;
-    if (sub) sub.textContent = msgs[idx];
-  }, 1800);
+    if (!sub) return;
+    sub.style.opacity = '0';
+    setTimeout(function() {
+      idx = (idx + 1) % msgs.length;
+      sub.textContent = msgs[idx];
+      sub.style.opacity = '1';
+    }, 300);
+  }, 2200);
+
+  // Render scientist SVG (default neutral scientist with goggles)
+  var svgContainer = document.getElementById('loginScientistSvg');
+  if (svgContainer && typeof WLScientist !== 'undefined') {
+    svgContainer.innerHTML = WLScientist.buildSVG({ coatColor:'#ffffff', head:'goggles_head', face:'safety_goggles' }, 'happy');
+  }
+
+  // Spawn floating particles
+  var screen = document.getElementById('loginScreen');
+  if (screen) {
+    _labParticleTimer = setInterval(function() { _spawnLabParticle(screen); }, 600);
+    for (var i = 0; i < 8; i++) setTimeout(function() { _spawnLabParticle(screen); }, i * 200);
+  }
+
+  // Animate progress bar
+  _animateLabProgress();
 }
+
+function _spawnLabParticle(container) {
+  var p = document.createElement('div');
+  p.className = 'labParticle';
+  var colors = ['rgba(99,102,241,.5)', 'rgba(6,182,212,.4)', 'rgba(251,191,36,.3)', 'rgba(129,140,248,.4)', 'rgba(74,222,128,.3)'];
+  var size = 2 + Math.random() * 4;
+  p.style.cssText =
+    'width:' + size + 'px;height:' + size + 'px;' +
+    'background:' + colors[Math.floor(Math.random() * colors.length)] + ';' +
+    'left:' + (5 + Math.random() * 90) + '%;' +
+    'bottom:-10px;' +
+    'animation-duration:' + (5 + Math.random() * 8) + 's;' +
+    'box-shadow:0 0 ' + (size + 4) + 'px ' + colors[Math.floor(Math.random() * colors.length)] + ';';
+  container.appendChild(p);
+  setTimeout(function() { if (p.parentNode) p.parentNode.removeChild(p); }, 13000);
+}
+
+var _labProgressSteps = [
+  { pct: 15, delay: 300 },
+  { pct: 35, delay: 1200 },
+  { pct: 55, delay: 2200 },
+  { pct: 75, delay: 3200 },
+  { pct: 90, delay: 4000 }
+];
+function _animateLabProgress() {
+  var bar = document.getElementById('labProgressBar');
+  if (!bar) return;
+  _labProgressSteps.forEach(function(step) {
+    setTimeout(function() { bar.style.width = step.pct + '%'; }, step.delay);
+  });
+}
+
 function stopLoadingMessages() {
   if (_loadingMsgTimer) { clearInterval(_loadingMsgTimer); _loadingMsgTimer = null; }
+  if (_labParticleTimer) { clearInterval(_labParticleTimer); _labParticleTimer = null; }
+  // Complete progress bar
+  var bar = document.getElementById('labProgressBar');
+  if (bar) bar.style.width = '100%';
 }
 
 async function initDashboard(){
@@ -1351,7 +1517,10 @@ async function login(){
 }
 
 function showDashboard(){
-  document.getElementById('loginScreen').classList.add('hidden');
+  var ls = document.getElementById('loginScreen');
+  ls.style.transition = 'opacity .4s ease';
+  ls.style.opacity = '0';
+  setTimeout(function() { ls.classList.add('hidden'); ls.style.opacity = ''; ls.style.transition = ''; }, 400);
   document.getElementById('dashboardScreen').classList.remove('hidden');
   document.getElementById('logoutBtn').style.display = 'inline-flex';
   document.getElementById('classNameDisplay').textContent = currentClass.name;
