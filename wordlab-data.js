@@ -741,6 +741,21 @@ const WordLabData = (() => {
     } catch(e) { return true; }
   }
 
+  // ── Stage progression ─────────────────────────────────────────
+  // Return the student's current stage for a given activity (or global if no activity)
+  // Checks per-activity override first, then falls back to the student's base stage
+  // Returns null if no stage set
+  function getStudentStage(activity){
+    var overridesRaw = sessionStorage.getItem('wl_stage_overrides');
+    if (overridesRaw && activity) {
+      try {
+        var overrides = JSON.parse(overridesRaw);
+        if (overrides && overrides[activity]) return overrides[activity];
+      } catch(e){}
+    }
+    return sessionStorage.getItem('wl_stage') || null;
+  }
+
   // ── Record attempt ────────────────────────────────────────────
   async function recordAttempt(activity, category, correct, timeMs, streak) {
     streak = streak || 0;
@@ -870,7 +885,7 @@ const WordLabData = (() => {
     const session = loadSession();
     if (!session) return null;
     var [stuResult, charResult, isTeacher] = await Promise.all([
-      sbCall(() => sb().from('students').select('extension_mode, eald_language, support_mode').eq('id', session.studentId).maybeSingle()),
+      sbCall(() => sb().from('students').select('extension_mode, eald_language, support_mode, stage, stage_overrides').eq('id', session.studentId).maybeSingle()),
       sbCall(() => sb().from('student_character').select('student_id, quarks, xp, badges, scientist, stats').eq('student_id', session.studentId).maybeSingle()),
       isStudentTeacher(session.classId, session.studentId)
     ]);
@@ -892,6 +907,19 @@ const WordLabData = (() => {
       sessionStorage.setItem('wl_extension_activities', JSON.stringify(data.extension_activities));
     } else {
       sessionStorage.removeItem('wl_extension_activities');
+    }
+    // Cache stage + overrides in sessionStorage for quick access during gameplay
+    if (data && data.stage !== undefined) {
+      if (data.stage) {
+        sessionStorage.setItem('wl_stage', data.stage);
+      } else {
+        sessionStorage.removeItem('wl_stage');
+      }
+    }
+    if (data && data.stage_overrides) {
+      sessionStorage.setItem('wl_stage_overrides', JSON.stringify(data.stage_overrides));
+    } else {
+      sessionStorage.removeItem('wl_stage_overrides');
     }
     if (data && data.eald_language) {
       sessionStorage.setItem('wl_eald_language', data.eald_language);
@@ -1272,6 +1300,8 @@ const WordLabData = (() => {
     endSession();
     sessionStorage.removeItem('wl_extension_mode');
     sessionStorage.removeItem('wl_extension_activities');
+    sessionStorage.removeItem('wl_stage');
+    sessionStorage.removeItem('wl_stage_overrides');
     sessionStorage.removeItem('wl_ext_pinned');
     sessionStorage.removeItem('wl_teacher_preview');
     sessionStorage.removeItem('wl_eald_language');
@@ -2700,6 +2730,7 @@ const WordLabData = (() => {
     getClassTeacherIds, isStudentTeacher, setStudentTeacher, saveClassSettings,
     createTeacherStudent, getTeacherStudent, enterStudentMode, exitStudentMode, isTeacherPreview,
     isExtensionMode, loadExtensionData,
+    getStudentStage,
     isLowStimMode, loadLowStimMode,
     isSupportMode, setSupportMode, loadSupportMode,
     checkDailyLimit, incrementDailyUsage,
