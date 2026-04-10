@@ -925,6 +925,7 @@ const WordLabData = (() => {
           p_value: value === undefined ? null : value
         });
         if (error) console.warn('save_scientist_field RPC error', error);
+        _syncTeacherScientist(session, updates);
         return;
       } catch (e) {
         console.warn('save_scientist_field failed, falling back', e);
@@ -944,6 +945,28 @@ const WordLabData = (() => {
     } catch (e) {
       console.warn('saveScientist RPC fallback failed', e);
     }
+    _syncTeacherScientist(session, updates);
+  }
+
+  // When a teacher customises their scientist in student preview mode,
+  // mirror the changes to the teachers.scientist column so the dashboard
+  // loading screen shows their personalised character.
+  async function _syncTeacherScientist(session, updates) {
+    if (!isTeacherPreview()) return;
+    try {
+      var { data: { session: authSess } } = await sb().auth.getSession();
+      if (!authSess) return;
+      // Read current teacher scientist, merge updates, write back
+      var { data: teacher } = await sb().from('teachers')
+        .select('id, scientist')
+        .eq('auth_user_id', authSess.user.id)
+        .maybeSingle();
+      if (!teacher) return;
+      var sci = teacher.scientist || {};
+      Object.keys(updates).forEach(function(k) { sci[k] = updates[k]; });
+      await sb().from('teachers').update({ scientist: sci }).eq('id', teacher.id);
+      if (_teacherRecord) _teacherRecord.scientist = sci;
+    } catch(e) { console.warn('Teacher scientist sync failed:', e); }
   }
 
   async function purchase(itemId, cost) {
