@@ -486,14 +486,35 @@ async function loadCustomLists() {
       { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } }
     );
     const lists = await listsRes.json();
-    if (!lists.length) { setCustomMsg('No word lists found for this class.', 'error'); return; }
+    const setsRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/class_spelling_sets?class_id=eq.${classId}&select=id,name,words`,
+      { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } }
+    );
+    let sets = await setsRes.json();
+    if (!Array.isArray(sets)) sets = [];
+    if (!lists.length && !sets.length) { setCustomMsg('No word lists found for this class.', 'error'); return; }
     customListsData = {};
     lists.forEach(l => { customListsData[l.id] = { name: l.name, words: l.words || [] }; });
+    sets.forEach(s => {
+      const words = (s.words || []).map(w => typeof w === 'string' ? { word: w } : w);
+      customListsData['ss-' + s.id] = { name: s.name, words };
+    });
+    const totalCount = lists.length + sets.length;
     const sel = document.getElementById('customListSelect');
-    sel.innerHTML = lists.map(l =>
-      `<option value="${l.id}">${_esc(l.name)} (${(l.words||[]).length} words)</option>`
-    ).join('');
-    setCustomMsg(`✓ ${lists.length} list${lists.length>1?'s':''} loaded for ${classes[0].name}`, 'ok');
+    sel.textContent = '';
+    lists.forEach(l => {
+      const opt = document.createElement('option');
+      opt.value = l.id;
+      opt.textContent = `${_esc(l.name)} (${(l.words||[]).length} words)`;
+      sel.appendChild(opt);
+    });
+    sets.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = 'ss-' + s.id;
+      opt.textContent = `Check-In: ${_esc(s.name)} (${(s.words||[]).length} words)`;
+      sel.appendChild(opt);
+    });
+    setCustomMsg(`✓ ${totalCount} list${totalCount>1?'s':''} loaded for ${classes[0].name}`, 'ok');
   } catch(e) {
     setCustomMsg('Could not load lists. Check your connection.', 'error');
   }

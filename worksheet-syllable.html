@@ -208,12 +208,32 @@ async function loadCustomLists() {
     if (!classes.length) { msg.textContent = 'Class code not found.'; msg.style.color = '#dc2626'; return; }
     var listsRes = await fetch(SUPABASE_URL + '/rest/v1/class_word_lists?class_id=eq.' + classes[0].id + '&select=id,name,words', { headers: { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON } });
     var lists = await listsRes.json();
-    if (!lists.length) { msg.textContent = 'No word lists for this class.'; msg.style.color = '#dc2626'; return; }
+    var setsRes = await fetch(SUPABASE_URL + '/rest/v1/class_spelling_sets?class_id=eq.' + classes[0].id + '&select=id,name,words', { headers: { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON } });
+    var sets = await setsRes.json();
+    if (!Array.isArray(sets)) sets = [];
+    if (!lists.length && !sets.length) { msg.textContent = 'No word lists for this class.'; msg.style.color = '#dc2626'; return; }
     customListsData = {};
     lists.forEach(function(l) { customListsData[l.id] = { name: l.name, words: l.words || [] }; });
-    sel.innerHTML = lists.map(function(l) { return '<option value="' + l.id + '">' + _esc(l.name) + ' (' + (l.words||[]).length + ' words)</option>'; }).join('');
+    sets.forEach(function(s) {
+      var words = (s.words || []).map(function(w) { return typeof w === 'string' ? { word: w } : w; });
+      customListsData['ss-' + s.id] = { name: s.name, words: words };
+    });
+    var totalCount = lists.length + sets.length;
+    sel.textContent = '';
+    lists.forEach(function(l) {
+      var opt = document.createElement('option');
+      opt.value = l.id;
+      opt.textContent = _esc(l.name) + ' (' + (l.words||[]).length + ' words)';
+      sel.appendChild(opt);
+    });
+    sets.forEach(function(s) {
+      var opt = document.createElement('option');
+      opt.value = 'ss-' + s.id;
+      opt.textContent = 'Check-In: ' + _esc(s.name) + ' (' + (s.words||[]).length + ' words)';
+      sel.appendChild(opt);
+    });
     sel.style.display = '';
-    msg.textContent = '✓ ' + lists.length + ' list' + (lists.length > 1 ? 's' : '') + ' loaded'; msg.style.color = '#16a34a';
+    msg.textContent = '✓ ' + totalCount + ' list' + (totalCount > 1 ? 's' : '') + ' loaded'; msg.style.color = '#16a34a';
   } catch(e) { msg.textContent = 'Could not load lists.'; msg.style.color = '#dc2626'; }
 }
 
