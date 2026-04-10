@@ -794,7 +794,9 @@ function populateMorphSelect(type) {
   updateMorphMatchCount();
 }
 
-// Build Root Lab entries from data.js for a given morpheme focus
+// Build Root Lab entries from data.js for a given morpheme focus.
+// Uses the <u> markup in examples to parse words: the underlined part is always the
+// morpheme being taught by that entry, and before/after are the other parts.
 function buildMorphemeWords(morphType, morphForm) {
   var M = window.MORPHEMES || {};
   var allPrefixes = M.prefixes || [];
@@ -804,96 +806,135 @@ function buildMorphemeWords(morphType, morphForm) {
   var words = [];
   var seen = {};
 
-  // Find the selected morpheme's meaning
-  var allMorphs = morphType === 'prefix' ? allPrefixes : morphType === 'suffix' ? allSuffixes : allBases;
-  var morph = allMorphs.find(function(m) { return m.form.toLowerCase() === form; });
-  var morphMeaning = morph ? morph.meaning : '';
+  // Build lookup maps for meaning resolution
+  var prefixMap = {}; allPrefixes.forEach(function(p) { prefixMap[p.form.toLowerCase()] = p.meaning; });
+  var suffixMap = {}; allSuffixes.forEach(function(s) { suffixMap[s.form.toLowerCase()] = s.meaning; });
+  var baseMap = {};   allBases.forEach(function(b) { baseMap[b.form.toLowerCase()] = b.meaning; });
+  // All prefix/suffix forms for filtering longer matches
+  var prefixForms = Object.keys(prefixMap);
+  var suffixForms = Object.keys(suffixMap);
 
-  // Scan all examples across all morphemes
+  // Find the selected morpheme's meaning
+  var morphMeaning = prefixMap[form] || suffixMap[form] || baseMap[form] || '';
+
+  // Helper: look up meaning for a word fragment, trying known morphemes
+  function findPrefixMeaning(s) { return prefixMap[s.toLowerCase()] || ''; }
+  function findSuffixMeaning(s) {
+    var low = s.toLowerCase();
+    if (suffixMap[low]) return suffixMap[low];
+    // Try common suffix spelling variations: d→ed, r→er, n→en, etc.
+    var tries = [low, 'e'+low, low+'e'];
+    for (var i = 0; i < tries.length; i++) { if (suffixMap[tries[i]]) return suffixMap[tries[i]]; }
+    // Try if the fragment ends with a known suffix
+    for (var j = 0; j < suffixForms.length; j++) {
+      if (low.endsWith(suffixForms[j]) && low.length > suffixForms[j].length) return suffixMap[suffixForms[j]];
+      if (low === suffixForms[j]) return suffixMap[suffixForms[j]];
+    }
+    return '';
+  }
+  function findBaseMeaning(s) {
+    var low = s.toLowerCase();
+    if (baseMap[low]) return baseMap[low];
+    // Try stripping trailing e (e.g. "behave" stored as "behave", fragment might be "behav")
+    if (baseMap[low + 'e']) return baseMap[low + 'e'];
+    // Try without doubled final consonant (e.g. "hopp" → "hop")
+    if (low.length > 2 && low[low.length-1] === low[low.length-2]) {
+      if (baseMap[low.slice(0,-1)]) return baseMap[low.slice(0,-1)];
+    }
+    return '';
+  }
+
+  // Scan all morpheme entries
   var allItems = [].concat(allPrefixes, allSuffixes, allBases);
   allItems.forEach(function(item) {
+    var itemType = prefixMap[item.form.toLowerCase()] !== undefined ? 'prefix'
+                 : suffixMap[item.form.toLowerCase()] !== undefined ? 'suffix' : 'base';
+
     (item.examples || []).forEach(function(ex) {
+      var uMatch = ex.match(/<u>(.*?)<\/u>/);
+      if (!uMatch) return;
       var word = ex.replace(/<\/?[^>]+>/g, '').replace(/\s/g, '');
       var wLow = word.toLowerCase();
-      if (seen[wLow]) return;
+      if (seen[wLow] || word.length < 3) return;
 
+      // Parse the <u> markup to get before/underlined/after
+      var uIdx = ex.indexOf('<u>');
+      var before = ex.slice(0, uIdx).replace(/<\/?[^>]+>/g, '').trim();
+      var underlined = uMatch[1];
+      var after = ex.slice(ex.indexOf('</u>') + 4).replace(/<\/?[^>]+>/g, '').trim();
+
+      // Skip words with no affixes (just the base alone)
+      if (!before && !after) return;
+
+      // Determine prefix, base, suffix from the markup
       var prefix = null, base = null, suffix = null;
-      var prefixMeaning = null, baseMeaning = null, suffixMeaning = null;
+      var prefMeaning = null, baseMng = null, suffMeaning = null;
 
-      if (morphType === 'prefix' && wLow.startsWith(form) && wLow.length > form.length) {
-        prefix = morphForm;
-        prefixMeaning = morphMeaning;
-        var rest = word.slice(form.length);
-        // Try to identify the base from known bases
-        var foundBase = allBases.find(function(b) { return rest.toLowerCase().startsWith(b.form.toLowerCase()) && rest.length >= b.form.length; });
-        if (foundBase) {
-          base = rest.slice(0, foundBase.form.length);
-          baseMeaning = foundBase.meaning;
-          var remainder = rest.slice(foundBase.form.length);
-          if (remainder) {
-            var foundSuffix = allSuffixes.find(function(s) { return remainder.toLowerCase() === s.form.toLowerCase(); });
-            suffix = remainder;
-            suffixMeaning = foundSuffix ? foundSuffix.meaning : '';
-          }
+      if (itemType === 'prefix') {
+        // Underlined part is a prefix, rest is base+suffix
+        prefix = underlined;
+        prefMeaning = item.meaning;
+        // after might be base or base+suffix
+        var bm = findBaseMeaning(after);
+        if (bm) {
+          base = after; baseMng = bm;
         } else {
-          base = rest;
-          baseMeaning = '';
-        }
-      } else if (morphType === 'suffix' && wLow.endsWith(form) && wLow.length > form.length) {
-        suffix = morphForm;
-        suffixMeaning = morphMeaning;
-        var front = word.slice(0, -form.length);
-        // Try to identify prefix + base
-        var foundPrefix = allPrefixes.find(function(p) { return front.toLowerCase().startsWith(p.form.toLowerCase()) && front.length > p.form.length; });
-        if (foundPrefix) {
-          prefix = front.slice(0, foundPrefix.form.length);
-          prefixMeaning = foundPrefix.meaning;
-          base = front.slice(foundPrefix.form.length);
-          var fb = allBases.find(function(b) { return base.toLowerCase() === b.form.toLowerCase(); });
-          baseMeaning = fb ? fb.meaning : '';
-        } else {
-          base = front;
-          var fb2 = allBases.find(function(b) { return front.toLowerCase().startsWith(b.form.toLowerCase()); });
-          if (fb2) {
-            base = front.slice(0, fb2.form.length);
-            baseMeaning = fb2.meaning;
-          } else {
-            baseMeaning = '';
+          // Try splitting after into base+suffix
+          var split = false;
+          for (var si = after.length - 1; si >= 1; si--) {
+            var bPart = after.slice(0, si), sPart = after.slice(si);
+            var bmTry = findBaseMeaning(bPart), smTry = findSuffixMeaning(sPart);
+            if (bmTry) { base = bPart; baseMng = bmTry; suffix = sPart; suffMeaning = smTry; split = true; break; }
           }
+          if (!split) { base = after; baseMng = ''; }
         }
-      } else if (morphType === 'base' && wLow.includes(form)) {
-        var idx = wLow.indexOf(form);
-        var before = word.slice(0, idx);
-        base = word.slice(idx, idx + form.length);
-        baseMeaning = morphMeaning;
-        var after = word.slice(idx + form.length);
-        if (before) {
-          var fp = allPrefixes.find(function(p) { return before.toLowerCase() === p.form.toLowerCase(); });
-          prefix = before;
-          prefixMeaning = fp ? fp.meaning : '';
+      } else if (itemType === 'suffix') {
+        // Underlined part is a suffix
+        suffix = underlined;
+        suffMeaning = item.meaning;
+        // before might be prefix+base or just base
+        var bmDirect = findBaseMeaning(before);
+        if (bmDirect) {
+          base = before; baseMng = bmDirect;
+        } else {
+          // Try splitting before into prefix+base
+          var splitP = false;
+          for (var pi = 1; pi < before.length; pi++) {
+            var pPart = before.slice(0, pi), bPart2 = before.slice(pi);
+            var pmTry = findPrefixMeaning(pPart), bmTry2 = findBaseMeaning(bPart2);
+            if (pmTry) { prefix = pPart; prefMeaning = pmTry; base = bPart2; baseMng = bmTry2; splitP = true; break; }
+          }
+          if (!splitP) { base = before; baseMng = ''; }
         }
-        if (after) {
-          var fs = allSuffixes.find(function(s) { return after.toLowerCase() === s.form.toLowerCase(); });
-          suffix = after;
-          suffixMeaning = fs ? fs.meaning : '';
-        }
-        // Skip if word is just the base with no affixes
-        if (!prefix && !suffix) return;
       } else {
-        return;
+        // Underlined part is a base
+        base = underlined;
+        baseMng = item.meaning;
+        if (before) { prefix = before; prefMeaning = findPrefixMeaning(before); }
+        if (after) { suffix = after; suffMeaning = findSuffixMeaning(after); }
       }
 
+      // Check if the word contains our target morpheme
+      var match = false;
+      if (morphType === 'prefix' && prefix && prefix.toLowerCase() === form) match = true;
+      if (morphType === 'suffix' && suffix && suffix.toLowerCase() === form) match = true;
+      if (morphType === 'base' && base && base.toLowerCase() === form) match = true;
+      if (!match) return;
+
+      // Filter out longer prefix/suffix false matches
+      if (morphType === 'prefix' && prefixForms.some(function(p) { return p !== form && p.startsWith(form) && wLow.startsWith(p); })) return;
+      if (morphType === 'suffix' && suffixForms.some(function(s) { return s !== form && s.endsWith(form) && wLow.endsWith(s); })) return;
+
       seen[wLow] = true;
-      // Build full meaning from parts
       var meaningParts = [];
-      if (prefixMeaning) meaningParts.push(prefixMeaning);
-      if (baseMeaning) meaningParts.push(baseMeaning);
-      if (suffixMeaning) meaningParts.push(suffixMeaning);
+      if (prefMeaning) meaningParts.push(prefMeaning);
+      if (baseMng) meaningParts.push(baseMng);
+      if (suffMeaning) meaningParts.push(suffMeaning);
 
       words.push({
         word: word,
         parts: { prefix: prefix, base: base, suffix: suffix },
-        meanings: { prefix: prefix ? (prefixMeaning || '') : null, base: baseMeaning || '', suffix: suffix ? (suffixMeaning || '') : null },
+        meanings: { prefix: prefix ? (prefMeaning || '') : null, base: baseMng || '', suffix: suffix ? (suffMeaning || '') : null },
         fullMeaning: meaningParts.join(' + ') || word,
         distractors: [],
         level: 'starter'
