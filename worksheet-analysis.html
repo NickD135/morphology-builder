@@ -273,7 +273,7 @@
         <div class="sectionLabel">Number of words</div>
         <div class="stepper">
           <button class="stepperBtn" onclick="stepCount(-1)">−</button>
-          <input type="number" class="stepperVal" id="countInput" min="2" max="5" value="3" readonly>
+          <input type="number" class="stepperVal" id="countInput" min="2" max="12" value="6" readonly>
           <button class="stepperBtn" onclick="stepCount(1)">+</button>
         </div>
       </div>
@@ -409,7 +409,7 @@ function filterMorphemeList() {
 // ── Stepper ──────────────────────────────────────────────────
 function stepCount(d) {
   const el = document.getElementById('countInput');
-  el.value = Math.min(5, Math.max(2, parseInt(el.value) + d));
+  el.value = Math.min(12, Math.max(2, parseInt(el.value) + d));
 }
 
 // ── Custom list loader ───────────────────────────────────────
@@ -605,14 +605,48 @@ function buildWordList(source, count) {
     const morph = pool.find(m => m.id === selectedMorphId);
     if (!morph) return null;
     const words = [];
-    shuffle(morph.examples || []).forEach(ex => {
-      if (words.length >= count) return;
-      const parsed = parseExample(ex, morph, morphemeType);
-      if (!parsed) return;
+    const seen = new Set();
+    function addWord(parsed) {
+      if (!parsed || seen.has(parsed.word.toLowerCase())) return;
+      seen.add(parsed.word.toLowerCase());
       words.push({ ...parsed, morpheme: morph, mtype: morphemeType });
-    });
+    }
+    // 1. Direct examples from the selected morpheme
+    shuffle(morph.examples || []).forEach(ex => { addWord(parseExample(ex, morph, morphemeType)); });
+    // 2. Cross-reference: scan ALL morphemes for words that contain the selected morpheme
+    if (words.length < count) {
+      const MORPH = window.MORPHEMES || {};
+      const EXT = window.WL_EXTENSION || {};
+      const ext = document.getElementById('extToggle').checked;
+      const form = morph.form.toLowerCase();
+      const allPrefixForms = [...(MORPH.prefixes||[]), ...(ext ? (EXT.prefixes||[]) : [])].map(p => p.form.toLowerCase());
+      const allSuffixForms = [...(MORPH.suffixes||[]), ...(ext ? (EXT.suffixes||[]) : [])].map(s => s.form.toLowerCase());
+      const allItems = [
+        ...(MORPH.bases||[]), ...(MORPH.prefixes||[]), ...(MORPH.suffixes||[]),
+        ...(ext ? [...(EXT.bases||[]), ...(EXT.prefixes||[]), ...(EXT.suffixes||[])] : [])
+      ];
+      shuffle(allItems).forEach(item => {
+        if (item.id === morph.id) return;
+        (item.examples || []).forEach(ex => {
+          if (words.length >= count) return;
+          const word = ex.replace(/<\/?[^>]+>/g,'').replace(/\s/g,'');
+          const wLow = word.toLowerCase();
+          if (morphemeType === 'prefix' && wLow.startsWith(form) && wLow.length > form.length) {
+            // Skip if a longer known prefix also matches (e.g. 'uni' matches but we're looking for 'un')
+            if (allPrefixForms.some(p => p !== form && p.startsWith(form) && wLow.startsWith(p))) return;
+            addWord({ word, prefix: morph.form, base: word.slice(morph.form.length), suffix: '' });
+          } else if (morphemeType === 'suffix' && wLow.endsWith(form) && wLow.length > form.length) {
+            if (allSuffixForms.some(s => s !== form && s.endsWith(form) && wLow.endsWith(s))) return;
+            addWord({ word, prefix: '', base: word.slice(0, -morph.form.length), suffix: morph.form });
+          } else if (morphemeType === 'base' && wLow.includes(form)) {
+            const idx = wLow.indexOf(form);
+            addWord({ word, prefix: word.slice(0, idx), base: word.slice(idx, idx + morph.form.length), suffix: word.slice(idx + morph.form.length) });
+          }
+        });
+      });
+    }
     if (!words.length) { alert('No valid examples found for this morpheme.'); return null; }
-    return { words, focusMorph: morph, mtype: morphemeType };
+    return { words: shuffle(words).slice(0, count), focusMorph: morph, mtype: morphemeType };
   }
 
   if (source === 'custom') {
