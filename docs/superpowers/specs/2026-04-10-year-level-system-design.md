@@ -92,7 +92,7 @@ In games with difficulty tiers (Sound Sorter, Phoneme Splitter, Root Lab), EXT l
 
 ### 5.1 Morpheme tagging (data.js)
 
-Add a `stage` field to every prefix, suffix, and base:
+Add a `stage` field to every prefix, suffix, and base. The tag means **"introduced at this level"** — students see content from their stage and below (cumulative).
 
 ```js
 // Prefixes
@@ -102,6 +102,8 @@ Add a `stage` field to every prefix, suffix, and base:
 ```
 
 `stage: null` means unassigned — shows at all levels until tagged.
+
+A Voyager student sees all `s2e` + `s2l` + `null` content. A Trailblazer sees `s2e` + `s2l` + `s3e` + `s3l` + `null`. No content is ever lost as students progress.
 
 ### 5.2 Word-level tagging
 
@@ -130,11 +132,13 @@ No new tables needed. Sub-level is calculated live, not stored.
 Content pipeline when a student opens a game:
 
 1. **Custom word lists & spelling sets** — always loaded first, unfiltered (teacher's explicit choices)
-2. **Built-in content** — filtered by student's stage:
-   - Content with `stage` matching student's stage → included
+2. **Built-in content** — filtered by student's stage (cumulative — current stage and below):
+   - Content tagged at or below the student's stage → eligible pool
    - If EXT is on for this game → also include content tagged with the next stage up
    - Content with `stage: null` (untagged) → included at all levels
-3. **In-game tiers** (Starter/Level Up/Challenge) — work within the filtered pool, UNLESS EXT is on which locks to Challenge in applicable games
+3. **Content weighting** — ~80% of content served is from the student's current stage, ~20% is revision from below-stage content. This keeps foundations sharp without letting students coast on easy material. Mastery calculation only counts current-stage attempts.
+   - If EXT is on: the 80% draws from current stage + next stage up, the 20% revision draws from all stages below
+4. **In-game tiers** (Starter/Level Up/Challenge) — work within the filtered pool, UNLESS EXT is on which locks to Challenge in applicable games
 
 ### Per-game behaviour
 
@@ -294,6 +298,8 @@ Accessible via a new tab in the analytics section (admin-only, not teacher-facin
 | EXT = +1 stage | Replaces separate extension pool; extension is now relative to student's level, not absolute |
 | Stage 4 (Pioneer) for beyond-curriculum | Gives genuinely advanced content a home; extends Year 6 students beyond Stage 3 |
 | Untagged content shows at all levels | Nothing breaks during mapping rollout; progressive enhancement |
+| Stage tag means "introduced at" (cumulative) | Students see current stage and below; no content lost on promotion; single tag per item, no multi-tagging needed |
+| 80/20 content weighting | Current stage content prioritised (80%); below-stage revision (20%) reinforces foundations without inflating mastery |
 | Custom content bypasses filtering | Teacher's explicit word list choices trump the system |
 | Stage groups for assignment targeting | Natural grouping; reduces manual student-by-student selection |
 | Live group assignments | Students get content for their current stage automatically; data preserved permanently |
