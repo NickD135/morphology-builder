@@ -380,7 +380,7 @@ const WordLabData = (() => {
     if (!session) return null;
     var { data } = await sb()
       .from('teachers')
-      .select('id, school_id, email, plan')
+      .select('id, school_id, email, plan, scientist')
       .eq('auth_user_id', session.user.id)
       .maybeSingle();
 
@@ -411,7 +411,7 @@ const WordLabData = (() => {
           });
           var { data: newTeacher } = await sb()
             .from('teachers')
-            .select('id, school_id, email, plan')
+            .select('id, school_id, email, plan, scientist')
             .eq('auth_user_id', session.user.id)
             .maybeSingle();
           data = newTeacher;
