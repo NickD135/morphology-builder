@@ -1388,10 +1388,11 @@ function startLoadingMessages() {
     }, 300);
   }, 2200);
 
-  // Render scientist SVG (default neutral scientist with goggles)
+  // Render scientist SVG — default first, then try teacher's customised one
   var svgContainer = document.getElementById('loginScientistSvg');
   if (svgContainer && typeof WLScientist !== 'undefined') {
     svgContainer.innerHTML = WLScientist.buildSVG({ coatColor:'#ffffff', head:'goggles_head', face:'safety_goggles' }, 'happy');
+    _loadTeacherScientist(svgContainer);
   }
 
   // Spawn floating particles
@@ -1434,6 +1435,34 @@ function _animateLabProgress() {
   _labProgressSteps.forEach(function(step) {
     setTimeout(function() { bar.style.width = step.pct + '%'; }, step.delay);
   });
+}
+
+async function _loadTeacherScientist(container) {
+  try {
+    var sb = WordLabData._sb();
+    // Get teacher's school classes
+    var teacher = await WordLabData.getTeacherRecord();
+    if (!teacher || !teacher.school_id) return;
+    var { data: classes } = await sb.from('classes').select('id').eq('school_id', teacher.school_id);
+    if (!classes || !classes.length) return;
+    // Find first student_character with a customised scientist in any of their classes
+    var classIds = classes.map(function(c) { return c.id; });
+    var { data: students } = await sb.from('students').select('id').in('class_id', classIds).limit(20);
+    if (!students || !students.length) return;
+    var studentIds = students.map(function(s) { return s.id; });
+    var { data: chars } = await sb.from('student_character').select('scientist').in('student_id', studentIds).not('scientist', 'is', null);
+    if (!chars || !chars.length) return;
+    // Use the first one that has any customisation (not all defaults)
+    var sci = null;
+    for (var i = 0; i < chars.length; i++) {
+      var s = chars[i].scientist;
+      if (s && (s.coatColor !== '#ffffff' || s.head || s.face || s.coatPattern !== 'plain' || s.wings)) {
+        sci = s; break;
+      }
+    }
+    if (!sci) return;
+    container.innerHTML = WLScientist.buildSVG(sci, 'happy');
+  } catch(e) { /* silent — keep default */ }
 }
 
 function stopLoadingMessages() {
