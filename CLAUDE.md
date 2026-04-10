@@ -1393,6 +1393,71 @@ Full checklist document: `docs/nsw-doe-approval-checklist.md`
 
 ---
 
+### PHASE 7.22 — Session 2026-04-10
+
+#### Teaching slide decks cleanup
+- [x] Generated missing `arch-prefix` deck (was in script but never built)
+- [x] Removed 4 untagged duplicate decks (ful, re, tion, un — tagged versions already existed)
+- [x] Regenerated all 321 decks with updated generator
+- [x] Verified all 320 entries in teacher-resources.html have matching files (zero 404s)
+- [x] Updated deck counts from 324 to 321 across for-schools, about, faq, teacher-resources
+- [x] 1 orphan file (zip) on disk, deliberately excluded from UI
+
+#### Worksheet generators — word analysis
+- [x] Stepper max raised from 5 to 12, default from 3 to 6
+- [x] Cross-reference search: when morpheme has fewer examples than requested, scans all 349 morphemes' examples for matching words
+- [x] False-match filtering: longer known prefixes/suffixes block shorter ones (e.g. uni- prevents un- matching uniform)
+
+#### Morpheme data expansion
+- [x] All 349 morphemes in data.js expanded to minimum 6 examples each (was 1–3)
+- [x] All added words are real English words appropriate for ages 9–12, Australian spelling
+
+#### Worksheet generators — Root Lab
+- [x] Added "Base focus" option to morpheme focus selector (was prefix/suffix only)
+- [x] Added `buildMorphemeWords()` that auto-generates Root Lab entries from data.js using `<u>` markup parsing
+- [x] Morpheme meanings now resolve correctly via markup parsing (prefix/base/suffix boundaries accurate)
+- [x] Cloze sentences work for all words — challenge words get multiple choice, others get write-in line
+- [x] All 349 morphemes now usable in Root Lab worksheet generator
+
+#### Worksheet generators — spelling check-in sets
+- [x] All 6 worksheet generators with custom list support now also fetch `class_spelling_sets`
+- [x] Spelling sets appear in dropdown prefixed with "Check-In: "
+- [x] Plain-string words (no AI analysis) normalised to `{word: str}` objects
+- [x] `ss-` ID prefix prevents collisions with word list IDs
+
+#### Dashboard fixes
+- [x] Custom Word Lists button restored — `renderWordListsTab()` call was dropped in Phase 7.19 redesign
+- [x] "Don't have a class yet?" hint hidden during loading, only shown when teacher has zero classes
+- [x] Classes and plan banner fetched in parallel (was sequential)
+
+#### Teacher Resources auth gate
+- [x] `requireTeacherAuth()` added to teacher-resources.html — 321 decks and 9 generators now require login
+- [x] for-schools.html link routes through teacher-login with returnTo param
+- [x] about.html and faq.html links note "(sign-in required)"
+- [x] 3 sample decks (un-, play, -ful) + 3 worksheet links added to for-schools.html as free preview
+
+#### Dashboard loading screen — lab analysis room
+- [x] Full-screen immersive loading experience themed as a lab analysis room
+- [x] Dark navy background with animated grid lines and radial indigo/cyan glows
+- [x] Floating luminous particles in brand colours rising from below
+- [x] Lab equipment silhouettes (microscope, flask, DNA, clipboard) in background
+- [x] Scientist character rendered via WLScientist.buildSVG() with gentle bob animation and indigo glow halo
+- [x] Shimmer progress bar tracking load stages
+- [x] Cycling messages with fade transitions ("Calibrating the microscopes...", etc.)
+- [x] Animated flask liquids (indigo, cyan, amber) at bottom of card
+- [x] Glassmorphism card with backdrop blur
+- [x] Smooth fade-out transition into dashboard
+
+#### Teacher scientist character
+- [x] Added `scientist` jsonb column to teachers table (migration: `teacher_scientist.sql`)
+- [x] `getTeacherRecord()` now selects the scientist field
+- [x] Dashboard loading screen shows teacher's customised scientist (falls back to default goggles scientist)
+- [x] `_syncTeacherScientist()` mirrors scientist changes to teacher record when customising in View as Student mode
+- [x] UPDATE RLS policy added for teachers table (`auth.uid() = auth_user_id`)
+- [ ] Pending: verify sync works after RLS policy is applied in Supabase
+
+---
+
 ### PHASE 8 — Growth & Integrations (Later)
 
 - [ ] Google Classroom integration (roster import via Google API)
@@ -1491,3 +1556,8 @@ At the start of each working session, do this:
 | Hardcoded per-page hud tint colours (not new tokens) | When consolidating the chrome CSS in Phase 7.20, each game page wanted its hud text in an accent-tinted off-white (purple `#e9d5ff`, amber `#fde68a`, emerald `#d1fae5`, etc.) that isn't a simple alpha of the page's `--accent`. Introducing new `--hud-text` / `--hud-bg` tokens would either require defining them on every page (just moving the hardcoding one step deeper) or a shared stylesheet rewrite. Hardcoding the 2–3 tinted colours per page inside the page's own `<style>` block is simpler, co-located with the rest of the page, and the "unified" part of the design system is structural (selectors, sizes, spacing) not literal colour values. |
 | Phase A dark theme extends beyond the original scope | Original Phase A was teacher-signup + onboarding (commit 50b6512). On continuation, `class-setup.html` and `account.html` still had light-bg panels that made the teacher journey jump themes. Ported them in Phase 7.20 to close the loop — the whole teacher flow (landing → login → signup → onboarding → dashboard → class-setup → account) is now one continuous navy + indigo surface. |
 | Principal landing page (for-schools.html) | Direct-to-principal sales page with pack download + trial CTA. Marketing copy says "3-month trial" but backend still grants 12 months; see project_trial_period_change.md for the planned flip. |
+| Teacher Resources auth-gated | Slide decks and worksheet generators are core product value; locked behind `requireTeacherAuth()`. 3 sample decks on for-schools.html let principals evaluate quality without full access. |
+| All morpheme examples expanded to 6 | Worksheet generators need at least 6 words per morpheme. Cross-reference search supplements further but the base data now guarantees a minimum. |
+| Spelling check-in sets in worksheet generators | Teachers create spelling sets for check-ins; natural to reuse those words in worksheet generators alongside custom word lists. Prefixed "Check-In:" in dropdown to distinguish. |
+| Lab analysis room loading screen | 4.5s dashboard load time felt dead; immersive lab theme with scientist, particles, progress bar, and cycling messages makes the wait feel intentional. Smooth fade-out into dashboard. |
+| Teacher scientist on teachers table | Teachers aren't students — need their own scientist field. Syncs from View as Student customisation so teachers get a personalised loading screen without a separate customiser UI. |
