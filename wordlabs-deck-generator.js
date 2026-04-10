@@ -504,7 +504,13 @@ function addTrueFalseSlide(pres) {
     fontSize: 14, color: C.slate, fontFace: FONT_BODY, align: "left", valign: "middle",
   });
 
-  DATA.trueOrFalse.forEach((item, i) => {
+  // Shuffle T/F so answers aren't always in the same order
+  const shuffled = DATA.trueOrFalse.slice();
+  for (let j = shuffled.length - 1; j > 0; j--) {
+    const k = Math.floor(Math.random() * (j + 1));
+    [shuffled[j], shuffled[k]] = [shuffled[k], shuffled[j]];
+  }
+  shuffled.forEach((item, i) => {
     const y = 1.32 + i * 0.76;
     const isTrue = item.answer;
     slide.addShape("rect", {

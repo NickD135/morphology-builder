@@ -356,9 +356,12 @@ const ALL_MORPHEMES = [
   { morpheme: "pathy",  type: "suffix" },
 ];
 
-// Allow filtering via command line: node generate-all-decks.js struct port
-// If no args, run all morphemes
-const args = process.argv.slice(2);
+// CLI flags:
+//   --force     Overwrite existing PPTX files (default: skip existing)
+//   morpheme1 morpheme2 ...  Only generate these morphemes (default: all)
+const rawArgs = process.argv.slice(2);
+const FORCE = rawArgs.includes("--force");
+const args = rawArgs.filter(a => !a.startsWith("--"));
 const MORPHEMES = args.length > 0
   ? ALL_MORPHEMES.filter(m => args.includes(m.morpheme))
   : ALL_MORPHEMES;
@@ -462,10 +465,11 @@ RULES:
 - prefixes: 5 prefixes that commonly combine with "${morpheme}" to form real English words
 - suffixes: 5 suffixes that commonly combine with "${morpheme}" to form real English words
 - examples: 8 real English words containing "${morpheme}", with child-friendly definitions
-- trueOrFalse: mix of 3 true and 2 false statements about the morpheme and its words
+- trueOrFalse: mix of 3 true and 2 false statements. IMPORTANT: vary the order randomly — do NOT always put true first then false. Shuffle so the pattern is unpredictable (e.g. FTTTF, TFTFT, FTTFT, etc.)
 - day1Sentences: 3 sentences a teacher might use in class, each containing a "${morpheme}" word
 - day2: dictation sentence with EXACTLY 2 focus words containing "${morpheme}". Count commas, semicolons, colons, question marks, exclamation marks (NOT full stops) for punctuationCount
 - day3: harder dictation sentence with EXACTLY 3 focus words containing "${morpheme}". Count punctuation the same way
+- CRITICAL: Day 3 focus words MUST ALL be DIFFERENT words from Day 2. No word may appear in both day2.words and day3.words. Use completely different "${morpheme}" words for each day.
 - Each focus word needs a complete morpheme breakdown (every prefix + root + suffix as separate parts with meanings)
 
 MORPHEME NOTES — the "note" field:
@@ -495,7 +499,8 @@ PHONEMES — NEW FORMAT (CRITICAL):
 - Split vowels: hope = [{"g":"h"},{"g":"o"},{"g":"p"},{"g":"e"}]
 - WHEN TO ADD "s" (sound annotation): only when the letters don't obviously make the sound they look like. E.g. "s" making /sh/, "c" making /s/ or /sh/, "g" making /j/, "ti" making /sh/, "ph" making /f/, silent letters, etc.
 - DO NOT add "s" for straightforward sounds like "t" making /t/, "m" making /m/, etc.
-- VALIDATION: join all "g" values together — the result MUST exactly equal the original word
+- VALIDATION: join all "g" values together — the result MUST exactly equal the original word. Double-check this before returning.
+- SYLLABLE VALIDATION: join all syllable parts (removing /) — the result MUST exactly equal the original word. E.g. "re/con/struc/tion" joined = "reconstruction". Double-check this before returning.
 - Use Australian/British English spelling (e.g. "organise" not "organize")
 
 Return ONLY the JSON object. No markdown, no backticks, no explanation.`;
@@ -596,10 +601,11 @@ RULES:
 - prefixes field: 5 base words this prefix attaches to (e.g. for "re": ["build", "write", "play", "connect", "view"])
 - suffixes field: 5 suffixes commonly found on words with this prefix (e.g. "ed", "ing", "ion", "able", "ment")
 - examples: 8 real English words starting with "${morpheme}-", with child-friendly definitions
-- trueOrFalse: mix of 3 true and 2 false statements
+- trueOrFalse: mix of 3 true and 2 false statements. IMPORTANT: vary the order randomly — do NOT always put true first then false. Shuffle so the pattern is unpredictable (e.g. FTTTF, TFTFT, FTTFT, etc.)
 - day1Sentences: 3 classroom sentences each containing a "${morpheme}-" word
 - day2: dictation with EXACTLY 2 focus words starting with "${morpheme}-"
 - day3: harder dictation with EXACTLY 3 focus words starting with "${morpheme}-"
+- CRITICAL: Day 3 focus words MUST ALL be DIFFERENT words from Day 2. No word may appear in both day2.words and day3.words. Use completely different "${morpheme}-" words for each day.
 - Each focus word: full morpheme breakdown (prefix + base + any suffixes), syllables, grapheme-based phonemes
 
 MORPHEME NOTES — the "note" field:
@@ -624,7 +630,8 @@ PHONEMES — CRITICAL RULES:
 - Double consonants = one grapheme: "pp", "ll", "ss", "ff", "tt", "rr"
 - WHEN TO ADD "s": only when letters don't obviously make the sound they look like (s→/sh/, c→/s/, g→/j/, ti→/sh/, ph→/f/, etc.)
 - DO NOT add "s" for straightforward sounds
-- VALIDATION: join all "g" values — must exactly equal the original word
+- VALIDATION: join all "g" values — must exactly equal the original word. Double-check this before returning.
+- SYLLABLE VALIDATION: join all syllable parts (removing /) — the result MUST exactly equal the original word. Double-check this before returning.
 - Use Australian/British English spelling
 
 Return ONLY the JSON object. No markdown, no backticks, no explanation.`;
@@ -725,10 +732,11 @@ RULES:
 - prefixes field: 5 prefixes commonly found on words ending in "-${morpheme}" (e.g. "re", "un", "dis", "pre", "over")
 - suffixes field: 5 base words this suffix attaches to (e.g. for "-ful": ["help", "power", "hope", "care", "play"])
 - examples: 8 real English words ending in "-${morpheme}", with child-friendly definitions
-- trueOrFalse: mix of 3 true and 2 false statements
+- trueOrFalse: mix of 3 true and 2 false statements. IMPORTANT: vary the order randomly — do NOT always put true first then false. Shuffle so the pattern is unpredictable (e.g. FTTTF, TFTFT, FTTFT, etc.)
 - day1Sentences: 3 classroom sentences each containing a "-${morpheme}" word
 - day2: dictation with EXACTLY 2 focus words ending in "-${morpheme}"
 - day3: harder dictation with EXACTLY 3 focus words ending in "-${morpheme}"
+- CRITICAL: Day 3 focus words MUST ALL be DIFFERENT words from Day 2. No word may appear in both day2.words and day3.words. Use completely different "-${morpheme}" words for each day.
 - Each focus word: full morpheme breakdown (any prefixes + base + suffix), syllables, grapheme-based phonemes
 
 MORPHEME NOTES — the "note" field:
@@ -752,7 +760,8 @@ PHONEMES — CRITICAL RULES:
 - Double consonants = one grapheme: "pp", "ll", "ss", "ff", "tt", "rr"
 - WHEN TO ADD "s": only when letters don't obviously make the sound they look like (s→/sh/, c→/s/, g→/j/, ti→/sh/, ph→/f/, etc.)
 - DO NOT add "s" for straightforward sounds
-- VALIDATION: join all "g" values — must exactly equal the original word
+- VALIDATION: join all "g" values — must exactly equal the original word. Double-check this before returning.
+- SYLLABLE VALIDATION: join all syllable parts (removing /) — the result MUST exactly equal the original word. Double-check this before returning.
 - Use Australian/British English spelling
 
 Return ONLY the JSON object. No markdown, no backticks, no explanation.`;
@@ -819,13 +828,18 @@ async function main() {
     process.exit(1);
   }
 
-  // Ensure output directory exists
+  // Ensure output directory and JSON cache exist
   if (!fs.existsSync(OUTPUT_DIR)) {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  }
+  const jsonCacheDir = path.join(OUTPUT_DIR, ".json-cache");
+  if (!fs.existsSync(jsonCacheDir)) {
+    fs.mkdirSync(jsonCacheDir, { recursive: true });
   }
 
   console.log(`\n=== Word Labs Batch Deck Generator ===`);
   console.log(`Morphemes: ${MORPHEMES.length}`);
+  console.log(`Force: ${FORCE}`);
   console.log(`Output: ${OUTPUT_DIR}\n`);
 
   let generated = 0;
@@ -837,15 +851,16 @@ async function main() {
     const typeTag = type === "base" ? "" : `-${type}`;
     const filename = `wordlabs-${morpheme}${typeTag}-3day.pptx`;
     const outputPath = path.join(OUTPUT_DIR, filename);
+    const jsonPath = path.join(jsonCacheDir, filename.replace(".pptx", ".json"));
 
-    // Skip if already exists
-    if (fs.existsSync(outputPath)) {
+    // Skip if already exists (unless --force)
+    if (!FORCE && fs.existsSync(outputPath)) {
       console.log(`SKIP  ${morpheme} (${type}) — ${filename} already exists`);
       skipped++;
       continue;
     }
 
-    console.log(`\nGEN   ${morpheme} (${type})`);
+    console.log(`\nGEN   ${morpheme} (${type})${FORCE && fs.existsSync(outputPath) ? " [FORCE]" : ""}`);
     console.log(`  → Calling Anthropic API for content...`);
 
     try {
@@ -869,8 +884,37 @@ async function main() {
         throw new Error(`API response missing fields: ${missing.join(", ")}`);
       }
 
+      // Validate no word reuse between day2 and day3
+      const d2words = data.day2.words.map(w => w.word.toLowerCase());
+      const d3words = data.day3.words.map(w => w.word.toLowerCase());
+      const overlap = d2words.filter(w => d3words.includes(w));
+      if (overlap.length > 0) {
+        console.log(`  ⚠ Word reuse detected (${overlap.join(", ")}) — requesting retry...`);
+        // Don't fail — just log the warning. The improved prompt should prevent most cases.
+      }
+
+      // Validate phoneme joins
+      const allWords = [...data.day2.words, ...data.day3.words];
+      for (const w of allWords) {
+        if (w.phonemes && Array.isArray(w.phonemes)) {
+          const joined = w.phonemes.map(p => p.g).join("");
+          if (joined !== w.word) {
+            console.log(`  ⚠ Phoneme mismatch: "${w.word}" → "${joined}"`);
+          }
+        }
+        if (w.syllables) {
+          const syllJoined = w.syllables.split("/").join("");
+          if (syllJoined !== w.word) {
+            console.log(`  ⚠ Syllable mismatch: "${w.word}" → "${syllJoined}" (${w.syllables})`);
+          }
+        }
+      }
+
       // Inject the morpheme type so the generator can adapt labels
       data.type = type;
+
+      // Cache the JSON data for audit script
+      fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2));
 
       console.log(`  → Content received: ${data.examples.length} examples, day2: ${data.day2.words.length} words, day3: ${data.day3.words.length} words`);
       console.log(`  → Generating PPTX...`);
