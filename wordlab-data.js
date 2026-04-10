@@ -756,6 +756,34 @@ const WordLabData = (() => {
     return sessionStorage.getItem('wl_stage') || null;
   }
 
+  // Filter an array of items by the student's stage for a given activity.
+  // Items must have a `stage` field (or null/undefined = untagged).
+  // Returns a new array with items the student should see.
+  // Untagged items (stage null/undefined) always pass. Students with no stage
+  // set see everything (no filter applied).
+  function filterByStage(items, activity){
+    if (!items || !items.length) return items;
+    var stage = getStudentStage(activity);
+    if (!stage) return items.slice(); // no stage set = show everything
+    var ext = isExtensionMode(activity);
+    return items.filter(function(it){
+      return WLStage.isItemVisible(it.stage, stage, ext);
+    });
+  }
+
+  // Apply 80/20 head-weighting on top of stage filtering.
+  // Items are filtered by stage first, then passed through WLStage.weightPool
+  // so the first ~N items of the returned array are 80% current-stage and
+  // 20% revision from below. Games should consume items from the front of
+  // the returned array and NOT re-shuffle (that would discard the weighting).
+  function weightByStage(items, activity){
+    var filtered = filterByStage(items, activity);
+    var stage = getStudentStage(activity);
+    if (!stage) return filtered;
+    var ext = isExtensionMode(activity);
+    return WLStage.weightPool(filtered, stage, ext);
+  }
+
   // ── Record attempt ────────────────────────────────────────────
   async function recordAttempt(activity, category, correct, timeMs, streak) {
     streak = streak || 0;
@@ -2730,7 +2758,7 @@ const WordLabData = (() => {
     getClassTeacherIds, isStudentTeacher, setStudentTeacher, saveClassSettings,
     createTeacherStudent, getTeacherStudent, enterStudentMode, exitStudentMode, isTeacherPreview,
     isExtensionMode, loadExtensionData,
-    getStudentStage,
+    getStudentStage, filterByStage, weightByStage,
     isLowStimMode, loadLowStimMode,
     isSupportMode, setSupportMode, loadSupportMode,
     checkDailyLimit, incrementDailyUsage,
