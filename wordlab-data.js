@@ -952,11 +952,11 @@ const WordLabData = (() => {
   // mirror the changes to the teachers.scientist column so the dashboard
   // loading screen shows their personalised character.
   async function _syncTeacherScientist(session, updates) {
-    if (!isTeacherPreview()) return;
+    // Sync to teacher record if this is a teacher in student preview mode
+    // OR if there's an authenticated teacher session (covers edge cases)
     try {
       var { data: { session: authSess } } = await sb().auth.getSession();
       if (!authSess) return;
-      // Read current teacher scientist, merge updates, write back
       var { data: teacher } = await sb().from('teachers')
         .select('id, scientist')
         .eq('auth_user_id', authSess.user.id)
@@ -964,7 +964,8 @@ const WordLabData = (() => {
       if (!teacher) return;
       var sci = teacher.scientist || {};
       Object.keys(updates).forEach(function(k) { sci[k] = updates[k]; });
-      await sb().from('teachers').update({ scientist: sci }).eq('id', teacher.id);
+      var { error } = await sb().from('teachers').update({ scientist: sci }).eq('id', teacher.id);
+      if (error) console.warn('Teacher scientist update error:', error);
       if (_teacherRecord) _teacherRecord.scientist = sci;
     } catch(e) { console.warn('Teacher scientist sync failed:', e); }
   }
