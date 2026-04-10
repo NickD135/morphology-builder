@@ -88,7 +88,14 @@
     }
   }
 
-  // 80/20 weighted shuffle: ~4 current stage items for every 1 below-stage
+  // Head-weighted shuffle: the first ~N items of the returned array follow a
+  // 4:1 ratio of current-stage to below-stage items (80/20), with untagged
+  // items blended into the current-stage slots. Once current-stage items are
+  // exhausted, the remainder of the output is filled with untagged and below-
+  // stage items in fallback order. Games typically consume only the first N
+  // items per round, so the head region is what matters for the 80/20 target.
+  //
+  // Do NOT re-shuffle the returned array — that discards the weighting.
   function weightPool(items, studentStage, extEnabled){
     if (!studentStage) return items.slice();
     var current = [];
@@ -125,6 +132,13 @@
   // progressRows: rows from student_progress
   // taggedCategories: { activity: Set<category> } of categories at student's stage
   // Returns: { overall: 0-1, perGame: { [activity]: 0-1 or null } }
+  //
+  // DESIGN NOTE: A game with no attempts returns `null` in perGame but counts
+  // as 0 in the overall average. This is intentional — it penalises students
+  // who ignore some of the 6 core games, and drives the "Try this one!" nudge
+  // on the landing page mastery panel. A student who plays only 3 of 6 games
+  // at 100% accuracy has overall = 0.5, same as a student who plays all 6 at
+  // 50%. Do NOT "fix" this by excluding null games from the denominator.
   function calcMastery(progressRows, studentStage, taggedCategories){
     var perGame = {};
     CORE_GAMES.forEach(function(g){ perGame[g] = null; });
@@ -170,6 +184,12 @@
     if (!stage) return '';
     return STAGE_NAMES[stage] + ' ' + subLevel(mastery);
   }
+
+  Object.freeze(STAGE_ORDER);
+  Object.freeze(STAGE_NAMES);
+  Object.freeze(STAGE_LABELS);
+  Object.freeze(STAGE_SHORT);
+  Object.freeze(CORE_GAMES);
 
   global.WLStage = {
     STAGE_ORDER: STAGE_ORDER,
