@@ -195,6 +195,7 @@
         <div class="radioGroup">
           <label><input type="radio" name="morphfocus" value="none" checked onchange="toggleMorphFocus()"> All words (randomised)</label>
           <label><input type="radio" name="morphfocus" value="prefix" onchange="toggleMorphFocus()"> Prefix focus <span class="hint">e.g. un-, re-</span></label>
+          <label><input type="radio" name="morphfocus" value="base" onchange="toggleMorphFocus()"> Base focus <span class="hint">e.g. act, help</span></label>
           <label><input type="radio" name="morphfocus" value="suffix" onchange="toggleMorphFocus()"> Suffix focus <span class="hint">e.g. -ful, -ness</span></label>
         </div>
         <div id="morphPickerWrap" style="display:none;margin-top:8px;">
@@ -778,11 +779,128 @@ function toggleMorphFocus() {
 
 function populateMorphSelect(type) {
   var sel = document.getElementById('morphSelect');
-  var items = type === 'prefix' ? (window.PREFIXES || []) : (window.SUFFIXES || []);
-  sel.innerHTML = items.map(function(m) {
-    return '<option value="' + m.form + '">' + (m.display || m.form) + ' — ' + m.meaning + '</option>';
-  }).join('');
+  sel.textContent = '';
+  var M = window.MORPHEMES || {};
+  var items;
+  if (type === 'prefix') items = M.prefixes || [];
+  else if (type === 'suffix') items = M.suffixes || [];
+  else items = M.bases || [];
+  items.forEach(function(m) {
+    var opt = document.createElement('option');
+    opt.value = m.form;
+    opt.textContent = (m.display || m.form) + ' \u2014 ' + m.meaning;
+    sel.appendChild(opt);
+  });
   updateMorphMatchCount();
+}
+
+// Build Root Lab entries from data.js for a given morpheme focus
+function buildMorphemeWords(morphType, morphForm) {
+  var M = window.MORPHEMES || {};
+  var allPrefixes = M.prefixes || [];
+  var allSuffixes = M.suffixes || [];
+  var allBases = M.bases || [];
+  var form = morphForm.toLowerCase();
+  var words = [];
+  var seen = {};
+
+  // Find the selected morpheme's meaning
+  var allMorphs = morphType === 'prefix' ? allPrefixes : morphType === 'suffix' ? allSuffixes : allBases;
+  var morph = allMorphs.find(function(m) { return m.form.toLowerCase() === form; });
+  var morphMeaning = morph ? morph.meaning : '';
+
+  // Scan all examples across all morphemes
+  var allItems = [].concat(allPrefixes, allSuffixes, allBases);
+  allItems.forEach(function(item) {
+    (item.examples || []).forEach(function(ex) {
+      var word = ex.replace(/<\/?[^>]+>/g, '').replace(/\s/g, '');
+      var wLow = word.toLowerCase();
+      if (seen[wLow]) return;
+
+      var prefix = null, base = null, suffix = null;
+      var prefixMeaning = null, baseMeaning = null, suffixMeaning = null;
+
+      if (morphType === 'prefix' && wLow.startsWith(form) && wLow.length > form.length) {
+        prefix = morphForm;
+        prefixMeaning = morphMeaning;
+        var rest = word.slice(form.length);
+        // Try to identify the base from known bases
+        var foundBase = allBases.find(function(b) { return rest.toLowerCase().startsWith(b.form.toLowerCase()) && rest.length >= b.form.length; });
+        if (foundBase) {
+          base = rest.slice(0, foundBase.form.length);
+          baseMeaning = foundBase.meaning;
+          var remainder = rest.slice(foundBase.form.length);
+          if (remainder) {
+            var foundSuffix = allSuffixes.find(function(s) { return remainder.toLowerCase() === s.form.toLowerCase(); });
+            suffix = remainder;
+            suffixMeaning = foundSuffix ? foundSuffix.meaning : '';
+          }
+        } else {
+          base = rest;
+          baseMeaning = '';
+        }
+      } else if (morphType === 'suffix' && wLow.endsWith(form) && wLow.length > form.length) {
+        suffix = morphForm;
+        suffixMeaning = morphMeaning;
+        var front = word.slice(0, -form.length);
+        // Try to identify prefix + base
+        var foundPrefix = allPrefixes.find(function(p) { return front.toLowerCase().startsWith(p.form.toLowerCase()) && front.length > p.form.length; });
+        if (foundPrefix) {
+          prefix = front.slice(0, foundPrefix.form.length);
+          prefixMeaning = foundPrefix.meaning;
+          base = front.slice(foundPrefix.form.length);
+          var fb = allBases.find(function(b) { return base.toLowerCase() === b.form.toLowerCase(); });
+          baseMeaning = fb ? fb.meaning : '';
+        } else {
+          base = front;
+          var fb2 = allBases.find(function(b) { return front.toLowerCase().startsWith(b.form.toLowerCase()); });
+          if (fb2) {
+            base = front.slice(0, fb2.form.length);
+            baseMeaning = fb2.meaning;
+          } else {
+            baseMeaning = '';
+          }
+        }
+      } else if (morphType === 'base' && wLow.includes(form)) {
+        var idx = wLow.indexOf(form);
+        var before = word.slice(0, idx);
+        base = word.slice(idx, idx + form.length);
+        baseMeaning = morphMeaning;
+        var after = word.slice(idx + form.length);
+        if (before) {
+          var fp = allPrefixes.find(function(p) { return before.toLowerCase() === p.form.toLowerCase(); });
+          prefix = before;
+          prefixMeaning = fp ? fp.meaning : '';
+        }
+        if (after) {
+          var fs = allSuffixes.find(function(s) { return after.toLowerCase() === s.form.toLowerCase(); });
+          suffix = after;
+          suffixMeaning = fs ? fs.meaning : '';
+        }
+        // Skip if word is just the base with no affixes
+        if (!prefix && !suffix) return;
+      } else {
+        return;
+      }
+
+      seen[wLow] = true;
+      // Build full meaning from parts
+      var meaningParts = [];
+      if (prefixMeaning) meaningParts.push(prefixMeaning);
+      if (baseMeaning) meaningParts.push(baseMeaning);
+      if (suffixMeaning) meaningParts.push(suffixMeaning);
+
+      words.push({
+        word: word,
+        parts: { prefix: prefix, base: base, suffix: suffix },
+        meanings: { prefix: prefix ? (prefixMeaning || '') : null, base: baseMeaning || '', suffix: suffix ? (suffixMeaning || '') : null },
+        fullMeaning: meaningParts.join(' + ') || word,
+        distractors: [],
+        level: 'starter'
+      });
+    });
+  });
+  return words;
 }
 
 function updateMorphMatchCount() {
@@ -790,12 +908,17 @@ function updateMorphMatchCount() {
   var focusVal = document.querySelector('input[name=morphfocus]:checked').value;
   if (focusVal === 'none') { el.textContent = ''; return; }
   var morphForm = document.getElementById('morphSelect').value.toLowerCase();
-  var count = WORDS.filter(function(w) {
+  // Count from built-in pool
+  var builtIn = WORDS.filter(function(w) {
     if (focusVal === 'prefix') return w.parts.prefix && w.parts.prefix.toLowerCase() === morphForm;
-    return w.parts.suffix && w.parts.suffix.toLowerCase() === morphForm;
+    if (focusVal === 'suffix') return w.parts.suffix && w.parts.suffix.toLowerCase() === morphForm;
+    return w.parts.base && w.parts.base.toLowerCase() === morphForm;
   }).length;
-  el.textContent = count + ' matching word' + (count !== 1 ? 's' : '') + ' in built-in pool';
-  el.style.color = count > 0 ? '#16a34a' : '#dc2626';
+  // Count from data.js cross-reference
+  var generated = buildMorphemeWords(focusVal, morphForm).length;
+  var total = builtIn + generated;
+  el.textContent = total + ' word' + (total !== 1 ? 's' : '') + ' available';
+  el.style.color = total > 0 ? '#16a34a' : '#dc2626';
 }
 
 async function generateWorksheet() {
@@ -819,10 +942,18 @@ async function generateWorksheet() {
   var morphFocus = document.querySelector('input[name=morphfocus]:checked').value;
   if (morphFocus !== 'none' && src !== 'custom') {
     var morphForm = document.getElementById('morphSelect').value.toLowerCase();
-    pool = pool.filter(function(w) {
+    // Filter built-in words
+    var filtered = pool.filter(function(w) {
       if (morphFocus === 'prefix') return w.parts.prefix && w.parts.prefix.toLowerCase() === morphForm;
-      return w.parts.suffix && w.parts.suffix.toLowerCase() === morphForm;
+      if (morphFocus === 'suffix') return w.parts.suffix && w.parts.suffix.toLowerCase() === morphForm;
+      return w.parts.base && w.parts.base.toLowerCase() === morphForm;
     });
+    // Supplement with auto-generated words from data.js
+    var generated = buildMorphemeWords(morphFocus, morphForm);
+    var seen = {};
+    filtered.forEach(function(w) { seen[w.word.toLowerCase()] = true; });
+    generated.forEach(function(w) { if (!seen[w.word.toLowerCase()]) { filtered.push(w); seen[w.word.toLowerCase()] = true; } });
+    pool = filtered;
     if (!pool.length) { alert('No words match the selected ' + morphFocus + '. Try a different morpheme or use "All words".'); return; }
   }
 
