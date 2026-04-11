@@ -64,16 +64,15 @@ const header = parseLine(lines[0]);
 const typeIdx = header.indexOf('type');
 const idIdx = header.indexOf('id');
 const stageIdx = header.indexOf('stage');
-const groupIdx = header.indexOf('group'); // optional
+const groupIdx = header.indexOf('group');     // optional
+const displayIdx = header.indexOf('display'); // optional — used for BASE_INFO dict fallback
+const formIdx = header.indexOf('form');       // optional — alternative key
 if (typeIdx < 0 || idIdx < 0 || stageIdx < 0) {
-  console.error('CSV must have columns: type, id, stage (group is optional)');
+  console.error('CSV must have columns: type, id, stage (group, display, form optional)');
   process.exit(1);
 }
 
-// Collect target updates: { id -> { stage: 'sXY'|null, group: '' } }
-// Since data.js entries have unique ids within each type array, keying by
-// id is usually sufficient. The group field is advisory and is used when
-// a base id collides across the 4 base arrays.
+// Collect target updates
 const updates = [];
 let skipped = 0;
 for (let i = 1; i < lines.length; i++) {
@@ -81,40 +80,96 @@ for (let i = 1; i < lines.length; i++) {
   const type = (parts[typeIdx] || '').trim();
   const id = (parts[idIdx] || '').trim();
   const group = groupIdx >= 0 ? (parts[groupIdx] || '').trim() : '';
+  const display = displayIdx >= 0 ? (parts[displayIdx] || '').trim() : '';
+  const form = formIdx >= 0 ? (parts[formIdx] || '').trim() : '';
   const stageRaw = (parts[stageIdx] || '').trim();
   if (!id) { skipped++; continue; }
   if (stageRaw && !VALID_STAGES.has(stageRaw)) { skipped++; continue; }
-  updates.push({ type, id, group, stage: stageRaw || null });
+  // Word key for BASE_INFO dict lookup: prefer explicit form, then display
+  // (stripping hyphens/dashes), then fall back to id.
+  const word = form || display.replace(/[-\s]/g, '') || id;
+  updates.push({ type, id, group, stage: stageRaw || null, word });
 }
 
 let js = fs.readFileSync(jsPath, 'utf8');
 let changed = 0;
 let notFound = 0;
+let matchedViaDict = 0;
+
+// Map groups to the dict names used in data.js
+const BASE_INFO_DICTS = {
+  anglo: 'ANGLO_BASE_INFO',
+  latin: 'LATIN_BASE_INFO',
+  greek: 'GREEK_BASE_INFO',
+};
 
 for (const u of updates) {
   const newVal = u.stage === null ? 'null' : '"' + u.stage + '"';
+
+  // Pass 1: literal id lookup (prefixes, suffixes, CORE_BASES)
   const escapedId = u.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  // Match { id:"<id>", stage:(null|"sXY") — both single- and double-quoted ids, flexible whitespace.
-  const re = new RegExp(
+  const literalRe = new RegExp(
     '(\\{\\s*id\\s*:\\s*["\']' + escapedId + '["\']\\s*,\\s*stage\\s*:\\s*)(null|"[^"]*"|\'[^\']*\')',
     'g'
   );
   let hit = false;
-  js = js.replace(re, (match, pre, oldVal) => {
+  let wasUnchanged = true;
+  js = js.replace(literalRe, (match, pre, oldVal) => {
     hit = true;
     if (oldVal === newVal) return match;
+    wasUnchanged = false;
     changed++;
     return pre + newVal;
   });
-  if (!hit) notFound++;
+  if (hit) continue;
+
+  // Pass 2: BASE_INFO dict lookup for anglo/latin/greek bases
+  // Pattern: `<word>:{ stage:... , ...}` — key is bare identifier, not quoted.
+  // We scope the search to the correct dict to avoid cross-dict collisions.
+  if (u.type === 'base' && BASE_INFO_DICTS[u.group]) {
+    const dictName = BASE_INFO_DICTS[u.group];
+    const dictStart = js.indexOf('const ' + dictName + ' = {');
+    if (dictStart !== -1) {
+      // Find the matching closing brace for this dict (first `};` after start)
+      const dictEnd = js.indexOf('};', dictStart);
+      if (dictEnd !== -1) {
+        const before = js.slice(0, dictStart);
+        const dictBody = js.slice(dictStart, dictEnd);
+        const after = js.slice(dictEnd);
+
+        const escapedWord = u.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Match `<word>:{ stage:(null|"...") `  — flexible whitespace, bare identifier key
+        const dictRe = new RegExp(
+          '(\\b' + escapedWord + '\\s*:\\s*\\{\\s*stage\\s*:\\s*)(null|"[^"]*"|\'[^\']*\')',
+          'g'
+        );
+        let dictHit = false;
+        const newBody = dictBody.replace(dictRe, (match, pre, oldVal) => {
+          dictHit = true;
+          if (oldVal === newVal) return match;
+          changed++;
+          matchedViaDict++;
+          return pre + newVal;
+        });
+        if (dictHit) {
+          js = before + newBody + after;
+          continue;
+        }
+      }
+    }
+  }
+
+  notFound++;
 }
 
 fs.writeFileSync(jsPath, js);
 
+const unchanged = updates.length - changed - notFound;
+
 console.log('Persisted stage tags to ' + path.relative(process.cwd(), jsPath));
 console.log('  CSV rows:    ' + updates.length);
-console.log('  Updated:     ' + changed);
-console.log('  Unchanged:   ' + (updates.length - changed - notFound));
+console.log('  Updated:     ' + changed + (matchedViaDict > 0 ? ' (' + matchedViaDict + ' via BASE_INFO dict)' : ''));
+console.log('  Unchanged:   ' + unchanged);
 console.log('  Not found:   ' + notFound);
 if (skipped > 0) console.log('  Skipped:     ' + skipped + ' (invalid stage / missing id)');
 console.log('\nNext: git diff ' + path.relative(process.cwd(), jsPath) + ' && git commit');
