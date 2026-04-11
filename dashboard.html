@@ -847,6 +847,19 @@
     .ssStudentPill{ border:1px solid var(--line); background:var(--navy-3); color:var(--text-secondary); border-radius:20px; padding:3px 10px; font-size:11px; font-weight:700; cursor:pointer; font-family:'Lexend',sans-serif; transition:all .15s; }
     .ssStudentPill:hover{ border-color:rgba(99,102,241,.4); color:var(--text-primary); }
     .ssStudentPill.active{ background:var(--indigo-soft); color:var(--indigo-2); border-color:var(--indigo); }
+    /* Stage-group match: looks active but via a dashed outline so teachers
+       can tell it's an auto-assignment (clearing the group removes it,
+       unlike explicit clicks which promote to individual assignments). */
+    .ssStudentPill.stage-matched{
+      background:rgba(99,102,241,.18);
+      color:var(--indigo-2);
+      border:1px dashed var(--indigo);
+    }
+    .ssStudentPill.stage-matched::after{
+      content:' \1F393';
+      font-size:10px;
+      margin-left:2px;
+    }
 
     /* ── Reward modal ── */
     .rewardModal{ position:fixed; inset:0; z-index:60; background:rgba(15,23,42,.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:20px; overflow-y:auto; }
@@ -4904,12 +4917,15 @@ function buildSpellingSetHeatmap(set) {
     '</section>';
 
   // ── Card 4: Assigned students ────────────────────────────────────
+  var currentGroup = set.stage_group || '';
   var studentPills = currentClass.students.map(function(s) {
     var checked = activeStudentIds.indexOf(s.id) !== -1;
-    return '<button type="button" class="ssStudentPill' + (checked ? ' active' : '') + '" data-sid="' + s.id + '" onclick="ssToggleStudent(this)">' +
+    var stageMatched = !!(currentGroup && s.stage === currentGroup);
+    var cls = 'ssStudentPill' + (checked ? ' active' : '') + (stageMatched && !checked ? ' stage-matched' : '');
+    var title = stageMatched && !checked ? 'Auto-assigned via stage group' : '';
+    return '<button type="button" class="' + cls + '" data-sid="' + s.id + '"' + (title ? ' title="' + title + '"' : '') + ' onclick="ssToggleStudent(this)">' +
       WordLabData.escapeHtml(s.name) + '</button>';
   }).join('');
-  var currentGroup = set.stage_group || '';
   var groupOptsSS = [
     ['', 'None'],
     ['s2e', 'All Explorers'],
