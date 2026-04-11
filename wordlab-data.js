@@ -2117,7 +2117,7 @@ const WordLabData = (() => {
       // Cache all lists for this class on first call
       if (!_customWordsCache) {
         var { data: lists } = await sbCall(() => sb().from('class_word_lists')
-          .select('id, words, games, priority')
+          .select('id, words, games, priority, stage_group')
           .eq('class_id', session.classId));
         if (!lists || lists.length === 0) { _customWordsCache = []; _customWordsPriorityCache = {}; return []; }
 
@@ -2137,10 +2137,23 @@ const WordLabData = (() => {
         _customWordsCache = [];
         _customWordsPriorityCache = {};
         var priorityRank = { custom_only: 3, custom_first: 2, mixed: 1 };
+        var studentStage = getStudentStage();
         lists.forEach(function(list) {
           var assigned = assignMap[list.id];
-          // If list has specific assignments and this student isn't in them, skip
-          if (assigned && assigned.length > 0 && assigned.indexOf(session.studentId) === -1) return;
+          var hasIndividual = assigned && assigned.length > 0;
+          var individualMatch = hasIndividual && assigned.indexOf(session.studentId) !== -1;
+          // Stage-group match: list is auto-assigned to every student at this stage
+          var stageMatch = list.stage_group && studentStage && list.stage_group === studentStage;
+          if (hasIndividual) {
+            // If this list has explicit student assignments, individual match OR
+            // stage-group match is required (stage group is additive, not
+            // restrictive, so it can widen but never narrow individual picks).
+            if (!individualMatch && !stageMatch) return;
+          } else if (list.stage_group) {
+            // No explicit assignments, but stage-group set: student must match
+            if (!stageMatch) return;
+          }
+          // Otherwise (no assignments, no stage_group): list applies to everyone
           var games = list.games || ['breakdown'];
           var listPriority = list.priority || 'mixed';
           // Track highest priority per game
@@ -2244,7 +2257,7 @@ const WordLabData = (() => {
     try {
       // Get all spelling sets for this class
       var { data: sets } = await sb().from('class_spelling_sets')
-        .select('id, words')
+        .select('id, words, stage_group')
         .eq('class_id', session.classId);
       if (!sets || !sets.length) { _spellingSetWordsCache = []; return []; }
 
@@ -2256,8 +2269,24 @@ const WordLabData = (() => {
         .eq('active', true)
         .in('spelling_set_id', setIds);
 
-      if (!assigns || !assigns.length) { _spellingSetWordsCache = []; return []; }
-      var assignedSetIds = assigns.map(function(a) { return a.spelling_set_id; });
+      var individualSetIds = (assigns || []).map(function(a) { return a.spelling_set_id; });
+
+      // Stage-group matches: any set whose stage_group === student's stage
+      var studentStage = getStudentStage();
+      var stageGroupSetIds = [];
+      if (studentStage) {
+        sets.forEach(function(s) {
+          if (s.stage_group && s.stage_group === studentStage) stageGroupSetIds.push(s.id);
+        });
+      }
+
+      // Merge individual + stage-group assignments, dedup
+      var assignedMap = {};
+      individualSetIds.forEach(function(id) { assignedMap[id] = true; });
+      stageGroupSetIds.forEach(function(id) { assignedMap[id] = true; });
+      var assignedSetIds = Object.keys(assignedMap);
+
+      if (!assignedSetIds.length) { _spellingSetWordsCache = []; return []; }
 
       // Collect words from assigned sets
       var words = [];

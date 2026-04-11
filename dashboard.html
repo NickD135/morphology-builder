@@ -727,6 +727,20 @@
       cursor:pointer; font-family:Lexend,sans-serif;
     }
     .wl-stage-bulk-btn:hover{ filter:brightness(1.1); }
+    .wlGroupBtn, .wlGroupBtnSS{
+      padding:5px 12px;
+      border:1px solid rgba(148,163,184,.4); background:#fff;
+      color:#475569;
+      border-radius:999px; cursor:pointer; font-size:11px; font-weight:700;
+      font-family:Lexend,sans-serif;
+    }
+    .wlGroupBtn:hover, .wlGroupBtnSS:hover{
+      background:rgba(99,102,241,.08); border-color:var(--indigo,#6366f1); color:var(--indigo,#6366f1);
+    }
+    .wlGroupBtn-active{
+      background:var(--indigo,#6366f1) !important; color:#fff !important;
+      border-color:var(--indigo,#6366f1) !important;
+    }
     .gd-flagCard{ background:rgba(248,113,113,.05); border:1px solid rgba(248,113,113,.3); border-radius:14px; padding:14px 16px; transition:all .15s ease; cursor:pointer; }
     .gd-flagCard:hover{ background:rgba(248,113,113,.1); border-color:var(--bad); }
     .gd-flagCard-name{ font-size:14px; font-weight:900; color:var(--text-bright); display:flex; align-items:center; gap:8px; margin-bottom:8px; }
@@ -3626,7 +3640,7 @@ async function dashLoadWordLists(){
 
   try {
     const { data, error } = await dbSb().from('class_word_lists')
-      .select('id, name, words, games, priority, created_at')
+      .select('id, name, words, games, priority, created_at, stage_group')
       .eq('class_id', currentClass.id)
       .order('created_at', { ascending: false });
     if(error) throw error;
@@ -3658,6 +3672,10 @@ async function dashLoadWordLists(){
       const games = list.games || ['breakdown'];
       const listPriority = list.priority || 'mixed';
       const assigns = assignMap[list.id] || [];
+      const stageGroup = list.stage_group || null;
+      const stageGroupLabel = stageGroup && typeof WLStage !== 'undefined'
+        ? ' · \u{1F393} All ' + WLStage.STAGE_NAMES[stageGroup] + 's'
+        : '';
       const assignLabel = assigns.length === 0 ? 'All students' :
         assigns.length + ' student' + (assigns.length !== 1 ? 's' : '');
 
@@ -3673,7 +3691,7 @@ async function dashLoadWordLists(){
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
           <div>
             <div style="font-size:15px;font-weight:900;color:var(--text-primary);">${WordLabData.escapeHtml(list.name)}</div>
-            <div style="font-size:12px;color:var(--muted);font-weight:700;">${words.length} word${words.length !== 1 ? 's' : ''} &middot; ${assignLabel}${assignNames ? ' (' + assignNames + ')' : ''}</div>
+            <div style="font-size:12px;color:var(--muted);font-weight:700;">${words.length} word${words.length !== 1 ? 's' : ''} &middot; ${assignLabel}${assignNames ? ' (' + assignNames + ')' : ''}${stageGroupLabel}</div>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <button onclick="dashChangePriority('${list.id}')" style="border:2px solid ${priorityBorder[listPriority]};background:${priorityBg[listPriority]};color:${priorityColors[listPriority]};font-weight:800;font-size:12px;border-radius:10px;padding:6px 14px;cursor:pointer;white-space:nowrap;font-family:'Lexend',sans-serif;">⚡ ${priorityLabels[listPriority]}</button>
@@ -3926,11 +3944,17 @@ async function dashAssignWordList(listId){
   if(!currentClass || !currentClass.students) return;
   var students = currentClass.students.slice().sort(function(a,b){ return a.name.localeCompare(b.name); });
 
-  // Fetch current assignments
+  // Fetch current assignments + current stage_group
   var { data: current } = await dbSb().from('word_list_assignments')
     .select('student_id')
     .eq('word_list_id', listId);
   var assigned = (current || []).map(function(a){ return a.student_id; });
+
+  var { data: listRow } = await dbSb().from('class_word_lists')
+    .select('stage_group')
+    .eq('id', listId)
+    .maybeSingle();
+  var currentGroup = (listRow && listRow.stage_group) || '';
 
   var checkboxes = students.map(function(s){
     var checked = assigned.indexOf(s.id) !== -1 ? 'checked' : '';
@@ -3938,7 +3962,27 @@ async function dashAssignWordList(listId){
       '<input type="checkbox" class="assignCb" value="' + s.id + '" ' + checked + '> ' + WordLabData.escapeHtml(s.name) + '</label>';
   }).join('');
 
-  var html = '<div style="max-height:300px;overflow-y:auto;margin-bottom:12px;">' +
+  var groupOpts = [
+    ['', 'None'],
+    ['s2e', 'All Explorers'],
+    ['s2l', 'All Voyagers'],
+    ['s3e', 'All Wanderers'],
+    ['s3l', 'All Trailblazers'],
+    ['s4',  'All Pioneers']
+  ];
+  var groupBtns = groupOpts.map(function(o){
+    var active = (o[0] === currentGroup) ? ' wlGroupBtn-active' : '';
+    return '<button type="button" class="wlGroupBtn' + active + '" data-group="' + o[0] + '" onclick="setWordListStageGroup(\'' + listId + '\',\'' + o[0] + '\',this)">' + o[1] + '</button>';
+  }).join('');
+  var groupStrip =
+    '<div class="wl-group-assign" style="margin-bottom:12px;padding:10px 12px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);border-radius:10px;">' +
+      '<div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px;">Auto-assign by stage</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + groupBtns + '</div>' +
+      '<div style="font-size:10px;color:var(--muted);margin-top:6px;font-weight:600;">Stage assignments are live \u2014 students follow their current stage automatically.</div>' +
+    '</div>';
+
+  var html = groupStrip +
+    '<div style="max-height:300px;overflow-y:auto;margin-bottom:12px;">' +
     '<label style="display:flex;align-items:center;gap:6px;padding:6px 0;font-size:13px;font-weight:800;color:var(--indigo);cursor:pointer;border-bottom:1px solid var(--line);margin-bottom:6px;">' +
     '<input type="checkbox" id="assignAll" ' + (assigned.length === 0 ? 'checked' : '') + ' onchange="document.querySelectorAll(\'.assignCb\').forEach(function(c){c.checked=false;c.disabled=this.checked;}.bind(this))"> All students (no specific assignment)</label>' +
     checkboxes + '</div>' +
@@ -3972,6 +4016,29 @@ async function saveAssignments(listId){
 
   document.getElementById('assignOverlay').remove();
   dashLoadWordLists();
+}
+
+async function setWordListStageGroup(listId, group, btnEl){
+  var name = group ? (WLStage.STAGE_NAMES[group] + 's') : 'none';
+  if (!confirm('Auto-assign this word list to ' + name + '?\n\nIndividual student assignments are unaffected.')) return;
+  try {
+    await dbSb().from('class_word_lists').update({ stage_group: group || null }).eq('id', listId);
+    // Update active state on buttons in-place
+    var buttons = document.querySelectorAll('.wlGroupBtn');
+    buttons.forEach(function(b){ b.classList.remove('wlGroupBtn-active'); });
+    if (btnEl) btnEl.classList.add('wlGroupBtn-active');
+  } catch(e) { alert('Error: ' + (e.message || e)); }
+}
+
+async function setSpellingSetStageGroup(setId, group, btnEl){
+  var name = group ? (WLStage.STAGE_NAMES[group] + 's') : 'none';
+  if (!confirm('Auto-assign this spelling set to ' + name + '?\n\nIndividual student assignments are unaffected.')) return;
+  try {
+    await dbSb().from('class_spelling_sets').update({ stage_group: group || null }).eq('id', setId);
+    var buttons = document.querySelectorAll('.wlGroupBtnSS');
+    buttons.forEach(function(b){ b.classList.remove('wlGroupBtn-active'); });
+    if (btnEl) btnEl.classList.add('wlGroupBtn-active');
+  } catch(e) { alert('Error: ' + (e.message || e)); }
 }
 
 async function dashDeleteWordList(listId, listName){
@@ -4444,14 +4511,14 @@ async function loadSpellingSetsData() {
   } catch(e) { currentClass.settings = currentClass.settings || {}; }
   try {
     var { data: sets, error: setsErr } = await dbSb().from('class_spelling_sets')
-      .select('id, name, set_number, words, created_at, assessment_active, assessment_scheduled_at, assessment_mode')
+      .select('id, name, set_number, words, created_at, assessment_active, assessment_scheduled_at, assessment_mode, stage_group')
       .eq('class_id', currentClass.id)
       .order('set_number', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: true });
     // Fallback if assessment columns not yet in schema cache
     if (setsErr && setsErr.code === '42703') {
       var fallback = await dbSb().from('class_spelling_sets')
-        .select('id, name, set_number, words, created_at')
+        .select('id, name, set_number, words, created_at, stage_group')
         .eq('class_id', currentClass.id)
         .order('set_number', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: true });
@@ -4832,6 +4899,26 @@ function buildSpellingSetHeatmap(set) {
     return '<button type="button" class="ssStudentPill' + (checked ? ' active' : '') + '" data-sid="' + s.id + '" onclick="ssToggleStudent(this)">' +
       WordLabData.escapeHtml(s.name) + '</button>';
   }).join('');
+  var currentGroup = set.stage_group || '';
+  var groupOptsSS = [
+    ['', 'None'],
+    ['s2e', 'All Explorers'],
+    ['s2l', 'All Voyagers'],
+    ['s3e', 'All Wanderers'],
+    ['s3l', 'All Trailblazers'],
+    ['s4',  'All Pioneers']
+  ];
+  var groupBtnsSS = groupOptsSS.map(function(o){
+    var active = (o[0] === currentGroup) ? ' wlGroupBtn-active' : '';
+    return '<button type="button" class="wlGroupBtnSS' + active + '" data-group="' + o[0] + '" onclick="setSpellingSetStageGroup(\'' + set.id + '\',\'' + o[0] + '\',this)">' + o[1] + '</button>';
+  }).join('');
+  var stageGroupStrip =
+    '<div style="margin-bottom:12px;padding:10px 12px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);border-radius:10px;">' +
+      '<div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px;">Auto-assign by stage</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + groupBtnsSS + '</div>' +
+      '<div style="font-size:10px;color:var(--muted);margin-top:6px;font-weight:600;">Stage assignments are live \u2014 students follow their current stage automatically.</div>' +
+    '</div>';
+
   var assignHtml =
     '<section class="ss-card">' +
       '<div class="ss-assignCard-header">' +
@@ -4845,6 +4932,7 @@ function buildSpellingSetHeatmap(set) {
           '<button class="ss-saveBtn" onclick="ssSaveAssignments(\'' + set.id + '\')">Save</button>' +
         '</div>' +
       '</div>' +
+      stageGroupStrip +
       '<div class="ss-pillGrid" id="ssStudentCheckboxes">' + studentPills + '</div>' +
     '</section>';
 
