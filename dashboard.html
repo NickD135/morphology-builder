@@ -683,6 +683,21 @@
     .gd-flagPill:hover{ background:rgba(248,113,113,.18); border-color:var(--bad); transform:translateY(-1px); }
     .gd-flagPill-count{ background:var(--bad); color:#fff; border-radius:999px; padding:1px 7px; font-size:10px; font-weight:900; min-width:18px; text-align:center; line-height:1.3; }
     .gd-flagPill-ext{ background:var(--indigo); color:#fff; border-radius:5px; padding:1px 5px; font-size:8px; font-weight:900; letter-spacing:.04em; text-transform:uppercase; }
+    .gd-flagPill-stage{
+      display:inline-block; background:var(--indigo,#6366f1); color:#fff;
+      font-size:10px; font-weight:800; padding:2px 6px; border-radius:6px;
+      margin-left:4px; letter-spacing:.02em;
+    }
+    .gd-flagPill-stage.ready-promote{
+      background:#16a34a;
+      box-shadow:0 0 0 2px rgba(22,163,74,.3);
+      cursor:pointer;
+    }
+    .gd-flagPill-stage.ready-promote::after{ content:' \2191'; }
+    .gd-flagPill-stageNone{
+      display:inline-block; background:rgba(148,163,184,.2); color:#94a3b8;
+      font-size:10px; padding:2px 6px; border-radius:6px; margin-left:4px;
+    }
     .gd-flagCard{ background:rgba(248,113,113,.05); border:1px solid rgba(248,113,113,.3); border-radius:14px; padding:14px 16px; transition:all .15s ease; cursor:pointer; }
     .gd-flagCard:hover{ background:rgba(248,113,113,.1); border-color:var(--bad); }
     .gd-flagCard-name{ font-size:14px; font-weight:900; color:var(--text-bright); display:flex; align-items:center; gap:8px; margin-bottom:8px; }
@@ -2126,9 +2141,54 @@ function gdBuildAttentionCard() {
   return '<section class="gd-attentionCard alert">' + header + '<div class="gd-flagPillRow">' + pills + '</div></section>';
 }
 
+function _gdCalcMasteryFromAllProgress(student) {
+  // Phase 1 stub: count all core-game results for now. Replaced by tagged
+  // categories once content tagging lands.
+  var perGame = {};
+  if (typeof WLStage === 'undefined') return { overall: 0, perGame: perGame };
+  WLStage.CORE_GAMES.forEach(function(g){ perGame[g] = null; });
+  var results = (student && student.results) || {};
+  WLStage.CORE_GAMES.forEach(function(g){
+    var act = results[g];
+    if (!act) return;
+    var c = 0, t = 0;
+    Object.keys(act).forEach(function(k){
+      var r = act[k]; if (!r) return;
+      c += r.correct || 0; t += r.total || 0;
+    });
+    if (t > 0) perGame[g] = c / t;
+  });
+  var sum = 0;
+  WLStage.CORE_GAMES.forEach(function(g){ sum += (perGame[g] || 0); });
+  return { overall: sum / WLStage.CORE_GAMES.length, perGame: perGame };
+}
+
+function _gdBuildStagePillHtml(student) {
+  if (typeof WLStage === 'undefined' || !WLStage.STAGE_SHORT) return '';
+  if (!student.stage) {
+    return '<span class="gd-flagPill-stageNone" title="No stage set">\u2014</span>';
+  }
+  var short = WLStage.STAGE_SHORT[student.stage] || '??';
+  var sub = '';
+  var ready = false;
+  if (student._mastery && student._mastery.overall != null) {
+    sub = ' ' + WLStage.subLevel(student._mastery.overall);
+    if (student._mastery.overall >= 0.75) ready = true;
+  }
+  var cls = 'gd-flagPill-stage' + (ready ? ' ready-promote' : '');
+  var title = (WLStage.STAGE_LABELS && WLStage.STAGE_LABELS[student.stage]) || student.stage;
+  return '<span class="' + cls + '" title="' + WordLabData.escapeHtml(title) + '">' + short + sub + '</span>';
+}
+
 function gdBuildMatrixCard() {
   var acts = _gdActivities();
   var groupCounts = GD_GROUPS.map(function(g) { return { name:g.name, key:g.key, count:g.activities.length }; });
+
+  // Compute mastery for each student who has a stage set
+  (currentClass.students || []).forEach(function(s){
+    if (!s.stage) { s._mastery = null; return; }
+    s._mastery = _gdCalcMasteryFromAllProgress(s);
+  });
 
   // Group header row
   var groupHeaderHtml = '<th class="gd-studentHead" rowspan="2">Student</th>';
@@ -2161,10 +2221,13 @@ function gdBuildMatrixCard() {
     var supBtn = '<button class="gd-miniBadge sup' + (supOn ? ' on' : '') + '" onclick="event.stopPropagation();toggleSupportFromDashboard(\'' + s.id + '\',' + supOn + ')" title="Support mode">sup</button>';
     var rewardBtn = '<button class="gd-miniBadge reward" onclick="event.stopPropagation();openRewardModal(\'' + s.id + '\')" title="Give reward">\uD83C\uDF81</button>';
 
-    return '<tr>' +
+    var stagePill = _gdBuildStagePillHtml(s);
+
+    return '<tr data-student-id="' + s.id + '">' +
       '<td class="gd-studentCell">' +
         '<div class="gd-studentCell-row">' +
           '<span class="gd-studentCell-name" onclick="showStudentProfile(\'' + s.id + '\')">' + WordLabData.escapeHtml(s.name) + '</span>' +
+          stagePill +
           '<div class="gd-studentCell-badges">' + extBtn + supBtn + rewardBtn + '</div>' +
         '</div>' +
         '<div class="gd-studentCell-meta' + (lastAct.isToday ? ' active' : '') + '">' + lastAct.label + '</div>' +

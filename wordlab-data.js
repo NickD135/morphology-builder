@@ -476,6 +476,19 @@ const WordLabData = (() => {
         studs.forEach(function(s) { s.extension_activities = extMap[s.id] || []; });
       }
     } catch(e) { /* column not available yet */ }
+    // Load stage fields separately for the same schema-cache reason
+    try {
+      var _stageRes = await sb().from('students').select('id, stage, stage_overrides').eq('class_id', id);
+      if (_stageRes && !_stageRes.error && _stageRes.data) {
+        var stageMap = {};
+        _stageRes.data.forEach(function(s) { stageMap[s.id] = s; });
+        studs.forEach(function(s) {
+          var row = stageMap[s.id];
+          s.stage = row ? (row.stage || null) : null;
+          s.stage_overrides = row ? (row.stage_overrides || {}) : {};
+        });
+      }
+    } catch(e) { /* columns not available yet */ }
 
     const studentIds = (studs || []).map(s => s.id);
     let progressRows = [];
@@ -540,6 +553,8 @@ const WordLabData = (() => {
       extension_activities: s.extension_activities || [],
       eald_language: s.eald_language || null,
       support_mode: !!s.support_mode,
+      stage: s.stage || null,
+      stage_overrides: s.stage_overrides || {},
       results: progressMap[s.id] || {},
       lastActive: lastActiveMap[s.id] || null
     }));
