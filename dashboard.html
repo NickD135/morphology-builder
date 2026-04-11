@@ -2206,8 +2206,41 @@ function _gdBuildStagePillHtml(student) {
   }
   var cls = 'gd-flagPill-stage' + (ready ? ' ready-promote' : '');
   var title = (WLStage.STAGE_LABELS && WLStage.STAGE_LABELS[student.stage]) || student.stage;
-  return '<span class="' + cls + '" title="' + WordLabData.escapeHtml(title) + '">' + short + sub + '</span>';
+  var titleAttr = ready ? title + ' \u2014 click to promote to next stage' : title;
+  return '<span class="' + cls + '" title="' + WordLabData.escapeHtml(titleAttr) + '">' + short + sub + '</span>';
 }
+
+(function wireReadyPromote(){
+  document.addEventListener('click', async function(e){
+    var pill = e.target.closest && e.target.closest('.gd-flagPill-stage.ready-promote');
+    if (!pill) return;
+    if (typeof WLStage === 'undefined') return;
+    var row = pill.closest('[data-student-id]');
+    var sid = row && row.dataset.studentId;
+    if (!sid) return;
+    if (!currentClass) return;
+    var student = (currentClass.students || []).find(function(s){ return s.id === sid; });
+    if (!student) return;
+    e.stopPropagation();
+    var next = WLStage.nextStage(student.stage);
+    if (!next) {
+      alert(student.name + ' is already at the top stage.');
+      return;
+    }
+    var pct = Math.round(((student._mastery && student._mastery.overall) || 0) * 100);
+    var msg = student.name + ' is at ' + pct + '% mastery on '
+      + WLStage.STAGE_NAMES[student.stage]
+      + ' \u2014 promote to ' + WLStage.STAGE_NAMES[next] + '?';
+    if (!confirm(msg)) return;
+    try {
+      await dbSb().from('students').update({ stage: next }).eq('id', sid);
+      student.stage = next;
+      gdRefresh();
+    } catch(err) {
+      alert('Update failed: ' + (err.message || err));
+    }
+  });
+})();
 
 function gdBuildMatrixCard() {
   var acts = _gdActivities();
