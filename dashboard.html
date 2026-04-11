@@ -698,6 +698,35 @@
       display:inline-block; background:rgba(148,163,184,.2); color:#94a3b8;
       font-size:10px; padding:2px 6px; border-radius:6px; margin-left:4px;
     }
+    .wl-stage-filter{
+      display:flex; gap:6px; padding:10px 16px 0; flex-wrap:wrap;
+    }
+    .wlStageFilterBtn{
+      padding:6px 12px;
+      border:1px solid var(--line); background:rgba(255,255,255,.04);
+      color:var(--text-primary);
+      border-radius:999px; cursor:pointer; font-size:12px; font-weight:700;
+      font-family:Lexend,sans-serif;
+    }
+    .wlStageFilterBtn:hover{ background:rgba(99,102,241,.12); }
+    .wlStageFilterBtn.active{
+      background:var(--indigo,#6366f1); color:#fff; border-color:var(--indigo,#6366f1);
+    }
+    .wl-stage-bulk-bar{
+      display:flex; align-items:center; gap:10px;
+      padding:8px 16px; margin:8px 16px 0;
+      background:rgba(99,102,241,.12);
+      border:1px solid rgba(99,102,241,.3);
+      border-radius:8px; font-size:12px; color:var(--text-primary);
+      font-weight:700;
+    }
+    .wl-stage-bulk-btn{
+      margin-left:auto;
+      border:none; background:var(--indigo,#6366f1); color:#fff;
+      border-radius:6px; padding:6px 12px; font-size:11px; font-weight:800;
+      cursor:pointer; font-family:Lexend,sans-serif;
+    }
+    .wl-stage-bulk-btn:hover{ filter:brightness(1.1); }
     .gd-flagCard{ background:rgba(248,113,113,.05); border:1px solid rgba(248,113,113,.3); border-radius:14px; padding:14px 16px; transition:all .15s ease; cursor:pointer; }
     .gd-flagCard:hover{ background:rgba(248,113,113,.1); border-color:var(--bad); }
     .gd-flagCard-name{ font-size:14px; font-weight:900; color:var(--text-bright); display:flex; align-items:center; gap:8px; margin-bottom:8px; }
@@ -2235,11 +2264,29 @@ function gdBuildMatrixCard() {
     '</tr>';
   }).join('');
 
+  var filterStrip =
+    '<div id="wlStageFilter" class="wl-stage-filter">' +
+      '<button class="wlStageFilterBtn active" data-stage="">All</button>' +
+      '<button class="wlStageFilterBtn" data-stage="s2e">Explorer</button>' +
+      '<button class="wlStageFilterBtn" data-stage="s2l">Voyager</button>' +
+      '<button class="wlStageFilterBtn" data-stage="s3e">Wanderer</button>' +
+      '<button class="wlStageFilterBtn" data-stage="s3l">Trailblazer</button>' +
+      '<button class="wlStageFilterBtn" data-stage="s4">Pioneer</button>' +
+      '<button class="wlStageFilterBtn" data-stage="none">Not set</button>' +
+    '</div>' +
+    '<div id="wlStageBulkBar" class="wl-stage-bulk-bar" style="display:none;">' +
+      '<span id="wlStageBulkCount"></span>' +
+      '<button id="wlStageBulkSetBtn" class="wl-stage-bulk-btn">Set stage\u2026</button>' +
+    '</div>';
+
+  setTimeout(_wlWireStageFilter, 0);
+
   return '<section class="gd-matrixCard">' +
     '<div class="gd-matrixCard-header">' +
       '<div class="gd-matrixCard-title">\uD83D\uDCCA Activity Matrix</div>' +
       '<div class="gd-matrixCard-sub">Click a column to drill in \u00B7 click a name for the full profile</div>' +
     '</div>' +
+    filterStrip +
     '<div class="gd-matrixCard-body">' +
       '<table class="gd-matrixTable">' +
         '<thead><tr>' + groupHeaderHtml + '</tr><tr>' + iconHeaderHtml + '</tr></thead>' +
@@ -2247,6 +2294,78 @@ function gdBuildMatrixCard() {
       '</table>' +
     '</div>' +
   '</section>';
+}
+
+var _wlCurrentStageFilter = '';
+function _wlWireStageFilter() {
+  var buttons = document.querySelectorAll('.wlStageFilterBtn');
+  if (!buttons.length) return;
+  buttons.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      buttons.forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      _wlCurrentStageFilter = btn.dataset.stage || '';
+      _wlApplyStageFilter();
+    });
+  });
+  var bulkBtn = document.getElementById('wlStageBulkSetBtn');
+  if (bulkBtn) bulkBtn.addEventListener('click', _wlBulkSetStage);
+}
+
+function _wlApplyStageFilter() {
+  if (!currentClass) return;
+  var students = currentClass.students || [];
+  var rows = document.querySelectorAll('.gd-matrixTable tbody tr[data-student-id]');
+  var visible = 0;
+  rows.forEach(function(tr){
+    var sid = tr.dataset.studentId;
+    var s = students.find(function(st){ return st.id === sid; });
+    if (!s) return;
+    var show;
+    if (!_wlCurrentStageFilter) show = true;
+    else if (_wlCurrentStageFilter === 'none') show = !s.stage;
+    else show = s.stage === _wlCurrentStageFilter;
+    tr.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  var bar = document.getElementById('wlStageBulkBar');
+  var count = document.getElementById('wlStageBulkCount');
+  if (bar && count) {
+    if (_wlCurrentStageFilter) {
+      bar.style.display = '';
+      count.textContent = visible + ' student' + (visible === 1 ? '' : 's') + ' shown';
+    } else {
+      bar.style.display = 'none';
+    }
+  }
+}
+
+async function _wlBulkSetStage() {
+  if (typeof WLStage === 'undefined') return;
+  var students = (currentClass && currentClass.students) || [];
+  var targets;
+  if (_wlCurrentStageFilter === 'none') targets = students.filter(function(s){ return !s.stage; });
+  else targets = students.filter(function(s){ return s.stage === _wlCurrentStageFilter; });
+  if (!targets.length) { alert('No students to update.'); return; }
+  var msg = 'Set ' + targets.length + ' student(s) to which stage?\n\n'
+    + 's2e = Explorer\ns2l = Voyager\ns3e = Wanderer\n'
+    + 's3l = Trailblazer\ns4 = Pioneer\n(leave blank to clear)';
+  var newStage = prompt(msg);
+  if (newStage === null) return;
+  newStage = (newStage || '').trim() || null;
+  if (newStage && WLStage.STAGE_ORDER.indexOf(newStage) === -1) {
+    alert('Invalid stage code'); return;
+  }
+  var name = newStage ? WLStage.STAGE_NAMES[newStage] : 'Not set';
+  if (!confirm('Set ' + targets.length + ' student(s) to ' + name + '?')) return;
+  try {
+    var ids = targets.map(function(s){ return s.id; });
+    await dbSb().from('students').update({ stage: newStage }).in('id', ids);
+    targets.forEach(function(s){ s.stage = newStage; });
+    gdRefresh();
+  } catch(e) {
+    alert('Update failed: ' + (e.message || e));
+  }
 }
 
 // ── Activity detail content ──
