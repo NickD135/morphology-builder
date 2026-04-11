@@ -636,6 +636,44 @@
     .student-xp-track { width: 80px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 4px; }
     .student-xp-fill { height: 100%; background: #6366f1; border-radius: 2px; transition: width .6s ease; }
     .stat-pill-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .wl-level-pill { background: rgba(99,102,241,.12); border-color: rgba(99,102,241,.35); }
+    .wl-level-pill:hover { background: rgba(99,102,241,.22); }
+    .wl-level-panel {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff; border-radius: 16px; padding: 24px;
+      max-width: 420px; width: 90%;
+      box-shadow: 0 20px 60px rgba(0,0,0,.3); z-index: 9999;
+    }
+    .wl-level-panel-header {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 12px;
+    }
+    .wl-level-panel-header h3 {
+      margin: 0; font-size: 20px; color: #312e81; font-weight: 800;
+    }
+    .wl-level-panel-close {
+      background: none; border: none; font-size: 28px; cursor: pointer;
+      color: #64748b; line-height: 1; padding: 0 6px;
+    }
+    .wl-level-panel-close:hover { color: #111827; }
+    .wl-level-panel-mastery {
+      font-size: 14px; color: #64748b; margin-bottom: 16px;
+    }
+    .wl-level-panel-hint {
+      font-size: 12px; color: #64748b;
+      margin-top: 16px; text-align: center;
+    }
+    .wl-level-panel-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.5); z-index: 9998;
+    }
+    .wl-level-row { display: flex; align-items: center; margin-bottom: 8px; font-size: 13px; color: #111827; }
+    .wl-level-row-label { width: 140px; font-weight: 600; }
+    .wl-level-row-bar { flex: 1; height: 10px; background: #e5e7eb; border-radius: 5px; overflow: hidden; margin: 0 8px; }
+    .wl-level-row-bar > div { height: 100%; background: #6366f1; transition: width .3s ease; }
+    .wl-level-row-pct { width: 40px; text-align: right; font-variant-numeric: tabular-nums; }
+    .wl-level-row-nudge { color: #16a34a; font-size: 11px; margin-left: 4px; font-weight: 700; }
     .stat-pill-item {
       display: flex; align-items: center; gap: 5px;
       background: rgba(255,255,255,0.06);
@@ -1551,6 +1589,9 @@
       </div>
     </div>
     <div class="stat-pill-group">
+      <div class="stat-pill-item wl-level-pill" id="hubLevelPill" style="display:none; cursor:pointer;">
+        <span id="hubLevelIcon">🔬</span> <span id="hubLevelText">Explorer 1</span>
+      </div>
       <div class="stat-pill-item">🔥 <span id="hubStreak">0</span> streak</div>
       <div class="stat-pill-item">⚛️ <span id="hubQuarks">0</span> quarks</div>
       <div class="stat-pill-item">🏆 <span id="hubBadges">0</span> badges</div>
@@ -1577,6 +1618,17 @@
     </div>
   </div>
 </div>
+
+<div id="wlLevelPanel" class="wl-level-panel" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="wlLevelPanelTitle">
+  <div class="wl-level-panel-header">
+    <h3 id="wlLevelPanelTitle">Explorer 1</h3>
+    <button id="wlLevelPanelClose" aria-label="Close" class="wl-level-panel-close">&times;</button>
+  </div>
+  <div id="wlLevelPanelMastery" class="wl-level-panel-mastery"></div>
+  <div id="wlLevelPanelBars"></div>
+  <div class="wl-level-panel-hint">Master all 6 skill games to level up!</div>
+</div>
+<div id="wlLevelPanelBackdrop" class="wl-level-panel-backdrop" style="display:none;"></div>
 
 <!-- Student content -->
 <div class="sections-bg">
@@ -2102,6 +2154,8 @@ async function initStudentLayout(session) {
     var hubTotalXpEl = document.getElementById('hubTotalXP');
     if (hubTotalXpEl) hubTotalXpEl.textContent = (sd.xp || 0).toLocaleString() + ' XP total';
 
+    // ── Level badge & mastery panel ──
+    try { renderLevelBadge(session.studentId); } catch(e) { console.warn('level badge error', e); }
 
     // ── Daily Challenges (no DB dependency, uses cached data) ──
     try { renderDailyChallenges(); } catch(e) { console.warn('challenges render error', e); }
@@ -2362,6 +2416,139 @@ function renderGameNudges(sd) {
     }
   }
 }
+
+async function renderLevelBadge(studentId) {
+  var pillEl = document.getElementById('hubLevelPill');
+  var iconEl = document.getElementById('hubLevelIcon');
+  var textEl = document.getElementById('hubLevelText');
+  if (!pillEl || typeof WordLabData === 'undefined' || typeof WLStage === 'undefined') return;
+
+  var stage = WordLabData.getStudentStage();
+  if (!stage) { pillEl.style.display = 'none'; return; }
+
+  if (document.body.classList.contains('low-stim')) {
+    pillEl.style.display = 'none'; return;
+  }
+
+  var mastery = await computeMasteryForStudent(studentId, stage);
+
+  var icons = { s2e:'\uD83D\uDD2C', s2l:'\u2697\uFE0F', s3e:'\uD83E\uDDEC', s3l:'\uD83D\uDE80', s4:'\uD83C\uDF1F' };
+  iconEl.textContent = icons[stage] || '\uD83D\uDD2C';
+  textEl.textContent = WLStage.levelLabel(stage, mastery.overall);
+  pillEl.style.display = '';
+  pillEl.dataset.mastery = JSON.stringify(mastery);
+}
+
+async function computeMasteryForStudent(studentId, stage) {
+  try {
+    var prog = await WordLabData._sbCall(function(){
+      return WordLabData._sb().from('student_progress')
+        .select('activity, category, correct, total')
+        .eq('student_id', studentId);
+    });
+    var rows = (prog && prog.data) || [];
+    var taggedCategories = buildTaggedCategoryMap(stage);
+    return WLStage.calcMastery(rows, stage, taggedCategories);
+  } catch(e) {
+    return { overall: 0, perGame: {} };
+  }
+}
+
+// Phase-1 stub: until content is tagged, pass empty sets so calcMastery
+// returns 0 everywhere. Task 25's CSV workflow will replace this.
+function buildTaggedCategoryMap(stage) {
+  var map = {};
+  WLStage.CORE_GAMES.forEach(function(g){ map[g] = new Set(); });
+  return map;
+}
+
+(function wireLevelPanel(){
+  var pill = document.getElementById('hubLevelPill');
+  var panel = document.getElementById('wlLevelPanel');
+  var backdrop = document.getElementById('wlLevelPanelBackdrop');
+  var close = document.getElementById('wlLevelPanelClose');
+  if (!pill || !panel) return;
+
+  var labels = {
+    'sound-sorter': 'Sound Sorter',
+    'phoneme-splitter': 'Phoneme Splitter',
+    'syllable-splitter': 'Syllable Splitter',
+    'breakdown-blitz': 'Breakdown Blitz',
+    'meaning-mode': 'Meaning Match-Up',
+    'mission-mode': 'Mission Mode'
+  };
+
+  pill.addEventListener('click', function(){
+    if (typeof WLStage === 'undefined' || typeof WordLabData === 'undefined') return;
+    var data = {};
+    try { data = JSON.parse(pill.dataset.mastery || '{}'); } catch(e){}
+    var stage = WordLabData.getStudentStage();
+    var pct = Math.round((data.overall || 0) * 100);
+
+    document.getElementById('wlLevelPanelTitle').textContent = WLStage.levelLabel(stage, data.overall || 0);
+    document.getElementById('wlLevelPanelMastery').textContent = pct + '% mastery';
+
+    var barsEl = document.getElementById('wlLevelPanelBars');
+    while (barsEl.firstChild) barsEl.removeChild(barsEl.firstChild);
+
+    var lowestGame = null;
+    var lowestScore = 2;
+    WLStage.CORE_GAMES.forEach(function(g){
+      var score = data.perGame && data.perGame[g];
+      if (score == null) {
+        if (lowestScore > -0.5) { lowestGame = g; lowestScore = -1; }
+      } else if (score < lowestScore) {
+        lowestScore = score; lowestGame = g;
+      }
+    });
+
+    WLStage.CORE_GAMES.forEach(function(g){
+      var score = data.perGame && data.perGame[g];
+      var p = score == null ? 0 : Math.round(score * 100);
+      var row = document.createElement('div');
+      row.className = 'wl-level-row';
+
+      var label = document.createElement('span');
+      label.className = 'wl-level-row-label';
+      label.textContent = labels[g] || g;
+      row.appendChild(label);
+
+      var barOuter = document.createElement('div');
+      barOuter.className = 'wl-level-row-bar';
+      var barInner = document.createElement('div');
+      barInner.style.width = p + '%';
+      barOuter.appendChild(barInner);
+      row.appendChild(barOuter);
+
+      var pctEl = document.createElement('span');
+      pctEl.className = 'wl-level-row-pct';
+      pctEl.textContent = p + '%';
+      row.appendChild(pctEl);
+
+      if (g === lowestGame) {
+        var nudge = document.createElement('span');
+        nudge.className = 'wl-level-row-nudge';
+        nudge.textContent = ' \u2190 Try this one!';
+        row.appendChild(nudge);
+      }
+
+      barsEl.appendChild(row);
+    });
+
+    panel.style.display = 'block';
+    backdrop.style.display = 'block';
+  });
+
+  function closePanel(){
+    panel.style.display = 'none';
+    backdrop.style.display = 'none';
+  }
+  if (close) close.addEventListener('click', closePanel);
+  if (backdrop) backdrop.addEventListener('click', closePanel);
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && panel.style.display === 'block') closePanel();
+  });
+})();
 
 function renderDailyChallenges() {
   if (typeof WordLabData === 'undefined') return;

@@ -2772,7 +2772,9 @@ const WordLabData = (() => {
     speakInLanguage, preloadTTS, buildEALDSpeakButtons, buildEALDRevealButton, _speakEALD,
     escapeHtml,
     getWordOfTheWeek,
-    sbCall
+    sbCall,
+    _sb: sb,
+    _sbCall: sbCall
   };
 
 })();
