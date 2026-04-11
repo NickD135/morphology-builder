@@ -674,6 +674,23 @@
     .wl-level-row-bar > div { height: 100%; background: #6366f1; transition: width .3s ease; }
     .wl-level-row-pct { width: 40px; text-align: right; font-variant-numeric: tabular-nums; }
     .wl-level-row-nudge { color: #16a34a; font-size: 11px; margin-left: 4px; font-weight: 700; }
+    .wl-promo-toast {
+      position: fixed; top: 40%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #fff; padding: 32px 40px; border-radius: 20px;
+      font-size: 20px; font-weight: 800; text-align: center;
+      box-shadow: 0 20px 60px rgba(99,102,241,.4); z-index: 9999;
+    }
+    .wl-promo-toast-name { font-size: 28px; margin-top: 4px; }
+    .wl-sub-toast {
+      position: fixed; bottom: 80px; left: 50%;
+      transform: translateX(-50%);
+      background: #16a34a; color: #fff;
+      padding: 16px 24px; border-radius: 12px;
+      font-size: 16px; font-weight: 700;
+      box-shadow: 0 12px 32px rgba(22,163,74,.4); z-index: 9999;
+    }
     .stat-pill-item {
       display: flex; align-items: center; gap: 5px;
       background: rgba(255,255,255,0.06);
@@ -2437,6 +2454,69 @@ async function renderLevelBadge(studentId) {
   textEl.textContent = WLStage.levelLabel(stage, mastery.overall);
   pillEl.style.display = '';
   pillEl.dataset.mastery = JSON.stringify(mastery);
+
+  // Sub-level crossing celebration
+  try {
+    var currentSub = WLStage.subLevel(mastery.overall || 0);
+    var lastKey = 'wl_last_sub_' + stage;
+    var lastSub = parseInt(localStorage.getItem(lastKey) || '1', 10);
+    if (currentSub > lastSub && !document.body.classList.contains('low-stim')) {
+      showSubLevelToast(stage, currentSub);
+    }
+    localStorage.setItem(lastKey, String(currentSub));
+  } catch(e) {}
+}
+
+// Stage promotion celebration — runs once on load if stage moved forward
+(function celebrateStagePromotion(){
+  if (typeof WordLabData === 'undefined' || typeof WLStage === 'undefined') return;
+  var currentStage = WordLabData.getStudentStage();
+  if (!currentStage) return;
+  var lastSeen = localStorage.getItem('wl_last_seen_stage');
+  if (lastSeen && lastSeen !== currentStage) {
+    var oldIdx = WLStage.stageIndex(lastSeen);
+    var newIdx = WLStage.stageIndex(currentStage);
+    if (newIdx > oldIdx) showPromotionToast(currentStage);
+  }
+  localStorage.setItem('wl_last_seen_stage', currentStage);
+})();
+
+function showPromotionToast(stage) {
+  if (document.body.classList.contains('low-stim')) return;
+  if (typeof WLStage === 'undefined') return;
+  var name = WLStage.STAGE_NAMES[stage];
+  var toast = document.createElement('div');
+  toast.className = 'wl-promo-toast';
+  var line1 = document.createElement('div');
+  line1.textContent = '\uD83C\uDF89';
+  var line2 = document.createElement('div');
+  line2.textContent = "You've been promoted to";
+  var line3 = document.createElement('div');
+  line3.className = 'wl-promo-toast-name';
+  line3.textContent = name + '!';
+  toast.appendChild(line1);
+  toast.appendChild(line2);
+  toast.appendChild(line3);
+  document.body.appendChild(toast);
+  setTimeout(function(){
+    toast.style.transition = 'opacity .8s';
+    toast.style.opacity = '0';
+    setTimeout(function(){ toast.remove(); }, 800);
+  }, 3000);
+}
+
+function showSubLevelToast(stage, subLvl) {
+  if (typeof WLStage === 'undefined') return;
+  var name = WLStage.STAGE_NAMES[stage];
+  var toast = document.createElement('div');
+  toast.className = 'wl-sub-toast';
+  toast.textContent = '\u2B50 ' + name + ' ' + subLvl + '!';
+  document.body.appendChild(toast);
+  setTimeout(function(){
+    toast.style.transition = 'opacity .6s';
+    toast.style.opacity = '0';
+    setTimeout(function(){ toast.remove(); }, 600);
+  }, 2500);
 }
 
 async function computeMasteryForStudent(studentId, stage) {
