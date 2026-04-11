@@ -836,12 +836,16 @@ function renderWordTagger() {
     return;
   }
 
-  // Restore drafts
+  // Restore drafts. New composite-key format: "sound-sorter:<word>|<sound>|<level>".
+  // Legacy format was "sound-sorter:<word>" (no disambiguation) — kept as a fallback
+  // so older drafts still apply.
   try {
     var saved = JSON.parse(localStorage.getItem('wl_stage_word_overrides') || '{}');
     words.forEach(function(w){
-      var key = 'sound-sorter:' + w.word;
-      if (saved.hasOwnProperty(key)) w.stage = saved[key] || null;
+      var compositeKey = 'sound-sorter:' + w.word + '|' + w.sound + '|' + w.level;
+      var legacyKey = 'sound-sorter:' + w.word;
+      if (saved.hasOwnProperty(compositeKey)) w.stage = saved[compositeKey] || null;
+      else if (saved.hasOwnProperty(legacyKey)) w.stage = saved[legacyKey] || null;
     });
   } catch(e){}
 
@@ -867,6 +871,34 @@ function renderWordTagger() {
     filterBar.appendChild(btn);
   });
   root.appendChild(filterBar);
+
+  // Export/Import buttons
+  var btnGroup = document.createElement('div');
+  btnGroup.className = 'wl-cl-btn-group';
+  var exportBtn = document.createElement('button');
+  exportBtn.type = 'button';
+  exportBtn.textContent = 'Export CSV';
+  exportBtn.className = 'wl-cl-btn wl-cl-btn-primary';
+  exportBtn.addEventListener('click', function(){ _wlCLExportWordCSV(words); });
+  btnGroup.appendChild(exportBtn);
+  var importBtn = document.createElement('button');
+  importBtn.type = 'button';
+  importBtn.textContent = 'Import CSV';
+  importBtn.className = 'wl-cl-btn wl-cl-btn-success';
+  importBtn.addEventListener('click', function(){ _wlCLImportWordCSV(words, renderTable); });
+  btnGroup.appendChild(importBtn);
+  var clearBtn = document.createElement('button');
+  clearBtn.type = 'button';
+  clearBtn.textContent = 'Clear drafts';
+  clearBtn.className = 'wl-cl-btn';
+  clearBtn.style.background = '#475569';
+  clearBtn.addEventListener('click', function(){
+    if (!confirm('Clear all localStorage word stage drafts? (This does not touch sound-sorter-data.js.)')) return;
+    localStorage.removeItem('wl_stage_word_overrides');
+    renderWordTagger();
+  });
+  btnGroup.appendChild(clearBtn);
+  root.appendChild(btnGroup);
 
   var unassignedCount = document.createElement('div');
   unassignedCount.className = 'wl-cl-unassigned-count';
@@ -942,9 +974,107 @@ function renderWordTagger() {
 function _wlCLSaveWordOverrides(words) {
   var overrides = {};
   words.forEach(function(w){
-    if (w.stage) overrides['sound-sorter:' + w.word] = w.stage;
+    // Composite key: word + sound + level (handles the 6 known duplicates)
+    if (w.stage) overrides['sound-sorter:' + w.word + '|' + w.sound + '|' + w.level] = w.stage;
   });
   localStorage.setItem('wl_stage_word_overrides', JSON.stringify(overrides));
+}
+
+function _wlCLExportWordCSV(words) {
+  var rows = [['word','sound','soundLabel','level','stage','extension']];
+  words.forEach(function(w){
+    rows.push([
+      w.word || '',
+      w.sound || '',
+      w.soundLabel || '',
+      w.level || '',
+      w.stage || '',
+      'false'  // Sound Sorter main pool — extension words live separately
+    ]);
+  });
+  var csv = rows.map(function(r){
+    return r.map(function(c){
+      c = String(c);
+      if (c.indexOf(',') !== -1 || c.indexOf('"') !== -1 || c.indexOf('\n') !== -1) {
+        c = '"' + c.replace(/"/g, '""') + '"';
+      }
+      return c;
+    }).join(',');
+  }).join('\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'sound-sorter-words-' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+}
+
+function _wlCLImportWordCSV(words, onDone) {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.csv,text/csv';
+  input.addEventListener('change', function(){
+    var f = input.files && input.files[0];
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      var rows = _wlCLParseCSV(String(reader.result));
+      _wlCLApplyWordImport(rows, words, onDone);
+    };
+    reader.readAsText(f);
+  });
+  input.click();
+}
+
+function _wlCLApplyWordImport(rows, words, onDone) {
+  if (rows.length < 2) { alert('CSV is empty'); return; }
+  var header = rows[0];
+  var wordIdx = header.indexOf('word');
+  var soundIdx = header.indexOf('sound');
+  var levelIdx = header.indexOf('level');
+  var stageIdx = header.indexOf('stage');
+  if (wordIdx < 0 || soundIdx < 0 || levelIdx < 0 || stageIdx < 0) {
+    alert('Word CSV must have columns: word, sound, level, stage');
+    return;
+  }
+  // Build an index of the in-memory words for O(1) lookup by composite key
+  var index = {};
+  words.forEach(function(w){
+    var key = (w.word || '') + '|' + (w.sound || '') + '|' + (w.level || '');
+    (index[key] = index[key] || []).push(w);
+  });
+  var changes = 0, errors = 0;
+  // Dry-run: count changes
+  for (var i = 1; i < rows.length; i++) {
+    var word = (rows[i][wordIdx] || '').trim();
+    var sound = (rows[i][soundIdx] || '').trim();
+    var level = (rows[i][levelIdx] || '').trim();
+    var stage = (rows[i][stageIdx] || '').trim() || null;
+    if (!word || !sound || !level) { errors++; continue; }
+    if (stage && (typeof WLStage === 'undefined' || WLStage.STAGE_ORDER.indexOf(stage) === -1)) { errors++; continue; }
+    var matches = index[word + '|' + sound + '|' + level];
+    if (!matches || !matches.length) { errors++; continue; }
+    // Count as a change if any matched entry has a different stage
+    if (matches.some(function(m){ return m.stage !== stage; })) changes++;
+  }
+  if (!confirm('Apply ' + changes + ' changes (' + errors + ' errors will be skipped)?')) return;
+  // Commit
+  for (var i = 1; i < rows.length; i++) {
+    var word = (rows[i][wordIdx] || '').trim();
+    var sound = (rows[i][soundIdx] || '').trim();
+    var level = (rows[i][levelIdx] || '').trim();
+    var stage = (rows[i][stageIdx] || '').trim() || null;
+    if (!word || !sound || !level) continue;
+    if (stage && WLStage.STAGE_ORDER.indexOf(stage) === -1) continue;
+    var matches = index[word + '|' + sound + '|' + level];
+    if (!matches) continue;
+    matches.forEach(function(m){ m.stage = stage; });
+  }
+  _wlCLSaveWordOverrides(words);
+  if (typeof onDone === 'function') onDone();
+  alert('Applied ' + changes + ' changes. Export and run the persist script to commit to sound-sorter-data.js.');
 }
 
 // ── Wire sub-tabs ────────────────────────────────────────────
