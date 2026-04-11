@@ -2799,13 +2799,88 @@ function showExtPopover(studentId, btnEl) {
 
   var title = document.createElement('div');
   title.style.cssText = 'font-size:14px;font-weight:900;color:var(--text-primary);margin-bottom:4px;';
-  title.textContent = '\uD83D\uDD2C Extension — ' + (student.name || 'Student');
+  title.textContent = '\uD83C\uDF93 Stage & Extension — ' + (student.name || 'Student');
   card.appendChild(title);
 
   var desc = document.createElement('div');
   desc.style.cssText = 'font-size:10px;color:var(--muted);font-weight:600;margin-bottom:12px;';
-  desc.textContent = 'Toggle extension content globally or per activity.';
+  desc.textContent = 'Set the student\u2019s year-level stage and optional per-activity overrides, then configure extension content below.';
   card.appendChild(desc);
+
+  // Stage selector
+  var stageSection = document.createElement('div');
+  stageSection.style.cssText = 'margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line);';
+  var stageLabel = document.createElement('div');
+  stageLabel.style.cssText = 'font-size:11px;font-weight:900;color:var(--text-primary);margin-bottom:6px;';
+  stageLabel.textContent = 'Stage';
+  stageSection.appendChild(stageLabel);
+  var stageSelect = document.createElement('select');
+  stageSelect.style.cssText = 'width:100%;padding:7px 9px;border:1px solid var(--line);background:var(--navy-3,#0b1230);color:var(--text-primary);border-radius:8px;font-size:12px;font-family:Lexend,sans-serif;';
+  var _STAGE_OPTS = [
+    ['', 'Not set'],
+    ['s2e', 'Explorer (Stage 2 Early, ~Y3)'],
+    ['s2l', 'Voyager (Stage 2 Late, ~Y4)'],
+    ['s3e', 'Wanderer (Stage 3 Early, ~Y5)'],
+    ['s3l', 'Trailblazer (Stage 3 Late, ~Y6)'],
+    ['s4',  'Pioneer (Beyond curriculum)']
+  ];
+  _STAGE_OPTS.forEach(function(o){
+    var opt = document.createElement('option');
+    opt.value = o[0]; opt.textContent = o[1];
+    stageSelect.appendChild(opt);
+  });
+  stageSelect.value = student.stage || '';
+  stageSection.appendChild(stageSelect);
+
+  // Per-activity stage overrides
+  var overridesSection = document.createElement('details');
+  overridesSection.style.cssText = 'margin-top:10px;';
+  var overridesSummary = document.createElement('summary');
+  overridesSummary.style.cssText = 'font-size:10px;font-weight:800;color:var(--muted);cursor:pointer;margin-bottom:6px;';
+  overridesSummary.textContent = 'Per-activity stage overrides';
+  overridesSection.appendChild(overridesSummary);
+
+  var currentOverrides = student.stage_overrides || {};
+  var _overrideSelects = {};
+  var _OVERRIDE_OPTS = [
+    ['', 'Use base'],
+    ['s2e', 'Explorer'],
+    ['s2l', 'Voyager'],
+    ['s3e', 'Wanderer'],
+    ['s3l', 'Trailblazer'],
+    ['s4',  'Pioneer']
+  ];
+  _EXT_ACTIVITIES.forEach(function(act){
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;margin:3px 0;';
+    var lbl = document.createElement('span');
+    lbl.style.cssText = 'flex:1;font-size:10px;color:var(--muted);font-weight:700;';
+    lbl.textContent = act.label;
+    var sel = document.createElement('select');
+    sel.style.cssText = 'width:110px;padding:3px 6px;border:1px solid var(--line);background:var(--navy-3,#0b1230);color:var(--text-primary);border-radius:6px;font-size:10px;font-family:Lexend,sans-serif;';
+    _OVERRIDE_OPTS.forEach(function(o){
+      var opt = document.createElement('option');
+      opt.value = o[0]; opt.textContent = o[1];
+      sel.appendChild(opt);
+    });
+    sel.value = currentOverrides[act.id] || '';
+    row.appendChild(lbl);
+    row.appendChild(sel);
+    overridesSection.appendChild(row);
+    _overrideSelects[act.id] = sel;
+  });
+  stageSection.appendChild(overridesSection);
+  card.appendChild(stageSection);
+
+  // Extension sub-heading
+  var extHeading = document.createElement('div');
+  extHeading.style.cssText = 'font-size:11px;font-weight:900;color:var(--text-primary);margin-bottom:2px;';
+  extHeading.textContent = '+1 Stage (Extension)';
+  card.appendChild(extHeading);
+  var extSub = document.createElement('div');
+  extSub.style.cssText = 'font-size:9px;color:var(--muted);font-weight:600;margin-bottom:8px;';
+  extSub.textContent = 'Gives the student access to content from the next stage up.';
+  card.appendChild(extSub);
 
   // Global toggle
   var globalRow = document.createElement('div');
@@ -2875,13 +2950,23 @@ function showExtPopover(studentId, btnEl) {
     var anyOn = false;
     toggles.forEach(function(t) { if (t.dataset.on === '1') { onList.push(t.dataset.actId); anyOn = true; } });
     var allChecked = onList.length === _EXT_ACTIVITIES.length;
+    var newStage = stageSelect.value || null;
+    var newOverrides = {};
+    Object.keys(_overrideSelects).forEach(function(k){
+      var v = _overrideSelects[k].value;
+      if (v) newOverrides[k] = v;
+    });
     try {
       await dbSb().from('students').update({
         extension_mode: anyOn,
-        extension_activities: allChecked ? [] : onList
+        extension_activities: allChecked ? [] : onList,
+        stage: newStage,
+        stage_overrides: newOverrides
       }).eq('id', studentId);
       student.extension_mode = anyOn;
       student.extension_activities = allChecked ? [] : onList;
+      student.stage = newStage;
+      student.stage_overrides = newOverrides;
       pop.remove();
       renderSummary();
       renderFlags();
