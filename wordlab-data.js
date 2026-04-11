@@ -744,6 +744,15 @@ const WordLabData = (() => {
   // If activity is provided, checks per-activity extension.
   // extension_activities=[] means all activities (backward compatible).
   // extension_activities=['phoneme-splitter','root-lab'] means only those.
+  //
+  // Under the stage system, extension means "+1 stage": when this returns
+  // true for an activity, content tagged with the next stage up becomes
+  // visible via WLStage.visibleStages(baseStage, true). A Voyager with
+  // extension on sees Explorer + Voyager + Wanderer content; a Pioneer
+  // already at the top is unaffected. In games with difficulty tiers
+  // (Sound Sorter, Phoneme Splitter, Root Lab) extension also locks the
+  // tier selector to Challenge — see Task 21 and the game pages for
+  // that wiring.
   function isExtensionMode(activity) {
     if (sessionStorage.getItem('wl_extension_mode') !== 'true') return false;
     if (!activity) return true; // global check
