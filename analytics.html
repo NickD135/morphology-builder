@@ -98,6 +98,75 @@
       .act-row{flex-wrap:wrap;}
       .act-label{width:100%;text-align:left;}
     }
+
+    /* ── Content Levels (stage tagging admin UI) ──────────────── */
+    .wl-cl-subtabs{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+    .wlCLSubtab{
+      padding:8px 16px;border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.03);color:#cbd5e1;
+      border-radius:999px;cursor:pointer;font-size:12px;font-weight:800;
+      font-family:'Lexend',sans-serif;
+    }
+    .wlCLSubtab:hover{background:rgba(99,102,241,.12);}
+    .wlCLSubtab.active{background:#6366f1;color:#fff;border-color:#6366f1;}
+    .wl-cl-filter-bar{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+    .wl-cl-filter-btn{
+      padding:5px 12px;border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.03);color:#94a3b8;
+      border-radius:999px;cursor:pointer;font-size:12px;font-weight:700;
+      font-family:'Lexend',sans-serif;
+    }
+    .wl-cl-filter-btn:hover{background:rgba(99,102,241,.12);color:#e0e7ff;}
+    .wl-cl-filter-btn.active{background:#6366f1;color:#fff;border-color:#6366f1;}
+    .wl-cl-unassigned-count{
+      font-size:12px;font-weight:800;color:#fbbf24;margin-bottom:10px;
+    }
+    .wl-cl-btn-group{display:flex;gap:8px;margin-bottom:12px;}
+    .wl-cl-btn{
+      padding:7px 14px;border:none;border-radius:8px;
+      cursor:pointer;font-size:12px;font-weight:800;
+      font-family:'Lexend',sans-serif;color:#fff;
+    }
+    .wl-cl-btn:hover{filter:brightness(1.1);}
+    .wl-cl-btn-primary{background:#6366f1;}
+    .wl-cl-btn-success{background:#16a34a;}
+    .wl-cl-table{width:100%;border-collapse:collapse;font-size:12px;}
+    .wl-cl-table th,.wl-cl-table td{
+      text-align:left;padding:7px 10px;
+      border-top:1px solid rgba(255,255,255,.04);
+      color:#cbd5e1;
+    }
+    .wl-cl-table thead th{
+      font-size:10px;text-transform:uppercase;letter-spacing:.1em;
+      color:#64748b;border-top:none;border-bottom:1px solid rgba(255,255,255,.08);
+      font-weight:900;
+    }
+    .wl-cl-table tbody tr:hover td{background:rgba(99,102,241,.04);}
+    .wl-cl-morph{font-weight:800;color:#e0e7ff;}
+    .wl-cl-examples{font-size:11px;color:#64748b;}
+    .wl-cl-table select{
+      padding:4px 8px;border:1px solid rgba(255,255,255,.1);
+      background:rgba(255,255,255,.04);color:#e0e7ff;
+      border-radius:6px;font-size:11px;font-family:'Lexend',sans-serif;
+      cursor:pointer;
+    }
+    .wl-cl-table-wrap{
+      max-height:560px;overflow-y:auto;
+      border-radius:12px;border:1px solid rgba(255,255,255,.06);
+      background:rgba(255,255,255,.02);
+    }
+    .wl-cl-help{
+      margin-top:14px;padding:12px 14px;
+      background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.2);
+      border-radius:10px;font-size:11px;color:#fbbf24;line-height:1.6;
+    }
+    .wl-cl-help code{
+      background:rgba(0,0,0,.3);padding:2px 6px;border-radius:4px;
+      color:#e0e7ff;font-family:ui-monospace,monospace;font-size:10px;
+    }
+    .wl-cl-word-note{
+      margin:8px 0 12px;color:#64748b;font-size:12px;font-weight:600;
+    }
   </style>
 </head>
 <body>
@@ -183,6 +252,24 @@
     </section>
 
     <div style="text-align:center;font-size:11px;font-weight:700;color:#475569;margin-top:8px;" id="generatedAt"></div>
+
+    <!-- Content Levels (stage tagging admin UI) -->
+    <section class="section" aria-label="Content stage tagging">
+      <div class="section-heading">Content Levels</div>
+      <div class="wl-cl-subtabs">
+        <button id="wlCLSubtabMorpheme" class="wlCLSubtab active" type="button">Morphemes</button>
+        <button id="wlCLSubtabWord" class="wlCLSubtab" type="button">Sound Sorter Words</button>
+      </div>
+      <div id="wlCLMorphemeView"></div>
+      <div id="wlCLWordView" style="display:none;"></div>
+      <div class="wl-cl-help">
+        <strong>Workflow:</strong> Tag morphemes/words here, then <em>Export CSV</em>.
+        To persist to code, run:
+        <code>node scripts/apply-stage-csv.js morpheme-stages-YYYY-MM-DD.csv data.js</code>
+        and commit the result. Drafts are saved to <code>localStorage</code>
+        so you can iterate across sessions before running the persist script.
+      </div>
+    </section>
   </div>
 </div>
 
@@ -191,6 +278,8 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="wordlab-stage.js"></script>
 <script defer src="wordlab-data.js"></script>
+<script defer src="data.js"></script>
+<script defer src="sound-sorter-data.js"></script>
 <script>
 const SUPABASE_URL = 'https://kdpavfrzmmzknqfpodrl.supabase.co';
 let _data = null;
@@ -277,6 +366,9 @@ function renderAll() {
   renderSparkline();
 
   document.getElementById('generatedAt').textContent = 'Generated ' + new Date(_data.generated_at).toLocaleString();
+
+  // Content Levels admin UI
+  try { _wlCLWireSubtabs(); renderMorphemeTagger(); } catch(e) { console.warn('Content Levels init error:', e); }
 }
 
 // ── School table ───────────────────────────────────────────
@@ -382,6 +474,476 @@ function renderSparkline() {
       '<span>' + days[Math.floor(days.length / 2)].date.slice(5) + '</span>' +
       '<span>' + days[days.length - 1].date.slice(5) + '</span>';
   }
+}
+
+// ═══════════════════════════════════════════════════════════
+// Content Levels — stage tagging admin UI (Phase 6)
+// ═══════════════════════════════════════════════════════════
+
+function _wlCLCollectMorphemes() {
+  var items = [];
+  if (typeof PREFIXES !== 'undefined') PREFIXES.forEach(function(p){ items.push({ type:'prefix', group:'', ref:p }); });
+  if (typeof SUFFIXES !== 'undefined') SUFFIXES.forEach(function(s){ items.push({ type:'suffix', group:'', ref:s }); });
+  if (typeof CORE_BASES  !== 'undefined') CORE_BASES.forEach(function(b){  items.push({ type:'base', group:'core',  ref:b }); });
+  if (typeof ANGLO_BASES !== 'undefined') ANGLO_BASES.forEach(function(b){ items.push({ type:'base', group:'anglo', ref:b }); });
+  if (typeof LATIN_BASES !== 'undefined') LATIN_BASES.forEach(function(b){ items.push({ type:'base', group:'latin', ref:b }); });
+  if (typeof GREEK_BASES !== 'undefined') GREEK_BASES.forEach(function(b){ items.push({ type:'base', group:'greek', ref:b }); });
+  return items;
+}
+
+function _wlCLKeyFor(item) {
+  return item.type + ':' + (item.group ? item.group + ':' : '') + item.ref.id;
+}
+
+function _wlCLRestoreMorphemeDrafts(items) {
+  try {
+    var saved = JSON.parse(localStorage.getItem('wl_stage_morpheme_overrides') || '{}');
+    items.forEach(function(it){
+      var k = _wlCLKeyFor(it);
+      if (saved.hasOwnProperty(k)) it.ref.stage = saved[k] || null;
+    });
+  } catch(e){}
+}
+
+function _wlCLSaveMorphemeOverrides(items) {
+  var overrides = {};
+  items.forEach(function(it){
+    var k = _wlCLKeyFor(it);
+    if (it.ref.stage) overrides[k] = it.ref.stage;
+  });
+  localStorage.setItem('wl_stage_morpheme_overrides', JSON.stringify(overrides));
+}
+
+var _WL_STAGE_OPTS = [
+  ['', 'Decide later'],
+  ['s2e', 'Explorer'],
+  ['s2l', 'Voyager'],
+  ['s3e', 'Wanderer'],
+  ['s3l', 'Trailblazer'],
+  ['s4',  'Pioneer']
+];
+
+var _WL_FILTER_OPTS = [
+  ['', 'All'],
+  ['unassigned', 'Unassigned'],
+  ['s2e', 'Explorer'],
+  ['s2l', 'Voyager'],
+  ['s3e', 'Wanderer'],
+  ['s3l', 'Trailblazer'],
+  ['s4',  'Pioneer']
+];
+
+function renderMorphemeTagger() {
+  var root = document.getElementById('wlCLMorphemeView');
+  if (!root) return;
+  while (root.firstChild) root.removeChild(root.firstChild);
+
+  if (typeof PREFIXES === 'undefined') {
+    var msg = document.createElement('p');
+    msg.style.color = '#fbbf24';
+    msg.textContent = 'data.js not loaded. Check <script> tag in analytics.html.';
+    root.appendChild(msg);
+    return;
+  }
+
+  var items = _wlCLCollectMorphemes();
+  _wlCLRestoreMorphemeDrafts(items);
+
+  // Filter bar
+  var filterBar = document.createElement('div');
+  filterBar.className = 'wl-cl-filter-bar';
+  var currentFilter = '';
+  _WL_FILTER_OPTS.forEach(function(f){
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = f[1];
+    btn.className = 'wl-cl-filter-btn' + (f[0] === '' ? ' active' : '');
+    btn.addEventListener('click', function(){
+      currentFilter = f[0];
+      filterBar.querySelectorAll('button').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      renderTable();
+    });
+    filterBar.appendChild(btn);
+  });
+  root.appendChild(filterBar);
+
+  // Export/Import buttons
+  var btnGroup = document.createElement('div');
+  btnGroup.className = 'wl-cl-btn-group';
+  var exportBtn = document.createElement('button');
+  exportBtn.type = 'button';
+  exportBtn.textContent = 'Export CSV';
+  exportBtn.className = 'wl-cl-btn wl-cl-btn-primary';
+  exportBtn.addEventListener('click', function(){ _wlCLExportMorphemeCSV(items); });
+  btnGroup.appendChild(exportBtn);
+  var importBtn = document.createElement('button');
+  importBtn.type = 'button';
+  importBtn.textContent = 'Import CSV';
+  importBtn.className = 'wl-cl-btn wl-cl-btn-success';
+  importBtn.addEventListener('click', function(){ _wlCLImportMorphemeCSV(items, renderTable); });
+  btnGroup.appendChild(importBtn);
+  var clearBtn = document.createElement('button');
+  clearBtn.type = 'button';
+  clearBtn.textContent = 'Clear drafts';
+  clearBtn.className = 'wl-cl-btn';
+  clearBtn.style.background = '#475569';
+  clearBtn.addEventListener('click', function(){
+    if (!confirm('Clear all localStorage stage drafts? (This does not touch data.js.)')) return;
+    localStorage.removeItem('wl_stage_morpheme_overrides');
+    // Reset stage to whatever's in the actual arrays (re-pulling from sources)
+    items.forEach(function(it){ it.ref.stage = it.ref.stage; });
+    renderMorphemeTagger();
+  });
+  btnGroup.appendChild(clearBtn);
+  root.appendChild(btnGroup);
+
+  var unassignedCount = document.createElement('div');
+  unassignedCount.className = 'wl-cl-unassigned-count';
+  root.appendChild(unassignedCount);
+
+  var tableWrap = document.createElement('div');
+  tableWrap.className = 'wl-cl-table-wrap';
+  var table = document.createElement('table');
+  table.className = 'wl-cl-table';
+  var thead = document.createElement('thead');
+  var headRow = document.createElement('tr');
+  ['Morpheme','Type','Group','Meaning','Stage','Examples'].forEach(function(h){
+    var th = document.createElement('th');
+    th.textContent = h;
+    headRow.appendChild(th);
+  });
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+  var tbody = document.createElement('tbody');
+  table.appendChild(tbody);
+  tableWrap.appendChild(table);
+  root.appendChild(tableWrap);
+
+  function renderTable() {
+    while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+    var shown = items.filter(function(it){
+      if (currentFilter === '') return true;
+      if (currentFilter === 'unassigned') return !it.ref.stage;
+      return it.ref.stage === currentFilter;
+    });
+    var unassigned = items.filter(function(it){ return !it.ref.stage; }).length;
+    unassignedCount.textContent = unassigned + ' of ' + items.length + ' morphemes unassigned';
+
+    shown.forEach(function(it){
+      var tr = document.createElement('tr');
+
+      var morphCell = document.createElement('td');
+      morphCell.textContent = it.ref.display || it.ref.form || it.ref.id;
+      morphCell.className = 'wl-cl-morph';
+      tr.appendChild(morphCell);
+
+      var typeCell = document.createElement('td');
+      typeCell.textContent = it.type;
+      tr.appendChild(typeCell);
+
+      var groupCell = document.createElement('td');
+      groupCell.textContent = it.group || '\u2014';
+      groupCell.style.color = '#64748b';
+      tr.appendChild(groupCell);
+
+      var meanCell = document.createElement('td');
+      meanCell.textContent = it.ref.meaning || '';
+      tr.appendChild(meanCell);
+
+      var stageCell = document.createElement('td');
+      var sel = document.createElement('select');
+      _WL_STAGE_OPTS.forEach(function(o){
+        var opt = document.createElement('option');
+        opt.value = o[0]; opt.textContent = o[1];
+        sel.appendChild(opt);
+      });
+      sel.value = it.ref.stage || '';
+      sel.addEventListener('change', function(){
+        it.ref.stage = sel.value || null;
+        _wlCLSaveMorphemeOverrides(items);
+        // Update count without full re-render
+        var u = items.filter(function(x){ return !x.ref.stage; }).length;
+        unassignedCount.textContent = u + ' of ' + items.length + ' morphemes unassigned';
+      });
+      stageCell.appendChild(sel);
+      tr.appendChild(stageCell);
+
+      var exCell = document.createElement('td');
+      exCell.className = 'wl-cl-examples';
+      var exStr = (it.ref.examples || []).slice(0, 3)
+        .map(function(e){ return String(e).replace(/<\/?u>/g, ''); }).join(', ');
+      exCell.textContent = exStr;
+      tr.appendChild(exCell);
+
+      tbody.appendChild(tr);
+    });
+  }
+  renderTable();
+}
+
+function _wlCLExportMorphemeCSV(items) {
+  var rows = [['type','group','id','display','meaning','stage']];
+  items.forEach(function(it){
+    rows.push([
+      it.type,
+      it.group || '',
+      it.ref.id || '',
+      it.ref.display || it.ref.form || '',
+      it.ref.meaning || '',
+      it.ref.stage || ''
+    ]);
+  });
+  var csv = rows.map(function(r){
+    return r.map(function(c){
+      c = String(c);
+      if (c.indexOf(',') !== -1 || c.indexOf('"') !== -1 || c.indexOf('\n') !== -1) {
+        c = '"' + c.replace(/"/g, '""') + '"';
+      }
+      return c;
+    }).join(',');
+  }).join('\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'morpheme-stages-' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+}
+
+function _wlCLParseCSV(text) {
+  var rows = [];
+  var lines = text.split(/\r?\n/);
+  for (var i = 0; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    var fields = [], cur = '', inQ = false;
+    for (var j = 0; j < lines[i].length; j++) {
+      var ch = lines[i][j];
+      if (inQ) {
+        if (ch === '"' && lines[i][j+1] === '"') { cur += '"'; j++; }
+        else if (ch === '"') inQ = false;
+        else cur += ch;
+      } else {
+        if (ch === ',') { fields.push(cur); cur = ''; }
+        else if (ch === '"') inQ = true;
+        else cur += ch;
+      }
+    }
+    fields.push(cur);
+    rows.push(fields);
+  }
+  return rows;
+}
+
+function _wlCLImportMorphemeCSV(items, onDone) {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.csv,text/csv';
+  input.addEventListener('change', function(){
+    var f = input.files && input.files[0];
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      var rows = _wlCLParseCSV(String(reader.result));
+      _wlCLApplyImport(rows, items, onDone);
+    };
+    reader.readAsText(f);
+  });
+  input.click();
+}
+
+function _wlCLApplyImport(rows, items, onDone) {
+  if (rows.length < 2) { alert('CSV is empty'); return; }
+  var header = rows[0];
+  var typeIdx = header.indexOf('type');
+  var idIdx = header.indexOf('id');
+  var stageIdx = header.indexOf('stage');
+  var groupIdx = header.indexOf('group'); // optional
+  if (typeIdx < 0 || idIdx < 0 || stageIdx < 0) {
+    alert('CSV must have columns: type, id, stage');
+    return;
+  }
+  var changes = 0, errors = 0;
+  // Dry-run: count changes
+  for (var i = 1; i < rows.length; i++) {
+    var type = rows[i][typeIdx];
+    var id = rows[i][idIdx];
+    var group = groupIdx >= 0 ? (rows[i][groupIdx] || '') : '';
+    var stage = rows[i][stageIdx] || null;
+    if (stage && (typeof WLStage === 'undefined' || WLStage.STAGE_ORDER.indexOf(stage) === -1)) { errors++; continue; }
+    var match = items.find(function(it){
+      return it.type === type && it.ref.id === id && (!group || it.group === group);
+    });
+    if (!match) { errors++; continue; }
+    if (match.ref.stage !== stage) changes++;
+  }
+  if (!confirm('Apply ' + changes + ' changes (' + errors + ' errors will be skipped)?')) return;
+  // Commit
+  for (var i = 1; i < rows.length; i++) {
+    var type = rows[i][typeIdx];
+    var id = rows[i][idIdx];
+    var group = groupIdx >= 0 ? (rows[i][groupIdx] || '') : '';
+    var stage = rows[i][stageIdx] || null;
+    if (stage && WLStage.STAGE_ORDER.indexOf(stage) === -1) continue;
+    var match = items.find(function(it){
+      return it.type === type && it.ref.id === id && (!group || it.group === group);
+    });
+    if (match) match.ref.stage = stage;
+  }
+  _wlCLSaveMorphemeOverrides(items);
+  if (typeof onDone === 'function') onDone();
+  alert('Applied ' + changes + ' changes. Export and run the persist script to commit to data.js.');
+}
+
+// ── Word tagger (Sound Sorter) ──────────────────────────────
+function renderWordTagger() {
+  var root = document.getElementById('wlCLWordView');
+  if (!root) return;
+  while (root.firstChild) root.removeChild(root.firstChild);
+
+  var words = (typeof SOUND_SORTER_WORDS !== 'undefined' && SOUND_SORTER_WORDS) || [];
+  if (!words.length) {
+    var p = document.createElement('p');
+    p.style.color = '#fbbf24';
+    p.textContent = 'sound-sorter-data.js not loaded or SOUND_SORTER_WORDS is empty.';
+    root.appendChild(p);
+    return;
+  }
+
+  // Restore drafts
+  try {
+    var saved = JSON.parse(localStorage.getItem('wl_stage_word_overrides') || '{}');
+    words.forEach(function(w){
+      var key = 'sound-sorter:' + w.word;
+      if (saved.hasOwnProperty(key)) w.stage = saved[key] || null;
+    });
+  } catch(e){}
+
+  var note = document.createElement('div');
+  note.className = 'wl-cl-word-note';
+  note.textContent = 'Currently only Sound Sorter words are tagged here. Breakdown Blitz, Phoneme Splitter, and Syllable Splitter tagging will be added later.';
+  root.appendChild(note);
+
+  var filterBar = document.createElement('div');
+  filterBar.className = 'wl-cl-filter-bar';
+  var currentFilter = '';
+  _WL_FILTER_OPTS.forEach(function(f){
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = f[1];
+    btn.className = 'wl-cl-filter-btn' + (f[0] === '' ? ' active' : '');
+    btn.addEventListener('click', function(){
+      currentFilter = f[0];
+      filterBar.querySelectorAll('button').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      renderTable();
+    });
+    filterBar.appendChild(btn);
+  });
+  root.appendChild(filterBar);
+
+  var unassignedCount = document.createElement('div');
+  unassignedCount.className = 'wl-cl-unassigned-count';
+  root.appendChild(unassignedCount);
+
+  var tableWrap = document.createElement('div');
+  tableWrap.className = 'wl-cl-table-wrap';
+  var table = document.createElement('table');
+  table.className = 'wl-cl-table';
+  var thead = document.createElement('thead');
+  var headRow = document.createElement('tr');
+  ['Word','Sound','Level','Stage'].forEach(function(h){
+    var th = document.createElement('th');
+    th.textContent = h;
+    headRow.appendChild(th);
+  });
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+  var tbody = document.createElement('tbody');
+  table.appendChild(tbody);
+  tableWrap.appendChild(table);
+  root.appendChild(tableWrap);
+
+  function renderTable() {
+    while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+    var shown = words.filter(function(w){
+      if (currentFilter === '') return true;
+      if (currentFilter === 'unassigned') return !w.stage;
+      return w.stage === currentFilter;
+    });
+    var unassigned = words.filter(function(w){ return !w.stage; }).length;
+    unassignedCount.textContent = unassigned + ' of ' + words.length + ' words unassigned';
+
+    shown.forEach(function(w){
+      var tr = document.createElement('tr');
+      var wCell = document.createElement('td');
+      wCell.className = 'wl-cl-morph';
+      wCell.textContent = w.word || '';
+      tr.appendChild(wCell);
+
+      var sCell = document.createElement('td');
+      sCell.textContent = w.soundLabel || w.sound || '';
+      tr.appendChild(sCell);
+
+      var lCell = document.createElement('td');
+      lCell.textContent = w.level || '';
+      lCell.style.color = '#64748b';
+      tr.appendChild(lCell);
+
+      var stageCell = document.createElement('td');
+      var sel = document.createElement('select');
+      _WL_STAGE_OPTS.forEach(function(o){
+        var opt = document.createElement('option');
+        opt.value = o[0]; opt.textContent = o[1];
+        sel.appendChild(opt);
+      });
+      sel.value = w.stage || '';
+      sel.addEventListener('change', function(){
+        w.stage = sel.value || null;
+        _wlCLSaveWordOverrides(words);
+        var u = words.filter(function(x){ return !x.stage; }).length;
+        unassignedCount.textContent = u + ' of ' + words.length + ' words unassigned';
+      });
+      stageCell.appendChild(sel);
+      tr.appendChild(stageCell);
+
+      tbody.appendChild(tr);
+    });
+  }
+  renderTable();
+}
+
+function _wlCLSaveWordOverrides(words) {
+  var overrides = {};
+  words.forEach(function(w){
+    if (w.stage) overrides['sound-sorter:' + w.word] = w.stage;
+  });
+  localStorage.setItem('wl_stage_word_overrides', JSON.stringify(overrides));
+}
+
+// ── Wire sub-tabs ────────────────────────────────────────────
+function _wlCLWireSubtabs() {
+  var mBtn = document.getElementById('wlCLSubtabMorpheme');
+  var wBtn = document.getElementById('wlCLSubtabWord');
+  var mView = document.getElementById('wlCLMorphemeView');
+  var wView = document.getElementById('wlCLWordView');
+  if (!mBtn || !wBtn || !mView || !wView) return;
+  mBtn.addEventListener('click', function(){
+    mBtn.classList.add('active');
+    wBtn.classList.remove('active');
+    mView.style.display = '';
+    wView.style.display = 'none';
+    renderMorphemeTagger();
+  });
+  wBtn.addEventListener('click', function(){
+    wBtn.classList.add('active');
+    mBtn.classList.remove('active');
+    wView.style.display = '';
+    mView.style.display = 'none';
+    renderWordTagger();
+  });
 }
 
 // ── Helpers ─────────────────────────────────────────────────
