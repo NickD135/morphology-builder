@@ -2170,6 +2170,33 @@ function gdBuildAttentionCard() {
   return '<section class="gd-attentionCard alert">' + header + '<div class="gd-flagPillRow">' + pills + '</div></section>';
 }
 
+var _gdSortState = { key: 'name', dir: 1 };
+function _gdSortStudents() {
+  if (!currentClass || !currentClass.students) return;
+  var key = _gdSortState.key;
+  var dir = _gdSortState.dir;
+  currentClass.students.sort(function(a, b){
+    var av, bv;
+    if (key === 'stage') {
+      av = (typeof WLStage !== 'undefined') ? WLStage.stageIndex(a.stage) : 0;
+      bv = (typeof WLStage !== 'undefined') ? WLStage.stageIndex(b.stage) : 0;
+    } else {
+      av = (a.name || '').toLowerCase();
+      bv = (b.name || '').toLowerCase();
+    }
+    if (av < bv) return -1 * dir;
+    if (av > bv) return 1 * dir;
+    return 0;
+  });
+}
+
+function _gdHandleSort(key) {
+  if (_gdSortState.key === key) _gdSortState.dir *= -1;
+  else { _gdSortState.key = key; _gdSortState.dir = 1; }
+  _gdSortStudents();
+  gdRefresh();
+}
+
 function _gdCalcMasteryFromAllProgress(student) {
   // Phase 1 stub: count all core-game results for now. Replaced by tagged
   // categories once content tagging lands.
@@ -2252,8 +2279,17 @@ function gdBuildMatrixCard() {
     s._mastery = _gdCalcMasteryFromAllProgress(s);
   });
 
+  // Apply current sort order
+  _gdSortStudents();
+
   // Group header row
-  var groupHeaderHtml = '<th class="gd-studentHead" rowspan="2">Student</th>';
+  var arrowName = _gdSortState.key === 'name' ? (_gdSortState.dir > 0 ? ' \u2191' : ' \u2193') : '';
+  var arrowStage = _gdSortState.key === 'stage' ? (_gdSortState.dir > 0 ? ' \u2191' : ' \u2193') : '';
+  var groupHeaderHtml = '<th class="gd-studentHead" rowspan="2" style="cursor:pointer;" title="Click to sort">' +
+    '<span onclick="_gdHandleSort(\'name\');event.stopPropagation();">Student' + arrowName + '</span>' +
+    '  \u00B7  ' +
+    '<span onclick="_gdHandleSort(\'stage\');event.stopPropagation();" style="font-size:10px;color:var(--muted);font-weight:700;">Stage' + arrowStage + '</span>' +
+    '</th>';
   groupCounts.forEach(function(g) {
     groupHeaderHtml += '<th class="gd-groupHead gd-col-' + g.key + '" colspan="' + g.count + '">' + g.name + '</th>';
   });
