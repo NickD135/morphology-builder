@@ -515,7 +515,8 @@ let WORDS = window.SOUND_SORTER_WORDS;
 // available. The SOUND_GROUPS rebuild below also needs to re-run after
 // the swap, so both happen here.
 document.addEventListener('DOMContentLoaded', function(){
-  if(typeof WordLabData !== 'undefined' && WordLabData.isExtensionMode && WordLabData.isExtensionMode('sound-sorter')){
+  var extOn = (typeof WordLabData !== 'undefined' && WordLabData.isExtensionMode && WordLabData.isExtensionMode('sound-sorter'));
+  if(extOn){
     if(window.WL_EXTENSION) WORDS.splice(0, WORDS.length, ...WL_EXTENSION.soundWords);
   }
   // Rebuild SOUND_GROUPS from whatever is now in WORDS
@@ -526,6 +527,22 @@ document.addEventListener('DOMContentLoaded', function(){
   });
   SOUND_GROUPS.vowel     = [...seen.vowel.entries()].map(([id, label]) => ({ id, label }));
   SOUND_GROUPS.consonant = [...seen.consonant.entries()].map(([id, label]) => ({ id, label }));
+
+  // Stage system: lock tier to Challenge when extension is on (+1 stage)
+  if(extOn){
+    document.querySelectorAll('.optBtn[data-level]').forEach(function(btn){
+      if(btn.dataset.level !== 'challenge'){
+        btn.disabled = true;
+        btn.style.opacity = '0.4';
+        btn.style.cursor = 'not-allowed';
+        btn.title = 'Locked to Challenge in +1 Stage (Extension) mode';
+      }
+    });
+    var challengeBtn = document.querySelector('.optBtn[data-level="challenge"]');
+    if(challengeBtn && typeof selectLevel === 'function'){
+      selectLevel('challenge', challengeBtn);
+    }
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════
