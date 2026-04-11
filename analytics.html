@@ -301,7 +301,25 @@ const ACTIVITY_NAMES = {
   'flashcard-mode': 'Flashcards',
 };
 
-(async function init() {
+function _setLoadingError(msg) {
+  var el = document.getElementById('loadingState');
+  if (!el) return;
+  while (el.firstChild) el.removeChild(el.firstChild);
+  var icon = document.createElement('div');
+  icon.className = 'icon';
+  icon.textContent = '\u26A0\uFE0F';
+  el.appendChild(icon);
+  el.appendChild(document.createTextNode(String(msg)));
+}
+
+// Defer init until all `<script defer>` tags (WordLabData, data.js,
+// sound-sorter-data.js) have finished executing — DOMContentLoaded
+// fires after the defer queue drains.
+async function init() {
+  if (typeof WordLabData === 'undefined') {
+    _setLoadingError('Script load error: WordLabData unavailable.');
+    return;
+  }
   var user = await WordLabData.requireTeacherAuth();
   if (!user) return;
 
@@ -331,9 +349,15 @@ const ACTIVITY_NAMES = {
     document.getElementById('loadingState').style.display = 'none';
     document.getElementById('content').style.display = '';
   } catch (e) {
-    document.getElementById('loadingState').innerHTML = '<div class="icon">⚠️</div>Error loading analytics: ' + WordLabData.escapeHtml(e.message);
+    _setLoadingError('Error loading analytics: ' + (e && e.message ? String(e.message) : String(e)));
   }
-})();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
 
 function renderAll() {
   var t = _data.totals;

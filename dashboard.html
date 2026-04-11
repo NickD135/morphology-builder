@@ -3974,10 +3974,20 @@ async function dashAssignWordList(listId){
     var active = (o[0] === currentGroup) ? ' wlGroupBtn-active' : '';
     return '<button type="button" class="wlGroupBtn' + active + '" data-group="' + o[0] + '" onclick="setWordListStageGroup(\'' + listId + '\',\'' + o[0] + '\',this)">' + o[1] + '</button>';
   }).join('');
+  var wlStageMatchCount = 0;
+  var wlStageLabel = '';
+  if (currentGroup && typeof WLStage !== 'undefined') {
+    wlStageMatchCount = (currentClass.students || []).filter(function(s){ return s.stage === currentGroup; }).length;
+    wlStageLabel = WLStage.STAGE_NAMES[currentGroup] || currentGroup;
+  }
   var groupStrip =
     '<div class="wl-group-assign" style="margin-bottom:12px;padding:10px 12px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);border-radius:10px;">' +
       '<div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px;">Auto-assign by stage</div>' +
       '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + groupBtns + '</div>' +
+      (currentGroup ?
+        '<div style="font-size:11px;color:#4338ca;margin-top:8px;font-weight:800;">\u2713 Auto-assigned to ' + wlStageMatchCount + ' ' + WordLabData.escapeHtml(wlStageLabel) + (wlStageMatchCount === 1 ? '' : 's') + ' right now</div>'
+        : ''
+      ) +
       '<div style="font-size:10px;color:var(--muted);margin-top:6px;font-weight:600;">Stage assignments are live \u2014 students follow their current stage automatically.</div>' +
     '</div>';
 
@@ -4912,19 +4922,40 @@ function buildSpellingSetHeatmap(set) {
     var active = (o[0] === currentGroup) ? ' wlGroupBtn-active' : '';
     return '<button type="button" class="wlGroupBtnSS' + active + '" data-group="' + o[0] + '" onclick="setSpellingSetStageGroup(\'' + set.id + '\',\'' + o[0] + '\',this)">' + o[1] + '</button>';
   }).join('');
+  // Count students matched by the stage_group (live)
+  var stageGroupMatchCount = 0;
+  var stageGroupLabel = '';
+  if (currentGroup && typeof WLStage !== 'undefined') {
+    stageGroupMatchCount = (currentClass.students || []).filter(function(s){ return s.stage === currentGroup; }).length;
+    stageGroupLabel = WLStage.STAGE_NAMES[currentGroup] || currentGroup;
+  }
   var stageGroupStrip =
     '<div style="margin-bottom:12px;padding:10px 12px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);border-radius:10px;">' +
       '<div style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px;">Auto-assign by stage</div>' +
       '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + groupBtnsSS + '</div>' +
+      (currentGroup ?
+        '<div style="font-size:11px;color:#a5b4fc;margin-top:8px;font-weight:800;">\u2713 Auto-assigned to ' + stageGroupMatchCount + ' ' + WordLabData.escapeHtml(stageGroupLabel) + (stageGroupMatchCount === 1 ? '' : 's') + ' right now</div>'
+        : ''
+      ) +
       '<div style="font-size:10px;color:var(--muted);margin-top:6px;font-weight:600;">Stage assignments are live \u2014 students follow their current stage automatically.</div>' +
     '</div>';
+
+  // Effective count combines individual picks + stage-group matches (dedup)
+  var individualSet = {};
+  activeStudentIds.forEach(function(sid){ individualSet[sid] = true; });
+  if (currentGroup) {
+    (currentClass.students || []).forEach(function(s){
+      if (s.stage === currentGroup) individualSet[s.id] = true;
+    });
+  }
+  var effectiveCount = Object.keys(individualSet).length;
 
   var assignHtml =
     '<section class="ss-card">' +
       '<div class="ss-assignCard-header">' +
         '<div class="ss-assignCard-headline">' +
           '<span>\uD83D\uDC65 Assigned Students</span>' +
-          '<span class="ss-assignCard-count">' + activeStudentIds.length + ' of ' + currentClass.students.length + '</span>' +
+          '<span class="ss-assignCard-count">' + effectiveCount + ' of ' + currentClass.students.length + '</span>' +
         '</div>' +
         '<div class="ss-assignCard-controls">' +
           '<button class="ss-linkBtn" onclick="ssSelectAll(\'' + set.id + '\')">Select all</button>' +
