@@ -1247,17 +1247,29 @@
         }
       }
     } catch(e) { console.warn('Spelling set morphemes load error:', e); }
-    // Apply stage filtering to content pools
-    try {
-      var _filteredPrefixes = WordLabData.weightByStage(PREFIXES.slice(), 'mission-mode');
-      PREFIXES.splice(0, PREFIXES.length, ..._filteredPrefixes);
-      var _filteredSuffixes = WordLabData.weightByStage(SUFFIXES.slice(), 'mission-mode');
-      SUFFIXES.splice(0, SUFFIXES.length, ..._filteredSuffixes);
-      var _filteredSuffixBases = WordLabData.weightByStage(SUFFIX_BASES.slice(), 'mission-mode');
-      SUFFIX_BASES.splice(0, SUFFIX_BASES.length, ..._filteredSuffixBases);
-      var _filteredBases = WordLabData.weightByStage(BASES.slice(), 'mission-mode');
-      BASES.splice(0, BASES.length, ..._filteredBases);
-    } catch(e){}
+  });
+
+  // Stage filtering runs as its own DOMContentLoaded handler so early
+  // returns in the custom-morphemes/spelling-set block above can't skip
+  // it. Must run AFTER extension swap, custom morphemes, and spelling set
+  // reordering so the filter operates on the final pool. setTimeout(0)
+  // defers execution to after other DOMContentLoaded handlers microqueue.
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){
+      if (typeof WordLabData === 'undefined' || !WordLabData.weightByStage) return;
+      try {
+        var _filteredPrefixes = WordLabData.weightByStage(PREFIXES.slice(), 'mission-mode');
+        PREFIXES.splice(0, PREFIXES.length, ..._filteredPrefixes);
+        var _filteredSuffixes = WordLabData.weightByStage(SUFFIXES.slice(), 'mission-mode');
+        SUFFIXES.splice(0, SUFFIXES.length, ..._filteredSuffixes);
+        if (typeof SUFFIX_BASES !== 'undefined') {
+          var _filteredSuffixBases = WordLabData.weightByStage(SUFFIX_BASES.slice(), 'mission-mode');
+          SUFFIX_BASES.splice(0, SUFFIX_BASES.length, ..._filteredSuffixBases);
+        }
+        var _filteredBases = WordLabData.weightByStage(BASES.slice(), 'mission-mode');
+        BASES.splice(0, BASES.length, ..._filteredBases);
+      } catch(e) { console.warn('stage filter error', e); }
+    }, 50);
   });
   var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
   // ── Round count system ──
