@@ -639,8 +639,22 @@
     .gd-activityItem-acc.bad{ background:rgba(248,113,113,.15); color:var(--bad); }
     .gd-activityItem-flag{ font-size:9px; font-weight:900; padding:2px 6px; border-radius:999px; background:rgba(248,113,113,.12); color:var(--bad); border:1px solid rgba(248,113,113,.3); flex-shrink:0; }
 
-    /* Main column */
+    /* Main column wrapper (controls bar + content) */
+    .gd-mainCol{ display:flex; flex-direction:column; gap:0; min-width:0; flex:1; }
     .gd-main{ display:flex; flex-direction:column; gap:18px; min-width:0; }
+
+    /* Controls bar */
+    .gd-controlsBar{ display:flex; align-items:center; gap:12px; padding:8px 14px; margin-bottom:14px; background:#1e293b; border:1px solid rgba(255,255,255,.08); border-radius:12px; flex-wrap:wrap; }
+    .gd-controlsBar-title{ font-size:11px; font-weight:800; color:var(--text-bright); letter-spacing:.03em; margin-right:auto; white-space:nowrap; }
+    .gd-controlsBar-group{ display:flex; align-items:center; gap:4px; }
+    .gd-controlsBar-label{ font-size:10px; font-weight:700; color:var(--text-secondary); margin-right:2px; }
+    .gd-sortBtn{ font-family:inherit; font-size:10px; font-weight:700; padding:4px 10px; border-radius:8px; border:1px solid rgba(255,255,255,.12); background:transparent; color:var(--text-secondary); cursor:pointer; transition:all .15s; }
+    .gd-sortBtn:hover{ background:rgba(255,255,255,.06); color:var(--text-primary); }
+    .gd-sortBtn.active{ background:var(--indigo); color:#fff; border-color:var(--indigo); }
+    .gd-controlsBar-check{ display:flex; align-items:center; gap:5px; font-size:10px; font-weight:700; color:var(--text-secondary); cursor:pointer; white-space:nowrap; }
+    .gd-controlsBar-check input[type="checkbox"]{ accent-color:var(--indigo); width:14px; height:14px; cursor:pointer; }
+    .gd-controlsBar-export{ font-family:inherit; font-size:10px; font-weight:700; padding:4px 12px; border-radius:8px; border:1px solid rgba(99,102,241,.3); background:rgba(99,102,241,.1); color:var(--indigo-2); cursor:pointer; transition:all .15s; }
+    .gd-controlsBar-export:hover{ background:rgba(99,102,241,.2); color:#fff; }
 
     /* Class Pulse hero card */
     .gd-pulseCard{ background:linear-gradient(135deg,#1e293b 0%,#243352 50%,#1e293b 100%); border:1px solid rgba(255,255,255,.14); border-radius:20px; padding:20px 24px; box-shadow:0 4px 12px rgba(0,0,0,.2); position:relative; overflow:hidden; }
@@ -1131,7 +1145,22 @@
     </div>
     <div class="gd-layout">
       <aside class="gd-sidebar" id="gdSidebar" aria-label="Activity navigation"><!-- rendered by gdRenderSidebar --></aside>
-      <main class="gd-main" id="gdMain" role="main"><!-- rendered by gdShowOverview / gdShowActivity --></main>
+      <div class="gd-mainCol">
+        <div class="gd-controlsBar" id="gdControlsBar" style="display:none;" role="toolbar" aria-label="View controls">
+          <span class="gd-controlsBar-title" id="gdViewTitle"></span>
+          <div class="gd-controlsBar-group">
+            <span class="gd-controlsBar-label">Sort</span>
+            <button class="gd-sortBtn active" data-sort="level" onclick="_gdToggleSort('level')">Level</button>
+            <button class="gd-sortBtn" data-sort="name" onclick="_gdToggleSort('name')">Name</button>
+          </div>
+          <label class="gd-controlsBar-check">
+            <input type="checkbox" id="gdShowPast" onchange="_gdTogglePast(this)">
+            <span>Show past level data</span>
+          </label>
+          <button class="gd-controlsBar-export" onclick="gdExportCurrentView()" aria-label="Export current view">Export</button>
+        </div>
+        <main class="gd-main" id="gdMain" role="main"><!-- rendered by gdShowOverview / gdShowActivity --></main>
+      </div>
     </div>
     <!-- Legacy section divs retained for compat shims (hidden). Word Lists still uses its own panel. -->
     <div id="sectionWordLists" class="hidden"></div>
@@ -2000,7 +2029,9 @@ function _gdMeta(key) {
 }
 
 // Current game-data view state
-var _gdState = { view:'overview', activity:null };
+var _gdState = { view:'overview', activity:null, stageDetail:null };
+var _gdSortBy = 'level';
+var _gdShowPast = false;
 
 // Per-activity class-wide cumulative accuracy and attempts
 function _gdActStats(activityKey) {
@@ -2112,7 +2143,7 @@ function gdRenderSidebar() {
     html += '<div class="gd-sidebar-groupTitle">' + group.name + '</div>';
     html += '<div class="gd-sidebar-list">';
     group.activities.forEach(function(a) {
-      var isActive = _gdState.view === 'activity' && _gdState.activity === a.key;
+      var isActive = (_gdState.activity === a.key) && (_gdState.view === 'activity' || _gdState.view === 'game-stage' || _gdState.view === 'stage-detail');
       var stats = _gdActStats(a.key);
       var accText = stats.pct !== null ? stats.pct + '%' : '\u2014';
       var accClassName = _gdAccPillClass(stats.pct);
@@ -2133,23 +2164,114 @@ function gdRenderSidebar() {
 function gdShowOverview() {
   _gdState.view = 'overview';
   _gdState.activity = null;
+  _gdState.stageDetail = null;
   gdRenderSidebar();
+  _gdRenderControlsBar();
   gdRenderOverview();
 }
 
 function gdShowActivity(activityKey) {
   if (!_gdMeta(activityKey)) return;
+  // Route stage-grouped games to the game-stage drill-down
+  if (STAGE_GROUPED_GAMES.indexOf(activityKey) !== -1) {
+    return gdShowGameStage(activityKey);
+  }
   _gdState.view = 'activity';
   _gdState.activity = activityKey;
+  _gdState.stageDetail = null;
   gdRenderSidebar();
+  _gdRenderControlsBar();
   gdRenderActivityDetail(activityKey);
   // Scroll main content to top so the hero is visible
   try { document.getElementById('gdMain').scrollIntoView({ block:'start', behavior:'smooth' }); } catch(e) {}
 }
 
+var STAGE_GROUPED_GAMES = ['phoneme-splitter','syllable-splitter','breakdown-blitz','meaning-mode','mission-mode','root-lab'];
+
+function gdShowGameStage(activityKey) {
+  _gdState.view = 'game-stage';
+  _gdState.activity = activityKey;
+  _gdState.stageDetail = null;
+  gdRenderSidebar();
+  _gdRenderControlsBar();
+  gdRenderGameStage(activityKey);
+  var m = document.getElementById('gdMain'); if (m) m.scrollTop = 0;
+}
+
+function gdShowStageDetail(activityKey, stage) {
+  _gdState.view = 'stage-detail';
+  _gdState.activity = activityKey;
+  _gdState.stageDetail = stage;
+  gdRenderSidebar();
+  _gdRenderControlsBar();
+  gdRenderStageDetail(activityKey, stage);
+  var m = document.getElementById('gdMain'); if (m) m.scrollTop = 0;
+}
+
+// Stub renderers — replaced by Tasks 4 and 5
+function gdRenderGameStage(activityKey) {
+  var main = document.getElementById('gdMain');
+  if (main) main.textContent = 'Game stage view for ' + activityKey + ' (Task 4)';
+}
+function gdRenderStageDetail(activityKey, stage) {
+  var main = document.getElementById('gdMain');
+  if (main) main.textContent = 'Stage detail for ' + activityKey + ' / ' + stage + ' (Task 5)';
+}
+
+function _gdActivityMeta(key) {
+  for (var i = 0; i < GD_GROUPS.length; i++) {
+    for (var j = 0; j < GD_GROUPS[i].activities.length; j++) {
+      var a = GD_GROUPS[i].activities[j];
+      if (a.key === key) return { icon: a.icon, label: a.label, group: GD_GROUPS[i].key };
+    }
+  }
+  return null;
+}
+
+function _gdToggleSort(mode) {
+  _gdSortBy = mode;
+  document.querySelectorAll('.gd-sortBtn').forEach(function(b) { b.classList.toggle('active', b.dataset.sort === mode); });
+  gdRefresh();
+}
+function _gdTogglePast(el) {
+  _gdShowPast = el.checked;
+  gdRefresh();
+}
+function _gdRenderControlsBar() {
+  var bar = document.getElementById('gdControlsBar');
+  if (!bar) return;
+  var show = (_gdState.view === 'game-stage' || _gdState.view === 'stage-detail');
+  bar.style.display = show ? 'flex' : 'none';
+  if (!show) return;
+  // Update title
+  var titleEl = document.getElementById('gdViewTitle');
+  if (titleEl) {
+    var meta = _gdActivityMeta(_gdState.activity);
+    var label = meta ? (meta.icon + ' ' + meta.label) : _gdState.activity;
+    if (_gdState.view === 'stage-detail' && _gdState.stageDetail) {
+      label += ' \u203A ' + _gdState.stageDetail;
+    }
+    titleEl.textContent = label;
+  }
+  // Sync sort button state
+  document.querySelectorAll('.gd-sortBtn').forEach(function(b) { b.classList.toggle('active', b.dataset.sort === _gdSortBy); });
+  // Sync checkbox state
+  var cb = document.getElementById('gdShowPast');
+  if (cb) cb.checked = _gdShowPast;
+}
+
+function gdExportCurrentView() {
+  // Stub for Task 8
+  alert('Export coming in Task 8');
+}
+
 function gdRefresh() {
   if (_gdState.view === 'activity' && _gdState.activity) {
     gdShowActivity(_gdState.activity);
+  } else if (_gdState.view === 'game-stage') {
+    gdRenderGameStage(_gdState.activity);
+  } else if (_gdState.view === 'stage-detail') {
+    gdRenderStageDetail(_gdState.activity, _gdState.stageDetail);
   } else {
     gdShowOverview();
   }
