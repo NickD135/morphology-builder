@@ -3678,6 +3678,51 @@ function showStudentProfile(studentId){
       <button class="profilePageTab" id="tabExt" onclick="setProfilePage('extension')">🔬 Extension${hasExtData ? '' : ' <span style=\'font-size:10px;color:#64748b;\'>(no data)</span>'}</button>
     </div>
     <div id="profilePageBase">
+      ${(function(){
+        if (typeof WLStage === 'undefined' || !student.stage) return '';
+        var stageOrder = WLStage.STAGE_ORDER || [];
+        var stageNames = WLStage.STAGE_NAMES || {};
+        var stagePill  = _gdBuildStagePillHtml(student);
+
+        // Overall accuracy across the 6 stage-grouped games at the student's current stage
+        var sgCorrect = 0, sgTotal = 0;
+        STAGE_GROUPED_GAMES.forEach(function(gk) {
+          var r = _gdStudentActAccByStageEx(student, gk, [student.stage]);
+          if (r) { sgCorrect += r.total * r.acc / 100; sgTotal += r.total; }
+        });
+        var overallStageAcc = sgTotal > 0 ? Math.round(sgCorrect / sgTotal * 100) + '%' : '—';
+
+        var html = '<div style="background:#1e293b; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px 16px; margin-bottom:16px;">';
+        html += '<div style="display:flex; align-items:center; gap:10px; margin-bottom:' + (_gdShowPast ? '8' : '0') + 'px;">';
+        html += stagePill;
+        html += '<span style="font-size:13px; font-weight:700; color:#e2e8f0;">Overall at this level: ' + overallStageAcc + '</span>';
+        html += '</div>';
+
+        if (_gdShowPast) {
+          var studentStageIdx = stageOrder.indexOf(student.stage);
+          var rows = '';
+          stageOrder.forEach(function(stg, idx) {
+            if (idx > studentStageIdx) return;
+            var sc = STAGE_COLORS[stg] || { bg:'#334155', text:'#64748b' };
+            var stageName = stageNames[stg] || stg;
+            var short = (WLStage.STAGE_SHORT && WLStage.STAGE_SHORT[stg]) || stg.toUpperCase();
+            var stgCorrect = 0, stgTotal = 0, stgGames = 0;
+            STAGE_GROUPED_GAMES.forEach(function(gk) {
+              var r = _gdStudentActAccByStageEx(student, gk, [stg]);
+              if (r) { stgCorrect += r.total * r.acc / 100; stgTotal += r.total; stgGames++; }
+            });
+            if (stgTotal === 0) return;
+            var stgAcc = Math.round(stgCorrect / stgTotal * 100);
+            rows += '<div><span class="gd-stageBadge" style="background:' + sc.bg + ';color:#fff;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:800;font-family:monospace;">' + short + '</span> ' + stageName + ': ' + stgAcc + '% across ' + stgGames + ' game' + (stgGames !== 1 ? 's' : '') + '</div>';
+          });
+          if (rows) {
+            html += '<div style="font-size:11px; color:#94a3b8; line-height:1.8;">' + rows + '</div>';
+          }
+        }
+
+        html += '</div>';
+        return html;
+      })()}
       ${statsHtml}
       ${flagsHtml}
       <div class="sectionGroup">🔤 Sounds</div>
