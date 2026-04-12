@@ -308,43 +308,43 @@ const CORE_BASES = [
   { id:"power", stage:"s2e", form:"power", meaning:"strength; control; energy", pos:["noun"], examples:["<u>power</u>","em<u>power</u>","power<u>ful</u>","over<u>power</u>","<u>power</u>less","super<u>power</u>"] },
   { id:"fast", stage:"s2e", form:"fast", meaning:"quick", pos:["adj"], examples:["<u>fast</u>","fast<u>er</u>","fast<u>est</u>","<u>fast</u>en","<u>fast</u>ness","break<u>fast</u>"] },
 
-  // Bases migrated from game-specific inline pools (stage:null — will be tagged later)
-  { id:"place", stage:null, form:"place", meaning:"put in a position", pos:["verb","noun"], examples:["<u>place</u>","dis<u>place</u>","re<u>place</u>","mis<u>place</u>","<u>place</u>ment","<u>place</u>holder"] },
-  { id:"view", stage:null, form:"view", meaning:"look at something", pos:["verb","noun"], examples:["<u>view</u>","re<u>view</u>","over<u>view</u>","pre<u>view</u>","inter<u>view</u>","world<u>view</u>"] },
-  { id:"lead", stage:null, form:"lead", meaning:"guide others", pos:["verb","noun"], examples:["<u>lead</u>","<u>lead</u>er","mis<u>lead</u>","<u>lead</u>ership","<u>lead</u>ing","fore<u>lead</u>"] },
-  { id:"child", stage:null, form:"child", meaning:"a young person", pos:["noun"], examples:["<u>child</u>","<u>child</u>hood","<u>child</u>ish","<u>child</u>like","<u>child</u>ren","grand<u>child</u>"] },
-  { id:"farm", stage:null, form:"farm", meaning:"grow crops or animals", pos:["noun","verb"], examples:["<u>farm</u>","<u>farm</u>er","<u>farm</u>ing","<u>farm</u>land","<u>farm</u>yard","out<u>farm</u>"] },
-  { id:"peace", stage:null, form:"peace", meaning:"calm and no conflict", pos:["noun"], examples:["<u>peace</u>","<u>peace</u>ful","<u>peace</u>fully","<u>peace</u>maker","<u>peace</u>time","peace<u>keeping</u>"] },
-  { id:"joy", stage:null, form:"joy", meaning:"great happiness", pos:["noun"], examples:["<u>joy</u>","<u>joy</u>ful","<u>joy</u>ous","<u>joy</u>fully","en<u>joy</u>","<u>joy</u>less"] },
-  { id:"thought", stage:null, form:"thought", meaning:"an idea in your mind", pos:["noun"], examples:["<u>thought</u>","<u>thought</u>ful","<u>thought</u>less","<u>thought</u>fully","after<u>thought</u>","over<u>thought</u>"] },
-  { id:"danger", stage:null, form:"danger", meaning:"risk of harm", pos:["noun"], examples:["<u>danger</u>","<u>danger</u>ous","en<u>danger</u>","<u>danger</u>ously","<u>danger</u>zone","end<u>anger</u>ment"] },
-  { id:"nerve", stage:null, form:"nerve", meaning:"ability to stay calm; a fibre in the body", pos:["noun"], examples:["<u>nerve</u>","<u>nerve</u>less","<u>nerve</u>-racking","<u>nerve</u>s","un<u>nerve</u>","<u>nerve</u>-wracking"] },
-  { id:"young", stage:null, form:"young", meaning:"not old", pos:["adj"], examples:["<u>young</u>","<u>young</u>er","<u>young</u>est","<u>young</u>ish","<u>young</u>ster","ever-<u>young</u>"] },
-  { id:"old", stage:null, form:"old", meaning:"having lived many years", pos:["adj"], examples:["<u>old</u>","<u>old</u>er","<u>old</u>est","<u>old</u>ish","<u>old</u>en","<u>old</u>-fashioned"] },
-  { id:"wind", stage:null, form:"wind", meaning:"moving air", pos:["noun"], examples:["<u>wind</u>","<u>wind</u>y","<u>wind</u>less","<u>wind</u>mill","<u>wind</u>shield","down<u>wind</u>"] },
-  { id:"rain", stage:null, form:"rain", meaning:"water falling from clouds", pos:["noun"], examples:["<u>rain</u>","<u>rain</u>y","<u>rain</u>less","<u>rain</u>bow","<u>rain</u>fall","<u>rain</u>coat"] },
-  { id:"sand", stage:null, form:"sand", meaning:"tiny grains of rock", pos:["noun"], examples:["<u>sand</u>","<u>sand</u>y","<u>sand</u>stone","<u>sand</u>castle","<u>sand</u>bank","quick<u>sand</u>"] },
-  { id:"invent", stage:null, form:"invent", meaning:"create something new", pos:["verb"], examples:["<u>invent</u>","<u>invent</u>or","<u>invent</u>ion","<u>invent</u>ive","re<u>invent</u>","<u>invent</u>iveness"] },
-  { id:"music", stage:null, form:"music", meaning:"organised sounds", pos:["noun"], examples:["<u>music</u>","<u>music</u>ian","<u>music</u>al","<u>music</u>ally","<u>music</u>ianship","<u>music</u>-lover"] },
-  { id:"magic", stage:null, form:"magic", meaning:"using secret powers", pos:["noun"], examples:["<u>magic</u>","<u>magic</u>ian","<u>magic</u>al","<u>magic</u>ally","<u>magic</u>k","<u>magic</u>-trick"] },
-  { id:"history", stage:null, form:"history", meaning:"past events", pos:["noun"], examples:["<u>history</u>","<u>history</u>-maker","pre<u>history</u>","<u>historic</u>al","<u>historic</u>","natural <u>history</u>"] },
-  { id:"hand", stage:null, form:"hand", meaning:"the part at the end of your arm", pos:["noun"], examples:["<u>hand</u>","<u>hand</u>ful","<u>hand</u>less","<u>hand</u>ish","<u>hand</u>-made","under<u>hand</u>"] },
-  { id:"active", stage:null, form:"active", meaning:"doing things; moving around", pos:["adj"], examples:["<u>active</u>","inter<u>active</u>","hyper<u>active</u>","pro<u>active</u>","<u>active</u>ly","in<u>active</u>"] },
-  { id:"moral", stage:null, form:"moral", meaning:"right and wrong; relating to values", pos:["adj","noun"], examples:["<u>moral</u>","a<u>moral</u>","im<u>moral</u>","<u>moral</u>ly","<u>moral</u>ity","<u>moral</u>ise"] },
-  { id:"national", stage:null, form:"national", meaning:"relating to a nation", pos:["adj","noun"], examples:["<u>national</u>","inter<u>national</u>","multi<u>national</u>","trans<u>national</u>","<u>national</u>ly","<u>national</u>ism"] },
-  { id:"circle", stage:null, form:"circle", meaning:"a perfectly round shape", pos:["noun","verb"], examples:["<u>circle</u>","semi<u>circle</u>","<u>circle</u>d","<u>circle</u>s","full <u>circle</u>","<u>circle</u>-time"] },
-  { id:"function", stage:null, form:"function", meaning:"purpose; a working system", pos:["noun","verb"], examples:["<u>function</u>","mal<u>function</u>","multi<u>function</u>","dis<u>function</u>","<u>function</u>al","<u>function</u>ally"] },
-  { id:"final", stage:null, form:"final", meaning:"last; at the end", pos:["adj","noun"], examples:["<u>final</u>","semi<u>final</u>","<u>final</u>ly","<u>final</u>ist","<u>final</u>ise","<u>final</u>e"] },
-  { id:"night", stage:null, form:"night", meaning:"the time of darkness", pos:["noun"], examples:["<u>night</u>","mid<u>night</u>","over<u>night</u>","<u>night</u>time","<u>night</u>fall","<u>night</u>ly"] },
-  { id:"point", stage:null, form:"point", meaning:"a specific spot or tip", pos:["noun","verb"], examples:["<u>point</u>","mid<u>point</u>","dis<u>appoint</u>","view<u>point</u>","stand<u>point</u>","gun<u>point</u>"] },
-  { id:"ordinary", stage:null, form:"ordinary", meaning:"normal; usual", pos:["adj"], examples:["<u>ordinary</u>","extra<u>ordinary</u>","un<u>ordinary</u>","<u>ordinary</u>-looking","<u>ordinar</u>ily","out of the <u>ordinary</u>"] },
-  { id:"courage", stage:null, form:"courage", meaning:"bravery", pos:["noun"], examples:["<u>courage</u>","dis<u>courage</u>","en<u>courage</u>","<u>courage</u>ous","<u>courage</u>ously","out<u>courage</u>"] },
-  { id:"serve", stage:null, form:"serve", meaning:"work for; keep", pos:["verb"], examples:["<u>serve</u>","re<u>serve</u>","de<u>serve</u>","con<u>serve</u>","ob<u>serve</u>","pre<u>serve</u>"] },
-  { id:"task", stage:null, form:"task", meaning:"a job or piece of work", pos:["noun"], examples:["<u>task</u>","multi<u>task</u>","<u>task</u>force","over<u>task</u>","<u>task</u>master","<u>task</u>-based"] },
-  { id:"enemy", stage:null, form:"enemy", meaning:"someone who is against you", pos:["noun"], examples:["<u>enemy</u>","arch<u>enemy</u>","<u>enemy</u>-fire","<u>enemy</u>-lines","make an <u>enemy</u>","public <u>enemy</u>"] },
-  { id:"bishop", stage:null, form:"bishop", meaning:"a leader in the church", pos:["noun"], examples:["<u>bishop</u>","arch<u>bishop</u>","<u>bishop</u>ric","<u>bishop</u>s","<u>bishop</u>-elect","vice-<u>bishop</u>"] },
-  { id:"rival", stage:null, form:"rival", meaning:"a competitor", pos:["noun","verb"], examples:["<u>rival</u>","arch<u>rival</u>","<u>rival</u>ry","un<u>rival</u>led","<u>rival</u>led","<u>rival</u>ling"] },
-  { id:"navigate", stage:null, form:"navigate", meaning:"find your way; steer a route", pos:["verb"], examples:["<u>navigate</u>","circum<u>navigate</u>","<u>navigate</u>d","<u>navigate</u>or","<u>navigat</u>ion","<u>navigat</u>able"] }
+  // Bases migrated from game-specific inline pools
+  { id:"place", stage:"s2e", form:"place", meaning:"put in a position", pos:["verb","noun"], examples:["<u>place</u>","dis<u>place</u>","re<u>place</u>","mis<u>place</u>","<u>place</u>ment","<u>place</u>holder"] },
+  { id:"view", stage:"s2e", form:"view", meaning:"look at something", pos:["verb","noun"], examples:["<u>view</u>","re<u>view</u>","over<u>view</u>","pre<u>view</u>","inter<u>view</u>","world<u>view</u>"] },
+  { id:"lead", stage:"s2e", form:"lead", meaning:"guide others", pos:["verb","noun"], examples:["<u>lead</u>","<u>lead</u>er","mis<u>lead</u>","<u>lead</u>ership","<u>lead</u>ing","fore<u>lead</u>"] },
+  { id:"child", stage:"s2e", form:"child", meaning:"a young person", pos:["noun"], examples:["<u>child</u>","<u>child</u>hood","<u>child</u>ish","<u>child</u>like","<u>child</u>ren","grand<u>child</u>"] },
+  { id:"farm", stage:"s2e", form:"farm", meaning:"grow crops or animals", pos:["noun","verb"], examples:["<u>farm</u>","<u>farm</u>er","<u>farm</u>ing","<u>farm</u>land","<u>farm</u>yard","out<u>farm</u>"] },
+  { id:"peace", stage:"s2e", form:"peace", meaning:"calm and no conflict", pos:["noun"], examples:["<u>peace</u>","<u>peace</u>ful","<u>peace</u>fully","<u>peace</u>maker","<u>peace</u>time","peace<u>keeping</u>"] },
+  { id:"joy", stage:"s2e", form:"joy", meaning:"great happiness", pos:["noun"], examples:["<u>joy</u>","<u>joy</u>ful","<u>joy</u>ous","<u>joy</u>fully","en<u>joy</u>","<u>joy</u>less"] },
+  { id:"thought", stage:"s2e", form:"thought", meaning:"an idea in your mind", pos:["noun"], examples:["<u>thought</u>","<u>thought</u>ful","<u>thought</u>less","<u>thought</u>fully","after<u>thought</u>","over<u>thought</u>"] },
+  { id:"danger", stage:"s2e", form:"danger", meaning:"risk of harm", pos:["noun"], examples:["<u>danger</u>","<u>danger</u>ous","en<u>danger</u>","<u>danger</u>ously","<u>danger</u>zone","end<u>anger</u>ment"] },
+  { id:"nerve", stage:"s2l", form:"nerve", meaning:"ability to stay calm; a fibre in the body", pos:["noun"], examples:["<u>nerve</u>","<u>nerve</u>less","<u>nerve</u>-racking","<u>nerve</u>s","un<u>nerve</u>","<u>nerve</u>-wracking"] },
+  { id:"young", stage:"s2e", form:"young", meaning:"not old", pos:["adj"], examples:["<u>young</u>","<u>young</u>er","<u>young</u>est","<u>young</u>ish","<u>young</u>ster","ever-<u>young</u>"] },
+  { id:"old", stage:"s2e", form:"old", meaning:"having lived many years", pos:["adj"], examples:["<u>old</u>","<u>old</u>er","<u>old</u>est","<u>old</u>ish","<u>old</u>en","<u>old</u>-fashioned"] },
+  { id:"wind", stage:"s2e", form:"wind", meaning:"moving air", pos:["noun"], examples:["<u>wind</u>","<u>wind</u>y","<u>wind</u>less","<u>wind</u>mill","<u>wind</u>shield","down<u>wind</u>"] },
+  { id:"rain", stage:"s2e", form:"rain", meaning:"water falling from clouds", pos:["noun"], examples:["<u>rain</u>","<u>rain</u>y","<u>rain</u>less","<u>rain</u>bow","<u>rain</u>fall","<u>rain</u>coat"] },
+  { id:"sand", stage:"s2e", form:"sand", meaning:"tiny grains of rock", pos:["noun"], examples:["<u>sand</u>","<u>sand</u>y","<u>sand</u>stone","<u>sand</u>castle","<u>sand</u>bank","quick<u>sand</u>"] },
+  { id:"invent", stage:"s2l", form:"invent", meaning:"create something new", pos:["verb"], examples:["<u>invent</u>","<u>invent</u>or","<u>invent</u>ion","<u>invent</u>ive","re<u>invent</u>","<u>invent</u>iveness"] },
+  { id:"music", stage:"s2e", form:"music", meaning:"organised sounds", pos:["noun"], examples:["<u>music</u>","<u>music</u>ian","<u>music</u>al","<u>music</u>ally","<u>music</u>ianship","<u>music</u>-lover"] },
+  { id:"magic", stage:"s2e", form:"magic", meaning:"using secret powers", pos:["noun"], examples:["<u>magic</u>","<u>magic</u>ian","<u>magic</u>al","<u>magic</u>ally","<u>magic</u>k","<u>magic</u>-trick"] },
+  { id:"history", stage:"s2l", form:"history", meaning:"past events", pos:["noun"], examples:["<u>history</u>","<u>history</u>-maker","pre<u>history</u>","<u>historic</u>al","<u>historic</u>","natural <u>history</u>"] },
+  { id:"hand", stage:"s2e", form:"hand", meaning:"the part at the end of your arm", pos:["noun"], examples:["<u>hand</u>","<u>hand</u>ful","<u>hand</u>less","<u>hand</u>ish","<u>hand</u>-made","under<u>hand</u>"] },
+  { id:"active", stage:"s2l", form:"active", meaning:"doing things; moving around", pos:["adj"], examples:["<u>active</u>","inter<u>active</u>","hyper<u>active</u>","pro<u>active</u>","<u>active</u>ly","in<u>active</u>"] },
+  { id:"moral", stage:"s2l", form:"moral", meaning:"right and wrong; relating to values", pos:["adj","noun"], examples:["<u>moral</u>","a<u>moral</u>","im<u>moral</u>","<u>moral</u>ly","<u>moral</u>ity","<u>moral</u>ise"] },
+  { id:"national", stage:"s2l", form:"national", meaning:"relating to a nation", pos:["adj","noun"], examples:["<u>national</u>","inter<u>national</u>","multi<u>national</u>","trans<u>national</u>","<u>national</u>ly","<u>national</u>ism"] },
+  { id:"circle", stage:"s2e", form:"circle", meaning:"a perfectly round shape", pos:["noun","verb"], examples:["<u>circle</u>","semi<u>circle</u>","<u>circle</u>d","<u>circle</u>s","full <u>circle</u>","<u>circle</u>-time"] },
+  { id:"function", stage:"s2l", form:"function", meaning:"purpose; a working system", pos:["noun","verb"], examples:["<u>function</u>","mal<u>function</u>","multi<u>function</u>","dis<u>function</u>","<u>function</u>al","<u>function</u>ally"] },
+  { id:"final", stage:"s2l", form:"final", meaning:"last; at the end", pos:["adj","noun"], examples:["<u>final</u>","semi<u>final</u>","<u>final</u>ly","<u>final</u>ist","<u>final</u>ise","<u>final</u>e"] },
+  { id:"night", stage:"s2e", form:"night", meaning:"the time of darkness", pos:["noun"], examples:["<u>night</u>","mid<u>night</u>","over<u>night</u>","<u>night</u>time","<u>night</u>fall","<u>night</u>ly"] },
+  { id:"point", stage:"s2e", form:"point", meaning:"a specific spot or tip", pos:["noun","verb"], examples:["<u>point</u>","mid<u>point</u>","dis<u>appoint</u>","view<u>point</u>","stand<u>point</u>","gun<u>point</u>"] },
+  { id:"ordinary", stage:"s2l", form:"ordinary", meaning:"normal; usual", pos:["adj"], examples:["<u>ordinary</u>","extra<u>ordinary</u>","un<u>ordinary</u>","<u>ordinary</u>-looking","<u>ordinar</u>ily","out of the <u>ordinary</u>"] },
+  { id:"courage", stage:"s2e", form:"courage", meaning:"bravery", pos:["noun"], examples:["<u>courage</u>","dis<u>courage</u>","en<u>courage</u>","<u>courage</u>ous","<u>courage</u>ously","out<u>courage</u>"] },
+  { id:"serve", stage:"s2l", form:"serve", meaning:"work for; keep", pos:["verb"], examples:["<u>serve</u>","re<u>serve</u>","de<u>serve</u>","con<u>serve</u>","ob<u>serve</u>","pre<u>serve</u>"] },
+  { id:"task", stage:"s2e", form:"task", meaning:"a job or piece of work", pos:["noun"], examples:["<u>task</u>","multi<u>task</u>","<u>task</u>force","over<u>task</u>","<u>task</u>master","<u>task</u>-based"] },
+  { id:"enemy", stage:"s3e", form:"enemy", meaning:"someone who is against you", pos:["noun"], examples:["<u>enemy</u>","arch<u>enemy</u>","<u>enemy</u>-fire","<u>enemy</u>-lines","make an <u>enemy</u>","public <u>enemy</u>"] },
+  { id:"bishop", stage:"s3e", form:"bishop", meaning:"a leader in the church", pos:["noun"], examples:["<u>bishop</u>","arch<u>bishop</u>","<u>bishop</u>ric","<u>bishop</u>s","<u>bishop</u>-elect","vice-<u>bishop</u>"] },
+  { id:"rival", stage:"s3e", form:"rival", meaning:"a competitor", pos:["noun","verb"], examples:["<u>rival</u>","arch<u>rival</u>","<u>rival</u>ry","un<u>rival</u>led","<u>rival</u>led","<u>rival</u>ling"] },
+  { id:"navigate", stage:"s2l", form:"navigate", meaning:"find your way; steer a route", pos:["verb"], examples:["<u>navigate</u>","circum<u>navigate</u>","<u>navigate</u>d","<u>navigate</u>or","<u>navigat</u>ion","<u>navigat</u>able"] }
 ];
 
 const ANGLO_BASE_INFO = {
@@ -509,7 +509,7 @@ const LATIN_BASE_INFO = {
   spire:{ stage:"s3l", meaning:"breathe; live", pos:["verb"], examples:["in<u>spire</u>","re<u>spire</u>","con<u>spire</u>","ex<u>spire</u>","per<u>spire</u>","a<u>spire</u>"] },
   grad:{ stage:"s3l", meaning:"step; go", pos:["verb","noun"], examples:["<u>grad</u>e","<u>grad</u>ual","up<u>grad</u>e","de<u>grad</u>e","<u>grad</u>uate","re<u>tro</u><u>grad</u>e"] },
   mot:{ stage:"s3l", meaning:"move", pos:["verb","noun"], examples:["<u>mot</u>ion","<u>mot</u>or","pro<u>mot</u>e","e<u>mot</u>ion","re<u>mot</u>e","lo<u>com</u>otive"] },
-  scribe:{ stage:null, meaning:"write", pos:["verb"], examples:["de<u>scribe</u>","in<u>scribe</u>","pre<u>scribe</u>","sub<u>scribe</u>","tran<u>scribe</u>","pro<u>scribe</u>"] }
+  scribe:{ stage:"s3l", meaning:"write", pos:["verb"], examples:["de<u>scribe</u>","in<u>scribe</u>","pre<u>scribe</u>","sub<u>scribe</u>","tran<u>scribe</u>","pro<u>scribe</u>"] }
 };
 
 const LATIN_BASE_LIST = [
@@ -673,8 +673,8 @@ const GREEK_BASE_INFO = {
   nitro:{ stage:"s3l", meaning:"nitrogen; nitric", pos:["noun"], examples:["<u>nitro</u>gen","<u>nitro</u>glycerin"] },
   techno:{ stage:"s3l", meaning:"technology; skill", pos:["noun","adj"], examples:["<u>techno</u>cracy","<u>techno</u>logy"] },
   cata:{ stage:"s4", meaning:"down; against; completely", pos:["noun","verb"], examples:["<u>cata</u>lysis","<u>cata</u>logue"] },
-  graphy:{ stage:null, meaning:"writing or visual recording", pos:["noun"], examples:["bio<u>graphy</u>","photo<u>graphy</u>","geo<u>graphy</u>","carto<u>graphy</u>","choreo<u>graphy</u>","crypto<u>graphy</u>"] },
-  naut:{ stage:null, meaning:"voyager or traveller", pos:["noun"], examples:["astro<u>naut</u>","cosmo<u>naut</u>","aero<u>nautics</u>","aqua<u>naut</u>","<u>naut</u>ical","<u>naut</u>ilus"] }
+  graphy:{ stage:"s3l", meaning:"writing or visual recording", pos:["noun"], examples:["bio<u>graphy</u>","photo<u>graphy</u>","geo<u>graphy</u>","carto<u>graphy</u>","choreo<u>graphy</u>","crypto<u>graphy</u>"] },
+  naut:{ stage:"s3l", meaning:"voyager or traveller", pos:["noun"], examples:["astro<u>naut</u>","cosmo<u>naut</u>","aero<u>nautics</u>","aqua<u>naut</u>","<u>naut</u>ical","<u>naut</u>ilus"] }
 };
 
 const GREEK_BASE_LIST = [
