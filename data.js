@@ -1,3 +1,4 @@
+(function() {
 const PREFIXES = [
   { id:"ad", stage:"s3e", form:"ad", display:"ad-", meaning:"towards; to", allowedPos:["noun","adj","verb"], altForms:["ac","af","ag","al","an","ap","ar","as","at"], examples:["<u>ad</u>here","<u>ad</u>join","<u>ad</u>mit","<u>ad</u>vance","<u>ad</u>apt","<u>ad</u>venture"] },
   { id:"anti", stage:"s2l", form:"anti", display:"anti-", meaning:"against", allowedPos:["noun","adj","verb"], examples:["<u>anti</u>social","<u>anti</u>clockwise","<u>anti</u>biotic","<u>anti</u>septic","<u>anti</u>freeze","<u>anti</u>dote"] },
@@ -705,3 +706,8 @@ window.MORPHEMES = {
 };
 window.PREFIXES = PREFIXES;
 window.SUFFIXES = SUFFIXES;
+window.CORE_BASES = CORE_BASES;
+window.ANGLO_BASES = ANGLO_BASES;
+window.LATIN_BASES = LATIN_BASES;
+window.GREEK_BASES = GREEK_BASES;
+})();
