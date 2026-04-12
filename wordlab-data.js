@@ -814,6 +814,51 @@ const WordLabData = (() => {
     return WLStage.weightPool(filtered, stage, ext);
   }
 
+  // ── Word corrections (teacher overrides) ─────────────────────
+  // Games call getWordCorrections('phoneme') on load, then
+  // applyCorrections(WORDS, corrections, 'word') to patch defaults.
+  async function getWordCorrections(game) {
+    var cacheKey = 'wl_corrections_' + game;
+    try {
+      var cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        var parsed = JSON.parse(cached);
+        if (Date.now() - parsed.ts < 300000) return parsed.data; // 5-min TTL
+      }
+    } catch(e) {}
+    try {
+      var result = await sb().from('word_corrections')
+        .select('word_key, corrections')
+        .eq('game', game);
+      var data = (result.data || []);
+      try { sessionStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: data })); } catch(e) {}
+      return data;
+    } catch(e) {
+      return []; // fallback: no corrections
+    }
+  }
+
+  function applyCorrections(items, corrections, keyField) {
+    if (!corrections || !corrections.length || !items || !items.length) return;
+    var map = {};
+    corrections.forEach(function(c) { map[c.word_key] = c.corrections; });
+    items.forEach(function(item) {
+      var fix = map[item[keyField]];
+      if (!fix) return;
+      Object.keys(fix).forEach(function(k) {
+        // Handle array fields stored as strings (syllables, phonemes, etc.)
+        var val = fix[k];
+        if (typeof val === 'string' && Array.isArray(item[k])) {
+          item[k] = val.split('·').map(function(s){ return s.trim(); });
+        } else if (k === 'answers' && typeof val === 'object' && typeof item[k] === 'object') {
+          Object.assign(item[k], val);
+        } else {
+          item[k] = val;
+        }
+      });
+    });
+  }
+
   // ── Record attempt ────────────────────────────────────────────
   async function recordAttempt(activity, category, correct, timeMs, streak) {
     streak = streak || 0;
@@ -2810,6 +2855,7 @@ const WordLabData = (() => {
     checkDailyLimit, incrementDailyUsage,
     getDailyChallenges, updateChallengeProgress, claimChallengeReward, updateDailyStreak, CHALLENGE_GAMES,
     getFeaturedGame, loadFeaturedGame, getLeastPlayedGames, getBonusDayMultiplier,
+    getWordCorrections, applyCorrections,
     getCustomWords, getCustomWordPriority,
     getCustomMorphemes, getCustomMorphemePriority,
     getSpellingSetWords, recordSpellingAttempt,

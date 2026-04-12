@@ -1,0 +1,152 @@
+# Content Editor — Design Spec
+
+**Date:** 2026-04-12
+**Goal:** Let Nick view and edit all game word data from a hidden, auth-gated page. Edits are stored as overrides in Supabase and applied at game load time.
+
+---
+
+## Architecture
+
+### Override table: `word_corrections`
+
+```sql
+word_corrections (
+  id uuid PK DEFAULT gen_random_uuid(),
+  game text NOT NULL,        -- 'phoneme' | 'syllable' | 'breakdown' | 'sound-sorter' | 'root-lab' | 'refinery' | 'spectrum' | 'homophone' | 'morpheme'
+  word_key text NOT NULL,    -- word or item identifier
+  corrections jsonb NOT NULL,-- only the changed fields
+  updated_at timestamptz DEFAULT now(),
+  UNIQUE(game, word_key)
+)
+```
+
+- RLS: only Nick's teacher account can SELECT/INSERT/UPDATE/DELETE (via `auth.uid()` check against `teachers` table)
+- Games read via anon key with a SELECT policy scoped to the teacher's school (so corrections apply to their students' games)
+
+### Override flow
+
+1. Teacher edits a field on `content-editor.html`
+2. JS upserts to `word_corrections` (game + word_key)
+3. Game pages call `WordLabData.getWordCorrections(game)` on load
+4. Returns array of `{word_key, corrections}` — game patches its local array
+
+### Fallback
+
+- If Supabase is unreachable or returns empty, games use unmodified defaults
+- Corrections are cached in `sessionStorage` with 5-min TTL so repeat loads don't re-query
+
+---
+
+## Editor page: `content-editor.html`
+
+- **URL:** `/content-editor.html` — no links from any page
+- **Auth:** `requireTeacherAuth()` on load
+- **Style:** Dark navy theme matching dashboard
+
+### Layout
+
+- Top bar: page title + game selector tabs
+- Main area: searchable, sortable table of all entries for the selected game
+- Inline editing: click any cell to edit, auto-saves on blur
+- Visual indicators: edited cells get a small coloured dot to show they have an override
+- Bulk actions: "Reset to default" per row or per selection
+
+### Game tabs and their editable columns
+
+| Tab | Source | Key | Editable columns |
+|-----|--------|-----|-----------------|
+| Breakdown | MISSIONS (breakdown-mode.html) | word | stage, clue, prefix, base, suffix1, suffix2 |
+| Phoneme | WORDS (phoneme-mode.html) | word | stage, diff, phonemes (joined with ·) |
+| Syllable | WORDS (syllable-mode.html) | word | stage, syllables (joined with ·) |
+| Sound Sorter | SOUND_SORTER_WORDS (sound-sorter-data.js) | word | stage, sound, soundLabel, grapheme, before, after, clue, level, distractors, explain |
+| Root Lab | WORDS (root-lab.html) | word | stage, level, prefix, base, suffix, prefix meaning, base meaning, suffix meaning, fullMeaning |
+| Refinery | CLINES (word-refinery.html) | category | stage, words (comma-sep), gaps, clue, explain, leftAnchor, rightAnchor |
+| Spectrum | SPECTRUM_SETS (word-spectrum.html) | label | stage, words (comma-sep), clue, leftAnchor, rightAnchor |
+| Homophones | HOMOPHONES (homophone-mode.html) | group (joined) | stage, explain, sentences (complex — edit as JSON or mini-form) |
+| Morphemes | data.js PREFIXES/SUFFIXES/BASES | id | stage, meaning, examples, altForms (prefixes only) |
+
+### Search & filter
+
+- Text search across word/key column
+- Filter by stage dropdown
+- Filter by "has override" toggle
+- Sort by any column header click
+
+---
+
+## Game-side integration: `WordLabData.getWordCorrections(game)`
+
+```js
+// Added to wordlab-data.js
+async function getWordCorrections(game) {
+  var cacheKey = 'wl_corrections_' + game;
+  var cached = sessionStorage.getItem(cacheKey);
+  if (cached) {
+    var parsed = JSON.parse(cached);
+    if (Date.now() - parsed.ts < 300000) return parsed.data; // 5-min TTL
+  }
+  var result = await sb().from('word_corrections')
+    .select('word_key, corrections')
+    .eq('game', game);
+  var data = (result.data || []);
+  sessionStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: data }));
+  return data;
+}
+
+// Helper to apply corrections to an array
+function applyCorrections(items, corrections, keyField) {
+  if (!corrections || !corrections.length) return;
+  var map = {};
+  corrections.forEach(function(c) { map[c.word_key] = c.corrections; });
+  items.forEach(function(item) {
+    var fix = map[item[keyField]];
+    if (fix) Object.assign(item, fix);
+  });
+}
+```
+
+Each game page adds ~3 lines after loading its word array:
+
+```js
+// e.g. in phoneme-mode.html after WORDS is defined
+WordLabData.getWordCorrections('phoneme').then(function(c) {
+  WordLabData.applyCorrections(WORDS, c, 'word');
+});
+```
+
+---
+
+## Scope
+
+### In scope
+- Supabase migration SQL for `word_corrections` table + RLS
+- `content-editor.html` page with all 9 game tabs
+- `getWordCorrections()` and `applyCorrections()` in wordlab-data.js
+- Integration into all 9+ game pages
+- Inline cell editing with auto-save
+
+### Out of scope
+- Adding new words (edit existing only — new words added via code)
+- Editing valid-combos.json (generated by build script)
+- Real-time collaboration (single user: Nick)
+
+---
+
+## Files to create/modify
+
+| File | Action |
+|------|--------|
+| `content-editor.html` | **Create** — full editor page |
+| `supabase/migrations/word_corrections.sql` | **Create** — table + RLS |
+| `wordlab-data.js` | **Modify** — add getWordCorrections, applyCorrections |
+| `breakdown-mode.html` | **Modify** — add correction loading |
+| `phoneme-mode.html` | **Modify** — add correction loading |
+| `syllable-mode.html` | **Modify** — add correction loading |
+| `sound-sorter.html` | **Modify** — add correction loading |
+| `root-lab.html` | **Modify** — add correction loading |
+| `word-refinery.html` | **Modify** — add correction loading |
+| `word-spectrum.html` | **Modify** — add correction loading |
+| `homophone-mode.html` | **Modify** — add correction loading |
+| `meaning-mode.html` | **Modify** — add correction loading |
+| `mission-mode.html` | **Modify** — add correction loading |
+| `data.js` | **Modify** — add correction loading for morphemes |

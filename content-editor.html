@@ -1,0 +1,997 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Labs – Content Editor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="wordlab-common.css">
+  <style>
+    :root{
+      --bg:#0f172a; --panel:#1e293b; --line:rgba(255,255,255,.08); --text:#e2e8f0; --muted:#94a3b8;
+      --accent:#4338ca; --accent-rgb:67,56,202;
+      --indigo:#6366f1; --indigo-2:#818cf8; --indigo-soft:rgba(99,102,241,.15);
+      --green:#4ade80; --green-soft:rgba(74,222,128,.1);
+      --orange:#fbbf24; --orange-soft:rgba(251,191,36,.1);
+      --bad:#f87171; --bad-soft:rgba(248,113,113,.1);
+      --cyan:#06b6d4;
+      --navy:#0f172a; --navy-2:#1e293b; --navy-3:#334155;
+    }
+    body{ background:var(--bg); color:var(--text); line-height:1.5; min-height:100vh; }
+
+    /* ── Topbar ── */
+    .headerInner{ max-width:1600px; height:56px; }
+    .brandIcon{ background:var(--accent); font-size:16px; }
+    .brandText h1{ margin:0; font-size:15px; font-weight:900; color:#e0e7ff; }
+    .brandText .sub{ font-size:9px; text-transform:uppercase; letter-spacing:.22em; color:var(--muted); font-weight:800; display:block; }
+
+    /* ── Layout ── */
+    .wrap{ max-width:1600px; margin:0 auto; padding:16px 20px; }
+
+    /* ── Tabs ── */
+    .tabBar{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
+    .tabBtn{
+      border:none; background:rgba(255,255,255,.06); color:var(--muted);
+      font-weight:700; font-size:12px; padding:8px 16px; border-radius:10px;
+      cursor:pointer; font-family:inherit; transition:all .15s; white-space:nowrap;
+    }
+    .tabBtn:hover{ background:rgba(255,255,255,.1); color:#e0e7ff; }
+    .tabBtn.active{ background:var(--indigo); color:#fff; }
+
+    /* ── Controls row ── */
+    .controls{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+    .controls input[type="text"]{
+      background:var(--navy-2); border:1px solid rgba(255,255,255,.1); color:var(--text);
+      padding:8px 14px; border-radius:10px; font-size:13px; font-weight:600; width:260px;
+      outline:none; transition:border-color .15s;
+    }
+    .controls input[type="text"]:focus{ border-color:var(--indigo); }
+    .controls select{
+      background:var(--navy-2); border:1px solid rgba(255,255,255,.1); color:var(--text);
+      padding:8px 12px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer;
+    }
+    .controls label{
+      display:inline-flex; align-items:center; gap:6px;
+      font-size:12px; font-weight:700; color:var(--muted); cursor:pointer; white-space:nowrap;
+    }
+    .controls label input[type="checkbox"]{ accent-color:var(--indigo); width:15px; height:15px; cursor:pointer; }
+    .rowCount{ font-size:12px; font-weight:700; color:var(--muted); margin-left:auto; }
+
+    /* ── Table ── */
+    .tableWrap{
+      background:var(--panel); border:1px solid var(--line); border-radius:16px;
+      overflow:hidden; position:relative;
+    }
+    .tableScroll{ overflow-x:auto; max-height:calc(100vh - 220px); overflow-y:auto; }
+    table{ width:100%; border-collapse:collapse; font-size:12px; }
+    thead{ position:sticky; top:0; z-index:10; }
+    thead th{
+      background:#1a2744; padding:10px 10px; text-align:left;
+      font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.15em;
+      color:var(--indigo-2); border-bottom:1px solid var(--line); white-space:nowrap;
+    }
+    tbody tr{ border-bottom:1px solid var(--line); transition:background .1s; }
+    tbody tr:hover{ background:rgba(99,102,241,.04); }
+    tbody td{
+      padding:6px 10px; vertical-align:top; position:relative;
+      max-width:260px; word-break:break-word;
+    }
+
+    /* ── Editable cells ── */
+    td.editable{ cursor:pointer; }
+    td.editable:hover{ background:rgba(99,102,241,.08); }
+    td .cellVal{ display:block; min-height:18px; }
+    td .cellVal.empty{ color:#475569; font-style:italic; }
+    td input.cellInput, td select.cellInput, td textarea.cellInput{
+      background:var(--navy); border:1px solid var(--indigo); color:var(--text);
+      padding:4px 8px; border-radius:6px; font-size:12px; font-weight:600;
+      width:100%; outline:none; font-family:inherit;
+    }
+    td textarea.cellInput{ resize:vertical; min-height:60px; }
+
+    /* ── Override indicator ── */
+    .overrideDot{
+      display:inline-block; width:7px; height:7px; border-radius:50%;
+      background:var(--cyan); margin-left:6px; vertical-align:middle;
+      box-shadow:0 0 4px rgba(6,182,212,.5);
+    }
+    tr.hasOverride{ background:rgba(6,182,212,.03); }
+
+    /* ── Reset button ── */
+    .resetBtn{
+      border:none; background:var(--bad-soft); color:var(--bad);
+      font-size:10px; font-weight:800; padding:3px 8px; border-radius:6px;
+      cursor:pointer; white-space:nowrap; transition:background .15s;
+    }
+    .resetBtn:hover{ background:rgba(248,113,113,.2); }
+
+    /* ── Saved flash ── */
+    .savedFlash{
+      position:absolute; top:2px; right:4px;
+      background:var(--green); color:#fff;
+      font-size:9px; font-weight:900; text-transform:uppercase;
+      padding:2px 6px; border-radius:4px;
+      animation:flashFade 1.2s ease forwards;
+      pointer-events:none; z-index:5;
+    }
+    @keyframes flashFade{
+      0%{ opacity:1; transform:translateY(0); }
+      70%{ opacity:1; }
+      100%{ opacity:0; transform:translateY(-6px); }
+    }
+
+    /* ── Stage pill ── */
+    .stagePill{
+      display:inline-block; padding:2px 8px; border-radius:6px;
+      font-size:10px; font-weight:800; text-transform:uppercase;
+    }
+    .stagePill.s2e{ background:rgba(74,222,128,.15); color:#4ade80; }
+    .stagePill.s2l{ background:rgba(96,165,250,.15); color:#60a5fa; }
+    .stagePill.s3e{ background:rgba(251,191,36,.15); color:#fbbf24; }
+    .stagePill.s3l{ background:rgba(251,146,60,.15); color:#fb923c; }
+    .stagePill.s4{ background:rgba(248,113,113,.15); color:#f87171; }
+
+    /* ── Load more ── */
+    .loadMoreRow{ text-align:center; padding:14px; }
+    .loadMoreBtn{
+      border:none; background:var(--indigo-soft); color:var(--indigo-2);
+      font-weight:800; font-size:12px; padding:10px 24px; border-radius:10px;
+      cursor:pointer; font-family:inherit; transition:background .15s;
+    }
+    .loadMoreBtn:hover{ background:rgba(99,102,241,.25); }
+
+    /* ── Loading state ── */
+    .loadingMsg{
+      text-align:center; padding:60px 20px;
+      font-size:14px; font-weight:700; color:var(--muted);
+    }
+
+    /* ── Error banner ── */
+    .errorBanner{
+      background:var(--bad-soft); border:1px solid rgba(248,113,113,.3);
+      color:var(--bad); padding:10px 16px; border-radius:10px;
+      font-size:13px; font-weight:700; margin-bottom:14px;
+    }
+
+    /* ── Responsive ── */
+    @media(max-width:700px){
+      .controls input[type="text"]{ width:100%; }
+      .controls{ gap:8px; }
+      .tabBtn{ font-size:11px; padding:6px 12px; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="header">
+    <div class="headerInner">
+      <a class="brand" href="landing.html">
+        <div class="brandIcon">&#129514;</div>
+        <div class="brandText">
+          <h1>Word Labs</h1>
+          <span class="sub">Content Editor</span>
+        </div>
+      </a>
+      <div class="headerRight">
+        <a class="topBtn" href="dashboard.html">Dashboard</a>
+        <button class="topBtn" id="signOutBtn">Sign Out</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="wrap">
+    <!-- Tab bar -->
+    <div class="tabBar" id="tabBar" role="tablist"></div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <input type="text" id="searchInput" placeholder="Search by word or key..." aria-label="Search words">
+      <select id="stageFilter" aria-label="Filter by stage">
+        <option value="">All stages</option>
+        <option value="s2e">S2E</option>
+        <option value="s2l">S2L</option>
+        <option value="s3e">S3E</option>
+        <option value="s3l">S3L</option>
+        <option value="s4">S4</option>
+      </select>
+      <label><input type="checkbox" id="overrideToggle"> Has override</label>
+      <span class="rowCount" id="rowCount"></span>
+    </div>
+
+    <!-- Error banner -->
+    <div class="errorBanner hidden" id="errorBanner" role="alert"></div>
+
+    <!-- Table -->
+    <div class="tableWrap">
+      <div class="tableScroll" id="tableScroll">
+        <div class="loadingMsg" id="loadingMsg">Select a tab to load game data...</div>
+        <table class="hidden" id="dataTable">
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+        <div class="loadMoreRow hidden" id="loadMoreRow">
+          <button class="loadMoreBtn" id="loadMoreBtn">Load more rows...</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="wordlab-data.js"></script>
+  <script src="data.js"></script>
+  <script src="sound-sorter-data.js"></script>
+  <script>
+// Content Editor — self-contained IIFE
+// NOTE: Uses Function constructor to parse JS data arrays from our own game
+// HTML files (same-origin fetches only). This is NOT evaluating user input.
+(function(){
+  'use strict';
+
+  // ── State ──────────────────────────────────────────────────────
+  var currentTab = null;
+  var gameDataCache = {};       // tab.id -> raw data array
+  var correctionsCache = {};    // tab.id -> { word_key: corrections }
+  var filteredRows = [];
+  var visibleCount = 0;
+  var PAGE_SIZE = 100;
+
+  // ── Tab configs ────────────────────────────────────────────────
+  var STAGES = ['s2e','s2l','s3e','s3l','s4'];
+
+  var TABS = [
+    {
+      id:'breakdown', label:'Breakdown', game:'breakdown',
+      fetchFn: function(){ return fetchInlineVar('breakdown-mode.html', 'MISSIONS'); },
+      keyField:'word',
+      columns:[
+        { field:'word', label:'Word', editable:false },
+        { field:'stage', label:'Stage', editable:true, type:'stage' },
+        { field:'clue', label:'Clue', editable:true, type:'text' },
+        { field:'answers.prefix', label:'Prefix', editable:true, type:'text', nested:'answers' },
+        { field:'answers.base', label:'Base', editable:true, type:'text', nested:'answers' },
+        { field:'answers.suffix1', label:'Suffix 1', editable:true, type:'text', nested:'answers' },
+        { field:'answers.suffix2', label:'Suffix 2', editable:true, type:'text', nested:'answers' }
+      ]
+    },
+    {
+      id:'phoneme', label:'Phoneme', game:'phoneme',
+      fetchFn: function(){ return fetchInlineVar('phoneme-mode.html', 'WORDS'); },
+      keyField:'word',
+      columns:[
+        { field:'word', label:'Word', editable:false },
+        { field:'stage', label:'Stage', editable:true, type:'stage' },
+        { field:'diff', label:'Difficulty', editable:true, type:'text' },
+        { field:'phonemes', label:'Phonemes', editable:true, type:'array', sep:' \u00b7 ' }
+      ]
+    },
+    {
+      id:'syllable', label:'Syllable', game:'syllable',
+      fetchFn: function(){ return fetchInlineVar('syllable-mode.html', 'WORDS'); },
+      keyField:'word',
+      columns:[
+        { field:'word', label:'Word', editable:false },
+        { field:'stage', label:'Stage', editable:true, type:'stage' },
+        { field:'syllables', label:'Syllables', editable:true, type:'array', sep:' \u00b7 ' }
+      ]
+    },
+    {
+      id:'soundsorter', label:'Sound Sorter', game:'soundsorter',
+      fetchFn: function(){ return Promise.resolve(window.SOUND_SORTER_WORDS ? window.SOUND_SORTER_WORDS.slice() : []); },
+      keyField:'word',
+      columns:[
+        { field:'word', label:'Word', editable:false },
+        { field:'stage', label:'Stage', editable:true, type:'stage' },
+        { field:'sound', label:'Sound', editable:true, type:'text' },
+        { field:'soundLabel', label:'Label', editable:true, type:'text' },
+        { field:'grapheme', label:'Grapheme', editable:true, type:'text' },
+        { field:'before', label:'Before', editable:true, type:'text' },
+        { field:'after', label:'After', editable:true, type:'text' },
+        { field:'clue', label:'Clue', editable:true, type:'text' },
+        { field:'level', label:'Level', editable:true, type:'text' },
+        { field:'distractors', label:'Distractors', editable:true, type:'array', sep:', ' },
+        { field:'explain', label:'Explain', editable:true, type:'text' }
+      ]
+    },
+    {
+      id:'rootlab', label:'Root Lab', game:'rootlab',
+      fetchFn: function(){ return fetchInlineVar('root-lab.html', 'WORDS'); },
+      keyField:'word',
+      columns:[
+        { field:'word', label:'Word', editable:false },
+        { field:'stage', label:'Stage', editable:true, type:'stage' },
+        { field:'level', label:'Level', editable:true, type:'text' },
+        { field:'parts.prefix', label:'Prefix', editable:true, type:'text', nested:'parts' },
+        { field:'parts.base', label:'Base', editable:true, type:'text', nested:'parts' },
+        { field:'parts.suffix', label:'Suffix', editable:true, type:'text', nested:'parts' },
+        { field:'meanings.prefix', label:'Prefix Meaning', editable:true, type:'text', nested:'meanings' },
+        { field:'meanings.base', label:'Base Meaning', editable:true, type:'text', nested:'meanings' },
+        { field:'meanings.suffix', label:'Suffix Meaning', editable:true, type:'text', nested:'meanings' },
+        { field:'fullMeaning', label:'Full Meaning', editable:true, type:'text' }
+      ]
+    },
+    {
+      id:'refinery', label:'Refinery', game:'refinery',
+      fetchFn: function(){ return fetchInlineVar('word-refinery.html', 'CLINES'); },
+      keyField:'category',
+      columns:[
+        { field:'category', label:'Category', editable:false },
+        { field:'stage', label:'Stage', editable:true, type:'stage' },
+        { field:'leftAnchor', label:'Left Anchor', editable:true, type:'text' },
+        { field:'rightAnchor', label:'Right Anchor', editable:true, type:'text' },
+        { field:'words', label:'Words', editable:true, type:'array', sep:', ' },
+        { field:'gaps', label:'Gap Indices', editable:true, type:'array', sep:', ' },
+        { field:'clue', label:'Clue', editable:true, type:'text' },
+        { field:'explain', label:'Explain', editable:true, type:'text' }
+      ]
+    },
+    {
+      id:'spectrum', label:'Spectrum', game:'spectrum',
+      fetchFn: function(){ return fetchSpectrumData(); },
+      keyField:'_key',
+      columns:[
+        { field:'_key', label:'Key', editable:false },
+        { field:'_type', label:'Type', editable:false },
+        { field:'stage', label:'Stage', editable:true, type:'stage' },
+        { field:'word', label:'Word/Label', editable:false },
+        { field:'options', label:'Options', editable:true, type:'array', sep:', ' },
+        { field:'correct', label:'Correct', editable:true, type:'text' },
+        { field:'explain', label:'Explain', editable:true, type:'text' },
+        { field:'leftAnchor', label:'Left Anchor', editable:true, type:'text' },
+        { field:'rightAnchor', label:'Right Anchor', editable:true, type:'text' },
+        { field:'words', label:'Words', editable:true, type:'array', sep:', ' },
+        { field:'clue', label:'Clue', editable:true, type:'text' }
+      ]
+    },
+    {
+      id:'homophones', label:'Homophones', game:'homophones',
+      fetchFn: function(){ return fetchInlineVar('homophone-mode.html', 'HOMOPHONES'); },
+      keyField:'_key',
+      columns:[
+        { field:'_key', label:'Group', editable:false },
+        { field:'stage', label:'Stage', editable:true, type:'stage' },
+        { field:'explain', label:'Explain', editable:true, type:'text' },
+        { field:'sentences', label:'Sentences (JSON)', editable:true, type:'json' }
+      ]
+    },
+    {
+      id:'morphemes', label:'Morphemes', game:'morphemes',
+      fetchFn: function(){ return loadMorphemeData(); },
+      keyField:'id',
+      columns:[
+        { field:'_type', label:'Type', editable:false },
+        { field:'id', label:'ID', editable:false },
+        { field:'stage', label:'Stage', editable:true, type:'stage' },
+        { field:'form', label:'Form', editable:true, type:'text' },
+        { field:'meaning', label:'Meaning', editable:true, type:'text' },
+        { field:'examples', label:'Examples', editable:true, type:'array', sep:', ' },
+        { field:'altForms', label:'Alt Forms', editable:true, type:'array', sep:', ' }
+      ]
+    }
+  ];
+
+  // ── Init ───────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', async function(){
+    try {
+      await WordLabData.requireTeacherAuth();
+    } catch(e) {
+      return; // redirected to login
+    }
+
+    document.getElementById('signOutBtn').addEventListener('click', function(){
+      WordLabData.teacherSignOut();
+    });
+
+    buildTabs();
+
+    document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 200));
+    document.getElementById('stageFilter').addEventListener('change', applyFilters);
+    document.getElementById('overrideToggle').addEventListener('change', applyFilters);
+    document.getElementById('loadMoreBtn').addEventListener('click', function(){ showMoreRows(); });
+  });
+
+  // ── Tab rendering ──────────────────────────────────────────────
+  function buildTabs(){
+    var bar = document.getElementById('tabBar');
+    TABS.forEach(function(tab){
+      var btn = document.createElement('button');
+      btn.className = 'tabBtn';
+      btn.setAttribute('role', 'tab');
+      btn.setAttribute('aria-selected', 'false');
+      btn.textContent = tab.label;
+      btn.addEventListener('click', function(){ selectTab(tab); });
+      bar.appendChild(btn);
+    });
+  }
+
+  async function selectTab(tab){
+    if (currentTab && currentTab.id === tab.id) return;
+    currentTab = tab;
+
+    // Update tab UI
+    var btns = document.querySelectorAll('.tabBtn');
+    TABS.forEach(function(t, i){
+      btns[i].classList.toggle('active', t.id === tab.id);
+      btns[i].setAttribute('aria-selected', t.id === tab.id ? 'true' : 'false');
+    });
+
+    // Show loading
+    document.getElementById('dataTable').classList.add('hidden');
+    document.getElementById('loadMoreRow').classList.add('hidden');
+    document.getElementById('loadingMsg').textContent = 'Loading ' + tab.label + ' data...';
+    document.getElementById('loadingMsg').classList.remove('hidden');
+    document.getElementById('errorBanner').classList.add('hidden');
+
+    // Reset filters
+    document.getElementById('searchInput').value = '';
+    document.getElementById('stageFilter').value = '';
+    document.getElementById('overrideToggle').checked = false;
+
+    try {
+      // Fetch game data if not cached
+      if (!gameDataCache[tab.id]) {
+        gameDataCache[tab.id] = await tab.fetchFn();
+      }
+
+      // Prepare keys for special tabs
+      var data = gameDataCache[tab.id];
+      if (tab.id === 'homophones') {
+        data.forEach(function(item){
+          if (!item._key) item._key = item.group.join('/');
+        });
+      }
+
+      // Fetch corrections
+      if (!correctionsCache[tab.id]) {
+        var corr = await loadCorrections(tab.game);
+        correctionsCache[tab.id] = {};
+        corr.forEach(function(c){ correctionsCache[tab.id][c.word_key] = c.corrections; });
+      }
+
+      buildTable();
+    } catch(e) {
+      console.error('Error loading tab', tab.id, e);
+      document.getElementById('loadingMsg').classList.add('hidden');
+      var eb = document.getElementById('errorBanner');
+      eb.textContent = 'Error loading data: ' + (e.message || String(e));
+      eb.classList.remove('hidden');
+    }
+  }
+
+  // ── Fetch helpers ──────────────────────────────────────────────
+  // Fetches an HTML game page (same-origin) and extracts a named JS
+  // variable declaration. Only parses data from our own codebase files.
+  var _htmlCache = {};
+  function fetchPageHtml(url){
+    if (_htmlCache[url]) return Promise.resolve(_htmlCache[url]);
+    return fetch(url).then(function(r){ return r.text(); }).then(function(text){
+      _htmlCache[url] = text;
+      return text;
+    });
+  }
+
+  function extractJsVar(html, varName){
+    var regex = new RegExp('(?:const|var|let)\\s+' + varName + '\\s*=\\s*');
+    var match = html.match(regex);
+    if (!match) throw new Error('Could not find ' + varName);
+    var startIdx = match.index + match[0].length;
+    var depth = 0, i = startIdx, started = false;
+    for (; i < html.length; i++) {
+      if (html[i] === '[' || html[i] === '{') { depth++; started = true; }
+      if (html[i] === ']' || html[i] === '}') { depth--; }
+      if (started && depth === 0) { i++; break; }
+    }
+    return html.substring(startIdx, i);
+  }
+
+  function parseJsLiteral(code){
+    // Uses Function constructor to evaluate a JS literal (array/object)
+    // from our own same-origin game files. This is safe because the source
+    // is our own codebase HTML, not user-supplied input.
+    return (new Function('return ' + code))(); // eslint-disable-line no-new-func
+  }
+
+  function fetchInlineVar(url, varName){
+    return fetchPageHtml(url).then(function(html){
+      var code = extractJsVar(html, varName);
+      return parseJsLiteral(code);
+    });
+  }
+
+  function fetchSpectrumData(){
+    return fetchPageHtml('word-spectrum.html').then(function(html){
+      var synonyms = parseJsLiteral(extractJsVar(html, 'SYNONYM_PAIRS'));
+      var antonyms = parseJsLiteral(extractJsVar(html, 'ANTONYM_PAIRS'));
+      var spectrums = parseJsLiteral(extractJsVar(html, 'SPECTRUM_SETS'));
+      var rows = [];
+      synonyms.forEach(function(s){ s._type = 'synonym'; s._key = 'syn:' + s.word; rows.push(s); });
+      antonyms.forEach(function(a){ a._type = 'antonym'; a._key = 'ant:' + a.word; rows.push(a); });
+      spectrums.forEach(function(sp){ sp._type = 'spectrum'; sp._key = 'spec:' + sp.label; rows.push(sp); });
+      return rows;
+    });
+  }
+
+  function loadMorphemeData(){
+    var M = window.MORPHEMES;
+    if (!M) return Promise.resolve([]);
+    var rows = [];
+    (M.prefixes || []).forEach(function(p){
+      rows.push(Object.assign({}, p, { _type:'prefix', id: p.id || p.form }));
+    });
+    (M.suffixes || []).forEach(function(s){
+      rows.push(Object.assign({}, s, { _type:'suffix', id: s.id || s.form }));
+    });
+    (M.bases || []).forEach(function(b){
+      rows.push(Object.assign({}, b, { _type:'base', id: b.id || b.form }));
+    });
+    return Promise.resolve(rows);
+  }
+
+  async function loadCorrections(game){
+    try {
+      var result = await WordLabData._sb().from('word_corrections')
+        .select('word_key, corrections')
+        .eq('game', game);
+      return result.data || [];
+    } catch(e) {
+      console.error('Error loading corrections for', game, e);
+      return [];
+    }
+  }
+
+  // ── Table building ─────────────────────────────────────────────
+  function buildTable(){
+    applyFilters();
+  }
+
+  function applyFilters(){
+    if (!currentTab) return;
+    var data = gameDataCache[currentTab.id] || [];
+    var search = document.getElementById('searchInput').value.trim().toLowerCase();
+    var stage = document.getElementById('stageFilter').value;
+    var overrideOnly = document.getElementById('overrideToggle').checked;
+    var corr = correctionsCache[currentTab.id] || {};
+
+    filteredRows = data.filter(function(item){
+      // Search filter
+      if (search) {
+        var found = false;
+        for (var ci = 0; ci < currentTab.columns.length; ci++) {
+          var v = String(getCellValue(item, currentTab.columns[ci].field) || '').toLowerCase();
+          if (v.indexOf(search) !== -1) { found = true; break; }
+        }
+        if (!found) return false;
+      }
+      // Stage filter
+      if (stage && item.stage !== stage) return false;
+      // Override filter
+      if (overrideOnly) {
+        var key = item[currentTab.keyField];
+        if (!corr[key]) return false;
+      }
+      return true;
+    });
+
+    visibleCount = 0;
+    renderTable();
+  }
+
+  function renderTable(){
+    var table = document.getElementById('dataTable');
+    var thead = document.getElementById('tableHead');
+    var tbody = document.getElementById('tableBody');
+    var loading = document.getElementById('loadingMsg');
+    var loadMore = document.getElementById('loadMoreRow');
+
+    // Build header
+    thead.innerHTML = '';
+    var hRow = document.createElement('tr');
+    currentTab.columns.forEach(function(col){
+      var th = document.createElement('th');
+      th.textContent = col.label;
+      hRow.appendChild(th);
+    });
+    var thAct = document.createElement('th');
+    thAct.textContent = 'Actions';
+    hRow.appendChild(thAct);
+    thead.appendChild(hRow);
+
+    // Build body
+    tbody.innerHTML = '';
+    var end = Math.min(PAGE_SIZE, filteredRows.length);
+    for (var i = 0; i < end; i++) {
+      tbody.appendChild(buildRow(filteredRows[i]));
+    }
+    visibleCount = end;
+
+    loading.classList.add('hidden');
+    table.classList.remove('hidden');
+
+    if (visibleCount < filteredRows.length) {
+      loadMore.classList.remove('hidden');
+      document.getElementById('loadMoreBtn').textContent =
+        'Load more (' + (filteredRows.length - visibleCount) + ' remaining)';
+    } else {
+      loadMore.classList.add('hidden');
+    }
+
+    updateRowCount();
+  }
+
+  function showMoreRows(){
+    var tbody = document.getElementById('tableBody');
+    var end = Math.min(visibleCount + PAGE_SIZE, filteredRows.length);
+    for (var i = visibleCount; i < end; i++) {
+      tbody.appendChild(buildRow(filteredRows[i]));
+    }
+    visibleCount = end;
+
+    var loadMore = document.getElementById('loadMoreRow');
+    if (visibleCount < filteredRows.length) {
+      document.getElementById('loadMoreBtn').textContent =
+        'Load more (' + (filteredRows.length - visibleCount) + ' remaining)';
+    } else {
+      loadMore.classList.add('hidden');
+    }
+    updateRowCount();
+  }
+
+  function updateRowCount(){
+    var total = (gameDataCache[currentTab.id] || []).length;
+    var txt = filteredRows.length + ' rows';
+    if (filteredRows.length !== total) txt += ' (filtered from ' + total + ')';
+    document.getElementById('rowCount').textContent = txt;
+  }
+
+  function buildRow(item){
+    var tr = document.createElement('tr');
+    var key = item[currentTab.keyField];
+    var corr = correctionsCache[currentTab.id] || {};
+    var hasOverride = !!corr[key];
+    if (hasOverride) tr.classList.add('hasOverride');
+    tr.setAttribute('data-key', key);
+
+    currentTab.columns.forEach(function(col){
+      var td = document.createElement('td');
+      var val = getCellValue(item, col.field);
+      var corrVal = getCorrectedValue(key, col.field);
+      var displayVal = corrVal !== undefined ? corrVal : val;
+
+      if (col.editable) {
+        td.classList.add('editable');
+        td.setAttribute('data-field', col.field);
+        td.setAttribute('data-orig', serializeValue(val, col));
+        renderCellDisplay(td, displayVal, col, corrVal !== undefined);
+
+        td.addEventListener('click', function(e){
+          if (e.target.classList.contains('resetBtn')) return;
+          if (td.querySelector('.cellInput')) return;
+          startEditing(td, item, col);
+        });
+      } else {
+        renderCellDisplay(td, displayVal, col, false);
+      }
+
+      tr.appendChild(td);
+    });
+
+    // Actions column
+    var tdAct = document.createElement('td');
+    if (hasOverride) {
+      var resetBtn = document.createElement('button');
+      resetBtn.className = 'resetBtn';
+      resetBtn.textContent = '\u00d7 Reset';
+      resetBtn.title = 'Remove all overrides for this row';
+      resetBtn.addEventListener('click', function(){ resetRow(key, tr); });
+      tdAct.appendChild(resetBtn);
+    }
+    tr.appendChild(tdAct);
+
+    return tr;
+  }
+
+  // ── Cell value helpers ─────────────────────────────────────────
+  function getCellValue(item, field){
+    if (field.indexOf('.') !== -1) {
+      var parts = field.split('.');
+      var obj = item[parts[0]];
+      return obj ? obj[parts[1]] : null;
+    }
+    return item[field];
+  }
+
+  function getCorrectedValue(wordKey, field){
+    var corr = correctionsCache[currentTab.id] || {};
+    var fix = corr[wordKey];
+    if (!fix) return undefined;
+    if (field.indexOf('.') !== -1) {
+      var parts = field.split('.');
+      var nested = fix[parts[0]];
+      if (nested && nested[parts[1]] !== undefined) return nested[parts[1]];
+      return undefined;
+    }
+    return fix[field] !== undefined ? fix[field] : undefined;
+  }
+
+  function serializeValue(val, col){
+    if (val == null) return '';
+    if (col.type === 'array') return Array.isArray(val) ? val.join(col.sep || ', ') : String(val);
+    if (col.type === 'json') return JSON.stringify(val, null, 2);
+    return String(val);
+  }
+
+  function deserializeValue(str, col){
+    if (col.type === 'array') {
+      return str.split(/[,\u00b7]/).map(function(s){ return s.trim(); }).filter(Boolean);
+    }
+    if (col.type === 'json') {
+      try { return JSON.parse(str); } catch(e) { return null; }
+    }
+    if (col.type === 'stage') return str || null;
+    return str;
+  }
+
+  // ── Cell display ───────────────────────────────────────────────
+  function renderCellDisplay(td, val, col, isOverride){
+    td.innerHTML = '';
+    var span = document.createElement('span');
+    span.className = 'cellVal';
+
+    if (col.type === 'stage' && val) {
+      var pill = document.createElement('span');
+      pill.className = 'stagePill ' + val;
+      pill.textContent = val.toUpperCase();
+      td.appendChild(pill);
+    } else if (col.type === 'json') {
+      var jsonStr = val ? JSON.stringify(val) : '';
+      span.textContent = jsonStr.length > 80 ? jsonStr.substring(0, 80) + '...' : jsonStr;
+      td.appendChild(span);
+    } else if (col.type === 'array') {
+      span.textContent = Array.isArray(val) ? val.join(col.sep || ', ') : (val || '');
+      td.appendChild(span);
+    } else {
+      if (val == null || val === '') {
+        span.classList.add('empty');
+        span.textContent = '(empty)';
+      } else {
+        span.textContent = String(val);
+      }
+      td.appendChild(span);
+    }
+
+    if (isOverride) {
+      var dot = document.createElement('span');
+      dot.className = 'overrideDot';
+      dot.title = 'Has override';
+      td.appendChild(dot);
+    }
+  }
+
+  // ── Inline editing ─────────────────────────────────────────────
+  function startEditing(td, item, col){
+    var key = item[currentTab.keyField];
+    var corrVal = getCorrectedValue(key, col.field);
+    var origVal = getCellValue(item, col.field);
+    var displayVal = corrVal !== undefined ? corrVal : origVal;
+
+    td.innerHTML = '';
+
+    var input;
+    if (col.type === 'stage') {
+      input = document.createElement('select');
+      input.className = 'cellInput';
+      var emptyOpt = document.createElement('option');
+      emptyOpt.value = '';
+      emptyOpt.textContent = '(none)';
+      input.appendChild(emptyOpt);
+      STAGES.forEach(function(s){
+        var opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s.toUpperCase();
+        if (displayVal === s) opt.selected = true;
+        input.appendChild(opt);
+      });
+    } else if (col.type === 'json') {
+      input = document.createElement('textarea');
+      input.className = 'cellInput';
+      input.value = displayVal ? JSON.stringify(displayVal, null, 2) : '';
+    } else {
+      input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'cellInput';
+      input.value = serializeValue(displayVal, col);
+    }
+
+    var cancelled = false;
+    input.addEventListener('blur', function(){
+      if (!cancelled) finishEditing(td, item, col, input);
+    });
+    input.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' && col.type !== 'json') {
+        e.preventDefault();
+        input.blur();
+      }
+      if (e.key === 'Escape') {
+        cancelled = true;
+        var cv = corrVal !== undefined ? corrVal : origVal;
+        renderCellDisplay(td, cv, col, corrVal !== undefined);
+      }
+    });
+
+    td.appendChild(input);
+    input.focus();
+    if (input.select) input.select();
+  }
+
+  async function finishEditing(td, item, col, input){
+    var key = item[currentTab.keyField];
+    var origVal = getCellValue(item, col.field);
+    var newVal = deserializeValue(input.value, col);
+
+    // Compare serialized forms to check for actual change
+    var origStr = serializeValue(origVal, col);
+    var newStr = serializeValue(newVal, col);
+
+    if (origStr === newStr) {
+      // Matches original — remove this field from corrections if present
+      await removeCorrectionField(key, col.field);
+      renderCellDisplay(td, origVal, col, false);
+      refreshRowOverrideState(td.parentNode, key);
+      return;
+    }
+
+    // Save correction
+    await saveCorrectionField(key, col.field, newVal);
+    renderCellDisplay(td, newVal, col, true);
+    refreshRowOverrideState(td.parentNode, key);
+
+    // Saved flash
+    var flash = document.createElement('span');
+    flash.className = 'savedFlash';
+    flash.textContent = 'SAVED';
+    td.appendChild(flash);
+    setTimeout(function(){ if (flash.parentNode) flash.parentNode.removeChild(flash); }, 1300);
+  }
+
+  // ── Correction persistence ─────────────────────────────────────
+  async function saveCorrectionField(wordKey, field, value){
+    var corr = correctionsCache[currentTab.id] || {};
+    if (!corr[wordKey]) corr[wordKey] = {};
+
+    if (field.indexOf('.') !== -1) {
+      var parts = field.split('.');
+      if (!corr[wordKey][parts[0]]) corr[wordKey][parts[0]] = {};
+      corr[wordKey][parts[0]][parts[1]] = value;
+    } else {
+      corr[wordKey][field] = value;
+    }
+    correctionsCache[currentTab.id] = corr;
+
+    try {
+      await WordLabData._sb().from('word_corrections').upsert({
+        game: currentTab.game,
+        word_key: wordKey,
+        corrections: corr[wordKey],
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'game,word_key' });
+    } catch(e) {
+      console.error('Error saving correction', e);
+      showError('Failed to save: ' + (e.message || String(e)));
+    }
+  }
+
+  async function removeCorrectionField(wordKey, field){
+    var corr = correctionsCache[currentTab.id] || {};
+    if (!corr[wordKey]) return;
+
+    if (field.indexOf('.') !== -1) {
+      var parts = field.split('.');
+      if (corr[wordKey][parts[0]]) {
+        delete corr[wordKey][parts[0]][parts[1]];
+        if (Object.keys(corr[wordKey][parts[0]]).length === 0) {
+          delete corr[wordKey][parts[0]];
+        }
+      }
+    } else {
+      delete corr[wordKey][field];
+    }
+
+    // If no corrections left, delete the row entirely
+    if (Object.keys(corr[wordKey]).length === 0) {
+      delete corr[wordKey];
+      try {
+        await WordLabData._sb().from('word_corrections')
+          .delete()
+          .eq('game', currentTab.game)
+          .eq('word_key', wordKey);
+      } catch(e) {
+        console.error('Error deleting correction row', e);
+      }
+    } else {
+      try {
+        await WordLabData._sb().from('word_corrections').upsert({
+          game: currentTab.game,
+          word_key: wordKey,
+          corrections: corr[wordKey],
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'game,word_key' });
+      } catch(e) {
+        console.error('Error updating correction', e);
+      }
+    }
+  }
+
+  async function resetRow(wordKey, tr){
+    if (!confirm('Remove all overrides for "' + wordKey + '"?')) return;
+
+    var corr = correctionsCache[currentTab.id] || {};
+    delete corr[wordKey];
+
+    try {
+      await WordLabData._sb().from('word_corrections')
+        .delete()
+        .eq('game', currentTab.game)
+        .eq('word_key', wordKey);
+    } catch(e) {
+      console.error('Error deleting correction', e);
+      showError('Failed to reset: ' + (e.message || String(e)));
+      return;
+    }
+
+    // Re-render the row in place
+    var item = findItemByKey(wordKey);
+    if (item && tr.parentNode) {
+      var newTr = buildRow(item);
+      tr.parentNode.replaceChild(newTr, tr);
+    }
+  }
+
+  function refreshRowOverrideState(tr, wordKey){
+    if (!tr) return;
+    var corr = correctionsCache[currentTab.id] || {};
+    var hasOverride = !!corr[wordKey];
+    tr.classList.toggle('hasOverride', hasOverride);
+
+    // Update actions cell (last td)
+    var actTd = tr.lastElementChild;
+    actTd.innerHTML = '';
+    if (hasOverride) {
+      var resetBtn = document.createElement('button');
+      resetBtn.className = 'resetBtn';
+      resetBtn.textContent = '\u00d7 Reset';
+      resetBtn.title = 'Remove all overrides for this row';
+      resetBtn.addEventListener('click', function(){ resetRow(wordKey, tr); });
+      actTd.appendChild(resetBtn);
+    }
+  }
+
+  function findItemByKey(wordKey){
+    var data = gameDataCache[currentTab.id] || [];
+    for (var i = 0; i < data.length; i++) {
+      if (data[i][currentTab.keyField] === wordKey) return data[i];
+    }
+    return null;
+  }
+
+  // ── Utilities ──────────────────────────────────────────────────
+  function debounce(fn, ms){
+    var timer;
+    return function(){
+      var args = arguments, ctx = this;
+      clearTimeout(timer);
+      timer = setTimeout(function(){ fn.apply(ctx, args); }, ms);
+    };
+  }
+
+  function showError(msg){
+    var eb = document.getElementById('errorBanner');
+    eb.textContent = msg;
+    eb.classList.remove('hidden');
+    setTimeout(function(){ eb.classList.add('hidden'); }, 5000);
+  }
+
+})();
+  </script>
+</body>
+</html>
