@@ -1188,6 +1188,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="wordlab-stage.js"></script>
+<script src="data.js"></script>
 <script src="wordlab-data.js"></script>
 <script src="wordlab-scientist.js"></script>
 <script>
@@ -1340,6 +1341,17 @@ function _buildCategoryStageMap() {
     map[k] = {};
   });
 
+  // Debug: verify stage map population
+  var debugCounts = {};
+  Object.keys(map).forEach(function(act) {
+    var staged = 0, unstaged = 0;
+    Object.keys(map[act]).forEach(function(cat) {
+      if (map[act][cat]) staged++; else unstaged++;
+    });
+    if (staged + unstaged > 0) debugCounts[act] = { staged: staged, unstaged: unstaged };
+  });
+  console.debug('[Stage Map]', debugCounts);
+
   return map;
 }
 
@@ -1433,13 +1445,14 @@ let _extColumnsCache = null;
 
 function buildExtColumns(){
   const M = window.MORPHEMES || {};
-  const extPrefixes = (M.prefixes||[]).filter(p=>p.stage>=3).map(p=>'prefix:'+p.id);
-  const extSuffixes = (M.suffixes||[]).filter(s=>s.stage>=3).map(s=>'suffix:'+s.id);
-  const extBases    = (M.bases||[]).filter(b=>b.stage>=3).map(b=>'base:'+b.id);
+  const extStages = ['s3e','s3l','s4'];
+  const extPrefixes = (M.prefixes||[]).filter(p=>extStages.indexOf(p.stage)!==-1).map(p=>'prefix:'+p.id);
+  const extSuffixes = (M.suffixes||[]).filter(s=>extStages.indexOf(s.stage)!==-1).map(s=>'suffix:'+s.id);
+  const extBases    = (M.bases||[]).filter(b=>extStages.indexOf(b.stage)!==-1).map(b=>'base:'+b.id);
   return {
     'phoneme-splitter':  ['Starter','Level up','Challenge'],
     'syllable-splitter': ['2 syllables','3 syllables','4+ syllables'],
-    'breakdown-blitz':   (M.missions||[]).filter(m=>m.stage>=3).map(m=>m.word),
+    'breakdown-blitz':   [], // populated dynamically via _loadBreakdownStages()
     'meaning-mode': [...extPrefixes, ...extSuffixes, ...extBases],
     'mission-mode': [...extPrefixes, ...extSuffixes, ...extBases],
     'sound-sorter': [
