@@ -1193,13 +1193,7 @@
 <script>
 // ── Column definitions for each activity ────────────────────────
 const COLUMNS = {
-  'sound-sorter': [
-    'Long A','Long E','Long I','Long O','Long U / OO','OO (book)',
-    'OW sound','OY sound','OR sound','AR sound','ER sound','AIR sound','EAR sound',
-    'Short A','Short E','Short I','Short O','Short U',
-    'SH sound','CH sound','TH sound','F sound','K sound','J sound',
-    'Z sound','N sound','R sound','M sound','S sound','NG sound','W sound','ZH sound'
-  ],
+  'sound-sorter': [],  // dynamic discovery — columns are now "Sound:grapheme" format
   'phoneme-splitter': ['Starter','Level up','Challenge','Mixed'],
   'syllable-splitter': ['2 syllables','3 syllables','4+ syllables','Mixed'],
   'breakdown-blitz': [
@@ -1442,7 +1436,7 @@ function buildExtColumns(){
     'breakdown-blitz':   (M.missions||[]).filter(m=>m.stage>=3).map(m=>m.word),
     'meaning-mode': [...extPrefixes, ...extSuffixes, ...extBases],
     'mission-mode': [...extPrefixes, ...extSuffixes, ...extBases],
-    'sound-sorter': [...new Set((window.SOUND_SORTER_WORDS||[]).filter(w=>(w.stage||1)>=3).map(w=>w.sound))],
+    'sound-sorter': [],  // dynamic discovery — columns now include grapheme
     'root-lab': ['Starter','Level Up','Challenge'],
     'homophone-hunter': ['mode1','mode2','mode3'],
     'word-spectrum': ['synonym','antonym','spectrum'],
@@ -3450,6 +3444,15 @@ function gdBuildHeatmapCard(activityKey, meta) {
       Object.keys(actData).forEach(function(k) { dyn.add(k); });
     });
     allColumns = Array.from(dyn).sort();
+    // Sound Sorter: sort by sound group then grapheme
+    if (activityKey === 'sound-sorter') {
+      allColumns.sort(function(a, b) {
+        var sa = a.split(':'), sb = b.split(':');
+        var cmp = (sa[0] || a).localeCompare(sb[0] || b);
+        if (cmp !== 0) return cmp;
+        return (sa[1] || '').localeCompare(sb[1] || '');
+      });
+    }
   }
   var isTTR = activityKey === 'meaning-mode' || activityKey === 'mission-mode';
   var activeType = isTTR ? (morphemeFilter[activityKey] || 'prefix') : null;
@@ -3474,9 +3477,41 @@ function gdBuildHeatmapCard(activityKey, meta) {
     (isTTR ? '<span style="margin-left:8px;">Bright border = fast · Faded = slow</span>' : '') +
   '</div>';
 
-  var headerCols = columns.map(function(col) {
-    return '<th class="rotate"><span>' + WordLabData.escapeHtml(colLabel(col)) + '</span></th>';
-  }).join('');
+  // Sound Sorter: detect grapheme-level columns (contain colon) and build group headers
+  var isSoundGrapheme = activityKey === 'sound-sorter' && columns.some(function(c) { return c.indexOf(':') !== -1; });
+  var ssGroups = []; // [{sound, cols: [{col, grapheme}]}]
+  if (isSoundGrapheme) {
+    var currentGroup = null;
+    columns.forEach(function(col) {
+      var idx = col.indexOf(':');
+      var sound = idx !== -1 ? col.substring(0, idx) : col;
+      var grapheme = idx !== -1 ? col.substring(idx + 1) : '';
+      if (!currentGroup || currentGroup.sound !== sound) {
+        currentGroup = { sound: sound, cols: [] };
+        ssGroups.push(currentGroup);
+      }
+      currentGroup.cols.push({ col: col, grapheme: grapheme });
+    });
+  }
+
+  var headerCols, ssGroupRow = '';
+  if (isSoundGrapheme) {
+    // Top row: sound group headers spanning their grapheme columns
+    ssGroupRow = '<tr><th></th>' + ssGroups.map(function(g) {
+      return '<th colspan="' + g.cols.length + '" style="text-align:center;font-size:9px;font-weight:800;color:#c4b5fd;padding:2px 4px;border-bottom:2px solid rgba(196,181,253,.25);white-space:nowrap;">' + WordLabData.escapeHtml(g.sound) + '</th>';
+    }).join('') + '</tr>';
+    // Bottom row: grapheme labels
+    headerCols = ssGroups.map(function(g) {
+      return g.cols.map(function(c) {
+        var lbl = c.grapheme || c.col;
+        return '<th class="rotate"><span>' + WordLabData.escapeHtml(lbl) + '</span></th>';
+      }).join('');
+    }).join('');
+  } else {
+    headerCols = columns.map(function(col) {
+      return '<th class="rotate"><span>' + WordLabData.escapeHtml(colLabel(col)) + '</span></th>';
+    }).join('');
+  }
 
   var rows = students.map(function(student) {
     var actData = isExt ? ((extensionData[student.id]||{})[activityKey]||{}) : ((student.results||{})[activityKey]||{});
@@ -3502,11 +3537,11 @@ function gdBuildHeatmapCard(activityKey, meta) {
 
   return '<section class="gd-heatmapCard">' +
     '<div class="gd-heatmapCard-header">' +
-      '<div class="gd-heatmapCard-title">' + meta.icon + ' ' + WordLabData.escapeHtml(meta.label) + ' \u2014 by ' + (activityKey === 'phoneme-splitter' || activityKey === 'syllable-splitter' || activityKey === 'root-lab' ? 'difficulty' : activityKey === 'sound-sorter' ? 'sound' : isTTR ? 'morpheme' : 'category') + '</div>' +
+      '<div class="gd-heatmapCard-title">' + meta.icon + ' ' + WordLabData.escapeHtml(meta.label) + ' \u2014 by ' + (activityKey === 'phoneme-splitter' || activityKey === 'syllable-splitter' || activityKey === 'root-lab' ? 'difficulty' : activityKey === 'sound-sorter' ? (isSoundGrapheme ? 'grapheme' : 'sound') : isTTR ? 'morpheme' : 'category') + '</div>' +
       legend +
     '</div>' +
     '<div class="gd-heatmapCard-body">' +
-      '<div class="heatmapWrap"><table class="heatmap"><thead><tr><th>Student</th>' + headerCols + '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<div class="heatmapWrap"><table class="heatmap"><thead>' + ssGroupRow + '<tr><th>Student</th>' + headerCols + '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
     '</div>' +
   '</section>';
 }
@@ -3577,6 +3612,11 @@ function shortLabel(col){
   if(col === '4+ syllables') return '4+';
   if(col === 'Level up') return 'Lvl up';
   if(col === 'Level Up') return 'Lvl Up';
+  // Sound Sorter grapheme format: "Long A:ai" → "ai (Long A)"
+  var ssIdx = col.indexOf(':');
+  if(ssIdx !== -1 && !col.startsWith('prefix:') && !col.startsWith('suffix:') && !col.startsWith('base:') && !col.startsWith('cline:') && !col.startsWith('mode')) {
+    return col.substring(ssIdx + 1);
+  }
   return col;
 }
 
@@ -3771,9 +3811,23 @@ function showStudentProfile(studentId){
     </div>`;
   }
 
-  const soundCols      = COLUMNS['sound-sorter'];
-  const vowelCols      = soundCols.slice(0, 18);
-  const consoCols      = soundCols.slice(18);
+  // Discover sound-sorter columns from student data (supports both old "Long A" and new "Long A:ai" format)
+  const soundCols = (function() {
+    var actData = results['sound-sorter'] || {};
+    var cols = Object.keys(actData);
+    if (cols.length === 0) cols = COLUMNS['sound-sorter'] || [];
+    cols.sort(function(a, b) {
+      var sa = a.split(':'), sb = b.split(':');
+      var cmp = (sa[0] || a).localeCompare(sb[0] || b);
+      if (cmp !== 0) return cmp;
+      return (sa[1] || '').localeCompare(sb[1] || '');
+    });
+    return cols;
+  })();
+  // Split into vowel and consonant groups based on known sound names
+  const _vowelSounds = ['Long A','Long E','Long I','Long O','Long U / OO','OO (book)','OW sound','OY sound','OR sound','AR sound','ER sound','AIR sound','EAR sound','Short A','Short E','Short I','Short O','Short U'];
+  const vowelCols = soundCols.filter(function(c) { var s = c.indexOf(':') !== -1 ? c.substring(0, c.indexOf(':')) : c; return _vowelSounds.indexOf(s) !== -1; });
+  const consoCols = soundCols.filter(function(c) { var s = c.indexOf(':') !== -1 ? c.substring(0, c.indexOf(':')) : c; return _vowelSounds.indexOf(s) === -1; });
   const meaningPfx     = COLUMNS['meaning-mode'].filter(c => c.startsWith('prefix:'));
   const meaningSfx     = COLUMNS['meaning-mode'].filter(c => c.startsWith('suffix:'));
   const meaningBases   = COLUMNS['meaning-mode'].filter(c => c.startsWith('base:'));
