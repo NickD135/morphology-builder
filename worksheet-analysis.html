@@ -319,7 +319,6 @@
 </div>
 
 <script defer src="data.js"></script>
-<script defer src="wordlab-extension-data.js"></script>
 <script>
 function _esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 // ── State ────────────────────────────────────────────────────
@@ -352,21 +351,17 @@ function setMorphemeType(type) {
 function getMorphemePool() {
   const ext    = document.getElementById('extToggle').checked;
   const MORPH  = window.MORPHEMES || {};
-  const EXT    = window.WL_EXTENSION || {};
   if (morphemeType === 'base') {
-    const standard = (MORPH.bases || []).filter(b => ['latin','greek','anglo'].includes(b.group));
-    const extension = ext ? (EXT.bases || []).map(b => ({...b, _ext:true})) : [];
-    return [...standard, ...extension];
+    const all = (MORPH.bases || []).filter(b => ['latin','greek','anglo'].includes(b.group) || b.group);
+    return ext ? all : all.filter(b => !b.stage || b.stage <= 2);
   }
   if (morphemeType === 'prefix') {
-    const standard  = MORPH.prefixes || [];
-    const extension = ext ? (EXT.prefixes || []).map(p => ({...p, _ext:true})) : [];
-    return [...standard, ...extension];
+    const all = MORPH.prefixes || [];
+    return ext ? all : all.filter(p => !p.stage || p.stage <= 2);
   }
   // suffix
-  const standard  = MORPH.suffixes || [];
-  const extension = ext ? (EXT.suffixes || []).map(s => ({...s, _ext:true})) : [];
-  return [...standard, ...extension];
+  const all = MORPH.suffixes || [];
+  return ext ? all : all.filter(s => !s.stage || s.stage <= 2);
 }
 
 function buildMorphemeList(filter='') {
@@ -569,21 +564,13 @@ function syllableFallback(word) {
 
 // ── Syllable lookup from phoneme/syllable word lists ─────────
 function getSyllables(word) {
-  const ext = window.WL_EXTENSION || {};
-  const allSyl = [
-    ...((window.SYLLABLE_WORDS_STD) || []),
-    ...(ext.syllableWords || [])
-  ];
+  const allSyl = (window.SYLLABLE_WORDS_STD) || [];
   const found = allSyl.find(w => w.word.toLowerCase() === word.toLowerCase());
   return found ? found.syllables : syllableFallback(word);
 }
 
 function getPhonemeSplit(word) {
-  const ext = window.WL_EXTENSION || {};
-  const allPhon = [
-    ...((window.PHONEME_WORDS_STD) || []),
-    ...(ext.phonemeWords || [])
-  ];
+  const allPhon = (window.PHONEME_WORDS_STD) || [];
   const found = allPhon.find(w => w.word.toLowerCase() === word.toLowerCase());
   return found ? found.phonemes : phonemeFallback(word);
 }
@@ -637,14 +624,11 @@ function buildWordList(source, count) {
     // 2. Cross-reference: scan ALL morphemes for words that contain the selected morpheme
     if (words.length < count) {
       const MORPH = window.MORPHEMES || {};
-      const EXT = window.WL_EXTENSION || {};
-      const ext = document.getElementById('extToggle').checked;
       const form = morph.form.toLowerCase();
-      const allPrefixForms = [...(MORPH.prefixes||[]), ...(ext ? (EXT.prefixes||[]) : [])].map(p => p.form.toLowerCase());
-      const allSuffixForms = [...(MORPH.suffixes||[]), ...(ext ? (EXT.suffixes||[]) : [])].map(s => s.form.toLowerCase());
+      const allPrefixForms = (MORPH.prefixes||[]).map(p => p.form.toLowerCase());
+      const allSuffixForms = (MORPH.suffixes||[]).map(s => s.form.toLowerCase());
       const allItems = [
-        ...(MORPH.bases||[]), ...(MORPH.prefixes||[]), ...(MORPH.suffixes||[]),
-        ...(ext ? [...(EXT.bases||[]), ...(EXT.prefixes||[]), ...(EXT.suffixes||[])] : [])
+        ...(MORPH.bases||[]), ...(MORPH.prefixes||[]), ...(MORPH.suffixes||[])
       ];
       shuffle(allItems).forEach(item => {
         if (item.id === morph.id) return;
@@ -690,13 +674,12 @@ function buildWordList(source, count) {
 
   // random
   const pool = document.querySelector('input[name=randpool]:checked').value;
-  const ext  = window.WL_EXTENSION || {};
   const MORPH = window.MORPHEMES || {};
   let allBases = [];
   if (pool === 'standard' || pool === 'mixed')
-    allBases = [...allBases, ...(MORPH.bases||[]).filter(b => ['latin','greek','anglo'].includes(b.group))];
+    allBases = [...allBases, ...(MORPH.bases||[]).filter(b => !b.stage || b.stage <= 2)];
   if (pool === 'extension' || pool === 'mixed')
-    allBases = [...allBases, ...(ext.bases||[])];
+    allBases = [...allBases, ...(MORPH.bases||[]).filter(b => b.stage >= 3)];
 
   const words = [];
   const tried = new Set();

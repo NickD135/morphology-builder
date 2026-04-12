@@ -1147,7 +1147,6 @@
 <script src="wordlab-stage.js"></script>
 <script src="wordlab-data.js"></script>
 <script src="wordlab-scientist.js"></script>
-<script defer src="wordlab-extension-data.js"></script>
 <script>
 // ── Column definitions for each activity ────────────────────────
 const COLUMNS = {
@@ -1267,23 +1266,17 @@ let extensionData = {}; // { studentId: { activity: { category: {correct,total,t
 let _extColumnsCache = null;
 
 function buildExtColumns(){
-  const ext = window.WL_EXTENSION;
-  if(!ext) return {};
+  const M = window.MORPHEMES || {};
+  const extPrefixes = (M.prefixes||[]).filter(p=>p.stage>=3).map(p=>'prefix:'+p.id);
+  const extSuffixes = (M.suffixes||[]).filter(s=>s.stage>=3).map(s=>'suffix:'+s.id);
+  const extBases    = (M.bases||[]).filter(b=>b.stage>=3).map(b=>'base:'+b.id);
   return {
     'phoneme-splitter':  ['Starter','Level up','Challenge'],
     'syllable-splitter': ['2 syllables','3 syllables','4+ syllables'],
-    'breakdown-blitz':   (ext.missions||[]).map(m=>m.word),
-    'meaning-mode': [
-      ...(ext.meaningPrefixes||[]).map(p=>'prefix:'+p.id),
-      ...(ext.meaningSuffixes||[]).map(s=>'suffix:'+s.id),
-      ...(ext.meaningBases||[]).map(b=>'base:'+b.id),
-    ],
-    'mission-mode': [
-      ...(ext.meaningPrefixes||[]).map(p=>'prefix:'+p.id),
-      ...(ext.meaningSuffixes||[]).map(s=>'suffix:'+s.id),
-      ...(ext.missionBases||[]).map(b=>'base:'+b.id),
-    ],
-    'sound-sorter': [...new Set((ext.soundWords||[]).map(w=>w.sound))],
+    'breakdown-blitz':   (M.missions||[]).filter(m=>m.stage>=3).map(m=>m.word),
+    'meaning-mode': [...extPrefixes, ...extSuffixes, ...extBases],
+    'mission-mode': [...extPrefixes, ...extSuffixes, ...extBases],
+    'sound-sorter': [...new Set((window.SOUND_SORTER_WORDS||[]).filter(w=>(w.stage||1)>=3).map(w=>w.sound))],
     'root-lab': ['Starter','Level Up','Challenge'],
     'homophone-hunter': ['mode1','mode2','mode3'],
     'word-spectrum': ['synonym','antonym','spectrum'],

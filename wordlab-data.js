@@ -2712,21 +2712,8 @@ const WordLabData = (() => {
     document.head.appendChild(style);
   }
 
-  // ── Lazy-load extension data ────────────────────────────────
-  let _extLoaded = false;
-  let _extLoading = null;
-  function loadExtensionData() {
-    if (_extLoaded || window.WL_EXTENSION) { _extLoaded = true; return Promise.resolve(); }
-    if (_extLoading) return _extLoading;
-    _extLoading = new Promise(function(resolve) {
-      var s = document.createElement('script');
-      s.src = 'wordlab-extension-data.js';
-      s.onload = function() { _extLoaded = true; resolve(); };
-      s.onerror = function() { console.warn('Failed to load extension data'); resolve(); };
-      document.head.appendChild(s);
-    });
-    return _extLoading;
-  }
+  // loadExtensionData — removed (wordlab-extension-data.js deleted, all content in data.js)
+  function loadExtensionData() { return Promise.resolve(); }
 
   // ── Word of the Week ─────────────────────────────────────────
   // 52 curated words, one per week, cycling yearly.
