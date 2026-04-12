@@ -201,38 +201,19 @@ function generateCombos(prefixes, bases, suffixes) {
   return combos;
 }
 
-// ── Standard build ───────────────────────────────────────────────────────────
-console.log('\n=== Building standard valid-combos.json ===');
-const stdCombos = generateCombos(MORPHEMES.prefixes, MORPHEMES.bases, MORPHEMES.suffixes);
+// ── Build unified valid-combos.json ──────────────────────────────────────────
+// Extension mode used to have its own valid-combos-ext.json built from the
+// wordlab-extension-data.js pool. Since extension morphemes have been
+// migrated into data.js with s3l/s4 stage tags, there is now only ONE combos
+// file — the runtime filterByStage call in morpheme-builder.html handles the
+// +1 stage semantic for extension students.
+console.log('\n=== Building valid-combos.json ===');
+console.log(`  Morphemes: ${MORPHEMES.prefixes.length} prefixes, ${MORPHEMES.bases.length} bases, ${MORPHEMES.suffixes.length} suffixes`);
+const combos = generateCombos(MORPHEMES.prefixes, MORPHEMES.bases, MORPHEMES.suffixes);
 
-const stdPath = path.join(ROOT, 'valid-combos.json');
-fs.writeFileSync(stdPath, JSON.stringify(stdCombos));
-const stdSize = fs.statSync(stdPath).size;
-console.log(`  Written: ${stdPath} (${(stdSize / 1024).toFixed(1)} KB)\n`);
-
-// ── Extension build ──────────────────────────────────────────────────────────
-console.log('=== Building extension valid-combos-ext.json ===');
-
-let extPrefixes = MORPHEMES.prefixes;
-let extSuffixes = MORPHEMES.suffixes;
-let extBases = MORPHEMES.bases;
-
-try {
-  const extSandbox = loadDataFile('wordlab-extension-data.js');
-  const ext = extSandbox.WL_EXTENSION || extSandbox.window.WL_EXTENSION;
-  if (ext && ext.prefixes) extPrefixes = ext.prefixes;
-  if (ext && ext.suffixes) extSuffixes = ext.suffixes;
-  if (ext && ext.bases) extBases = ext.bases;
-  console.log(`  Extension: ${extPrefixes.length} prefixes, ${extBases.length} bases, ${extSuffixes.length} suffixes`);
-} catch (e) {
-  console.error('  Failed to load extension data, using standard:', e.message);
-}
-
-const extCombos = generateCombos(extPrefixes, extBases, extSuffixes);
-
-const extPath = path.join(ROOT, 'valid-combos-ext.json');
-fs.writeFileSync(extPath, JSON.stringify(extCombos));
-const extSize = fs.statSync(extPath).size;
-console.log(`  Written: ${extPath} (${(extSize / 1024).toFixed(1)} KB)\n`);
+const outPath = path.join(ROOT, 'valid-combos.json');
+fs.writeFileSync(outPath, JSON.stringify(combos));
+const outSize = fs.statSync(outPath).size;
+console.log(`  Written: ${outPath} (${(outSize / 1024).toFixed(1)} KB, ${combos.length} combos)\n`);
 
 console.log('Done!');
