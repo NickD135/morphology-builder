@@ -1304,11 +1304,6 @@ let _categoryStageCache = null;
 function _buildCategoryStageMap() {
   var map = {};
 
-  // Difficulty-level games (static mapping)
-  map['phoneme-splitter'] = { 'Starter': 's2e', 'Level up': 's2l', 'Challenge': 's3e', 'Mixed': null };
-  map['syllable-splitter'] = { '2 syllables': 's2e', '3 syllables': 's2l', '4+ syllables': 's3e', 'Mixed': null };
-  map['root-lab'] = { 'Starter': 's2e', 'Level Up': 's2l', 'Challenge': 's3e', 'Mixed': null };
-
   // Morpheme games — build from window.MORPHEMES
   var missionMap = {};
   var meaningMap = {};
@@ -1337,26 +1332,23 @@ function _buildCategoryStageMap() {
   map['breakdown-blitz'] = {};
 
   // Non-stage games — no mapping (always return null)
-  ['sound-sorter', 'homophone-hunter', 'word-spectrum', 'word-refinery', 'speed-mode'].forEach(function(k) {
+  ['sound-sorter', 'homophone-hunter', 'word-spectrum', 'word-refinery', 'speed-mode', 'phoneme-splitter', 'syllable-splitter', 'root-lab'].forEach(function(k) {
     map[k] = {};
   });
-
-  // Debug: verify stage map population
-  var debugCounts = {};
-  Object.keys(map).forEach(function(act) {
-    var staged = 0, unstaged = 0;
-    Object.keys(map[act]).forEach(function(cat) {
-      if (map[act][cat]) staged++; else unstaged++;
-    });
-    if (staged + unstaged > 0) debugCounts[act] = { staged: staged, unstaged: unstaged };
-  });
-  console.debug('[Stage Map]', debugCounts);
 
   return map;
 }
 
 function getCategoryStage(activity, category) {
-  if (!_categoryStageCache) _categoryStageCache = _buildCategoryStageMap();
+  if (!_categoryStageCache) {
+    _categoryStageCache = _buildCategoryStageMap();
+    console.debug('[Stage Map] Built:', Object.keys(_categoryStageCache).map(function(k) {
+      var m = _categoryStageCache[k];
+      var count = Object.keys(m).length;
+      var staged = Object.values(m).filter(function(v) { return v !== null; }).length;
+      return k + ': ' + staged + '/' + count + ' staged';
+    }).join(', '));
+  }
   var actMap = _categoryStageCache[activity];
   if (!actMap) return null;
   var stage = actMap[category];
@@ -2242,7 +2234,7 @@ function gdShowActivity(activityKey) {
   try { document.getElementById('gdMain').scrollIntoView({ block:'start', behavior:'smooth' }); } catch(e) {}
 }
 
-var STAGE_GROUPED_GAMES = ['phoneme-splitter','syllable-splitter','breakdown-blitz','meaning-mode','mission-mode','root-lab'];
+var STAGE_GROUPED_GAMES = ['breakdown-blitz','meaning-mode','mission-mode'];
 
 function gdShowGameStage(activityKey) {
   _gdState.view = 'game-stage';
@@ -2831,7 +2823,10 @@ function gdExportCurrentView() {
 }
 
 function gdRefresh() {
-  if (_gdState.view === 'activity' && _gdState.activity) {
+  if (_gdState.view === 'activity' && _gdState.activity && _gdState.soundDetail) {
+    // Re-render sound detail without resetting soundDetail
+    gdRenderActivityDetail(_gdState.activity);
+  } else if (_gdState.view === 'activity' && _gdState.activity) {
     gdShowActivity(_gdState.activity);
   } else if (_gdState.view === 'game-stage') {
     gdRenderGameStage(_gdState.activity);
@@ -3477,12 +3472,16 @@ function _ssAggregateResult(actData, soundCol) {
 
 // Sound Sorter drill-down: show grapheme-level detail for a single sound
 function gdShowSoundDetail(soundName) {
+  _gdState.view = 'activity';
+  _gdState.activity = 'sound-sorter';
   _gdState.soundDetail = soundName;
-  gdRefresh();
+  gdRenderSidebar();
+  _gdRenderControlsBar();
+  gdRenderActivityDetail('sound-sorter');
 }
 function gdClearSoundDetail() {
   _gdState.soundDetail = null;
-  gdRefresh();
+  gdRenderActivityDetail('sound-sorter');
 }
 
 function gdBuildHeatmapCard(activityKey, meta) {
@@ -3954,7 +3953,7 @@ function showStudentProfile(studentId){
         var stageNames = WLStage.STAGE_NAMES || {};
         var stagePill  = _gdBuildStagePillHtml(student);
 
-        // Overall accuracy across the 6 stage-grouped games at the student's current stage
+        // Overall accuracy across the stage-grouped games at the student's current stage
         var sgCorrect = 0, sgTotal = 0;
         STAGE_GROUPED_GAMES.forEach(function(gk) {
           var r = _gdStudentActAccByStageEx(student, gk, [student.stage]);
