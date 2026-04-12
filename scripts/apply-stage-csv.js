@@ -24,6 +24,15 @@ const path = require('path');
 
 const VALID_STAGES = new Set(['s2e', 's2l', 's3e', 's3l', 's4']);
 
+// Game CSV routing — each game column value maps to its HTML target file
+// and the regex that locates its top-level word array. Referenced by
+// applyGameCSV() which runs early via the format-detection branch below.
+const GAME_TARGETS = {
+  breakdown: { file: 'breakdown-mode.html', arrayRe: /MISSIONS\s*=\s*\[/ },
+  phoneme:   { file: 'phoneme-mode.html',   arrayRe: /WORDS\s*=\s*\[/ },
+  syllable:  { file: 'syllable-mode.html',  arrayRe: /WORDS\s*=\s*\[/ },
+};
+
 if (process.argv.length < 4) {
   console.error('Usage: node scripts/apply-stage-csv.js <csv-file> <data-file>');
   process.exit(1);
@@ -70,8 +79,17 @@ if (lines.length < 2) {
 
 const header = parseLine(lines[0]);
 
-// Auto-detect format. Word CSVs have a `word` column (morpheme CSVs have `type`+`id`).
-const isWordFormat = header.indexOf('word') >= 0 && header.indexOf('level') >= 0;
+// Auto-detect format by header columns.
+//   game CSV    → has `game` + `word`                  (multi-file game pools)
+//   sound CSV   → has `word` + `level` (no `game`)     (sound-sorter-data.js)
+//   morpheme    → has `type` + `id`                    (data.js)
+const hasGame = header.indexOf('game') >= 0 && header.indexOf('word') >= 0;
+const isWordFormat = !hasGame && header.indexOf('word') >= 0 && header.indexOf('level') >= 0;
+
+if (hasGame) {
+  applyGameCSV(lines, header);
+  process.exit(0);
+}
 
 if (isWordFormat) {
   applyWordCSV(lines, header);
@@ -307,4 +325,110 @@ function applyWordCSV(lines, header) {
 
 function normLabel(s) {
   return String(s || '').toLowerCase().replace(/\s*sound\s*$/, '').trim();
+}
+
+// ─── Game CSV path (breakdown / phoneme / syllable) ────────────────────
+// Rows: { game, word, difficulty, stage }. The `game` column routes each
+// row to its target HTML file. `difficulty` is carried for audit but not
+// used for matching — each game pool has unique words.
+// GAME_TARGETS is declared near the top of this file so the format-detection
+// branch can reach it before this block is evaluated.
+function findArrayBoundsG(src, arrayRe) {
+  const m = src.match(arrayRe);
+  if (!m) return null;
+  let i = m.index + m[0].length - 1; // sits on `[`
+  let depth = 0;
+  let inStr = false, strCh = '';
+  for (; i < src.length; i++) {
+    const ch = src[i];
+    if (inStr) {
+      if (ch === '\\') { i++; continue; }
+      if (ch === strCh) inStr = false;
+    } else {
+      if (ch === '"' || ch === "'") { inStr = true; strCh = ch; }
+      else if (ch === '[') depth++;
+      else if (ch === ']') { depth--; if (depth === 0) return [m.index + m[0].length - 1, i]; }
+    }
+  }
+  return null;
+}
+
+function escRe(s) {
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function applyGameCSV(lines, header) {
+  const gameIdx = header.indexOf('game');
+  const wordIdx = header.indexOf('word');
+  const stageIdx = header.indexOf('stage');
+  if (gameIdx < 0 || wordIdx < 0 || stageIdx < 0) {
+    console.error('Game CSV must have columns: game, word, stage (difficulty optional)');
+    process.exit(1);
+  }
+
+  // Group rows by game so each file is read/written exactly once.
+  const byGame = {};
+  let skipped = 0;
+  for (let i = 1; i < lines.length; i++) {
+    const parts = parseLine(lines[i]);
+    const game = (parts[gameIdx] || '').trim();
+    const word = (parts[wordIdx] || '').trim();
+    const stageRaw = (parts[stageIdx] || '').trim();
+    if (!game || !word) { skipped++; continue; }
+    if (!GAME_TARGETS[game]) { skipped++; continue; }
+    if (stageRaw && !VALID_STAGES.has(stageRaw)) { skipped++; continue; }
+    (byGame[game] = byGame[game] || []).push({ word, stage: stageRaw || null });
+  }
+
+  const totals = { rows: 0, updated: 0, unchanged: 0, notFound: 0 };
+  const perGame = {};
+
+  for (const [game, updates] of Object.entries(byGame)) {
+    const target = GAME_TARGETS[game];
+    if (!fs.existsSync(target.file)) {
+      console.error('Skipping ' + game + ' — file not found: ' + target.file);
+      continue;
+    }
+    const src = fs.readFileSync(target.file, 'utf8');
+    const bounds = findArrayBoundsG(src, target.arrayRe);
+    if (!bounds) {
+      console.error('Skipping ' + game + ' — array not found in ' + target.file);
+      continue;
+    }
+    const before = src.slice(0, bounds[0]);
+    let slice = src.slice(bounds[0], bounds[1] + 1);
+    const after = src.slice(bounds[1] + 1);
+
+    let updated = 0, unchanged = 0, notFound = 0;
+    for (const u of updates) {
+      const newVal = u.stage === null ? 'null' : '"' + u.stage + '"';
+      // Match `{ word:"X", stage:(null|"...")` — prefix captures everything up
+      // through `stage:`, so we replace the old value in-place without touching
+      // the entry's other fields. Non-greedy `\s*` allows varying whitespace.
+      const re = new RegExp(
+        '(\\{\\s*word\\s*:\\s*"' + escRe(u.word) + '"\\s*,\\s*stage\\s*:\\s*)(null|"[^"]*"|\'[^\']*\')'
+      );
+      const m = slice.match(re);
+      if (!m) { notFound++; continue; }
+      const oldVal = m[2];
+      if (oldVal === newVal) { unchanged++; continue; }
+      slice = slice.replace(re, '$1' + newVal);
+      updated++;
+    }
+    fs.writeFileSync(target.file, before + slice + after);
+    perGame[game] = { updated, unchanged, notFound, total: updates.length, file: target.file };
+    totals.rows += updates.length;
+    totals.updated += updated;
+    totals.unchanged += unchanged;
+    totals.notFound += notFound;
+  }
+
+  console.log('Game CSV applied:');
+  for (const [g, s] of Object.entries(perGame)) {
+    console.log('  ' + g.padEnd(10) + ' ' + s.file);
+    console.log('    rows: ' + s.total + '  updated: ' + s.updated + '  unchanged: ' + s.unchanged + '  not found: ' + s.notFound);
+  }
+  console.log('\n  TOTAL rows: ' + totals.rows + '  updated: ' + totals.updated + '  unchanged: ' + totals.unchanged + '  not found: ' + totals.notFound);
+  if (skipped > 0) console.log('  Skipped:     ' + skipped + ' (invalid game / stage / missing word)');
+  console.log('\nNext: git diff ' + Object.values(GAME_TARGETS).map(g => g.file).join(' ') + ' && git commit');
 }
