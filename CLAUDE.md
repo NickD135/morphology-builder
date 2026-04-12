@@ -1499,14 +1499,30 @@ Full checklist document: `docs/nsw-doe-approval-checklist.md`
 - [x] Dashboard: difficulty-level columns aggregate old + new data via prefix matching
 - [x] Dashboard: click difficulty column → word-level drill-down (populates as students play)
 
+#### Homophone/Refinery/Spectrum tracking + display
+- [x] homophone-mode.html records `"mode1:there/their/they're"` format (per-group tracking)
+- [x] Dashboard: homophone modes renamed — "Identifying Homophones" / "Matching Sentences" / "Fixing in Paragraphs"
+- [x] Dashboard: Word Refinery strips `cline:` prefix — shows "Talking", "Getting Bigger" etc.
+- [x] Dashboard: Word Spectrum drill-down from mode (synonym/antonym/spectrum) to individual words
+- [x] All 3 use same prefix-aggregation + drill-down pattern as other games
+
+#### Stage management modal
+- [x] Dedicated "🎓 Levels" button in controls bar opens stage management modal
+- [x] Stage reference strip: 5 stages with formal curriculum names (Early Stage 2 ~Y3 through Beyond Curriculum), colors, descriptions
+- [x] Bulk operations: select all/some students, set level, apply — batched Supabase updates
+- [x] Per-student dropdowns: individual level assignment with current level + mastery + ready-to-promote indicator
+- [x] Save button shows change count, groups updates by target stage for efficiency
+- [x] Mobile responsive: columns collapse below 700px
+
 #### Stage grouping classification
 - [x] 3 category-stage games (Breakdown, Meaning, Mission): categories ARE stage-tagged content
 - [x] 3 student-stage games (Phoneme, Syllable, Root Lab): categories are difficulty levels, stage groups students
-- [x] 5 non-stage games (Sound Sorter, Homophone, Spectrum, Refinery, Speed): flat heatmaps
+- [x] 5 non-stage games (Sound Sorter, Homophone, Spectrum, Refinery, Speed): flat heatmaps with mode/item drill-down
 
 #### Content tagging
 - [x] Tagged final 39 untagged bases in data.js (zero stage:null entries remain)
 - [x] data.js wrapped in IIFE to prevent global scope collisions with game pages
+- [x] sound-sorter-data.js: normalized 71 duplicate soundLabels (AR→AR sound, etc.)
 
 ---
 
@@ -1618,6 +1634,10 @@ At the start of each working session, do this:
 | Word-level recording for phoneme/syllable/root-lab/sound-sorter | Changed from `"2 syllables"` to `"2 syllables:tiger"` format. Dashboard aggregates back to difficulty level via prefix matching. Old data shows correctly. Word-level drill-down populates over time. |
 | Sound Sorter grapheme recording | Changed from `"Long A"` to `"Long A:ai"` format. Same prefix aggregation pattern. Lets teachers see which specific spelling patterns students struggle with within a sound. |
 | data.js IIFE wrapper | data.js declared `const PREFIXES` etc. at global scope which collided with game pages' own declarations. IIFE keeps variables local; `window.MORPHEMES` + `window.PREFIXES` etc. assigned explicitly for external access. |
+| Homophone mode labels (Identifying/Matching/Fixing) | mode1/mode2/mode3 meant nothing to teachers. Descriptive labels match what each mode actually tests: identifying which word is wrong, matching words to sentences, fixing errors in paragraphs. |
+| Prefix-aggregation pattern for all drill-down games | All games that record `"category:detail"` format use the same `_aggregateDifficultyResult()` for backward compat. Old data ("Starter") and new data ("Starter:bridge") both contribute to the category total. Drill-down shows detail when available. |
+| Stage management as a dedicated modal (not inline) | Previous UX scattered stage assignment across pill clicks, filter-strip prompts, and EXT popovers. One modal with reference strip + bulk + individual + mastery indicators is clearer for teachers managing a whole class. |
+| CATEGORY_STAGE_GAMES vs STAGE_GROUPED_GAMES distinction | Phoneme/Syllable/Root Lab categories are difficulty levels, not stages. They get stage grouping of STUDENTS but no category-level stage filtering. Only Breakdown/Meaning/Mission have categories that map to stages via getCategoryStage(). |
 | meaningPattern decoration lookup (Mission Mode) | Mission Mode PREFIXES/SUFFIXES have `meaningPattern` strings ("towards {base}", "{base} again") not in data.js. These are hand-crafted per morpheme and not derivable from `meaning`. Extracted to compact lookup objects (~95 entries) that decorate window.MORPHEMES at page load. |
 | Derive Mission Mode validPrefixes from valid-combos.json | Instead of hand-maintaining `validPrefixes:[...]` per base entry, derive them at startup by grouping valid-combos.json by base. Authoritative, auto-updates when morphemes are added, removed 280 lines of inline data. |
 | isRealWord switched from dictionary to validPrefixes | Every Mission Mode base now has derived `validPrefixes` from valid-combos.json. Dictionary lookup was a fallback that sometimes failed on combining forms (phon, scope). The validPrefixes check is exact and faster (no dictionary.txt fetch). |
