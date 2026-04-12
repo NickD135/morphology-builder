@@ -1471,6 +1471,43 @@ Full checklist document: `docs/nsw-doe-approval-checklist.md`
 - [x] Fixed additional WL_EXTENSION refs in wordlab-data.js (loadExtensionData), dashboard.html (buildExtColumns), worksheet-analysis.html (5 usages)
 - [x] Zero WL_EXTENSION or wordlab-extension-data references remain in codebase
 
+### PHASE 7.24 — Session 2026-04-12 (Dashboard stage-aware overhaul)
+
+#### Dashboard three-tier drill-down
+- [x] `getCategoryStage()` helper — maps student_progress categories to curriculum stages via window.MORPHEMES + breakdown-mode.html fetch
+- [x] Navigation state machine extended from 2 views to 4 (overview / game-stage / stage-detail / activity-flat)
+- [x] Global controls bar: Sort by Level/Name, Show past level data toggle, Export CSV
+- [x] Layer 1 Overview: stage-grouped students × 11 game columns with Phonics/Morphology/Vocabulary/Other group headers
+- [x] Layer 2 Game Overview: 5 stage columns (S2E→S4) with aggregate accuracy, dimming for stages above/below student
+- [x] Layer 3 Stage Detail: individual categories filtered to selected stage, student filtering by toggle
+- [x] Non-stage games (Sound Sorter, Homophone, Spectrum, Refinery, Speed) show flat heatmaps
+- [x] Student profile stage summary: current stage pill + per-stage accuracy history when toggle is on
+- [x] CSV export for all 4 view types respecting sort/toggle state
+- [x] Fixed: data.js not loaded on dashboard (window.MORPHEMES was undefined, breaking all morpheme lookups)
+- [x] Fixed: buildExtColumns() string-vs-number stage comparison (`p.stage >= 3` on string stages)
+
+#### Sound Sorter grapheme-level tracking
+- [x] sound-sorter.html records `"Long A:ai"` instead of `"Long A"` — per-grapheme progress
+- [x] sound-sorter-data.js: normalized 71 duplicate soundLabels (e.g. "AR" → "AR sound")
+- [x] Dashboard: Sound Sorter overview shows 32 sounds with prefix aggregation (old + new data)
+- [x] Dashboard: click sound column → grapheme drill-down (populates as students play)
+
+#### Word-level tracking for Phoneme/Syllable/Root Lab
+- [x] phoneme-mode.html records `"Starter:bridge"` format
+- [x] syllable-mode.html records `"2 syllables:tiger"` format
+- [x] root-lab.html records `"Starter:telescope"` format
+- [x] Dashboard: difficulty-level columns aggregate old + new data via prefix matching
+- [x] Dashboard: click difficulty column → word-level drill-down (populates as students play)
+
+#### Stage grouping classification
+- [x] 3 category-stage games (Breakdown, Meaning, Mission): categories ARE stage-tagged content
+- [x] 3 student-stage games (Phoneme, Syllable, Root Lab): categories are difficulty levels, stage groups students
+- [x] 5 non-stage games (Sound Sorter, Homophone, Spectrum, Refinery, Speed): flat heatmaps
+
+#### Content tagging
+- [x] Tagged final 39 untagged bases in data.js (zero stage:null entries remain)
+- [x] data.js wrapped in IIFE to prevent global scope collisions with game pages
+
 ---
 
 ### PHASE 8 — Growth & Integrations (Later)
@@ -1576,6 +1613,11 @@ At the start of each working session, do this:
 | Spelling check-in sets in worksheet generators | Teachers create spelling sets for check-ins; natural to reuse those words in worksheet generators alongside custom word lists. Prefixed "Check-In:" in dropdown to distinguish. |
 | Lab analysis room loading screen | 4.5s dashboard load time felt dead; immersive lab theme with scientist, particles, progress bar, and cycling messages makes the wait feel intentional. Smooth fade-out into dashboard. |
 | Teacher scientist on teachers table | Teachers aren't students — need their own scientist field. Syncs from View as Student customisation so teachers get a personalised loading screen without a separate customiser UI. |
+| Dashboard three-tier drill-down (Overview → Game → Stage) | Teachers need to see per-stage performance, not just flat per-game heatmaps. Three layers let them scan (overview), focus (game), then investigate (individual words/morphemes). Global toggle for current-level vs historical data. |
+| Only 3 games have category-level stage tags | Breakdown, Meaning, Mission store per-word/morpheme categories which have stage tags. Other games store difficulty levels or sound names — can't be filtered by stage. Separate CATEGORY_STAGE_GAMES from STAGE_GROUPED_GAMES. |
+| Word-level recording for phoneme/syllable/root-lab/sound-sorter | Changed from `"2 syllables"` to `"2 syllables:tiger"` format. Dashboard aggregates back to difficulty level via prefix matching. Old data shows correctly. Word-level drill-down populates over time. |
+| Sound Sorter grapheme recording | Changed from `"Long A"` to `"Long A:ai"` format. Same prefix aggregation pattern. Lets teachers see which specific spelling patterns students struggle with within a sound. |
+| data.js IIFE wrapper | data.js declared `const PREFIXES` etc. at global scope which collided with game pages' own declarations. IIFE keeps variables local; `window.MORPHEMES` + `window.PREFIXES` etc. assigned explicitly for external access. |
 | meaningPattern decoration lookup (Mission Mode) | Mission Mode PREFIXES/SUFFIXES have `meaningPattern` strings ("towards {base}", "{base} again") not in data.js. These are hand-crafted per morpheme and not derivable from `meaning`. Extracted to compact lookup objects (~95 entries) that decorate window.MORPHEMES at page load. |
 | Derive Mission Mode validPrefixes from valid-combos.json | Instead of hand-maintaining `validPrefixes:[...]` per base entry, derive them at startup by grouping valid-combos.json by base. Authoritative, auto-updates when morphemes are added, removed 280 lines of inline data. |
 | isRealWord switched from dictionary to validPrefixes | Every Mission Mode base now has derived `validPrefixes` from valid-combos.json. Dictionary lookup was a fallback that sometimes failed on combining forms (phon, scope). The validPrefixes check is exact and faster (no dictionary.txt fetch). |
