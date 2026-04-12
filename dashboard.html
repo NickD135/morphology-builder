@@ -805,6 +805,13 @@
     .gd-matrixCell.no-data{ background:rgba(255,255,255,.04); color:#64748b; }
     .gd-matrixCell.flagged{ outline:2px solid var(--bad); outline-offset:-2px; }
 
+    /* Stage overview — group header rows */
+    .gd-stageGroupRow td{ padding:14px 14px 4px; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.14em; border-bottom:1px solid rgba(255,255,255,0.06); }
+    .gd-stageBadge{ display:inline-block; padding:2px 7px; border-radius:5px; font-size:9px; margin-right:6px; letter-spacing:.06em; color:white; }
+    .gd-stageCount{ float:right; color:#64748b; font-weight:600; text-transform:none; letter-spacing:0; font-size:10px; }
+    .gd-cell-dim{ opacity:.25; }
+    .gd-matrixTable .gd-levelCell{ padding:6px 8px; text-align:center; white-space:nowrap; }
+
     /* Activity Detail view */
     .gd-backLink{ display:inline-flex; align-items:center; gap:8px; background:none; border:1.5px solid rgba(255,255,255,.14); color:var(--text-secondary); font-weight:800; font-size:12px; padding:8px 16px; border-radius:12px; transition:all .15s; margin-bottom:14px; cursor:pointer; font-family:'Lexend',sans-serif; }
     .gd-backLink:hover{ background:rgba(255,255,255,.06); color:var(--text-bright); border-color:var(--indigo-2); }
@@ -1379,6 +1386,27 @@ function _gdStudentActAccByStage(student, activityKey, stages) {
   });
 
   return total > 0 ? Math.round(100 * correct / total) : null;
+}
+
+// Like _gdStudentActAccByStage but returns {acc, total} for intervention checking
+function _gdStudentActAccByStageEx(student, activityKey, stages) {
+  var src = (dashboardMode === 'extension' && extensionData[student.id])
+    ? extensionData[student.id]
+    : student.results;
+  if (!src) return null;
+  var actData = src[activityKey];
+  if (!actData) return null;
+  var correct = 0, total = 0;
+  Object.keys(actData).forEach(function(cat) {
+    if (stages) {
+      var catStage = getCategoryStage(activityKey, cat);
+      if (catStage !== null && stages.indexOf(catStage) === -1) return;
+    }
+    var r = actData[cat];
+    correct += r.correct || 0;
+    total += r.total || 0;
+  });
+  return total > 0 ? { acc: Math.round(100 * correct / total), total: total } : null;
 }
 
 let currentClass = null;
@@ -2240,18 +2268,22 @@ function _gdTogglePast(el) {
 function _gdRenderControlsBar() {
   var bar = document.getElementById('gdControlsBar');
   if (!bar) return;
-  var show = (_gdState.view === 'game-stage' || _gdState.view === 'stage-detail');
+  var show = (_gdState.view === 'overview' || _gdState.view === 'game-stage' || _gdState.view === 'stage-detail');
   bar.style.display = show ? 'flex' : 'none';
   if (!show) return;
   // Update title
   var titleEl = document.getElementById('gdViewTitle');
   if (titleEl) {
-    var meta = _gdActivityMeta(_gdState.activity);
-    var label = meta ? (meta.icon + ' ' + meta.label) : _gdState.activity;
-    if (_gdState.view === 'stage-detail' && _gdState.stageDetail) {
-      label += ' \u203A ' + _gdState.stageDetail;
+    if (_gdState.view === 'overview') {
+      titleEl.textContent = '\uD83C\uDFE0 Overview';
+    } else {
+      var meta = _gdActivityMeta(_gdState.activity);
+      var label = meta ? (meta.icon + ' ' + meta.label) : _gdState.activity;
+      if (_gdState.view === 'stage-detail' && _gdState.stageDetail) {
+        label += ' \u203A ' + _gdState.stageDetail;
+      }
+      titleEl.textContent = label;
     }
-    titleEl.textContent = label;
   }
   // Sync sort button state
   document.querySelectorAll('.gd-sortBtn').forEach(function(b) { b.classList.toggle('active', b.dataset.sort === _gdSortBy); });
@@ -2281,10 +2313,151 @@ function gdRefresh() {
 function gdRenderOverview() {
   var main = document.getElementById('gdMain');
   if (!main) return;
-  if (!currentClass) { main.innerHTML = ''; return; }
+  if (!currentClass) { main.textContent = ''; return; }
 
-  var html = gdBuildPulseCard() + gdBuildAttentionCard() + gdBuildMatrixCard();
-  main.innerHTML = html;
+  // Build stage overview — all user data is escaped via WordLabData.escapeHtml()
+  main.innerHTML = gdBuildStageOverview(); // eslint-disable-line -- safe: user data escaped
+}
+
+var STAGE_COLORS = {
+  s2e: { bg:'#4338ca', text:'#6366f1', name:'Explorer' },
+  s2l: { bg:'#0891b2', text:'#06b6d4', name:'Voyager' },
+  s3e: { bg:'#d97706', text:'#f59e0b', name:'Wanderer' },
+  s3l: { bg:'#7c3aed', text:'#8b5cf6', name:'Trailblazer' },
+  s4:  { bg:'#16a34a', text:'#16a34a', name:'Pioneer' }
+};
+
+function gdBuildStageOverview() {
+  var acts = _gdActivities();
+  var groupCounts = GD_GROUPS.map(function(g) { return { name:g.name, key:g.key, count:g.activities.length }; });
+  var students = (currentClass && currentClass.students) || [];
+
+  // Compute mastery for each student
+  students.forEach(function(s) {
+    if (!s.stage) { s._mastery = null; return; }
+    s._mastery = _gdCalcMasteryFromAllProgress(s);
+  });
+
+  // ── Header row 1: group headers ──
+  var groupHeaderHtml = '<th class="gd-studentHead" rowspan="2">Student</th>' +
+    '<th class="gd-colHead" rowspan="2" style="min-width:60px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--text-secondary);">Level</th>';
+  groupCounts.forEach(function(g) {
+    groupHeaderHtml += '<th class="gd-groupHead gd-col-' + g.key + '" colspan="' + g.count + '">' + g.name + '</th>';
+  });
+
+  // ── Header row 2: game icons ──
+  var iconHeaderHtml = '';
+  acts.forEach(function(a) {
+    iconHeaderHtml += '<th class="gd-colHead gd-col-' + a.group + '" onclick="gdShowActivity(\'' + a.key + '\')" title="' + WordLabData.escapeHtml(a.label) + '" aria-label="' + WordLabData.escapeHtml(a.label) + '">' + a.icon + '</th>';
+  });
+
+  // ── Build student rows ──
+  function buildStudentRow(s) {
+    var extOn = !!s.extension_mode;
+    var supOn = !!s.support_mode;
+    var lastAct = _gdLastActive(s);
+
+    // Determine stage filter for stage-grouped games
+    var studentStages = null;
+    if (!_gdShowPast && s.stage) {
+      studentStages = [s.stage];
+    }
+
+    var cells = acts.map(function(a) {
+      var isStageGrouped = STAGE_GROUPED_GAMES.indexOf(a.key) !== -1;
+      var stages = (isStageGrouped && studentStages) ? studentStages : null;
+      var r = _gdStudentActAccByStageEx(s, a.key, stages);
+      if (!r) return '<td class="gd-col-' + a.group + '"><div class="gd-matrixCell no-data" title="No data yet">\u2013</div></td>';
+      var ac = accClass(r.acc);
+      var flagged = r.total >= THRESHOLD_ATTEMPTS && r.acc < THRESHOLD_PCT;
+      var tooltip = WordLabData.escapeHtml(s.name) + ' \u2014 ' + WordLabData.escapeHtml(a.label) + '\n' + r.acc + '% (' + r.total + ' attempts)';
+      return '<td class="gd-col-' + a.group + '"><div class="gd-matrixCell ' + ac + (flagged ? ' flagged' : '') + '" title="' + tooltip + '" onclick="gdShowActivity(\'' + a.key + '\')">' + r.acc + '%</div></td>';
+    }).join('');
+
+    var extBtn = '<button class="gd-miniBadge ext' + (extOn ? ' on' : '') + '" onclick="event.stopPropagation();showExtPopover(\'' + s.id + '\',this)" title="Extension mode \u2014 click to configure">ext</button>';
+    var supBtn = '<button class="gd-miniBadge sup' + (supOn ? ' on' : '') + '" onclick="event.stopPropagation();toggleSupportFromDashboard(\'' + s.id + '\',' + supOn + ')" title="Support mode">sup</button>';
+    var rewardBtn = '<button class="gd-miniBadge reward" onclick="event.stopPropagation();openRewardModal(\'' + s.id + '\')" title="Give reward">\uD83C\uDF81</button>';
+    var stagePill = _gdBuildStagePillHtml(s);
+
+    return '<tr data-student-id="' + s.id + '">' +
+      '<td class="gd-studentCell">' +
+        '<div class="gd-studentCell-row">' +
+          '<span class="gd-studentCell-name" onclick="showStudentProfile(\'' + s.id + '\')">' + WordLabData.escapeHtml(s.name) + '</span>' +
+          '<div class="gd-studentCell-badges">' + extBtn + supBtn + rewardBtn + '</div>' +
+        '</div>' +
+        '<div class="gd-studentCell-meta' + (lastAct.isToday ? ' active' : '') + '">' + lastAct.label + '</div>' +
+      '</td>' +
+      '<td class="gd-levelCell">' + stagePill + '</td>' +
+      cells +
+    '</tr>';
+  }
+
+  // ── Build body rows based on sort mode ──
+  var bodyHtml = '';
+  if (_gdSortBy === 'level') {
+    // Group by stage
+    var stageOrder = (typeof WLStage !== 'undefined') ? WLStage.STAGE_ORDER : [];
+    var groups = {};
+    var unassigned = [];
+    students.forEach(function(s) {
+      if (s.stage && stageOrder.indexOf(s.stage) !== -1) {
+        if (!groups[s.stage]) groups[s.stage] = [];
+        groups[s.stage].push(s);
+      } else {
+        unassigned.push(s);
+      }
+    });
+
+    // Sort each group alphabetically
+    function sortAlpha(arr) {
+      arr.sort(function(a, b) { return (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase()); });
+    }
+
+    var totalCols = 2 + acts.length; // student + level + games
+    stageOrder.forEach(function(stage) {
+      var group = groups[stage];
+      if (!group || !group.length) return;
+      sortAlpha(group);
+      var sc = STAGE_COLORS[stage] || { bg:'#334155', text:'#64748b', name:stage };
+      var short = (typeof WLStage !== 'undefined' && WLStage.STAGE_SHORT) ? WLStage.STAGE_SHORT[stage] : stage;
+      bodyHtml += '<tr class="gd-stageGroupRow"><td colspan="' + totalCols + '">' +
+        '<span class="gd-stageBadge" style="background:' + sc.bg + ';">' + short + '</span>' +
+        sc.name +
+        '<span class="gd-stageCount">' + group.length + ' student' + (group.length !== 1 ? 's' : '') + '</span>' +
+      '</td></tr>';
+      group.forEach(function(s) { bodyHtml += buildStudentRow(s); });
+    });
+
+    // Unassigned
+    if (unassigned.length) {
+      sortAlpha(unassigned);
+      bodyHtml += '<tr class="gd-stageGroupRow"><td colspan="' + totalCols + '">' +
+        '<span class="gd-stageBadge" style="background:#334155;">\u2014</span>' +
+        'Not assigned' +
+        '<span class="gd-stageCount">' + unassigned.length + ' student' + (unassigned.length !== 1 ? 's' : '') + '</span>' +
+      '</td></tr>';
+      unassigned.forEach(function(s) { bodyHtml += buildStudentRow(s); });
+    }
+  } else {
+    // Alphabetical — no group headers
+    var sorted = students.slice().sort(function(a, b) {
+      return (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase());
+    });
+    sorted.forEach(function(s) { bodyHtml += buildStudentRow(s); });
+  }
+
+  return '<section class="gd-matrixCard">' +
+    '<div class="gd-matrixCard-header">' +
+      '<div class="gd-matrixCard-title">\uD83D\uDCCA Class Overview</div>' +
+      '<div class="gd-matrixCard-sub">Click a column to drill in \u00B7 click a name for the full profile</div>' +
+    '</div>' +
+    '<div class="gd-matrixCard-body">' +
+      '<table class="gd-matrixTable">' +
+        '<thead><tr>' + groupHeaderHtml + '</tr><tr>' + iconHeaderHtml + '</tr></thead>' +
+        '<tbody>' + bodyHtml + '</tbody>' +
+      '</table>' +
+    '</div>' +
+  '</section>';
 }
 
 function gdBuildPulseCard() {
