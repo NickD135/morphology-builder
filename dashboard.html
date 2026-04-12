@@ -2426,10 +2426,24 @@ function gdRenderGameStage(activityKey) {
   main.innerHTML = gdBuildGameStageOverview(activityKey); // eslint-disable-line -- safe: user data escaped
   _gdRenderControlsBar();
 }
+var HOMOPHONE_MODE_LABELS = {
+  'mode1': 'Identifying Homophones',
+  'mode2': 'Matching Sentences',
+  'mode3': 'Fixing in Paragraphs'
+};
+
+function _formatRefineryCol(col) {
+  if (col.indexOf('cline:') !== 0) return col;
+  return col.slice(6).replace(/-/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+}
+
 function _gdFormatCategory(activityKey, cat) {
   if (cat.indexOf('prefix:') === 0) return cat.slice(7) + '-';
   if (cat.indexOf('suffix:') === 0) return '-' + cat.slice(7);
   if (cat.indexOf('base:') === 0) return cat.slice(5);
+  if (activityKey === 'homophone-hunter') return HOMOPHONE_MODE_LABELS[cat] || cat;
+  if (activityKey === 'word-refinery') return _formatRefineryCol(cat);
+  if (activityKey === 'word-spectrum' && cat.indexOf(':') !== -1) return cat.substring(cat.indexOf(':') + 1);
   return cat;
 }
 
@@ -2778,11 +2792,12 @@ function gdExportCurrentView() {
       }
     });
 
+    var isDiffDrill2 = DIFFICULTY_DRILLDOWN_GAMES.indexOf(actKey) !== -1;
     filtered.forEach(function(s) {
       var actData = isExt ? ((extensionData[s.id]||{})[actKey]||{}) : ((s.results||{})[actKey]||{});
       var row = [s.name, stageName(s)];
       stageCols.forEach(function(cat) {
-        var r = actData[cat];
+        var r = isDiffDrill2 ? _aggregateDifficultyResult(actData, cat) : actData[cat];
         if (!r || !r.total) {
           row.push('');
         } else {
@@ -2814,11 +2829,12 @@ function gdExportCurrentView() {
     }));
     rows.push(header);
 
+    var isDiffDrill3 = DIFFICULTY_DRILLDOWN_GAMES.indexOf(actKey) !== -1;
     students.forEach(function(s) {
       var actData = isExt ? ((extensionData[s.id]||{})[actKey]||{}) : ((s.results||{})[actKey]||{});
       var row = [s.name, stageName(s)];
       allColumns.forEach(function(cat) {
-        var r = actData[cat];
+        var r = isDiffDrill3 ? _aggregateDifficultyResult(actData, cat) : actData[cat];
         if (!r || !r.total) {
           row.push('');
         } else {
@@ -3525,7 +3541,7 @@ function _aggregateDifficultyResult(actData, diffCol) {
 }
 
 // Difficulty drill-down for phoneme-splitter, syllable-splitter, root-lab
-var DIFFICULTY_DRILLDOWN_GAMES = ['phoneme-splitter', 'syllable-splitter', 'root-lab'];
+var DIFFICULTY_DRILLDOWN_GAMES = ['phoneme-splitter', 'syllable-splitter', 'root-lab', 'homophone-hunter', 'word-spectrum'];
 
 function gdShowDifficultyDetail(activityKey, difficultyCol) {
   _gdState.view = 'activity';
@@ -3594,7 +3610,7 @@ function gdBuildHeatmapCard(activityKey, meta) {
   var isTTR = activityKey === 'meaning-mode' || activityKey === 'mission-mode';
   var activeType = isTTR ? (morphemeFilter[activityKey] || 'prefix') : null;
   var columns = isSoundDetail ? soundDetailCols : isDifficultyDetail ? difficultyDetailCols : (isTTR ? allColumns.filter(function(c) { return c.indexOf(activeType + ':') === 0; }) : allColumns);
-  var colLabel = function(c) { return isTTR ? c.replace(/^[^:]+:/, '') : c; };
+  var colLabel = function(c) { return isTTR ? c.replace(/^[^:]+:/, '') : _gdFormatCategory(activityKey, c); };
 
   if (!columns.length && !isSoundDetail && !isDifficultyDetail) {
     var emptyIllus = isExt ? '\uD83D\uDD2C' : '\uD83D\uDCCA';
@@ -3612,9 +3628,11 @@ function gdBuildHeatmapCard(activityKey, meta) {
 
   // Difficulty detail with no word-level data yet
   if (isDifficultyDetail && !difficultyDetailCols.length) {
+    var emptyDetailLabel = activityKey === 'homophone-hunter' ? (HOMOPHONE_MODE_LABELS[difficultyDetailName] || difficultyDetailName) : difficultyDetailName;
+    var emptyDetailType = activityKey === 'homophone-hunter' ? 'group-level' : 'item-level';
     return '<section class="gd-heatmapCard"><div class="gd-heatmapCard-header">' +
-      '<div class="gd-heatmapCard-title"><a href="#" onclick="event.preventDefault();gdClearDifficultyDetail(\'' + activityKey + '\')" style="color:#c4b5fd;text-decoration:none;font-weight:800;">' + meta.icon + ' ' + WordLabData.escapeHtml(meta.label) + '</a> &gt; ' + WordLabData.escapeHtml(difficultyDetailName) + '</div></div>' +
-      '<div class="gd-heatmapCard-body" style="padding:20px;"><div class="wlEmpty"><div class="wlEmpty-illus">\uD83D\uDCCA</div><div class="wlEmpty-title">No word-level data yet</div><div class="wlEmpty-sub">Students have not yet played ' + WordLabData.escapeHtml(difficultyDetailName) + ' questions in the new word-tracking format. Difficulty-level data is shown in the overview.</div></div></div></section>';
+      '<div class="gd-heatmapCard-title"><a href="#" onclick="event.preventDefault();gdClearDifficultyDetail(\'' + activityKey + '\')" style="color:#c4b5fd;text-decoration:none;font-weight:800;">' + meta.icon + ' ' + WordLabData.escapeHtml(meta.label) + '</a> &gt; ' + WordLabData.escapeHtml(emptyDetailLabel) + '</div></div>' +
+      '<div class="gd-heatmapCard-body" style="padding:20px;"><div class="wlEmpty"><div class="wlEmpty-illus">\uD83D\uDCCA</div><div class="wlEmpty-title">No ' + emptyDetailType + ' data yet</div><div class="wlEmpty-sub">Students have not yet played ' + WordLabData.escapeHtml(emptyDetailLabel) + ' questions in the new tracking format. Overview data is shown above.</div></div></div></section>';
   }
 
   var legend = '<div class="legend" style="margin:0;font-size:10px;">' +
@@ -3695,12 +3713,14 @@ function gdBuildHeatmapCard(activityKey, meta) {
   if (isSoundDetail) {
     titleHtml = '<a href="#" onclick="event.preventDefault();gdClearSoundDetail()" style="color:#c4b5fd;text-decoration:none;font-weight:800;">\uD83D\uDD24 Sound Sorter</a> &gt; ' + WordLabData.escapeHtml(soundDetailName) + ' \u2014 by grapheme';
   } else if (isDifficultyDetail) {
-    titleHtml = '<a href="#" onclick="event.preventDefault();gdClearDifficultyDetail(\'' + activityKey + '\')" style="color:#c4b5fd;text-decoration:none;font-weight:800;">' + meta.icon + ' ' + WordLabData.escapeHtml(meta.label) + '</a> &gt; ' + WordLabData.escapeHtml(difficultyDetailName) + ' \u2014 by word';
+    var detailLabel = activityKey === 'homophone-hunter' ? (HOMOPHONE_MODE_LABELS[difficultyDetailName] || difficultyDetailName) : difficultyDetailName;
+    var detailByLabel = activityKey === 'homophone-hunter' ? 'homophone group' : activityKey === 'word-spectrum' ? 'word' : 'word';
+    titleHtml = '<a href="#" onclick="event.preventDefault();gdClearDifficultyDetail(\'' + activityKey + '\')" style="color:#c4b5fd;text-decoration:none;font-weight:800;">' + meta.icon + ' ' + WordLabData.escapeHtml(meta.label) + '</a> &gt; ' + WordLabData.escapeHtml(detailLabel) + ' \u2014 by ' + detailByLabel;
   } else {
-    var byLabel = activityKey === 'phoneme-splitter' || activityKey === 'syllable-splitter' || activityKey === 'root-lab' ? 'difficulty' : activityKey === 'sound-sorter' ? 'sound' : isTTR ? 'morpheme' : 'category';
+    var byLabel = activityKey === 'phoneme-splitter' || activityKey === 'syllable-splitter' || activityKey === 'root-lab' ? 'difficulty' : activityKey === 'sound-sorter' ? 'sound' : isTTR ? 'morpheme' : activityKey === 'homophone-hunter' ? 'mode' : activityKey === 'word-spectrum' ? 'type' : activityKey === 'word-refinery' ? 'cline' : 'category';
     titleHtml = meta.icon + ' ' + WordLabData.escapeHtml(meta.label) + ' \u2014 by ' + byLabel;
     if (isSoundOverview) titleHtml += ' <span style="font-size:10px;color:#94a3b8;font-weight:600;">(click a sound to see graphemes)</span>';
-    if (isDifficultyOverview) titleHtml += ' <span style="font-size:10px;color:#94a3b8;font-weight:600;">(click a level to see words)</span>';
+    if (isDifficultyOverview) titleHtml += ' <span style="font-size:10px;color:#94a3b8;font-weight:600;">(click a ' + byLabel + ' to see detail)</span>';
   }
 
   return '<section class="gd-heatmapCard">' +
@@ -3780,6 +3800,9 @@ function shortLabel(col){
   if(col === '4+ syllables') return '4+';
   if(col === 'Level up') return 'Lvl up';
   if(col === 'Level Up') return 'Lvl Up';
+  if(HOMOPHONE_MODE_LABELS[col]) return HOMOPHONE_MODE_LABELS[col].split(' ')[0];
+  if(col.startsWith('cline:')) return _formatRefineryCol(col);
+  if(col === 'synonym' || col === 'antonym' || col === 'spectrum') return col.charAt(0).toUpperCase() + col.slice(1);
   // Sound Sorter grapheme format: "Long A:ai" → "ai (Long A)"
   var ssIdx = col.indexOf(':');
   if(ssIdx !== -1 && !col.startsWith('prefix:') && !col.startsWith('suffix:') && !col.startsWith('base:') && !col.startsWith('cline:') && !col.startsWith('mode')) {
@@ -3969,8 +3992,9 @@ function showStudentProfile(studentId){
   function profileSection(label, colorClass, activityKey, cols, hasTime){
     const actData = results[activityKey] || {};
     const isSS = activityKey === 'sound-sorter';
+    const isDiffDrill = DIFFICULTY_DRILLDOWN_GAMES.indexOf(activityKey) !== -1;
     const cells = cols.map(col => {
-      const r = isSS ? _ssAggregateResult(actData, col) : (actData[col] || null);
+      const r = isSS ? _ssAggregateResult(actData, col) : isDiffDrill ? _aggregateDifficultyResult(actData, col) : (actData[col] || null);
       const lbl = shortLabel(col);
       return `<div title="${col}">${makeProfileCell(r, hasTime)}<div style="font-size:7px;color:var(--muted);font-weight:700;text-align:center;margin-top:1px;width:30px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${lbl}</div></div>`;
     }).join('');
