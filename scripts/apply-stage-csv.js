@@ -24,14 +24,21 @@ const path = require('path');
 
 const VALID_STAGES = new Set(['s2e', 's2l', 's3e', 's3l', 's4']);
 
-// Game CSV routing — each game column value maps to its HTML target file
-// and the regex that locates its top-level word array. Referenced by
-// applyGameCSV() which runs early via the format-detection branch below.
+// Game CSV routing — each game column value maps to its HTML target file,
+// the regex that locates its top-level word array, and the "key field" whose
+// value in the CSV's `word` column identifies the entry to update. For
+// word-keyed pools this is literally `word`. For group-keyed pools (refinery,
+// spectrum, homophone) it's the category/label/first-homophone that uniquely
+// labels each cline/set/group. Referenced by applyGameCSV() which runs early
+// via the format-detection branch below.
 const GAME_TARGETS = {
-  breakdown: { file: 'breakdown-mode.html', arrayRe: /MISSIONS\s*=\s*\[/ },
-  phoneme:   { file: 'phoneme-mode.html',   arrayRe: /WORDS\s*=\s*\[/ },
-  syllable:  { file: 'syllable-mode.html',  arrayRe: /WORDS\s*=\s*\[/ },
-  rootlab:   { file: 'root-lab.html',       arrayRe: /const\s+WORDS\s*=\s*\[/ },
+  breakdown: { file: 'breakdown-mode.html', arrayRe: /MISSIONS\s*=\s*\[/,      keyField: 'word' },
+  phoneme:   { file: 'phoneme-mode.html',   arrayRe: /WORDS\s*=\s*\[/,         keyField: 'word' },
+  syllable:  { file: 'syllable-mode.html',  arrayRe: /WORDS\s*=\s*\[/,         keyField: 'word' },
+  rootlab:   { file: 'root-lab.html',       arrayRe: /const\s+WORDS\s*=\s*\[/, keyField: 'word' },
+  refinery:  { file: 'word-refinery.html',  arrayRe: /CLINES\s*=\s*\[/,        keyField: 'category' },
+  spectrum:  { file: 'word-spectrum.html',  arrayRe: /SETS\s*=\s*\[/,          keyField: 'label' },
+  homophone: { file: 'homophone-mode.html', arrayRe: /HOMOPHONES\s*=\s*\[/,    keyField: 'group' },
 };
 
 if (process.argv.length < 4) {
@@ -401,18 +408,29 @@ function applyGameCSV(lines, header) {
     const after = src.slice(bounds[1] + 1);
 
     let updated = 0, unchanged = 0, notFound = 0;
-    // Root Lab uses single-quoted string literals; other games use double quotes.
-    // Pick the quote style that matches the file so we produce a valid replacement.
-    const useSingleQuotes = game === 'rootlab';
+    // Root Lab and Homophone Mode use single-quoted strings; other pools use
+    // double quotes. Pick the replacement quote style to match the file so we
+    // produce a literal that slots in cleanly.
+    const useSingleQuotes = game === 'rootlab' || game === 'homophone';
     const q = useSingleQuotes ? "'" : '"';
+    const keyField = target.keyField;
 
     for (const u of updates) {
       const newVal = u.stage === null ? 'null' : q + u.stage + q;
-      // Match `{ word:"X", stage:(null|"..."|'...')` OR `{ word:'X', ...`
-      // The entry's word may be single- or double-quoted in the source.
-      const re = new RegExp(
-        '(\\{\\s*word\\s*:\\s*["\']' + escRe(u.word) + '["\']\\s*,\\s*stage\\s*:\\s*)(null|"[^"]*"|\'[^\']*\')'
-      );
+      let re;
+      if (keyField === 'group') {
+        // Match `{ group:['first',...],  stage:(null|"..."|'...')`
+        // The first homophone is the key; the array body may contain escaped
+        // quotes ('they\'re') so we stop at the first unescaped `]`.
+        re = new RegExp(
+          '(\\{\\s*group\\s*:\\s*\\[\\s*[\'"]' + escRe(u.word) + '[\'"][^\\]]*\\]\\s*,\\s*stage\\s*:\\s*)(null|"[^"]*"|\'[^\']*\')'
+        );
+      } else {
+        // Scalar key field (word / category / label) — simple direct match.
+        re = new RegExp(
+          '(\\{\\s*' + keyField + '\\s*:\\s*["\']' + escRe(u.word) + '["\']\\s*,\\s*stage\\s*:\\s*)(null|"[^"]*"|\'[^\']*\')'
+        );
+      }
       const m = slice.match(re);
       if (!m) { notFound++; continue; }
       const oldVal = m[2];

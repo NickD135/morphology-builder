@@ -1,19 +1,27 @@
 #!/usr/bin/env node
 // Usage: node scripts/extract-game-words.js [output.csv]
 //
-// Extracts word entries from inline game pools that don't have a tagger UI:
+// Extracts entries from inline game pools that don't have a tagger UI.
+// Word-keyed pools (one stage tag per individual word):
 //   - Breakdown Blitz     (breakdown-mode.html → MISSIONS = [...])
 //   - Phoneme Splitter    (phoneme-mode.html   → WORDS = [...])
 //   - Syllable Splitter   (syllable-mode.html  → WORDS = [...])
 //   - Root Lab            (root-lab.html       → WORDS = [...], single-quoted)
 //
+// Group-keyed pools (one stage tag per cline/set/homophone group — the `word`
+// column in the CSV holds the group's identifier, not an individual word):
+//   - Word Refinery       (word-refinery.html  → CLINES = [...],  key: category)
+//   - Word Spectrum       (word-spectrum.html  → SETS = [...],    key: label)
+//   - Homophone Mode      (homophone-mode.html → HOMOPHONES = [...], key: group[0])
+//
 // Emits a combined CSV with columns: game, word, difficulty, stage
 //
-//   game        = breakdown | phoneme | syllable | rootlab
-//   word        = the word itself
-//   difficulty  = phoneme's `diff` field (Starter / Level up / Challenge),
-//                 root lab's `level` field (starter / levelup / challenge),
-//                 or empty for breakdown + syllable (single-tier pools)
+//   game        = breakdown | phoneme | syllable | rootlab |
+//                 refinery | spectrum | homophone
+//   word        = the word itself, OR for group-keyed pools the group's
+//                 identifier (category / label / first homophone)
+//   difficulty  = phoneme's `diff` field, root lab's `level` field,
+//                 or empty for single-tier / group pools
 //   stage       = current stage tag (s2e / s2l / s3e / s3l / s4 or empty = null)
 //
 // Defaults to ./game-words-YYYY-MM-DD.csv if no output path is given.
@@ -21,10 +29,13 @@
 const fs = require('fs');
 
 const TARGETS = [
-  { game: 'breakdown', file: 'breakdown-mode.html', arrayRe: /MISSIONS\s*=\s*\[/ },
-  { game: 'phoneme',   file: 'phoneme-mode.html',   arrayRe: /WORDS\s*=\s*\[/ },
-  { game: 'syllable',  file: 'syllable-mode.html',  arrayRe: /WORDS\s*=\s*\[/ },
-  { game: 'rootlab',   file: 'root-lab.html',       arrayRe: /const\s+WORDS\s*=\s*\[/ },
+  { game: 'breakdown', file: 'breakdown-mode.html', arrayRe: /MISSIONS\s*=\s*\[/,        keyField: 'word' },
+  { game: 'phoneme',   file: 'phoneme-mode.html',   arrayRe: /WORDS\s*=\s*\[/,           keyField: 'word' },
+  { game: 'syllable',  file: 'syllable-mode.html',  arrayRe: /WORDS\s*=\s*\[/,           keyField: 'word' },
+  { game: 'rootlab',   file: 'root-lab.html',       arrayRe: /const\s+WORDS\s*=\s*\[/,   keyField: 'word' },
+  { game: 'refinery',  file: 'word-refinery.html',  arrayRe: /CLINES\s*=\s*\[/,          keyField: 'category' },
+  { game: 'spectrum',  file: 'word-spectrum.html',  arrayRe: /SETS\s*=\s*\[/,            keyField: 'label' },
+  { game: 'homophone', file: 'homophone-mode.html', arrayRe: /HOMOPHONES\s*=\s*\[/,      keyField: 'group' },
 ];
 
 function findArrayBounds(src, arrayRe) {
@@ -48,19 +59,31 @@ function findArrayBounds(src, arrayRe) {
   return null;
 }
 
-function extractEntries(src) {
-  // Yields { word, stage, diff } for each top-level { ... } object found.
-  // Accepts both single-quoted (root-lab) and double-quoted (game files) strings.
+function extractEntries(src, keyField) {
+  // Yields { word, stage, diff } per top-level { ... } object.
+  // `keyField` can be:
+  //   - 'word' / 'category' / 'label'  → scalar string field, extract directly
+  //   - 'group'                        → array field; extract first element as key
+  //
+  // Accepts both single-quoted and double-quoted strings on every field,
+  // so the same extractor works across double-quoted game files and the
+  // single-quoted root-lab / homophone-mode files.
   const entries = [];
   let cursor = 0;
-  // Match { word: "foo" or { word: 'foo' — captures the word regardless of quote style
-  const findRe = /\{\s*word\s*:\s*(?:"([^"]*)"|'([^']*)')/;
+  let findRe;
+  if (keyField === 'group') {
+    // Match `{ group:['first', ...` — captures the first array element
+    findRe = /\{\s*group\s*:\s*\[\s*(?:"([^"]*)"|'([^']*)')/;
+  } else {
+    // Match `{ keyField:"value"` or `{ keyField:'value'`
+    findRe = new RegExp('\\{\\s*' + keyField + '\\s*:\\s*(?:"([^"]*)"|\'([^\']*)\')');
+  }
   while (cursor < src.length) {
     const rest = src.slice(cursor);
     const m = rest.match(findRe);
     if (!m) break;
     const entryStart = cursor + m.index;
-    const wordVal = m[1] !== undefined ? m[1] : m[2];
+    const keyVal = m[1] !== undefined ? m[1] : m[2];
     // Walk to the matching `}` — respects nested braces and string literals.
     let depth = 0;
     let j = entryStart;
@@ -78,16 +101,14 @@ function extractEntries(src) {
     }
     if (j >= src.length) break;
     const entryText = src.slice(entryStart, j + 1);
-    // stage may be null, "sNN", or 'sNN'
     const stageMatch = entryText.match(/stage\s*:\s*(?:null|"([^"]*)"|'([^']*)')/);
     const stageVal = stageMatch ? (stageMatch[1] !== undefined ? stageMatch[1] : (stageMatch[2] !== undefined ? stageMatch[2] : '')) : '';
-    // Phoneme's `diff` field, or Root Lab's `level` field — prefer diff, fall back to level
     const diffMatch = entryText.match(/diff\s*:\s*(?:"([^"]*)"|'([^']*)')/);
     const levelMatch = entryText.match(/level\s*:\s*(?:"([^"]*)"|'([^']*)')/);
     const diffVal = diffMatch ? (diffMatch[1] !== undefined ? diffMatch[1] : diffMatch[2])
                   : (levelMatch ? (levelMatch[1] !== undefined ? levelMatch[1] : levelMatch[2]) : '');
     entries.push({
-      word: wordVal,
+      word: keyVal,
       stage: stageVal,
       diff: diffVal,
     });
@@ -120,7 +141,7 @@ for (const t of TARGETS) {
     continue;
   }
   const slice = src.slice(bounds[0], bounds[1] + 1);
-  const entries = extractEntries(slice);
+  const entries = extractEntries(slice, t.keyField);
   summary.push({ game: t.game, count: entries.length });
   for (const e of entries) {
     rows.push([t.game, e.word, e.diff, e.stage]);
