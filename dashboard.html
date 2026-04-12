@@ -2234,7 +2234,8 @@ function gdShowActivity(activityKey) {
   try { document.getElementById('gdMain').scrollIntoView({ block:'start', behavior:'smooth' }); } catch(e) {}
 }
 
-var STAGE_GROUPED_GAMES = ['breakdown-blitz','meaning-mode','mission-mode'];
+var STAGE_GROUPED_GAMES = ['breakdown-blitz','meaning-mode','mission-mode','phoneme-splitter','syllable-splitter','root-lab'];
+var CATEGORY_STAGE_GAMES = ['breakdown-blitz','meaning-mode','mission-mode'];
 
 function gdShowGameStage(activityKey) {
   _gdState.view = 'game-stage';
@@ -2451,11 +2452,17 @@ function gdBuildStageDetail(activityKey, stage) {
     ' \u203A <span style="color:' + sc.text + ';font-weight:800;">' + WordLabData.escapeHtml(stageName) + '</span>' +
   '</div>';
 
-  // Filter columns to only those matching this stage
+  // Filter columns to only those matching this stage (category-stage games)
+  // For student-stage-only games (phoneme, syllable, root-lab), show ALL columns (difficulty levels)
   var allColumns = isExt ? ((getExtColumns()[activityKey]) || []) : (COLUMNS[activityKey] || []);
-  var stageCols = allColumns.filter(function(cat) {
-    return getCategoryStage(activityKey, cat) === stage;
-  });
+  var stageCols;
+  if (CATEGORY_STAGE_GAMES.indexOf(activityKey) !== -1) {
+    stageCols = allColumns.filter(function(cat) {
+      return getCategoryStage(activityKey, cat) === stage;
+    });
+  } else {
+    stageCols = allColumns;
+  }
 
   if (!stageCols.length) {
     return '<section class="gd-matrixCard">' +
@@ -2691,8 +2698,8 @@ function gdExportCurrentView() {
       var studentStages = (!_gdShowPast && s.stage) ? [s.stage] : null;
       var row = [s.name, stageName(s)];
       acts.forEach(function(a) {
-        var isStageGrouped = STAGE_GROUPED_GAMES.indexOf(a.key) !== -1;
-        var stages = (isStageGrouped && studentStages) ? studentStages : null;
+        var isCatStage = CATEGORY_STAGE_GAMES.indexOf(a.key) !== -1;
+        var stages = (isCatStage && studentStages) ? studentStages : null;
         var r = _gdStudentActAccByStageEx(s, a.key, stages);
         row.push(r ? r.acc + '%' : '');
       });
@@ -2720,9 +2727,14 @@ function gdExportCurrentView() {
     var actKey = _gdState.activity;
     var stage = _gdState.stageDetail;
     var allColumns = isExt ? ((getExtColumns()[actKey]) || []) : (COLUMNS[actKey] || []);
-    var stageCols = allColumns.filter(function(cat) {
-      return getCategoryStage(actKey, cat) === stage;
-    });
+    var stageCols;
+    if (CATEGORY_STAGE_GAMES.indexOf(actKey) !== -1) {
+      stageCols = allColumns.filter(function(cat) {
+        return getCategoryStage(actKey, cat) === stage;
+      });
+    } else {
+      stageCols = allColumns;
+    }
     var stageIdx = stageOrder.indexOf(stage);
     var sc = (typeof STAGE_COLORS !== 'undefined' && STAGE_COLORS[stage]) || { name: stageNames[stage] || stage };
     var stageLabel = sc.name || stageNames[stage] || stage;
@@ -2892,8 +2904,8 @@ function gdBuildStageOverview() {
     }
 
     var cells = acts.map(function(a) {
-      var isStageGrouped = STAGE_GROUPED_GAMES.indexOf(a.key) !== -1;
-      var stages = (isStageGrouped && studentStages) ? studentStages : null;
+      var isCatStage = CATEGORY_STAGE_GAMES.indexOf(a.key) !== -1;
+      var stages = (isCatStage && studentStages) ? studentStages : null;
       var r = _gdStudentActAccByStageEx(s, a.key, stages);
       if (!r) return '<td class="gd-col-' + a.group + '"><div class="gd-matrixCell no-data" title="No data yet">\u2013</div></td>';
       var ac = accClass(r.acc);
