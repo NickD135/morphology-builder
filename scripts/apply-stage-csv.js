@@ -31,6 +31,7 @@ const GAME_TARGETS = {
   breakdown: { file: 'breakdown-mode.html', arrayRe: /MISSIONS\s*=\s*\[/ },
   phoneme:   { file: 'phoneme-mode.html',   arrayRe: /WORDS\s*=\s*\[/ },
   syllable:  { file: 'syllable-mode.html',  arrayRe: /WORDS\s*=\s*\[/ },
+  rootlab:   { file: 'root-lab.html',       arrayRe: /const\s+WORDS\s*=\s*\[/ },
 };
 
 if (process.argv.length < 4) {
@@ -400,13 +401,17 @@ function applyGameCSV(lines, header) {
     const after = src.slice(bounds[1] + 1);
 
     let updated = 0, unchanged = 0, notFound = 0;
+    // Root Lab uses single-quoted string literals; other games use double quotes.
+    // Pick the quote style that matches the file so we produce a valid replacement.
+    const useSingleQuotes = game === 'rootlab';
+    const q = useSingleQuotes ? "'" : '"';
+
     for (const u of updates) {
-      const newVal = u.stage === null ? 'null' : '"' + u.stage + '"';
-      // Match `{ word:"X", stage:(null|"...")` — prefix captures everything up
-      // through `stage:`, so we replace the old value in-place without touching
-      // the entry's other fields. Non-greedy `\s*` allows varying whitespace.
+      const newVal = u.stage === null ? 'null' : q + u.stage + q;
+      // Match `{ word:"X", stage:(null|"..."|'...')` OR `{ word:'X', ...`
+      // The entry's word may be single- or double-quoted in the source.
       const re = new RegExp(
-        '(\\{\\s*word\\s*:\\s*"' + escRe(u.word) + '"\\s*,\\s*stage\\s*:\\s*)(null|"[^"]*"|\'[^\']*\')'
+        '(\\{\\s*word\\s*:\\s*["\']' + escRe(u.word) + '["\']\\s*,\\s*stage\\s*:\\s*)(null|"[^"]*"|\'[^\']*\')'
       );
       const m = slice.match(re);
       if (!m) { notFound++; continue; }
