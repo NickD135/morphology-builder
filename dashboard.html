@@ -2648,8 +2648,164 @@ function _gdRenderControlsBar() {
 }
 
 function gdExportCurrentView() {
-  // Stub for Task 8
-  alert('Export coming in Task 8');
+  var rows = [];
+  var students = (currentClass && currentClass.students) || [];
+  var isExt = dashboardMode === 'extension';
+  var stageOrder = (typeof WLStage !== 'undefined') ? WLStage.STAGE_ORDER : [];
+  var stageNames = (typeof WLStage !== 'undefined') ? WLStage.STAGE_NAMES : {};
+
+  function stageName(s) {
+    return (s.stage && stageNames[s.stage]) ? stageNames[s.stage] : 'Not assigned';
+  }
+
+  function csvVal(v) {
+    if (v == null) return '';
+    v = String(v);
+    if (v.indexOf(',') !== -1 || v.indexOf('"') !== -1 || v.indexOf('\n') !== -1) {
+      return '"' + v.replace(/"/g, '""') + '"';
+    }
+    return v;
+  }
+
+  var viewName = _gdState.view;
+
+  if (_gdState.view === 'overview') {
+    var acts = _gdActivities();
+    var header = ['Student', 'Stage'].concat(acts.map(function(a) { return a.label; }));
+    rows.push(header);
+    students.forEach(function(s) {
+      var studentStages = (!_gdShowPast && s.stage) ? [s.stage] : null;
+      var row = [s.name, stageName(s)];
+      acts.forEach(function(a) {
+        var isStageGrouped = STAGE_GROUPED_GAMES.indexOf(a.key) !== -1;
+        var stages = (isStageGrouped && studentStages) ? studentStages : null;
+        var r = _gdStudentActAccByStageEx(s, a.key, stages);
+        row.push(r ? r.acc + '%' : '');
+      });
+      rows.push(row);
+    });
+
+  } else if (_gdState.view === 'game-stage') {
+    var actKey = _gdState.activity;
+    var header = ['Student', 'Stage'].concat(stageOrder.map(function(stage) {
+      return stageNames[stage] || stage;
+    }));
+    rows.push(header);
+    students.forEach(function(s) {
+      var row = [s.name, stageName(s)];
+      stageOrder.forEach(function(stage) {
+        var r = _gdStudentActAccByStageEx(s, actKey, [stage]);
+        row.push(r ? r.acc + '%' : '');
+      });
+      rows.push(row);
+    });
+    var meta = _gdActivityMeta(actKey);
+    viewName = (meta ? meta.label.replace(/\s+/g, '-').toLowerCase() : actKey) + '-by-stage';
+
+  } else if (_gdState.view === 'stage-detail') {
+    var actKey = _gdState.activity;
+    var stage = _gdState.stageDetail;
+    var allColumns = isExt ? ((getExtColumns()[actKey]) || []) : (COLUMNS[actKey] || []);
+    var stageCols = allColumns.filter(function(cat) {
+      return getCategoryStage(actKey, cat) === stage;
+    });
+    var stageIdx = stageOrder.indexOf(stage);
+    var sc = (typeof STAGE_COLORS !== 'undefined' && STAGE_COLORS[stage]) || { name: stageNames[stage] || stage };
+    var stageLabel = sc.name || stageNames[stage] || stage;
+
+    var header = ['Student', 'Stage'].concat(stageCols.map(function(cat) {
+      return _gdFormatCategory(actKey, cat);
+    }));
+    rows.push(header);
+
+    // Same filtering logic as gdBuildStageDetail
+    var filtered = students.filter(function(s) {
+      var sIdx = s.stage ? stageOrder.indexOf(s.stage) : -1;
+      if (_gdShowPast) {
+        if (sIdx >= 0) return sIdx >= stageIdx;
+        var actData = isExt ? ((extensionData[s.id]||{})[actKey]||{}) : ((s.results||{})[actKey]||{});
+        for (var i = 0; i < stageCols.length; i++) {
+          var r = actData[stageCols[i]];
+          if (r && r.total > 0) return true;
+        }
+        return false;
+      } else {
+        if (sIdx >= 0) return s.stage === stage;
+        var actData2 = isExt ? ((extensionData[s.id]||{})[actKey]||{}) : ((s.results||{})[actKey]||{});
+        for (var j = 0; j < stageCols.length; j++) {
+          var r2 = actData2[stageCols[j]];
+          if (r2 && r2.total > 0) return true;
+        }
+        return false;
+      }
+    });
+
+    filtered.forEach(function(s) {
+      var actData = isExt ? ((extensionData[s.id]||{})[actKey]||{}) : ((s.results||{})[actKey]||{});
+      var row = [s.name, stageName(s)];
+      stageCols.forEach(function(cat) {
+        var r = actData[cat];
+        if (!r || !r.total) {
+          row.push('');
+        } else {
+          row.push(Math.round(100 * (r.correct || 0) / r.total) + '%');
+        }
+      });
+      rows.push(row);
+    });
+
+    var meta = _gdActivityMeta(actKey);
+    viewName = (meta ? meta.label.replace(/\s+/g, '-').toLowerCase() : actKey) + '-' + stageLabel.replace(/\s+/g, '-').toLowerCase();
+
+  } else if (_gdState.view === 'activity') {
+    var actKey = _gdState.activity;
+    var allColumns = isExt ? (getExtColumns()[actKey] || []) : (COLUMNS[actKey] || []);
+
+    // Dynamic column discovery (for speed-mode etc.)
+    if (allColumns.length === 0 && students.length > 0) {
+      var dyn = {};
+      students.forEach(function(s) {
+        var actData = isExt ? ((extensionData[s.id]||{})[actKey]||{}) : ((s.results||{})[actKey]||{});
+        Object.keys(actData).forEach(function(k) { dyn[k] = true; });
+      });
+      allColumns = Object.keys(dyn).sort();
+    }
+
+    var header = ['Student', 'Stage'].concat(allColumns.map(function(cat) {
+      return _gdFormatCategory(actKey, cat);
+    }));
+    rows.push(header);
+
+    students.forEach(function(s) {
+      var actData = isExt ? ((extensionData[s.id]||{})[actKey]||{}) : ((s.results||{})[actKey]||{});
+      var row = [s.name, stageName(s)];
+      allColumns.forEach(function(cat) {
+        var r = actData[cat];
+        if (!r || !r.total) {
+          row.push('');
+        } else {
+          row.push(Math.round(100 * (r.correct || 0) / r.total) + '%');
+        }
+      });
+      rows.push(row);
+    });
+
+    var meta = _gdActivityMeta(actKey);
+    viewName = meta ? meta.label.replace(/\s+/g, '-').toLowerCase() : actKey;
+  }
+
+  if (!rows.length) { alert('No data to export.'); return; }
+
+  var csv = rows.map(function(r) { return r.map(csvVal).join(','); }).join('\n');
+  var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'wordlabs-' + viewName + '-' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function gdRefresh() {
