@@ -29,13 +29,21 @@
 const fs = require('fs');
 
 const TARGETS = [
-  { game: 'breakdown', file: 'breakdown-mode.html', arrayRe: /MISSIONS\s*=\s*\[/,        keyField: 'word' },
-  { game: 'phoneme',   file: 'phoneme-mode.html',   arrayRe: /WORDS\s*=\s*\[/,           keyField: 'word' },
-  { game: 'syllable',  file: 'syllable-mode.html',  arrayRe: /WORDS\s*=\s*\[/,           keyField: 'word' },
-  { game: 'rootlab',   file: 'root-lab.html',       arrayRe: /const\s+WORDS\s*=\s*\[/,   keyField: 'word' },
-  { game: 'refinery',  file: 'word-refinery.html',  arrayRe: /CLINES\s*=\s*\[/,          keyField: 'category' },
-  { game: 'spectrum',  file: 'word-spectrum.html',  arrayRe: /SETS\s*=\s*\[/,            keyField: 'label' },
-  { game: 'homophone', file: 'homophone-mode.html', arrayRe: /HOMOPHONES\s*=\s*\[/,      keyField: 'group' },
+  { game: 'breakdown',       file: 'breakdown-mode.html', arrayRe: /MISSIONS\s*=\s*\[/,                    keyField: 'word' },
+  { game: 'phoneme',         file: 'phoneme-mode.html',   arrayRe: /WORDS\s*=\s*\[/,                       keyField: 'word' },
+  { game: 'syllable',        file: 'syllable-mode.html',  arrayRe: /WORDS\s*=\s*\[/,                       keyField: 'word' },
+  { game: 'rootlab',         file: 'root-lab.html',       arrayRe: /const\s+WORDS\s*=\s*\[/,               keyField: 'word' },
+  { game: 'refinery',        file: 'word-refinery.html',  arrayRe: /const\s+CLINES\s*=\s*\[/,              keyField: 'category' },
+  { game: 'refinery-ext',    file: 'word-refinery.html',  arrayRe: /const\s+EXT_CLINES\s*=\s*\[/,          keyField: 'category' },
+  { game: 'refinery-order',  file: 'word-refinery.html',  arrayRe: /const\s+ORDER_CLINES\s*=\s*\[/,        keyField: 'category' },
+  { game: 'spectrum',        file: 'word-spectrum.html',  arrayRe: /const\s+SPECTRUM_SETS\s*=\s*\[/,       keyField: 'label' },
+  { game: 'spectrum-ext',    file: 'word-spectrum.html',  arrayRe: /const\s+EXT_SPECTRUM_SETS\s*=\s*\[/,   keyField: 'label' },
+  { game: 'synonym',         file: 'word-spectrum.html',  arrayRe: /const\s+SYNONYM_PAIRS\s*=\s*\[/,       keyField: 'word' },
+  { game: 'synonym-ext',     file: 'word-spectrum.html',  arrayRe: /const\s+EXT_SYNONYM_PAIRS\s*=\s*\[/,   keyField: 'word' },
+  { game: 'antonym',         file: 'word-spectrum.html',  arrayRe: /const\s+ANTONYM_PAIRS\s*=\s*\[/,       keyField: 'word' },
+  { game: 'antonym-ext',     file: 'word-spectrum.html',  arrayRe: /const\s+EXT_ANTONYM_PAIRS\s*=\s*\[/,   keyField: 'word' },
+  { game: 'homophone',       file: 'homophone-mode.html', arrayRe: /const\s+HOMOPHONES\s*=\s*\[/,          keyField: 'group' },
+  { game: 'homophone-ext',   file: 'homophone-mode.html', arrayRe: /const\s+EXT_HOMOPHONES\s*=\s*\[/,      keyField: 'group' },
 ];
 
 function findArrayBounds(src, arrayRe) {

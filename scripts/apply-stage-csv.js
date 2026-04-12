@@ -32,13 +32,21 @@ const VALID_STAGES = new Set(['s2e', 's2l', 's3e', 's3l', 's4']);
 // labels each cline/set/group. Referenced by applyGameCSV() which runs early
 // via the format-detection branch below.
 const GAME_TARGETS = {
-  breakdown: { file: 'breakdown-mode.html', arrayRe: /MISSIONS\s*=\s*\[/,      keyField: 'word' },
-  phoneme:   { file: 'phoneme-mode.html',   arrayRe: /WORDS\s*=\s*\[/,         keyField: 'word' },
-  syllable:  { file: 'syllable-mode.html',  arrayRe: /WORDS\s*=\s*\[/,         keyField: 'word' },
-  rootlab:   { file: 'root-lab.html',       arrayRe: /const\s+WORDS\s*=\s*\[/, keyField: 'word' },
-  refinery:  { file: 'word-refinery.html',  arrayRe: /CLINES\s*=\s*\[/,        keyField: 'category' },
-  spectrum:  { file: 'word-spectrum.html',  arrayRe: /SETS\s*=\s*\[/,          keyField: 'label' },
-  homophone: { file: 'homophone-mode.html', arrayRe: /HOMOPHONES\s*=\s*\[/,    keyField: 'group' },
+  breakdown:        { file: 'breakdown-mode.html', arrayRe: /MISSIONS\s*=\s*\[/,                     keyField: 'word' },
+  phoneme:          { file: 'phoneme-mode.html',   arrayRe: /WORDS\s*=\s*\[/,                        keyField: 'word' },
+  syllable:         { file: 'syllable-mode.html',  arrayRe: /WORDS\s*=\s*\[/,                        keyField: 'word' },
+  rootlab:          { file: 'root-lab.html',       arrayRe: /const\s+WORDS\s*=\s*\[/,                keyField: 'word' },
+  refinery:         { file: 'word-refinery.html',  arrayRe: /const\s+CLINES\s*=\s*\[/,               keyField: 'category' },
+  'refinery-ext':   { file: 'word-refinery.html',  arrayRe: /const\s+EXT_CLINES\s*=\s*\[/,           keyField: 'category' },
+  'refinery-order': { file: 'word-refinery.html',  arrayRe: /const\s+ORDER_CLINES\s*=\s*\[/,         keyField: 'category' },
+  spectrum:         { file: 'word-spectrum.html',  arrayRe: /const\s+SPECTRUM_SETS\s*=\s*\[/,        keyField: 'label' },
+  'spectrum-ext':   { file: 'word-spectrum.html',  arrayRe: /const\s+EXT_SPECTRUM_SETS\s*=\s*\[/,    keyField: 'label' },
+  synonym:          { file: 'word-spectrum.html',  arrayRe: /const\s+SYNONYM_PAIRS\s*=\s*\[/,        keyField: 'word' },
+  'synonym-ext':    { file: 'word-spectrum.html',  arrayRe: /const\s+EXT_SYNONYM_PAIRS\s*=\s*\[/,    keyField: 'word' },
+  antonym:          { file: 'word-spectrum.html',  arrayRe: /const\s+ANTONYM_PAIRS\s*=\s*\[/,        keyField: 'word' },
+  'antonym-ext':    { file: 'word-spectrum.html',  arrayRe: /const\s+EXT_ANTONYM_PAIRS\s*=\s*\[/,    keyField: 'word' },
+  homophone:        { file: 'homophone-mode.html', arrayRe: /const\s+HOMOPHONES\s*=\s*\[/,           keyField: 'group' },
+  'homophone-ext':  { file: 'homophone-mode.html', arrayRe: /const\s+EXT_HOMOPHONES\s*=\s*\[/,       keyField: 'group' },
 };
 
 if (process.argv.length < 4) {
@@ -408,10 +416,10 @@ function applyGameCSV(lines, header) {
     const after = src.slice(bounds[1] + 1);
 
     let updated = 0, unchanged = 0, notFound = 0;
-    // Root Lab and Homophone Mode use single-quoted strings; other pools use
-    // double quotes. Pick the replacement quote style to match the file so we
-    // produce a literal that slots in cleanly.
-    const useSingleQuotes = game === 'rootlab' || game === 'homophone';
+    // Root Lab and Homophone Mode files use single-quoted strings throughout;
+    // all other game files use double quotes. The quote style is per-FILE not
+    // per-game, so both `homophone` and `homophone-ext` (same file) share it.
+    const useSingleQuotes = target.file === 'root-lab.html' || target.file === 'homophone-mode.html';
     const q = useSingleQuotes ? "'" : '"';
     const keyField = target.keyField;
 
