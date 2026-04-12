@@ -2337,21 +2337,21 @@ const WordLabData = (() => {
       stageGroupSetIds.forEach(function(id) { assignedMap[id] = true; });
       var assignedSetIds = Object.keys(assignedMap);
 
-      if (!assignedSetIds.length) { _spellingSetWordsCache = []; return []; }
-
       // Collect words from assigned sets
       var words = [];
-      sets.forEach(function(set) {
-        if (assignedSetIds.indexOf(set.id) === -1) return;
-        (set.words || []).forEach(function(w) {
-          if (typeof w === 'object' && w.word) {
-            w._spellingSetId = set.id;
-            words.push(w);
-          }
+      if (assignedSetIds.length) {
+        sets.forEach(function(set) {
+          if (assignedSetIds.indexOf(set.id) === -1) return;
+          (set.words || []).forEach(function(w) {
+            if (typeof w === 'object' && w.word) {
+              w._spellingSetId = set.id;
+              words.push(w);
+            }
+          });
         });
-      });
+      }
 
-      // Load focus words and prepend (same priority as set words)
+      // Load focus words — always, even when no sets are assigned
       try {
         var focusWords = await getFocusWords();
         if (focusWords && focusWords.length) {
@@ -2364,6 +2364,8 @@ const WordLabData = (() => {
           });
         }
       } catch(e) { /* non-critical */ }
+
+      if (!words.length) { _spellingSetWordsCache = []; return []; }
 
       // Prioritise and repeat words based on accuracy (skip for check-in/assessment mode)
       if (!skipRepetition) {
