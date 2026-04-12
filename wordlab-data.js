@@ -2352,14 +2352,25 @@ const WordLabData = (() => {
       }
 
       // Load focus words — always, even when no sets are assigned
+      // Look up full word data (syllables, phonemes, etc.) from the source set
       try {
         var focusWords = await getFocusWords();
         if (focusWords && focusWords.length) {
           var setWordKeys = {};
           words.forEach(function(w) { setWordKeys[w.word.toLowerCase()] = true; });
+          // Build lookup of full word data from all sets in this class
+          var _allSetWords = {};
+          (sets || []).forEach(function(s) {
+            (s.words || []).forEach(function(w) {
+              if (typeof w === 'object' && w.word) _allSetWords[w.word.toLowerCase()] = w;
+            });
+          });
           focusWords.forEach(function(fw) {
             if (!setWordKeys[fw.word.toLowerCase()]) {
-              words.push({ word: fw.word, base: fw.base || '', prefix: fw.prefix || '', suffix1: fw.suffix1 || '', clue: fw.clue || '', _spellingSetId: fw.source_set || '', _isFocusWord: true });
+              // Merge focus word with full set data (syllables, phonemes, etc.)
+              var fullData = _allSetWords[fw.word.toLowerCase()] || {};
+              var merged = { word: fw.word, base: fw.base || fullData.base || '', prefix: fw.prefix || fullData.prefix || '', suffix1: fw.suffix1 || fullData.suffix1 || '', suffix2: fullData.suffix2 || '', clue: fw.clue || fullData.clue || '', syllables: fullData.syllables || null, phonemes: fullData.phonemes || null, sound: fullData.sound || null, soundLabel: fullData.soundLabel || null, grapheme: fullData.grapheme || null, before: fullData.before || null, after: fullData.after || null, ssLevel: fullData.ssLevel || null, ssType: fullData.ssType || null, distractors: fullData.distractors || null, explain: fullData.explain || null, _spellingSetId: fw.source_set || '', _isFocusWord: true };
+              words.push(merged);
             }
           });
         }
