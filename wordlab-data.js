@@ -785,14 +785,20 @@ const WordLabData = (() => {
   // Returns a new array with items the student should see.
   // Untagged items (stage null/undefined) always pass. Students with no stage
   // set see everything (no filter applied).
+  // Safety net: if filtering reduces the pool below MIN_POOL_SIZE, fall back to
+  // the full input so games always have enough content to be playable.
+  var MIN_POOL_SIZE = 5;
   function filterByStage(items, activity){
     if (!items || !items.length) return items;
     var stage = getStudentStage(activity);
     if (!stage) return items.slice(); // no stage set = show everything
     var ext = isExtensionMode(activity);
-    return items.filter(function(it){
+    var filtered = items.filter(function(it){
       return WLStage.isItemVisible(it.stage, stage, ext);
     });
+    // Safety net: never return a pool so small that the game is unplayable
+    if (filtered.length < MIN_POOL_SIZE && items.length >= MIN_POOL_SIZE) return items.slice();
+    return filtered;
   }
 
   // Apply 80/20 head-weighting on top of stage filtering.

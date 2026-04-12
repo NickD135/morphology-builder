@@ -249,8 +249,13 @@ var WLHelp = (function() {
     var seen = false;
     try { seen = !!localStorage.getItem(key); } catch(e) {}
     if (!seen) {
-      // Small delay so the page renders first
-      setTimeout(showPopup, 400);
+      // Wait for DOM to be fully ready, then show after a short render delay
+      function _schedulePopup() { setTimeout(showPopup, 600); }
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        _schedulePopup();
+      } else {
+        document.addEventListener('DOMContentLoaded', _schedulePopup);
+      }
     }
   }
 
