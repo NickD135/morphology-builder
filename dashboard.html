@@ -1250,6 +1250,108 @@ const COLUMNS = {
 const THRESHOLD_PCT = 70;
 const THRESHOLD_ATTEMPTS = 3;
 
+/* ── Stage helpers ────────────────────────────────────────────────
+   Maps every student_progress category string to its curriculum
+   stage tag (e.g. 's2e', 's2l', 's3e') or null if untagged.
+   Used by the stage-filtered accuracy function below.            */
+
+let _categoryStageCache = null;
+
+function _buildCategoryStageMap() {
+  var map = {};
+
+  // Difficulty-level games (static mapping)
+  map['phoneme-splitter'] = { 'Starter': 's2e', 'Level up': 's2l', 'Challenge': 's3e', 'Mixed': null };
+  map['syllable-splitter'] = { '2 syllables': 's2e', '3 syllables': 's2l', '4+ syllables': 's3e', 'Mixed': null };
+  map['root-lab'] = { 'Starter': 's2e', 'Level Up': 's2l', 'Challenge': 's3e', 'Mixed': null };
+
+  // Morpheme games — build from window.MORPHEMES
+  var missionMap = {};
+  var meaningMap = {};
+  var M = window.MORPHEMES;
+  if (M) {
+    (M.prefixes || []).forEach(function(m) {
+      var key = 'prefix:' + m.id;
+      missionMap[key] = m.stage || null;
+      meaningMap[key] = m.stage || null;
+    });
+    (M.suffixes || []).forEach(function(m) {
+      var key = 'suffix:' + m.id;
+      missionMap[key] = m.stage || null;
+      meaningMap[key] = m.stage || null;
+    });
+    (M.bases || []).forEach(function(m) {
+      var key = 'base:' + m.id;
+      missionMap[key] = m.stage || null;
+      meaningMap[key] = m.stage || null;
+    });
+  }
+  map['mission-mode'] = missionMap;
+  map['meaning-mode'] = meaningMap;
+
+  // Breakdown blitz — populated asynchronously by _loadBreakdownStages()
+  map['breakdown-blitz'] = {};
+
+  // Non-stage games — no mapping (always return null)
+  ['sound-sorter', 'homophone-hunter', 'word-spectrum', 'word-refinery', 'speed-mode'].forEach(function(k) {
+    map[k] = {};
+  });
+
+  return map;
+}
+
+function getCategoryStage(activity, category) {
+  if (!_categoryStageCache) _categoryStageCache = _buildCategoryStageMap();
+  var actMap = _categoryStageCache[activity];
+  if (!actMap) return null;
+  var stage = actMap[category];
+  return stage === undefined ? null : stage;
+}
+
+function _loadBreakdownStages() {
+  fetch('breakdown-mode.html').then(function(resp) {
+    return resp.text();
+  }).then(function(html) {
+    if (!_categoryStageCache) _categoryStageCache = _buildCategoryStageMap();
+    var bdMap = _categoryStageCache['breakdown-blitz'];
+
+    // Pattern 1: word before stage
+    var rx1 = /\{[^}]*word\s*:\s*["']([^"']+)["'][^}]*stage\s*:\s*["']([^"']+)["']/g;
+    var m;
+    while ((m = rx1.exec(html)) !== null) {
+      bdMap[m[1]] = m[2];
+    }
+    // Pattern 2: stage before word
+    var rx2 = /\{[^}]*stage\s*:\s*["']([^"']+)["'][^}]*word\s*:\s*["']([^"']+)["']/g;
+    while ((m = rx2.exec(html)) !== null) {
+      if (!bdMap[m[2]]) bdMap[m[2]] = m[1];
+    }
+  }).catch(function() { /* non-critical — breakdown stages just won't filter */ });
+}
+
+function _gdStudentActAccByStage(student, activityKey, stages) {
+  var src = (dashboardMode === 'extension' && extensionData[student.id])
+    ? extensionData[student.id]
+    : student.results;
+  if (!src) return null;
+  var actData = src[activityKey];
+  if (!actData) return null;
+
+  var correct = 0, total = 0;
+  Object.keys(actData).forEach(function(cat) {
+    if (stages) {
+      var catStage = getCategoryStage(activityKey, cat);
+      // Include if category's stage is in the filter list, or if untagged (null)
+      if (catStage !== null && stages.indexOf(catStage) === -1) return;
+    }
+    var r = actData[cat];
+    correct += r.correct || 0;
+    total += r.total || 0;
+  });
+
+  return total > 0 ? Math.round(100 * correct / total) : null;
+}
+
 let currentClass = null;
 let currentCrownLeaderId = null;
 const morphemeFilter = { 'mission-mode': 'prefix', 'meaning-mode': 'prefix' };
@@ -1798,6 +1900,9 @@ async function renderDashboard(){
   // Render the Game Data view on demand — the new layout lazy-renders
   // only whatever is currently active (Overview or Activity Detail)
   gdRefresh();
+
+  // Pre-load breakdown-blitz stage data in background
+  _loadBreakdownStages();
 }
 
 function switchView(view, btn) {
