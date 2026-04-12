@@ -2075,7 +2075,7 @@ function _gdMeta(key) {
 }
 
 // Current game-data view state
-var _gdState = { view:'overview', activity:null, stageDetail:null, soundDetail:null };
+var _gdState = { view:'overview', activity:null, stageDetail:null, soundDetail:null, difficultyDetail:null };
 var _gdSortBy = 'level';
 var _gdShowPast = false;
 
@@ -2212,6 +2212,7 @@ function gdShowOverview() {
   _gdState.activity = null;
   _gdState.stageDetail = null;
   _gdState.soundDetail = null;
+  _gdState.difficultyDetail = null;
   gdRenderSidebar();
   _gdRenderControlsBar();
   gdRenderOverview();
@@ -2227,6 +2228,7 @@ function gdShowActivity(activityKey) {
   _gdState.activity = activityKey;
   _gdState.stageDetail = null;
   _gdState.soundDetail = null;
+  _gdState.difficultyDetail = null;
   gdRenderSidebar();
   _gdRenderControlsBar();
   gdRenderActivityDetail(activityKey);
@@ -2242,6 +2244,7 @@ function gdShowGameStage(activityKey) {
   _gdState.activity = activityKey;
   _gdState.stageDetail = null;
   _gdState.soundDetail = null;
+  _gdState.difficultyDetail = null;
   gdRenderSidebar();
   _gdRenderControlsBar();
   gdRenderGameStage(activityKey);
@@ -2252,6 +2255,7 @@ function gdShowStageDetail(activityKey, stage) {
   _gdState.view = 'stage-detail';
   _gdState.activity = activityKey;
   _gdState.stageDetail = stage;
+  _gdState.difficultyDetail = null;
   gdRenderSidebar();
   _gdRenderControlsBar();
   gdRenderStageDetail(activityKey, stage);
@@ -2476,12 +2480,19 @@ function gdBuildStageDetail(activityKey, stage) {
     '</section>';
   }
 
+  var isDiffDrilldown = DIFFICULTY_DRILLDOWN_GAMES.indexOf(activityKey) !== -1;
+
   // Header row
   var headerHtml = '<th class="gd-studentHead">Student</th>' +
     '<th class="gd-colHead" style="min-width:60px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--text-secondary);">Level</th>';
   stageCols.forEach(function(cat) {
     var label = _gdFormatCategory(activityKey, cat);
-    headerHtml += '<th class="gd-colHead gd-stageDetail-colHead" title="' + WordLabData.escapeHtml(cat) + '">' + WordLabData.escapeHtml(label) + '</th>';
+    if (isDiffDrilldown) {
+      headerHtml += '<th class="gd-colHead gd-stageDetail-colHead" title="Click to see word breakdown" style="cursor:pointer;" onclick="gdShowDifficultyDetail(\'' + activityKey.replace(/'/g, "\\'") + '\',\'' + cat.replace(/'/g, "\\'") + '\')">' +
+        '<span style="text-decoration:underline dotted;text-underline-offset:2px;">' + WordLabData.escapeHtml(label) + '</span></th>';
+    } else {
+      headerHtml += '<th class="gd-colHead gd-stageDetail-colHead" title="' + WordLabData.escapeHtml(cat) + '">' + WordLabData.escapeHtml(label) + '</th>';
+    }
   });
 
   // Filter students
@@ -2518,7 +2529,8 @@ function gdBuildStageDetail(activityKey, stage) {
     var actData = isExt ? ((extensionData[s.id]||{})[activityKey]||{}) : ((s.results||{})[activityKey]||{});
 
     var cells = stageCols.map(function(cat) {
-      var r = actData[cat];
+      // For phoneme/syllable/root-lab, aggregate both old format ("Starter") and new word-level format ("Starter:bridge")
+      var r = isDiffDrilldown ? _aggregateDifficultyResult(actData, cat) : (actData[cat] || null);
       if (!r || !r.total) {
         return '<td><div class="gd-matrixCell no-data" title="No data yet">\u2013</div></td>';
       }
@@ -2835,8 +2847,8 @@ function gdExportCurrentView() {
 }
 
 function gdRefresh() {
-  if (_gdState.view === 'activity' && _gdState.activity && _gdState.soundDetail) {
-    // Re-render sound detail without resetting soundDetail
+  if (_gdState.view === 'activity' && _gdState.activity && (_gdState.soundDetail || _gdState.difficultyDetail)) {
+    // Re-render sound/difficulty detail without resetting the detail state
     gdRenderActivityDetail(_gdState.activity);
   } else if (_gdState.view === 'activity' && _gdState.activity) {
     gdShowActivity(_gdState.activity);
@@ -3496,6 +3508,39 @@ function gdClearSoundDetail() {
   gdRenderActivityDetail('sound-sorter');
 }
 
+// Aggregate phoneme/syllable/root-lab data: sums both exact match ("Starter") and prefix match ("Starter:bridge")
+function _aggregateDifficultyResult(actData, diffCol) {
+  var correct = 0, total = 0, totalTime = 0, latestUpdated = null;
+  Object.keys(actData).forEach(function(cat) {
+    if (cat === diffCol || cat.indexOf(diffCol + ':') === 0) {
+      var r = actData[cat];
+      correct += r.correct || 0;
+      total += r.total || 0;
+      totalTime += r.totalTime || 0;
+      if (r.updated_at && (!latestUpdated || r.updated_at > latestUpdated)) latestUpdated = r.updated_at;
+    }
+  });
+  if (total === 0) return null;
+  return { correct: correct, total: total, totalTime: totalTime, updated_at: latestUpdated };
+}
+
+// Difficulty drill-down for phoneme-splitter, syllable-splitter, root-lab
+var DIFFICULTY_DRILLDOWN_GAMES = ['phoneme-splitter', 'syllable-splitter', 'root-lab'];
+
+function gdShowDifficultyDetail(activityKey, difficultyCol) {
+  _gdState.view = 'activity';
+  _gdState.activity = activityKey;
+  _gdState.soundDetail = null;
+  _gdState.difficultyDetail = difficultyCol;
+  gdRenderSidebar();
+  _gdRenderControlsBar();
+  gdRenderActivityDetail(activityKey);
+}
+function gdClearDifficultyDetail(activityKey) {
+  _gdState.difficultyDetail = null;
+  gdRenderActivityDetail(activityKey);
+}
+
 function gdBuildHeatmapCard(activityKey, meta) {
   var isExt = dashboardMode === 'extension';
   var allColumns = isExt ? (getExtColumns()[activityKey] || []) : (COLUMNS[activityKey] || []);
@@ -3528,12 +3573,30 @@ function gdBuildHeatmapCard(activityKey, meta) {
     soundDetailCols = Array.from(graphSet).sort();
   }
 
+  // Difficulty drill-down for phoneme/syllable/root-lab: word-level detail for a difficulty level
+  var isDifficultyOverview = DIFFICULTY_DRILLDOWN_GAMES.indexOf(activityKey) !== -1 && !_gdState.difficultyDetail;
+  var isDifficultyDetail = DIFFICULTY_DRILLDOWN_GAMES.indexOf(activityKey) !== -1 && !!_gdState.difficultyDetail;
+  var difficultyDetailName = _gdState.difficultyDetail;
+  var difficultyDetailCols = [];
+  if (isDifficultyDetail) {
+    var wordSet = new Set();
+    students.forEach(function(s) {
+      var actData = isExt ? ((extensionData[s.id]||{})[activityKey]||{}) : ((s.results||{})[activityKey]||{});
+      Object.keys(actData).forEach(function(cat) {
+        if (cat.indexOf(difficultyDetailName + ':') === 0) {
+          wordSet.add(cat);
+        }
+      });
+    });
+    difficultyDetailCols = Array.from(wordSet).sort();
+  }
+
   var isTTR = activityKey === 'meaning-mode' || activityKey === 'mission-mode';
   var activeType = isTTR ? (morphemeFilter[activityKey] || 'prefix') : null;
-  var columns = isSoundDetail ? soundDetailCols : (isTTR ? allColumns.filter(function(c) { return c.indexOf(activeType + ':') === 0; }) : allColumns);
+  var columns = isSoundDetail ? soundDetailCols : isDifficultyDetail ? difficultyDetailCols : (isTTR ? allColumns.filter(function(c) { return c.indexOf(activeType + ':') === 0; }) : allColumns);
   var colLabel = function(c) { return isTTR ? c.replace(/^[^:]+:/, '') : c; };
 
-  if (!columns.length && !isSoundDetail) {
+  if (!columns.length && !isSoundDetail && !isDifficultyDetail) {
     var emptyIllus = isExt ? '\uD83D\uDD2C' : '\uD83D\uDCCA';
     var emptyTitle = isExt ? 'No extension data yet' : 'No data yet';
     var emptySub = 'Once your students start playing ' + WordLabData.escapeHtml(meta.label) + (isExt ? ' in extension mode' : '') + ', their results will appear here — a coloured cell per student per category.';
@@ -3547,6 +3610,13 @@ function gdBuildHeatmapCard(activityKey, meta) {
       '<div class="gd-heatmapCard-body" style="padding:20px;"><div class="wlEmpty"><div class="wlEmpty-illus">\uD83D\uDCCA</div><div class="wlEmpty-title">No grapheme-level data yet</div><div class="wlEmpty-sub">Students have not yet played ' + WordLabData.escapeHtml(soundDetailName) + ' questions in the new grapheme-tracking format. Sound-level data is shown in the overview.</div></div></div></section>';
   }
 
+  // Difficulty detail with no word-level data yet
+  if (isDifficultyDetail && !difficultyDetailCols.length) {
+    return '<section class="gd-heatmapCard"><div class="gd-heatmapCard-header">' +
+      '<div class="gd-heatmapCard-title"><a href="#" onclick="event.preventDefault();gdClearDifficultyDetail(\'' + activityKey + '\')" style="color:#c4b5fd;text-decoration:none;font-weight:800;">' + meta.icon + ' ' + WordLabData.escapeHtml(meta.label) + '</a> &gt; ' + WordLabData.escapeHtml(difficultyDetailName) + '</div></div>' +
+      '<div class="gd-heatmapCard-body" style="padding:20px;"><div class="wlEmpty"><div class="wlEmpty-illus">\uD83D\uDCCA</div><div class="wlEmpty-title">No word-level data yet</div><div class="wlEmpty-sub">Students have not yet played ' + WordLabData.escapeHtml(difficultyDetailName) + ' questions in the new word-tracking format. Difficulty-level data is shown in the overview.</div></div></div></section>';
+  }
+
   var legend = '<div class="legend" style="margin:0;font-size:10px;">' +
     '<span>Accuracy:</span>' +
     '<span class="legendCell" style="background:#166534;"></span><span>100%</span>' +
@@ -3558,7 +3628,7 @@ function gdBuildHeatmapCard(activityKey, meta) {
     (isTTR ? '<span style="margin-left:8px;">Bright border = fast · Faded = slow</span>' : '') +
   '</div>';
 
-  // Build column headers — Sound Sorter overview headers are clickable for drill-down
+  // Build column headers
   var isSoundOverview = activityKey === 'sound-sorter' && !isSoundDetail;
   var headerCols;
   if (isSoundDetail) {
@@ -3567,9 +3637,20 @@ function gdBuildHeatmapCard(activityKey, meta) {
       var grapheme = col.indexOf(':') !== -1 ? col.substring(col.indexOf(':') + 1) : col;
       return '<th class="rotate"><span>' + WordLabData.escapeHtml(grapheme) + '</span></th>';
     }).join('');
+  } else if (isDifficultyDetail) {
+    // Word detail: show word name extracted after the colon
+    headerCols = columns.map(function(col) {
+      var word = col.indexOf(':') !== -1 ? col.substring(col.indexOf(':') + 1) : col;
+      return '<th class="rotate"><span>' + WordLabData.escapeHtml(word) + '</span></th>';
+    }).join('');
   } else if (isSoundOverview) {
     headerCols = columns.map(function(col) {
       return '<th class="rotate" style="cursor:pointer;" onclick="gdShowSoundDetail(\'' + col.replace(/'/g, "\\'") + '\')"><span style="text-decoration:underline dotted;text-underline-offset:2px;">' + WordLabData.escapeHtml(col) + '</span></th>';
+    }).join('');
+  } else if (isDifficultyOverview) {
+    // Difficulty-level overview headers are clickable for word drill-down
+    headerCols = columns.map(function(col) {
+      return '<th class="rotate" style="cursor:pointer;" onclick="gdShowDifficultyDetail(\'' + activityKey.replace(/'/g, "\\'") + '\',\'' + col.replace(/'/g, "\\'") + '\')"><span style="text-decoration:underline dotted;text-underline-offset:2px;">' + WordLabData.escapeHtml(col) + '</span></th>';
     }).join('');
   } else {
     headerCols = columns.map(function(col) {
@@ -3581,9 +3662,12 @@ function gdBuildHeatmapCard(activityKey, meta) {
     var actData = isExt ? ((extensionData[student.id]||{})[activityKey]||{}) : ((student.results||{})[activityKey]||{});
     var cells = columns.map(function(col) {
       // Sound Sorter overview: aggregate exact + prefix-matched categories
+      // Difficulty overview: aggregate exact + prefix-matched categories
       var result;
       if (isSoundOverview) {
         result = _ssAggregateResult(actData, col);
+      } else if (isDifficultyOverview) {
+        result = _aggregateDifficultyResult(actData, col);
       } else {
         result = actData[col] || null;
       }
@@ -3598,7 +3682,7 @@ function gdBuildHeatmapCard(activityKey, meta) {
         : 'never';
       if (!result || total === 0) return '<td><div class="cell no-data" title="No data yet">\u2013</div></td>';
       if (total < THRESHOLD_ATTEMPTS) return '<td><div class="cell not-enough ' + ac + '" title="' + total + ' attempt' + (total !== 1 ? 's' : '') + ' (need ' + THRESHOLD_ATTEMPTS + '+) · last attempt ' + lastAttempt + '">' + total + '<br>att</div></td>';
-      var displayCol = isSoundDetail && col.indexOf(':') !== -1 ? col.substring(col.indexOf(':') + 1) : colLabel(col);
+      var displayCol = (isSoundDetail || isDifficultyDetail) && col.indexOf(':') !== -1 ? col.substring(col.indexOf(':') + 1) : colLabel(col);
       var tooltip = WordLabData.escapeHtml(student.name) + ' \u2014 ' + WordLabData.escapeHtml(displayCol) + '\n' + result.correct + ' of ' + total + ' correct (' + pct + '%) \u00b7 last attempt ' + lastAttempt + (flagged ? '\n\u26a0\ufe0f Needs support' : '');
       return '<td><div class="cell ' + ac + ' ' + tc + '" title="' + tooltip + '"' + (flagged ? ' style="outline:3px solid var(--bad);outline-offset:-2px;"' : '') + '>' + (flagged ? '<span aria-hidden="true" style="font-size:9px;position:absolute;top:1px;right:2px;">\u26a0</span>' : '') + pct + '%</div></td>';
     }).join('');
@@ -3610,10 +3694,13 @@ function gdBuildHeatmapCard(activityKey, meta) {
   var titleHtml;
   if (isSoundDetail) {
     titleHtml = '<a href="#" onclick="event.preventDefault();gdClearSoundDetail()" style="color:#c4b5fd;text-decoration:none;font-weight:800;">\uD83D\uDD24 Sound Sorter</a> &gt; ' + WordLabData.escapeHtml(soundDetailName) + ' \u2014 by grapheme';
+  } else if (isDifficultyDetail) {
+    titleHtml = '<a href="#" onclick="event.preventDefault();gdClearDifficultyDetail(\'' + activityKey + '\')" style="color:#c4b5fd;text-decoration:none;font-weight:800;">' + meta.icon + ' ' + WordLabData.escapeHtml(meta.label) + '</a> &gt; ' + WordLabData.escapeHtml(difficultyDetailName) + ' \u2014 by word';
   } else {
     var byLabel = activityKey === 'phoneme-splitter' || activityKey === 'syllable-splitter' || activityKey === 'root-lab' ? 'difficulty' : activityKey === 'sound-sorter' ? 'sound' : isTTR ? 'morpheme' : 'category';
     titleHtml = meta.icon + ' ' + WordLabData.escapeHtml(meta.label) + ' \u2014 by ' + byLabel;
     if (isSoundOverview) titleHtml += ' <span style="font-size:10px;color:#94a3b8;font-weight:600;">(click a sound to see graphemes)</span>';
+    if (isDifficultyOverview) titleHtml += ' <span style="font-size:10px;color:#94a3b8;font-weight:600;">(click a level to see words)</span>';
   }
 
   return '<section class="gd-heatmapCard">' +
