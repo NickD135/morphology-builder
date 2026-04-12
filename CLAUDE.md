@@ -1458,6 +1458,21 @@ Full checklist document: `docs/nsw-doe-approval-checklist.md`
 
 ---
 
+### PHASE 7.23 — Session 2026-04-12 (Wave 3 extension retirement)
+
+#### Extension data retirement — Wave 3
+- [x] Pre-flight audit: 51 morphemes missing from data.js (39 unique after dedup)
+- [x] Migrated 39 morphemes into data.js as stage:null (valid-combos: 3,966 → 4,244)
+- [x] Flashcard + Speed Builder: deleted WL_EXTENSION overrides (stage filtering already in place)
+- [x] Meaning Mode: replaced inline PREFIXES/SUFFIXES/BASES with window.MORPHEMES reads, added data.js script tag
+- [x] Mission Mode: extracted 40+55 meaningPattern lookup tables, derived BASES/SUFFIX_BASES from valid-combos.json at startup
+- [x] Mission Mode: replaced dictionary-based isRealWord with validPrefixes-based check, removed dictionary.txt fetch
+- [x] Deleted wordlab-extension-data.js (1,134 lines) + removed script tags from 15 HTML files
+- [x] Fixed additional WL_EXTENSION refs in wordlab-data.js (loadExtensionData), dashboard.html (buildExtColumns), worksheet-analysis.html (5 usages)
+- [x] Zero WL_EXTENSION or wordlab-extension-data references remain in codebase
+
+---
+
 ### PHASE 8 — Growth & Integrations (Later)
 
 - [ ] Google Classroom integration (roster import via Google API)
@@ -1561,3 +1576,6 @@ At the start of each working session, do this:
 | Spelling check-in sets in worksheet generators | Teachers create spelling sets for check-ins; natural to reuse those words in worksheet generators alongside custom word lists. Prefixed "Check-In:" in dropdown to distinguish. |
 | Lab analysis room loading screen | 4.5s dashboard load time felt dead; immersive lab theme with scientist, particles, progress bar, and cycling messages makes the wait feel intentional. Smooth fade-out into dashboard. |
 | Teacher scientist on teachers table | Teachers aren't students — need their own scientist field. Syncs from View as Student customisation so teachers get a personalised loading screen without a separate customiser UI. |
+| meaningPattern decoration lookup (Mission Mode) | Mission Mode PREFIXES/SUFFIXES have `meaningPattern` strings ("towards {base}", "{base} again") not in data.js. These are hand-crafted per morpheme and not derivable from `meaning`. Extracted to compact lookup objects (~95 entries) that decorate window.MORPHEMES at page load. |
+| Derive Mission Mode validPrefixes from valid-combos.json | Instead of hand-maintaining `validPrefixes:[...]` per base entry, derive them at startup by grouping valid-combos.json by base. Authoritative, auto-updates when morphemes are added, removed 280 lines of inline data. |
+| isRealWord switched from dictionary to validPrefixes | Every Mission Mode base now has derived `validPrefixes` from valid-combos.json. Dictionary lookup was a fallback that sometimes failed on combining forms (phon, scope). The validPrefixes check is exact and faster (no dictionary.txt fetch). |
