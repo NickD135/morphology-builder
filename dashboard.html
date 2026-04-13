@@ -1152,11 +1152,12 @@
     </div>
     <nav style="display:flex;gap:6px;align-items:stretch;" role="navigation" aria-label="Main navigation">
       <button class="topBtn" onclick="backToClassPicker()" id="logoutBtn" style="display:none;"><span class="topBtn-icon">←</span>Switch</button>
-      <button class="topBtn" onclick="exportData()"><span class="topBtn-icon">⬇</span>Export</button>
+      <button class="topBtn" id="exportBtn" onclick="exportData()"><span class="topBtn-icon">⬇</span>Export</button>
       <a href="class-setup.html" class="topBtn"><span class="topBtn-icon">⚙️</span>Setup</a>
       <a href="account.html" class="topBtn"><span class="topBtn-icon">👤</span>Account</a>
       <a href="landing.html" class="topBtn"><span class="topBtn-icon">🏠</span>Home</a>
       <button class="topBtn" onclick="WordLabData.teacherSignOut()"><span class="topBtn-icon">↗</span>Sign Out</button>
+      <button id="dashTourBtn" style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);color:#a5b4fc;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:Lexend,system-ui,sans-serif;display:none;" aria-label="Replay guided tour">&#x2753; Tour</button>
     </nav>
   </div>
 </header>
@@ -1249,7 +1250,7 @@
       </div>
     </div>
     <div class="settingsStrip-group" style="margin-left:auto;">
-      <button onclick="showWordLists()" style="border:none;background:rgba(255,255,255,.08);color:var(--text-secondary);font-weight:800;font-size:10px;padding:5px 12px;border-radius:8px;cursor:pointer;font-family:inherit;transition:all .15s;" onmouseover="this.style.background='rgba(255,255,255,.14)';this.style.color='#e2e8f0'" onmouseout="this.style.background='rgba(255,255,255,.08)';this.style.color='#94a3b8'">📝 Custom Word Lists for Practise</button>
+      <button id="wordListsBtn" onclick="showWordLists()" style="border:none;background:rgba(255,255,255,.08);color:var(--text-secondary);font-weight:800;font-size:10px;padding:5px 12px;border-radius:8px;cursor:pointer;font-family:inherit;transition:all .15s;" onmouseover="this.style.background='rgba(255,255,255,.14)';this.style.color='#e2e8f0'" onmouseout="this.style.background='rgba(255,255,255,.08)';this.style.color='#94a3b8'">📝 Custom Word Lists for Practise</button>
     </div>
   </div>
 
@@ -1257,7 +1258,7 @@
 
   <div class="viewTabs" role="tablist" aria-label="Dashboard views">
     <button class="viewTab active" onclick="switchView('games',this)" role="tab" aria-selected="true">Game Data</button>
-    <button class="viewTab" onclick="switchView('spelling',this)" role="tab" aria-selected="false">Class Spelling Sets</button>
+    <button class="viewTab" id="ssTabBtn" onclick="switchView('spelling',this)" role="tab" aria-selected="false">Class Spelling Sets</button>
   </div>
 
   <div id="viewGames">
@@ -1282,7 +1283,7 @@
             <input type="checkbox" id="gdShowPast" onchange="_gdTogglePast(this)">
             <span>Show past level data</span>
           </label>
-          <button class="gd-controlsBar-export" onclick="gdShowStageMgmt()" aria-label="Manage student levels">&#x1F393; Levels</button>
+          <button class="gd-controlsBar-export" id="levelBtn" onclick="gdShowStageMgmt()" aria-label="Manage student levels">&#x1F393; Levels</button>
           <button class="gd-controlsBar-export" onclick="gdExportCurrentView()" aria-label="Export current view">Export</button>
         </div>
         <main class="gd-main" id="gdMain" role="main"><!-- rendered by gdShowOverview / gdShowActivity --></main>
@@ -1303,6 +1304,7 @@
 <script src="data.js"></script>
 <script src="wordlab-data.js"></script>
 <script src="wordlab-scientist.js"></script>
+<script src="wordlab-tour.js"></script>
 <script>
 // ── Column definitions for each activity ────────────────────────
 const COLUMNS = {
@@ -2090,6 +2092,34 @@ async function renderDashboard(){
 
   // Pre-load breakdown-blitz stage data in background
   _loadBreakdownStages();
+
+  // Teacher dashboard guided tour — trigger after dashboard is painted
+  if (typeof WLTour !== 'undefined') {
+    var _dashTourSteps = [
+      { target: null, title: 'Welcome to Your Dashboard!', text: "This quick tour will show you how to read your class data, adjust settings, and get the most out of Word Labs. You can replay it anytime." },
+      { target: '#classNameDisplay', title: 'Class Selector', text: "Your classes appear here. Click to switch between them. Each class has its own data, settings, and spelling sets.", position: 'bottom' },
+      { target: '#statsBar', title: 'Class Stats', text: "A snapshot of your class: overall accuracy, most-played game, most-missed morpheme, and how many students were active today.", position: 'bottom' },
+      { target: '#settingsStrip', title: 'Settings & Controls', text: "Control your class here. Set a <strong>Focus Game</strong> for 2x rewards, toggle <strong>Low-stim mode</strong> for sensory-sensitive students, and switch between base and extension content.", position: 'bottom' },
+      { target: '#levelBtn', title: 'Curriculum Levels', text: "Assign curriculum levels to students. Words, morphemes, and sounds in every game are <strong>matched to the student\u2019s level</strong> \u2014 content grows with them as they progress through year groups.", position: 'bottom' },
+      { target: '#gdSidebar', title: 'Game Tabs', text: "Each tab shows progress for one game. Word Labs covers <strong>morphology</strong> (word parts), <strong>phonics</strong> (sounds and spelling), and <strong>vocabulary</strong> (word meaning and register).", position: 'right' },
+      { target: '.gd-main', title: 'Heatmap', text: "Green cells = strong (80%+). Amber = developing. Red = needs support. Dash = not attempted yet. Click any column header to drill down into specific words or morphemes.", position: 'top' },
+      { target: '.student-name', title: 'Student Profiles', text: "Click a student\u2019s name to see their full profile: scores across all games, level, XP, badges, and check-in history.", position: 'right' },
+      { target: null, title: 'Morphology Games', text: "<strong>Breakdown Blitz</strong> \u2014 decompose words into prefix + base + suffix<br><strong>Mission Mode</strong> \u2014 match morphemes to complete words<br><strong>Meaning Match-Up</strong> \u2014 match morphemes to their meanings<br><strong>Root Lab</strong> \u2014 explore word etymology" },
+      { target: null, title: 'Phonics Games', text: "<strong>Phoneme Splitter</strong> \u2014 split words into individual sounds<br><strong>Syllable Splitter</strong> \u2014 chop words into syllables<br><strong>Sound Sorter</strong> \u2014 identify the correct grapheme for a sound<br><strong>Homophone Hunter</strong> \u2014 pick the right spelling in context" },
+      { target: null, title: 'Vocabulary Games', text: "<strong>Word Spectrum</strong> \u2014 synonyms, antonyms, shades of meaning<br><strong>The Refinery</strong> \u2014 arrange words from everyday to specialist<br><strong>Speed Builder</strong> \u2014 race the clock building real words<br><strong>Flashcards</strong> \u2014 quick morpheme review" },
+      { target: '#ssTabBtn', title: 'Spelling Check-In Sets', text: "Create spelling check-in sets, run dictation assessments, and track which words each student gets right or wrong. <strong>Focus words</strong> from check-ins automatically feed into practice games.", position: 'bottom' },
+      { target: '#wordListsBtn', title: 'Custom Word Lists', text: "Add custom word lists that feed into 6 practice games. AI analyses your words to generate morpheme breakdowns, syllable splits, and phoneme data automatically.", position: 'bottom' },
+      { target: '#exportBtn', title: 'Export Data', text: "Download class data as CSV for reports, parent evenings, or school records.", position: 'bottom' },
+      { target: '#dashTourBtn', title: "That\u2019s the Tour!", text: "You can replay this tour anytime by clicking this button. If you need more help, check the <strong>Teacher Guide</strong> in the menu." }
+    ];
+    var _dashReplayBtn = document.getElementById('dashTourBtn');
+    if (_dashReplayBtn) {
+      _dashReplayBtn.style.display = '';
+      _dashReplayBtn.addEventListener('click', function() { WLTour.start(_dashTourSteps, 'teacher-dashboard'); });
+    }
+    // Delay auto-start slightly so loading screen fade-out completes
+    setTimeout(function() { WLTour.autoStart('teacher-dashboard', _dashTourSteps); }, 600);
+  }
 }
 
 function switchView(view, btn) {

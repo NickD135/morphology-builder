@@ -1598,10 +1598,10 @@
   <div class="student-status-strip">
     <div class="student-info-block">
       <div class="student-sci-avatar" id="hubSciAvatar"></div>
-      <div>
+      <div id="scientistWidget">
         <div class="student-name-display" id="hubStudentName" aria-live="polite">Loading...</div>
         <div class="student-level-display" id="hubStudentLevel">Quark Cadet · Lv1</div>
-        <div class="student-xp-track"><div class="student-xp-fill" id="hubXpFill" style="width:0%"></div></div>
+        <div class="student-xp-track" id="xpArea"><div class="student-xp-fill" id="hubXpFill" style="width:0%"></div></div>
         <div id="hubTotalXP" style="font-size:10px;font-weight:700;color:#94a3b8;margin-top:2px;"></div>
       </div>
     </div>
@@ -1609,10 +1609,11 @@
       <div class="stat-pill-item wl-level-pill" id="hubLevelPill" style="display:none; cursor:pointer;">
         <span id="hubLevelIcon">🔬</span> <span id="hubLevelText">Explorer 1</span>
       </div>
-      <div class="stat-pill-item">🔥 <span id="hubStreak">0</span> streak</div>
-      <div class="stat-pill-item">⚛️ <span id="hubQuarks">0</span> quarks</div>
+      <div class="stat-pill-item" id="streakPill">🔥 <span id="hubStreak">0</span> streak</div>
+      <div class="stat-pill-item" id="quarkPill">⚛️ <span id="hubQuarks">0</span> quarks</div>
       <div class="stat-pill-item">🏆 <span id="hubBadges">0</span> badges</div>
       <a href="scientist.html" class="stat-pill-item" style="text-decoration:none;color:#e0e7ff;cursor:pointer;border-color:rgba(99,102,241,.3);background:rgba(99,102,241,.08);">🔬 My Scientist</a>
+      <button id="replayTourBtn" class="stat-pill-item" style="cursor:pointer;border-color:rgba(99,102,241,.3);background:rgba(99,102,241,.08);color:#a5b4fc;font-size:11px;font-weight:700;display:none;" aria-label="Replay guided tour">❓ Tour</button>
     </div>
     <div class="strip-challenges-block" id="stripChallengesBlock">
       <div class="hub-flame-wrap" id="hubFlameWrap">
@@ -1687,7 +1688,7 @@
     <h2 class="section-heading" style="margin-top:32px;">Play</h2>
     <p style="font-size:13px;font-weight:600;color:#6366f1;margin-bottom:14px;letter-spacing:.02em;">Timed challenges and skill games</p>
     <div class="play-hub-container">
-      <div class="play-hub-grid">
+      <div class="play-hub-grid" id="playGrid">
         <a class="act-card" href="sound-sorter.html" style="background:#0d9488;--glow-lo:rgba(13,148,136,.3);--glow-hi:rgba(13,148,136,.55);">
           <div class="act-card-emoji">🔤</div>
           <div class="act-card-name">Sound Sorter</div>
@@ -1942,6 +1943,7 @@
 <script src="wordlab-scientist.js"></script>
 <script src="wordlab-effects.js"></script>
 <script src="wordlab-audio.js"></script>
+<script src="wordlab-tour.js"></script>
 <script>
 /* ── Menu ── */
 function toggleMenu(){
@@ -2295,6 +2297,30 @@ async function initStudentLayout(session) {
 
     // renderGameNudges needs featured game data loaded, so runs after Batch 2
     try { renderGameNudges(sd); } catch(e) { console.warn('nudge render error', e); }
+
+    // Tour replay button + auto-start on first visit
+    if (typeof WLTour !== 'undefined') {
+      var _replayBtn = document.getElementById('replayTourBtn');
+      if (_replayBtn) { _replayBtn.style.display = ''; }
+      var _studentTourSteps = [
+        { target: null, title: 'Welcome to Word Labs!', text: "You're a word scientist who studies how words are built. Let's show you around your lab." },
+        { target: '#scientistWidget', title: 'Your Scientist', text: 'This is your scientist! As you play games and earn XP, you\'ll level up and unlock new ranks \u2014 from <strong>Quark Cadet</strong> all the way to <strong>Lab Director</strong>.', position: 'bottom' },
+        { target: '#quarkPill', title: 'Quarks', text: 'Quarks are your lab currency. Earn them by playing games. Spend them in the <strong>Scientist Shop</strong> on lab coats, accessories, and dance moves.', position: 'bottom', lowStimHide: true },
+        { target: '#xpArea', title: 'XP and Level', text: 'Every correct answer earns XP. Fill the bar to level up. Harder questions and longer streaks are worth more.', position: 'bottom' },
+        { target: '#stripChallengesBlock', title: 'Daily Challenges', text: 'Three new challenges every day \u2014 easy, medium, and hard \u2014 plus a weekly challenge. Complete them for bonus quarks.', position: 'bottom', lowStimHide: true },
+        { target: '#streakPill', title: 'Play Streak', text: 'Play for 10+ minutes each day to build your streak. The flame grows bigger the longer you keep it going!', position: 'bottom', lowStimHide: true },
+        { target: '#playGrid', title: 'Your Games', text: 'These are your games. Each one practises different word skills. Try them all \u2014 you get <strong>bonus rewards</strong> for playing a variety!' },
+        { target: null, title: 'Word Building Games', text: 'Some games focus on <strong>word parts</strong>: breaking words into prefixes, bases, and suffixes, matching morphemes to meanings, and building words from scratch. These help you understand how words are constructed.' },
+        { target: null, title: 'Sounds & Spelling Games', text: 'Other games focus on <strong>sounds</strong>: splitting words into phonemes, chopping syllables, sorting graphemes, and hunting homophones. These help you become a stronger speller.' },
+        { target: null, title: 'Vocabulary Games', text: 'And some games build your <strong>word power</strong>: arranging synonyms from everyday to specialist, exploring shades of meaning, and reviewing with flashcards.' },
+        { target: '.focus-glow', title: 'Featured Game', text: 'The glowing game gives you <strong>2x quarks and XP</strong>! It changes based on which skills you need to practise most.', position: 'top', lowStimHide: true },
+        { target: null, title: 'Words Grow With You', text: "As your teacher moves you to higher levels, the words in your games get more challenging. You'll always be practising words that match your year group. Good luck, scientist!" }
+      ];
+      if (_replayBtn) {
+        _replayBtn.addEventListener('click', function() { WLTour.start(_studentTourSteps, 'student-landing'); });
+      }
+      WLTour.autoStart('student-landing', _studentTourSteps);
+    }
 
   } catch(e) {
     console.warn('Student layout init failed', e);
