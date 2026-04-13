@@ -72,6 +72,7 @@ privacy-law-compliant, multi-tenant, with proper teacher auth and a payment laye
 | `class-setup.html` | Teachers | Create classes, add/remove students, manage codes |
 | `item-creator.html` | Teachers | Draw or AI-generate custom shop items (lab coats, hats, etc.) |
 | `account.html` | Teachers | Account settings — plan status, change password, school name, subscription management, delete account |
+| `content-editor.html` | Owner only | Hidden page — edit all game word data (syllable splits, phonemes, stages, clues) with Supabase overrides |
 | `teacher-login.html` | Teachers | Email/password login + create account (with school name), forgot-password flow |
 | `teacher-signup.html` | Teachers | Email/password signup, creates school + teacher records |
 | `about.html` | Everyone | Research base, syllabus alignment, activities overview, references |
@@ -90,6 +91,7 @@ privacy-law-compliant, multi-tenant, with proper teacher auth and a payment laye
 | `wordlab-teacher.js` | Teacher Mode for game pages — no XP, no timer, word count picker, rich feedback, Next button |
 | `wordlab-help.js` | First-visit instruction popup + floating ? help button on all game pages |
 | `wordlab-hints.js` | "Need Advice" scientist hints + support mode toggle + speech bubble UI |
+| `wordlab-tour.js` | Guided spotlight walkthrough tours — overlay + tooltip + step sequencing for teacher/student onboarding |
 | `data.js` | Static morpheme/word content data |
 
 ---
@@ -194,6 +196,15 @@ word_list_assignments (
 )
 
 -- Note: school_id has been added to classes and shop_items tables
+
+word_corrections (
+  id uuid PK,
+  game text,                   -- 'phoneme' | 'syllable' | 'breakdown' | 'sound-sorter' | 'root-lab' | 'refinery' | 'spectrum' | 'homophone' | 'morpheme'
+  word_key text,               -- word or item identifier
+  corrections jsonb,           -- only the changed fields (patched over defaults at game load)
+  updated_at timestamptz,
+  UNIQUE(game, word_key)
+)
 
 ---
 
@@ -1526,6 +1537,43 @@ Full checklist document: `docs/nsw-doe-approval-checklist.md`
 
 ---
 
+### PHASE 7.25 — Session 2026-04-12/13
+
+#### Game testing (Playwright end-to-end on live site)
+- [x] Played all 13 games as Test 2 (Voyager 1) on wordlabs.app via Playwright
+- [x] Verified data writes to Supabase for all scored games (XP, quarks, progress)
+- [x] Words served confirmed appropriate across all game types
+
+#### Bug fixes from playtesting
+- [x] Stage filter safety net: `filterByStage()` falls back to full pool when filtering leaves <5 items — fixes Refinery (1 cline), Root Lab (empty non-Starter), Syllable/Breakdown too few words
+- [x] Default difficulty changed to Mixed in 6 games (Phoneme, Syllable, Root Lab, Sound Sorter, Meaning Match-Up, Mission Mode)
+- [x] First-visit instruction popup timing: waits for DOM readyState before showing
+- [x] altForms HTML rendering: Mission Mode and Meaning Match-Up buttons now render `<span>` for altForms (e.g. "IN- (im, il, ir)") instead of showing raw HTML tags
+- [x] Spelling heatmap: students with check-in results but no assignment row now show data (not dimmed dashes)
+- [x] Spelling heatmap: fallback query now includes `results` column
+- [x] Focus words: loaded even when no spelling sets are assigned (was blocked by early return)
+- [x] Focus words: now carry full data (syllables, phonemes, graphemes) from source spelling set — fixes games like Syllable Splitter filtering them out
+
+#### Content editor (`content-editor.html`)
+- [x] Hidden auth-gated page (owner email only, fake 404 for others) at `/content-editor`
+- [x] `word_corrections` Supabase table: stores teacher overrides as jsonb per game + word_key
+- [x] 9 game tabs: Breakdown, Phoneme, Syllable, Sound Sorter, Root Lab, Refinery, Spectrum, Homophones, Morphemes
+- [x] Inline cell editing with auto-save to Supabase, override indicators, reset-to-default
+- [x] Search, stage filter, "has override" toggle
+- [x] `getWordCorrections()` + `applyCorrections()` in wordlab-data.js with 5-min session cache
+- [x] All 10 game pages load and apply corrections on startup (graceful fallback if Supabase unreachable)
+- [x] CSP override for `/content-editor` only (unsafe-eval needed for parsing inline game data)
+
+#### Guided walkthrough tours (`wordlab-tour.js`)
+- [x] Shared spotlight walkthrough engine: overlay + spotlight cutout + tooltip card, step sequencing, keyboard nav, scroll-into-view, localStorage tracking
+- [x] Student tour (landing.html): 12 steps — scientist, quarks, XP, daily challenges, streaks, game types (morphology/phonics/vocabulary), featured game, level progression
+- [x] Teacher tour (dashboard.html): 15 steps — class selector, stats bar, settings, levels, game tabs, heatmap, student profiles, game type explanations, spelling sets, word lists, export
+- [x] Auto-starts on first visit, replay button on both pages
+- [x] Low-stim aware: skips gamification steps when low-stim mode active
+- [x] Keyboard support: arrow keys, Enter, Escape
+
+---
+
 ### PHASE 8 — Growth & Integrations (Later)
 
 - [ ] Google Classroom integration (roster import via Google API)
@@ -1641,3 +1689,9 @@ At the start of each working session, do this:
 | meaningPattern decoration lookup (Mission Mode) | Mission Mode PREFIXES/SUFFIXES have `meaningPattern` strings ("towards {base}", "{base} again") not in data.js. These are hand-crafted per morpheme and not derivable from `meaning`. Extracted to compact lookup objects (~95 entries) that decorate window.MORPHEMES at page load. |
 | Derive Mission Mode validPrefixes from valid-combos.json | Instead of hand-maintaining `validPrefixes:[...]` per base entry, derive them at startup by grouping valid-combos.json by base. Authoritative, auto-updates when morphemes are added, removed 280 lines of inline data. |
 | isRealWord switched from dictionary to validPrefixes | Every Mission Mode base now has derived `validPrefixes` from valid-combos.json. Dictionary lookup was a fallback that sometimes failed on combining forms (phon, scope). The validPrefixes check is exact and faster (no dictionary.txt fetch). |
+| Stage filter MIN_POOL_SIZE=5 safety net | If stage filtering reduces a game's word pool below 5 items, fall back to the full unfiltered pool. Prevents games from being unplayable at certain student stages — Refinery had only 1 cline, Root Lab had 0 words on non-Starter modes for s2e students. |
+| Mixed as default difficulty | Students get a broader range of content from the start. Starter was too restrictive when combined with stage filtering. Teachers can still narrow to specific difficulty levels. Changed in Phoneme, Syllable, Root Lab, Sound Sorter, Meaning Match-Up, Mission Mode. |
+| Content editor as override table (word_corrections) | Corrections stored as jsonb patches over static defaults, not a full data migration. Games merge overrides at load time with 5-min session cache. Zero risk to existing data — if Supabase is unreachable, games use unmodified defaults. |
+| Content editor owner-only access | Hardcoded email check + fake 404 page. No links anywhere. CSP with unsafe-eval only on this page (needed to parse inline game data via Function constructor). |
+| Focus words carry full word data | Focus words were just {word, base, clue} but games need syllables, phonemes, graphemes. Now merged with full data from source spelling set at load time. |
+| Spotlight walkthrough tours | One linear tour per page (not mini-tours by topic). Simpler code, clearer experience. Auto-starts once, replay button for later. Low-stim mode filters out gamification steps. |
