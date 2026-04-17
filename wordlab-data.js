@@ -390,6 +390,7 @@ const WordLabData = (() => {
       try {
         var schoolName = session.user.user_metadata?.school_name || 'My School';
         var joinSchoolId = session.user.user_metadata?.join_school_id || '';
+        var postcode = session.user.user_metadata?.school_postcode || '';
         var schoolId = null;
 
         if (joinSchoolId) {
@@ -398,7 +399,7 @@ const WordLabData = (() => {
         } else {
           var { data: school } = await sb()
             .from('schools')
-            .insert({ name: schoolName, plan: 'active', trial_ends_at: new Date(Date.now() + 365 * 86400000).toISOString() })
+            .insert({ name: schoolName, postcode: postcode || null, plan: 'active', trial_ends_at: new Date(Date.now() + 365 * 86400000).toISOString() })
             .select('id')
             .single();
           if (school) schoolId = school.id;
