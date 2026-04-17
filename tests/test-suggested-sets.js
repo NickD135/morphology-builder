@@ -141,5 +141,54 @@ test('distanceConfig — far above returns size 10 at hardest end', function(){
   assert.deepStrictEqual(WL.distanceConfig(4),  { size: 10, anchorRatio: 1.0 });
 });
 
+// --- Task 5 tests ---
+
+function mockPool(n){
+  var p = [];
+  for (var i = 0; i < n; i++){
+    p.push({ p:null, b:'x', s1:null, s2:null, word:'word'+i });
+  }
+  return p;
+}
+
+test('buildListForStage — far below picks easiest 5 from pool start', function(){
+  var pool = mockPool(20);
+  var list = WL.buildListForStage(pool, 's3l', 's2e');
+  assert.deepStrictEqual(list, ['word0','word1','word2','word3','word4']);
+});
+
+test('buildListForStage — far above picks hardest 10 from pool end', function(){
+  var pool = mockPool(20);
+  var list = WL.buildListForStage(pool, 's2e', 's4');
+  assert.deepStrictEqual(list, ['word10','word11','word12','word13','word14','word15','word16','word17','word18','word19']);
+});
+
+test('buildListForStage — same stage picks 8 centred', function(){
+  // distance 0 → size 8, anchor 0.5. Pool 20: anchor=round(0.5*19)=10, start=10-4=6, end=14.
+  var pool = mockPool(20);
+  var list = WL.buildListForStage(pool, 's3e', 's3e');
+  assert.strictEqual(list.length, 8);
+  assert.strictEqual(list[0], 'word6');
+  assert.strictEqual(list[7], 'word13');
+});
+
+test('buildListForStage — pool shorter than size returns whole pool', function(){
+  var pool = mockPool(3);
+  var list = WL.buildListForStage(pool, 's3l', 's2e');
+  assert.strictEqual(list.length, 3);
+});
+
+test('buildListForStage — empty pool returns []', function(){
+  assert.deepStrictEqual(WL.buildListForStage([], 's3e', 's3e'), []);
+});
+
+test('buildListForStage — adjacent levels overlap', function(){
+  var pool = mockPool(20);
+  var voy = WL.buildListForStage(pool, 's3e', 's2l'); // d = -1
+  var wan = WL.buildListForStage(pool, 's3e', 's3e'); // d = 0
+  var shared = voy.filter(function(w){ return wan.indexOf(w) !== -1; });
+  assert.ok(shared.length > 0, 'adjacent levels should share at least one word');
+});
+
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 process.exit(failed > 0 ? 1 : 0);

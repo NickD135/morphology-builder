@@ -86,13 +86,34 @@
     return { size: 10, anchorRatio: 1.0 };
   }
 
+  function buildListForStage(sortedPool, homeStage, targetStage){
+    if (!sortedPool || sortedPool.length === 0) return [];
+    var homeIdx = stageIndex(homeStage);
+    var targetIdx = stageIndex(targetStage);
+    if (homeIdx < 0) homeIdx = 2;
+    if (targetIdx < 0) return sortedPool.map(function(c){ return c.word; });
+
+    var distance = targetIdx - homeIdx;
+    var cfg = distanceConfig(distance);
+    var L = sortedPool.length;
+    var N = Math.min(cfg.size, L);
+
+    var anchor = Math.round(cfg.anchorRatio * (L - 1));
+    var start = anchor - Math.floor(N / 2);
+    start = Math.max(0, Math.min(start, L - N));
+    var end = start + N;
+
+    return sortedPool.slice(start, end).map(function(c){ return c.word; });
+  }
+
   global.WLSuggested = {
     STAGE_ORDER: STAGE_ORDER,
     stageIndex: stageIndex,
     buildMorphemeIndex: buildMorphemeIndex,
     getCombosForMorpheme: getCombosForMorpheme,
     scoreCombo: scoreCombo,
-    distanceConfig: distanceConfig
+    distanceConfig: distanceConfig,
+    buildListForStage: buildListForStage
   };
 })(typeof window !== 'undefined' ? window : global);
 
