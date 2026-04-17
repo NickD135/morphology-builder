@@ -148,7 +148,8 @@
     <div class="errMsg" id="errMsg" aria-live="assertive"></div>
 
     <div id="formSection">
-      <div class="inviteBox">
+      <!-- Invite code flow superseded by school search — preserved for backwards compat -->
+      <div class="inviteBox" style="display:none;">
         <div class="inviteBox-label">Joining a colleague's school?</div>
         <div class="inviteBox-hint">Enter their invite code to share the same school account.</div>
         <div class="field" style="margin-bottom:0;">
@@ -157,9 +158,23 @@
         </div>
       </div>
 
-      <div class="field">
+      <div class="field" id="schoolField">
         <label for="schoolInput">School name</label>
-        <input type="text" id="schoolInput" placeholder="e.g. Riverside Primary School" autocomplete="organization">
+        <div style="position:relative;">
+          <input type="text" id="schoolInput" placeholder="Start typing your school name…" autocomplete="off" autocapitalize="words">
+          <div id="schoolResults" role="listbox" aria-label="School search results"
+               style="display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--navy-2,#1e293b);border:1px solid var(--line,#334155);border-radius:0 0 10px 10px;max-height:240px;overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.3);"></div>
+        </div>
+        <input type="hidden" id="joinSchoolId" value="">
+        <div id="schoolSelected" style="display:none;margin-top:6px;padding:8px 12px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);border-radius:8px;font-size:13px;color:#e0e7ff;">
+          <span id="schoolSelectedName" style="font-weight:700;"></span>
+          <button type="button" id="schoolChangeBtn" style="margin-left:8px;border:none;background:transparent;color:#a5b4fc;font-size:12px;cursor:pointer;font-weight:700;text-decoration:underline;">Change</button>
+        </div>
+      </div>
+      <div class="field" id="postcodeField" style="display:none;">
+        <label for="postcodeInput">School postcode</label>
+        <input type="text" id="postcodeInput" placeholder="e.g. 2150" maxlength="4" inputmode="numeric" pattern="\d{4}" autocomplete="postal-code">
+        <div class="fieldHint">Australian 4-digit postcode — helps distinguish schools with the same name.</div>
       </div>
       <div class="field">
         <label for="emailInput">Email</label>
@@ -269,9 +284,113 @@
     });
   });
 
+  // --- School search ---
+  var _schoolSearchTimer = null;
+  var _selectedSchoolId = null;
+
+  function schoolSearchInit(){
+    var input = document.getElementById('schoolInput');
+    var results = document.getElementById('schoolResults');
+    var selectedBox = document.getElementById('schoolSelected');
+    var changeBtn = document.getElementById('schoolChangeBtn');
+    var postcodeField = document.getElementById('postcodeField');
+    var hiddenId = document.getElementById('joinSchoolId');
+
+    input.addEventListener('input', function(){
+      clearTimeout(_schoolSearchTimer);
+      var q = (input.value || '').trim();
+      if (q.length < 3) { results.style.display = 'none'; return; }
+      _schoolSearchTimer = setTimeout(function(){ schoolSearch(q); }, 300);
+    });
+
+    changeBtn.addEventListener('click', function(){
+      _selectedSchoolId = null;
+      hiddenId.value = '';
+      selectedBox.style.display = 'none';
+      input.style.display = '';
+      input.value = '';
+      input.focus();
+      postcodeField.style.display = 'none';
+      results.style.display = 'none';
+    });
+
+    // Close results on outside click
+    document.addEventListener('click', function(e){
+      if (!e.target.closest('#schoolField')) results.style.display = 'none';
+    });
+  }
+
+  async function schoolSearch(query){
+    var results = document.getElementById('schoolResults');
+    try {
+      var { data, error } = await sb().rpc('search_schools', { query: query });
+      if (error) throw error;
+      renderSchoolResults(data || [], query);
+    } catch(e){
+      console.warn('School search error:', e);
+      results.style.display = 'none';
+    }
+  }
+
+  function renderSchoolResults(schools, query){
+    var container = document.getElementById('schoolResults');
+    while (container.firstChild) container.removeChild(container.firstChild);
+
+    schools.forEach(function(s){
+      var row = document.createElement('button');
+      row.type = 'button';
+      row.setAttribute('role', 'option');
+      row.style.cssText = 'display:block;width:100%;text-align:left;padding:10px 14px;border:none;background:transparent;color:#e0e7ff;font-size:13px;cursor:pointer;font-family:inherit;border-bottom:1px solid rgba(255,255,255,.06);';
+      row.addEventListener('mouseenter', function(){ row.style.background = 'rgba(99,102,241,.15)'; });
+      row.addEventListener('mouseleave', function(){ row.style.background = 'transparent'; });
+      var nameSpan = document.createElement('span');
+      nameSpan.style.fontWeight = '700';
+      nameSpan.textContent = s.name;
+      var pcSpan = document.createElement('span');
+      pcSpan.style.cssText = 'color:#94a3b8;margin-left:6px;';
+      pcSpan.textContent = s.postcode ? '(' + s.postcode + ')' : '';
+      row.appendChild(nameSpan);
+      row.appendChild(pcSpan);
+      row.addEventListener('click', function(){ selectSchool(s.id, s.name, s.postcode); });
+      container.appendChild(row);
+    });
+
+    // "Create new school" footer
+    var footer = document.createElement('button');
+    footer.type = 'button';
+    footer.setAttribute('role', 'option');
+    footer.style.cssText = 'display:block;width:100%;text-align:left;padding:10px 14px;border:none;background:rgba(16,185,129,.08);color:#6ee7b7;font-size:13px;cursor:pointer;font-family:inherit;font-weight:700;';
+    footer.addEventListener('mouseenter', function(){ footer.style.background = 'rgba(16,185,129,.15)'; });
+    footer.addEventListener('mouseleave', function(){ footer.style.background = 'rgba(16,185,129,.08)'; });
+    footer.textContent = '+ Create new school: \u201c' + query + '\u201d';
+    footer.addEventListener('click', function(){ createNewSchool(query); });
+    container.appendChild(footer);
+
+    container.style.display = '';
+  }
+
+  function selectSchool(id, name, postcode){
+    _selectedSchoolId = id;
+    document.getElementById('joinSchoolId').value = id;
+    document.getElementById('schoolSelectedName').textContent = name + (postcode ? ' (' + postcode + ')' : '');
+    document.getElementById('schoolSelected').style.display = '';
+    document.getElementById('schoolInput').style.display = 'none';
+    document.getElementById('schoolResults').style.display = 'none';
+    document.getElementById('postcodeField').style.display = 'none';
+  }
+
+  function createNewSchool(name){
+    _selectedSchoolId = null;
+    document.getElementById('joinSchoolId').value = '';
+    document.getElementById('schoolInput').value = name;
+    document.getElementById('schoolResults').style.display = 'none';
+    document.getElementById('postcodeField').style.display = '';
+    document.getElementById('postcodeInput').focus();
+  }
+
   async function signUp() {
-    const inviteCode = (document.getElementById('inviteCodeInput')?.value || '').trim().toUpperCase();
     const school   = document.getElementById('schoolInput').value.trim();
+    const postcode = (document.getElementById('postcodeInput')?.value || '').trim();
     const email    = document.getElementById('emailInput').value.trim();
     const password = document.getElementById('passwordInput').value;
     const confirm  = document.getElementById('confirmInput').value;
@@ -279,33 +398,24 @@
 
     clearErr();
 
-    if (!inviteCode && !school) { showErr('Please enter your school name, or an invite code to join a colleague\'s school.'); setInvalid('schoolInput', true); return; }
+    // School selection: either picked an existing school, or creating new
+    var joinSchoolId = _selectedSchoolId || null;
+
+    if (!joinSchoolId && !school) {
+      showErr('Please search for your school, or type a name to create a new one.');
+      setInvalid('schoolInput', true);
+      return;
+    }
+    if (!joinSchoolId && postcode && !/^\d{4}$/.test(postcode)) {
+      showErr('Please enter a valid 4-digit Australian postcode.');
+      setInvalid('postcodeInput', true);
+      return;
+    }
     if (!email)    { showErr('Please enter your email address.'); setInvalid('emailInput', true); return; }
     if (!validEmail(email)) { showErr('That email address doesn\'t look right.'); setInvalid('emailInput', true); return; }
     if (!password) { showErr('Please enter a password.'); setInvalid('passwordInput', true); return; }
     if (password.length < 8) { showErr('Password must be at least 8 characters.'); setInvalid('passwordInput', true); return; }
     if (password !== confirm) { showErr('Passwords do not match.'); setInvalid('confirmInput', true); return; }
-
-    // If invite code provided, validate it
-    var joinSchoolId = null;
-    if (inviteCode) {
-      try {
-        const { data: existingSchool, error: lookupErr } = await sb()
-          .from('schools')
-          .select('id, name')
-          .eq('invite_code', inviteCode)
-          .maybeSingle();
-        if (lookupErr || !existingSchool) {
-          showErr('Invalid invite code. Check the code and try again.');
-          setInvalid('inviteCodeInput', true);
-          return;
-        }
-        joinSchoolId = existingSchool.id;
-      } catch(e) {
-        showErr('Could not validate invite code — please try again.');
-        return;
-      }
-    }
 
     btn.disabled = true;
     btn.textContent = 'Creating account…';
@@ -315,7 +425,7 @@
         email,
         password,
         options: {
-          data: { school_name: school || '', join_school_id: joinSchoolId || '' },
+          data: { school_name: school || '', join_school_id: joinSchoolId || '', school_postcode: postcode || '' },
           emailRedirectTo: window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'teacher-login.html?confirmed=1'
         }
       });
@@ -374,6 +484,7 @@
     // Check if joining an existing school via invite code
     const { data: { user } } = await sb().auth.getUser();
     const joinSchoolId = user?.user_metadata?.join_school_id || '';
+    const postcode = user?.user_metadata?.school_postcode || '';
     var schoolId = null;
 
     if (joinSchoolId) {
@@ -382,7 +493,7 @@
       // Create new school
       const { data: school, error: schoolErr } = await sb()
         .from('schools')
-        .insert({ name: schoolName || 'My School', plan: 'active', trial_ends_at: new Date(Date.now() + 365 * 86400000).toISOString() })
+        .insert({ name: schoolName || 'My School', postcode: postcode || null, plan: 'active', trial_ends_at: new Date(Date.now() + 365 * 86400000).toISOString() })
         .select('id')
         .single();
       if (schoolErr) { console.warn('School creation failed:', schoolErr); return; }
@@ -402,6 +513,8 @@
   document.getElementById('confirmInput').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') signUp();
   });
+
+  schoolSearchInit();
 </script>
 </body>
 </html>
