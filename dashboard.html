@@ -7846,9 +7846,129 @@ function suggestedClose(){
 }
 
 function suggestedRenderGrid(){
-  // stub — populated in Task 8
   var body = document.getElementById('suggestedBody');
-  body.textContent = 'Loaded ' + _suggestedIndex.length + ' morphemes. Grid coming next.';
+  while (body.firstChild) body.removeChild(body.firstChild);
+
+  // --- Controls row ---
+  var controls = document.createElement('div');
+  controls.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;';
+
+  var search = document.createElement('input');
+  search.id = 'suggestedSearch';
+  search.type = 'text';
+  search.placeholder = 'Search morphemes\u2026';
+  search.style.cssText = 'flex:1 1 240px;min-width:200px;padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:var(--navy-3);color:var(--text);font-family:\'Lexend\',sans-serif;font-size:13px;';
+
+  function _makeSelect(id, options){
+    var sel = document.createElement('select');
+    sel.id = id;
+    sel.style.cssText = 'padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:var(--navy-3);color:var(--text);font-size:13px;';
+    options.forEach(function(opt){
+      var o = document.createElement('option');
+      o.value = opt.value;
+      o.textContent = opt.label;
+      sel.appendChild(o);
+    });
+    return sel;
+  }
+
+  var typeFilter = _makeSelect('suggestedTypeFilter', [
+    { value: 'all',    label: 'All types' },
+    { value: 'prefix', label: 'Prefixes' },
+    { value: 'base',   label: 'Bases' },
+    { value: 'suffix', label: 'Suffixes' }
+  ]);
+
+  var stageFilter = _makeSelect('suggestedStageFilter', [
+    { value: 'all', label: 'All stages' },
+    { value: 's2e', label: 'Explorer (s2e)' },
+    { value: 's2l', label: 'Voyager (s2l)' },
+    { value: 's3e', label: 'Wanderer (s3e)' },
+    { value: 's3l', label: 'Trailblazer (s3l)' },
+    { value: 's4',  label: 'Pioneer (s4)' }
+  ]);
+
+  controls.appendChild(search);
+  controls.appendChild(typeFilter);
+  controls.appendChild(stageFilter);
+  body.appendChild(controls);
+
+  // --- Grid wrapper ---
+  var gridWrap = document.createElement('div');
+  gridWrap.id = 'suggestedGridWrap';
+  gridWrap.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;max-height:60vh;overflow:auto;padding:4px;';
+  body.appendChild(gridWrap);
+
+  function _renderCards(){
+    var q = (search.value || '').toLowerCase().trim();
+    var tf = typeFilter.value;
+    var sf = stageFilter.value;
+
+    while (gridWrap.firstChild) gridWrap.removeChild(gridWrap.firstChild);
+
+    var filtered = _suggestedIndex.filter(function(m){
+      if (tf !== 'all' && m.type !== tf) return false;
+      if (sf !== 'all' && m.homeStage !== sf) return false;
+      if (q){
+        var hay = (m.id + ' ' + m.display + ' ' + m.meaning).toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+
+    if (!filtered.length){
+      var empty = document.createElement('div');
+      empty.style.cssText = 'grid-column:1/-1;text-align:center;color:var(--text-secondary);padding:24px;';
+      empty.textContent = 'No morphemes match.';
+      gridWrap.appendChild(empty);
+      return;
+    }
+
+    filtered.forEach(function(m){
+      var card = document.createElement('button');
+      card.type = 'button';
+      card.style.cssText = 'text-align:left;background:var(--navy-3);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--text);cursor:pointer;font-family:\'Lexend\',sans-serif;display:flex;flex-direction:column;gap:4px;';
+      card.addEventListener('mouseenter', function(){ card.style.borderColor = 'var(--indigo)'; });
+      card.addEventListener('mouseleave', function(){ card.style.borderColor = 'var(--line)'; });
+
+      var top = document.createElement('div');
+      top.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:6px;';
+
+      var disp = document.createElement('span');
+      disp.style.cssText = 'font-weight:800;font-size:14px;';
+      disp.textContent = m.display;
+
+      var stageLabel = m.homeStage
+        ? (window.WLStage.STAGE_SHORT[m.homeStage] || m.homeStage)
+        : '\u2014';
+      var pill = document.createElement('span');
+      pill.style.cssText = 'font-size:10px;font-weight:800;padding:2px 6px;border-radius:6px;background:var(--navy-2);color:var(--text-secondary);white-space:nowrap;';
+      pill.textContent = m.type.toUpperCase() + ' \u00b7 ' + stageLabel;
+
+      top.appendChild(disp);
+      top.appendChild(pill);
+
+      var meaning = document.createElement('div');
+      meaning.style.cssText = 'font-size:11px;color:var(--text-secondary);';
+      meaning.textContent = m.meaning || '';
+
+      card.appendChild(top);
+      card.appendChild(meaning);
+
+      card.addEventListener('click', function(){ suggestedSelectMorpheme(m.id, m.type); });
+      gridWrap.appendChild(card);
+    });
+  }
+
+  search.addEventListener('input', _renderCards);
+  typeFilter.addEventListener('change', _renderCards);
+  stageFilter.addEventListener('change', _renderCards);
+  _renderCards();
+}
+
+function suggestedSelectMorpheme(id, type){
+  // stub — populated in Task 9
+  console.log('TODO: render detail for', id, type);
 }
 
 // ── Boot ─────────────────────────────────────────────────────────
