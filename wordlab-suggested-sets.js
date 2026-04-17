@@ -78,12 +78,21 @@
     return maxIdx * 1e6 + len * 1e3 + morphCount * 100 + (firstChar / 1000);
   }
 
+  function distanceConfig(distance){
+    if (distance <= -2) return { size: 5,  anchorRatio: 0.0 };
+    if (distance === -1) return { size: 7,  anchorRatio: 0.3 };
+    if (distance === 0)  return { size: 8,  anchorRatio: 0.5 };
+    if (distance === 1)  return { size: 9,  anchorRatio: 0.7 };
+    return { size: 10, anchorRatio: 1.0 };
+  }
+
   global.WLSuggested = {
     STAGE_ORDER: STAGE_ORDER,
     stageIndex: stageIndex,
     buildMorphemeIndex: buildMorphemeIndex,
     getCombosForMorpheme: getCombosForMorpheme,
-    scoreCombo: scoreCombo
+    scoreCombo: scoreCombo,
+    distanceConfig: distanceConfig
   };
 })(typeof window !== 'undefined' ? window : global);
 

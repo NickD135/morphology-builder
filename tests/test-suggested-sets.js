@@ -113,5 +113,33 @@ test('scoreCombo — unknown stage defaults to idx 0 (easiest)', function(){
     'unknown bases should sort before known s3l bases');
 });
 
+// --- Task 4 tests ---
+
+test('distanceConfig — far below returns size 5 at easiest end', function(){
+  assert.deepStrictEqual(WL.distanceConfig(-4), { size: 5, anchorRatio: 0.0 });
+  assert.deepStrictEqual(WL.distanceConfig(-2), { size: 5, anchorRatio: 0.0 });
+});
+
+test('distanceConfig — d = -1 returns size 7 lower-biased', function(){
+  var c = WL.distanceConfig(-1);
+  assert.strictEqual(c.size, 7);
+  assert.ok(c.anchorRatio > 0 && c.anchorRatio < 0.5);
+});
+
+test('distanceConfig — d = 0 returns size 8 centred', function(){
+  assert.deepStrictEqual(WL.distanceConfig(0), { size: 8, anchorRatio: 0.5 });
+});
+
+test('distanceConfig — d = +1 returns size 9 upper-biased', function(){
+  var c = WL.distanceConfig(1);
+  assert.strictEqual(c.size, 9);
+  assert.ok(c.anchorRatio > 0.5 && c.anchorRatio < 1.0);
+});
+
+test('distanceConfig — far above returns size 10 at hardest end', function(){
+  assert.deepStrictEqual(WL.distanceConfig(2),  { size: 10, anchorRatio: 1.0 });
+  assert.deepStrictEqual(WL.distanceConfig(4),  { size: 10, anchorRatio: 1.0 });
+});
+
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 process.exit(failed > 0 ? 1 : 0);
