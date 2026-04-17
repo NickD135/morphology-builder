@@ -1301,6 +1301,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="wordlab-stage.js"></script>
+<script src="wordlab-suggested-sets.js"></script>
 <script src="data.js"></script>
 <script src="wordlab-data.js"></script>
 <script src="wordlab-scientist.js"></script>
@@ -6899,6 +6900,7 @@ function buildSpellingSetCreateForm() {
       '<div id="ssCreateStatus" style="display:none;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:700;"></div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
         '<button onclick="ssAnalyzeWords()" id="ssAnalyzeBtn" style="border:none;background:var(--indigo);color:#fff;font-weight:900;font-size:13px;padding:11px 20px;border-radius:12px;cursor:pointer;font-family:\'Lexend\',sans-serif;">🤖 Generate Breakdowns</button>' +
+        '<button onclick="suggestedOpen()" id="suggestedOpenBtn" style="border:none;background:var(--indigo);color:#fff;font-weight:800;font-size:12px;padding:9px 14px;border-radius:10px;cursor:pointer;font-family:\'Lexend\',sans-serif;">Suggested Sets</button>' +
         '<button onclick="createSpellingSet()" id="ssCreateBtn" style="display:none;border:none;background:#16a34a;color:#fff;font-weight:900;font-size:13px;padding:11px 20px;border-radius:12px;cursor:pointer;font-family:\'Lexend\',sans-serif;">✓ Save Spelling Set</button>' +
         '<button onclick="createSpellingSetPlain()" style="border:1px solid var(--line);background:var(--navy-3);color:var(--text-secondary);font-weight:800;font-size:11px;padding:11px 16px;border-radius:12px;cursor:pointer;font-family:\'Lexend\',sans-serif;">Save without AI (words only)</button>' +
       '</div>' +
@@ -7760,6 +7762,93 @@ async function deleteSpellingSet(setId) {
     _activeSpellingSetId = null;
     await renderSpellingSetsTab();
   } catch(e) { alert('Error: ' + (e.message || e)); }
+}
+
+// --- Suggested Spelling Sets state ---
+var _suggestedCombos = null;
+var _suggestedIndex = null;
+var _suggestedSelected = null;   // { id, type }
+var _suggestedEdits = null;      // { s2e: [...], s2l: [...], ... }
+var _suggestedModalEl = null;
+
+function _suggestedBuildModal(){
+  var overlay = document.createElement('div');
+  overlay.id = 'suggestedModal';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-labelledby', 'suggestedTitle');
+  overlay.style.cssText = 'display:none;position:fixed;inset:0;z-index:9000;background:rgba(15,23,42,0.82);backdrop-filter:blur(6px);padding:24px;overflow:auto;';
+
+  var card = document.createElement('div');
+  card.style.cssText = 'max-width:1100px;margin:0 auto;background:var(--navy-2);border:1px solid var(--line);border-radius:16px;padding:22px;color:var(--text);';
+
+  var headerRow = document.createElement('div');
+  headerRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;';
+
+  var title = document.createElement('h2');
+  title.id = 'suggestedTitle';
+  title.style.cssText = 'margin:0;font-size:20px;font-weight:900;';
+  title.textContent = 'Suggested Spelling Sets';
+
+  var closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.setAttribute('aria-label', 'Close');
+  closeBtn.style.cssText = 'border:none;background:transparent;color:var(--text-secondary);font-size:26px;cursor:pointer;line-height:1;';
+  closeBtn.textContent = '\u00d7';
+  closeBtn.onclick = function(){ suggestedClose(); };
+
+  headerRow.appendChild(title);
+  headerRow.appendChild(closeBtn);
+
+  var bodyEl = document.createElement('div');
+  bodyEl.id = 'suggestedBody';
+
+  card.appendChild(headerRow);
+  card.appendChild(bodyEl);
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', function(e){
+    if (e.target === overlay) suggestedClose();
+  });
+
+  return overlay;
+}
+
+async function suggestedOpen(){
+  if (!_suggestedModalEl) _suggestedModalEl = _suggestedBuildModal();
+  _suggestedModalEl.style.display = '';
+  document.body.style.overflow = 'hidden';
+  var body = document.getElementById('suggestedBody');
+  body.textContent = 'Loading morphemes and combos\u2026';
+  try {
+    if (!_suggestedCombos) {
+      var res = await fetch('valid-combos.json');
+      _suggestedCombos = await res.json();
+    }
+    if (!_suggestedIndex) {
+      if (!window.WLSuggested || !window.MORPHEMES) {
+        throw new Error('Required modules not loaded (WLSuggested or MORPHEMES).');
+      }
+      _suggestedIndex = window.WLSuggested.buildMorphemeIndex(window.MORPHEMES);
+    }
+    suggestedRenderGrid();
+  } catch(e){
+    body.textContent = 'Error: ' + (e.message || e);
+  }
+}
+
+function suggestedClose(){
+  if (_suggestedModalEl) _suggestedModalEl.style.display = 'none';
+  document.body.style.overflow = '';
+  _suggestedSelected = null;
+  _suggestedEdits = null;
+}
+
+function suggestedRenderGrid(){
+  // stub — populated in Task 8
+  var body = document.getElementById('suggestedBody');
+  body.textContent = 'Loaded ' + _suggestedIndex.length + ' morphemes. Grid coming next.';
 }
 
 // ── Boot ─────────────────────────────────────────────────────────
