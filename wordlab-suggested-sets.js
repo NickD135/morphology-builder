@@ -128,10 +128,16 @@
     var morpheme = _findMorpheme(morphemeId, type, morphemes);
     var homeStage = morpheme && morpheme.stage ? morpheme.stage : null;
 
-    var pool = getCombosForMorpheme(morphemeId, type, combos);
-    pool.sort(function(a, b){
+    var rawPool = getCombosForMorpheme(morphemeId, type, combos);
+    rawPool.sort(function(a, b){
       return scoreCombo(a, stageMap) - scoreCombo(b, stageMap);
     });
+    // Deduplicate by word — different morpheme paths can produce the same word
+    var pool = [];
+    var seenWords = {};
+    for (var i = 0; i < rawPool.length; i++){
+      if (!seenWords[rawPool[i].word]) { seenWords[rawPool[i].word] = true; pool.push(rawPool[i]); }
+    }
 
     var out = {};
     STAGE_ORDER.forEach(function(s){
