@@ -8089,9 +8089,54 @@ function suggestedRenderLevelList(stage){
   });
 }
 
-function suggestedSaveLevel(stage){
-  // stub — populated in Task 10
-  alert('TODO: save & assign ' + stage + ' — ' + (_suggestedEdits[stage] || []).join(', '));
+async function suggestedSaveLevel(stage){
+  if (!currentClass) { alert('No class selected.'); return; }
+  var words = (_suggestedEdits[stage] || []).filter(Boolean);
+  if (!words.length) { alert('This list is empty \u2014 add some words first.'); return; }
+
+  var allStudents = (currentClass && currentClass.students) || [];
+  var targets = allStudents.filter(function(s){ return s.stage === stage; });
+
+  if (!targets.length){
+    var proceed = confirm('No students are at ' + window.WLStage.STAGE_NAMES[stage] + ' in this class. Save the set without assigning?');
+    if (!proceed) return;
+  }
+
+  var meta = _suggestedSelected || { id: 'unknown', type: 'base' };
+  var nameEl = document.getElementById('sugName-' + stage);
+  var fallbackName = meta.id + ' \u2014 ' + window.WLStage.STAGE_NAMES[stage];
+  var setName = nameEl ? ((nameEl.value || '').trim() || fallbackName) : fallbackName;
+
+  var maxNum = _spellingSets.reduce(function(m, s){ return Math.max(m, s.set_number || 0); }, 0);
+  var setNumber = maxNum + 1;
+
+  try {
+    var insertRes = await dbSb().from('class_spelling_sets').insert({
+      class_id: currentClass.id,
+      name: setName,
+      set_number: setNumber,
+      words: words
+    }).select('id').single();
+    if (insertRes.error) throw insertRes.error;
+    var setId = insertRes.data.id;
+
+    if (targets.length){
+      var rows = targets.map(function(s){ return { spelling_set_id: setId, student_id: s.id }; });
+      var assignRes = await dbSb().from('spelling_set_assignments').upsert(rows, { onConflict: 'spelling_set_id,student_id' });
+      if (assignRes.error) throw assignRes.error;
+    }
+
+    var msg = '"' + setName + '" saved with ' + words.length + ' words';
+    msg += targets.length
+      ? ' and assigned to ' + targets.length + ' ' + window.WLStage.STAGE_NAMES[stage] + ' student(s).'
+      : '.';
+    alert(msg);
+
+    _activeSpellingSetId = setId;
+    await renderSpellingSetsTab();
+  } catch(e){
+    alert('Error saving: ' + (e.message || e));
+  }
 }
 
 // ── Boot ─────────────────────────────────────────────────────────
