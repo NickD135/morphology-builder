@@ -175,21 +175,28 @@
   function enrichWords(wordList, ctx){
     var morphemes = (ctx && ctx.morphemes) || { prefixes:[], bases:[], suffixes:[] };
     var combos = (ctx && ctx.combos) || [];
+    var phonemeData = (ctx && ctx.phonemeData) || {};
     var comboMap = {};
     for (var i = 0; i < combos.length; i++){
       if (!comboMap[combos[i].word]) comboMap[combos[i].word] = combos[i];
     }
     return wordList.map(function(w){
       var combo = comboMap[w];
-      if (!combo) return { word: w };
-      return {
-        word: combo.word,
-        prefix: combo.p || '',
-        base: combo.b || '',
-        suffix1: combo.s1 || '',
-        suffix2: combo.s2 || '',
-        clue: _buildClue(combo, morphemes)
+      var pd = phonemeData[w];
+      if (!combo && !pd) return { word: w };
+      var obj = {
+        word: w,
+        prefix: combo ? (combo.p || '') : '',
+        base: combo ? (combo.b || '') : '',
+        suffix1: combo ? (combo.s1 || '') : '',
+        suffix2: combo ? (combo.s2 || '') : '',
+        clue: combo ? _buildClue(combo, morphemes) : ''
       };
+      if (pd){
+        if (pd.syllables) obj.syllables = pd.syllables;
+        if (pd.phonemes) obj.phonemes = pd.phonemes;
+      }
+      return obj;
     });
   }
 

@@ -294,6 +294,16 @@ test('enrichWords — unknown word gets minimal {word} object', function(){
   assert.strictEqual(result[0].prefix, undefined);
 });
 
+test('enrichWords — merges phonemeData when provided', function(){
+  var combos = [{ p:null, b:'happy', s1:null, s2:null, word:'happy' }];
+  var morphemes = { prefixes:[], bases:[{id:'happy',stage:'s2e',meaning:'feeling good'}], suffixes:[] };
+  var pd = { happy: { syllables:['hap','py'], phonemes:['h','a','pp','y'] } };
+  var result = WL.enrichWords(['happy'], { morphemes:morphemes, combos:combos, phonemeData:pd });
+  assert.deepStrictEqual(result[0].syllables, ['hap','py']);
+  assert.deepStrictEqual(result[0].phonemes, ['h','a','pp','y']);
+  assert.strictEqual(result[0].base, 'happy');
+});
+
 test('enrichWords — mixed known and unknown', function(){
   var result = WL.enrichWords(['scope', 'xylophone'], {
     morphemes: FIXTURE_MORPHEMES_FULL,

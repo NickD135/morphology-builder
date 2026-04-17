@@ -7766,6 +7766,7 @@ async function deleteSpellingSet(setId) {
 
 // --- Suggested Spelling Sets state ---
 var _suggestedCombos = null;
+var _suggestedPhonemeData = null;
 var _suggestedIndex = null;
 var _suggestedSelected = null;   // { id, type }
 var _suggestedEdits = null;      // { s2e: [...], s2l: [...], ... }
@@ -7830,6 +7831,12 @@ async function suggestedOpen(){
       var res = await fetch('valid-combos.json');
       if (!res.ok) throw new Error('Failed to load valid-combos.json (' + res.status + ')');
       _suggestedCombos = await res.json();
+    }
+    if (!_suggestedPhonemeData) {
+      try {
+        var pdRes = await fetch('word-phoneme-data.json');
+        if (pdRes.ok) _suggestedPhonemeData = await pdRes.json();
+      } catch(e) { /* non-critical — enrichment works without it */ }
     }
     if (!_suggestedIndex) {
       if (!window.WLSuggested || !window.MORPHEMES) {
@@ -8151,7 +8158,8 @@ async function suggestedSaveLevel(stage){
 
   var enrichedWords = window.WLSuggested.enrichWords(words, {
     morphemes: window.MORPHEMES,
-    combos: _suggestedCombos
+    combos: _suggestedCombos,
+    phonemeData: _suggestedPhonemeData
   });
 
   var maxNum = _spellingSets.reduce(function(m, s){ return Math.max(m, s.set_number || 0); }, 0);
