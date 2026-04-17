@@ -7967,8 +7967,131 @@ function suggestedRenderGrid(){
 }
 
 function suggestedSelectMorpheme(id, type){
-  // stub — populated in Task 9
-  console.log('TODO: render detail for', id, type);
+  _suggestedSelected = { id: id, type: type };
+  var result = window.WLSuggested.buildAllLevels(id, type, {
+    morphemes: window.MORPHEMES,
+    combos: _suggestedCombos
+  });
+
+  _suggestedEdits = {
+    s2e: result.s2e.slice(),
+    s2l: result.s2l.slice(),
+    s3e: result.s3e.slice(),
+    s3l: result.s3l.slice(),
+    s4:  result.s4.slice()
+  };
+
+  var body = document.getElementById('suggestedBody');
+  while (body.firstChild) body.removeChild(body.firstChild);
+
+  var meta = result.meta.morpheme || { display: id, meaning: '' };
+  var homeLbl = result.meta.homeStage
+    ? (window.WLStage.STAGE_NAMES[result.meta.homeStage] + ' (' + result.meta.homeStage + ')')
+    : 'unassigned';
+
+  // --- Header row ---
+  var header = document.createElement('div');
+  header.style.cssText = 'display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px;';
+
+  var headerH = document.createElement('h3');
+  headerH.style.cssText = 'margin:0;font-size:22px;font-weight:900;';
+  var typeLabel = type === 'prefix' ? ' (prefix)' : type === 'suffix' ? ' (suffix)' : ' (base)';
+  headerH.textContent = meta.display + typeLabel;
+
+  var headerMeaning = document.createElement('div');
+  headerMeaning.style.cssText = 'color:var(--text-secondary);font-size:13px;';
+  headerMeaning.textContent = (meta.meaning ? meta.meaning + ' \u00b7 ' : '')
+    + 'home: ' + homeLbl + ' \u00b7 ' + result.meta.poolSize + ' combos';
+
+  var back = document.createElement('button');
+  back.type = 'button';
+  back.style.cssText = 'margin-left:auto;border:1px solid var(--line);background:var(--navy-3);color:var(--text);font-weight:700;font-size:12px;padding:7px 12px;border-radius:8px;cursor:pointer;font-family:\'Lexend\',sans-serif;';
+  back.textContent = '\u2190 Back to morphemes';
+  back.addEventListener('click', function(){ suggestedRenderGrid(); });
+
+  header.appendChild(headerH);
+  header.appendChild(headerMeaning);
+  header.appendChild(back);
+  body.appendChild(header);
+
+  // --- 5 level columns ---
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(5,1fr);gap:10px;';
+  body.appendChild(grid);
+
+  window.WLSuggested.STAGE_ORDER.forEach(function(stage){
+    var col = document.createElement('div');
+    col.style.cssText = 'background:var(--navy-3);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:260px;';
+
+    var colTitle = document.createElement('div');
+    colTitle.style.cssText = 'font-weight:900;font-size:14px;';
+    colTitle.textContent = window.WLStage.STAGE_NAMES[stage];
+
+    var colSub = document.createElement('div');
+    colSub.style.cssText = 'font-size:11px;color:var(--text-secondary);';
+    colSub.textContent = window.WLStage.STAGE_LABELS[stage];
+
+    col.appendChild(colTitle);
+    col.appendChild(colSub);
+
+    var listWrap = document.createElement('div');
+    listWrap.id = 'sugList-' + stage;
+    listWrap.style.cssText = 'display:flex;flex-direction:column;gap:4px;flex:1;';
+    col.appendChild(listWrap);
+
+    var assignBtn = document.createElement('button');
+    assignBtn.type = 'button';
+    assignBtn.style.cssText = 'margin-top:auto;border:none;background:var(--indigo);color:#fff;font-weight:800;font-size:12px;padding:9px;border-radius:9px;cursor:pointer;font-family:\'Lexend\',sans-serif;';
+    assignBtn.textContent = 'Save & assign';
+    assignBtn.addEventListener('click', (function(s){ return function(){ suggestedSaveLevel(s); }; })(stage));
+    col.appendChild(assignBtn);
+
+    grid.appendChild(col);
+    suggestedRenderLevelList(stage);
+  });
+}
+
+function suggestedRenderLevelList(stage){
+  var wrap = document.getElementById('sugList-' + stage);
+  if (!wrap) return;
+  while (wrap.firstChild) wrap.removeChild(wrap.firstChild);
+
+  var words = _suggestedEdits[stage] || [];
+  if (!words.length){
+    var empty = document.createElement('div');
+    empty.style.cssText = 'color:var(--text-secondary);font-size:12px;font-style:italic;padding:6px 0;';
+    empty.textContent = 'No words for this stage.';
+    wrap.appendChild(empty);
+    return;
+  }
+
+  words.forEach(function(w, i){
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;background:var(--navy-2);border-radius:6px;padding:5px 8px;';
+
+    var label = document.createElement('span');
+    label.style.cssText = 'flex:1;font-size:13px;';
+    label.textContent = w;
+
+    var del = document.createElement('button');
+    del.type = 'button';
+    del.setAttribute('aria-label', 'Remove ' + w);
+    del.style.cssText = 'border:none;background:transparent;color:var(--text-secondary);font-size:16px;cursor:pointer;line-height:1;';
+    del.textContent = '\u00d7';
+    del.addEventListener('click', (function(idx){ return function(){
+      _suggestedEdits[stage].splice(idx, 1);
+      suggestedRenderLevelList(stage);
+    }; })(i));
+
+    row.appendChild(label);
+    row.appendChild(del);
+    wrap.appendChild(row);
+  });
+}
+
+function suggestedSaveLevel(stage){
+  // stub — populated in Task 10
+  alert('TODO: save & assign ' + stage + ' — ' + (_suggestedEdits[stage] || []).join(', '));
 }
 
 // ── Boot ─────────────────────────────────────────────────────────
