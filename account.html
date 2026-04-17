@@ -216,6 +216,13 @@
             <button id="editSchoolBtn" class="editInlineBtn" aria-label="Edit school name">Edit</button>
           </div>
         </div>
+        <div class="row">
+          <div class="rowLabel">Postcode</div>
+          <div class="rowValue" id="acctPostcodeRow">
+            <span id="acctPostcode">—</span>
+            <button id="editPostcodeBtn" class="editInlineBtn" aria-label="Edit postcode">Edit</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -485,7 +492,7 @@ async function initAccount() {
   _schoolId = teacher.school_id;
   const { data: school } = await WordLabData._sb()
     .from('schools')
-    .select('name, plan, trial_ends_at, student_limit, stripe_customer_id')
+    .select('name, plan, trial_ends_at, student_limit, stripe_customer_id, postcode')
     .eq('id', teacher.school_id)
     .maybeSingle();
 
@@ -497,6 +504,27 @@ async function initAccount() {
   // Populate account info
   document.getElementById('acctEmail').textContent = user.email;
   document.getElementById('acctSchool').textContent = school.name || '—';
+  var pcEl = document.getElementById('acctPostcode');
+  if (pcEl) pcEl.textContent = school.postcode || '—';
+
+  // Backfill prompt for schools without postcode
+  if (!school.postcode) {
+    var banner = document.createElement('div');
+    banner.style.cssText = 'background:rgba(217,119,6,.1);border:1px solid rgba(217,119,6,.2);border-radius:10px;padding:10px 14px;margin:12px 0;font-size:13px;color:#fbbf24;display:flex;align-items:center;gap:10px;flex-wrap:wrap;';
+    var bannerText = document.createElement('span');
+    bannerText.textContent = 'Add your school postcode so colleagues can find your school when signing up.';
+    var addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.style.cssText = 'border:none;background:#d97706;color:#fff;font-weight:700;font-size:12px;padding:6px 12px;border-radius:6px;cursor:pointer;font-family:inherit;';
+    addBtn.textContent = 'Add postcode';
+    addBtn.addEventListener('click', editPostcode);
+    banner.appendChild(bannerText);
+    banner.appendChild(addBtn);
+    var schoolRow = document.getElementById('acctPostcode').closest('.row');
+    if (schoolRow && schoolRow.parentElement) {
+      schoolRow.parentElement.insertBefore(banner, schoolRow.nextSibling);
+    }
+  }
 
   // Plan badge
   const plan = school.plan || 'trial';
@@ -698,6 +726,44 @@ async function editSchoolName() {
   }
 }
 
+async function editPostcode() {
+  var current = document.getElementById('acctPostcode').textContent;
+  var newPostcode = await wlInputModal({
+    title: 'Edit school postcode',
+    body: 'Your 4-digit Australian postcode helps distinguish schools with the same name.',
+    placeholder: 'e.g. 2150',
+    defaultValue: current === '\u2014' ? '' : current,
+    confirmText: 'Save',
+    validate: function(v) {
+      if (!v || !v.trim()) return 'Please enter a postcode.';
+      if (!/^\d{4}$/.test(v.trim())) return 'Postcode must be 4 digits.';
+      if (v.trim() === current) return 'Postcode is unchanged.';
+      return true;
+    }
+  });
+  if (!newPostcode || !_schoolId) return;
+
+  try {
+    var { error } = await WordLabData._sb()
+      .from('schools')
+      .update({ postcode: newPostcode.trim() })
+      .eq('id', _schoolId);
+    if (error) {
+      wlToast('Could not update postcode. Please try again.', 'err');
+    } else {
+      document.getElementById('acctPostcode').textContent = newPostcode.trim();
+      wlToast('Postcode updated.', 'ok');
+      // Remove backfill banner if present
+      var banner = document.getElementById('acctPostcode').closest('.row');
+      if (banner && banner.nextSibling && banner.nextSibling.textContent && banner.nextSibling.textContent.indexOf('postcode') !== -1) {
+        banner.nextSibling.remove();
+      }
+    }
+  } catch(e) {
+    wlToast('Something went wrong. Please try again.', 'err');
+  }
+}
+
 async function loadTeamInfo() {
   if (!_schoolId) return;
   try {
@@ -824,6 +890,7 @@ async function deleteAccount() {
 // Bind buttons via addEventListener (no inline onclick)
 document.getElementById('signOutBtn').addEventListener('click', function() { WordLabData.teacherSignOut(); });
 document.getElementById('editSchoolBtn').addEventListener('click', editSchoolName);
+document.getElementById('editPostcodeBtn').addEventListener('click', editPostcode);
 document.getElementById('copyCodeBtn').addEventListener('click', copyInviteCode);
 document.getElementById('changePwBtn').addEventListener('click', changePassword);
 document.getElementById('portalBtn').addEventListener('click', openPortal);
