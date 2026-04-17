@@ -81,5 +81,37 @@ test('getCombosForMorpheme returns [] for unknown id', function(){
   assert.deepStrictEqual(WL.getCombosForMorpheme('nope', 'base', FIXTURE_COMBOS), []);
 });
 
+// --- Task 3 tests ---
+
+var FIXTURE_STAGE_MAP = {
+  prefix: { tele:'s3l', micro:'s3l', re:'s2e', un:'s2e' },
+  base:   { scope:'s3l', act:'s2e' },
+  suffix: { s:'s2e', ed:'s2e', ing:'s2e', ion:'s3e', ive:'s3e' }
+};
+
+test('scoreCombo returns a number', function(){
+  var c = { p:null, b:'act', s1:null, s2:null, word:'act' };
+  assert.strictEqual(typeof WL.scoreCombo(c, FIXTURE_STAGE_MAP), 'number');
+});
+
+test('scoreCombo — higher stage scores higher', function(){
+  var easy = { p:null, b:'act', s1:null, s2:null, word:'act' };
+  var hard = { p:'tele', b:'scope', s1:null, s2:null, word:'telescope' };
+  assert.ok(WL.scoreCombo(hard, FIXTURE_STAGE_MAP) > WL.scoreCombo(easy, FIXTURE_STAGE_MAP));
+});
+
+test('scoreCombo — ties on stage broken by length', function(){
+  var short = { p:null, b:'act', s1:null,  s2:null, word:'act' };
+  var long  = { p:null, b:'act', s1:'ing', s2:null, word:'acting' };
+  assert.ok(WL.scoreCombo(long, FIXTURE_STAGE_MAP) > WL.scoreCombo(short, FIXTURE_STAGE_MAP));
+});
+
+test('scoreCombo — unknown stage defaults to idx 0 (easiest)', function(){
+  var unknown = { p:null, b:'xxxx', s1:null, s2:null, word:'xxxx' };
+  var known = { p:null, b:'scope', s1:null, s2:null, word:'scope' };
+  assert.ok(WL.scoreCombo(unknown, FIXTURE_STAGE_MAP) < WL.scoreCombo(known, FIXTURE_STAGE_MAP),
+    'unknown bases should sort before known s3l bases');
+});
+
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 process.exit(failed > 0 ? 1 : 0);

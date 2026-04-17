@@ -51,11 +51,39 @@
     });
   }
 
+  function scoreCombo(combo, stageMap){
+    if (!combo) return 0;
+    var maxIdx = 0;
+    var tryStage = function(id, kind){
+      if (!id) return;
+      var stage = stageMap[kind] && stageMap[kind][id];
+      if (!stage) return;
+      var idx = stageIndex(stage);
+      if (idx > maxIdx) maxIdx = idx;
+    };
+    tryStage(combo.p,  'prefix');
+    tryStage(combo.b,  'base');
+    tryStage(combo.s1, 'suffix');
+    tryStage(combo.s2, 'suffix');
+
+    var morphCount = 0;
+    if (combo.p)  morphCount++;
+    if (combo.b)  morphCount++;
+    if (combo.s1) morphCount++;
+    if (combo.s2) morphCount++;
+    var word = combo.word || '';
+    var len = word.length;
+    var firstChar = word.length ? word.charCodeAt(0) : 97;
+
+    return maxIdx * 1e6 + len * 1e3 + morphCount * 100 + (firstChar / 1000);
+  }
+
   global.WLSuggested = {
     STAGE_ORDER: STAGE_ORDER,
     stageIndex: stageIndex,
     buildMorphemeIndex: buildMorphemeIndex,
-    getCombosForMorpheme: getCombosForMorpheme
+    getCombosForMorpheme: getCombosForMorpheme,
+    scoreCombo: scoreCombo
   };
 })(typeof window !== 'undefined' ? window : global);
 
