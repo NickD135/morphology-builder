@@ -96,7 +96,15 @@
     var distance = targetIdx - homeIdx;
     var cfg = distanceConfig(distance);
     var L = sortedPool.length;
-    var N = Math.min(cfg.size, L);
+    // For small pools (≤10), scale target size proportionally so lower levels
+    // still get fewer words. Without this, a pool of 5 gives all 5 to every level.
+    var N;
+    if (L <= 10){
+      N = Math.max(Math.ceil(L * 0.4), Math.floor(cfg.size * L / 10));
+      N = Math.min(N, L);
+    } else {
+      N = Math.min(cfg.size, L);
+    }
 
     var anchor = Math.round(cfg.anchorRatio * (L - 1));
     var start = anchor - Math.floor(N / 2);
