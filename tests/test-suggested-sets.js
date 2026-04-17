@@ -42,5 +42,44 @@ test('buildMorphemeIndex handles null input', function(){
   assert.deepStrictEqual(WL.buildMorphemeIndex(null), []);
 });
 
+// --- Task 2 tests ---
+
+var FIXTURE_COMBOS = [
+  { p:null,   b:'scope', s1:null, s2:null, word:'scope' },
+  { p:null,   b:'scope', s1:'s',  s2:null, word:'scopes' },
+  { p:null,   b:'scope', s1:'ed', s2:null, word:'scoped' },
+  { p:'tele', b:'scope', s1:null, s2:null, word:'telescope' },
+  { p:'micro',b:'scope', s1:null, s2:null, word:'microscope' },
+  { p:null,   b:'act',   s1:null, s2:null, word:'act' },
+  { p:'re',   b:'act',   s1:null, s2:null, word:'react' },
+  { p:null,   b:'act',   s1:'ing',s2:null, word:'acting' }
+];
+
+test('getCombosForMorpheme base — returns only combos with b === id', function(){
+  var out = WL.getCombosForMorpheme('scope', 'base', FIXTURE_COMBOS);
+  assert.strictEqual(out.length, 5);
+  assert.ok(out.every(function(c){ return c.b === 'scope'; }));
+});
+
+test('getCombosForMorpheme prefix — returns only combos with p === id', function(){
+  var out = WL.getCombosForMorpheme('re', 'prefix', FIXTURE_COMBOS);
+  assert.strictEqual(out.length, 1);
+  assert.strictEqual(out[0].word, 'react');
+});
+
+test('getCombosForMorpheme suffix — matches s1 OR s2', function(){
+  var combos = [
+    { p:null, b:'act', s1:'ion', s2:null, word:'action' },
+    { p:null, b:'nat', s1:'ion', s2:'s',  word:'nations' },
+    { p:null, b:'act', s1:'ive', s2:'ion',word:'activation' }
+  ];
+  var out = WL.getCombosForMorpheme('ion', 'suffix', combos);
+  assert.strictEqual(out.length, 3);
+});
+
+test('getCombosForMorpheme returns [] for unknown id', function(){
+  assert.deepStrictEqual(WL.getCombosForMorpheme('nope', 'base', FIXTURE_COMBOS), []);
+});
+
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 process.exit(failed > 0 ? 1 : 0);

@@ -41,10 +41,21 @@
     return out;
   }
 
+  function getCombosForMorpheme(id, type, combos){
+    if (!id || !combos) return [];
+    return combos.filter(function(c){
+      if (type === 'prefix') return c.p === id;
+      if (type === 'base')   return c.b === id;
+      if (type === 'suffix') return c.s1 === id || c.s2 === id;
+      return false;
+    });
+  }
+
   global.WLSuggested = {
     STAGE_ORDER: STAGE_ORDER,
     stageIndex: stageIndex,
-    buildMorphemeIndex: buildMorphemeIndex
+    buildMorphemeIndex: buildMorphemeIndex,
+    getCombosForMorpheme: getCombosForMorpheme
   };
 })(typeof window !== 'undefined' ? window : global);
 
