@@ -7770,6 +7770,8 @@ var _suggestedIndex = null;
 var _suggestedSelected = null;   // { id, type }
 var _suggestedEdits = null;      // { s2e: [...], s2l: [...], ... }
 var _suggestedModalEl = null;
+var _suggestedPrevOverflow = '';
+var _suggestedTrigger = null;
 
 function _suggestedBuildModal(){
   var overlay = document.createElement('div');
@@ -7816,14 +7818,17 @@ function _suggestedBuildModal(){
 }
 
 async function suggestedOpen(){
+  _suggestedTrigger = document.activeElement;
   if (!_suggestedModalEl) _suggestedModalEl = _suggestedBuildModal();
   _suggestedModalEl.style.display = '';
+  _suggestedPrevOverflow = document.body.style.overflow;
   document.body.style.overflow = 'hidden';
   var body = document.getElementById('suggestedBody');
   body.textContent = 'Loading morphemes and combos\u2026';
   try {
     if (!_suggestedCombos) {
       var res = await fetch('valid-combos.json');
+      if (!res.ok) throw new Error('Failed to load valid-combos.json (' + res.status + ')');
       _suggestedCombos = await res.json();
     }
     if (!_suggestedIndex) {
@@ -7833,17 +7838,23 @@ async function suggestedOpen(){
       _suggestedIndex = window.WLSuggested.buildMorphemeIndex(window.MORPHEMES);
     }
     suggestedRenderGrid();
+    _suggestedModalEl.querySelector('[aria-label="Close"]').focus();
   } catch(e){
     body.textContent = 'Error: ' + (e.message || e);
   }
 }
 
 function suggestedClose(){
+  if (_suggestedTrigger) { _suggestedTrigger.focus(); _suggestedTrigger = null; }
   if (_suggestedModalEl) _suggestedModalEl.style.display = 'none';
-  document.body.style.overflow = '';
+  document.body.style.overflow = _suggestedPrevOverflow || '';
   _suggestedSelected = null;
   _suggestedEdits = null;
 }
+
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape' && _suggestedModalEl && _suggestedModalEl.style.display !== 'none') suggestedClose();
+});
 
 function suggestedRenderGrid(){
   var body = document.getElementById('suggestedBody');
