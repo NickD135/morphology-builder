@@ -190,5 +190,82 @@ test('buildListForStage — adjacent levels overlap', function(){
   assert.ok(shared.length > 0, 'adjacent levels should share at least one word');
 });
 
+// --- Task 6 tests ---
+
+var FIXTURE_MORPHEMES_FULL = {
+  prefixes: [
+    { id:'un',    stage:'s2e', display:'un-',    meaning:'not',     examples:[] },
+    { id:'tele',  stage:'s3l', display:'tele-',  meaning:'far',     examples:[] },
+    { id:'micro', stage:'s3l', display:'micro-', meaning:'small',   examples:[] }
+  ],
+  bases: [
+    { id:'act',   stage:'s2e', display:'act',    meaning:'do',      examples:[] },
+    { id:'scope', stage:'s3l', display:'scope',  meaning:'look at', examples:[] }
+  ],
+  suffixes: [
+    { id:'s',   stage:'s2e', display:'-s',   meaning:'plural', examples:[] },
+    { id:'ed',  stage:'s2e', display:'-ed',  meaning:'past',   examples:[] },
+    { id:'ing', stage:'s2e', display:'-ing', meaning:'doing',  examples:[] },
+    { id:'ion', stage:'s3e', display:'-ion', meaning:'state',  examples:[] }
+  ]
+};
+
+var SCOPE_COMBOS = [
+  { p:null,   b:'scope', s1:null, s2:null, word:'scope' },
+  { p:null,   b:'scope', s1:'s',  s2:null, word:'scopes' },
+  { p:null,   b:'scope', s1:'ed', s2:null, word:'scoped' },
+  { p:null,   b:'scope', s1:'ing',s2:null, word:'scoping' },
+  { p:'tele', b:'scope', s1:null, s2:null, word:'telescope' },
+  { p:'tele', b:'scope', s1:'s',  s2:null, word:'telescopes' },
+  { p:'micro',b:'scope', s1:null, s2:null, word:'microscope' },
+  { p:'micro',b:'scope', s1:'s',  s2:null, word:'microscopes' }
+];
+
+test('buildAllLevels — returns 5 stage keys', function(){
+  var res = WL.buildAllLevels('scope', 'base', {
+    morphemes: FIXTURE_MORPHEMES_FULL,
+    combos: SCOPE_COMBOS
+  });
+  ['s2e','s2l','s3e','s3l','s4'].forEach(function(s){
+    assert.ok(Array.isArray(res[s]), s + ' present');
+  });
+});
+
+test('buildAllLevels — s2e for s3l-home morpheme is 5 easiest', function(){
+  var res = WL.buildAllLevels('scope', 'base', {
+    morphemes: FIXTURE_MORPHEMES_FULL,
+    combos: SCOPE_COMBOS
+  });
+  assert.strictEqual(res.s2e.length, 5);
+  assert.ok(res.s2e.indexOf('scope') !== -1);
+});
+
+test('buildAllLevels — s3l for s3l-home morpheme uses whole pool when pool<=size', function(){
+  var res = WL.buildAllLevels('scope', 'base', {
+    morphemes: FIXTURE_MORPHEMES_FULL,
+    combos: SCOPE_COMBOS
+  });
+  assert.strictEqual(res.s3l.length, 8);
+});
+
+test('buildAllLevels — meta carries homeStage + poolSize + morpheme', function(){
+  var res = WL.buildAllLevels('scope', 'base', {
+    morphemes: FIXTURE_MORPHEMES_FULL,
+    combos: SCOPE_COMBOS
+  });
+  assert.strictEqual(res.meta.homeStage, 's3l');
+  assert.strictEqual(res.meta.poolSize, 8);
+  assert.strictEqual(res.meta.morpheme.id, 'scope');
+});
+
+test('buildAllLevels — unknown morpheme returns empty lists', function(){
+  var res = WL.buildAllLevels('zzz', 'base', {
+    morphemes: FIXTURE_MORPHEMES_FULL,
+    combos: SCOPE_COMBOS
+  });
+  assert.deepStrictEqual(res.s2e, []);
+  assert.strictEqual(res.meta.poolSize, 0);
+});
+
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 process.exit(failed > 0 ? 1 : 0);

@@ -106,6 +106,50 @@
     return sortedPool.slice(start, end).map(function(c){ return c.word; });
   }
 
+  function _buildStageMap(morphemes){
+    var map = { prefix: {}, base: {}, suffix: {} };
+    (morphemes.prefixes || []).forEach(function(m){ if (m.stage) map.prefix[m.id] = m.stage; });
+    (morphemes.bases    || []).forEach(function(m){ if (m.stage) map.base[m.id]   = m.stage; });
+    (morphemes.suffixes || []).forEach(function(m){ if (m.stage) map.suffix[m.id] = m.stage; });
+    return map;
+  }
+
+  function _findMorpheme(id, type, morphemes){
+    var key = type === 'prefix' ? 'prefixes' : type === 'base' ? 'bases' : 'suffixes';
+    var list = morphemes[key] || [];
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return null;
+  }
+
+  function buildAllLevels(morphemeId, type, ctx){
+    var morphemes = (ctx && ctx.morphemes) || { prefixes:[], bases:[], suffixes:[] };
+    var combos = (ctx && ctx.combos) || [];
+    var stageMap = _buildStageMap(morphemes);
+    var morpheme = _findMorpheme(morphemeId, type, morphemes);
+    var homeStage = morpheme && morpheme.stage ? morpheme.stage : null;
+
+    var pool = getCombosForMorpheme(morphemeId, type, combos);
+    pool.sort(function(a, b){
+      return scoreCombo(a, stageMap) - scoreCombo(b, stageMap);
+    });
+
+    var out = {};
+    STAGE_ORDER.forEach(function(s){
+      out[s] = buildListForStage(pool, homeStage, s);
+    });
+    out.meta = {
+      homeStage: homeStage,
+      poolSize: pool.length,
+      morpheme: morpheme ? {
+        id: morpheme.id,
+        type: type,
+        display: morpheme.display || morpheme.id,
+        meaning: morpheme.meaning || ''
+      } : null
+    };
+    return out;
+  }
+
   global.WLSuggested = {
     STAGE_ORDER: STAGE_ORDER,
     stageIndex: stageIndex,
@@ -113,7 +157,8 @@
     getCombosForMorpheme: getCombosForMorpheme,
     scoreCombo: scoreCombo,
     distanceConfig: distanceConfig,
-    buildListForStage: buildListForStage
+    buildListForStage: buildListForStage,
+    buildAllLevels: buildAllLevels
   };
 })(typeof window !== 'undefined' ? window : global);
 
