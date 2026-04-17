@@ -156,6 +156,43 @@
     return out;
   }
 
+  function _morphemeMeaning(id, type, morphemes){
+    var key = type === 'prefix' ? 'prefixes' : type === 'base' ? 'bases' : 'suffixes';
+    var list = morphemes[key] || [];
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i].meaning || '';
+    return '';
+  }
+
+  function _buildClue(combo, morphemes){
+    var parts = [];
+    if (combo.p) parts.push(combo.p + '- (' + _morphemeMeaning(combo.p, 'prefix', morphemes) + ')');
+    if (combo.b) parts.push(combo.b + ' (' + _morphemeMeaning(combo.b, 'base', morphemes) + ')');
+    if (combo.s1) parts.push('-' + combo.s1 + ' (' + _morphemeMeaning(combo.s1, 'suffix', morphemes) + ')');
+    if (combo.s2) parts.push('-' + combo.s2 + ' (' + _morphemeMeaning(combo.s2, 'suffix', morphemes) + ')');
+    return parts.join(' + ');
+  }
+
+  function enrichWords(wordList, ctx){
+    var morphemes = (ctx && ctx.morphemes) || { prefixes:[], bases:[], suffixes:[] };
+    var combos = (ctx && ctx.combos) || [];
+    var comboMap = {};
+    for (var i = 0; i < combos.length; i++){
+      if (!comboMap[combos[i].word]) comboMap[combos[i].word] = combos[i];
+    }
+    return wordList.map(function(w){
+      var combo = comboMap[w];
+      if (!combo) return { word: w };
+      return {
+        word: combo.word,
+        prefix: combo.p || '',
+        base: combo.b || '',
+        suffix1: combo.s1 || '',
+        suffix2: combo.s2 || '',
+        clue: _buildClue(combo, morphemes)
+      };
+    });
+  }
+
   global.WLSuggested = {
     STAGE_ORDER: STAGE_ORDER,
     stageIndex: stageIndex,
@@ -164,7 +201,8 @@
     scoreCombo: scoreCombo,
     distanceConfig: distanceConfig,
     buildListForStage: buildListForStage,
-    buildAllLevels: buildAllLevels
+    buildAllLevels: buildAllLevels,
+    enrichWords: enrichWords
   };
 })(typeof window !== 'undefined' ? window : global);
 

@@ -267,5 +267,42 @@ test('buildAllLevels — unknown morpheme returns empty lists', function(){
   assert.strictEqual(res.meta.poolSize, 0);
 });
 
+// --- enrichWords tests ---
+
+test('enrichWords — known combo gets structured object with clue', function(){
+  var combos = [{ p:'un', b:'happy', s1:'ness', s2:null, word:'unhappiness' }];
+  var morphemes = {
+    prefixes: [{ id:'un', stage:'s2e', meaning:'not' }],
+    bases: [{ id:'happy', stage:'s2e', meaning:'feeling good' }],
+    suffixes: [{ id:'ness', stage:'s2e', meaning:'state of' }]
+  };
+  var result = WL.enrichWords(['unhappiness'], { morphemes: morphemes, combos: combos });
+  assert.strictEqual(result.length, 1);
+  assert.strictEqual(result[0].word, 'unhappiness');
+  assert.strictEqual(result[0].prefix, 'un');
+  assert.strictEqual(result[0].base, 'happy');
+  assert.strictEqual(result[0].suffix1, 'ness');
+  assert.strictEqual(result[0].suffix2, '');
+  assert.ok(result[0].clue.indexOf('not') !== -1, 'clue contains prefix meaning');
+  assert.ok(result[0].clue.indexOf('feeling good') !== -1, 'clue contains base meaning');
+});
+
+test('enrichWords — unknown word gets minimal {word} object', function(){
+  var result = WL.enrichWords(['xylophone'], { morphemes: FIXTURE_MORPHEMES_FULL, combos: SCOPE_COMBOS });
+  assert.strictEqual(result.length, 1);
+  assert.strictEqual(result[0].word, 'xylophone');
+  assert.strictEqual(result[0].prefix, undefined);
+});
+
+test('enrichWords — mixed known and unknown', function(){
+  var result = WL.enrichWords(['scope', 'xylophone'], {
+    morphemes: FIXTURE_MORPHEMES_FULL,
+    combos: SCOPE_COMBOS
+  });
+  assert.strictEqual(result[0].base, 'scope');
+  assert.strictEqual(result[1].word, 'xylophone');
+  assert.strictEqual(result[1].base, undefined);
+});
+
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 process.exit(failed > 0 ? 1 : 0);
