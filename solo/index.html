@@ -917,7 +917,10 @@ function App(){
   const [selectedClassId,setSelectedClassId]=useState(null);
   const [loading,setLoading]=useState(false);
   const [loginMode,setLoginMode]=useState("student"); // "student" | "teacher"
-  const [loginCode,setLoginCode]=useState("");      // student_code
+  const [loginClassCode,setLoginClassCode]=useState(""); // class code (step 1)
+  const [loginClassObj,setLoginClassObj]=useState(null);  // resolved class {id,name}
+  const [loginStep,setLoginStep]=useState("class");       // "class" | "student"
+  const [loginCode,setLoginCode]=useState("");      // student_code (step 2)
   const [loginEmail,setLoginEmail]=useState("");    // teacher email
   const [loginPassword,setLoginPassword]=useState(""); // teacher password
   const [view,setView]=useState("login");
@@ -941,6 +944,20 @@ function App(){
   const [pretestAns,setPretestAns]=useState({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
   const [pretestResults,setPretestResults]=useState(null);
 
+  async function doClassLookup(){
+    setLoginError("");
+    const code=loginClassCode.trim().toUpperCase();
+    if(!code){setLoginError("Enter your class code.");return;}
+    setLoading(true);
+    const {data:cls,error}=await sb.from("classes").select("id,name").eq("class_code",code).single();
+    if(error||!cls){setLoginError("Class code not recognised.");setLoading(false);return;}
+    setLoginClassObj(cls);
+    setLoginStep("student");
+    setLoginCode("");
+    setLoginError("");
+    setLoading(false);
+  }
+
   async function doLogin(){
     setLoginError("");
     if(loginMode==="teacher"){
@@ -960,8 +977,8 @@ function App(){
       const code=loginCode.trim().toUpperCase();
       if(!code){setLoginError("Enter your student code.");return;}
       setLoading(true);
-      const {data:student,error}=await sb.from("students").select("id,name,class_id").eq("student_code",code).single();
-      if(error||!student){setLoginError("Student code not recognised.");setLoading(false);return;}
+      const {data:student,error}=await sb.from("students").select("id,name,class_id").eq("student_code",code).eq("class_id",loginClassObj.id).single();
+      if(error||!student){setLoginError("Student code not recognised in this class.");setLoading(false);return;}
       const prog=buildEmptyProgress([student]);
       const {data:rows}=await sb.from("solo_progress").select("outcome_key").eq("student_id",student.id).eq("completed",true);
       rows?.forEach(r=>{if(prog[student.id])prog[student.id][r.outcome_key]=true;});
@@ -996,7 +1013,7 @@ function App(){
 
   function doLogout(){
     sb.auth.signOut();
-    setView("login");setStudentId(null);setIsTeacher(false);setLoginCode("");setLoginEmail("");setLoginPassword("");setLoginError("");setSelectedUnit(null);setTeacherFocus(null);setStudents([]);setClasses([]);setSelectedClassId(null);setProgress({});setLoginMode("student");
+    setView("login");setStudentId(null);setIsTeacher(false);setLoginClassCode("");setLoginClassObj(null);setLoginStep("class");setLoginCode("");setLoginEmail("");setLoginPassword("");setLoginError("");setSelectedUnit(null);setTeacherFocus(null);setStudents([]);setClasses([]);setSelectedClassId(null);setProgress({});setLoginMode("student");
   }
 
   function startPretest(){
@@ -1125,13 +1142,28 @@ function App(){
       </div>
       <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:"1.25rem",marginBottom:12}}>
         {loginMode==="student"?(
-          <>
-            <label style={{display:"block",fontSize:12,fontWeight:600,color:"#475569",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.04em"}}>Student code</label>
-            <input autoFocus value={loginCode} onChange={e=>setLoginCode(e.target.value.toUpperCase())}
-              onKeyDown={e=>e.key==="Enter"&&doLogin()}
-              placeholder="e.g. AB3X" maxLength={6}
-              style={{width:"100%",boxSizing:"border-box",padding:"9px 12px",border:"1px solid #cbd5e1",borderRadius:8,fontSize:16,fontFamily:"monospace",letterSpacing:"0.1em",marginBottom:loginError?8:12,outline:"none"}}/>
-          </>
+          loginStep==="class"?(
+            <>
+              <label style={{display:"block",fontSize:12,fontWeight:600,color:"#475569",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.04em"}}>Class code</label>
+              <input autoFocus value={loginClassCode} onChange={e=>setLoginClassCode(e.target.value.toUpperCase())}
+                onKeyDown={e=>e.key==="Enter"&&doClassLookup()}
+                placeholder="e.g. AB3X2Y" maxLength={8}
+                style={{width:"100%",boxSizing:"border-box",padding:"9px 12px",border:"1px solid #cbd5e1",borderRadius:8,fontSize:16,fontFamily:"monospace",letterSpacing:"0.1em",marginBottom:loginError?8:12,outline:"none"}}/>
+            </>
+          ):(
+            <>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,padding:"8px 12px",background:"#f0fdf4",border:"1px solid #86efac",borderRadius:8}}>
+                <span style={{fontSize:13,color:"#16a34a",fontWeight:600}}>✓ {loginClassObj.name}</span>
+                <button onClick={()=>{setLoginStep("class");setLoginClassObj(null);setLoginError("");}}
+                  style={{fontSize:12,color:"#64748b",background:"none",border:"none",cursor:"pointer",padding:0}}>Change</button>
+              </div>
+              <label style={{display:"block",fontSize:12,fontWeight:600,color:"#475569",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.04em"}}>Student code</label>
+              <input autoFocus value={loginCode} onChange={e=>setLoginCode(e.target.value.toUpperCase())}
+                onKeyDown={e=>e.key==="Enter"&&doLogin()}
+                placeholder="e.g. AB3X" maxLength={6}
+                style={{width:"100%",boxSizing:"border-box",padding:"9px 12px",border:"1px solid #cbd5e1",borderRadius:8,fontSize:16,fontFamily:"monospace",letterSpacing:"0.1em",marginBottom:loginError?8:12,outline:"none"}}/>
+            </>
+          )
         ):(
           <>
             <label style={{display:"block",fontSize:12,fontWeight:600,color:"#475569",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.04em"}}>Email</label>
@@ -1147,9 +1179,9 @@ function App(){
           </>
         )}
         {loginError&&<p style={{fontSize:13,color:"#dc2626",margin:"0 0 12px"}}>{loginError}</p>}
-        <button onClick={doLogin} disabled={loading}
+        <button onClick={loginMode==="student"&&loginStep==="class"?doClassLookup:doLogin} disabled={loading}
           style={{width:"100%",padding:10,background:loading?"#94a3b8":"#1e40af",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:600,cursor:loading?"default":"pointer"}}>
-          {loading?"Signing in…":"Sign in"}
+          {loading?"Loading…":loginMode==="student"&&loginStep==="class"?"Continue →":"Sign in"}
         </button>
       </div>
       {loginMode==="student"&&(
