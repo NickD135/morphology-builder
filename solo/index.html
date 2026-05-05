@@ -909,6 +909,13 @@ function unitProgress(prog,unitId){ const u=UNITS.find(u=>u.id===unitId); if(!u)
 const Sb=(extra={})=>({fontSize:13,padding:"6px 14px",border:"1px solid #e2e8f0",borderRadius:8,background:"#fff",cursor:"pointer",color:"#475569",...extra});
 const Pb=(active,extra={})=>({textAlign:"left",padding:"10px 14px",fontSize:14,borderRadius:8,cursor:"pointer",border:`${active?"1.5px":"1px"} solid ${active?"#3b82f6":"#e2e8f0"}`,background:active?"#eff6ff":"#fff",color:active?"#1d4ed8":"#1e293b",fontWeight:active?600:400,...extra});
 
+function fmtTime(iso){
+  if(!iso)return"";
+  try{
+    return new Date(iso).toLocaleString("en-AU",{timeZone:"Australia/Sydney",day:"numeric",month:"short",hour:"numeric",minute:"2-digit",hour12:true});
+  }catch{return"";}
+}
+
 // ─── App ──────────────────────────────────────────────────────────────────────
 function App(){
   const [progress,setProgress]=useState({});
@@ -916,6 +923,7 @@ function App(){
   const [classes,setClasses]=useState([]);
   const [selectedClassId,setSelectedClassId]=useState(null);
   const [loading,setLoading]=useState(false);
+  const [timestamps,setTimestamps]=useState({}); // {studentId:{outcomeKey:isoString}}
   const [loginMode,setLoginMode]=useState("student"); // "student" | "teacher"
   const [loginClassCode,setLoginClassCode]=useState(""); // class code (step 1)
   const [loginClassObj,setLoginClassObj]=useState(null);  // resolved class {id,name}
@@ -980,10 +988,12 @@ function App(){
       const {data:student,error}=await sb.from("students").select("id,name,class_id").eq("student_code",code).eq("class_id",loginClassObj.id).single();
       if(error||!student){setLoginError("Student code not recognised in this class.");setLoading(false);return;}
       const prog=buildEmptyProgress([student]);
-      const {data:rows}=await sb.from("solo_progress").select("outcome_key").eq("student_id",student.id).eq("completed",true);
-      rows?.forEach(r=>{if(prog[student.id])prog[student.id][r.outcome_key]=true;});
+      const ts={};
+      const {data:rows}=await sb.from("solo_progress").select("outcome_key,updated_at").eq("student_id",student.id).eq("completed",true);
+      rows?.forEach(r=>{if(prog[student.id]){prog[student.id][r.outcome_key]=true;ts[r.outcome_key]=r.updated_at;}});
       setStudents([student]);
       setProgress(prog);
+      setTimestamps({[student.id]:ts});
       setStudentId(student.id);
       setLoading(false);
       setView("home");
@@ -996,24 +1006,38 @@ function App(){
     const {data:sr}=await sb.from("students").select("id,name,student_code").eq("class_id",classId).order("name");
     const sList=sr||[];
     const prog=buildEmptyProgress(sList);
+    const ts={};
     if(sList.length>0){
       const ids=sList.map(s=>s.id);
-      const {data:rows}=await sb.from("solo_progress").select("student_id,outcome_key").eq("completed",true).in("student_id",ids);
-      rows?.forEach(r=>{if(prog[r.student_id])prog[r.student_id][r.outcome_key]=true;});
+      const {data:rows}=await sb.from("solo_progress").select("student_id,outcome_key,updated_at").eq("completed",true).in("student_id",ids);
+      rows?.forEach(r=>{
+        if(prog[r.student_id]){
+          prog[r.student_id][r.outcome_key]=true;
+          if(!ts[r.student_id])ts[r.student_id]={};
+          ts[r.student_id][r.outcome_key]=r.updated_at;
+        }
+      });
     }
     setStudents(sList);
     setProgress(prog);
+    setTimestamps(ts);
     setLoading(false);
     setView("home");
   }
 
   async function saveOutcome(sid,key,val){
-    await sb.from("solo_progress").upsert({student_id:sid,outcome_key:key,completed:val,updated_at:new Date().toISOString()},{onConflict:"student_id,outcome_key"});
+    const now=new Date().toISOString();
+    await sb.from("solo_progress").upsert({student_id:sid,outcome_key:key,completed:val,updated_at:now},{onConflict:"student_id,outcome_key"});
+    setTimestamps(prev=>{
+      const st={...(prev[sid]||{})};
+      if(val)st[key]=now; else delete st[key];
+      return {...prev,[sid]:st};
+    });
   }
 
   function doLogout(){
     sb.auth.signOut();
-    setView("login");setStudentId(null);setIsTeacher(false);setLoginClassCode("");setLoginClassObj(null);setLoginStep("class");setLoginCode("");setLoginEmail("");setLoginPassword("");setLoginError("");setSelectedUnit(null);setTeacherFocus(null);setStudents([]);setClasses([]);setSelectedClassId(null);setProgress({});setLoginMode("student");
+    setView("login");setStudentId(null);setIsTeacher(false);setLoginClassCode("");setLoginClassObj(null);setLoginStep("class");setLoginCode("");setLoginEmail("");setLoginPassword("");setLoginError("");setSelectedUnit(null);setTeacherFocus(null);setStudents([]);setClasses([]);setSelectedClassId(null);setProgress({});setTimestamps({});setLoginMode("student");
   }
 
   function startPretest(){
@@ -1647,11 +1671,13 @@ function App(){
                   const key=`${selectedUnit.id}_${o.id}`;
                   const n=(studentAttempts[key]||[]).length;
                   const lastAttempt=(studentAttempts[key]||[]).slice(-1)[0];
+                  const ts=timestamps[s.id]?.[key];
                   return(
                     <div key={o.id} style={{background:"#fff",border:`1px solid ${d?"#86efac":"#e2e8f0"}`,borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",gap:10}}>
                       <div style={{width:18,height:18,borderRadius:"50%",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,background:d?"#dcfce7":"#f1f5f9",color:d?"#16a34a":"#94a3b8"}}>{d?"✓":""}</div>
                       <div style={{flex:1,minWidth:0}}>
                         <p style={{fontSize:13,fontWeight:600,margin:"0 0 1px",color:d?"#16a34a":"#1e293b"}}>{o.short}</p>
+                        {d&&ts&&<p style={{fontSize:11,color:"#64748b",margin:"1px 0 0"}}>✓ {fmtTime(ts)}</p>}
                         {n>0&&<p style={{fontSize:11,color:"#94a3b8",margin:0}}>{n} attempt{n!==1?"s":""} · last: <span style={{color:lastAttempt.passed?"#16a34a":"#dc2626",fontWeight:600}}>{lastAttempt.correct}/{lastAttempt.total}</span></p>}
                       </div>
                       <div style={{display:"flex",gap:6,flexShrink:0}}>
