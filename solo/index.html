@@ -1,0 +1,1706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOLO Tracker – Word Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; background: #fff; font-family: 'Lexend', sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="text/babel">
+    const { useState, useRef } = React;
+
+
+// ─── Unit colours ────────────────────────────────────────────────────────────
+const UC = {
+  u24:{bg:"#eff6ff",border:"#93c5fd",text:"#1d4ed8",dot:"#3b82f6",dark:"#1e3a8a"},
+  u25:{bg:"#f0fdf4",border:"#86efac",text:"#166534",dot:"#22c55e",dark:"#14532d"},
+  u26:{bg:"#faf5ff",border:"#c4b5fd",text:"#6d28d9",dot:"#7c3aed",dark:"#4c1d95"},
+  u27:{bg:"#fff7ed",border:"#fdba74",text:"#c2410c",dot:"#f97316",dark:"#7c2d12"},
+};
+const BAND = {
+  red:   {bg:"#fff0f0",border:"#fca5a5",text:"#b91c1c",dot:"#ef4444"},
+  yellow:{bg:"#fffbeb",border:"#fcd34d",text:"#92400e",dot:"#f59e0b"},
+  green: {bg:"#f0fdf4",border:"#86efac",text:"#166534",dot:"#22c55e"},
+};
+
+// ─── Visual question components ───────────────────────────────────────────────
+
+function Frac({v,s=15,c="inherit"}){
+  const p=String(v).split("/");
+  if(p.length!==2)return <span style={{fontSize:s,color:c,fontWeight:700}}>{v}</span>;
+  return <span style={{display:"inline-flex",flexDirection:"column",alignItems:"center",lineHeight:1.1,verticalAlign:"middle",color:c}}>
+    <span style={{fontSize:s,fontWeight:700,lineHeight:1}}>{p[0]}</span>
+    <span style={{display:"block",height:1.5,background:"currentColor",width:"110%",margin:"1px 0"}}/>
+    <span style={{fontSize:s,fontWeight:700,lineHeight:1}}>{p[1]}</span>
+  </span>;
+}
+
+function NumberLineQ({q,ans,setAns}){
+  const lineRef=useRef(null);
+  const [held,setHeld]=useState(null);
+  const placed=ans.nlPlaced||{};
+  const unplaced=q.tokens.filter(t=>placed[t]===undefined);
+  function pickUp(token){
+    if(held===token){setHeld(null);return;}
+    if(placed[token]!==undefined){const np={...placed};delete np[token];setAns(a=>({...a,nlPlaced:np}));}
+    setHeld(token);
+  }
+  function clickLine(e){
+    if(!held)return;
+    const rect=lineRef.current.getBoundingClientRect();
+    const pos=Math.max(0.02,Math.min(0.97,(e.clientX-rect.left)/rect.width));
+    setAns(a=>({...a,nlPlaced:{...(a.nlPlaced||{}),[held]:pos}}));
+    setHeld(null);
+  }
+  return(
+    <div>
+      <p style={{fontSize:12,color:"#64748b",margin:"0 0 14px",fontStyle:"italic"}}>
+        {held?<><strong style={{color:"#1e40af"}}>Click the number line</strong> to place <strong style={{color:"#1e40af"}}>{held}</strong></>
+          :"Click a fraction to pick it up, then click the number line to place it."}
+      </p>
+      <div style={{display:"flex",gap:10,marginBottom:28,flexWrap:"wrap",minHeight:44}}>
+        {unplaced.map(t=>(
+          <button key={t} onClick={()=>pickUp(t)} style={{padding:"8px 18px",background:held===t?"#1e40af":"#eff6ff",color:held===t?"#fff":"#1d4ed8",border:`2px solid ${held===t?"#1e40af":"#93c5fd"}`,borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:15,display:"flex",alignItems:"center",gap:4,boxShadow:held===t?"0 2px 8px rgba(30,64,175,0.3)":"none",transform:held===t?"scale(1.05)":"scale(1)",transition:"all 0.15s"}}>
+            <Frac v={t} s={13} c={held===t?"#fff":"#1d4ed8"}/>
+          </button>
+        ))}
+        {unplaced.length===0&&<span style={{fontSize:12,color:"#94a3b8",alignSelf:"center"}}>All placed — click a token to move it</span>}
+      </div>
+      <div style={{padding:"36px 20px 32px",cursor:held?"crosshair":"default",background:held?"#f0f9ff":"#f8fafc",borderRadius:12,border:`1.5px solid ${held?"#93c5fd":"#e2e8f0"}`,transition:"all 0.15s"}} onClick={clickLine}>
+        <div ref={lineRef} style={{position:"relative",height:4,background:"#334155",borderRadius:2}}>
+          <div style={{position:"absolute",left:-8,top:-4,width:0,height:0,borderTop:"6px solid transparent",borderBottom:"6px solid transparent",borderRight:"10px solid #334155"}}/>
+          <div style={{position:"absolute",right:-8,top:-4,width:0,height:0,borderTop:"6px solid transparent",borderBottom:"6px solid transparent",borderLeft:"10px solid #334155"}}/>
+          {[0,0.25,0.5,0.75,1].map(p=>(
+            <div key={p} style={{position:"absolute",left:`${p*100}%`,top:-6,transform:"translateX(-50%)",display:"flex",flexDirection:"column",alignItems:"center"}}>
+              <div style={{width:2,height:16,background:"#334155"}}/>
+              <span style={{marginTop:4,fontSize:11,fontWeight:600,color:"#475569"}}>{p===0?"0":p===1?"1":""}</span>
+            </div>
+          ))}
+          {Object.entries(placed).map(([t,pos])=>(
+            <div key={t} onClick={e=>{e.stopPropagation();pickUp(t);}}
+              style={{position:"absolute",left:`${pos*100}%`,top:-38,transform:"translateX(-50%)",background:"#1e40af",color:"#fff",padding:"4px 10px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",zIndex:2,boxShadow:"0 2px 6px rgba(30,64,175,0.35)",display:"flex",alignItems:"center"}}>
+              <Frac v={t} s={11} c="#fff"/>
+              <div style={{position:"absolute",left:"50%",top:"100%",marginLeft:-1,width:2,height:20,background:"#1e40af"}}/>
+            </div>
+          ))}
+        </div>
+      </div>
+      {Object.keys(placed).length>0&&<p style={{fontSize:11,color:"#94a3b8",margin:"8px 0 0",textAlign:"center"}}>Click a placed fraction to move it</p>}
+    </div>
+  );
+}
+
+function MatchQ({q,ans,setAns}){
+  const [selLeft,setSelLeft]=useState(null);
+  const matched=ans.matchPairs||{};
+  const matchedLeft=Object.keys(matched);
+  const matchedRight=Object.values(matched);
+  function clickLeft(item){
+    if(matchedLeft.includes(item)){const nm={...matched};delete nm[item];setAns(a=>({...a,matchPairs:nm}));setSelLeft(item);return;}
+    setSelLeft(selLeft===item?null:item);
+  }
+  function clickRight(item){
+    if(matchedRight.includes(item)){const nm={...matched};const k=Object.keys(nm).find(k=>nm[k]===item);delete nm[k];setAns(a=>({...a,matchPairs:nm}));return;}
+    if(!selLeft)return;
+    setAns(a=>({...a,matchPairs:{...(a.matchPairs||{}),[selLeft]:item}}));
+    setSelLeft(null);
+  }
+  const isCorrect=l=>matched[l]&&q.pairs[l]===matched[l];
+  const card=(active,isM,ok)=>({padding:"10px 4px",borderRadius:10,fontWeight:700,fontSize:15,cursor:"pointer",textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",minHeight:48,
+    border:`2px solid ${isM?(ok?"#86efac":"#fca5a5"):active?"#3b82f6":"#e2e8f0"}`,
+    background:isM?(ok?"#dcfce7":"#fee2e2"):active?"#eff6ff":"#f8fafc",
+    color:isM?(ok?"#16a34a":"#dc2626"):active?"#1d4ed8":"#1e293b",transition:"all 0.15s"});
+  return(
+    <div>
+      <p style={{fontSize:12,color:"#64748b",margin:"0 0 14px",fontStyle:"italic"}}>
+        {selLeft?<><strong style={{color:"#1e40af"}}>Now click the matching fraction</strong> on the right</>
+          :"Click a fraction on the left, then click its equivalent on the right."}
+      </p>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 28px 1fr",gap:"8px 4px",alignItems:"center"}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",textAlign:"center",textTransform:"uppercase",letterSpacing:"0.05em"}}>Fraction</div>
+        <div/>
+        <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",textAlign:"center",textTransform:"uppercase",letterSpacing:"0.05em"}}>Equivalent</div>
+        {q.left.map((l,i)=>{
+          const r=q.right[i];
+          const lM=matchedLeft.includes(l);
+          const rMatchedTo=Object.keys(matched).find(k=>matched[k]===r);
+          const rM=!!rMatchedTo;
+          return[
+            <button key={`l${l}`} onClick={()=>clickLeft(l)} style={card(selLeft===l,lM,isCorrect(l))}>
+              <Frac v={l} s={13} c={lM?(isCorrect(l)?"#16a34a":"#dc2626"):selLeft===l?"#1d4ed8":"#1e293b"}/>
+            </button>,
+            <div key={`m${i}`} style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
+              {lM&&<div style={{height:2,width:"100%",background:isCorrect(l)?"#86efac":"#fca5a5",borderRadius:1}}/>}
+            </div>,
+            <button key={`r${r}`} onClick={()=>clickRight(r)} style={card(false,rM,rMatchedTo?isCorrect(rMatchedTo):false)}>
+              <Frac v={r} s={13} c={rM?(isCorrect(rMatchedTo)?"#16a34a":"#dc2626"):"#1e293b"}/>
+            </button>
+          ];
+        })}
+      </div>
+      <p style={{fontSize:11,color:"#94a3b8",margin:"10px 0 0",textAlign:"center"}}>Click a matched pair to undo it</p>
+    </div>
+  );
+}
+
+function PartitionQ({q,ans,setAns}){
+  const shaded=new Set(ans.partitionShaded||[]);
+  function toggle(i){const ns=new Set(shaded);ns.has(i)?ns.delete(i):ns.add(i);setAns(a=>({...a,partitionShaded:[...ns]}));}
+  const fracStr=`${q.target}/${q.parts}`;
+  const statusColor=shaded.size===q.target?"#16a34a":shaded.size>q.target?"#dc2626":"#64748b";
+  const statusMsg=shaded.size===q.target?`✓ ${fracStr} shaded`:shaded.size>q.target?"Too many — click to unshade":`${shaded.size}/${q.parts} shaded`;
+  if(q.shape==="circle"){
+    const sz=180,cx=90,cy=90,r=82;
+    return(
+      <div>
+        <p style={{fontSize:12,color:"#64748b",margin:"0 0 14px",fontStyle:"italic"}}>
+          Click the sections to shade <strong style={{color:"#1e40af"}}>{fracStr}</strong> of the circle.
+        </p>
+        <div style={{display:"flex",justifyContent:"center",marginBottom:8}}>
+          <svg width={sz} height={sz} style={{cursor:"pointer"}}>
+            {Array.from({length:q.parts},(_,i)=>{
+              const a1=(i/q.parts)*2*Math.PI-Math.PI/2,a2=((i+1)/q.parts)*2*Math.PI-Math.PI/2;
+              const x1=cx+r*Math.cos(a1),y1=cy+r*Math.sin(a1),x2=cx+r*Math.cos(a2),y2=cy+r*Math.sin(a2);
+              const large=q.parts<3?1:0;
+              return <path key={i} d={`M${cx},${cy} L${x1},${y1} A${r},${r},0,${large},1,${x2},${y2} Z`}
+                fill={shaded.has(i)?"#1e40af":"#dbeafe"} stroke="#fff" strokeWidth={2}
+                onClick={()=>toggle(i)} style={{transition:"fill 0.15s",cursor:"pointer"}}/>;
+            })}
+            <circle cx={cx} cy={cy} r={r} fill="none" stroke="#334155" strokeWidth={2}/>
+          </svg>
+        </div>
+        <p style={{fontSize:12,textAlign:"center",fontWeight:600,color:statusColor}}>{statusMsg}</p>
+      </div>
+    );
+  }
+  return(
+    <div>
+      <p style={{fontSize:12,color:"#64748b",margin:"0 0 14px",fontStyle:"italic"}}>
+        Click the parts to shade <strong style={{color:"#1e40af"}}>{fracStr}</strong> of the bar.
+      </p>
+      <div style={{display:"flex",gap:3,marginBottom:8}}>
+        {Array.from({length:q.parts},(_,i)=>(
+          <div key={i} onClick={()=>toggle(i)}
+            style={{flex:1,height:80,background:shaded.has(i)?"#1e40af":"#dbeafe",border:"2px solid #fff",borderRadius:4,cursor:"pointer",transition:"background 0.15s",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            {shaded.has(i)&&<span style={{color:"rgba(255,255,255,0.5)",fontSize:20}}>✓</span>}
+          </div>
+        ))}
+      </div>
+      <p style={{fontSize:12,textAlign:"center",fontWeight:600,color:statusColor}}>{statusMsg}</p>
+    </div>
+  );
+}
+
+// ─── Question banks ───────────────────────────────────────────────────────────
+const UNITS = [
+  // ── Unit 24: Fractions ────────────────────────────────────────────────────
+  { id:"u24", name:"Unit 24", subtitle:"Fractions", outcomes:[
+    {id:"r1",band:"red",short:"Order unit fractions",label:"Compare and order unit fractions with denominators of 2,3,4,5,6,8 and 10 on a number line",questions:[
+      {id:1,type:"truefalse",text:"True or false: 1/4 is greater than 1/3.",answer:"false"},
+      {id:2,type:"numberline",text:"Place each fraction in its correct position on the number line.",tokens:["1/2","1/4","1/8"],targets:{"1/2":[0.40,0.60],"1/4":[0.18,0.32],"1/8":[0.05,0.17]}},
+      {id:3,type:"mc",text:"Which fraction is closest to 1 on a number line?",options:["1/10","1/8","1/4","1/2"],answer:"1/2"},
+      {id:4,type:"truefalse",text:"True or false: the larger the denominator, the smaller the unit fraction.",answer:"true"},
+      {id:5,type:"numberline",text:"Place each fraction in its correct position on the number line.",tokens:["1/3","1/2","1/10","1/5"],targets:{"1/3":[0.27,0.39],"1/2":[0.42,0.58],"1/10":[0.05,0.14],"1/5":[0.15,0.26]}},
+      {id:6,type:"mc",text:"Which fraction sits between 1/4 and 1/2 on a number line?",options:["1/8","1/6","1/3","1/10"],answer:"1/3"},
+      {id:7,type:"truefalse",text:"True or false: 1/6 is smaller than 1/8.",answer:"false"},
+      {id:8,type:"input",text:"Write a unit fraction that is smaller than 1/4 but larger than 1/8.",answer:"1/6",aliases:["1/5"]},
+      {id:9,type:"mc",text:"What is the correct order from left to right on a number line?",options:["1/2, 1/4, 1/8","1/8, 1/4, 1/2","1/4, 1/8, 1/2","1/2, 1/8, 1/4"],answer:"1/8, 1/4, 1/2"},
+      {id:10,type:"order",text:"Click from largest to smallest.",items:["1/10","1/2","1/4","1/6"],answer:["1/2","1/4","1/6","1/10"]},
+    ]},
+    {id:"r2",band:"red",short:"Equivalent fractions for half",label:"Create equivalent fractions for half in quarters, eighths, sixths and tenths",questions:[
+      {id:1,type:"partition",text:"Shade exactly half of this bar.",parts:4,target:2,shape:"bar"},
+      {id:2,type:"input",text:"How many quarters make one half?",answer:"2"},
+      {id:3,type:"partition",text:"Shade exactly half of this bar.",parts:8,target:4,shape:"bar"},
+      {id:4,type:"input",text:"How many eighths make one half?",answer:"4"},
+      {id:5,type:"input",text:"How many tenths make one half?",answer:"5"},
+      {id:6,type:"input",text:"How many sixths make one half?",answer:"3"},
+      {id:7,type:"mc",text:"Which fraction is equivalent to 1/2?",options:["3/8","4/8","2/6","3/10"],answer:"4/8"},
+      {id:8,type:"truefalse",text:"True or false: 5/10 is equivalent to 1/2.",answer:"true"},
+      {id:9,type:"input",text:"1/2 = ?/10 — what is the missing number?",answer:"5"},
+      {id:10,type:"match",text:"Match each fraction to its equivalent.",left:["1/2","2/4","3/6"],right:["5/10","6/12","4/8"],pairs:{"1/2":"5/10","2/4":"4/8","3/6":"6/12"}},
+    ]},
+    {id:"r3",band:"red",short:"Add fractions: same denominator",label:"Add fractions with the same denominator and make a whole",questions:[
+      {id:1,type:"input",text:"3/10 + 4/10 =",answer:"7/10"},
+      {id:2,type:"input",text:"2/6 + 3/6 =",answer:"5/6"},
+      {id:3,type:"input",text:"2/4 + 3/4 =",answer:"5/4",aliases:["1 1/4"]},
+      {id:4,type:"input",text:"7/8 + 6/8 =",answer:"13/8",aliases:["1 5/8"]},
+      {id:5,type:"input",text:"3/8 + ?/8 = 7/8 — what is the missing numerator?",answer:"4"},
+      {id:6,type:"truefalse",text:"True or false: when you add fractions with the same denominator, you add both the numerators and the denominators.",answer:"false"},
+      {id:7,type:"mc",text:"What is 5/12 + 7/12?",options:["12/24","11/12","12/12","10/12"],answer:"12/12"},
+      {id:8,type:"input",text:"1/5 + 3/5 =",answer:"4/5"},
+      {id:9,type:"input",text:"?/6 + 2/6 = 5/6 — what is the missing numerator?",answer:"3"},
+      {id:10,type:"truefalse",text:"True or false: 4/10 + 8/10 = 12/10.",answer:"true"},
+    ]},
+    {id:"r4",band:"red",short:"Subtract fractions: same denominator",label:"Find the difference between fractions with the same denominator",questions:[
+      {id:1,type:"input",text:"7/10 − 5/10 =",answer:"2/10",aliases:["1/5"]},
+      {id:2,type:"input",text:"6/8 − 3/8 =",answer:"3/8"},
+      {id:3,type:"input",text:"5/6 − 2/6 =",answer:"3/6",aliases:["1/2"]},
+      {id:4,type:"input",text:"9/4 − 3/4 =",answer:"6/4",aliases:["3/2","1 2/4","1 1/2"]},
+      {id:5,type:"input",text:"7/8 − ?/8 = 3/8 — what is the missing numerator?",answer:"4"},
+      {id:6,type:"truefalse",text:"True or false: 8/10 − 3/10 = 5/10.",answer:"true"},
+      {id:7,type:"mc",text:"What is 11/12 − 4/12?",options:["8/12","7/0","7/12","6/12"],answer:"7/12"},
+      {id:8,type:"input",text:"4/5 − 1/5 =",answer:"3/5"},
+      {id:9,type:"input",text:"?/6 − 1/6 = 4/6 — what is the missing numerator?",answer:"5"},
+      {id:10,type:"truefalse",text:"True or false: 3/4 − 1/4 = 2/8.",answer:"false"},
+    ]},
+    {id:"r5",band:"red",short:"Word problems: same denominator",label:"Solve word problems involving fractions with the same denominator",questions:[
+      {id:1,type:"input",text:"Emily has 5/12 of a chocolate bar. Nathan has 4/12. How much altogether?",answer:"9/12",aliases:["3/4"]},
+      {id:2,type:"input",text:"A jug has 1 litre of juice. You pour out 3/8 of a litre. How much is left?",answer:"5/8"},
+      {id:3,type:"input",text:"There is 7/10 of a pizza in one box and 3/10 in another. How much more in the first box?",answer:"4/10",aliases:["2/5"]},
+      {id:4,type:"mc",text:"A ribbon is 9/10 m long. You cut off 4/10 m. How much is left?",options:["5/20 m","13/10 m","4/10 m","5/10 m"],answer:"5/10 m"},
+      {id:5,type:"input",text:"Jack eats 3/8 of a pie and Jill eats 2/8. How much have they eaten altogether?",answer:"5/8"},
+      {id:6,type:"truefalse",text:"True or false: 4/9 + 6/9 is more than 1 whole.",answer:"true"},
+      {id:7,type:"input",text:"A tank is 7/8 full. After draining 3/8, how full is it?",answer:"4/8",aliases:["1/2"]},
+      {id:8,type:"mc",text:"Sam ran 3/5 km in the morning and 1/5 km in the afternoon. How far in total?",options:["4/10 km","2/5 km","3/5 km","4/5 km"],answer:"4/5 km"},
+      {id:9,type:"input",text:"A cake has 10 equal pieces. Tom eats 3 and Sue eats 4. What fraction is left?",answer:"3/10"},
+      {id:10,type:"truefalse",text:"True or false: 5/8 + 4/8 = 9/16.",answer:"false"},
+    ]},
+    {id:"r6",band:"red",short:"Fraction of a quantity",label:"Solve word problems involving a fraction of a quantity",questions:[
+      {id:1,type:"input",text:"A box has 24 apples. 1/3 are red. How many red apples?",answer:"8"},
+      {id:2,type:"input",text:"A bus has 16 passengers. Half are children. How many children?",answer:"8"},
+      {id:3,type:"input",text:"You have $9. You spend 2/3 of it. How much is left?",answer:"3"},
+      {id:4,type:"mc",text:"What is 1/4 of 20?",options:["4","5","6","8"],answer:"5"},
+      {id:5,type:"input",text:"A class has 30 students. 1/5 are absent. How many are absent?",answer:"6"},
+      {id:6,type:"input",text:"1/3 of a number is 7. What is the number?",answer:"21"},
+      {id:7,type:"truefalse",text:"True or false: 1/4 of 12 = 4.",answer:"false"},
+      {id:8,type:"input",text:"There are 40 lollies. 3/4 are red. How many red lollies?",answer:"30"},
+      {id:9,type:"mc",text:"A bag has 18 marbles. 2/3 are blue. How many are blue?",options:["6","9","12","14"],answer:"12"},
+      {id:10,type:"input",text:"1/5 of a number is 6. What is the number?",answer:"30"},
+    ]},
+    {id:"y1",band:"yellow",short:"Multi-step word problems",label:"Solve multi-step word problems with related denominators",questions:[
+      {id:1,type:"input",text:"84 students go on excursions. 1/6 go to the museum. How many?",answer:"14"},
+      {id:2,type:"input",text:"84 students go on excursions. 1/4 go to the zoo. How many?",answer:"21"},
+      {id:3,type:"input",text:"84 students: 1/6 museum, 1/4 zoo. How many go to the theme park?",answer:"49"},
+      {id:4,type:"mc",text:"60 students. 1/3 play sport and 1/4 do art (no overlap). How many do neither?",options:["15","20","25","30"],answer:"25"},
+      {id:5,type:"input",text:"A farmer has 120 animals. 1/4 are cows and 1/3 are sheep. How many are neither?",answer:"50"},
+      {id:6,type:"truefalse",text:"True or false: 1/3 of 84 is more than 1/4 of 84.",answer:"true"},
+      {id:7,type:"input",text:"72 students. 1/8 go to the library and 1/4 go to sport. How many go to neither?",answer:"45"},
+      {id:8,type:"mc",text:"A school has 240 students. 1/6 are in Year 5 and 1/4 are in Year 6. How many combined?",options:["80","90","100","110"],answer:"100"},
+      {id:9,type:"input",text:"36 students. 1/3 chose maths and 1/4 chose English (no overlap). How many chose neither?",answer:"15"},
+      {id:10,type:"truefalse",text:"True or false: 1/6 of 84 plus 1/4 of 84 is less than half of 84.",answer:"true"},
+    ]},
+    {id:"y2",band:"yellow",short:"Order fractions: related denominators",label:"Order fractions with related denominators using diagrams and number lines",questions:[
+      {id:1,type:"numberline",text:"Place these fractions in their correct positions on the number line.",tokens:["4/12","1/2","2/3","5/6"],targets:{"4/12":[0.26,0.40],"1/2":[0.42,0.58],"2/3":[0.60,0.74],"5/6":[0.76,0.90]}},
+      {id:2,type:"mc",text:"Which is larger: 3/4 or 5/8?",options:["3/4","5/8","They are equal"],answer:"3/4"},
+      {id:3,type:"truefalse",text:"True or false: 2/3 is greater than 3/4.",answer:"false"},
+      {id:4,type:"numberline",text:"Place these fractions in their correct positions on the number line.",tokens:["1/4","3/8","1/2","7/8"],targets:{"1/4":[0.19,0.31],"3/8":[0.31,0.44],"1/2":[0.44,0.57],"7/8":[0.81,0.93]}},
+      {id:5,type:"input",text:"Convert 3/4 to eighths (write as ?/8).",answer:"6/8"},
+      {id:6,type:"truefalse",text:"True or false: 5/6 is greater than 7/8.",answer:"false"},
+      {id:7,type:"mc",text:"Which is the correct order from largest to smallest?",options:["2/3, 5/6, 1/2, 1/3","5/6, 2/3, 1/2, 1/3","1/3, 1/2, 2/3, 5/6","5/6, 1/2, 2/3, 1/3"],answer:"5/6, 2/3, 1/2, 1/3"},
+      {id:8,type:"truefalse",text:"True or false: 4/12 is the same as 1/3.",answer:"true"},
+      {id:9,type:"input",text:"Convert 2/3 to sixths (write as ?/6).",answer:"4/6"},
+      {id:10,type:"mc",text:"Which fraction is between 1/2 and 2/3 on a number line?",options:["1/3","3/4","7/12","5/6"],answer:"7/12"},
+    ]},
+    {id:"y3",band:"yellow",short:"Fractions of collections: decimals",label:"Find 1/2, 1/4, 1/5 and 1/10 of collections, expressing remainders as decimals",questions:[
+      {id:1,type:"input",text:"1/2 of 15 — write as a decimal.",answer:"7.5"},
+      {id:2,type:"input",text:"1/4 of 15 — write as a decimal.",answer:"3.75"},
+      {id:3,type:"input",text:"1/5 of 24 — write as a decimal.",answer:"4.8"},
+      {id:4,type:"input",text:"1/10 of 24 — write as a decimal.",answer:"2.4"},
+      {id:5,type:"mc",text:"What is 1/4 of 7 as a decimal?",options:["1.5","1.75","2.25","2.5"],answer:"1.75"},
+      {id:6,type:"truefalse",text:"True or false: 1/2 of 9 = 4.5.",answer:"true"},
+      {id:7,type:"input",text:"1/5 of 13 — write as a decimal.",answer:"2.6"},
+      {id:8,type:"mc",text:"What is 1/10 of 35?",options:["3","3.5","4","3.55"],answer:"3.5"},
+      {id:9,type:"input",text:"1/4 of 9 — write as a decimal.",answer:"2.25"},
+      {id:10,type:"truefalse",text:"True or false: 1/2 of any odd number will always give a decimal answer.",answer:"true"},
+    ]},
+    {id:"y4",band:"yellow",short:"Equivalent fractions: notation",label:"Record equivalent fractions using diagrams, words and fraction notation",questions:[
+      {id:1,type:"mc",text:"Which is equivalent to 2/3?",options:["4/6","3/4","6/10","4/5"],answer:"4/6"},
+      {id:2,type:"mc",text:"Which is also equivalent to 2/3?",options:["6/8","4/10","3/6","8/12"],answer:"8/12"},
+      {id:3,type:"input",text:"Complete: 2/3 = ?/12 — write just the missing number.",answer:"8"},
+      {id:4,type:"input",text:"Complete: 3/4 = ?/8 — write just the missing number.",answer:"6"},
+      {id:5,type:"truefalse",text:"True or false: 4/6 and 6/9 are both equivalent to 2/3.",answer:"true"},
+      {id:6,type:"input",text:"Write an equivalent fraction for 1/3 with denominator 9 (e.g. 3/9).",answer:"3/9"},
+      {id:7,type:"mc",text:"Which fraction is NOT equivalent to 3/4?",options:["6/8","9/12","12/16","6/10"],answer:"6/10"},
+      {id:8,type:"input",text:"Complete: 1/2 = 3/? — write just the missing number.",answer:"6"},
+      {id:9,type:"truefalse",text:"True or false: 10/15 is equivalent to 2/3.",answer:"true"},
+      {id:10,type:"match",text:"Match each fraction to its equivalent.",left:["2/3","3/4","1/5"],right:["8/12","2/10","6/8"],pairs:{"2/3":"8/12","3/4":"6/8","1/5":"2/10"}},
+    ]},
+    {id:"y5",band:"yellow",short:"Recreate the whole",label:"Recreate the whole from fractional parts including quarters, eighths, thirds, sixths, fifths and tenths",questions:[
+      {id:1,type:"input",text:"1/4 + 1/4 + __ = 1. What is the missing fraction?",answer:"2/4",aliases:["1/2"]},
+      {id:2,type:"input",text:"1/5 + 1/5 + 1/5 + __ = 1. What is the missing fraction?",answer:"2/5"},
+      {id:3,type:"input",text:"1/8 + 1/8 + 1/8 + 1/8 + __ = 1. What is the missing fraction?",answer:"4/8",aliases:["1/2"]},
+      {id:4,type:"mc",text:"How many thirds make a whole?",options:["2","3","4","6"],answer:"3"},
+      {id:5,type:"input",text:"3/10 + 2/10 + ?/10 = 1. What is the missing numerator?",answer:"5"},
+      {id:6,type:"truefalse",text:"True or false: 5/6 + 1/6 = 1 whole.",answer:"true"},
+      {id:7,type:"input",text:"2/5 + 1/5 + __ = 1. What is the missing fraction?",answer:"2/5"},
+      {id:8,type:"mc",text:"Which fraction completes: 3/8 + 2/8 + __ = 1?",options:["2/8","3/8","4/8","5/8"],answer:"3/8"},
+      {id:9,type:"input",text:"?/4 + 3/4 = 1. What is the missing numerator?",answer:"1"},
+      {id:10,type:"partition",text:"Shade all parts of this circle to show that 4/4 equals 1 whole.",parts:4,target:4,shape:"circle"},
+    ]},
+    {id:"y6",band:"yellow",short:"Add and subtract: related denominators",label:"Represent fractions with related denominators to add and subtract",questions:[
+      {id:1,type:"input",text:"1/8 + 3/4 = (give answer as eighths, e.g. 7/8)",answer:"7/8"},
+      {id:2,type:"input",text:"2/3 + 5/12 = (give answer as twelfths)",answer:"13/12",aliases:["1 1/12"]},
+      {id:3,type:"input",text:"7/9 − 1/3 = (give answer as ninths)",answer:"4/9"},
+      {id:4,type:"input",text:"11/12 − 3/4 = (give answer as twelfths)",answer:"2/12",aliases:["1/6"]},
+      {id:5,type:"mc",text:"What is 1/2 + 1/4?",options:["2/6","2/4","3/4","3/6"],answer:"3/4"},
+      {id:6,type:"input",text:"1/2 + ?/4 = 3/4. What is the missing numerator?",answer:"1"},
+      {id:7,type:"truefalse",text:"True or false: 3/4 − 1/2 = 1/4.",answer:"true"},
+      {id:8,type:"input",text:"5/6 − 1/3 = (write answer as sixths)",answer:"3/6",aliases:["1/2"]},
+      {id:9,type:"mc",text:"What is 7/8 − 1/4?",options:["6/4","6/8","5/8","4/8"],answer:"5/8"},
+      {id:10,type:"truefalse",text:"True or false: 2/3 + 1/6 = 5/6.",answer:"true"},
+    ]},
+    {id:"g1",band:"green",short:"Simplify fractions",label:"Simplify fractions using the HCF of the numerator and denominator or repeated simplification",questions:[
+      {id:1,type:"mc",text:"What is the HCF of 12 and 18?",options:["2","3","6","9"],answer:"6"},
+      {id:2,type:"input",text:"Simplify 12/18 to its lowest terms.",answer:"2/3"},
+      {id:3,type:"mc",text:"What is 16/24 in its simplest form?",options:["4/8","2/3","8/12","4/6"],answer:"2/3"},
+      {id:4,type:"input",text:"Simplify 15/25.",answer:"3/5"},
+      {id:5,type:"truefalse",text:"True or false: 14/21 simplified is 2/3.",answer:"true"},
+      {id:6,type:"mc",text:"Which fraction is already in its simplest form?",options:["4/8","6/9","5/7","6/10"],answer:"5/7"},
+      {id:7,type:"input",text:"Simplify 18/24.",answer:"3/4"},
+      {id:8,type:"truefalse",text:"True or false: to simplify a fraction you divide both the numerator and denominator by their HCF.",answer:"true"},
+      {id:9,type:"mc",text:"What is the HCF of 20 and 30?",options:["5","10","15","20"],answer:"10"},
+      {id:10,type:"input",text:"Simplify 20/30 to its lowest terms.",answer:"2/3"},
+    ]},
+    {id:"g2",band:"green",short:"Fractions and decimals on a number line",label:"Locate positive and negative fractions, decimals and mixed numbers on a number line",questions:[
+      {id:1,type:"mc",text:"Where does 1.5 sit on a number line?",options:["Between 0 and 1","Between 1 and 2","Between 2 and 3","At 2"],answer:"Between 1 and 2"},
+      {id:2,type:"mc",text:"Which is the correct order from smallest to largest: −1/2, 1/4, −1, 3/4?",options:["−1/2, −1, 1/4, 3/4","−1, −1/2, 1/4, 3/4","1/4, 3/4, −1/2, −1","−1, 1/4, −1/2, 3/4"],answer:"−1, −1/2, 1/4, 3/4"},
+      {id:3,type:"truefalse",text:"True or false: 1 3/4 sits between 1 and 2 on a number line.",answer:"true"},
+      {id:4,type:"input",text:"What mixed number is halfway between 2 and 3?",answer:"2 1/2",aliases:["2.5"]},
+      {id:5,type:"truefalse",text:"True or false: −3/4 is closer to 0 than −1 is.",answer:"true"},
+      {id:6,type:"mc",text:"Which value is greatest?",options:["1 1/2","1.4","1 3/8","1.45"],answer:"1 1/2"},
+      {id:7,type:"input",text:"What decimal is equivalent to 3/4?",answer:"0.75"},
+      {id:8,type:"mc",text:"Between which two integers does −2 1/3 sit?",options:["Between −3 and −2","Between −2 and −1","Between 2 and 3","Between 1 and 2"],answer:"Between −3 and −2"},
+      {id:9,type:"truefalse",text:"True or false: 0.6 and 3/5 are the same value.",answer:"true"},
+      {id:10,type:"input",text:"Write 7/4 as a mixed number.",answer:"1 3/4",aliases:["1.75"]},
+    ]},
+    {id:"g3",band:"green",short:"Compare and order: fractions, decimals, mixed numbers",label:"Compare and order fractions, mixed numbers, decimals and percentages",questions:[
+      {id:1,type:"mc",text:"Which is the largest: 3/4, 0.7, 72%?",options:["72%","0.7","3/4","They are equal"],answer:"3/4"},
+      {id:2,type:"order",text:"Click from smallest to largest.",items:["2/3","0.6","65%","3/5"],answer:["3/5","0.6","65%","2/3"]},
+      {id:3,type:"truefalse",text:"True or false: 50%, 1/2 and 0.5 are all equivalent.",answer:"true"},
+      {id:4,type:"mc",text:"Order from largest to smallest: 1 1/2, 1.4, 140%, 1 3/8.",options:["1.4, 140%, 1 1/2, 1 3/8","140%, 1 1/2, 1.4, 1 3/8","1 3/8, 1.4, 140%, 1 1/2","1 1/2, 140%, 1.4, 1 3/8"],answer:"140%, 1 1/2, 1.4, 1 3/8"},
+      {id:5,type:"input",text:"Convert 3/8 to a percentage.",answer:"37.5%",aliases:["37.5"]},
+      {id:6,type:"truefalse",text:"True or false: 0.35 is less than 1/3.",answer:"false"},
+      {id:7,type:"input",text:"Write 2/5 as a decimal.",answer:"0.4"},
+      {id:8,type:"mc",text:"Which is smaller: 2 1/4 or 2.3?",options:["2.3","2 1/4","They are equal","Cannot tell"],answer:"2.3"},
+      {id:9,type:"input",text:"Write 0.625 as a fraction in its simplest form.",answer:"5/8"},
+      {id:10,type:"mc",text:"Which set is correctly ordered from smallest to largest?",options:["0.4, 45%, 1/2, 0.55","45%, 0.4, 1/2, 0.55","0.4, 45%, 0.55, 1/2","1/2, 0.55, 45%, 0.4"],answer:"0.4, 45%, 1/2, 0.55"},
+    ]},
+    {id:"g4",band:"green",short:"Add and subtract: unrelated denominators",label:"Add and subtract fractions with unrelated denominators, including finding a common denominator",questions:[
+      {id:1,type:"input",text:"1/2 + 1/3 = (write as a fraction)",answer:"5/6"},
+      {id:2,type:"mc",text:"What is 3/4 + 1/3?",options:["4/7","1 1/12","13/12","4/12"],answer:"13/12",aliases:["1 1/12"]},
+      {id:3,type:"input",text:"2/3 − 1/4 = (write as a fraction)",answer:"5/12"},
+      {id:4,type:"mc",text:"What is the lowest common denominator of 1/3 and 1/4?",options:["7","8","12","6"],answer:"12"},
+      {id:5,type:"truefalse",text:"True or false: to add 1/3 and 1/5 you first convert both to fifteenths.",answer:"true"},
+      {id:6,type:"input",text:"3/5 + 1/4 = (write as a fraction)",answer:"17/20"},
+      {id:7,type:"mc",text:"What is 7/8 − 1/3?",options:["13/24","6/5","17/24","5/8"],answer:"13/24"},
+      {id:8,type:"input",text:"1/2 + 2/5 = (write as a fraction)",answer:"9/10"},
+      {id:9,type:"truefalse",text:"True or false: 3/4 − 2/3 = 1/12.",answer:"true"},
+      {id:10,type:"input",text:"5/6 − 3/8 = (write as a fraction)",answer:"11/24"},
+    ]},
+    {id:"g5",band:"green",short:"Mixed number problems",label:"Solve problems involving adding and subtracting fractions and mixed numbers, including finding a common denominator",questions:[
+      {id:1,type:"input",text:"1 1/2 + 2 1/3 = (write as a mixed number, e.g. 3 5/6)",answer:"3 5/6"},
+      {id:2,type:"mc",text:"What is 2 3/4 + 1 1/2?",options:["3 5/4","3 3/6","4 1/4","3 4/6"],answer:"4 1/4"},
+      {id:3,type:"input",text:"3 1/2 − 1 1/4 = (write as a mixed number)",answer:"2 1/4"},
+      {id:4,type:"mc",text:"A recipe needs 2 1/4 cups of flour and 1 1/3 cups of sugar. How much in total?",options:["3 2/7","3 7/12","4 1/12","3 1/2"],answer:"3 7/12"},
+      {id:5,type:"truefalse",text:"True or false: 4 1/2 − 1 3/4 = 2 3/4.",answer:"true"},
+      {id:6,type:"input",text:"2 2/3 + 1 3/4 = (write as a mixed number)",answer:"4 5/12"},
+      {id:7,type:"mc",text:"A plank is 3 1/2 m long. You cut off 1 2/3 m. How much is left?",options:["1 5/6","2 1/6","2 5/6","1 1/6"],answer:"1 5/6"},
+      {id:8,type:"input",text:"5 1/4 − 2 2/3 = (write as a mixed number)",answer:"2 7/12"},
+      {id:9,type:"truefalse",text:"True or false: 1 3/8 + 2 3/4 = 4 1/8.",answer:"true"},
+      {id:10,type:"mc",text:"Jack ran 2 2/5 km and Sarah ran 3 1/2 km. How far did they run in total?",options:["5 9/10","5 3/7","6 1/10","5 1/2"],answer:"5 9/10"},
+    ]},
+  ]},
+
+  // ── Unit 25: Data ─────────────────────────────────────────────────────────
+  { id:"u25", name:"Unit 25", subtitle:"Data", outcomes:[
+    {id:"r1",band:"red",short:"Collect and tabulate data",label:"Collect categorical and numerical data through surveys and observation and tabulate it",questions:[
+      {id:1,type:"mc",text:"A student wants to find out the favourite fruit of students in their class. What is the best way to collect this data?",options:["Survey","Observation","Experiment","Research"],answer:"Survey"},
+      {id:2,type:"truefalse",text:"True or false: discrete numerical data can only take whole number values, like the number of siblings a student has.",answer:"true"},
+      {id:3,type:"mc",text:"Which of these is an example of categorical data?",options:["Number of goals scored","Students' shoe sizes","Favourite colour","Number of books read"],answer:"Favourite colour"},
+      {id:4,type:"input",text:"A survey of 28 students found: 10 chose football, 8 chose swimming, 6 chose tennis, and the rest chose basketball. How many chose basketball?",answer:"4"},
+      {id:5,type:"truefalse",text:"True or false: a tally chart is a good way to record data as you collect it.",answer:"true"},
+      {id:6,type:"mc",text:"Which method would you use to collect data about the number of birds visiting a garden each hour?",options:["Survey","Observation","Interview","Experiment"],answer:"Observation"},
+      {id:7,type:"input",text:"A class of 30 students is surveyed about their pet. 9 have a dog, 7 have a cat, 5 have a fish, and the rest have no pet. How many have no pet?",answer:"9"},
+      {id:8,type:"truefalse",text:"True or false: a spreadsheet is an appropriate tool for tabulating collected data.",answer:"true"},
+      {id:9,type:"mc",text:"Which question collects nominal categorical data (named categories with no order)?",options:["How tall are you?","What is your favourite sport?","How many siblings do you have?","What is your age?"],answer:"What is your favourite sport?"},
+      {id:10,type:"input",text:"A survey asks 25 students to choose their favourite season. 8 chose Summer, 5 chose Autumn, 7 chose Winter. How many chose Spring?",answer:"5"},
+    ]},
+    {id:"r2",band:"red",short:"Interpret side-by-side column graphs",label:"Interpret side-by-side column graphs for 2 categories",questions:[
+      {id:1,type:"input",text:"A side-by-side graph shows: boys who chose cats=5, girls who chose cats=8. How many students altogether chose cats?",answer:"13"},
+      {id:2,type:"truefalse",text:"True or false: in a side-by-side column graph, you can compare data from two groups at once.",answer:"true"},
+      {id:3,type:"mc",text:"A graph shows: Year 5 fiction=12, non-fiction=6. Year 6 fiction=9, non-fiction=11. Which year group reads more non-fiction?",options:["Year 5","Year 6","They read the same","Cannot tell"],answer:"Year 6"},
+      {id:4,type:"input",text:"A side-by-side graph shows: Monday — done:18, not done:4. Tuesday — done:15, not done:7. Across both days, how many did NOT do homework?",answer:"11"},
+      {id:5,type:"truefalse",text:"True or false: the height of a bar in a column graph represents the frequency of that category.",answer:"true"},
+      {id:6,type:"mc",text:"A graph shows pet preferences. Boys: dogs=8, cats=4. Girls: dogs=5, cats=9. Which pet is preferred more by girls?",options:["Dogs","Cats","They are equal","Cannot tell"],answer:"Cats"},
+      {id:7,type:"input",text:"Book preferences: Year 5 adventure=10, mystery=6. Year 6 adventure=7, mystery=11. How many more Year 6 students prefer mystery than adventure?",answer:"4"},
+      {id:8,type:"truefalse",text:"True or false: a side-by-side column graph always needs a key or legend to identify which bar belongs to which group.",answer:"true"},
+      {id:9,type:"mc",text:"Sport participation: Class A cricket=8, soccer=14. Class B cricket=11, soccer=9. Which class has more cricket participants?",options:["Class A","Class B","They are equal","Cannot tell"],answer:"Class B"},
+      {id:10,type:"mc",text:"What is the main advantage of a side-by-side column graph over two separate column graphs?",options:["It uses less space","It makes comparison between groups easier","It shows more types of data","It is more colourful"],answer:"It makes comparison between groups easier"},
+    ]},
+    {id:"r3",band:"red",short:"Interpret and draw timelines",label:"Interpret integers on a timeline and draw accurate timelines using an appropriate scale",questions:[
+      {id:1,type:"mc",text:"A timeline shows events from 1850 to 1950. What is the total time span?",options:["50 years","75 years","100 years","150 years"],answer:"100 years"},
+      {id:2,type:"truefalse",text:"True or false: on a timeline, events are placed in chronological order from left to right.",answer:"true"},
+      {id:3,type:"input",text:"A timeline runs from 1900 to 2000 with a mark every 10 years. How many marks are on the timeline, including start and end?",answer:"11"},
+      {id:4,type:"mc",text:"A timeline from January to December shows each month. Where would July appear?",options:["Near the start","In the middle","Near the end","At the very end"],answer:"In the middle"},
+      {id:5,type:"truefalse",text:"True or false: the scale on a timeline must show equal time intervals.",answer:"true"},
+      {id:6,type:"input",text:"A timeline represents 60 years and is drawn 30 cm long. How many centimetres represent 10 years?",answer:"5"},
+      {id:7,type:"mc",text:"An event happened in 1965. Timeline runs 1900–2000 with marks every 10 years. Between which two marks does it sit?",options:["1950 and 1960","1960 and 1970","1970 and 1980","1955 and 1965"],answer:"1960 and 1970"},
+      {id:8,type:"truefalse",text:"True or false: negative integers can appear on a timeline to represent events before a reference point.",answer:"true"},
+      {id:9,type:"mc",text:"Which is the most appropriate scale for a timeline showing events across a single school year?",options:["Every decade","Every year","Every month","Every century"],answer:"Every month"},
+      {id:10,type:"input",text:"A timeline spans 5 years from 2010 to 2015 and is drawn 25 cm long. How many centimetres represent 1 year?",answer:"5"},
+    ]},
+    {id:"r4",band:"red",short:"Interpret line graphs",label:"Interpret line graphs using the scales on the axes and describe data presented in line graphs",questions:[
+      {id:1,type:"mc",text:"A line graph shows temperatures: Mon 20°C, Tue 25°C, Wed 26°C. What was the increase from Monday to Wednesday?",options:["4°C","5°C","6°C","7°C"],answer:"6°C"},
+      {id:2,type:"truefalse",text:"True or false: a line graph is best used to show how data changes over time.",answer:"true"},
+      {id:3,type:"input",text:"A line graph shows plant height (cm): Wk1=3, Wk2=5, Wk3=8, Wk4=8, Wk5=11. What is the range of heights?",answer:"8"},
+      {id:4,type:"mc",text:"Temperatures: Mon=22°, Tue=25°, Wed=28°, Thu=24°, Fri=27°. On which day did the temperature decrease?",options:["Tuesday","Wednesday","Thursday","Friday"],answer:"Thursday"},
+      {id:5,type:"truefalse",text:"True or false: a steeper line on a line graph indicates a greater rate of change.",answer:"true"},
+      {id:6,type:"input",text:"A line graph shows rainfall (mm): Jan=40, Feb=35, Mar=55, Apr=60. What is the total rainfall?",answer:"190"},
+      {id:7,type:"mc",text:"What does a horizontal (flat) line on a line graph tell you?",options:["A rapid increase","No change over that time period","A decrease","The data has ended"],answer:"No change over that time period"},
+      {id:8,type:"truefalse",text:"True or false: a line graph would be appropriate to display the favourite colours of students in a class.",answer:"false"},
+      {id:9,type:"mc",text:"Test scores over 5 weeks: 60, 65, 70, 68, 75. What is the overall trend?",options:["Increasing","Decreasing","No change","Random"],answer:"Increasing"},
+      {id:10,type:"input",text:"Daily reading time (min): Mon=30, Tue=30, Wed=45, Thu=60, Fri=30. What is the mode?",answer:"30"},
+    ]},
+    {id:"r5",band:"red",short:"Choose appropriate data displays",label:"Recognise which types of data displays are appropriate to represent different types of data",questions:[
+      {id:1,type:"mc",text:"Which display best shows how a value changes over time?",options:["Column graph","Side-by-side column graph","Line graph","Tally chart"],answer:"Line graph"},
+      {id:2,type:"mc",text:"Which display would best compare the favourite sports of boys and girls?",options:["Line graph","Side-by-side column graph","Pie chart","Tally chart"],answer:"Side-by-side column graph"},
+      {id:3,type:"truefalse",text:"True or false: a timeline is the best display for showing historical events in order.",answer:"true"},
+      {id:4,type:"mc",text:"A researcher wants to display daily maximum temperatures for one month. Which is most appropriate?",options:["Tally chart","Side-by-side column graph","Pie chart","Line graph"],answer:"Line graph"},
+      {id:5,type:"truefalse",text:"True or false: a column graph is appropriate for displaying categorical data.",answer:"true"},
+      {id:6,type:"mc",text:"Which display would best show the results of a class survey about favourite subjects?",options:["Line graph","Timeline","Column graph","Scatter plot"],answer:"Column graph"},
+      {id:7,type:"truefalse",text:"True or false: a line graph should be used to compare two groups' preferences across categories.",answer:"false"},
+      {id:8,type:"mc",text:"To display when important events in a person's life occurred, which is most appropriate?",options:["Column graph","Line graph","Timeline","Side-by-side column graph"],answer:"Timeline"},
+      {id:9,type:"mc",text:"A teacher wants to display how a student's weekly test scores have changed. Which is best?",options:["Column graph","Line graph","Side-by-side column graph","Timeline"],answer:"Line graph"},
+      {id:10,type:"truefalse",text:"True or false: you could appropriately use a line graph to display categorical data such as favourite foods.",answer:"false"},
+    ]},
+    {id:"r6",band:"red",short:"Determine appropriate scale",label:"Determine an appropriate scale to represent data and use many-to-one scales",questions:[
+      {id:1,type:"mc",text:"Data values are 10, 20, 30, 40, 50. Which scale is most appropriate?",options:["By 1s","By 10s","By 100s","By 5s"],answer:"By 10s"},
+      {id:2,type:"truefalse",text:"True or false: a many-to-one scale means each unit on the axis represents more than one data value.",answer:"true"},
+      {id:3,type:"input",text:"A pictograph uses 1 symbol = 5 students. If 35 students chose football, how many symbols are drawn?",answer:"7"},
+      {id:4,type:"mc",text:"Your highest data value is 75. Which scale goes up to at least 75 in sensible steps?",options:["0 to 50 by 10s","0 to 60 by 20s","0 to 80 by 10s","0 to 100 by 50s"],answer:"0 to 80 by 10s"},
+      {id:5,type:"truefalse",text:"True or false: the scale on a column graph must always start at 0.",answer:"true"},
+      {id:6,type:"mc",text:"A many-to-one scale has 1 picture = 10 students. A category shows 4 pictures. How many students?",options:["14","4","400","40"],answer:"40"},
+      {id:7,type:"input",text:"Data values range from 0 to 30 counting by 5s. How many gridlines are needed from 0 to 30 inclusive?",answer:"7"},
+      {id:8,type:"mc",text:"Which scale would work best for data with a maximum value of 95?",options:["0 to 80 by 20s","0 to 50 by 10s","0 to 90 by 5s","0 to 100 by 10s"],answer:"0 to 100 by 10s"},
+      {id:9,type:"input",text:"A pictograph uses 1 symbol = 4 students. If 24 students chose science, how many symbols are drawn?",answer:"6"},
+      {id:10,type:"truefalse",text:"True or false: if your data goes up to 200, a scale that only reaches 100 would be inappropriate.",answer:"true"},
+    ]},
+    {id:"y1",band:"yellow",short:"Identify bias in data",label:"Identify sources of possible bias in data collection and surveys",questions:[
+      {id:1,type:"mc",text:"A survey asks: 'Don't you agree that homework should be banned?' What type of bias is this?",options:["Sampling bias","Observer bias","Leading question bias","No bias"],answer:"Leading question bias"},
+      {id:2,type:"truefalse",text:"True or false: surveying only one class to represent the whole school can cause sampling bias.",answer:"true"},
+      {id:3,type:"mc",text:"Which survey method gives the most representative result for the whole school?",options:["Ask 5 friends","Ask only Year 6","Ask students at the library","Randomly select 30 students from all year groups"],answer:"Randomly select 30 students from all year groups"},
+      {id:4,type:"truefalse",text:"True or false: a very small sample size can make survey results unreliable.",answer:"true"},
+      {id:5,type:"mc",text:"A soft drink company surveys shoppers in their own branded store. What bias might exist?",options:["The sample is too large","The questions are unclear","People there may already prefer that brand","There is no bias"],answer:"People there may already prefer that brand"},
+      {id:6,type:"input",text:"A survey of 3 students is used to represent a school of 300. Is this a good sample size? Write yes or no.",answer:"no"},
+      {id:7,type:"mc",text:"Which survey question is most likely to produce unbiased results?",options:["Don't you love sport?","Isn't reading better than TV?","Surely you prefer healthy food?","What do you enjoy most in your free time?"],answer:"What do you enjoy most in your free time?"},
+      {id:8,type:"truefalse",text:"True or false: to reduce bias, a survey should include a variety of participants from different groups.",answer:"true"},
+      {id:9,type:"mc",text:"A survey about school start times is only given to teachers. What problem does this create?",options:["Too many people are surveyed","The questions are too long","Only one group's perspective is represented","The scale is wrong"],answer:"Only one group's perspective is represented"},
+      {id:10,type:"truefalse",text:"True or false: a biased survey always produces completely wrong results.",answer:"false"},
+    ]},
+    {id:"y2",band:"yellow",short:"Identify misleading representations",label:"Identify misleading representations of data in graphs and media",questions:[
+      {id:1,type:"mc",text:"A graph's y-axis starts at 80 instead of 0. What effect does this have?",options:["It makes the graph more colourful","It has no effect","It makes the graph easier to read","Small differences appear much larger"],answer:"Small differences appear much larger"},
+      {id:2,type:"truefalse",text:"True or false: starting a bar graph's y-axis at a number other than zero can be misleading.",answer:"true"},
+      {id:3,type:"mc",text:"Graph A: y-axis 0–100. Graph B: same data, y-axis 90–100. Which makes the change look more dramatic?",options:["Graph A","They look the same","Graph B","Cannot tell"],answer:"Graph B"},
+      {id:4,type:"truefalse",text:"True or false: a graph can be technically accurate yet still be misleading.",answer:"true"},
+      {id:5,type:"mc",text:"Which feature of a graph is most important to check to avoid being misled?",options:["The colour","The size","The title","The scale and axis labels"],answer:"The scale and axis labels"},
+      {id:6,type:"truefalse",text:"True or false: using pictures of different sizes to represent the same value in a pictograph is misleading.",answer:"true"},
+      {id:7,type:"mc",text:"Sales went from 100 to 102. Headline: 'Sales skyrocket!' What makes this misleading?",options:["Wrong graph type","Sales actually decreased","Y-axis starts at 100, making a tiny increase look huge","The title is too short"],answer:"Y-axis starts at 100, making a tiny increase look huge"},
+      {id:8,type:"mc",text:"Which of these would make a column graph misleading?",options:["Labelling all axes","Starting y-axis at 0","Making all bars the same width","Y-axis that jumps from 0 to 50 with no equal intervals"],answer:"Y-axis that jumps from 0 to 50 with no equal intervals"},
+      {id:9,type:"truefalse",text:"True or false: graphs used in advertising always present data fairly and accurately.",answer:"false"},
+      {id:10,type:"mc",text:"Why might a 3D pie chart be considered misleading?",options:["Too many colours","Too complicated","Some slices appear larger due to 3D perspective","Shows too much data"],answer:"Some slices appear larger due to 3D perspective"},
+    ]},
+    {id:"y3",band:"yellow",short:"Construct column graphs: many-to-one scale",label:"Construct column graphs using a many-to-one scale",questions:[
+      {id:1,type:"mc",text:"Drawing a column graph for data: 20, 40, 60, 80, 100. Which scale is most appropriate?",options:["By 5s","By 1s","By 20s","By 100s"],answer:"By 20s"},
+      {id:2,type:"input",text:"A column graph has a scale of 1 cm = 10 students. A category has 70 students. How tall (cm) should the bar be?",answer:"7"},
+      {id:3,type:"truefalse",text:"True or false: when drawing a column graph, all bars should have equal width.",answer:"true"},
+      {id:4,type:"mc",text:"Data goes up to 90 and you want no more than 10 intervals. Which works best?",options:["By 5s","By 2s","By 10s","By 20s"],answer:"By 10s"},
+      {id:5,type:"input",text:"Scale goes 0–50 by 10s. A bar represents 35 students. Between which two gridlines does the bar end? Write the lower value.",answer:"30"},
+      {id:6,type:"truefalse",text:"True or false: a column graph must always have a title and labelled axes.",answer:"true"},
+      {id:7,type:"mc",text:"Which axis label placement is correct for a graph showing favourite sports?",options:["Number of students on x-axis, Sports on y-axis","Sports on y-axis, Number on x-axis","Sports on x-axis, Number of students on y-axis","No labels needed"],answer:"Sports on x-axis, Number of students on y-axis"},
+      {id:8,type:"mc",text:"Scale goes 0–50 by 5s. How many gridlines from 0 to 50 inclusive?",options:["9","10","11","12"],answer:"11"},
+      {id:9,type:"input",text:"A pictograph uses 1 symbol = 5 students. A category has 45 students. How many symbols?",answer:"9"},
+      {id:10,type:"truefalse",text:"True or false: when using a many-to-one scale you must include a key explaining what each unit represents.",answer:"true"},
+    ]},
+    {id:"y4",band:"yellow",short:"Describe data: range, mode and shape",label:"Describe and interpret data by calculating range and mode and describing the shape of distribution",questions:[
+      {id:1,type:"input",text:"Data: 3, 7, 5, 9, 5, 2, 8. What is the range?",answer:"7"},
+      {id:2,type:"input",text:"Data: 4, 7, 4, 9, 4, 6, 2. What is the mode?",answer:"4"},
+      {id:3,type:"mc",text:"A column graph shows the most frequent value is 5. What does this tell you?",options:["The mean is 5","The range is 5","The minimum is 5","The mode is 5"],answer:"The mode is 5"},
+      {id:4,type:"input",text:"Data: 12, 15, 12, 18, 20, 12, 15. What is the range?",answer:"8"},
+      {id:5,type:"truefalse",text:"True or false: a dataset can have more than one mode.",answer:"true"},
+      {id:6,type:"mc",text:"Data: 3, 3, 4, 5, 6, 7, 7, 7, 9. What is the mode?",options:["3","5","7","9"],answer:"7"},
+      {id:7,type:"input",text:"The range of a dataset is 15 and the lowest value is 8. What is the highest value?",answer:"23"},
+      {id:8,type:"truefalse",text:"True or false: the range tells us how spread out the data is.",answer:"true"},
+      {id:9,type:"mc",text:"Data: 2, 3, 5, 8, 10. What is the range?",options:["5","6","8","10"],answer:"8"},
+      {id:10,type:"mc",text:"Data: 4, 4, 5, 6, 6, 6, 7, 8. What is the mode?",options:["4","5","6","7"],answer:"6"},
+    ]},
+    {id:"y5",band:"yellow",short:"Compare and interpret displays",label:"Interpret and compare different data displays describing range, mode and shape of distribution",questions:[
+      {id:1,type:"mc",text:"Class A test scores range=20. Class B range=40. What does this tell us?",options:["Class A has higher scores","Class B has lower scores","Class B has more spread out results","Class A has more students"],answer:"Class B has more spread out results"},
+      {id:2,type:"truefalse",text:"True or false: two datasets can have the same mode but different ranges.",answer:"true"},
+      {id:3,type:"input",text:"Dataset A: 2,4,6,8,10. Dataset B: 1,4,7,10,13. Which has the larger range? Write A or B.",answer:"B"},
+      {id:4,type:"truefalse",text:"True or false: comparing two displays allows you to identify similarities and differences between datasets.",answer:"true"},
+      {id:5,type:"mc",text:"Class A: mode=75, range=20. Class B: mode=75, range=40. What can we conclude?",options:["Class B is more consistent","Both are equally consistent","Cannot tell","Class A is more consistent"],answer:"Class A is more consistent"},
+      {id:6,type:"mc",text:"A dataset is described as 'clustered around 50'. What does this mean?",options:["All values equal 50","The minimum is 50","The range is 50","Most values are close to 50"],answer:"Most values are close to 50"},
+      {id:7,type:"input",text:"Both classes have mode=7 for hours of sleep. Class A range=3, Class B range=6. Which is more consistent? Write A or B.",answer:"A"},
+      {id:8,type:"truefalse",text:"True or false: a larger range always means the data is unreliable.",answer:"false"},
+      {id:9,type:"mc",text:"Graph A: most students scored 70–80. Graph B: scores spread 20–100. Which class had more consistent results?",options:["Class in Graph B","Equally consistent","Cannot tell","Class in Graph A"],answer:"Class in Graph A"},
+      {id:10,type:"mc",text:"What does an 'outlier' in a dataset mean?",options:["A value that appears most often","The average value","The middle value","A value far from the rest of the data"],answer:"A value far from the rest of the data"},
+    ]},
+  ]},
+
+  // ── Unit 26: Representing Numbers & Decimals ──────────────────────────────
+  { id:"u26", name:"Unit 26", subtitle:"Representing Numbers & Decimals", outcomes:[
+    {id:"r1",band:"red",short:"Round numbers",label:"Round numbers to a specified place value",questions:[
+      {id:1,type:"input",text:"Round 3,847 to the nearest hundred.",answer:"3800"},
+      {id:2,type:"mc",text:"What is 56,423 rounded to the nearest thousand?",options:["55,000","56,000","56,400","57,000"],answer:"56,000"},
+      {id:3,type:"input",text:"Round 7.6 to the nearest whole number.",answer:"8"},
+      {id:4,type:"mc",text:"What is 4.35 rounded to the nearest tenth?",options:["4.3","4","4.4","5"],answer:"4.4"},
+      {id:5,type:"truefalse",text:"True or false: 6,500 rounded to the nearest thousand is 7,000.",answer:"true"},
+      {id:6,type:"input",text:"Round 234,567 to the nearest ten thousand.",answer:"230000"},
+      {id:7,type:"mc",text:"What is 0.847 rounded to the nearest hundredth?",options:["0.8","0.84","0.85","0.9"],answer:"0.85"},
+      {id:8,type:"truefalse",text:"True or false: 3.145 rounded to 2 decimal places is 3.15.",answer:"true"},
+      {id:9,type:"input",text:"Round 1,350,000 to the nearest million.",answer:"1000000"},
+      {id:10,type:"mc",text:"A number rounded to the nearest ten is 380. Which could be the original number?",options:["371","374","384","391"],answer:"384"},
+    ]},
+    {id:"r2",band:"red",short:"Millions and billions",label:"Recognise 1000 thousands = 1 million and 1000 millions = 1 billion, and partition large numbers",questions:[
+      {id:1,type:"mc",text:"How many thousands are in one million?",options:["100","10,000","100,000","1,000"],answer:"1,000"},
+      {id:2,type:"input",text:"Write the number: two million, four hundred thousand, six hundred and fifty.",answer:"2400650"},
+      {id:3,type:"mc",text:"How many millions are in one billion?",options:["10","100","10,000","1,000"],answer:"1,000"},
+      {id:4,type:"truefalse",text:"True or false: 1,000 thousands = 1 million.",answer:"true"},
+      {id:5,type:"mc",text:"What is the value of the digit 7 in 7,432,000?",options:["7 thousand","70,000","700,000","7 million"],answer:"7 million"},
+      {id:6,type:"truefalse",text:"True or false: 1,000 millions = 1 billion.",answer:"true"},
+      {id:7,type:"input",text:"Write: 5 millions + 4 hundred thousands + 3 ten thousands + 2 thousands + 1 hundred + 6 tens + 7 ones.",answer:"5432167"},
+      {id:8,type:"mc",text:"Which is the correct way to write six billion, three hundred million?",options:["6,003,000,000","6,300,000","6,030,000,000","6,300,000,000"],answer:"6,300,000,000"},
+      {id:9,type:"input",text:"In the number 8,245,673,000 — what digit is in the billions place?",answer:"8"},
+      {id:10,type:"mc",text:"Which number equals 3 millions + 5 hundreds?",options:["3,500","3,005,000","3,000,005","3,000,500"],answer:"3,000,500"},
+    ]},
+    {id:"r3",band:"red",short:"Decimal place value: thousandths",label:"Interpret decimal notation for thousandths and describe place value of digits up to 3 decimal places",questions:[
+      {id:1,type:"mc",text:"What is the value of the digit 5 in 3.125?",options:["5 tenths","5 ones","5 hundredths","5 thousandths"],answer:"5 thousandths"},
+      {id:2,type:"input",text:"Write 4 ones, 3 tenths, 7 hundredths and 2 thousandths as a decimal.",answer:"4.372"},
+      {id:3,type:"mc",text:"What is the place value of the digit 8 in 0.085?",options:["8 tenths","8 thousandths","8 hundredths","8 ones"],answer:"8 hundredths"},
+      {id:4,type:"truefalse",text:"True or false: in the number 2.307, the digit 0 is in the hundredths place.",answer:"true"},
+      {id:5,type:"input",text:"Write 7 thousandths as a decimal.",answer:"0.007"},
+      {id:6,type:"mc",text:"Which decimal has the digit 4 in the thousandths place?",options:["4.100","0.400","0.040","0.004"],answer:"0.004"},
+      {id:7,type:"truefalse",text:"True or false: in 3.250, the digit 5 is in the hundredths place.",answer:"true"},
+      {id:8,type:"input",text:"What is 2 tenths + 4 hundredths + 6 thousandths as a decimal?",answer:"0.246"},
+      {id:9,type:"mc",text:"In the number 5.923, which digit is in the hundredths place?",options:["9","5","3","2"],answer:"2"},
+      {id:10,type:"mc",text:"What is 0.045 equal to?",options:["4 tenths + 5 hundredths","4 hundredths + 5 tenths","45 hundredths","45 thousandths"],answer:"45 thousandths"},
+    ]},
+    {id:"r4",band:"red",short:"Compare and order decimals",label:"Compare and order decimal numbers of up to 3 decimal places",questions:[
+      {id:1,type:"order",text:"Click from smallest to largest.",items:["0.3","0.25","0.305","0.03"],answer:["0.03","0.25","0.3","0.305"]},
+      {id:2,type:"mc",text:"Which is larger: 0.5 or 0.49?",options:["0.49","They are equal","0.5"],answer:"0.5"},
+      {id:3,type:"truefalse",text:"True or false: 0.70 is greater than 0.7.",answer:"false"},
+      {id:4,type:"mc",text:"Which decimal is between 0.4 and 0.5?",options:["0.35","0.39","0.51","0.45"],answer:"0.45"},
+      {id:5,type:"truefalse",text:"True or false: 0.9 is greater than 0.89.",answer:"true"},
+      {id:6,type:"order",text:"Click from largest to smallest.",items:["2.1","2.01","2.15","2.105"],answer:["2.15","2.105","2.1","2.01"]},
+      {id:7,type:"mc",text:"Which of these is the greatest?",options:["3.009","3.09","3.099","3.1"],answer:"3.1"},
+      {id:8,type:"truefalse",text:"True or false: 4.250 = 4.25.",answer:"true"},
+      {id:9,type:"input",text:"What decimal comes exactly halfway between 0.6 and 0.8?",answer:"0.7"},
+      {id:10,type:"mc",text:"Which is the correct order from smallest to largest: 1.2, 0.12, 1.02?",options:["1.2, 1.02, 0.12","0.12, 1.2, 1.02","1.02, 0.12, 1.2","0.12, 1.02, 1.2"],answer:"0.12, 1.02, 1.2"},
+    ]},
+    {id:"r5",band:"red",short:"Trailing zeros and number lines",label:"Interpret that trailing zeros do not change a decimal's value, and place decimals on a number line",questions:[
+      {id:1,type:"truefalse",text:"True or false: 3.40 and 3.4 represent the same value.",answer:"true"},
+      {id:2,type:"mc",text:"Which of these are equal to 5.6?",options:["5.06 only","5.600 only","5.60 only","Both 5.60 and 5.600"],answer:"Both 5.60 and 5.600"},
+      {id:3,type:"truefalse",text:"True or false: adding a zero after the last decimal digit (e.g. 2.5 → 2.50) changes the value of the decimal.",answer:"false"},
+      {id:4,type:"input",text:"What decimal comes exactly halfway between 0 and 1?",answer:"0.5"},
+      {id:5,type:"mc",text:"Where does 0.3 sit on a number line from 0 to 1?",options:["Closer to 1","Exactly halfway","Beyond 1","Closer to 0"],answer:"Closer to 0"},
+      {id:6,type:"input",text:"What decimal is halfway between 0.4 and 0.6?",answer:"0.5"},
+      {id:7,type:"mc",text:"Which of these decimals is furthest to the right on a number line?",options:["0.8","0.18","0.801","0.81"],answer:"0.81"},
+      {id:8,type:"truefalse",text:"True or false: 7.500 = 7.5.",answer:"true"},
+      {id:9,type:"mc",text:"What is 1.250 written without unnecessary trailing zeros?",options:["1.0","1.2","1.3","1.25"],answer:"1.25"},
+      {id:10,type:"input",text:"What decimal is halfway between 1.2 and 1.4?",answer:"1.3"},
+    ]},
+    {id:"r6",band:"red",short:"Convert measurements",label:"Convert between metres and kilometres and use decimal notation for mass and distance",questions:[
+      {id:1,type:"input",text:"Convert 3.5 km to metres.",answer:"3500"},
+      {id:2,type:"mc",text:"Which is equivalent to 2500 metres?",options:["25 km","0.25 km","250 km","2.5 km"],answer:"2.5 km"},
+      {id:3,type:"input",text:"Convert 1.25 km to metres.",answer:"1250"},
+      {id:4,type:"mc",text:"A package weighs 1.5 kg. How many grams is that?",options:["150 g","15 g","15,000 g","1500 g"],answer:"1500 g"},
+      {id:5,type:"truefalse",text:"True or false: 500 metres = 0.5 kilometres.",answer:"true"},
+      {id:6,type:"input",text:"Convert 4750 metres to kilometres.",answer:"4.75"},
+      {id:7,type:"mc",text:"What is 2.75 kg in grams?",options:["275 g","27,500 g","275,000 g","2750 g"],answer:"2750 g"},
+      {id:8,type:"truefalse",text:"True or false: 2,250 g = 2.25 kg.",answer:"true"},
+      {id:9,type:"input",text:"A road is 3.2 km long. How many metres is that?",answer:"3200"},
+      {id:10,type:"mc",text:"Which is heavier: 1.5 kg or 1499 g?",options:["1499 g","They are equal","Cannot tell","1.5 kg"],answer:"1.5 kg"},
+    ]},
+    {id:"y1",band:"yellow",short:"Add and subtract decimals: word problems",label:"Solve word problems involving the addition and subtraction of decimals up to 3 decimal places",questions:[
+      {id:1,type:"input",text:"3.45 + 2.31 =",answer:"5.76"},
+      {id:2,type:"input",text:"8.7 − 3.4 =",answer:"5.3"},
+      {id:3,type:"input",text:"A piece of ribbon is 4.75 m long. You cut off 1.25 m. How much is left?",answer:"3.5",aliases:["3.50"]},
+      {id:4,type:"mc",text:"What is 12.6 + 5.75?",options:["17.25","17.35","18.25","18.35"],answer:"18.35"},
+      {id:5,type:"input",text:"A container holds 5.5 litres. You pour in 2.35 more litres. How much is in the container now?",answer:"7.85"},
+      {id:6,type:"truefalse",text:"True or false: 10 − 3.75 = 6.25.",answer:"true"},
+      {id:7,type:"input",text:"A plank is 2.8 m long. Another is 1.65 m long. How long are they together?",answer:"4.45"},
+      {id:8,type:"mc",text:"What is 7.3 − 2.65?",options:["4.35","4.75","5.35","4.65"],answer:"4.65"},
+      {id:9,type:"input",text:"Jack ran 3.4 km in the morning and 2.75 km in the afternoon. How far in total?",answer:"6.15"},
+      {id:10,type:"truefalse",text:"True or false: when adding decimals, you must line up the decimal points.",answer:"true"},
+    ]},
+    {id:"y2",band:"yellow",short:"Estimate discounts: 10%, 25%, 50%",label:"Use mental strategies to estimate discounts of 10%, 25% and 50%",questions:[
+      {id:1,type:"mc",text:"What is 50% of $80?",options:["$30","$50","$40","$60"],answer:"$40"},
+      {id:2,type:"input",text:"What is 10% of $150?",answer:"15",aliases:["$15","15.00","$15.00"]},
+      {id:3,type:"mc",text:"A $60 item has a 25% discount. What is the discount amount?",options:["$10","$20","$25","$15"],answer:"$15"},
+      {id:4,type:"input",text:"What is 50% of $45?",answer:"22.5",aliases:["22.50","$22.50","$22.5"]},
+      {id:5,type:"mc",text:"A shirt costs $120. It is 10% off. What is the sale price?",options:["$112","$110","$114","$108"],answer:"$108"},
+      {id:6,type:"truefalse",text:"True or false: 25% is the same as one quarter.",answer:"true"},
+      {id:7,type:"input",text:"A book costs $32. It has a 50% discount. What is the sale price?",answer:"16",aliases:["$16","16.00"]},
+      {id:8,type:"mc",text:"What is 10% of $375?",options:["$3.75","$375","$3,750","$37.50"],answer:"$37.50"},
+      {id:9,type:"truefalse",text:"True or false: a 25% discount on $200 saves you $50.",answer:"true"},
+      {id:10,type:"input",text:"A jacket costs $180. It has a 25% discount. How much do you save?",answer:"45",aliases:["$45","45.00"]},
+    ]},
+    {id:"y3",band:"yellow",short:"Integers in everyday contexts",label:"Interpret integers in everyday contexts and recognise that negative whole numbers can result from subtraction",questions:[
+      {id:1,type:"mc",text:"The temperature is -5°C. It drops by 3 degrees. What is the new temperature?",options:["-2°C","2°C","8°C","-8°C"],answer:"-8°C"},
+      {id:2,type:"truefalse",text:"True or false: -3 is greater than -7.",answer:"true"},
+      {id:3,type:"input",text:"A submarine is at -200 m. It rises 50 m. What is its new depth?",answer:"-150"},
+      {id:4,type:"mc",text:"Which of these represents a debt of $30?",options:["+$30","$30 credit","30","-$30"],answer:"-$30"},
+      {id:5,type:"truefalse",text:"True or false: on a number line, negative numbers are to the left of zero.",answer:"true"},
+      {id:6,type:"mc",text:"What is the correct order from smallest to largest: -4, 2, -1, 0?",options:["2, 0, -1, -4","0, -1, -4, 2","-4, 0, -1, 2","-4, -1, 0, 2"],answer:"-4, -1, 0, 2"},
+      {id:7,type:"input",text:"The temperature is 4°C. It drops 9 degrees overnight. What is the temperature in the morning?",answer:"-5"},
+      {id:8,type:"truefalse",text:"True or false: -10 + 10 = 0.",answer:"true"},
+      {id:9,type:"mc",text:"A bank account has -$50. The owner deposits $80. What is the new balance?",options:["$130","-$30","-$130","$30"],answer:"$30"},
+      {id:10,type:"input",text:"What integer is 6 less than -2?",answer:"-8"},
+    ]},
+  ]},
+
+  // ── Unit 27: Multiplicative Relations ────────────────────────────────────
+  { id:"u27", name:"Unit 27", subtitle:"Multiplicative Relations", outcomes:[
+    {id:"r1",band:"red",short:"Multiplication strategies",label:"Use the area model and algorithms to solve multiplication problems",questions:[
+      {id:1,type:"input",text:"23 × 4 =",answer:"92"},
+      {id:2,type:"mc",text:"Area model for 24 × 13: 20×13=260, 4×13=52. What is 24 × 13?",options:["302","322","332","312"],answer:"312"},
+      {id:3,type:"input",text:"47 × 3 =",answer:"141"},
+      {id:4,type:"truefalse",text:"True or false: 6 × 38 = (6 × 30) + (6 × 8).",answer:"true"},
+      {id:5,type:"input",text:"125 × 4 =",answer:"500"},
+      {id:6,type:"mc",text:"What is 52 × 21?",options:["1,082","1,102","1,112","1,092"],answer:"1,092"},
+      {id:7,type:"input",text:"234 × 3 =",answer:"702"},
+      {id:8,type:"truefalse",text:"True or false: 25 × 16 = (25 × 10) + (25 × 6).",answer:"true"},
+      {id:9,type:"input",text:"48 × 5 =",answer:"240"},
+      {id:10,type:"mc",text:"What is 36 × 25?",options:["880","890","910","900"],answer:"900"},
+    ]},
+    {id:"r2",band:"red",short:"Multiplication word problems",label:"Solve multiplication word problems using efficient strategies",questions:[
+      {id:1,type:"input",text:"There are 24 students in each of 6 classes. How many students in total?",answer:"144"},
+      {id:2,type:"mc",text:"A box holds 36 oranges. How many oranges in 8 boxes?",options:["276","278","298","288"],answer:"288"},
+      {id:3,type:"input",text:"A car park has 15 rows with 12 spaces per row. How many spaces in total?",answer:"180"},
+      {id:4,type:"mc",text:"A bookshelf has 9 shelves with 24 books each. How many books altogether?",options:["196","206","226","216"],answer:"216"},
+      {id:5,type:"truefalse",text:"True or false: 34 × 7 = 238.",answer:"true"},
+      {id:6,type:"input",text:"A school buys 125 pencils for each of 8 classes. How many pencils in total?",answer:"1000"},
+      {id:7,type:"mc",text:"Tickets cost $15 each. How much for 23 tickets?",options:["$325","$335","$355","$345"],answer:"$345"},
+      {id:8,type:"input",text:"A factory produces 250 items per hour. How many in 6 hours?",answer:"1500"},
+      {id:9,type:"truefalse",text:"True or false: to find the total cost of 14 items at $12 each, you would calculate 14 × 12.",answer:"true"},
+      {id:10,type:"mc",text:"A school hall has 28 rows with 35 seats per row. How many seats altogether?",options:["960","970","990","980"],answer:"980"},
+    ]},
+    {id:"r3",band:"red",short:"Factors, products, primes and composites",label:"Determine factors and products and identify prime, composite and other numbers",questions:[
+      {id:1,type:"mc",text:"What are all the factors of 12?",options:["1,2,4,6,12","2,3,4,6","1,3,4,12","1,2,3,4,6,12"],answer:"1,2,3,4,6,12"},
+      {id:2,type:"truefalse",text:"True or false: 7 is a prime number.",answer:"true"},
+      {id:3,type:"input",text:"What is the product of 6 and 8?",answer:"48"},
+      {id:4,type:"mc",text:"Which number is composite?",options:["11","13","17","15"],answer:"15"},
+      {id:5,type:"truefalse",text:"True or false: 1 is a prime number.",answer:"false"},
+      {id:6,type:"input",text:"How many factors does 16 have?",answer:"5"},
+      {id:7,type:"mc",text:"Which is a prime number?",options:["9","15","21","23"],answer:"23"},
+      {id:8,type:"truefalse",text:"True or false: 0 is neither prime nor composite.",answer:"true"},
+      {id:9,type:"input",text:"Write all factors of 18 in order, separated by commas.",answer:"1,2,3,6,9,18",aliases:["1, 2, 3, 6, 9, 18"]},
+      {id:10,type:"mc",text:"The product of 7 and 9 is:",options:["54","56","72","63"],answer:"63"},
+    ]},
+    {id:"r4",band:"red",short:"Patterns with multiples",label:"Use multiples to create tables of values and describe patterns using multiplication",questions:[
+      {id:1,type:"mc",text:"What is the next term: 4, 8, 12, 16, __ ?",options:["18","22","24","20"],answer:"20"},
+      {id:2,type:"input",text:"A table of values has the rule bottom = top × 7. If the top number is 6, what is the bottom number?",answer:"42"},
+      {id:3,type:"mc",text:"Top row: 1,2,3,4,5. Bottom row: 6,12,18,24,30. What is the rule?",options:["Add 5","Square the top","Add 6","Multiply top by 6"],answer:"Multiply top by 6"},
+      {id:4,type:"truefalse",text:"True or false: the sequence 3, 6, 9, 12, 15 consists of multiples of 3.",answer:"true"},
+      {id:5,type:"input",text:"The rule is 'multiply by 8'. What is the 5th term (starting from 1)?",answer:"40"},
+      {id:6,type:"mc",text:"Which sequence is made from multiples of 4?",options:["4,8,11,16","4,9,14,19","4,8,13,18","4,8,12,16"],answer:"4,8,12,16"},
+      {id:7,type:"input",text:"Rule: bottom = top × 9. Top = 7. What is the bottom?",answer:"63"},
+      {id:8,type:"truefalse",text:"True or false: all multiples of 6 are also multiples of both 2 and 3.",answer:"true"},
+      {id:9,type:"mc",text:"Top = 1,2,3,4. Bottom = 11,22,33,__. What is the missing number?",options:["40","42","48","44"],answer:"44"},
+      {id:10,type:"input",text:"List the first 5 multiples of 9, separated by commas.",answer:"9,18,27,36,45",aliases:["9, 18, 27, 36, 45"]},
+    ]},
+    {id:"r5",band:"red",short:"Multiply up to 4 digits",label:"Select and use efficient strategies to multiply whole numbers of up to 4 digits by 1- and 2-digit numbers",questions:[
+      {id:1,type:"input",text:"1234 × 3 =",answer:"3702"},
+      {id:2,type:"mc",text:"What is 2456 × 4?",options:["9,804","9,814","9,844","9,824"],answer:"9,824"},
+      {id:3,type:"input",text:"3125 × 5 =",answer:"15625"},
+      {id:4,type:"mc",text:"What is 327 × 12?",options:["3,814","4,024","3,714","3,924"],answer:"3,924"},
+      {id:5,type:"input",text:"1408 × 7 =",answer:"9856"},
+      {id:6,type:"truefalse",text:"True or false: 2,000 × 15 = 30,000.",answer:"true"},
+      {id:7,type:"mc",text:"What is 254 × 23?",options:["5,742","5,942","5,662","5,842"],answer:"5,842"},
+      {id:8,type:"input",text:"1500 × 8 =",answer:"12000"},
+      {id:9,type:"truefalse",text:"True or false: 1234 × 9 = 11,106.",answer:"true"},
+      {id:10,type:"input",text:"456 × 21 =",answer:"9576"},
+    ]},
+    {id:"y1",band:"yellow",short:"Division strategies and word problems",label:"Apply strategies to solve division problems and word problems involving division",questions:[
+      {id:1,type:"input",text:"144 ÷ 6 =",answer:"24"},
+      {id:2,type:"mc",text:"What is 252 ÷ 7?",options:["34","38","32","36"],answer:"36"},
+      {id:3,type:"input",text:"360 students are divided equally into 8 groups. How many in each group?",answer:"45"},
+      {id:4,type:"mc",text:"A baker has 175 biscuits to pack in bags of 5. How many bags?",options:["25","30","40","35"],answer:"35"},
+      {id:5,type:"truefalse",text:"True or false: 336 ÷ 4 = 84.",answer:"true"},
+      {id:6,type:"input",text:"1260 ÷ 9 =",answer:"140"},
+      {id:7,type:"mc",text:"$432 is shared equally among 8 people. How much each?",options:["$44","$56","$58","$54"],answer:"$54"},
+      {id:8,type:"input",text:"840 books distributed equally to 7 classes. How many books per class?",answer:"120"},
+      {id:9,type:"truefalse",text:"True or false: division is the inverse operation of multiplication.",answer:"true"},
+      {id:10,type:"mc",text:"1680 ÷ 12 =",options:["130","135","145","140"],answer:"140"},
+    ]},
+    {id:"y2",band:"yellow",short:"Remainders in division",label:"Use and interpret remainders in solutions to division problems",questions:[
+      {id:1,type:"input",text:"25 ÷ 4 = ? Write with remainder (e.g. 6 r 1).",answer:"6 r 1",aliases:["6r1","6 r1","6r 1"]},
+      {id:2,type:"mc",text:"What is 37 ÷ 5?",options:["7 r 1","6 r 3","8 r 2","7 r 2"],answer:"7 r 2"},
+      {id:3,type:"truefalse",text:"True or false: 43 ÷ 6 = 7 remainder 1.",answer:"true"},
+      {id:4,type:"input",text:"50 students sit in rows of 7. How many complete rows can be made?",answer:"7"},
+      {id:5,type:"mc",text:"100 lollies shared among 9 students. How many each, with remainder?",options:["10 r 10","11 r 2","12 r 0","11 r 1"],answer:"11 r 1"},
+      {id:6,type:"input",text:"29 ÷ 3 = ? Write with remainder.",answer:"9 r 2",aliases:["9r2","9 r2","9r 2"]},
+      {id:7,type:"truefalse",text:"True or false: if 47 ÷ 5 = 9 remainder 2, then 5 × 9 + 2 = 47.",answer:"true"},
+      {id:8,type:"mc",text:"A minibus holds 14 passengers. How many minibuses for 100 passengers?",options:["6","7","9","8"],answer:"8"},
+      {id:9,type:"input",text:"83 ÷ 9 = ? Write with remainder.",answer:"9 r 2",aliases:["9r2","9 r2","9r 2"]},
+      {id:10,type:"truefalse",text:"True or false: the remainder must always be smaller than the divisor.",answer:"true"},
+    ]},
+    {id:"y3",band:"yellow",short:"Order of operations",label:"Use grouping symbols and apply the order of operations to solve number sentences",questions:[
+      {id:1,type:"mc",text:"What is 3 + 4 × 2?",options:["14","10","16","11"],answer:"11"},
+      {id:2,type:"input",text:"(5 + 3) × 4 =",answer:"32"},
+      {id:3,type:"mc",text:"What is 20 − (3 + 5) × 2?",options:["6","12","14","4"],answer:"4"},
+      {id:4,type:"truefalse",text:"True or false: in 6 × (4 + 2), the brackets mean you calculate the addition first.",answer:"true"},
+      {id:5,type:"input",text:"24 ÷ (4 + 2) =",answer:"4"},
+      {id:6,type:"mc",text:"What is 5 × 3 + 4 × 2?",options:["26","30","22","23"],answer:"23"},
+      {id:7,type:"truefalse",text:"True or false: (3 + 4) × 2 gives the same answer as 3 + 4 × 2.",answer:"false"},
+      {id:8,type:"input",text:"36 ÷ 4 + 3 × 2 =",answer:"15"},
+      {id:9,type:"mc",text:"Which expression gives the largest answer?",options:["(5 + 3) × 4","5 + 3 × 4","5 × 3 + 4","5 × (3 + 4)"],answer:"5 × (3 + 4)"},
+      {id:10,type:"truefalse",text:"True or false: multiplication and division are performed before addition and subtraction in the order of operations.",answer:"true"},
+    ]},
+    {id:"y4",band:"yellow",short:"Inverse operations and number sentences",label:"Use inverse operations to solve number sentences involving more than one operation",questions:[
+      {id:1,type:"mc",text:"If 7 × ? = 63, what is the missing number?",options:["7","8","10","9"],answer:"9"},
+      {id:2,type:"input",text:"? ÷ 6 = 8. What is the missing number?",answer:"48"},
+      {id:3,type:"truefalse",text:"True or false: multiplication and division are inverse operations.",answer:"true"},
+      {id:4,type:"mc",text:"Which number sentence is correct?",options:["8 × 7 = 54","9 × 6 = 56","8 × 9 = 70","7 × 8 = 56"],answer:"7 × 8 = 56"},
+      {id:5,type:"input",text:"If 5 × 9 = 45, what is 45 ÷ 5?",answer:"9"},
+      {id:6,type:"mc",text:"What is the missing number: 72 ÷ ? = 8?",options:["6","7","8","9"],answer:"9"},
+      {id:7,type:"truefalse",text:"True or false: if 12 × 8 = 96, then 96 ÷ 12 = 8.",answer:"true"},
+      {id:8,type:"input",text:"? × 7 = 84. What is the missing number?",answer:"12"},
+      {id:9,type:"mc",text:"Which operation would you use to check a multiplication answer?",options:["Addition","Subtraction","Another multiplication","Division"],answer:"Division"},
+      {id:10,type:"input",text:"? ÷ 9 = 13. What is the missing number?",answer:"117"},
+    ]},
+    {id:"y5",band:"yellow",short:"Rates word problems",label:"Solve word problems involving rates using multiplication and division",questions:[
+      {id:1,type:"input",text:"A car travels at 80 km per hour. How far in 3 hours?",answer:"240"},
+      {id:2,type:"mc",text:"A worker earns $25 per hour. How much in 8 hours?",options:["$180","$190","$210","$200"],answer:"$200"},
+      {id:3,type:"input",text:"A machine produces 120 items per hour. How many in 5 hours?",answer:"600"},
+      {id:4,type:"mc",text:"A tap flows at 3 litres per minute. How many litres in 15 minutes?",options:["35","40","50","45"],answer:"45"},
+      {id:5,type:"truefalse",text:"True or false: if something costs $4 per kilogram, 7 kilograms costs $28.",answer:"true"},
+      {id:6,type:"input",text:"A cyclist rides at 15 km per hour. How far in 4 hours?",answer:"60"},
+      {id:7,type:"mc",text:"Tiles cost $12 per square metre. What is the cost for 15 square metres?",options:["$170","$190","$200","$180"],answer:"$180"},
+      {id:8,type:"input",text:"A factory makes 350 cars per day. How many in 5 days?",answer:"1750"},
+      {id:9,type:"truefalse",text:"True or false: a speed of 60 km per hour means you travel 1 km per minute.",answer:"true"},
+      {id:10,type:"mc",text:"A pump moves 400 litres per minute. How many minutes to fill a 3000-litre tank?",options:["6.5","7","8","7.5"],answer:"7.5"},
+    ]},
+  ]},
+];
+
+// ─── Pre-test / Post-test (Unit 24 Fractions) ────────────────────────────────
+// 2 questions per outcome. Get both right → outcome auto-ticked.
+const PRETEST = [
+  {outcomeId:"r1",short:"Order unit fractions",questions:[
+    {id:1,type:"mc",text:"Which unit fraction is the largest?",options:["1/8","1/4","1/2","1/6"],answer:"1/2"},
+    {id:2,type:"mc",text:"Which is the correct order from smallest to largest?",options:["1/2, 1/4, 1/8","1/8, 1/4, 1/2","1/4, 1/2, 1/8","1/8, 1/2, 1/4"],answer:"1/8, 1/4, 1/2"},
+  ]},
+  {outcomeId:"r2",short:"Equivalent fractions for half",questions:[
+    {id:1,type:"input",text:"How many sixths are equivalent to one half?",answer:"3"},
+    {id:2,type:"mc",text:"Which fraction is equivalent to 1/2?",options:["3/8","3/6","2/8","1/4"],answer:"3/6"},
+  ]},
+  {outcomeId:"r3",short:"Add fractions: same denominator",questions:[
+    {id:1,type:"input",text:"3/8 + 2/8 =",answer:"5/8"},
+    {id:2,type:"input",text:"4/10 + 5/10 =",answer:"9/10"},
+  ]},
+  {outcomeId:"r4",short:"Subtract fractions: same denominator",questions:[
+    {id:1,type:"input",text:"7/8 − 3/8 =",answer:"4/8",aliases:["1/2"]},
+    {id:2,type:"input",text:"9/10 − 4/10 =",answer:"5/10",aliases:["1/2"]},
+  ]},
+  {outcomeId:"r5",short:"Word problems: same denominator",questions:[
+    {id:1,type:"input",text:"A pizza is cut into 8 slices. Tom eats 3 slices and Sue eats 2. What fraction is left?",answer:"3/8"},
+    {id:2,type:"mc",text:"A jug has 7/10 L of juice. You drink 3/10 L. How much is left?",options:["10/10","3/7","4/10","4/0"],answer:"4/10"},
+  ]},
+  {outcomeId:"r6",short:"Fraction of a quantity",questions:[
+    {id:1,type:"input",text:"What is 1/4 of 20?",answer:"5"},
+    {id:2,type:"input",text:"A bag has 30 lollies. 1/3 are red. How many are red?",answer:"10"},
+  ]},
+  {outcomeId:"y1",short:"Multi-step word problems",questions:[
+    {id:1,type:"input",text:"60 students: 1/4 go to the library and 1/5 go to sport. How many go to neither?",answer:"33"},
+    {id:2,type:"input",text:"84 students go on excursions. 1/6 go to the museum. How many go to the museum?",answer:"14"},
+  ]},
+  {outcomeId:"y2",short:"Order fractions: related denominators",questions:[
+    {id:1,type:"mc",text:"Which is larger: 2/3 or 3/4?",options:["2/3","3/4","They are equal"],answer:"3/4"},
+    {id:2,type:"mc",text:"What is the correct order from smallest to largest: 5/6, 1/2, 2/3?",options:["5/6, 2/3, 1/2","2/3, 5/6, 1/2","1/2, 2/3, 5/6","1/2, 5/6, 2/3"],answer:"1/2, 2/3, 5/6"},
+  ]},
+  {outcomeId:"y3",short:"Fractions of collections: decimals",questions:[
+    {id:1,type:"input",text:"1/2 of 15 — write as a decimal.",answer:"7.5"},
+    {id:2,type:"input",text:"1/4 of 9 — write as a decimal.",answer:"2.25"},
+  ]},
+  {outcomeId:"y4",short:"Equivalent fractions: notation",questions:[
+    {id:1,type:"mc",text:"Which fraction is equivalent to 2/3?",options:["4/9","4/6","3/4","6/10"],answer:"4/6"},
+    {id:2,type:"input",text:"Complete: 3/4 = ?/12 — write just the missing number.",answer:"9"},
+  ]},
+  {outcomeId:"y5",short:"Recreate the whole",questions:[
+    {id:1,type:"input",text:"1/3 + 1/3 + __ = 1. What is the missing fraction?",answer:"1/3"},
+    {id:2,type:"input",text:"3/8 + 3/8 + __ = 1. What is the missing fraction?",answer:"2/8",aliases:["1/4"]},
+  ]},
+  {outcomeId:"y6",short:"Add and subtract: related denominators",questions:[
+    {id:1,type:"input",text:"1/4 + 1/2 = (write as quarters)",answer:"3/4"},
+    {id:2,type:"input",text:"5/6 − 1/3 = (write as sixths)",answer:"3/6",aliases:["1/2"]},
+  ]},
+  {outcomeId:"g1",short:"Simplify fractions",questions:[
+    {id:1,type:"input",text:"Simplify 8/12.",answer:"2/3"},
+    {id:2,type:"mc",text:"What is 15/20 in its simplest form?",options:["3/5","3/4","5/7","4/5"],answer:"3/4"},
+  ]},
+  {outcomeId:"g2",short:"Fractions and decimals on a number line",questions:[
+    {id:1,type:"mc",text:"Which is the correct order: −1, −1/2, 0, 3/4?",options:["3/4, 0, −1/2, −1","−1, 0, −1/2, 3/4","−1, −1/2, 0, 3/4","0, −1, −1/2, 3/4"],answer:"−1, −1/2, 0, 3/4"},
+    {id:2,type:"input",text:"Write 3/4 as a decimal.",answer:"0.75"},
+  ]},
+  {outcomeId:"g3",short:"Compare and order: fractions, decimals, percentages",questions:[
+    {id:1,type:"mc",text:"Which is largest: 3/5, 0.65, 62%?",options:["3/5","0.65","62%","They are equal"],answer:"0.65"},
+    {id:2,type:"input",text:"Write 2/5 as a percentage.",answer:"40%",aliases:["40"]},
+  ]},
+  {outcomeId:"g4",short:"Add and subtract: unrelated denominators",questions:[
+    {id:1,type:"input",text:"1/2 + 1/3 = (write as a fraction)",answer:"5/6"},
+    {id:2,type:"input",text:"3/4 − 1/3 = (write as a fraction)",answer:"5/12"},
+  ]},
+  {outcomeId:"g5",short:"Mixed number problems",questions:[
+    {id:1,type:"input",text:"1 1/2 + 2 1/4 = (write as a mixed number)",answer:"3 3/4"},
+    {id:2,type:"input",text:"3 1/2 − 1 1/4 = (write as a mixed number)",answer:"2 1/4"},
+  ]},
+];
+
+// ─── Supabase ─────────────────────────────────────────────────────────────────
+const SUPABASE_URL  = 'https://kdpavfrzmmzknqfpodrl.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkcGF2ZnJ6bW16a25xZnBvZHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjgzOTIsImV4cCI6MjA5MDAwNDM5Mn0.n5fe7HvXWMsM4xN_iaU_N4xLkC5xD4y9Uoer_DG-dlg';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+function buildEmptyProgress(studentList){
+  const p={};
+  studentList.forEach(s=>{
+    p[s.id]={};
+    UNITS.forEach(u=>u.outcomes.forEach(o=>{p[s.id][`${u.id}_${o.id}`]=false;}));
+  });
+  return p;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function norm(s){ return String(s).trim().toLowerCase().replace(/\s+/g," "); }
+function checkAnswer(given,q){
+  if(q.type==="order")return Array.isArray(given)&&JSON.stringify(given)===JSON.stringify(q.answer);
+  if(q.type==="shade")return Number(given)===q.answer;
+  if(q.type==="numberline"){
+    if(!given||typeof given!=="object")return false;
+    return q.tokens.every(t=>{const pos=given[t];if(pos===undefined)return false;const[mn,mx]=q.targets[t];return pos>=mn&&pos<=mx;});
+  }
+  if(q.type==="match"){
+    if(!given||typeof given!=="object")return false;
+    return q.left.every(l=>given[l]===q.pairs[l]);
+  }
+  if(q.type==="partition"){
+    if(!Array.isArray(given))return false;
+    return given.length===q.target;
+  }
+  const u=norm(given);
+  if(u===norm(q.answer))return true;
+  return(q.aliases||[]).some(a=>u===norm(a));
+}
+function fmtGiven(given,q){
+  if(q.type==="order")return Array.isArray(given)?given.join(" → "):String(given);
+  if(q.type==="shade")return `${given} cell${given===1?"":"s"} shaded`;
+  if(q.type==="numberline")return"Number line placement submitted";
+  if(q.type==="match")return"Matching attempt submitted";
+  if(q.type==="partition")return`${Array.isArray(given)?given.length:0} parts shaded`;
+  return String(given)||"(blank)";
+}
+function initAns(q){
+  return{input:"",option:"",orderSeq:[],shadedCells:q.type==="shade"?new Array(q.cells).fill(false):[],nlPlaced:{},matchPairs:{},partitionShaded:[]};
+}
+function unitProgress(prog,unitId){ const u=UNITS.find(u=>u.id===unitId); if(!u)return{done:0,total:0}; const total=u.outcomes.length; const done=u.outcomes.filter(o=>prog[`${unitId}_${o.id}`]).length; return{done,total}; }
+
+const Sb=(extra={})=>({fontSize:13,padding:"6px 14px",border:"1px solid #e2e8f0",borderRadius:8,background:"#fff",cursor:"pointer",color:"#475569",...extra});
+const Pb=(active,extra={})=>({textAlign:"left",padding:"10px 14px",fontSize:14,borderRadius:8,cursor:"pointer",border:`${active?"1.5px":"1px"} solid ${active?"#3b82f6":"#e2e8f0"}`,background:active?"#eff6ff":"#fff",color:active?"#1d4ed8":"#1e293b",fontWeight:active?600:400,...extra});
+
+// ─── App ──────────────────────────────────────────────────────────────────────
+function App(){
+  const [progress,setProgress]=useState({});
+  const [students,setStudents]=useState([]);
+  const [classes,setClasses]=useState([]);
+  const [selectedClassId,setSelectedClassId]=useState(null);
+  const [loading,setLoading]=useState(false);
+  const [loginMode,setLoginMode]=useState("student"); // "student" | "teacher"
+  const [loginCode,setLoginCode]=useState("");      // student_code
+  const [loginEmail,setLoginEmail]=useState("");    // teacher email
+  const [loginPassword,setLoginPassword]=useState(""); // teacher password
+  const [view,setView]=useState("login");
+  const [studentId,setStudentId]=useState(null);
+  const [isTeacher,setIsTeacher]=useState(false);
+  const [loginError,setLoginError]=useState("");
+  const [selectedUnit,setSelectedUnit]=useState(null);
+  const [activeOutcome,setActiveOutcome]=useState(null);
+  const [qIdx,setQIdx]=useState(0);
+  const [answers,setAnswers]=useState([]);
+  const [ans,setAns]=useState({input:"",option:"",orderSeq:[],shadedCells:[]});
+  const [results,setResults]=useState(null);
+  const [teacherFocus,setTeacherFocus]=useState(null);
+  const [attempts,setAttempts]=useState({});
+  const [teacherAttemptKey,setTeacherAttemptKey]=useState(null);
+  const [teacherAttemptIdx,setTeacherAttemptIdx]=useState(null);
+  const [pretestMode,setPretestMode]=useState(null);
+  const [pretestQList,setPretestQList]=useState([]);
+  const [pretestIdx,setPretestIdx]=useState(0);
+  const [pretestAnswers,setPretestAnswers]=useState([]);
+  const [pretestAns,setPretestAns]=useState({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
+  const [pretestResults,setPretestResults]=useState(null);
+
+  async function doLogin(){
+    setLoginError("");
+    if(loginMode==="teacher"){
+      setLoading(true);
+      const {error}=await sb.auth.signInWithPassword({email:loginEmail.trim(),password:loginPassword});
+      if(error){setLoginError("Email or password not recognised.");setLoading(false);return;}
+      const {data:{session}}=await sb.auth.getSession();
+      const uid=session?.user?.id;
+      const {data:tr}=await sb.from("teachers").select("school_id").eq("auth_user_id",uid).single();
+      if(!tr){setLoginError("No teacher record found.");setLoading(false);return;}
+      const {data:cr}=await sb.from("classes").select("id,name,class_code").eq("school_id",tr.school_id).order("name");
+      setClasses(cr||[]);
+      setIsTeacher(true);
+      setLoading(false);
+      setView("classes");
+    } else {
+      const code=loginCode.trim().toUpperCase();
+      if(!code){setLoginError("Enter your student code.");return;}
+      setLoading(true);
+      const {data:student,error}=await sb.from("students").select("id,name,class_id").eq("student_code",code).single();
+      if(error||!student){setLoginError("Student code not recognised.");setLoading(false);return;}
+      const prog=buildEmptyProgress([student]);
+      const {data:rows}=await sb.from("solo_progress").select("outcome_key").eq("student_id",student.id).eq("completed",true);
+      rows?.forEach(r=>{if(prog[student.id])prog[student.id][r.outcome_key]=true;});
+      setStudents([student]);
+      setProgress(prog);
+      setStudentId(student.id);
+      setLoading(false);
+      setView("home");
+    }
+  }
+
+  async function loadClass(classId){
+    setLoading(true);
+    setSelectedClassId(classId);
+    const {data:sr}=await sb.from("students").select("id,name,student_code").eq("class_id",classId).order("name");
+    const sList=sr||[];
+    const prog=buildEmptyProgress(sList);
+    if(sList.length>0){
+      const ids=sList.map(s=>s.id);
+      const {data:rows}=await sb.from("solo_progress").select("student_id,outcome_key").eq("completed",true).in("student_id",ids);
+      rows?.forEach(r=>{if(prog[r.student_id])prog[r.student_id][r.outcome_key]=true;});
+    }
+    setStudents(sList);
+    setProgress(prog);
+    setLoading(false);
+    setView("home");
+  }
+
+  async function saveOutcome(sid,key,val){
+    await sb.from("solo_progress").upsert({student_id:sid,outcome_key:key,completed:val,updated_at:new Date().toISOString()},{onConflict:"student_id,outcome_key"});
+  }
+
+  function doLogout(){
+    sb.auth.signOut();
+    setView("login");setStudentId(null);setIsTeacher(false);setLoginCode("");setLoginEmail("");setLoginPassword("");setLoginError("");setSelectedUnit(null);setTeacherFocus(null);setStudents([]);setClasses([]);setSelectedClassId(null);setProgress({});setLoginMode("student");
+  }
+
+  function startPretest(){
+    const flat=PRETEST.flatMap(section=>section.questions.map(q=>({outcomeId:section.outcomeId,short:section.short,q})));
+    setPretestQList(flat);
+    setPretestIdx(0);
+    setPretestAnswers([]);
+    setPretestAns(initAns(flat[0].q));
+    setPretestResults(null);
+    setPretestMode("running");
+    setView("pretest");
+  }
+
+  function handlePretestNext(){
+    const current=pretestQList[pretestIdx];
+    const q=current.q;
+    let given;
+    if(q.type==="order")given=pretestAns.orderSeq;
+    else if(q.type==="shade")given=pretestAns.shadedCells.filter(Boolean).length;
+    else if(q.type==="numberline")given=pretestAns.nlPlaced;
+    else if(q.type==="match")given=pretestAns.matchPairs;
+    else if(q.type==="partition")given=pretestAns.partitionShaded;
+    else if(q.type==="mc"||q.type==="truefalse")given=pretestAns.option;
+    else given=pretestAns.input;
+    const correct=checkAnswer(given,q);
+    const newAnswers=[...pretestAnswers,{outcomeId:current.outcomeId,short:current.short,q,given,correct}];
+    setPretestAnswers(newAnswers);
+    if(pretestIdx<pretestQList.length-1){
+      setPretestIdx(pretestIdx+1);
+      setPretestAns(initAns(pretestQList[pretestIdx+1].q));
+    } else {
+      // Group by outcome, check if both correct
+      const byOutcome={};
+      newAnswers.forEach(a=>{if(!byOutcome[a.outcomeId])byOutcome[a.outcomeId]={short:a.short,total:0,correct:0,wrong:[]};byOutcome[a.outcomeId].total++;if(a.correct)byOutcome[a.outcomeId].correct++;else byOutcome[a.outcomeId].wrong.push(a.q.text);});
+      const passed=Object.keys(byOutcome).filter(id=>byOutcome[id].correct===byOutcome[id].total);
+      // Auto-tick passed outcomes for this student
+      if(studentId){
+        setProgress(p=>{
+          const updated={...p[studentId]};
+          passed.forEach(id=>{updated[`u24_${id}`]=true;});
+          return{...p,[studentId]:updated};
+        });
+        passed.forEach(id=>saveOutcome(studentId,`u24_${id}`,true));
+      }
+      setPretestResults({byOutcome,passed});
+      setPretestMode("done");
+    }
+  }
+
+  function pretestCanGo(){
+    const q=pretestQList[pretestIdx]?.q;
+    if(!q)return false;
+    if(q.type==="input")return pretestAns.input.trim().length>0;
+    if(q.type==="mc"||q.type==="truefalse")return pretestAns.option.length>0;
+    if(q.type==="order")return pretestAns.orderSeq.length===q.items.length;
+    if(q.type==="shade")return pretestAns.shadedCells.some(Boolean);
+    if(q.type==="numberline")return q.tokens.every(t=>(pretestAns.nlPlaced||{})[t]!==undefined);
+    if(q.type==="match")return q.left.every(l=>(pretestAns.matchPairs||{})[l]!==undefined);
+    if(q.type==="partition")return(pretestAns.partitionShaded||[]).length>0;
+    return false;
+  }
+  function openUnit(unit){setSelectedUnit(unit);setView("rubric");}
+  function startOutcome(o){setActiveOutcome(o);setQIdx(0);setAnswers([]);setAns(initAns(o.questions[0]));setResults(null);setView("assessment");}
+  function handleNext(){
+    const q=activeOutcome.questions[qIdx];
+    let given;
+    if(q.type==="order")given=ans.orderSeq;
+    else if(q.type==="shade")given=ans.shadedCells.filter(Boolean).length;
+    else if(q.type==="numberline")given=ans.nlPlaced;
+    else if(q.type==="match")given=ans.matchPairs;
+    else if(q.type==="partition")given=ans.partitionShaded;
+    else if(q.type==="mc"||q.type==="truefalse")given=ans.option;
+    else given=ans.input;
+    const correct=checkAnswer(given,q);
+    const newAnswers=[...answers,{q,given,correct}];
+    setAnswers(newAnswers);
+    if(qIdx<activeOutcome.questions.length-1){setQIdx(qIdx+1);setAns(initAns(activeOutcome.questions[qIdx+1]));}
+    else{
+      const allCorrect=newAnswers.filter(a=>a.correct).length>=newAnswers.length-1;
+      setResults({allCorrect,results:newAnswers});
+      const key=`${selectedUnit.id}_${activeOutcome.id}`;
+      if(allCorrect&&studentId){setProgress(p=>({...p,[studentId]:{...p[studentId],[key]:true}}));saveOutcome(studentId,key,true);}
+      if(studentId){
+        const record={ts:Date.now(),passed:allCorrect,correct:newAnswers.filter(a=>a.correct).length,total:newAnswers.length,
+          results:newAnswers.map(a=>({text:a.q.text,type:a.q.type,given:fmtGiven(a.given,a.q),correct:a.correct}))};
+        setAttempts(prev=>({...prev,[studentId]:{...(prev[studentId]||{}),[key]:[...((prev[studentId]||{})[key]||[]),record]}}));
+      }
+    }
+  }
+  function canGo(){
+    if(!activeOutcome)return false;
+    const q=activeOutcome.questions[qIdx];
+    if(q.type==="input")return ans.input.trim().length>0;
+    if(q.type==="mc"||q.type==="truefalse")return ans.option.length>0;
+    if(q.type==="order")return ans.orderSeq.length===q.items.length;
+    if(q.type==="shade")return ans.shadedCells.some(Boolean);
+    if(q.type==="numberline")return q.tokens.every(t=>(ans.nlPlaced||{})[t]!==undefined);
+    if(q.type==="match")return q.left.every(l=>(ans.matchPairs||{})[l]!==undefined);
+    if(q.type==="partition")return(ans.partitionShaded||[]).length>0;
+    return false;
+  }
+
+  const ff="system-ui,sans-serif";
+
+  // ── Login ────────────────────────────────────────────────────────────────
+  if(view==="login") return(
+    <div style={{maxWidth:380,margin:"0 auto",padding:"1.5rem 1rem",fontFamily:ff}}>
+      <div style={{textAlign:"center",marginBottom:"1.5rem"}}>
+        <div style={{display:"inline-block",background:"#f1f5f9",borderRadius:8,padding:"4px 12px",marginBottom:12}}>
+          <span style={{fontSize:12,color:"#64748b",fontWeight:600}}>Word Labs</span>
+          <span style={{color:"#cbd5e1",margin:"0 6px"}}>|</span>
+          <span style={{fontSize:12,fontWeight:600,color:"#1e293b"}}>SOLO Tracker</span>
+        </div>
+        <h1 style={{fontSize:22,fontWeight:600,margin:"0 0 4px",color:"#0f172a"}}>Year 6 Maths</h1>
+        <p style={{fontSize:13,color:"#64748b",margin:0}}>Sign in to see your outcomes</p>
+      </div>
+      <div style={{display:"flex",gap:0,marginBottom:16,background:"#f1f5f9",borderRadius:10,padding:3}}>
+        {["student","teacher"].map(m=>(
+          <button key={m} onClick={()=>{setLoginMode(m);setLoginError("");}}
+            style={{flex:1,padding:"7px 0",fontSize:13,fontWeight:600,border:"none",borderRadius:8,cursor:"pointer",
+              background:loginMode===m?"#fff":"transparent",color:loginMode===m?"#1e293b":"#94a3b8",
+              boxShadow:loginMode===m?"0 1px 3px rgba(0,0,0,0.08)":"none",transition:"all 0.15s"}}>
+            {m==="student"?"Student":"Teacher"}
+          </button>
+        ))}
+      </div>
+      <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:"1.25rem",marginBottom:12}}>
+        {loginMode==="student"?(
+          <>
+            <label style={{display:"block",fontSize:12,fontWeight:600,color:"#475569",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.04em"}}>Student code</label>
+            <input autoFocus value={loginCode} onChange={e=>setLoginCode(e.target.value.toUpperCase())}
+              onKeyDown={e=>e.key==="Enter"&&doLogin()}
+              placeholder="e.g. AB3X" maxLength={6}
+              style={{width:"100%",boxSizing:"border-box",padding:"9px 12px",border:"1px solid #cbd5e1",borderRadius:8,fontSize:16,fontFamily:"monospace",letterSpacing:"0.1em",marginBottom:loginError?8:12,outline:"none"}}/>
+          </>
+        ):(
+          <>
+            <label style={{display:"block",fontSize:12,fontWeight:600,color:"#475569",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.04em"}}>Email</label>
+            <input autoFocus type="email" value={loginEmail} onChange={e=>setLoginEmail(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&doLogin()}
+              placeholder="teacher@school.edu.au"
+              style={{width:"100%",boxSizing:"border-box",padding:"9px 12px",border:"1px solid #cbd5e1",borderRadius:8,fontSize:14,marginBottom:12,outline:"none"}}/>
+            <label style={{display:"block",fontSize:12,fontWeight:600,color:"#475569",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.04em"}}>Password</label>
+            <input type="password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&doLogin()}
+              placeholder="Your Word Labs password"
+              style={{width:"100%",boxSizing:"border-box",padding:"9px 12px",border:"1px solid #cbd5e1",borderRadius:8,fontSize:14,marginBottom:loginError?8:12,outline:"none"}}/>
+          </>
+        )}
+        {loginError&&<p style={{fontSize:13,color:"#dc2626",margin:"0 0 12px"}}>{loginError}</p>}
+        <button onClick={doLogin} disabled={loading}
+          style={{width:"100%",padding:10,background:loading?"#94a3b8":"#1e40af",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:600,cursor:loading?"default":"pointer"}}>
+          {loading?"Signing in…":"Sign in"}
+        </button>
+      </div>
+      {loginMode==="student"&&(
+        <p style={{fontSize:12,color:"#94a3b8",textAlign:"center",margin:0}}>Use the code your teacher gave you — it's on your login card.</p>
+      )}
+    </div>
+  );
+
+  // ── Class selector (teacher) ─────────────────────────────────────────────
+  if(view==="classes") return(
+    <div style={{maxWidth:480,margin:"0 auto",padding:"1.5rem 1rem",fontFamily:ff}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}>
+        <div>
+          <h1 style={{fontSize:20,fontWeight:600,margin:"0 0 2px",color:"#0f172a"}}>Select a class</h1>
+          <p style={{fontSize:13,color:"#64748b",margin:0}}>Choose which class to open</p>
+        </div>
+        <button onClick={doLogout} style={Sb()}>Sign out</button>
+      </div>
+      {loading?<p style={{textAlign:"center",color:"#94a3b8",padding:"2rem 0"}}>Loading…</p>
+      :classes.length===0?<p style={{textAlign:"center",color:"#94a3b8",padding:"2rem 0"}}>No classes found.</p>
+      :<div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {classes.map(c=>(
+          <button key={c.id} onClick={()=>loadClass(c.id)} disabled={loading}
+            style={{padding:"12px 16px",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,cursor:"pointer",textAlign:"left",width:"100%"}}>
+            <span style={{fontSize:14,fontWeight:600,color:"#1e293b"}}>{c.name}</span>
+            <span style={{fontSize:12,color:"#94a3b8",marginLeft:8}}>Code: {c.class_code}</span>
+          </button>
+        ))}
+      </div>}
+    </div>
+  );
+
+  // ── Home / Unit selector ─────────────────────────────────────────────────
+  if(view==="home"){
+    const s=!isTeacher&&students.find(s=>s.id===studentId);
+    return(
+      <div style={{maxWidth:620,margin:"0 auto",padding:"1rem",fontFamily:ff}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}>
+          <div>
+            <h1 style={{fontSize:20,fontWeight:600,margin:"0 0 2px",color:"#0f172a"}}>{isTeacher?"Teacher dashboard":s.name+"'s units"}</h1>
+            <p style={{fontSize:13,color:"#64748b",margin:0}}>Year 6 Maths — select a unit to {isTeacher?"view class progress":"continue"}</p>
+          </div>
+          <button onClick={doLogout} style={Sb()}>Sign out</button>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(270px,1fr))",gap:12}}>
+          {UNITS.map(unit=>{
+            const uc=UC[unit.id];
+            let done=0,total=unit.outcomes.length;
+            if(isTeacher){
+              // show class average
+              const avg=students.reduce((sum,st)=>sum+unit.outcomes.filter(o=>progress[st.id][`${unit.id}_${o.id}`]).length,0);
+              done=Math.round(avg/students.length*10)/10;
+            } else {
+              done=unit.outcomes.filter(o=>progress[studentId][`${unit.id}_${o.id}`]).length;
+            }
+            const pct=Math.round(done/total*100);
+            const redDone=unit.outcomes.filter(o=>o.band==="red"&&(isTeacher?students.some(st=>progress[st.id][`${unit.id}_${o.id}`]):progress[studentId][`${unit.id}_${o.id}`])).length;
+            const redTotal=unit.outcomes.filter(o=>o.band==="red").length;
+            const yelDone=unit.outcomes.filter(o=>o.band==="yellow"&&(isTeacher?students.some(st=>progress[st.id][`${unit.id}_${o.id}`]):progress[studentId][`${unit.id}_${o.id}`])).length;
+            const yelTotal=unit.outcomes.filter(o=>o.band==="yellow").length;
+            return(
+              <div key={unit.id} style={{background:"#fff",border:`1px solid ${uc.border}`,borderRadius:12,padding:"1.25rem",cursor:"pointer",transition:"box-shadow 0.15s"}}
+                onClick={()=>openUnit(unit)}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                  <div>
+                    <span style={{display:"inline-block",background:uc.bg,color:uc.text,fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:6,marginBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"}}>{unit.name}</span>
+                    <h2 style={{fontSize:15,fontWeight:600,margin:0,color:"#0f172a"}}>{unit.subtitle}</h2>
+                  </div>
+                  <span style={{fontSize:13,fontWeight:700,color:uc.text}}>{isTeacher?`avg ${done}/${total}`:`${done}/${total}`}</span>
+                </div>
+                <div style={{background:"#f1f5f9",borderRadius:4,height:5,marginBottom:10,overflow:"hidden"}}>
+                  <div style={{height:"100%",width:`${pct}%`,background:uc.dot,borderRadius:4,transition:"width 0.4s"}}/>
+                </div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  <span style={{fontSize:11,padding:"2px 8px",borderRadius:5,background:BAND.red.bg,color:BAND.red.text,fontWeight:600}}>Red {redDone}/{redTotal}</span>
+                  <span style={{fontSize:11,padding:"2px 8px",borderRadius:5,background:BAND.yellow.bg,color:BAND.yellow.text,fontWeight:600}}>Yellow {yelDone}/{yelTotal}</span>
+                  {unit.id==="u24"&&(()=>{
+                    const gDone=unit.outcomes.filter(o=>o.band==="green"&&(isTeacher?students.some(st=>progress[st.id][`${unit.id}_${o.id}`]):progress[studentId][`${unit.id}_${o.id}`])).length;
+                    const gTotal=unit.outcomes.filter(o=>o.band==="green").length;
+                    return <span style={{fontSize:11,padding:"2px 8px",borderRadius:5,background:BAND.green.bg,color:BAND.green.text,fontWeight:600}}>Green {gDone}/{gTotal}</span>;
+                  })()}
+                </div>
+                {unit.id==="u24"&&!isTeacher&&(
+                  <button onClick={e=>{e.stopPropagation();startPretest();}}
+                    style={{marginTop:10,width:"100%",padding:"7px",fontSize:12,fontWeight:600,background:"#f0fdf4",color:"#166534",border:"1px solid #86efac",borderRadius:8,cursor:"pointer"}}>
+                    📋 Pre-test / Post-test
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Student rubric ────────────────────────────────────────────────────────
+  if(view==="rubric"&&!isTeacher){
+    const s=students.find(s=>s.id===studentId);
+    const prog=progress[studentId];
+    const {done,total}=unitProgress(prog,selectedUnit.id);
+    const pct=Math.round(done/total*100);
+    const uc=UC[selectedUnit.id];
+    return(
+      <div style={{maxWidth:580,margin:"0 auto",padding:"1rem",fontFamily:ff}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"1rem"}}>
+          <div>
+            <button onClick={()=>setView("home")} style={{...Sb(),marginBottom:6,display:"block"}}>← All units</button>
+            <h1 style={{fontSize:18,fontWeight:600,margin:"0 0 2px",color:"#0f172a"}}>{s.name} · {selectedUnit.name}: {selectedUnit.subtitle}</h1>
+            <p style={{fontSize:13,color:"#64748b",margin:0}}>{done} of {total} outcomes complete</p>
+          </div>
+        </div>
+        <div style={{background:"#f1f5f9",borderRadius:6,height:6,marginBottom:"1.5rem",overflow:"hidden"}}>
+          <div style={{height:"100%",width:`${pct}%`,background:uc.dot,borderRadius:6,transition:"width 0.4s"}}/>
+        </div>
+        {["red","yellow","green"].filter(band=>selectedUnit.outcomes.some(o=>o.band===band)).map(band=>{
+          const bs=BAND[band];
+          return(
+            <div key={band} style={{marginBottom:"1.5rem"}}>
+              <span style={{display:"inline-block",background:bs.bg,color:bs.text,border:`1px solid ${bs.border}`,fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:6,marginBottom:10,textTransform:"uppercase",letterSpacing:"0.05em"}}>{band}</span>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {selectedUnit.outcomes.filter(o=>o.band===band).map((o,i)=>{
+                  const isDone=prog[`${selectedUnit.id}_${o.id}`];
+                  return(
+                    <div key={o.id} style={{background:"#fff",border:`1px solid ${isDone?"#86efac":"#e2e8f0"}`,borderRadius:10,padding:"11px 14px",display:"flex",alignItems:"center",gap:10}}>
+                      <div style={{width:24,height:24,borderRadius:"50%",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,background:isDone?"#dcfce7":"#f1f5f9",color:isDone?"#16a34a":"#94a3b8"}}>{isDone?"✓":i+1}</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <p style={{fontSize:13,fontWeight:600,margin:"0 0 1px",color:isDone?"#16a34a":"#1e293b"}}>{o.short}</p>
+                        <p style={{fontSize:11,color:"#94a3b8",margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{o.label}</p>
+                      </div>
+                      {isDone?<span style={{fontSize:11,fontWeight:700,color:"#16a34a",flexShrink:0}}>Done</span>
+                        :<button onClick={()=>startOutcome(o)} style={{fontSize:12,padding:"5px 14px",background:uc.dark,color:"#fff",border:"none",borderRadius:7,cursor:"pointer",fontWeight:600,flexShrink:0}}>Show</button>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // ── Pre-test / Post-test ──────────────────────────────────────────────────
+  if(view==="pretest"){
+    if(pretestMode==="done"&&pretestResults){
+      const {byOutcome,passed}=pretestResults;
+      const allIds=PRETEST.map(s=>s.outcomeId);
+      return(
+        <div style={{maxWidth:560,margin:"0 auto",padding:"1rem",fontFamily:ff}}>
+          <div style={{textAlign:"center",padding:"1rem 0 1.25rem"}}>
+            <div style={{width:56,height:56,borderRadius:"50%",background:"#eff6ff",border:"2px solid #93c5fd",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px",fontSize:22}}>📋</div>
+            <h2 style={{fontSize:18,fontWeight:600,margin:"0 0 4px",color:"#0f172a"}}>Pre-test complete</h2>
+            <p style={{fontSize:13,color:"#64748b",margin:0}}>{passed.length} of {allIds.length} outcomes automatically unlocked</p>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:"1.25rem"}}>
+            {allIds.map(id=>{
+              const section=PRETEST.find(s=>s.outcomeId===id);
+              const r=byOutcome[id];
+              const ok=r&&r.correct===r.total;
+              const bs=ok?BAND.green:BAND.red;
+              return(
+                <div key={id} style={{background:"#fff",border:`1px solid ${ok?"#86efac":"#fca5a5"}`,borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{width:22,height:22,borderRadius:"50%",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,background:ok?"#dcfce7":"#fee2e2",color:ok?"#16a34a":"#dc2626"}}>{ok?"✓":"✗"}</div>
+                  <div style={{flex:1}}>
+                    <p style={{fontSize:13,fontWeight:600,margin:"0 0 1px",color:ok?"#16a34a":"#1e293b"}}>{section?.short}</p>
+                    {!ok&&r&&r.wrong.length>0&&<p style={{fontSize:11,color:"#94a3b8",margin:0}}>Needs work on this outcome</p>}
+                  </div>
+                  <span style={{fontSize:11,fontWeight:700,color:ok?"#16a34a":"#dc2626",flexShrink:0}}>{r?`${r.correct}/${r.total}`:""}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+            <button onClick={()=>{setPretestMode(null);setView("home");}} style={Sb()}>Back to units</button>
+            <button onClick={()=>{setSelectedUnit(UNITS.find(u=>u.id==="u24"));setView("rubric");setPretestMode(null);}}
+              style={Sb({background:"#1e40af",color:"#fff",border:"none",fontWeight:600})}>Go to my rubric →</button>
+          </div>
+        </div>
+      );
+    }
+
+    const current=pretestQList[pretestIdx];
+    if(!current)return null;
+    const q=current.q;
+    const pct=Math.round(pretestIdx/pretestQList.length*100);
+    const ok=pretestCanGo();
+    const pool=q.type==="order"?q.items.filter(item=>!pretestAns.orderSeq.includes(item)):[];
+
+    return(
+      <div style={{maxWidth:520,margin:"0 auto",padding:"1rem",fontFamily:ff}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:"1.25rem"}}>
+          <button onClick={()=>{setPretestMode(null);setView("home");}} style={Sb()}>✕ Exit</button>
+          <div style={{flex:1}}>
+            <p style={{fontSize:12,fontWeight:600,margin:"0 0 5px",color:"#64748b"}}>📋 Pre-test · {current.short}</p>
+            <div style={{background:"#f1f5f9",borderRadius:4,height:4,overflow:"hidden"}}>
+              <div style={{height:"100%",width:`${pct}%`,background:"#3b82f6",borderRadius:4,transition:"width 0.3s"}}/>
+            </div>
+          </div>
+          <span style={{fontSize:12,color:"#94a3b8",flexShrink:0}}>{pretestIdx+1}/{pretestQList.length}</span>
+        </div>
+        <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:"1.5rem",marginBottom:12}}>
+          <p style={{fontSize:16,fontWeight:500,margin:"0 0 1.25rem",lineHeight:1.6,color:"#0f172a"}}>{q.text}</p>
+          {q.type==="input"&&(
+            <><input autoFocus type="text" value={pretestAns.input} onChange={e=>setPretestAns(a=>({...a,input:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&ok&&handlePretestNext()}
+              placeholder="Type your answer" style={{width:"100%",boxSizing:"border-box",padding:"10px 12px",border:"1.5px solid #cbd5e1",borderRadius:8,fontSize:15,outline:"none"}}/>
+            <p style={{fontSize:11,color:"#94a3b8",margin:"6px 0 0"}}>Use fractions like 3/4 or whole numbers</p></>
+          )}
+          {q.type==="mc"&&(
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {q.options.map(opt=><button key={opt} onClick={()=>setPretestAns(a=>({...a,option:opt}))} style={Pb(pretestAns.option===opt)}>{opt}</button>)}
+            </div>
+          )}
+          {q.type==="truefalse"&&(
+            <div style={{display:"flex",gap:12}}>
+              {["true","false"].map(val=><button key={val} onClick={()=>setPretestAns(a=>({...a,option:val}))} style={Pb(pretestAns.option===val,{flex:1,textAlign:"center",fontSize:15})}>{val.charAt(0).toUpperCase()+val.slice(1)}</button>)}
+            </div>
+          )}
+          {q.type==="order"&&(
+            <div>
+              <p style={{fontSize:12,color:"#64748b",margin:"0 0 8px"}}>Click to build your order:</p>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",minHeight:44,marginBottom:14,padding:8,background:"#f8fafc",borderRadius:8,border:"1px solid #e2e8f0",alignItems:"center"}}>
+                {pool.length>0?pool.map(item=><button key={item} onClick={()=>setPretestAns(a=>({...a,orderSeq:[...a.orderSeq,item]}))} style={{padding:"7px 14px",borderRadius:8,border:"1px solid #e2e8f0",background:"#fff",cursor:"pointer",fontSize:14,fontWeight:500}}>{item}</button>)
+                  :<span style={{fontSize:12,color:"#94a3b8"}}>All placed</span>}
+              </div>
+              {pretestAns.orderSeq.length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
+                {pretestAns.orderSeq.map((item,i)=><span key={i} style={{display:"flex",alignItems:"center",gap:4}}>
+                  {i>0&&<span style={{color:"#cbd5e1"}}>→</span>}
+                  <button onClick={()=>setPretestAns(a=>({...a,orderSeq:a.orderSeq.filter((_,idx)=>idx!==i)}))} style={{padding:"7px 14px",borderRadius:8,border:"1.5px solid #bfdbfe",background:"#eff6ff",cursor:"pointer",fontSize:14,color:"#1d4ed8",fontWeight:600}}>{item}</button>
+                </span>)}
+              </div>}
+            </div>
+          )}
+          {q.type==="numberline"&&<NumberLineQ key={pretestIdx} q={q} ans={pretestAns} setAns={setPretestAns}/>}
+          {q.type==="match"&&<MatchQ key={pretestIdx} q={q} ans={pretestAns} setAns={setPretestAns}/>}
+          {q.type==="partition"&&<PartitionQ key={pretestIdx} q={q} ans={pretestAns} setAns={setPretestAns}/>}
+        </div>
+        <div style={{display:"flex",justifyContent:"flex-end"}}>
+          <button onClick={handlePretestNext} disabled={!ok}
+            style={{fontSize:14,padding:"9px 22px",background:ok?"#1e40af":"#e2e8f0",color:ok?"#fff":"#94a3b8",border:"none",borderRadius:8,cursor:ok?"pointer":"default",fontWeight:600}}>
+            {pretestIdx===pretestQList.length-1?"Submit":"Next →"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Assessment ────────────────────────────────────────────────────────────
+  if(view==="assessment"){
+    const o=activeOutcome;
+    const bs=BAND[o.band];
+    const uc=UC[selectedUnit.id];
+
+    if(results){
+      const correct=results.results.filter(r=>r.correct).length;
+      return(
+        <div style={{maxWidth:520,margin:"0 auto",padding:"1rem",fontFamily:ff}}>
+          <div style={{textAlign:"center",padding:"1.5rem 0 1.25rem"}}>
+            <div style={{width:56,height:56,borderRadius:"50%",background:results.allCorrect?"#dcfce7":"#fef9c3",border:`2px solid ${results.allCorrect?"#86efac":"#fcd34d"}`,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px",fontSize:22}}>
+              {results.allCorrect?"✓":correct}
+            </div>
+            {results.allCorrect
+              ?<><h2 style={{fontSize:18,fontWeight:600,margin:"0 0 4px",color:"#16a34a"}}>Outcome unlocked!</h2><p style={{fontSize:13,color:"#64748b",margin:0}}>{o.short} has been highlighted on your rubric.</p></>
+              :<><h2 style={{fontSize:18,fontWeight:600,margin:"0 0 4px",color:"#0f172a"}}>Keep practising</h2><p style={{fontSize:13,color:"#64748b",margin:0}}>{correct} of {results.results.length} correct — you can only miss 1 to unlock this outcome.</p></>}
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:"1.25rem"}}>
+            {results.results.map((r,i)=>(
+              <div key={i} style={{background:"#fff",border:`1px solid ${r.correct?"#86efac":"#fca5a5"}`,borderRadius:10,padding:"11px 14px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
+                  <p style={{fontSize:13,margin:0,flex:1,color:"#1e293b"}}>{r.q.text}</p>
+                  <span style={{fontSize:11,fontWeight:700,flexShrink:0,color:r.correct?"#16a34a":"#dc2626"}}>{r.correct?"Correct":"Incorrect"}</span>
+                </div>
+                {!r.correct&&<p style={{fontSize:12,color:"#64748b",margin:"6px 0 0"}}>Your answer: <span style={{color:"#dc2626"}}>{fmtGiven(r.given,r.q)}</span></p>}
+              </div>
+            ))}
+          </div>
+          <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+            <button onClick={()=>setView("rubric")} style={Sb()}>Back to rubric</button>
+            {!results.allCorrect&&<button onClick={()=>{setQIdx(0);setAnswers([]);setAns(initAns(o.questions[0]));setResults(null);}} style={Sb({background:uc.dark,color:"#fff",border:"none",fontWeight:600})}>Try again</button>}
+          </div>
+        </div>
+      );
+    }
+
+    const q=o.questions[qIdx];
+    const total=o.questions.length;
+    const pct=Math.round(qIdx/total*100);
+    const ok=canGo();
+    const pool=q.type==="order"?q.items.filter(item=>!ans.orderSeq.includes(item)):[];
+
+    return(
+      <div style={{maxWidth:520,margin:"0 auto",padding:"1rem",fontFamily:ff}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:"1.25rem"}}>
+          <button onClick={()=>setView("rubric")} style={Sb()}>← Back</button>
+          <div style={{flex:1}}>
+            <p style={{fontSize:12,fontWeight:600,margin:"0 0 5px",color:"#64748b"}}>{o.short}</p>
+            <div style={{background:"#f1f5f9",borderRadius:4,height:4,overflow:"hidden"}}>
+              <div style={{height:"100%",width:`${pct}%`,background:bs.dot,borderRadius:4,transition:"width 0.3s"}}/>
+            </div>
+          </div>
+          <span style={{fontSize:12,color:"#94a3b8",flexShrink:0}}>{qIdx+1}/{total}</span>
+        </div>
+        <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:"1.5rem",marginBottom:12}}>
+          <p style={{fontSize:16,fontWeight:500,margin:"0 0 1.25rem",lineHeight:1.6,color:"#0f172a"}}>{q.text}</p>
+          {q.type==="input"&&(
+            <><input autoFocus type="text" value={ans.input} onChange={e=>setAns(a=>({...a,input:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&ok&&handleNext()}
+              placeholder="Type your answer" style={{width:"100%",boxSizing:"border-box",padding:"10px 12px",border:"1.5px solid #cbd5e1",borderRadius:8,fontSize:15,outline:"none"}}/>
+            <p style={{fontSize:11,color:"#94a3b8",margin:"6px 0 0"}}>Use fractions like 3/4 or whole numbers</p></>
+          )}
+          {q.type==="mc"&&(
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {q.options.map(opt=><button key={opt} onClick={()=>setAns(a=>({...a,option:opt}))} style={Pb(ans.option===opt)}>{opt}</button>)}
+            </div>
+          )}
+          {q.type==="truefalse"&&(
+            <div style={{display:"flex",gap:12}}>
+              {["true","false"].map(val=><button key={val} onClick={()=>setAns(a=>({...a,option:val}))} style={Pb(ans.option===val,{flex:1,textAlign:"center",fontSize:15})}>{val.charAt(0).toUpperCase()+val.slice(1)}</button>)}
+            </div>
+          )}
+          {q.type==="order"&&(
+            <div>
+              <p style={{fontSize:12,color:"#64748b",margin:"0 0 8px"}}>Click to build your order:</p>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",minHeight:44,marginBottom:14,padding:8,background:"#f8fafc",borderRadius:8,border:"1px solid #e2e8f0",alignItems:"center"}}>
+                {pool.length>0?pool.map(item=><button key={item} onClick={()=>setAns(a=>({...a,orderSeq:[...a.orderSeq,item]}))} style={{padding:"7px 14px",borderRadius:8,border:"1px solid #e2e8f0",background:"#fff",cursor:"pointer",fontSize:14,fontWeight:500,color:"#1e293b"}}>{item}</button>)
+                  :<span style={{fontSize:12,color:"#94a3b8"}}>All placed below</span>}
+              </div>
+              {ans.orderSeq.length>0&&<>
+                <p style={{fontSize:12,color:"#94a3b8",margin:"0 0 6px"}}>Your order (click to remove):</p>
+                <div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
+                  {ans.orderSeq.map((item,i)=><span key={i} style={{display:"flex",alignItems:"center",gap:4}}>
+                    {i>0&&<span style={{color:"#cbd5e1",fontSize:14}}>→</span>}
+                    <button onClick={()=>setAns(a=>({...a,orderSeq:a.orderSeq.filter((_,idx)=>idx!==i)}))} style={{padding:"7px 14px",borderRadius:8,border:"1.5px solid #bfdbfe",background:"#eff6ff",cursor:"pointer",fontSize:14,color:"#1d4ed8",fontWeight:600}}>{item}</button>
+                  </span>)}
+                </div>
+              </>}
+            </div>
+          )}
+          {q.type==="shade"&&ans.shadedCells.length===q.cells&&(
+            <div>
+              <p style={{fontSize:12,color:"#64748b",margin:"0 0 8px"}}>Click cells to shade them:</p>
+              <div style={{display:"flex",gap:3,marginBottom:8}}>
+                {ans.shadedCells.map((shaded,i)=><div key={i} onClick={()=>setAns(a=>({...a,shadedCells:a.shadedCells.map((v,idx)=>idx===i?!v:v)}))}
+                  style={{flex:1,height:44,borderRadius:4,cursor:"pointer",background:shaded?uc.dark:"#f8fafc",border:`1px solid ${shaded?uc.dark:"#cbd5e1"}`,transition:"background 0.15s"}}/>)}
+              </div>
+              <p style={{fontSize:12,color:"#64748b",margin:0}}>{ans.shadedCells.filter(Boolean).length} of {q.cells} cells shaded</p>
+            </div>
+          )}
+          {q.type==="numberline"&&<NumberLineQ key={qIdx} q={q} ans={ans} setAns={setAns}/>}
+          {q.type==="match"&&<MatchQ key={qIdx} q={q} ans={ans} setAns={setAns}/>}
+          {q.type==="partition"&&<PartitionQ key={qIdx} q={q} ans={ans} setAns={setAns}/>}
+        </div>
+        <div style={{display:"flex",justifyContent:"flex-end"}}>
+          <button onClick={handleNext} disabled={!ok} style={{fontSize:14,padding:"9px 22px",background:ok?uc.dark:"#e2e8f0",color:ok?"#fff":"#94a3b8",border:"none",borderRadius:8,cursor:ok?"pointer":"default",fontWeight:600}}>
+            {qIdx===total-1?"Submit":"Next →"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Teacher: unit rubric view ────────────────────────────────────────────
+  if(view==="rubric"&&isTeacher){
+    if(teacherFocus){
+      const s=students.find(s=>s.id===teacherFocus);
+      const prog=progress[s.id];
+      const {done,total}=unitProgress(prog,selectedUnit.id);
+      const uc=UC[selectedUnit.id];
+      const studentAttempts=attempts[s.id]||{};
+
+      // ── Attempt detail view ──────────────────────────────────────────────
+      if(teacherAttemptKey!==null&&teacherAttemptIdx!==null){
+        const outcomeId=teacherAttemptKey.replace(`${selectedUnit.id}_`,"");
+        const outcome=selectedUnit.outcomes.find(o=>o.id===outcomeId);
+        const attempt=(studentAttempts[teacherAttemptKey]||[])[teacherAttemptIdx];
+        if(!attempt) return null;
+        const attemptNum=teacherAttemptIdx+1;
+        const timeStr=new Date(attempt.ts).toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"});
+        return(
+          <div style={{maxWidth:520,margin:"0 auto",padding:"1rem",fontFamily:ff}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:"1.5rem"}}>
+              <button onClick={()=>setTeacherAttemptIdx(null)} style={Sb()}>← Attempts</button>
+              <div>
+                <h1 style={{fontSize:17,fontWeight:600,margin:"0 0 2px",color:"#0f172a"}}>{s.name} — Attempt {attemptNum}</h1>
+                <p style={{fontSize:12,color:"#64748b",margin:0}}>{outcome?.short} · {timeStr} · <span style={{fontWeight:600,color:attempt.passed?"#16a34a":"#dc2626"}}>{attempt.passed?"Passed":"Not passed"}</span> ({attempt.correct}/{attempt.total})</p>
+              </div>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {attempt.results.map((r,i)=>(
+                <div key={i} style={{background:"#fff",border:`1px solid ${r.correct?"#86efac":"#fca5a5"}`,borderRadius:10,padding:"11px 14px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
+                    <p style={{fontSize:13,margin:0,flex:1,color:"#1e293b",lineHeight:1.4}}>{r.text}</p>
+                    <span style={{fontSize:11,fontWeight:700,flexShrink:0,color:r.correct?"#16a34a":"#dc2626",paddingTop:1}}>{r.correct?"✓":"✗"}</span>
+                  </div>
+                  {!r.correct&&<p style={{fontSize:12,color:"#64748b",margin:"6px 0 0"}}>Answer given: <span style={{color:"#dc2626",fontWeight:600}}>{r.given||"(blank)"}</span></p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
+      // ── Attempt list for one outcome ─────────────────────────────────────
+      if(teacherAttemptKey!==null){
+        const outcomeId=teacherAttemptKey.replace(`${selectedUnit.id}_`,"");
+        const outcome=selectedUnit.outcomes.find(o=>o.id===outcomeId);
+        const outcomeAttempts=studentAttempts[teacherAttemptKey]||[];
+        return(
+          <div style={{maxWidth:520,margin:"0 auto",padding:"1rem",fontFamily:ff}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:"1.5rem"}}>
+              <button onClick={()=>setTeacherAttemptKey(null)} style={Sb()}>← {s.name}</button>
+              <div>
+                <h1 style={{fontSize:17,fontWeight:600,margin:"0 0 2px",color:"#0f172a"}}>{outcome?.short}</h1>
+                <p style={{fontSize:12,color:"#64748b",margin:0}}>{s.name} · {outcomeAttempts.length} attempt{outcomeAttempts.length!==1?"s":""}</p>
+              </div>
+            </div>
+            {outcomeAttempts.length===0
+              ? <p style={{fontSize:13,color:"#94a3b8",textAlign:"center",padding:"2rem 0"}}>No attempts recorded this session.</p>
+              : <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {[...outcomeAttempts].reverse().map((a,ri)=>{
+                    const i=outcomeAttempts.length-1-ri;
+                    const timeStr=new Date(a.ts).toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"});
+                    const wrongQs=a.results.filter(r=>!r.correct);
+                    return(
+                      <div key={i} style={{background:"#fff",border:`1px solid ${a.passed?"#86efac":"#fca5a5"}`,borderRadius:10,padding:"12px 14px"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:wrongQs.length>0?8:0}}>
+                          <div>
+                            <span style={{fontSize:13,fontWeight:600,color:a.passed?"#16a34a":"#dc2626"}}>{a.passed?"Passed":"Not passed"}</span>
+                            <span style={{fontSize:12,color:"#94a3b8",marginLeft:8}}>{a.correct}/{a.total} correct · {timeStr}</span>
+                          </div>
+                          <button onClick={()=>setTeacherAttemptIdx(i)} style={Sb({fontSize:12,padding:"4px 12px"})}>View</button>
+                        </div>
+                        {wrongQs.length>0&&(
+                          <div style={{borderTop:"1px solid #f1f5f9",paddingTop:8}}>
+                            <p style={{fontSize:11,fontWeight:700,color:"#94a3b8",margin:"0 0 5px",textTransform:"uppercase",letterSpacing:"0.04em"}}>Incorrect questions</p>
+                            {wrongQs.map((r,wi)=>(
+                              <p key={wi} style={{fontSize:12,color:"#dc2626",margin:"0 0 3px",lineHeight:1.4}}>✗ {r.text}</p>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>}
+          </div>
+        );
+      }
+
+      // ── Student rubric with attempt counts ───────────────────────────────
+      return(
+        <div style={{maxWidth:520,margin:"0 auto",padding:"1rem",fontFamily:ff}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:"1.5rem"}}>
+            <button onClick={()=>{setTeacherFocus(null);setTeacherAttemptKey(null);setTeacherAttemptIdx(null);}} style={Sb()}>← Class</button>
+            <div><h1 style={{fontSize:18,fontWeight:600,margin:"0 0 2px",color:"#0f172a"}}>{s.name}</h1>
+              <p style={{fontSize:13,color:"#64748b",margin:0}}>{selectedUnit.name}: {selectedUnit.subtitle} — {done}/{total} complete</p></div>
+          </div>
+          {["red","yellow","green"].filter(band=>selectedUnit.outcomes.some(o=>o.band===band)).map(band=>{
+            const bs=BAND[band];
+            return(<div key={band} style={{marginBottom:"1.25rem"}}>
+              <span style={{display:"inline-block",background:bs.bg,color:bs.text,border:`1px solid ${bs.border}`,fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:6,marginBottom:8,textTransform:"uppercase",letterSpacing:"0.05em"}}>{band}</span>
+              <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                {selectedUnit.outcomes.filter(o=>o.band===band).map(o=>{
+                  const d=prog[`${selectedUnit.id}_${o.id}`];
+                  const key=`${selectedUnit.id}_${o.id}`;
+                  const n=(studentAttempts[key]||[]).length;
+                  const lastAttempt=(studentAttempts[key]||[]).slice(-1)[0];
+                  return(
+                    <div key={o.id} style={{background:"#fff",border:`1px solid ${d?"#86efac":"#e2e8f0"}`,borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",gap:10}}>
+                      <div style={{width:18,height:18,borderRadius:"50%",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,background:d?"#dcfce7":"#f1f5f9",color:d?"#16a34a":"#94a3b8"}}>{d?"✓":""}</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <p style={{fontSize:13,fontWeight:600,margin:"0 0 1px",color:d?"#16a34a":"#1e293b"}}>{o.short}</p>
+                        {n>0&&<p style={{fontSize:11,color:"#94a3b8",margin:0}}>{n} attempt{n!==1?"s":""} · last: <span style={{color:lastAttempt.passed?"#16a34a":"#dc2626",fontWeight:600}}>{lastAttempt.correct}/{lastAttempt.total}</span></p>}
+                      </div>
+                      <div style={{display:"flex",gap:6,flexShrink:0}}>
+                        {n>0&&<button onClick={()=>{setTeacherAttemptKey(key);setTeacherAttemptIdx(null);}} style={Sb({fontSize:12,padding:"4px 10px"})}>Attempts</button>}
+                        <button onClick={()=>{const nv=!d;setProgress(p=>({...p,[s.id]:{...p[s.id],[key]:nv}}));saveOutcome(s.id,key,nv);}}
+                          style={{fontSize:12,padding:"4px 10px",borderRadius:8,cursor:"pointer",fontWeight:600,border:`1px solid ${d?"#fca5a5":"#86efac"}`,background:d?"#fff0f0":"#f0fdf4",color:d?"#dc2626":"#16a34a"}}>
+                          {d?"Unmark":"✓ Mark"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>);
+          })}
+        </div>
+      );
+    }
+
+    const uc=UC[selectedUnit.id];
+    return(
+      <div style={{maxWidth:700,margin:"0 auto",padding:"1rem",fontFamily:ff}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}>
+          <div>
+            <button onClick={()=>{setView("home");setTeacherFocus(null);}} style={{...Sb(),marginBottom:6,display:"block"}}>← All units</button>
+            <h1 style={{fontSize:20,fontWeight:600,margin:"0 0 2px",color:"#0f172a"}}>{selectedUnit.name}: {selectedUnit.subtitle}</h1>
+            <p style={{fontSize:13,color:"#64748b",margin:0}}>{students.length} students</p>
+          </div>
+          <button onClick={doLogout} style={Sb()}>Sign out</button>
+        </div>
+        <div style={{overflowX:"auto",marginBottom:"1.75rem"}}>
+          <table style={{borderCollapse:"collapse",minWidth:"100%"}}>
+            <thead><tr>
+              <th style={{textAlign:"left",fontSize:12,fontWeight:400,color:"#94a3b8",padding:"0 8px 8px 0",minWidth:80}}></th>
+              {selectedUnit.outcomes.filter(o=>o.band==="red").map((_,i)=><th key={`r${i}`} style={{padding:"0 2px 8px"}}><span style={{display:"block",fontSize:10,fontWeight:700,color:BAND.red.text,textAlign:"center"}}>R{i+1}</span></th>)}
+              {selectedUnit.outcomes.filter(o=>o.band==="yellow").map((_,i)=><th key={`y${i}`} style={{padding:"0 2px 8px"}}><span style={{display:"block",fontSize:10,fontWeight:700,color:BAND.yellow.text,textAlign:"center"}}>Y{i+1}</span></th>)}
+              {selectedUnit.outcomes.filter(o=>o.band==="green").map((_,i)=><th key={`g${i}`} style={{padding:"0 2px 8px"}}><span style={{display:"block",fontSize:10,fontWeight:700,color:BAND.green.text,textAlign:"center"}}>G{i+1}</span></th>)}
+              <th style={{padding:"0 0 8px 8px"}}></th>
+            </tr></thead>
+            <tbody>
+              {students.map(s=>{
+                const prog=progress[s.id];
+                const {done,total}=unitProgress(prog,selectedUnit.id);
+                return(<tr key={s.id}>
+                  <td style={{padding:"3px 8px 3px 0"}}><button onClick={()=>setTeacherFocus(s.id)} style={{fontSize:13,padding:"3px 10px",border:"1px solid #e2e8f0",borderRadius:6,background:"#fff",cursor:"pointer",color:"#1e293b",fontWeight:500}}>{s.name}</button></td>
+                  {selectedUnit.outcomes.map(o=>{
+                    const d=prog[`${selectedUnit.id}_${o.id}`];
+                    return(<td key={o.id} style={{padding:"3px 2px",textAlign:"center"}}>
+                      <div style={{width:22,height:22,borderRadius:4,margin:"0 auto",background:d?"#dcfce7":"#f8fafc",border:`1px solid ${d?"#86efac":"#e2e8f0"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:d?"#16a34a":"#cbd5e1"}}>{d?"✓":""}</div>
+                    </td>);
+                  })}
+                  <td style={{padding:"3px 0 3px 8px",textAlign:"right"}}><span style={{fontSize:12,fontWeight:600,color:"#64748b"}}>{done}/{total}</span></td>
+                </tr>);
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p style={{fontSize:12,fontWeight:700,color:"#94a3b8",margin:"0 0 10px",textTransform:"uppercase",letterSpacing:"0.05em"}}>Completion by outcome</p>
+        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+          {selectedUnit.outcomes.map(o=>{
+            const n=students.filter(s=>progress[s.id][`${selectedUnit.id}_${o.id}`]).length;
+            const pct=Math.round(n/students.length*100);
+            const bs=BAND[o.band];
+            return(<div key={o.id} style={{display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:10,fontWeight:700,color:bs.text,width:20,flexShrink:0}}>{o.id.toUpperCase()}</span>
+              <span style={{fontSize:12,width:180,flexShrink:0,color:"#334155",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{o.short}</span>
+              <div style={{flex:1,background:"#f1f5f9",borderRadius:4,height:7,overflow:"hidden"}}>
+                <div style={{height:"100%",width:`${pct}%`,background:uc.dot,borderRadius:4}}/>
+              </div>
+              <span style={{fontSize:11,color:"#94a3b8",minWidth:28,textAlign:"right"}}>{n}/{students.length}</span>
+            </div>);
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>
