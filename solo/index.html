@@ -1792,6 +1792,17 @@ function App(){
   const [pretestAnswers,setPretestAnswers]=useState([]);
   const [pretestAns,setPretestAns]=useState({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
   const [pretestResults,setPretestResults]=useState(null);
+  const isMobile=useIsMobile();
+  const [expandedResource,setExpandedResource]=useState(null);
+  const [practiceOutcome,setPracticeOutcome]=useState(null);
+  const [practiceUnit,setPracticeUnit]=useState(null);
+  const [practicePhase,setPracticePhase]=useState("example");
+  const [practiceIdx,setPracticeIdx]=useState(0);
+  const [practiceAns,setPracticeAns]=useState({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
+  const [practiceSubmitted,setPracticeSubmitted]=useState(false);
+  const [practiceCorrect,setPracticeCorrect]=useState(false);
+  const [practiceAttempts,setPracticeAttempts]=useState(0);
+  const [practiceScore,setPracticeScore]=useState({correct:0,total:0});
 
   async function doClassLookup(){
     setLoginError("");
@@ -1879,10 +1890,12 @@ function App(){
   function doLogout(){
     sb.auth.signOut();
     setView("login");setStudentId(null);setIsTeacher(false);setLoginClassCode("");setLoginClassObj(null);setLoginStep("class");setLoginCode("");setLoginEmail("");setLoginPassword("");setLoginError("");setSelectedUnit(null);setTeacherFocus(null);setStudents([]);setClasses([]);setSelectedClassId(null);setProgress({});setTimestamps({});setLoginMode("student");
+    setExpandedResource(null);setPracticeOutcome(null);setPracticeUnit(null);setPracticePhase("example");setPracticeIdx(0);setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);setPracticeScore({correct:0,total:0});
   }
 
-  function startPretest(){
-    const flat=PRETEST.flatMap(section=>section.questions.map(q=>({outcomeId:section.outcomeId,short:section.short,q})));
+  function startPretest(unitId){
+    const data=PRETESTS[unitId]||[];
+    const flat=data.flatMap(section=>section.questions.map(q=>({outcomeId:section.outcomeId,short:section.short,q,unitId})));
     setPretestQList(flat);
     setPretestIdx(0);
     setPretestAnswers([]);
@@ -1904,24 +1917,22 @@ function App(){
     else if(q.type==="mc"||q.type==="truefalse")given=pretestAns.option;
     else given=pretestAns.input;
     const correct=checkAnswer(given,q);
-    const newAnswers=[...pretestAnswers,{outcomeId:current.outcomeId,short:current.short,q,given,correct}];
+    const newAnswers=[...pretestAnswers,{outcomeId:current.outcomeId,short:current.short,q,given,correct,unitId:current.unitId}];
     setPretestAnswers(newAnswers);
     if(pretestIdx<pretestQList.length-1){
       setPretestIdx(pretestIdx+1);
       setPretestAns(initAns(pretestQList[pretestIdx+1].q));
     } else {
-      // Group by outcome, check if both correct
       const byOutcome={};
-      newAnswers.forEach(a=>{if(!byOutcome[a.outcomeId])byOutcome[a.outcomeId]={short:a.short,total:0,correct:0,wrong:[]};byOutcome[a.outcomeId].total++;if(a.correct)byOutcome[a.outcomeId].correct++;else byOutcome[a.outcomeId].wrong.push(a.q.text);});
+      newAnswers.forEach(a=>{if(!byOutcome[a.outcomeId])byOutcome[a.outcomeId]={short:a.short,total:0,correct:0,wrong:[],unitId:a.unitId};byOutcome[a.outcomeId].total++;if(a.correct)byOutcome[a.outcomeId].correct++;else byOutcome[a.outcomeId].wrong.push(a.q.text);});
       const passed=Object.keys(byOutcome).filter(id=>byOutcome[id].correct===byOutcome[id].total);
-      // Auto-tick passed outcomes for this student
       if(studentId){
         setProgress(p=>{
           const updated={...p[studentId]};
-          passed.forEach(id=>{updated[`u24_${id}`]=true;});
+          passed.forEach(id=>{const uid=byOutcome[id].unitId||"u24";updated[`${uid}_${id}`]=true;});
           return{...p,[studentId]:updated};
         });
-        passed.forEach(id=>saveOutcome(studentId,`u24_${id}`,true));
+        passed.forEach(id=>saveOutcome(studentId,`${byOutcome[id].unitId||"u24"}_${id}`,true));
       }
       setPretestResults({byOutcome,passed});
       setPretestMode("done");
@@ -1978,6 +1989,70 @@ function App(){
     if(q.type==="numberline")return q.tokens.every(t=>(ans.nlPlaced||{})[t]!==undefined);
     if(q.type==="match")return q.left.every(l=>(ans.matchPairs||{})[l]!==undefined);
     if(q.type==="partition")return(ans.partitionShaded||[]).length>0;
+    return false;
+  }
+
+  function startPractice(unit,outcome){
+    setPracticeUnit(unit);setPracticeOutcome(outcome);
+    setPracticePhase("example");setPracticeIdx(0);
+    setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
+    setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);
+    setPracticeScore({correct:0,total:0});
+    setView("practice");
+  }
+
+  function getPracticeData(){
+    if(!practiceOutcome||!practiceUnit)return null;
+    return PRACTICE[`${practiceUnit.id}_${practiceOutcome.id}`]||null;
+  }
+
+  function submitPracticeAnswer(){
+    const pd=getPracticeData();if(!pd)return;
+    const q=pd.questions[practiceIdx];
+    let given;
+    if(q.type==="order")given=practiceAns.orderSeq;
+    else if(q.type==="shade")given=practiceAns.shadedCells.filter(Boolean).length;
+    else if(q.type==="numberline")given=practiceAns.nlPlaced;
+    else if(q.type==="match")given=practiceAns.matchPairs;
+    else if(q.type==="partition")given=practiceAns.partitionShaded;
+    else if(q.type==="mc"||q.type==="truefalse")given=practiceAns.option;
+    else given=practiceAns.input;
+    const correct=checkAnswer(given,q);
+    setPracticeCorrect(correct);
+    setPracticeSubmitted(true);
+    setPracticeAttempts(a=>a+1);
+    if(correct)setPracticeScore(s=>({correct:s.correct+1,total:s.total+1}));
+    else if(practiceAttempts===0){}
+    else setPracticeScore(s=>({...s,total:s.total+1}));
+  }
+
+  function nextPracticeQuestion(){
+    const pd=getPracticeData();if(!pd)return;
+    if(!practiceCorrect&&practiceAttempts===1){
+      setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
+      setPracticeSubmitted(false);setPracticeCorrect(false);
+      return;
+    }
+    if(practiceIdx<pd.questions.length-1){
+      setPracticeIdx(i=>i+1);
+      setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
+      setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);
+    } else {
+      if(!practiceCorrect)setPracticeScore(s=>({...s,total:s.total+1}));
+      setPracticePhase("done");
+    }
+  }
+
+  function practiceCan(){
+    const pd=getPracticeData();if(!pd)return false;
+    const q=pd.questions[practiceIdx];
+    if(q.type==="input")return practiceAns.input.trim().length>0;
+    if(q.type==="mc"||q.type==="truefalse")return practiceAns.option.length>0;
+    if(q.type==="order")return practiceAns.orderSeq.length===q.items.length;
+    if(q.type==="shade")return practiceAns.shadedCells.some(Boolean);
+    if(q.type==="numberline")return q.tokens.every(t=>(practiceAns.nlPlaced||{})[t]!==undefined);
+    if(q.type==="match")return q.left.every(l=>(practiceAns.matchPairs||{})[l]!==undefined);
+    if(q.type==="partition")return(practiceAns.partitionShaded||[]).length>0;
     return false;
   }
 
