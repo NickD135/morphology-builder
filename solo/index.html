@@ -18,7 +18,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.9/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script type="text/babel">
-    const { useState, useRef } = React;
+    const { useState, useRef, useEffect } = React;
 
 
 // ─── Unit colours ────────────────────────────────────────────────────────────
@@ -46,38 +46,47 @@ function Frac({v,s=15,c="inherit"}){
   </span>;
 }
 
+function useIsMobile(){ const [m,setM]=useState(()=>window.innerWidth<640); useEffect(()=>{const h=()=>setM(window.innerWidth<640);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);return m; }
+
 function NumberLineQ({q,ans,setAns}){
   const lineRef=useRef(null);
   const [held,setHeld]=useState(null);
   const placed=ans.nlPlaced||{};
   const unplaced=q.tokens.filter(t=>placed[t]===undefined);
+
+  function posFromEvent(e){
+    const rect=lineRef.current.getBoundingClientRect();
+    const clientX=e.touches?e.touches[0].clientX:e.changedTouches?e.changedTouches[0].clientX:e.clientX;
+    return Math.max(0.02,Math.min(0.97,(clientX-rect.left)/rect.width));
+  }
   function pickUp(token){
     if(held===token){setHeld(null);return;}
     if(placed[token]!==undefined){const np={...placed};delete np[token];setAns(a=>({...a,nlPlaced:np}));}
     setHeld(token);
   }
-  function clickLine(e){
+  function placeToken(e){
     if(!held)return;
-    const rect=lineRef.current.getBoundingClientRect();
-    const pos=Math.max(0.02,Math.min(0.97,(e.clientX-rect.left)/rect.width));
+    e.preventDefault();
+    const pos=posFromEvent(e);
     setAns(a=>({...a,nlPlaced:{...(a.nlPlaced||{}),[held]:pos}}));
     setHeld(null);
   }
   return(
     <div>
-      <p style={{fontSize:12,color:"#64748b",margin:"0 0 14px",fontStyle:"italic"}}>
-        {held?<><strong style={{color:"#1e40af"}}>Click the number line</strong> to place <strong style={{color:"#1e40af"}}>{held}</strong></>
-          :"Click a fraction to pick it up, then click the number line to place it."}
+      <p style={{fontSize:13,color:"#64748b",margin:"0 0 14px",fontStyle:"italic"}}>
+        {held?<><strong style={{color:"#1e40af"}}>Tap the number line</strong> to place <strong style={{color:"#1e40af"}}>{held}</strong></>
+          :"Tap a fraction to pick it up, then tap the number line to place it."}
       </p>
-      <div style={{display:"flex",gap:10,marginBottom:28,flexWrap:"wrap",minHeight:44}}>
+      <div style={{display:"flex",gap:10,marginBottom:28,flexWrap:"wrap",minHeight:52}}>
         {unplaced.map(t=>(
-          <button key={t} onClick={()=>pickUp(t)} style={{padding:"8px 18px",background:held===t?"#1e40af":"#eff6ff",color:held===t?"#fff":"#1d4ed8",border:`2px solid ${held===t?"#1e40af":"#93c5fd"}`,borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:15,display:"flex",alignItems:"center",gap:4,boxShadow:held===t?"0 2px 8px rgba(30,64,175,0.3)":"none",transform:held===t?"scale(1.05)":"scale(1)",transition:"all 0.15s"}}>
-            <Frac v={t} s={13} c={held===t?"#fff":"#1d4ed8"}/>
+          <button key={t} onClick={()=>pickUp(t)} style={{padding:"10px 20px",background:held===t?"#1e40af":"#eff6ff",color:held===t?"#fff":"#1d4ed8",border:`2px solid ${held===t?"#1e40af":"#93c5fd"}`,borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:16,display:"flex",alignItems:"center",gap:4,minHeight:44,boxShadow:held===t?"0 2px 8px rgba(30,64,175,0.3)":"none",transform:held===t?"scale(1.05)":"scale(1)",transition:"all 0.15s"}}>
+            <Frac v={t} s={14} c={held===t?"#fff":"#1d4ed8"}/>
           </button>
         ))}
-        {unplaced.length===0&&<span style={{fontSize:12,color:"#94a3b8",alignSelf:"center"}}>All placed — click a token to move it</span>}
+        {unplaced.length===0&&<span style={{fontSize:13,color:"#94a3b8",alignSelf:"center"}}>All placed — tap a token to move it</span>}
       </div>
-      <div style={{padding:"36px 20px 32px",cursor:held?"crosshair":"default",background:held?"#f0f9ff":"#f8fafc",borderRadius:12,border:`1.5px solid ${held?"#93c5fd":"#e2e8f0"}`,transition:"all 0.15s"}} onClick={clickLine}>
+      <div style={{padding:"40px 20px 36px",cursor:held?"crosshair":"default",background:held?"#f0f9ff":"#f8fafc",borderRadius:12,border:`1.5px solid ${held?"#93c5fd":"#e2e8f0"}`,transition:"all 0.15s",touchAction:"none"}}
+        onClick={placeToken} onTouchEnd={placeToken}>
         <div ref={lineRef} style={{position:"relative",height:4,background:"#334155",borderRadius:2}}>
           <div style={{position:"absolute",left:-8,top:-4,width:0,height:0,borderTop:"6px solid transparent",borderBottom:"6px solid transparent",borderRight:"10px solid #334155"}}/>
           <div style={{position:"absolute",right:-8,top:-4,width:0,height:0,borderTop:"6px solid transparent",borderBottom:"6px solid transparent",borderLeft:"10px solid #334155"}}/>
@@ -89,14 +98,14 @@ function NumberLineQ({q,ans,setAns}){
           ))}
           {Object.entries(placed).map(([t,pos])=>(
             <div key={t} onClick={e=>{e.stopPropagation();pickUp(t);}}
-              style={{position:"absolute",left:`${pos*100}%`,top:-38,transform:"translateX(-50%)",background:"#1e40af",color:"#fff",padding:"4px 10px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",zIndex:2,boxShadow:"0 2px 6px rgba(30,64,175,0.35)",display:"flex",alignItems:"center"}}>
-              <Frac v={t} s={11} c="#fff"/>
-              <div style={{position:"absolute",left:"50%",top:"100%",marginLeft:-1,width:2,height:20,background:"#1e40af"}}/>
+              style={{position:"absolute",left:`${pos*100}%`,top:-42,transform:"translateX(-50%)",background:"#1e40af",color:"#fff",padding:"5px 12px",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",zIndex:2,boxShadow:"0 2px 6px rgba(30,64,175,0.35)",display:"flex",alignItems:"center",minHeight:36}}>
+              <Frac v={t} s={12} c="#fff"/>
+              <div style={{position:"absolute",left:"50%",top:"100%",marginLeft:-1,width:2,height:22,background:"#1e40af"}}/>
             </div>
           ))}
         </div>
       </div>
-      {Object.keys(placed).length>0&&<p style={{fontSize:11,color:"#94a3b8",margin:"8px 0 0",textAlign:"center"}}>Click a placed fraction to move it</p>}
+      {Object.keys(placed).length>0&&<p style={{fontSize:11,color:"#94a3b8",margin:"8px 0 0",textAlign:"center"}}>Tap a placed fraction to move it</p>}
     </div>
   );
 }
