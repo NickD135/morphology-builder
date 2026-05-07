@@ -1804,6 +1804,8 @@ function App(){
   const [teacherAttemptKey,setTeacherAttemptKey]=useState(null);
   const [teacherAttemptIdx,setTeacherAttemptIdx]=useState(null);
   const [pretestMode,setPretestMode]=useState(null);
+  const [pretestResumeDraft,setPretestResumeDraft]=useState(null);
+  const [pretestShowResume,setPretestShowResume]=useState(false);
   const [pretestQList,setPretestQList]=useState([]);
   const [pretestIdx,setPretestIdx]=useState(0);
   const [pretestAnswers,setPretestAnswers]=useState([]);
@@ -1906,6 +1908,7 @@ function App(){
 
   function doLogout(){
     sb.auth.signOut();
+    try{if(studentId)localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}
     setView("login");setStudentId(null);setIsTeacher(false);setLoginClassCode("");setLoginClassObj(null);setLoginStep("class");setLoginCode("");setLoginEmail("");setLoginPassword("");setLoginError("");setSelectedUnit(null);setTeacherFocus(null);setStudents([]);setClasses([]);setSelectedClassId(null);setProgress({});setTimestamps({});setLoginMode("student");
     setExpandedResource(null);setPracticeOutcome(null);setPracticeUnit(null);setPracticePhase("example");setPracticeIdx(0);setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);setPracticeScore({correct:0,total:0});
   }
@@ -1914,11 +1917,36 @@ function App(){
     const data=PRETESTS[unitId]||[];
     const flat=data.flatMap(section=>section.questions.map(q=>({outcomeId:section.outcomeId,short:section.short,q,unitId})));
     setPretestQList(flat);
-    setPretestIdx(0);
-    setPretestAnswers([]);
-    setPretestAns(initAns(flat[0].q));
     setPretestResults(null);
     setPretestMode("running");
+    // Check for a same-device draft
+    let draft=null;
+    if(studentId){
+      try{
+        const raw=localStorage.getItem(`solo_pretest_draft_${studentId}`);
+        if(raw){
+          const parsed=JSON.parse(raw);
+          if(parsed.unitId===unitId&&parsed.pretestIdx>0&&parsed.pretestIdx<flat.length){
+            draft=parsed;
+          } else {
+            localStorage.removeItem(`solo_pretest_draft_${studentId}`);
+          }
+        }
+      }catch{}
+    }
+    if(draft){
+      setPretestResumeDraft(draft);
+      setPretestShowResume(true);
+      setPretestIdx(draft.pretestIdx);
+      setPretestAnswers(draft.pretestAnswers);
+      setPretestAns(initAns(flat[draft.pretestIdx].q));
+    } else {
+      setPretestResumeDraft(null);
+      setPretestShowResume(false);
+      setPretestIdx(0);
+      setPretestAnswers([]);
+      setPretestAns(initAns(flat[0].q));
+    }
     setView("pretest");
   }
 
@@ -1936,10 +1964,34 @@ function App(){
     const correct=checkAnswer(given,q);
     const newAnswers=[...pretestAnswers,{outcomeId:current.outcomeId,short:current.short,q,given,correct,unitId:current.unitId}];
     setPretestAnswers(newAnswers);
+
+    // Per-outcome immediate save: if this answer completes the outcome's pair and both are correct, save now
+    if(studentId){
+      const oid=current.outcomeId;
+      const uid=current.unitId||"u24";
+      const outcomeAnswers=newAnswers.filter(a=>a.outcomeId===oid);
+      const outcomeTotal=pretestQList.filter(item=>item.outcomeId===oid).length;
+      if(outcomeAnswers.length===outcomeTotal&&outcomeAnswers.every(a=>a.correct)){
+        saveOutcome(studentId,`${uid}_${oid}`,true);
+      }
+    }
+
+    // localStorage checkpoint after every question
+    if(studentId){
+      const nextIdx=pretestIdx+1;
+      try{
+        localStorage.setItem(
+          `solo_pretest_draft_${studentId}`,
+          JSON.stringify({unitId:current.unitId,pretestIdx:nextIdx,pretestAnswers:newAnswers})
+        );
+      }catch{}
+    }
+
     if(pretestIdx<pretestQList.length-1){
       setPretestIdx(pretestIdx+1);
       setPretestAns(initAns(pretestQList[pretestIdx+1].q));
     } else {
+      // Full completion — final save pass (idempotent upsert)
       const byOutcome={};
       newAnswers.forEach(a=>{if(!byOutcome[a.outcomeId])byOutcome[a.outcomeId]={short:a.short,total:0,correct:0,wrong:[],unitId:a.unitId};byOutcome[a.outcomeId].total++;if(a.correct)byOutcome[a.outcomeId].correct++;else byOutcome[a.outcomeId].wrong.push(a.q.text);});
       const passed=Object.keys(byOutcome).filter(id=>byOutcome[id].correct===byOutcome[id].total);
@@ -1950,6 +2002,8 @@ function App(){
           return{...p,[studentId]:updated};
         });
         passed.forEach(id=>saveOutcome(studentId,`${byOutcome[id].unitId||"u24"}_${id}`,true));
+        // Clear draft on completion
+        try{localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}
       }
       setPretestResults({byOutcome,passed});
       setPretestMode("done");
@@ -2511,7 +2565,7 @@ function App(){
     return(
       <div style={{maxWidth:520,margin:"0 auto",padding:"1rem",fontFamily:ff}}>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:"1.25rem"}}>
-          <button onClick={()=>{setPretestMode(null);setView("home");}} style={Sb()}>✕ Exit</button>
+          <button onClick={()=>{try{if(studentId)localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}setPretestShowResume(false);setPretestResumeDraft(null);setPretestMode(null);setView("home");}} style={Sb()}>✕ Exit</button>
           <div style={{flex:1}}>
             <p style={{fontSize:12,fontWeight:600,margin:"0 0 5px",color:"#64748b"}}>📋 Pre-test · {current.short}</p>
             <div style={{background:"#f1f5f9",borderRadius:4,height:4,overflow:"hidden"}}>
