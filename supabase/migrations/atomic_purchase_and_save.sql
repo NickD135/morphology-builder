@@ -87,8 +87,14 @@ DECLARE
     'displayBadges', '[]'::jsonb,
     'dances', '{}'::jsonb
   );
-  v_exists boolean;
+  v_exists  boolean;
+  v_safe_val jsonb;
 BEGIN
+  -- PostgREST sends JS null as SQL NULL for jsonb params, but we want JSON null
+  -- (which means "slot is empty") not SQL NULL (which destroys the whole column).
+  -- COALESCE maps SQL NULL → JSON null so jsonb_set never receives a NULL value arg.
+  v_safe_val := COALESCE(p_value, 'null'::jsonb);
+
   -- Check if row exists
   SELECT EXISTS(
     SELECT 1 FROM student_character WHERE student_id = p_student_id
@@ -100,7 +106,7 @@ BEGIN
       SET scientist = jsonb_set(
             COALESCE(scientist, v_default_scientist),
             ARRAY[p_field],
-            p_value
+            v_safe_val
           )
       WHERE student_id = p_student_id;
   ELSE
@@ -111,7 +117,7 @@ BEGIN
         0,
         0,
         '[]'::jsonb,
-        jsonb_set(v_default_scientist, ARRAY[p_field], p_value),
+        jsonb_set(v_default_scientist, ARRAY[p_field], v_safe_val),
         jsonb_build_object(
           'totalCorrect', 0,
           'totalAnswered', 0,
