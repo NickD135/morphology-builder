@@ -1937,6 +1937,16 @@ function App(){
     });
   }
 
+  async function loadResources(unitId,classId){
+    if(!classId){setSoloResources([]);return;}
+    const {data}=await sb.from("solo_resources")
+      .select("*")
+      .eq("unit_id",unitId)
+      .or(`scope.eq.global,class_id.eq.${classId}`)
+      .order("sort_order");
+    setSoloResources(data||[]);
+  }
+
   function doLogout(){
     sb.auth.signOut();
     try{if(studentId)localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}
@@ -2054,7 +2064,14 @@ function App(){
     if(q.type==="partition")return(pretestAns.partitionShaded||[]).length>0;
     return false;
   }
-  function openUnit(unit){setSelectedUnit(unit);setView("rubric");}
+  function openUnit(unit){
+    setSelectedUnit(unit);
+    setView("rubric");
+    setResourceTab("rubric");
+    setResourceOutcome(unit.outcomes[0]?.id||null);
+    const classId=isTeacher?selectedClassId:(loginClassObj?.id||null);
+    loadResources(unit.id,classId);
+  }
   function startOutcome(o){setActiveOutcome(o);setQIdx(0);setAnswers([]);setAns(initAns(o.questions[0]));setResults(null);setView("assessment");}
   function handleNext(){
     const q=activeOutcome.questions[qIdx];
