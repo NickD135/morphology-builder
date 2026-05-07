@@ -1951,6 +1951,40 @@ function App(){
     setSoloResources(data||[]);
   }
 
+  async function saveResource(){
+    if(!newResLabel.trim()){return;}
+    if(newResType!=="question"&&!newResUrl.trim()){return;}
+    if(newResType==="question"&&(!newResQ.text.trim()||newResQ.options.some(o=>!o.text.trim()))){return;}
+    const isAdmin=teacherEmail===ADMIN_EMAIL;
+    const goGlobal=isAdmin&&addingToGlobal;
+    const {data:{session}}=await sb.auth.getSession();
+    const uid=session?.user?.id;
+    if(!uid){return;}
+    const base={
+      unit_id:selectedUnit.id,
+      outcome_id:resourceOutcome,
+      type:newResType,
+      label:newResLabel.trim(),
+      scope:goGlobal?"global":"class",
+      class_id:goGlobal?null:selectedClassId,
+      created_by:uid,
+      sort_order:soloResources.filter(r=>r.outcome_id===resourceOutcome).length,
+    };
+    const payload=newResType==="question"
+      ?{...base,question:newResQ}
+      :{...base,url:newResUrl.trim()};
+    await sb.from("solo_resources").insert(payload);
+    await loadResources(selectedUnit.id,selectedClassId);
+    setAddingResource(false);
+    setNewResLabel("");setNewResUrl("");setNewResType("video");
+    setNewResQ({text:"",options:[{text:"",correct:true},{text:"",correct:false},{text:"",correct:false},{text:"",correct:false}]});
+  }
+
+  async function deleteResource(id){
+    await sb.from("solo_resources").delete().eq("id",id);
+    setSoloResources(prev=>prev.filter(r=>r.id!==id));
+  }
+
   function doLogout(){
     sb.auth.signOut();
     try{if(studentId)localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}
