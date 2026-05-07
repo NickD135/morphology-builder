@@ -2588,58 +2588,96 @@ function App(){
     const pool=q.type==="order"?q.items.filter(item=>!pretestAns.orderSeq.includes(item)):[];
 
     return(
-      <div style={{maxWidth:520,margin:"0 auto",padding:"1rem",fontFamily:ff}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:"1.25rem"}}>
-          <button onClick={()=>{try{if(studentId)localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}setPretestShowResume(false);setPretestResumeDraft(null);setPretestMode(null);setView("home");}} style={Sb()}>✕ Exit</button>
-          <div style={{flex:1}}>
-            <p style={{fontSize:12,fontWeight:600,margin:"0 0 5px",color:"#64748b"}}>📋 Pre-test · {current.short}</p>
-            <div style={{background:"#f1f5f9",borderRadius:4,height:4,overflow:"hidden"}}>
-              <div style={{height:"100%",width:`${pct}%`,background:"#3b82f6",borderRadius:4,transition:"width 0.3s"}}/>
+      <div style={{display:"flex",flexDirection:"column",flex:1,fontFamily:ff}}>
+        <AppNav title="Pre-test"
+          right={<span style={{fontSize:12,color:"rgba(255,255,255,0.6)",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{current.short}</span>}
+        />
+        <div style={{flex:1,display:"flex",flexDirection:"column",padding:"18px 18px 24px",minHeight:0}}>
+          {/* topbar */}
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexShrink:0}}>
+            <button onClick={()=>{try{if(studentId)localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}setPretestShowResume(false);setPretestResumeDraft(null);setPretestMode(null);setView("home");}} style={Sb()}>✕ Exit</button>
+            <div style={{flex:1,background:"var(--ind-100)",borderRadius:99,height:6,overflow:"hidden"}}>
+              <div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,var(--indigo),var(--blue))",borderRadius:99,transition:"width 0.3s"}}/>
+            </div>
+            <span style={{fontSize:12,color:"var(--muted)",fontWeight:600,flexShrink:0}}>{pretestIdx+1}/{pretestQList.length}</span>
+          </div>
+          {/* resume banner */}
+          {pretestShowResume&&(
+            <div style={{background:"var(--ind-50)",border:"1px solid var(--ind-200)",borderRadius:10,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexShrink:0}}>
+              <span style={{fontSize:13,color:"var(--indigo)",fontWeight:500}}>Continue where you left off? You were on question {pretestResumeDraft?.pretestIdx+1} of {pretestQList.length}.</span>
+              <div style={{display:"flex",gap:8,flexShrink:0}}>
+                <button onClick={()=>{try{if(studentId)localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}setPretestShowResume(false);setPretestResumeDraft(null);setPretestIdx(0);setPretestAnswers([]);setPretestAns(initAns(pretestQList[0].q));}}
+                  style={{fontFamily:ff,fontSize:12,padding:"5px 10px",background:"#fff",border:"1px solid var(--ind-200)",borderRadius:7,cursor:"pointer",color:"var(--indigo)"}}>Start over</button>
+                <button onClick={()=>setPretestShowResume(false)}
+                  style={{fontFamily:ff,fontSize:12,padding:"5px 12px",background:"var(--indigo)",border:"none",borderRadius:7,cursor:"pointer",color:"#fff",fontWeight:600}}>Continue →</button>
+              </div>
+            </div>
+          )}
+          {/* outcome strip */}
+          <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,padding:"9px 14px",display:"flex",alignItems:"center",gap:8,marginBottom:14,flexShrink:0,boxShadow:"var(--sh-sm)"}}>
+            <span style={{fontSize:10,fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase",padding:"3px 9px",borderRadius:5,background:"var(--ind-50)",color:"var(--indigo)",flexShrink:0}}>Pre-test</span>
+            <span style={{fontSize:13,fontWeight:600,color:"var(--sub)"}}>{current.short}</span>
+          </div>
+          {/* question card — fills remaining space */}
+          <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:20,padding:"28px 26px 24px",boxShadow:"var(--sh-lg)",flex:1,display:"flex",flexDirection:"column",minHeight:0}}>
+            <p style={{fontSize:22,fontWeight:600,lineHeight:1.55,letterSpacing:"-0.02em",marginBottom:26,flexShrink:0,color:"var(--text)"}}>{q.text}</p>
+            <div style={{display:"flex",flexDirection:"column",gap:10,flex:1,minHeight:0}}>
+              {q.type==="input"&&(
+                <div>
+                  <input autoFocus type="text" value={pretestAns.input} onChange={e=>setPretestAns(a=>({...a,input:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&ok&&handlePretestNext()}
+                    placeholder="Type your answer" style={{width:"100%",boxSizing:"border-box",padding:"12px 14px",border:"1.5px solid #cbd5e1",borderRadius:10,fontSize:16,outline:"none",fontFamily:ff}}/>
+                  <p style={{fontSize:12,color:"var(--muted)",margin:"8px 0 0"}}>Use fractions like 3/4 or whole numbers</p>
+                </div>
+              )}
+              {q.type==="mc"&&(
+                <>{q.options.map(opt=><button key={opt} onClick={()=>setPretestAns(a=>({...a,option:opt}))} style={Pb(pretestAns.option===opt)}>{opt}</button>)}</>
+              )}
+              {q.type==="truefalse"&&(
+                <div style={{display:"flex",gap:12,flex:1}}>
+                  {["true","false"].map(val=><button key={val} onClick={()=>setPretestAns(a=>({...a,option:val}))} style={Pb(pretestAns.option===val,{textAlign:"center",justifyContent:"center"})}>{val.charAt(0).toUpperCase()+val.slice(1)}</button>)}
+                </div>
+              )}
+              {q.type==="order"&&(
+                <div>
+                  <p style={{fontSize:12,color:"var(--sub)",margin:"0 0 8px"}}>Click to build your order:</p>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap",minHeight:44,marginBottom:14,padding:8,background:"#f8fafc",borderRadius:8,border:"1px solid #e2e8f0",alignItems:"center"}}>
+                    {pool.length>0?pool.map(item=><button key={item} onClick={()=>setPretestAns(a=>({...a,orderSeq:[...a.orderSeq,item]}))} style={{padding:"7px 14px",borderRadius:8,border:"1px solid #e2e8f0",background:"#fff",cursor:"pointer",fontSize:14,fontWeight:500,fontFamily:ff}}>{item}</button>)
+                      :<span style={{fontSize:12,color:"var(--muted)"}}>All placed</span>}
+                  </div>
+                  {pretestAns.orderSeq.length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
+                    {pretestAns.orderSeq.map((item,i)=><span key={i} style={{display:"flex",alignItems:"center",gap:4}}>
+                      {i>0&&<span style={{color:"#cbd5e1"}}>→</span>}
+                      <button onClick={()=>setPretestAns(a=>({...a,orderSeq:a.orderSeq.filter((_,idx)=>idx!==i)}))} style={{padding:"7px 14px",borderRadius:8,border:"1.5px solid #bfdbfe",background:"#eff6ff",cursor:"pointer",fontSize:14,color:"#1d4ed8",fontWeight:600,fontFamily:ff}}>{item}</button>
+                    </span>)}
+                  </div>}
+                </div>
+              )}
+              {q.type==="shade"&&pretestAns.shadedCells.length===q.cells&&(
+                <div>
+                  <p style={{fontSize:12,color:"var(--sub)",margin:"0 0 8px"}}>Click cells to shade them:</p>
+                  <div style={{display:"flex",gap:3,marginBottom:8}}>
+                    {pretestAns.shadedCells.map((shaded,i)=><div key={i} onClick={()=>setPretestAns(a=>({...a,shadedCells:a.shadedCells.map((v,idx)=>idx===i?!v:v)}))}
+                      style={{flex:1,height:52,borderRadius:4,cursor:"pointer",background:shaded?"var(--indigo)":"#f8fafc",border:`1px solid ${shaded?"var(--indigo)":"#cbd5e1"}`,transition:"background 0.15s"}}/>)}
+                  </div>
+                  <p style={{fontSize:12,color:"var(--sub)",margin:0}}>{pretestAns.shadedCells.filter(Boolean).length} of {q.cells} cells shaded</p>
+                </div>
+              )}
+              {q.type==="numberline"&&<NumberLineQ key={pretestIdx} q={q} ans={pretestAns} setAns={setPretestAns}/>}
+              {q.type==="match"&&<MatchQ key={pretestIdx} q={q} ans={pretestAns} setAns={setPretestAns}/>}
+              {q.type==="partition"&&<PartitionQ key={pretestIdx} q={q} ans={pretestAns} setAns={setPretestAns}/>}
             </div>
           </div>
-          <span style={{fontSize:12,color:"#94a3b8",flexShrink:0}}>{pretestIdx+1}/{pretestQList.length}</span>
-        </div>
-        <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:"1.5rem",marginBottom:12}}>
-          <p style={{fontSize:16,fontWeight:500,margin:"0 0 1.25rem",lineHeight:1.6,color:"#0f172a"}}>{q.text}</p>
-          {q.type==="input"&&(
-            <><input autoFocus type="text" value={pretestAns.input} onChange={e=>setPretestAns(a=>({...a,input:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&ok&&handlePretestNext()}
-              placeholder="Type your answer" style={{width:"100%",boxSizing:"border-box",padding:"10px 12px",border:"1.5px solid #cbd5e1",borderRadius:8,fontSize:15,outline:"none"}}/>
-            <p style={{fontSize:11,color:"#94a3b8",margin:"6px 0 0"}}>Use fractions like 3/4 or whole numbers</p></>
-          )}
-          {q.type==="mc"&&(
-            <div style={{display:"flex",flexDirection:"column",gap:8}}>
-              {q.options.map(opt=><button key={opt} onClick={()=>setPretestAns(a=>({...a,option:opt}))} style={Pb(pretestAns.option===opt)}>{opt}</button>)}
-            </div>
-          )}
-          {q.type==="truefalse"&&(
-            <div style={{display:"flex",gap:12}}>
-              {["true","false"].map(val=><button key={val} onClick={()=>setPretestAns(a=>({...a,option:val}))} style={Pb(pretestAns.option===val,{flex:1,textAlign:"center",fontSize:15})}>{val.charAt(0).toUpperCase()+val.slice(1)}</button>)}
-            </div>
-          )}
-          {q.type==="order"&&(
-            <div>
-              <p style={{fontSize:12,color:"#64748b",margin:"0 0 8px"}}>Click to build your order:</p>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap",minHeight:44,marginBottom:14,padding:8,background:"#f8fafc",borderRadius:8,border:"1px solid #e2e8f0",alignItems:"center"}}>
-                {pool.length>0?pool.map(item=><button key={item} onClick={()=>setPretestAns(a=>({...a,orderSeq:[...a.orderSeq,item]}))} style={{padding:"7px 14px",borderRadius:8,border:"1px solid #e2e8f0",background:"#fff",cursor:"pointer",fontSize:14,fontWeight:500}}>{item}</button>)
-                  :<span style={{fontSize:12,color:"#94a3b8"}}>All placed</span>}
-              </div>
-              {pretestAns.orderSeq.length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
-                {pretestAns.orderSeq.map((item,i)=><span key={i} style={{display:"flex",alignItems:"center",gap:4}}>
-                  {i>0&&<span style={{color:"#cbd5e1"}}>→</span>}
-                  <button onClick={()=>setPretestAns(a=>({...a,orderSeq:a.orderSeq.filter((_,idx)=>idx!==i)}))} style={{padding:"7px 14px",borderRadius:8,border:"1.5px solid #bfdbfe",background:"#eff6ff",cursor:"pointer",fontSize:14,color:"#1d4ed8",fontWeight:600}}>{item}</button>
-                </span>)}
-              </div>}
-            </div>
-          )}
-          {q.type==="numberline"&&<NumberLineQ key={pretestIdx} q={q} ans={pretestAns} setAns={setPretestAns}/>}
-          {q.type==="match"&&<MatchQ key={pretestIdx} q={q} ans={pretestAns} setAns={setPretestAns}/>}
-          {q.type==="partition"&&<PartitionQ key={pretestIdx} q={q} ans={pretestAns} setAns={setPretestAns}/>}
-        </div>
-        <div style={{display:"flex",justifyContent:"flex-end"}}>
-          <button onClick={handlePretestNext} disabled={!ok}
-            style={{fontSize:14,padding:"9px 22px",background:ok?"#1e40af":"#e2e8f0",color:ok?"#fff":"#94a3b8",border:"none",borderRadius:8,cursor:ok?"pointer":"default",fontWeight:600}}>
-            {pretestIdx===pretestQList.length-1?"Submit":"Next →"}
-          </button>
+          {/* actions row */}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:18,flexShrink:0}}>
+            {pretestQList.length<=15
+              ?<div style={{display:"flex",gap:5}}>{pretestQList.map((_,i)=><div key={i} style={{width:7,height:7,borderRadius:"50%",background:i<pretestIdx?"var(--ind-mid)":i===pretestIdx?"var(--indigo)":"var(--ind-100)",transform:i===pretestIdx?"scale(1.3)":"none",transition:"all 0.15s"}}/>)}</div>
+              :<span style={{fontSize:12,color:"var(--muted)"}}>{pretestIdx+1} of {pretestQList.length}</span>
+            }
+            <button onClick={handlePretestNext} disabled={!ok}
+              style={{padding:"13px 32px",border:"none",borderRadius:12,fontFamily:ff,fontSize:15,fontWeight:700,cursor:ok?"pointer":"default",background:ok?"linear-gradient(135deg,var(--indigo),var(--blue))":"#e2e8f0",color:ok?"#fff":"var(--muted)",boxShadow:ok?"0 4px 18px rgba(67,56,202,0.32)":"none",transition:"all 0.2s"}}>
+              {pretestIdx===pretestQList.length-1?"Submit":"Next →"}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -2689,70 +2727,81 @@ function App(){
     const pool=q.type==="order"?q.items.filter(item=>!ans.orderSeq.includes(item)):[];
 
     return(
-      <div style={{maxWidth:520,margin:"0 auto",padding:"1rem",fontFamily:ff}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:"1.25rem"}}>
-          <button onClick={()=>setView("rubric")} style={Sb()}>← Back</button>
-          <div style={{flex:1}}>
-            <p style={{fontSize:12,fontWeight:600,margin:"0 0 5px",color:"#64748b"}}>{o.short}</p>
-            <div style={{background:"#f1f5f9",borderRadius:4,height:4,overflow:"hidden"}}>
-              <div style={{height:"100%",width:`${pct}%`,background:bs.dot,borderRadius:4,transition:"width 0.3s"}}/>
+      <div style={{display:"flex",flexDirection:"column",flex:1,fontFamily:ff}}>
+        <AppNav title={o.short}/>
+        <div style={{flex:1,display:"flex",flexDirection:"column",padding:"18px 18px 24px",minHeight:0}}>
+          {/* topbar */}
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexShrink:0}}>
+            <button onClick={()=>setView("rubric")} style={Sb()}>← Back</button>
+            <div style={{flex:1,background:"var(--ind-100)",borderRadius:99,height:6,overflow:"hidden"}}>
+              <div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,var(--indigo),var(--blue))",borderRadius:99,transition:"width 0.3s"}}/>
+            </div>
+            <span style={{fontSize:12,color:"var(--muted)",fontWeight:600,flexShrink:0}}>{qIdx+1}/{total}</span>
+          </div>
+          {/* outcome strip */}
+          <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,padding:"9px 14px",display:"flex",alignItems:"center",gap:8,marginBottom:14,flexShrink:0,boxShadow:"var(--sh-sm)"}}>
+            <span style={{fontSize:10,fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase",padding:"3px 9px",borderRadius:5,background:bs.bg,color:bs.text,flexShrink:0}}>{o.band}</span>
+            <span style={{fontSize:13,fontWeight:600,color:"var(--sub)"}}>{o.short}</span>
+          </div>
+          {/* question card */}
+          <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:20,padding:"28px 26px 24px",boxShadow:"var(--sh-lg)",flex:1,display:"flex",flexDirection:"column",minHeight:0}}>
+            <p style={{fontSize:22,fontWeight:600,lineHeight:1.55,letterSpacing:"-0.02em",marginBottom:26,flexShrink:0,color:"var(--text)"}}>{q.text}</p>
+            <div style={{display:"flex",flexDirection:"column",gap:10,flex:1,minHeight:0}}>
+              {q.type==="input"&&(
+                <div>
+                  <input autoFocus type="text" value={ans.input} onChange={e=>setAns(a=>({...a,input:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&ok&&handleNext()}
+                    placeholder="Type your answer" style={{width:"100%",boxSizing:"border-box",padding:"12px 14px",border:"1.5px solid #cbd5e1",borderRadius:10,fontSize:16,outline:"none",fontFamily:ff}}/>
+                  <p style={{fontSize:12,color:"var(--muted)",margin:"8px 0 0"}}>Use fractions like 3/4 or whole numbers</p>
+                </div>
+              )}
+              {q.type==="mc"&&(
+                <>{q.options.map(opt=><button key={opt} onClick={()=>setAns(a=>({...a,option:opt}))} style={Pb(ans.option===opt)}>{opt}</button>)}</>
+              )}
+              {q.type==="truefalse"&&(
+                <div style={{display:"flex",gap:12,flex:1}}>
+                  {["true","false"].map(val=><button key={val} onClick={()=>setAns(a=>({...a,option:val}))} style={Pb(ans.option===val,{textAlign:"center",justifyContent:"center"})}>{val.charAt(0).toUpperCase()+val.slice(1)}</button>)}
+                </div>
+              )}
+              {q.type==="order"&&(
+                <div>
+                  <p style={{fontSize:12,color:"var(--sub)",margin:"0 0 8px"}}>Click to build your order:</p>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap",minHeight:44,marginBottom:14,padding:8,background:"#f8fafc",borderRadius:8,border:"1px solid #e2e8f0",alignItems:"center"}}>
+                    {pool.length>0?pool.map(item=><button key={item} onClick={()=>setAns(a=>({...a,orderSeq:[...a.orderSeq,item]}))} style={{padding:"7px 14px",borderRadius:8,border:"1px solid #e2e8f0",background:"#fff",cursor:"pointer",fontSize:14,fontWeight:500,fontFamily:ff,color:"var(--text)"}}>{item}</button>)
+                      :<span style={{fontSize:12,color:"var(--muted)"}}>All placed below</span>}
+                  </div>
+                  {ans.orderSeq.length>0&&<>
+                    <p style={{fontSize:12,color:"var(--muted)",margin:"0 0 6px"}}>Your order (click to remove):</p>
+                    <div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
+                      {ans.orderSeq.map((item,i)=><span key={i} style={{display:"flex",alignItems:"center",gap:4}}>
+                        {i>0&&<span style={{color:"#cbd5e1",fontSize:14}}>→</span>}
+                        <button onClick={()=>setAns(a=>({...a,orderSeq:a.orderSeq.filter((_,idx)=>idx!==i)}))} style={{padding:"7px 14px",borderRadius:8,border:"1.5px solid #bfdbfe",background:"#eff6ff",cursor:"pointer",fontSize:14,color:"#1d4ed8",fontWeight:600,fontFamily:ff}}>{item}</button>
+                      </span>)}
+                    </div>
+                  </>}
+                </div>
+              )}
+              {q.type==="shade"&&ans.shadedCells.length===q.cells&&(
+                <div>
+                  <p style={{fontSize:12,color:"var(--sub)",margin:"0 0 8px"}}>Click cells to shade them:</p>
+                  <div style={{display:"flex",gap:3,marginBottom:8}}>
+                    {ans.shadedCells.map((shaded,i)=><div key={i} onClick={()=>setAns(a=>({...a,shadedCells:a.shadedCells.map((v,idx)=>idx===i?!v:v)}))}
+                      style={{flex:1,height:52,borderRadius:4,cursor:"pointer",background:shaded?"var(--indigo)":"#f8fafc",border:`1px solid ${shaded?"var(--indigo)":"#cbd5e1"}`,transition:"background 0.15s"}}/>)}
+                  </div>
+                  <p style={{fontSize:12,color:"var(--sub)",margin:0}}>{ans.shadedCells.filter(Boolean).length} of {q.cells} cells shaded</p>
+                </div>
+              )}
+              {q.type==="numberline"&&<NumberLineQ key={qIdx} q={q} ans={ans} setAns={setAns}/>}
+              {q.type==="match"&&<MatchQ key={qIdx} q={q} ans={ans} setAns={setAns}/>}
+              {q.type==="partition"&&<PartitionQ key={qIdx} q={q} ans={ans} setAns={setAns}/>}
             </div>
           </div>
-          <span style={{fontSize:12,color:"#94a3b8",flexShrink:0}}>{qIdx+1}/{total}</span>
-        </div>
-        <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:"1.5rem",marginBottom:12}}>
-          <p style={{fontSize:16,fontWeight:500,margin:"0 0 1.25rem",lineHeight:1.6,color:"#0f172a"}}>{q.text}</p>
-          {q.type==="input"&&(
-            <><input autoFocus type="text" value={ans.input} onChange={e=>setAns(a=>({...a,input:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&ok&&handleNext()}
-              placeholder="Type your answer" style={{width:"100%",boxSizing:"border-box",padding:"10px 12px",border:"1.5px solid #cbd5e1",borderRadius:8,fontSize:15,outline:"none"}}/>
-            <p style={{fontSize:11,color:"#94a3b8",margin:"6px 0 0"}}>Use fractions like 3/4 or whole numbers</p></>
-          )}
-          {q.type==="mc"&&(
-            <div style={{display:"flex",flexDirection:"column",gap:8}}>
-              {q.options.map(opt=><button key={opt} onClick={()=>setAns(a=>({...a,option:opt}))} style={Pb(ans.option===opt)}>{opt}</button>)}
-            </div>
-          )}
-          {q.type==="truefalse"&&(
-            <div style={{display:"flex",gap:12}}>
-              {["true","false"].map(val=><button key={val} onClick={()=>setAns(a=>({...a,option:val}))} style={Pb(ans.option===val,{flex:1,textAlign:"center",fontSize:15})}>{val.charAt(0).toUpperCase()+val.slice(1)}</button>)}
-            </div>
-          )}
-          {q.type==="order"&&(
-            <div>
-              <p style={{fontSize:12,color:"#64748b",margin:"0 0 8px"}}>Click to build your order:</p>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap",minHeight:44,marginBottom:14,padding:8,background:"#f8fafc",borderRadius:8,border:"1px solid #e2e8f0",alignItems:"center"}}>
-                {pool.length>0?pool.map(item=><button key={item} onClick={()=>setAns(a=>({...a,orderSeq:[...a.orderSeq,item]}))} style={{padding:"7px 14px",borderRadius:8,border:"1px solid #e2e8f0",background:"#fff",cursor:"pointer",fontSize:14,fontWeight:500,color:"#1e293b"}}>{item}</button>)
-                  :<span style={{fontSize:12,color:"#94a3b8"}}>All placed below</span>}
-              </div>
-              {ans.orderSeq.length>0&&<>
-                <p style={{fontSize:12,color:"#94a3b8",margin:"0 0 6px"}}>Your order (click to remove):</p>
-                <div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
-                  {ans.orderSeq.map((item,i)=><span key={i} style={{display:"flex",alignItems:"center",gap:4}}>
-                    {i>0&&<span style={{color:"#cbd5e1",fontSize:14}}>→</span>}
-                    <button onClick={()=>setAns(a=>({...a,orderSeq:a.orderSeq.filter((_,idx)=>idx!==i)}))} style={{padding:"7px 14px",borderRadius:8,border:"1.5px solid #bfdbfe",background:"#eff6ff",cursor:"pointer",fontSize:14,color:"#1d4ed8",fontWeight:600}}>{item}</button>
-                  </span>)}
-                </div>
-              </>}
-            </div>
-          )}
-          {q.type==="shade"&&ans.shadedCells.length===q.cells&&(
-            <div>
-              <p style={{fontSize:12,color:"#64748b",margin:"0 0 8px"}}>Click cells to shade them:</p>
-              <div style={{display:"flex",gap:3,marginBottom:8}}>
-                {ans.shadedCells.map((shaded,i)=><div key={i} onClick={()=>setAns(a=>({...a,shadedCells:a.shadedCells.map((v,idx)=>idx===i?!v:v)}))}
-                  style={{flex:1,height:44,borderRadius:4,cursor:"pointer",background:shaded?uc.dark:"#f8fafc",border:`1px solid ${shaded?uc.dark:"#cbd5e1"}`,transition:"background 0.15s"}}/>)}
-              </div>
-              <p style={{fontSize:12,color:"#64748b",margin:0}}>{ans.shadedCells.filter(Boolean).length} of {q.cells} cells shaded</p>
-            </div>
-          )}
-          {q.type==="numberline"&&<NumberLineQ key={qIdx} q={q} ans={ans} setAns={setAns}/>}
-          {q.type==="match"&&<MatchQ key={qIdx} q={q} ans={ans} setAns={setAns}/>}
-          {q.type==="partition"&&<PartitionQ key={qIdx} q={q} ans={ans} setAns={setAns}/>}
-        </div>
-        <div style={{display:"flex",justifyContent:"flex-end"}}>
-          <button onClick={handleNext} disabled={!ok} style={{fontSize:14,padding:"9px 22px",background:ok?uc.dark:"#e2e8f0",color:ok?"#fff":"#94a3b8",border:"none",borderRadius:8,cursor:ok?"pointer":"default",fontWeight:600}}>
-            {qIdx===total-1?"Submit":"Next →"}
-          </button>
+          {/* actions */}
+          <div style={{display:"flex",justifyContent:"flex-end",marginTop:18,flexShrink:0}}>
+            <button onClick={handleNext} disabled={!ok}
+              style={{padding:"13px 32px",border:"none",borderRadius:12,fontFamily:ff,fontSize:15,fontWeight:700,cursor:ok?"pointer":"default",background:ok?"linear-gradient(135deg,var(--indigo),var(--blue))":"#e2e8f0",color:ok?"#fff":"var(--muted)",boxShadow:ok?"0 4px 18px rgba(67,56,202,0.32)":"none",transition:"all 0.2s"}}>
+              {qIdx===total-1?"Submit":"Next →"}
+            </button>
+          </div>
         </div>
       </div>
     );
