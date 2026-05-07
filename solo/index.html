@@ -2462,78 +2462,96 @@ function App(){
     const ok=practiceCan();
     const pool=q.type==="order"?q.items.filter(item=>!practiceAns.orderSeq.includes(item)):[];
     const showAnswer=practiceSubmitted&&!practiceCorrect&&practiceAttempts>=2;
+    const outcomeShortName=practiceOutcome?.short||"Practice";
 
     return(
-      <div style={{maxWidth:520,margin:"0 auto",padding:"1rem",fontFamily:ff}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:"1.25rem"}}>
-          <button onClick={()=>setPracticePhase("example")} style={Sb()}>← Example</button>
-          <div style={{flex:1}}>
-            <p style={{fontSize:12,fontWeight:600,margin:"0 0 5px",color:"#64748b"}}>{practiceOutcome?.short} — Practice</p>
-            <div style={{background:"#f1f5f9",borderRadius:4,height:4,overflow:"hidden"}}>
-              <div style={{height:"100%",width:`${pct}%`,background:bs.dot,borderRadius:4,transition:"width 0.3s"}}/>
+      <div style={{display:"flex",flexDirection:"column",flex:1,fontFamily:ff}}>
+        <AppNav title="Practice"
+          right={<span style={{fontSize:12,color:"rgba(255,255,255,0.6)",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{outcomeShortName}</span>}
+        />
+        <div style={{flex:1,display:"flex",flexDirection:"column",padding:"18px 18px 24px",minHeight:0}}>
+          {/* topbar: back + progress bar + counter */}
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexShrink:0}}>
+            <button onClick={()=>setPracticePhase("example")} style={Sb()}>← Example</button>
+            <div style={{flex:1,background:"var(--ind-100)",borderRadius:99,height:6,overflow:"hidden"}}>
+              <div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,var(--indigo),var(--blue))",borderRadius:99,transition:"width 0.3s"}}/>
+            </div>
+            <span style={{fontSize:12,color:"var(--muted)",fontWeight:600,flexShrink:0}}>{practiceIdx+1}/{total}</span>
+          </div>
+          {/* outcome strip */}
+          <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,padding:"9px 14px",display:"flex",alignItems:"center",gap:8,marginBottom:14,flexShrink:0,boxShadow:"var(--sh-sm)"}}>
+            <span style={{fontSize:10,fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase",padding:"3px 9px",borderRadius:5,background:"var(--ind-50)",color:"var(--indigo)",flexShrink:0}}>Practice</span>
+            <span style={{fontSize:13,fontWeight:600,color:"var(--sub)"}}>{outcomeShortName}</span>
+          </div>
+          {/* question card — fills remaining space */}
+          <div style={{background:"var(--surface)",border:`1px solid ${practiceSubmitted?(practiceCorrect?"#86efac":"#fca5a5"):"var(--border)"}`,borderRadius:20,padding:"28px 26px 24px",boxShadow:"var(--sh-lg)",flex:1,display:"flex",flexDirection:"column",minHeight:0,transition:"border-color 0.2s"}}>
+            <p style={{fontSize:22,fontWeight:600,lineHeight:1.55,letterSpacing:"-0.02em",marginBottom:26,flexShrink:0,color:"var(--text)"}}>{q.text}</p>
+            <div style={{display:"flex",flexDirection:"column",gap:10,flex:1,minHeight:0}}>
+              {!practiceSubmitted&&<>
+                {q.type==="input"&&(
+                  <div>
+                    <input autoFocus type="text" value={practiceAns.input} onChange={e=>setPracticeAns(a=>({...a,input:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&ok&&submitPracticeAnswer()}
+                      placeholder="Type your answer" style={{width:"100%",boxSizing:"border-box",padding:"12px 14px",border:"1.5px solid #cbd5e1",borderRadius:10,fontSize:16,outline:"none",fontFamily:ff}}/>
+                    <p style={{fontSize:12,color:"var(--muted)",margin:"8px 0 0"}}>Use fractions like 3/4 or whole numbers</p>
+                  </div>
+                )}
+                {q.type==="mc"&&(
+                  <>{q.options.map(opt=><button key={opt} onClick={()=>setPracticeAns(a=>({...a,option:opt}))} style={Pb(practiceAns.option===opt)}>{opt}</button>)}</>
+                )}
+                {q.type==="truefalse"&&(
+                  <div style={{display:"flex",gap:12,flex:1}}>
+                    {["true","false"].map(v=><button key={v} onClick={()=>setPracticeAns(a=>({...a,option:v}))} style={Pb(practiceAns.option===v,{textAlign:"center",justifyContent:"center"})}>{v.charAt(0).toUpperCase()+v.slice(1)}</button>)}
+                  </div>
+                )}
+                {q.type==="order"&&(
+                  <div>
+                    <p style={{fontSize:12,color:"var(--sub)",margin:"0 0 8px"}}>Click to build your order:</p>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap",minHeight:44,marginBottom:14,padding:8,background:"#f8fafc",borderRadius:8,border:"1px solid #e2e8f0",alignItems:"center"}}>
+                      {pool.length>0?pool.map(item=><button key={item} onClick={()=>setPracticeAns(a=>({...a,orderSeq:[...a.orderSeq,item]}))} style={{padding:"7px 14px",borderRadius:8,border:"1px solid #e2e8f0",background:"#fff",cursor:"pointer",fontSize:14,fontWeight:500,fontFamily:ff,color:"var(--text)"}}>{item}</button>)
+                        :<span style={{fontSize:12,color:"var(--muted)"}}>All placed</span>}
+                    </div>
+                    {practiceAns.orderSeq.length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
+                      {practiceAns.orderSeq.map((item,i)=><span key={i} style={{display:"flex",alignItems:"center",gap:4}}>
+                        {i>0&&<span style={{color:"#cbd5e1"}}>→</span>}
+                        <button onClick={()=>setPracticeAns(a=>({...a,orderSeq:a.orderSeq.filter((_,idx)=>idx!==i)}))} style={{padding:"7px 14px",borderRadius:8,border:"1.5px solid #bfdbfe",background:"#eff6ff",cursor:"pointer",fontSize:14,color:"#1d4ed8",fontWeight:600,fontFamily:ff}}>{item}</button>
+                      </span>)}
+                    </div>}
+                  </div>
+                )}
+                {q.type==="numberline"&&<NumberLineQ key={`p${practiceIdx}`} q={q} ans={practiceAns} setAns={setPracticeAns}/>}
+                {q.type==="match"&&<MatchQ key={`p${practiceIdx}`} q={q} ans={practiceAns} setAns={setPracticeAns}/>}
+                {q.type==="partition"&&<PartitionQ key={`p${practiceIdx}`} q={q} ans={practiceAns} setAns={setPracticeAns}/>}
+              </>}
+              {practiceSubmitted&&(
+                <div style={{padding:"14px",borderRadius:10,background:practiceCorrect?"#f0fdf4":"#fef2f2",border:`1px solid ${practiceCorrect?"#86efac":"#fca5a5"}`}}>
+                  <p style={{fontSize:14,fontWeight:600,margin:"0 0 4px",color:practiceCorrect?"#16a34a":"#dc2626"}}>
+                    {practiceCorrect?"✓ Correct!":practiceAttempts===1?"✗ Not quite — try again!":"✗ Incorrect"}
+                  </p>
+                  {!practiceCorrect&&practiceAttempts===1&&<p style={{fontSize:13,color:"#64748b",margin:0}}>Review your working and have another go.</p>}
+                  {showAnswer&&<p style={{fontSize:13,color:"#475569",margin:"4px 0 0"}}>The correct answer is: <strong style={{color:"#16a34a"}}>{q.answer}</strong>{q.aliases?.length?` (also accepted: ${q.aliases.join(", ")})`:""}.</p>}
+                </div>
+              )}
             </div>
           </div>
-          <span style={{fontSize:12,color:"#94a3b8",flexShrink:0}}>{practiceIdx+1}/{total}</span>
-        </div>
-        <div style={{background:"#fff",border:`1px solid ${practiceSubmitted?(practiceCorrect?"#86efac":"#fca5a5"):"#e2e8f0"}`,borderRadius:12,padding:"1.5rem",marginBottom:12,transition:"border-color 0.2s"}}>
-          <p style={{fontSize:16,fontWeight:500,margin:"0 0 1.25rem",lineHeight:1.6,color:"#0f172a"}}>{q.text}</p>
-          {!practiceSubmitted&&<>
-            {q.type==="input"&&(
-              <><input autoFocus type="text" value={practiceAns.input} onChange={e=>setPracticeAns(a=>({...a,input:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&ok&&submitPracticeAnswer()}
-                placeholder="Type your answer" style={{width:"100%",boxSizing:"border-box",padding:"10px 12px",border:"1.5px solid #cbd5e1",borderRadius:8,fontSize:16,outline:"none"}}/>
-              <p style={{fontSize:11,color:"#94a3b8",margin:"6px 0 0"}}>Use fractions like 3/4 or whole numbers</p></>
+          {/* actions row */}
+          <div style={{display:"flex",justifyContent:"flex-end",alignItems:"center",gap:10,marginTop:18,flexShrink:0}}>
+            {!practiceSubmitted&&(
+              <button onClick={submitPracticeAnswer} disabled={!ok}
+                style={{padding:"13px 32px",border:"none",borderRadius:12,fontFamily:ff,fontSize:15,fontWeight:700,cursor:ok?"pointer":"default",background:ok?"linear-gradient(135deg,var(--indigo),var(--blue))":"#e2e8f0",color:ok?"#fff":"var(--muted)",boxShadow:ok?"0 4px 18px rgba(67,56,202,0.32)":"none",transition:"all 0.2s"}}>
+                Check answer
+              </button>
             )}
-            {q.type==="mc"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
-              {q.options.map(opt=><button key={opt} onClick={()=>setPracticeAns(a=>({...a,option:opt}))} style={Pb(practiceAns.option===opt)}>{opt}</button>)}
-            </div>}
-            {q.type==="truefalse"&&<div style={{display:"flex",gap:12}}>
-              {["true","false"].map(v=><button key={v} onClick={()=>setPracticeAns(a=>({...a,option:v}))} style={Pb(practiceAns.option===v,{flex:1,textAlign:"center",fontSize:15})}>{v.charAt(0).toUpperCase()+v.slice(1)}</button>)}
-            </div>}
-            {q.type==="order"&&<div>
-              <p style={{fontSize:12,color:"#64748b",margin:"0 0 8px"}}>Click to build your order:</p>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap",minHeight:44,marginBottom:14,padding:8,background:"#f8fafc",borderRadius:8,border:"1px solid #e2e8f0",alignItems:"center"}}>
-                {pool.length>0?pool.map(item=><button key={item} onClick={()=>setPracticeAns(a=>({...a,orderSeq:[...a.orderSeq,item]}))} style={{padding:"10px 16px",borderRadius:8,border:"1px solid #e2e8f0",background:"#fff",cursor:"pointer",fontSize:14,fontWeight:500,color:"#1e293b",minHeight:44}}>{item}</button>)
-                  :<span style={{fontSize:12,color:"#94a3b8"}}>All placed</span>}
-              </div>
-              {practiceAns.orderSeq.length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
-                {practiceAns.orderSeq.map((item,i)=><span key={i} style={{display:"flex",alignItems:"center",gap:4}}>
-                  {i>0&&<span style={{color:"#cbd5e1"}}>→</span>}
-                  <button onClick={()=>setPracticeAns(a=>({...a,orderSeq:a.orderSeq.filter((_,idx)=>idx!==i)}))} style={{padding:"10px 16px",borderRadius:8,border:"1.5px solid #bfdbfe",background:"#eff6ff",cursor:"pointer",fontSize:14,color:"#1d4ed8",fontWeight:600,minHeight:44}}>{item}</button>
-                </span>)}
-              </div>}
-            </div>}
-            {q.type==="numberline"&&<NumberLineQ key={`p${practiceIdx}`} q={q} ans={practiceAns} setAns={setPracticeAns}/>}
-            {q.type==="match"&&<MatchQ key={`p${practiceIdx}`} q={q} ans={practiceAns} setAns={setPracticeAns}/>}
-            {q.type==="partition"&&<PartitionQ key={`p${practiceIdx}`} q={q} ans={practiceAns} setAns={setPracticeAns}/>}
-          </>}
-          {practiceSubmitted&&(
-            <div style={{padding:"12px",borderRadius:8,background:practiceCorrect?"#f0fdf4":"#fef2f2",border:`1px solid ${practiceCorrect?"#86efac":"#fca5a5"}`}}>
-              <p style={{fontSize:14,fontWeight:600,margin:"0 0 4px",color:practiceCorrect?"#16a34a":"#dc2626"}}>
-                {practiceCorrect?"✓ Correct!":practiceAttempts===1?"✗ Not quite — try again!":"✗ Incorrect"}
-              </p>
-              {!practiceCorrect&&practiceAttempts===1&&<p style={{fontSize:13,color:"#64748b",margin:0}}>Review your working and have another go.</p>}
-              {showAnswer&&<p style={{fontSize:13,color:"#475569",margin:"4px 0 0"}}>The correct answer is: <strong style={{color:"#16a34a"}}>{q.answer}</strong>{q.aliases?.length?` (also accepted: ${q.aliases.join(", ")})`:""}.</p>}
-            </div>
-          )}
-        </div>
-        <div style={{display:"flex",justifyContent:"flex-end",gap:8}}>
-          {!practiceSubmitted&&<button onClick={submitPracticeAnswer} disabled={!ok}
-            style={{fontSize:14,padding:"9px 22px",background:ok?uc.dark:"#e2e8f0",color:ok?"#fff":"#94a3b8",border:"none",borderRadius:8,cursor:ok?"pointer":"default",fontWeight:600}}>
-            Check answer
-          </button>}
-          {practiceSubmitted&&<>
-            {!practiceCorrect&&practiceAttempts===1&&<button onClick={()=>{setPracticeSubmitted(false);setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});}}
-              style={Sb({fontWeight:600,borderColor:"#f59e0b",color:"#92400e"})}>Try again</button>}
-            <button onClick={nextPracticeQuestion}
-              style={{fontSize:14,padding:"9px 22px",background:uc.dark,color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontWeight:600}}>
-              {practiceIdx===total-1?"Finish":"Next →"}
-            </button>
-          </>}
-        </div>
-        <div style={{marginTop:12,display:"flex",justifyContent:"center",gap:5}}>
-          {pd.questions.map((_,i)=>(
-            <div key={i} style={{width:8,height:8,borderRadius:"50%",background:i<practiceIdx?"#22c55e":i===practiceIdx?bs.dot:"#e2e8f0"}}/>
-          ))}
+            {practiceSubmitted&&<>
+              {!practiceCorrect&&practiceAttempts===1&&(
+                <button onClick={()=>{setPracticeSubmitted(false);setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});}}
+                  style={Sb({fontWeight:600,borderColor:"#f59e0b",color:"#92400e"})}>Try again</button>
+              )}
+              <button onClick={nextPracticeQuestion}
+                style={{padding:"13px 32px",border:"none",borderRadius:12,fontFamily:ff,fontSize:15,fontWeight:700,cursor:"pointer",background:"linear-gradient(135deg,var(--indigo),var(--blue))",color:"#fff",boxShadow:"0 4px 18px rgba(67,56,202,0.32)",transition:"all 0.2s"}}>
+                {practiceIdx===total-1?"Finish":"Next →"}
+              </button>
+            </>}
+          </div>
         </div>
       </div>
     );
