@@ -1938,12 +1938,16 @@ function App(){
   }
 
   async function loadResources(unitId,classId){
-    if(!classId){setSoloResources([]);return;}
-    const {data}=await sb.from("solo_resources")
-      .select("*")
-      .eq("unit_id",unitId)
-      .or(`scope.eq.global,class_id.eq.${classId}`)
-      .order("sort_order");
+    const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    let query=sb.from("solo_resources").select("*").eq("unit_id",unitId).order("sort_order");
+    if(classId){
+      if(!UUID_RE.test(classId)){setSoloResources([]);return;}
+      query=query.or(`scope.eq.global,class_id.eq.${classId}`);
+    }else{
+      query=query.eq("scope","global");
+    }
+    const {data,error}=await query;
+    if(error){setSoloResources([]);return;}
     setSoloResources(data||[]);
   }
 
