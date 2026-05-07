@@ -2565,34 +2565,37 @@ function App(){
       const activePretestData=PRETESTS[activeUnitId]||[];
       const allIds=activePretestData.map(s=>s.outcomeId);
       return(
-        <div style={{maxWidth:560,margin:"0 auto",padding:"1rem",fontFamily:ff}}>
-          <div style={{textAlign:"center",padding:"1rem 0 1.25rem"}}>
-            <div style={{width:56,height:56,borderRadius:"50%",background:"#eff6ff",border:"2px solid #93c5fd",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px",fontSize:22}}>📋</div>
-            <h2 style={{fontSize:18,fontWeight:600,margin:"0 0 4px",color:"#0f172a"}}>Pre-test complete</h2>
-            <p style={{fontSize:13,color:"#64748b",margin:0}}>{passed.length} of {allIds.length} outcomes automatically unlocked</p>
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:"1.25rem"}}>
-            {allIds.map(id=>{
-              const section=activePretestData.find(s=>s.outcomeId===id);
-              const r=byOutcome[id];
-              const ok=r&&r.correct===r.total;
-              const bs=ok?BAND.green:BAND.red;
-              return(
-                <div key={id} style={{background:"#fff",border:`1px solid ${ok?"#86efac":"#fca5a5"}`,borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
-                  <div style={{width:22,height:22,borderRadius:"50%",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,background:ok?"#dcfce7":"#fee2e2",color:ok?"#16a34a":"#dc2626"}}>{ok?"✓":"✗"}</div>
-                  <div style={{flex:1}}>
-                    <p style={{fontSize:13,fontWeight:600,margin:"0 0 1px",color:ok?"#16a34a":"#1e293b"}}>{section?.short}</p>
-                    {!ok&&r&&r.wrong.length>0&&<p style={{fontSize:11,color:"#94a3b8",margin:0}}>Needs work on this outcome</p>}
-                  </div>
-                  <span style={{fontSize:11,fontWeight:700,color:ok?"#16a34a":"#dc2626",flexShrink:0}}>{r?`${r.correct}/${r.total}`:""}</span>
-                </div>
-              );
-            })}
-          </div>
-          <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-            <button onClick={()=>{setPretestMode(null);setView("home");}} style={Sb()}>Back to units</button>
-            <button onClick={()=>{setSelectedUnit(UNITS.find(u=>u.id===activeUnitId));setView("rubric");setPretestMode(null);}}
-              style={Sb({background:"#1e40af",color:"#fff",border:"none",fontWeight:600})}>Go to my rubric →</button>
+        <div style={{display:"flex",flexDirection:"column",flex:1,fontFamily:ff}}>
+          <AppNav title="Pre-test Results"/>
+          <div style={{flex:1,overflowY:"auto",padding:"1.5rem 1rem"}}>
+            <div style={{maxWidth:520,margin:"0 auto"}}>
+              <div style={{textAlign:"center",padding:"1.5rem 0 1.25rem"}}>
+                <div style={{width:60,height:60,background:"var(--ind-50)",border:"1px solid var(--ind-200)",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px",fontSize:24,boxShadow:"0 0 0 6px rgba(99,102,241,0.08)"}}>📋</div>
+                <h2 style={{fontSize:20,fontWeight:800,margin:"0 0 4px",color:"var(--text)",letterSpacing:"-0.01em"}}>Pre-test Complete</h2>
+                <p style={{fontSize:13,color:"var(--sub)",margin:0}}>{passed.length} of {allIds.length} outcomes passed</p>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",marginBottom:"1.25rem"}}>
+                {allIds.map(id=>{
+                  const section=activePretestData.find(s=>s.outcomeId===id);
+                  const r=byOutcome[id];
+                  const isPassed=r&&r.correct===r.total;
+                  return(
+                    <div key={id} style={{background:"var(--surface)",borderRadius:10,boxShadow:"var(--sh-sm)",borderLeft:`3px solid ${isPassed?"#86efac":"#fca5a5"}`,padding:"12px 16px",marginBottom:10,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                      <div>
+                        <div style={{fontSize:14,fontWeight:600,color:"var(--text)"}}>{section?.short}</div>
+                        <div style={{fontSize:12,color:"var(--sub)"}}>{isPassed?"Both questions correct":"Needs more practice"}</div>
+                      </div>
+                      <span style={{fontSize:16}}>{isPassed?"✓":"✗"}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{display:"flex",gap:10,justifyContent:"center",marginTop:20}}>
+                <button onClick={()=>{setPretestMode(null);setView("home");}} style={Sb()}>← Units</button>
+                <button onClick={()=>{setSelectedUnit(UNITS.find(u=>u.id===activeUnitId));setView("rubric");setPretestMode(null);}}
+                  style={Sb({background:"linear-gradient(135deg,var(--indigo),var(--blue))",color:"#fff",border:"none",fontWeight:700,boxShadow:"0 4px 18px rgba(67,56,202,0.32)"})}>View Rubric →</button>
+              </div>
+            </div>
           </div>
         </div>
       );
@@ -2709,30 +2712,36 @@ function App(){
 
     if(results){
       const correct=results.results.filter(r=>r.correct).length;
+      const total=results.results.length;
+      const allCorrect=results.allCorrect;
       return(
-        <div style={{maxWidth:520,margin:"0 auto",padding:"1rem",fontFamily:ff}}>
-          <div style={{textAlign:"center",padding:"1.5rem 0 1.25rem"}}>
-            <div style={{width:56,height:56,borderRadius:"50%",background:results.allCorrect?"#dcfce7":"#fef9c3",border:`2px solid ${results.allCorrect?"#86efac":"#fcd34d"}`,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px",fontSize:22}}>
-              {results.allCorrect?"✓":correct}
-            </div>
-            {results.allCorrect
-              ?<><h2 style={{fontSize:18,fontWeight:600,margin:"0 0 4px",color:"#16a34a"}}>Outcome unlocked!</h2><p style={{fontSize:13,color:"#64748b",margin:0}}>{o.short} has been highlighted on your rubric.</p></>
-              :<><h2 style={{fontSize:18,fontWeight:600,margin:"0 0 4px",color:"#0f172a"}}>Keep practising</h2><p style={{fontSize:13,color:"#64748b",margin:0}}>{correct} of {results.results.length} correct — you can only miss 1 to unlock this outcome.</p></>}
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:"1.25rem"}}>
-            {results.results.map((r,i)=>(
-              <div key={i} style={{background:"#fff",border:`1px solid ${r.correct?"#86efac":"#fca5a5"}`,borderRadius:10,padding:"11px 14px"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
-                  <p style={{fontSize:13,margin:0,flex:1,color:"#1e293b"}}>{r.q.text}</p>
-                  <span style={{fontSize:11,fontWeight:700,flexShrink:0,color:r.correct?"#16a34a":"#dc2626"}}>{r.correct?"Correct":"Incorrect"}</span>
+        <div style={{display:"flex",flexDirection:"column",flex:1,fontFamily:ff}}>
+          <AppNav title={o.short}/>
+          <div style={{flex:1,overflowY:"auto",padding:"1.5rem 1rem"}}>
+            <div style={{maxWidth:520,margin:"0 auto"}}>
+              <div style={{textAlign:"center",padding:"1.5rem 0 1.25rem"}}>
+                <div style={{width:60,height:60,background:allCorrect?"#dcfce7":"var(--ind-50)",border:`1px solid ${allCorrect?"#86efac":"var(--ind-200)"}`,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px",fontSize:24,boxShadow:allCorrect?"0 0 0 6px rgba(134,239,172,0.2)":"0 0 0 6px rgba(99,102,241,0.08)"}}>
+                  {allCorrect?"⭐":"📋"}
                 </div>
-                {!r.correct&&<p style={{fontSize:12,color:"#64748b",margin:"6px 0 0"}}>Your answer: <span style={{color:"#dc2626"}}>{fmtGiven(r.given,r.q)}</span></p>}
+                <h2 style={{fontSize:20,fontWeight:800,margin:"0 0 4px",color:"var(--text)",letterSpacing:"-0.01em"}}>{allCorrect?"All correct!":correct+" / "+total+" correct"}</h2>
+                <p style={{fontSize:13,color:"var(--sub)",margin:0}}>{o.short}</p>
               </div>
-            ))}
-          </div>
-          <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-            <button onClick={()=>setView("rubric")} style={Sb()}>Back to rubric</button>
-            {!results.allCorrect&&<button onClick={()=>{setQIdx(0);setAnswers([]);setAns(initAns(o.questions[0]));setResults(null);}} style={Sb({background:uc.dark,color:"#fff",border:"none",fontWeight:600})}>Try again</button>}
+              <div style={{display:"flex",flexDirection:"column",marginBottom:"1.25rem"}}>
+                {results.results.map((r,i)=>(
+                  <div key={i} style={{background:"var(--surface)",borderRadius:10,boxShadow:"var(--sh-sm)",borderLeft:`3px solid ${r.correct?"#86efac":"#fca5a5"}`,padding:"12px 16px",marginBottom:10,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                    <div style={{flex:1,marginRight:12}}>
+                      <div style={{fontSize:14,fontWeight:600,color:"var(--text)"}}>{r.q.text}</div>
+                      {!r.correct&&<div style={{fontSize:12,color:"var(--sub)",marginTop:2}}>Your answer: <span style={{color:"#dc2626"}}>{fmtGiven(r.given,r.q)}</span></div>}
+                    </div>
+                    <span style={{fontSize:16,flexShrink:0}}>{r.correct?"✓":"✗"}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{display:"flex",gap:10,justifyContent:"center",marginTop:20}}>
+                <button onClick={()=>setView("rubric")} style={Sb()}>← Rubric</button>
+                {!allCorrect&&<button onClick={()=>{setQIdx(0);setAnswers([]);setAns(initAns(o.questions[0]));setResults(null);}} style={Sb({background:"linear-gradient(135deg,var(--indigo),var(--blue))",color:"#fff",border:"none",fontWeight:700,boxShadow:"0 4px 18px rgba(67,56,202,0.32)"})}>Try Again →</button>}
+              </div>
+            </div>
           </div>
         </div>
       );
