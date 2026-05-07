@@ -662,17 +662,20 @@ const WordLabData = (() => {
   async function startSession(classId, studentId, studentName) {
     saveSession({ classId, studentId, studentName, started: Date.now() });
     try {
-      const { data: existing } = await sb()
+      const { data: existing, error: charErr } = await sb()
         .from('student_character')
         .select('student_id, quarks, xp, badges, scientist, stats')
         .eq('student_id', studentId)
         .maybeSingle();
+      // If the read errored, bail — don't overwrite existing data with blank defaults
+      if (charErr) { console.warn('startSession character read failed', charErr); return; }
       const char = ensureCharFields(existing ? { ...existing } : { student_id: studentId });
       char.stats.sessions++;
       checkBadges(char);
+      // Never write scientist here — saveScientist/purchase use their own atomic RPCs for that
       await sb().from('student_character').upsert(
         { student_id: studentId, quarks: char.quarks, xp: char.xp,
-          badges: char.badges, scientist: char.scientist, stats: char.stats },
+          badges: char.badges, stats: char.stats },
         { onConflict: 'student_id' }
       );
     } catch(e) { console.warn('startSession character update failed', e); }
@@ -948,9 +951,10 @@ const WordLabData = (() => {
     }
 
     const newBadges = checkBadges(char);
+    // Don't include scientist — that field is only written by saveScientist/purchase (atomic RPCs)
     await sb().from('student_character').upsert(
       { student_id: studentId, quarks: char.quarks, xp: char.xp,
-        badges: char.badges, scientist: char.scientist, stats: char.stats,
+        badges: char.badges, stats: char.stats,
         updated_at: new Date().toISOString() },
       { onConflict: 'student_id' }
     );

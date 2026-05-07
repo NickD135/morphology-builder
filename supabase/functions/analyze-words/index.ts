@@ -64,7 +64,7 @@ Deno.serve(async (req: Request) => {
   const prompt = `You are a linguistics expert helping primary school teachers (ages 9-12, Australian English).
 
 For each word below, provide:
-1. A short clue/definition (child-friendly, max 8 words)
+1. A clue/definition: what the word MEANS in simple terms (child-friendly, max 8 words). NEVER show the word itself, its morphemes, or a breakdown like "un + struct + ure". ONLY write a meaning — e.g. "the act of building something" not "re + construct + ion".
 2. Morpheme breakdown: prefix (if any), base word, suffix (if any), suffix2 (if any)
 3. Syllable breakdown
 4. Grapheme-phoneme breakdown: split the word into its sound units using the ACTUAL LETTERS from the word
