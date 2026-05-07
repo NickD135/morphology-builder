@@ -11,11 +11,17 @@ CREATE TABLE solo_resources (
   question    jsonb,
   scope       text NOT NULL CHECK (scope IN ('global','class')),
   class_id    uuid REFERENCES classes(id) ON DELETE CASCADE,
-  created_by  uuid NOT NULL,
+  created_by  uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   sort_order  int NOT NULL DEFAULT 0,
   created_at  timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT class_required_for_class_scope
-    CHECK (scope = 'global' OR class_id IS NOT NULL)
+  CONSTRAINT scope_class_id_consistency CHECK (
+    (scope = 'class' AND class_id IS NOT NULL)
+    OR (scope = 'global' AND class_id IS NULL)
+  ),
+  CONSTRAINT url_or_question_required CHECK (
+    (type = 'question' AND question IS NOT NULL AND url IS NULL)
+    OR (type != 'question' AND url IS NOT NULL AND question IS NULL)
+  )
 );
 
 -- Enable RLS on the table
@@ -25,17 +31,37 @@ ALTER TABLE solo_resources ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "solo_resources_select"
   ON solo_resources FOR SELECT USING (true);
 
--- Only creator can insert
+-- Only creator can insert; only admin can set scope='global'
 CREATE POLICY "solo_resources_insert"
   ON solo_resources FOR INSERT
-  WITH CHECK (auth.uid() = created_by);
+  WITH CHECK (
+    auth.uid() = created_by
+    AND (
+      scope = 'class'
+      OR (auth.jwt() ->> 'email') = 'nickdeeney135@gmail.com'
+    )
+  );
 
--- Only creator can update
+-- Only creator can update; only admin or class-scoped allowed
 CREATE POLICY "solo_resources_update"
   ON solo_resources FOR UPDATE
-  USING (auth.uid() = created_by);
+  USING (auth.uid() = created_by AND scope = 'class');
 
--- Only creator can delete
+-- Only creator can delete; only admin can delete global resources
 CREATE POLICY "solo_resources_delete"
   ON solo_resources FOR DELETE
-  USING (auth.uid() = created_by);
+  USING (
+    auth.uid() = created_by
+    AND (
+      scope = 'class'
+      OR (auth.jwt() ->> 'email') = 'nickdeeney135@gmail.com'
+    )
+  );
+
+-- Indexes for primary query pattern: WHERE unit_id = $1 AND (scope = 'global' OR class_id = $2) ORDER BY sort_order
+CREATE INDEX IF NOT EXISTS idx_solo_resources_unit
+  ON solo_resources (unit_id, sort_order);
+
+CREATE INDEX IF NOT EXISTS idx_solo_resources_class
+  ON solo_resources (class_id)
+  WHERE class_id IS NOT NULL;
