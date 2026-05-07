@@ -4971,10 +4971,10 @@ async function giveReward(type){
       .maybeSingle();
     if(fetchErr) throw fetchErr;
 
-    const char = existing || { student_id: _rewardStudentId, quarks:0, xp:0, badges:[], scientist:{owned:[]}, stats:{} };
-    const sci = Object.assign({owned:[]}, char.scientist||{});
-    const owned = [...(sci.owned||[])];
+    const char = existing || { student_id: _rewardStudentId, quarks:0, xp:0, badges:[], stats:{} };
     const badges = [...(char.badges||[])];
+    // Never read/write scientist here for quarks/xp/badge — those rewards don't touch costume items.
+    // For effect/item/custom, use save_scientist_field RPC to append atomically (no stale-read overwrite).
     let updates = {};
 
     if(type === 'quarks'){
@@ -4991,9 +4991,11 @@ async function giveReward(type){
       const id = document.getElementById('rewardEffectId').value;
       if(!id) throw new Error('Please select an effect');
       const ownId = 'effect_' + id;
-      if(!owned.includes(ownId)) owned.push(ownId);
-      updates.scientist = Object.assign({}, sci, { owned });
+      // Atomically append to owned — no full-scientist overwrite
+      const { error: rpcErr } = await dbSb().rpc('gift_owned_item', { p_student_id: _rewardStudentId, p_item_key: ownId });
+      if(rpcErr) throw rpcErr;
       _setRewardStatus(`Effect "${id}" unlocked ✓`);
+      return; // RPC handled it, skip the upsert below
     } else if(type === 'badge'){
       const id = document.getElementById('rewardBadgeId').value;
       if(!id) throw new Error('Please select a badge');
@@ -5003,20 +5005,23 @@ async function giveReward(type){
     } else if(type === 'item'){
       const id = document.getElementById('rewardItemId').value;
       if(!id) throw new Error('Please select an item');
-      if(!owned.includes(id)) owned.push(id);
-      updates.scientist = Object.assign({}, sci, { owned });
+      const { error: rpcErr } = await dbSb().rpc('gift_owned_item', { p_student_id: _rewardStudentId, p_item_key: id });
+      if(rpcErr) throw rpcErr;
       _setRewardStatus(`Item "${id}" unlocked ✓`);
+      return;
     } else if(type === 'custom'){
       const id = document.getElementById('rewardCustomId').value;
       if(!id) throw new Error('Please select a custom item');
       const ownId = 'custom_' + id;
-      if(!owned.includes(ownId)) owned.push(ownId);
-      updates.scientist = Object.assign({}, sci, { owned });
+      const { error: rpcErr } = await dbSb().rpc('gift_owned_item', { p_student_id: _rewardStudentId, p_item_key: ownId });
+      if(rpcErr) throw rpcErr;
       _setRewardStatus(`Custom item unlocked ✓`);
+      return;
     }
 
     if(Object.keys(updates).length){
-      const upsertData = Object.assign({ student_id: _rewardStudentId, quarks: char.quarks||0, xp: char.xp||0, badges, scientist: sci, stats: char.stats||{} }, updates);
+      // Only quarks/xp/badge reach here — never write scientist
+      const upsertData = Object.assign({ student_id: _rewardStudentId, quarks: char.quarks||0, xp: char.xp||0, badges, stats: char.stats||{} }, updates);
       const { error: saveErr } = await dbSb().from('student_character').upsert(upsertData, { onConflict: 'student_id' });
       if(saveErr) throw saveErr;
     }

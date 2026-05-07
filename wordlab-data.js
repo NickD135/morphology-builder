@@ -2109,15 +2109,17 @@ const WordLabData = (() => {
     _saveChallengeData(studentId, data);
 
     // Award quarks and XP
-    var { data: existing } = await sb().from('student_character')
-      .select('student_id, quarks, xp, badges, scientist, stats').eq('student_id', studentId).maybeSingle();
+    var { data: existing, error: claimReadErr } = await sb().from('student_character')
+      .select('student_id, quarks, xp, badges, stats').eq('student_id', studentId).maybeSingle();
+    if (claimReadErr) { console.warn('claimChallengeReward read failed', claimReadErr); return null; }
     var char = ensureCharFields(existing ? { ...existing } : { student_id: studentId });
     char.quarks += challenge.quarks;
     char.xp += challenge.xp;
     var newBadges = checkBadges(char);
+    // Don't write scientist — it's only managed by saveScientist/purchase atomic RPCs
     await sb().from('student_character').upsert(
       { student_id: studentId, quarks: char.quarks, xp: char.xp,
-        badges: char.badges, scientist: char.scientist, stats: char.stats,
+        badges: char.badges, stats: char.stats,
         updated_at: new Date().toISOString() },
       { onConflict: 'student_id' }
     );
