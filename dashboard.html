@@ -8257,6 +8257,129 @@ async function suggestedSaveLevel(stage){
   }
 }
 
+// ── Spelling Feedback Tab ────────────────────────────────────────
+var _sfSessionCounts = {};
+var _sfSelectedStudentId = null;
+var _sfHistory = [];
+
+function sfInitials(name) {
+  if (!name) return '??';
+  var parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+async function renderSpellingFeedbackTab() {
+  var container = document.getElementById('sectionSpellingFeedback');
+  if (!container) return;
+  container.textContent = '';
+  var loading = document.createElement('div');
+  loading.className = 'sf-empty';
+  loading.textContent = 'Loading students…';
+  container.appendChild(loading);
+
+  var students = (currentClass && currentClass.students) || [];
+  if (!students.length) {
+    container.textContent = '';
+    var empty = document.createElement('div');
+    empty.className = 'sf-empty';
+    empty.textContent = 'No students in this class yet.';
+    container.appendChild(empty);
+    return;
+  }
+
+  _sfSessionCounts = {};
+  try {
+    var studentIds = students.map(function(s) { return s.id; });
+    var ciResult = await dbSb()
+      .from('spelling_check_in_results')
+      .select('student_id')
+      .in('student_id', studentIds);
+    if (ciResult.data) {
+      ciResult.data.forEach(function(row) {
+        _sfSessionCounts[row.student_id] = (_sfSessionCounts[row.student_id] || 0) + 1;
+      });
+    }
+  } catch(e) { console.warn('sfSessionCounts error', e); }
+
+  var sidebar = document.createElement('aside');
+  sidebar.className = 'ss-sidebar';
+  sidebar.setAttribute('aria-label', 'Student list');
+
+  var titleRow = document.createElement('div');
+  titleRow.className = 'ss-sidebar-title';
+  var titleSpan = document.createElement('span');
+  titleSpan.textContent = 'Students';
+  var countSpan = document.createElement('span');
+  countSpan.className = 'ss-sidebar-count';
+  countSpan.textContent = String(students.length);
+  titleRow.appendChild(titleSpan);
+  titleRow.appendChild(countSpan);
+  sidebar.appendChild(titleRow);
+
+  students.forEach(function(s) {
+    var count = _sfSessionCounts[s.id] || 0;
+    var btn = document.createElement('button');
+    btn.className = 'sf-student-item';
+    btn.dataset.id = s.id;
+    btn.setAttribute('aria-label', 'View feedback for ' + s.name);
+    btn.addEventListener('click', function() { sfSelectStudent(s.id, s.name); });
+
+    var avatar = document.createElement('div');
+    avatar.className = 'sf-avatar';
+    avatar.setAttribute('aria-hidden', 'true');
+    avatar.textContent = sfInitials(s.name);
+
+    var nameSpan = document.createElement('span');
+    nameSpan.className = 'sf-student-name';
+    nameSpan.textContent = s.name;
+
+    var pill = document.createElement('span');
+    pill.className = 'sf-session-pill' + (count ? '' : ' sf-session-pill--none');
+    pill.textContent = count ? count + (count === 1 ? ' session' : ' sessions') : 'No data';
+
+    btn.appendChild(avatar);
+    btn.appendChild(nameSpan);
+    btn.appendChild(pill);
+    sidebar.appendChild(btn);
+
+    if (_sfSelectedStudentId === s.id) btn.classList.add('active');
+  });
+
+  var mainPanel = document.createElement('div');
+  mainPanel.className = 'ss-main';
+  mainPanel.id = 'sfMainPanel';
+  var defaultMsg = document.createElement('div');
+  defaultMsg.className = 'sf-empty';
+  defaultMsg.textContent = 'Select a student from the list to see their spelling history.';
+  mainPanel.appendChild(defaultMsg);
+
+  var layout = document.createElement('div');
+  layout.className = 'ss-layout';
+  layout.appendChild(sidebar);
+  layout.appendChild(mainPanel);
+
+  var hero = document.createElement('div');
+  hero.className = 'gd-pageHero';
+  var heroText = document.createElement('div');
+  heroText.className = 'gd-pageHero-text';
+  var heroH1 = document.createElement('h1');
+  heroH1.textContent = '✉ ';
+  var heroAccent = document.createElement('span');
+  heroAccent.className = 'gd-accent';
+  heroAccent.textContent = 'Spelling Feedback';
+  heroH1.appendChild(heroAccent);
+  var heroP = document.createElement('p');
+  heroP.textContent = 'Select a student to view their check-in history and generate AI diagnostic feedback.';
+  heroText.appendChild(heroH1);
+  heroText.appendChild(heroP);
+  hero.appendChild(heroText);
+
+  container.textContent = '';
+  container.appendChild(hero);
+  container.appendChild(layout);
+}
+
 // ── Boot ─────────────────────────────────────────────────────────
 initDashboard();
 </script>
