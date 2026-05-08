@@ -10,7 +10,9 @@ const ALLOWED_ORIGINS = [
 
 function getCorsOrigin(req: Request): string {
   const origin = req.headers.get('origin') || '';
-  return ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  if (origin.endsWith('.app.github.dev')) return origin;
+  return ALLOWED_ORIGINS[0];
 }
 
 function corsHeaders(req: Request) {
