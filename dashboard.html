@@ -8529,6 +8529,158 @@ function sfRenderHistoryPanel(studentName) {
   panel.appendChild(outputDiv);
 }
 
+async function sfGenerateFeedback() {
+  var btn = document.getElementById('sfGenerateBtn');
+  var icon = document.getElementById('sfGenerateBtnIcon');
+  var textEl = document.getElementById('sfGenerateBtnText');
+  var output = document.getElementById('sfFeedbackOutput');
+  if (!btn || !output) return;
+
+  var historyStr = 'Student spelling history (oldest to most recent):\n' +
+    _sfHistory.map(function(item) {
+      var d = new Date(item.created_at);
+      var dateStr = d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+      return dateStr + ' | target: ' + item.target +
+        ' | typed: ' + (item.attempt || '') +
+        ' | correct: ' + item.correct;
+    }).join('\n');
+
+  btn.disabled = true;
+  icon.textContent = '';
+  var spinner = document.createElement('span');
+  spinner.className = 'sf-spinner';
+  spinner.setAttribute('aria-hidden', 'true');
+  icon.appendChild(spinner);
+  textEl.textContent = 'Analysing spelling patterns…';
+  output.textContent = '';
+
+  try {
+    var sessionResult = await WordLabData._sb().auth.getSession();
+    var session = sessionResult.data && sessionResult.data.session;
+    if (!session) throw new Error('Session expired. Please reload the page.');
+
+    var resp = await fetch('https://kdpavfrzmmzknqfpodrl.supabase.co/functions/v1/spelling-feedback', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token,
+      },
+      body: JSON.stringify({ history: historyStr }),
+    });
+
+    var respText = await resp.text();
+    var parsed;
+    try { parsed = JSON.parse(respText); }
+    catch(pe) { throw new Error('Could not parse server response.'); }
+
+    if (!resp.ok) throw new Error(parsed.error || 'AI service error (HTTP ' + resp.status + ')');
+
+    var fb = parsed.feedback;
+    if (!fb || typeof fb.summary !== 'string') throw new Error('Unexpected response format from AI.');
+
+    sfRenderFeedbackCards(fb, output);
+  } catch(e) {
+    output.textContent = '';
+    var errCard = document.createElement('div');
+    errCard.className = 'sf-error-card';
+    var errTitle = document.createElement('div');
+    errTitle.className = 'sf-error-title';
+    errTitle.textContent = 'Could not generate feedback. Please try again.';
+    var errDetail = document.createElement('div');
+    errDetail.className = 'sf-error-detail';
+    errDetail.textContent = String(e);
+    errCard.appendChild(errTitle);
+    errCard.appendChild(errDetail);
+    output.appendChild(errCard);
+  } finally {
+    btn.disabled = false;
+    icon.textContent = '🔍';
+    textEl.textContent = 'Generate Feedback';
+  }
+}
+
+function sfRenderFeedbackCards(fb, container) {
+  container.textContent = '';
+
+  var summaryCard = document.createElement('div');
+  summaryCard.className = 'sf-feedback-card sf-feedback-card--summary';
+  var summaryLabel = document.createElement('div');
+  summaryLabel.className = 'sf-card-label';
+  summaryLabel.textContent = 'Summary';
+  var summaryText = document.createElement('div');
+  summaryText.className = 'sf-card-text';
+  summaryText.textContent = fb.summary;
+  summaryCard.appendChild(summaryLabel);
+  summaryCard.appendChild(summaryText);
+  container.appendChild(summaryCard);
+
+  if (fb.strengths && fb.strengths.length) {
+    var strCard = document.createElement('div');
+    strCard.className = 'sf-feedback-card sf-feedback-card--strengths';
+    var strLabel = document.createElement('div');
+    strLabel.className = 'sf-card-label';
+    strLabel.textContent = 'Strengths';
+    strCard.appendChild(strLabel);
+    fb.strengths.forEach(function(s) {
+      var item = document.createElement('div');
+      item.className = 'sf-sub-item';
+      var title = document.createElement('div');
+      title.className = 'sf-sub-title';
+      title.textContent = s.title;
+      var detail = document.createElement('div');
+      detail.className = 'sf-sub-detail';
+      detail.textContent = s.detail;
+      item.appendChild(title);
+      item.appendChild(detail);
+      strCard.appendChild(item);
+    });
+    container.appendChild(strCard);
+  }
+
+  if (fb.improvements && fb.improvements.length) {
+    var impCard = document.createElement('div');
+    impCard.className = 'sf-feedback-card sf-feedback-card--improvements';
+    var impLabel = document.createElement('div');
+    impLabel.className = 'sf-card-label';
+    impLabel.textContent = 'Areas for Improvement';
+    impCard.appendChild(impLabel);
+    fb.improvements.forEach(function(imp) {
+      var item = document.createElement('div');
+      item.className = 'sf-sub-item';
+      var titleRow = document.createElement('div');
+      titleRow.className = 'sf-sub-title';
+      titleRow.textContent = imp.title;
+      if (imp.tag) {
+        var tag = document.createElement('span');
+        tag.className = 'sf-tag ' + (imp.tag === 'Persistent' ? 'sf-tag--persistent' : 'sf-tag--recent');
+        tag.textContent = imp.tag;
+        titleRow.appendChild(tag);
+      }
+      var detail = document.createElement('div');
+      detail.className = 'sf-sub-detail';
+      detail.textContent = imp.detail;
+      item.appendChild(titleRow);
+      item.appendChild(detail);
+      impCard.appendChild(item);
+    });
+    container.appendChild(impCard);
+  }
+
+  if (fb.nextSteps) {
+    var nsCard = document.createElement('div');
+    nsCard.className = 'sf-feedback-card sf-feedback-card--nextsteps';
+    var nsLabel = document.createElement('div');
+    nsLabel.className = 'sf-card-label';
+    nsLabel.textContent = 'Next Steps';
+    var nsText = document.createElement('div');
+    nsText.className = 'sf-card-text';
+    nsText.textContent = fb.nextSteps;
+    nsCard.appendChild(nsLabel);
+    nsCard.appendChild(nsText);
+    container.appendChild(nsCard);
+  }
+}
+
 // ── Boot ─────────────────────────────────────────────────────────
 initDashboard();
 </script>
