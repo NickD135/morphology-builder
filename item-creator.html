@@ -1109,9 +1109,24 @@ async function aiPolish() {
   }
 }
 
+function normaliseSvgDimensions(svgStr) {
+  // Fabric.js Image.fromURL reports 0×0 for SVGs without explicit pixel width/height,
+  // causing infinite scale and wrong positioning. Inject dimensions from viewBox.
+  const vbMatch = svgStr.match(/viewBox\s*=\s*["']([^"']+)["']/);
+  let w = 400, h = 400;
+  if (vbMatch) {
+    const parts = vbMatch[1].trim().split(/[\s,]+/);
+    if (parts.length >= 4) { w = parseFloat(parts[2]) || 400; h = parseFloat(parts[3]) || 400; }
+  }
+  return svgStr
+    .replace(/\s+width\s*=\s*["'][^"']*["']/g, '')
+    .replace(/\s+height\s*=\s*["'][^"']*["']/g, '')
+    .replace('<svg', '<svg width="' + w + '" height="' + h + '"');
+}
+
 function useAIVersion() {
   if (!aiSvgContent) { dismissAI(); return; }
-  const svgDataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(aiSvgContent)));
+  const svgDataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(normaliseSvgDimensions(aiSvgContent))));
   const zones = {
     coat:       { x:80,  y:220, w:240, h:260 },
     head:       { x:100, y:0,   w:200, h:200 },
