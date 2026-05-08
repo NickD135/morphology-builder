@@ -2146,6 +2146,7 @@ function App(){
       setTeacherEmail(session?.user?.email||"");
       setLoading(false);
       setView("classes");
+      try{sessionStorage.setItem('solo_session_v1',JSON.stringify({mode:'teacher'}));}catch{}
     } else {
       const code=loginCode.trim().toUpperCase();
       if(!code){setLoginError("Enter your student code.");return;}
@@ -2162,6 +2163,7 @@ function App(){
       setStudentId(student.id);
       setLoading(false);
       setView("home");
+      try{sessionStorage.setItem('solo_session_v1',JSON.stringify({mode:'student',studentId:student.id,studentName:student.name,classId:loginClassObj.id,className:loginClassObj.name}));}catch{}
     }
   }
 
@@ -2279,11 +2281,45 @@ function App(){
 
   function doLogout(){
     sb.auth.signOut();
+    try{sessionStorage.removeItem('solo_session_v1');}catch{}
     try{if(studentId)localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}
     setView("login");setStudentId(null);setIsTeacher(false);setLoginClassCode("");setLoginClassObj(null);setLoginStep("class");setLoginCode("");setLoginEmail("");setLoginPassword("");setLoginError("");setSelectedUnit(null);setTeacherFocus(null);setStudents([]);setClasses([]);setSelectedClassId(null);setProgress({});setTimestamps({});setLoginMode("student");
     setExpandedResource(null);setPracticeOutcome(null);setPracticeUnit(null);setPracticePhase("example");setPracticeIdx(0);setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);setPracticeScore({correct:0,total:0});
     setTeacherEmail("");setSoloResources([]);setResourceTab("rubric");setResourceOutcome(null);setAddingResource(false);setAddingToGlobal(false);setNewResType("video");setNewResLabel("");setNewResUrl("");setNewResQ({text:"",options:[{text:"",correct:true},{text:"",correct:false},{text:"",correct:false},{text:"",correct:false}]});setQuizState({});
   }
+
+  useEffect(()=>{
+    async function restoreSession(){
+      // Teacher: Supabase auth token survives refresh — check for existing session
+      const {data:{session}}=await sb.auth.getSession();
+      if(session?.user){
+        const uid=session.user.id;
+        const {data:tr}=await sb.from("teachers").select("school_id").eq("auth_user_id",uid).single();
+        if(tr){
+          const {data:cr}=await sb.from("classes").select("id,name,class_code").eq("school_id",tr.school_id).order("name");
+          setClasses(cr||[]);setIsTeacher(true);setTeacherEmail(session.user.email||"");setView("classes");
+          try{sessionStorage.setItem('solo_session_v1',JSON.stringify({mode:'teacher'}));}catch{}
+          return;
+        }
+      }
+      // Student: restore from sessionStorage (tab-lifetime only)
+      try{
+        const raw=sessionStorage.getItem('solo_session_v1');
+        if(!raw)return;
+        const sess=JSON.parse(raw);
+        if(sess.mode==='student'&&sess.studentId){
+          const student={id:sess.studentId,name:sess.studentName,class_id:sess.classId};
+          const prog=buildEmptyProgress([student]);
+          const ts={};
+          const {data:rows}=await sb.from("solo_progress").select("outcome_key,updated_at").eq("student_id",student.id).eq("completed",true);
+          rows?.forEach(r=>{if(prog[student.id]){prog[student.id][r.outcome_key]=true;ts[r.outcome_key]=r.updated_at;}});
+          setStudents([student]);setProgress(prog);setTimestamps({[student.id]:ts});
+          setStudentId(student.id);setLoginClassObj({id:sess.classId,name:sess.className});setView("home");
+        }
+      }catch{}
+    }
+    restoreSession();
+  },[]);
 
   function startPretest(unitId){
     const data=PRETESTS[unitId]||[];
