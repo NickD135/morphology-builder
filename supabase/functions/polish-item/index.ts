@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const ALLOWED_ORIGINS = [
   'https://wordlabs.app',
+  'https://www.wordlabs.app',
   'https://morphology-builder.vercel.app',
   'https://nickd135.github.io',
   'http://localhost:8080',
