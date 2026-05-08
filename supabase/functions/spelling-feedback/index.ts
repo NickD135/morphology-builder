@@ -75,6 +75,10 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Missing or empty history string' }, 400);
   }
 
+  if (body.history.length > 10_000) {
+    return json({ error: 'History string too long (max 10 000 characters)' }, 400);
+  }
+
   try {
     const anthropicResp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -84,7 +88,7 @@ Deno.serve(async (req: Request) => {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1500,
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: body.history }],
@@ -99,14 +103,26 @@ Deno.serve(async (req: Request) => {
 
     const data = await anthropicResp.json();
     const text: string = data.content?.[0]?.text || '';
+    console.log('Anthropic stop_reason:', data.stop_reason, 'text length:', text.length);
     if (!text) return json({ error: 'Empty response from AI' }, 500);
 
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error('No JSON object found in AI response, raw:', text.slice(0, 500));
+      return json({ error: 'Could not extract JSON from AI response' }, 500);
+    }
     let feedback: unknown;
     try {
-      feedback = JSON.parse(text);
-    } catch {
+      feedback = JSON.parse(jsonMatch[0]);
+    } catch (parseErr) {
       console.error('JSON parse failed, raw:', text.slice(0, 500));
       return json({ error: 'Could not parse AI response as JSON' }, 500);
+    }
+
+    const f = feedback as Record<string, unknown>;
+    if (typeof f.summary !== 'string' || !Array.isArray(f.strengths) || !Array.isArray(f.improvements)) {
+      console.error('AI response missing required fields, keys:', Object.keys(f));
+      return json({ error: 'AI response missing required fields' }, 500);
     }
 
     return json({ feedback });
