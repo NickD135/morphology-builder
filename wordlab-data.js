@@ -902,7 +902,7 @@ const WordLabData = (() => {
     var varietyBonus = 0, varietyXpBonus = 0, featuredBonus = false, dayBonus = false;
     // Per-activity reward scaling (default 1.0)
     var rewardScale = 1.0;
-    if (activity === 'homophone-hunter' || activity === 'breakdown-blitz') rewardScale = 0.5;
+    if (activity === 'homophone-hunter' || activity === 'breakdown-blitz' || activity === 'word-spectrum') rewardScale = 0.5;
     if (correct) {
       quarksEarned = Math.round(2 * rewardScale);
       var streakBonus = 0;
