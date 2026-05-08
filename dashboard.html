@@ -8380,6 +8380,155 @@ async function renderSpellingFeedbackTab() {
   container.appendChild(layout);
 }
 
+async function sfSelectStudent(studentId, studentName) {
+  _sfSelectedStudentId = studentId;
+  _sfHistory = [];
+
+  document.querySelectorAll('.sf-student-item').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.id === studentId);
+  });
+
+  var panel = document.getElementById('sfMainPanel');
+  if (!panel) return;
+  panel.textContent = '';
+  var loadingEl = document.createElement('div');
+  loadingEl.className = 'sf-empty';
+  loadingEl.textContent = 'Loading history…';
+  panel.appendChild(loadingEl);
+
+  try {
+    var result = await dbSb()
+      .from('spelling_check_in_results')
+      .select('created_at, results')
+      .eq('student_id', studentId)
+      .order('created_at', { ascending: true });
+
+    if (result.error) throw result.error;
+
+    _sfHistory = [];
+    (result.data || []).forEach(function(row) {
+      var items = Array.isArray(row.results) ? row.results : [];
+      items.forEach(function(item) {
+        _sfHistory.push({
+          created_at: row.created_at,
+          target: item.word || '',
+          attempt: item.typed || '',
+          correct: item.correct === true || item.correct === 'true',
+        });
+      });
+    });
+
+    sfRenderHistoryPanel(studentName);
+  } catch(e) {
+    panel.textContent = '';
+    var errCard = document.createElement('div');
+    errCard.className = 'sf-error-card';
+    var errTitle = document.createElement('div');
+    errTitle.className = 'sf-error-title';
+    errTitle.textContent = 'Could not load history.';
+    var errDetail = document.createElement('div');
+    errDetail.className = 'sf-error-detail';
+    errDetail.textContent = String(e);
+    errCard.appendChild(errTitle);
+    errCard.appendChild(errDetail);
+    panel.appendChild(errCard);
+  }
+}
+
+function sfRenderHistoryPanel(studentName) {
+  var panel = document.getElementById('sfMainPanel');
+  if (!panel) return;
+  panel.textContent = '';
+
+  var hasHistory = _sfHistory.length > 0;
+
+  if (!hasHistory) {
+    var emptyEl = document.createElement('div');
+    emptyEl.className = 'sf-empty';
+    emptyEl.textContent = 'No spelling check-in data yet for this student.';
+    panel.appendChild(emptyEl);
+  } else {
+    var wrap = document.createElement('div');
+    wrap.className = 'sf-history-wrap';
+    var table = document.createElement('table');
+    table.className = 'sf-history-table';
+    table.setAttribute('aria-label', 'Spelling attempt history for ' + studentName);
+
+    var thead = document.createElement('thead');
+    var headerRow = document.createElement('tr');
+    ['Target word', 'Student attempt', 'Result', 'Date'].forEach(function(h, i) {
+      var th = document.createElement('th');
+      th.textContent = h;
+      if (i === 2) th.style.textAlign = 'center';
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    var tbody = document.createElement('tbody');
+    _sfHistory.forEach(function(item) {
+      var d = new Date(item.created_at);
+      var dateStr = d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+      var tr = document.createElement('tr');
+
+      var tdTarget = document.createElement('td');
+      tdTarget.style.fontWeight = '800';
+      tdTarget.textContent = item.target;
+
+      var tdAttempt = document.createElement('td');
+      tdAttempt.style.fontFamily = 'monospace';
+      tdAttempt.textContent = item.attempt || '—';
+
+      var tdResult = document.createElement('td');
+      tdResult.style.textAlign = 'center';
+      var indicator = document.createElement('span');
+      indicator.className = item.correct ? 'sf-correct' : 'sf-incorrect';
+      indicator.setAttribute('aria-label', item.correct ? 'correct' : 'incorrect');
+      indicator.textContent = item.correct ? '✓' : '✗';
+      tdResult.appendChild(indicator);
+
+      var tdDate = document.createElement('td');
+      tdDate.className = 'sf-date';
+      tdDate.textContent = dateStr;
+
+      tr.appendChild(tdTarget);
+      tr.appendChild(tdAttempt);
+      tr.appendChild(tdResult);
+      tr.appendChild(tdDate);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    panel.appendChild(wrap);
+  }
+
+  var btnWrap = document.createElement('div');
+  btnWrap.style.marginTop = '20px';
+  var genBtn = document.createElement('button');
+  genBtn.className = 'sf-generate-btn';
+  genBtn.id = 'sfGenerateBtn';
+  genBtn.disabled = !hasHistory;
+  genBtn.setAttribute('aria-disabled', String(!hasHistory));
+  genBtn.addEventListener('click', sfGenerateFeedback);
+
+  var btnIcon = document.createElement('span');
+  btnIcon.id = 'sfGenerateBtnIcon';
+  btnIcon.textContent = '🔍';
+  var btnText = document.createElement('span');
+  btnText.id = 'sfGenerateBtnText';
+  btnText.textContent = 'Generate Feedback';
+  genBtn.appendChild(btnIcon);
+  genBtn.appendChild(btnText);
+  btnWrap.appendChild(genBtn);
+  panel.appendChild(btnWrap);
+
+  var outputDiv = document.createElement('div');
+  outputDiv.id = 'sfFeedbackOutput';
+  outputDiv.style.cssText = 'margin-top:24px;display:flex;flex-direction:column;gap:16px;';
+  outputDiv.setAttribute('aria-live', 'polite');
+  panel.appendChild(outputDiv);
+}
+
 // ── Boot ─────────────────────────────────────────────────────────
 initDashboard();
 </script>
