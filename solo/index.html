@@ -2002,6 +2002,20 @@ function ResourcesPanel({unit,resources,selectedOutcome,onSelectOutcome,teacherE
             </button>
           );
         })}
+        {/* Beyond SOLO — extension resources */}
+        <div style={{borderTop:"1px solid var(--border)",margin:"8px 0",paddingTop:8}}>
+          <p style={{fontSize:10,fontWeight:700,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 4px 4px"}}>Extension</p>
+          {(()=>{
+            const count=resources.filter(r=>r.outcome_id==="extra").length;
+            const sel=selectedOutcome==="extra";
+            return(
+              <button onClick={()=>onSelectOutcome("extra")} style={{fontFamily:ff2,width:"100%",textAlign:"left",padding:"7px 10px",borderRadius:8,border:"none",cursor:"pointer",background:sel?"#fefce8":"transparent",marginBottom:2}}>
+                <p style={{margin:0,fontSize:12,fontWeight:sel?700:500,color:sel?"#b45309":"#334155",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>⭐ Beyond SOLO</p>
+                {count>0&&<p style={{margin:0,fontSize:10,color:sel?"#d97706":"#94a3b8"}}>{count} resource{count!==1?"s":""}</p>}
+              </button>
+            );
+          })()}
+        </div>
       </div>
       <div style={{flex:1,overflowY:"auto",padding:"16px 20px"}}>
         <div style={{marginBottom:24}}>
@@ -2085,6 +2099,20 @@ function App(){
   const [pretestAnswers,setPretestAnswers]=useState([]);
   const [pretestAns,setPretestAns]=useState({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
   const [pretestResults,setPretestResults]=useState(null);
+  const [testSnapshots,setTestSnapshots]=useState({}); // {studentId:{unitId:[{by_outcome,passed_count,total_count,taken_at}]}}
+  const [tooltipOutcome,setTooltipOutcome]=useState(null);
+  const [studentRubricTab,setStudentRubricTab]=useState("outcomes"); // "outcomes" | "extra"
+  const [hiddenStudents,setHiddenStudents]=useState(new Set()); // Set of student IDs hidden from class view
+  const [manageGroupOpen,setManageGroupOpen]=useState(false);
+  const [hiddenUnits,setHiddenUnits]=useState(new Set()); // Set of unit IDs hidden from student view
+  const [reviewActive,setReviewActive]=useState(null); // {unitId, startedAt} from class settings, or null
+  const [reviewMode,setReviewMode]=useState(null); // null | 'running' | 'done'
+  const [reviewQList,setReviewQList]=useState([]);
+  const [reviewIdx,setReviewIdx]=useState(0);
+  const [reviewAnswers,setReviewAnswers]=useState([]);
+  const [reviewAns,setReviewAns]=useState({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
+  const [reviewResults,setReviewResults]=useState(null); // {byOutcome, passedCount, totalCount}
+  const [reviewResultsPanel,setReviewResultsPanel]=useState(null); // null | {loading, data, unitId}
   const isMobile=useIsMobile();
   const [expandedResource,setExpandedResource]=useState(null);
   const [practiceOutcome,setPracticeOutcome]=useState(null);
@@ -2157,6 +2185,13 @@ function App(){
       const ts={};
       const {data:rows}=await sb.from("solo_progress").select("outcome_key,updated_at").eq("student_id",student.id).eq("completed",true);
       rows?.forEach(r=>{if(prog[student.id]){prog[student.id][r.outcome_key]=true;ts[r.outcome_key]=r.updated_at;}});
+      const {data:snapRows}=await sb.from("solo_test_snapshots").select("unit_id,by_outcome,passed_count,total_count,taken_at").eq("student_id",student.id).order("taken_at");
+      const snaps={};
+      snapRows?.forEach(r=>{if(!snaps[r.unit_id])snaps[r.unit_id]=[];snaps[r.unit_id].push(r);});
+      const {data:classRow}=await sb.from("classes").select("settings").eq("id",loginClassObj.id).single();
+      setHiddenUnits(new Set(classRow?.settings?.soloHiddenUnits||[]));
+      setReviewActive(classRow?.settings?.soloActiveReview||null);
+      setTestSnapshots({[student.id]:snaps});
       setStudents([student]);
       setProgress(prog);
       setTimestamps({[student.id]:ts});
@@ -2170,10 +2205,16 @@ function App(){
   async function loadClass(classId){
     setLoading(true);
     setSelectedClassId(classId);
+    const {data:classRow}=await sb.from("classes").select("settings").eq("id",classId).single();
+    const storedHiddenUnits=classRow?.settings?.soloHiddenUnits||[];
+    setHiddenUnits(new Set(storedHiddenUnits));
+    setReviewActive(classRow?.settings?.soloActiveReview||null);
+    setReviewResultsPanel(null);
     const {data:sr}=await sb.from("students").select("id,name,student_code").eq("class_id",classId).order("name");
     const sList=sr||[];
     const prog=buildEmptyProgress(sList);
     const ts={};
+    const snapMap={};
     if(sList.length>0){
       const ids=sList.map(s=>s.id);
       const {data:rows}=await sb.from("solo_progress").select("student_id,outcome_key,updated_at").eq("completed",true).in("student_id",ids);
@@ -2184,7 +2225,17 @@ function App(){
           ts[r.student_id][r.outcome_key]=r.updated_at;
         }
       });
+      const {data:snapRows}=await sb.from("solo_test_snapshots").select("student_id,unit_id,by_outcome,passed_count,total_count,taken_at").in("student_id",ids).order("taken_at");
+      snapRows?.forEach(r=>{
+        if(!snapMap[r.student_id])snapMap[r.student_id]={};
+        if(!snapMap[r.student_id][r.unit_id])snapMap[r.student_id][r.unit_id]=[];
+        snapMap[r.student_id][r.unit_id].push(r);
+      });
     }
+    const {data:hiddenRows}=await sb.from("solo_hidden_students").select("student_id").eq("class_id",classId);
+    setHiddenStudents(new Set((hiddenRows||[]).map(r=>r.student_id)));
+    setManageGroupOpen(false);
+    setTestSnapshots(snapMap);
     setStudents(sList);
     setProgress(prog);
     setTimestamps(ts);
@@ -2200,6 +2251,150 @@ function App(){
       if(val)st[key]=now; else delete st[key];
       return {...prev,[sid]:st};
     });
+  }
+
+  async function saveTestSnapshot(sid,uid,byOutcome){
+    if(!sid)return;
+    const passedCount=Object.values(byOutcome).filter(o=>o.passed).length;
+    const totalCount=Object.keys(byOutcome).length;
+    const takenAt=new Date().toISOString();
+    const snap={student_id:sid,unit_id:uid,by_outcome:byOutcome,passed_count:passedCount,total_count:totalCount};
+    await sb.from("solo_test_snapshots").insert(snap);
+    setTestSnapshots(prev=>{
+      const existing=(prev[sid]||{})[uid]||[];
+      return{...prev,[sid]:{...(prev[sid]||{}),[uid]:[...existing,{by_outcome:byOutcome,passed_count:passedCount,total_count:totalCount,taken_at:takenAt}]}};
+    });
+  }
+
+  async function toggleHideStudent(sid,shouldHide){
+    if(shouldHide){
+      await sb.from("solo_hidden_students").insert({class_id:selectedClassId,student_id:sid});
+      setHiddenStudents(prev=>new Set([...prev,sid]));
+    } else {
+      await sb.from("solo_hidden_students").delete().eq("class_id",selectedClassId).eq("student_id",sid);
+      setHiddenStudents(prev=>{const n=new Set(prev);n.delete(sid);return n;});
+    }
+  }
+
+  async function toggleHideUnit(unitId){
+    const next=new Set(hiddenUnits);
+    if(next.has(unitId))next.delete(unitId); else next.add(unitId);
+    setHiddenUnits(next);
+    // Merge into existing settings so other settings (focusGame, lowStimMode, etc.) are preserved
+    const {data:cur}=await sb.from("classes").select("settings").eq("id",selectedClassId).single();
+    const merged={...(cur?.settings||{}),soloHiddenUnits:[...next]};
+    await sb.from("classes").update({settings:merged}).eq("id",selectedClassId);
+  }
+
+  async function startUnitReview(unitId){
+    const startedAt=new Date().toISOString();
+    const ra={unitId,startedAt};
+    const {data:cur}=await sb.from("classes").select("settings").eq("id",selectedClassId).single();
+    const merged={...(cur?.settings||{}),soloActiveReview:ra};
+    await sb.from("classes").update({settings:merged}).eq("id",selectedClassId);
+    setReviewActive(ra);
+    setReviewResultsPanel(null);
+  }
+
+  async function stopUnitReview(){
+    const {data:cur}=await sb.from("classes").select("settings").eq("id",selectedClassId).single();
+    const merged={...(cur?.settings||{})};
+    delete merged.soloActiveReview;
+    await sb.from("classes").update({settings:merged}).eq("id",selectedClassId);
+    setReviewActive(null);
+    setReviewResultsPanel(null);
+  }
+
+  async function loadReviewResults(){
+    if(!reviewActive)return;
+    setReviewResultsPanel({loading:true,data:[],unitId:reviewActive.unitId});
+    const {data}=await sb.from("solo_review_results")
+      .select("student_id,by_outcome,passed_count,total_count,completed_at")
+      .eq("class_id",selectedClassId)
+      .eq("unit_id",reviewActive.unitId)
+      .eq("review_key",reviewActive.startedAt);
+    setReviewResultsPanel({loading:false,data:data||[],unitId:reviewActive.unitId});
+  }
+
+  function beginReview(){
+    if(!reviewActive)return;
+    const prog=progress[studentId]||{};
+    const unitData=PRETESTS[reviewActive.unitId]||[];
+    const qList=[];
+    unitData.forEach(section=>{
+      const key=`${reviewActive.unitId}_${section.outcomeId}`;
+      if(prog[key]){
+        const qs=section.questions;
+        const q=qs[Math.floor(Math.random()*qs.length)];
+        qList.push({outcomeId:section.outcomeId,short:section.short,q,unitId:reviewActive.unitId});
+      }
+    });
+    if(qList.length===0){
+      // No outcomes achieved yet — mark done immediately
+      try{sessionStorage.setItem(`solo_review_done_${reviewActive.startedAt}_${studentId}`,'1');}catch{}
+      setReviewMode(null);
+      return;
+    }
+    setReviewQList(qList);
+    setReviewIdx(0);
+    setReviewAnswers([]);
+    setReviewAns({input:"",option:"",orderSeq:[],shadedCells:qList[0].q.type==="shade"?Array(qList[0].q.cells||0).fill(false):[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
+    setReviewMode('running');
+    setView('review');
+  }
+
+  function reviewCanGo(){
+    const q=reviewQList[reviewIdx]?.q;
+    if(!q)return false;
+    if(q.type==="input")return reviewAns.input.trim().length>0;
+    if(q.type==="mc"||q.type==="truefalse")return reviewAns.option.length>0;
+    if(q.type==="order")return reviewAns.orderSeq.length===q.items.length;
+    if(q.type==="shade")return reviewAns.shadedCells.some(Boolean);
+    if(q.type==="numberline")return q.tokens.every(t=>(reviewAns.nlPlaced||{})[t]!==undefined);
+    if(q.type==="match")return q.left.every(l=>(reviewAns.matchPairs||{})[l]!==undefined);
+    if(q.type==="partition")return(reviewAns.partitionShaded||[]).length>0;
+    return false;
+  }
+
+  async function handleReviewNext(){
+    const current=reviewQList[reviewIdx];
+    const q=current.q;
+    let given;
+    if(q.type==="order")given=reviewAns.orderSeq;
+    else if(q.type==="shade")given=reviewAns.shadedCells.filter(Boolean).length;
+    else if(q.type==="numberline")given=reviewAns.nlPlaced;
+    else if(q.type==="match")given=reviewAns.matchPairs;
+    else if(q.type==="partition")given=reviewAns.partitionShaded;
+    else if(q.type==="mc"||q.type==="truefalse")given=reviewAns.option;
+    else given=reviewAns.input;
+    const correct=checkAnswer(given,q);
+    const newAnswers=[...reviewAnswers,{outcomeId:current.outcomeId,short:current.short,correct}];
+    setReviewAnswers(newAnswers);
+
+    if(reviewIdx<reviewQList.length-1){
+      const next=reviewQList[reviewIdx+1];
+      setReviewIdx(reviewIdx+1);
+      setReviewAns({input:"",option:"",orderSeq:[],shadedCells:next.q.type==="shade"?Array(next.q.cells||0).fill(false):[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
+    } else {
+      const byOutcome={};
+      newAnswers.forEach(a=>{byOutcome[a.outcomeId]={short:a.short,passed:a.correct,correct:a.correct?1:0,total:1};});
+      const passedCount=Object.values(byOutcome).filter(o=>o.passed).length;
+      const totalCount=Object.keys(byOutcome).length;
+      if(studentId&&reviewActive){
+        await sb.from("solo_review_results").insert({
+          student_id:studentId,
+          class_id:loginClassObj?.id||"",
+          unit_id:reviewActive.unitId,
+          review_key:reviewActive.startedAt,
+          by_outcome:byOutcome,
+          passed_count:passedCount,
+          total_count:totalCount
+        });
+        try{sessionStorage.setItem(`solo_review_done_${reviewActive.startedAt}_${studentId}`,'1');}catch{}
+      }
+      setReviewResults({byOutcome,passedCount,totalCount});
+      setReviewMode('done');
+    }
   }
 
   async function loadResources(unitId,classId){
@@ -2283,7 +2478,7 @@ function App(){
     sb.auth.signOut();
     try{sessionStorage.removeItem('solo_session_v1');}catch{}
     try{if(studentId)localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}
-    setView("login");setStudentId(null);setIsTeacher(false);setLoginClassCode("");setLoginClassObj(null);setLoginStep("class");setLoginCode("");setLoginEmail("");setLoginPassword("");setLoginError("");setSelectedUnit(null);setTeacherFocus(null);setStudents([]);setClasses([]);setSelectedClassId(null);setProgress({});setTimestamps({});setLoginMode("student");
+    setView("login");setStudentId(null);setIsTeacher(false);setLoginClassCode("");setLoginClassObj(null);setLoginStep("class");setLoginCode("");setLoginEmail("");setLoginPassword("");setLoginError("");setSelectedUnit(null);setTeacherFocus(null);setStudents([]);setClasses([]);setSelectedClassId(null);setProgress({});setTimestamps({});setTestSnapshots({});setHiddenStudents(new Set());setHiddenUnits(new Set());setManageGroupOpen(false);setReviewActive(null);setReviewMode(null);setReviewQList([]);setReviewIdx(0);setReviewAnswers([]);setReviewResults(null);setReviewResultsPanel(null);setLoginMode("student");
     setExpandedResource(null);setPracticeOutcome(null);setPracticeUnit(null);setPracticePhase("example");setPracticeIdx(0);setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);setPracticeScore({correct:0,total:0});
     setTeacherEmail("");setSoloResources([]);setResourceTab("rubric");setResourceOutcome(null);setAddingResource(false);setAddingToGlobal(false);setNewResType("video");setNewResLabel("");setNewResUrl("");setNewResQ({text:"",options:[{text:"",correct:true},{text:"",correct:false},{text:"",correct:false},{text:"",correct:false}]});setQuizState({});
   }
@@ -2313,6 +2508,12 @@ function App(){
           const ts={};
           const {data:rows}=await sb.from("solo_progress").select("outcome_key,updated_at").eq("student_id",student.id).eq("completed",true);
           rows?.forEach(r=>{if(prog[student.id]){prog[student.id][r.outcome_key]=true;ts[r.outcome_key]=r.updated_at;}});
+          const {data:snapRows}=await sb.from("solo_test_snapshots").select("unit_id,by_outcome,passed_count,total_count,taken_at").eq("student_id",student.id).order("taken_at");
+          const snaps={};snapRows?.forEach(r=>{if(!snaps[r.unit_id])snaps[r.unit_id]=[];snaps[r.unit_id].push(r);});
+          const {data:classRow}=await sb.from("classes").select("settings").eq("id",sess.classId).single();
+          setHiddenUnits(new Set(classRow?.settings?.soloHiddenUnits||[]));
+          setReviewActive(classRow?.settings?.soloActiveReview||null);
+          setTestSnapshots({[student.id]:snaps});
           setStudents([student]);setProgress(prog);setTimestamps({[student.id]:ts});
           setStudentId(student.id);setLoginClassObj({id:sess.classId,name:sess.className});setView("home");
         }
@@ -2403,6 +2604,9 @@ function App(){
       const byOutcome={};
       newAnswers.forEach(a=>{if(!byOutcome[a.outcomeId])byOutcome[a.outcomeId]={short:a.short,total:0,correct:0,wrong:[],unitId:a.unitId};byOutcome[a.outcomeId].total++;if(a.correct)byOutcome[a.outcomeId].correct++;else byOutcome[a.outcomeId].wrong.push(a.q.text);});
       const passed=Object.keys(byOutcome).filter(id=>byOutcome[id].correct===byOutcome[id].total);
+      const activeUnitId=pretestQList[0]?.unitId||"u24";
+      // Capture prior snapshots BEFORE saving so results screen can label pre vs post correctly
+      const priorSnaps=(testSnapshots[studentId]||{})[activeUnitId]||[];
       if(studentId){
         setProgress(p=>{
           const updated={...p[studentId]};
@@ -2410,10 +2614,17 @@ function App(){
           return{...p,[studentId]:updated};
         });
         passed.forEach(id=>saveOutcome(studentId,`${byOutcome[id].unitId||"u24"}_${id}`,true));
+        // Save snapshot — enrich byOutcome with passed boolean and band info
+        const byOutcomeSnap={};
+        Object.entries(byOutcome).forEach(([id,o])=>{
+          const band=UNITS.find(u=>u.id===o.unitId)?.outcomes.find(oc=>oc.id===id)?.band||"red";
+          byOutcomeSnap[id]={short:o.short,correct:o.correct,total:o.total,passed:o.correct===o.total,band};
+        });
+        saveTestSnapshot(studentId,activeUnitId,byOutcomeSnap);
         // Clear draft on completion
         try{localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}
       }
-      setPretestResults({byOutcome,passed});
+      setPretestResults({byOutcome,passed,priorSnaps});
       setPretestMode("done");
     }
   }
@@ -2435,6 +2646,7 @@ function App(){
     setView("rubric");
     setResourceTab("rubric");
     setResourceOutcome(unit.outcomes[0]?.id||null);
+    setStudentRubricTab("outcomes");
     const classId=isTeacher?selectedClassId:(loginClassObj?.id||null);
     loadResources(unit.id,classId);
     loadUnitResources(unit);
@@ -2642,6 +2854,8 @@ function App(){
   if(view==="home"){
     const s=!isTeacher&&students.find(s=>s.id===studentId);
     const nameDisplay=isTeacher?null:(s?s.name:"");
+    const visibleStudents=isTeacher?students.filter(st=>!hiddenStudents.has(st.id)):students;
+    const hiddenCount=hiddenStudents.size;
     return(
       <div style={{display:"flex",flexDirection:"column",flex:1,fontFamily:ff}}>
         <AppNav title="SOLO Tracker"
@@ -2652,37 +2866,106 @@ function App(){
         />
         <div style={{flex:1,overflowY:"auto",padding:"1.25rem 1rem"}}>
           <div style={{maxWidth:640,margin:"0 auto"}}>
-            <h1 style={{fontSize:22,fontWeight:800,margin:"0 0 4px",color:"var(--text)",letterSpacing:"-0.02em"}}>{isTeacher?"Class overview":s?s.name+"'s units":""}</h1>
-            <p style={{fontSize:13,color:"var(--sub)",margin:"0 0 20px"}}>Year 6 Maths — {isTeacher?"track class progress":"select a unit to continue"}</p>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+              <h1 style={{fontSize:22,fontWeight:800,margin:0,color:"var(--text)",letterSpacing:"-0.02em"}}>{isTeacher?"Class overview":s?s.name+"'s units":""}</h1>
+              {isTeacher&&<button onClick={()=>setManageGroupOpen(v=>!v)}
+                style={{fontFamily:ff,fontSize:12,fontWeight:600,padding:"5px 12px",background:manageGroupOpen?"#4338ca":"var(--surface)",color:manageGroupOpen?"#fff":"var(--sub)",border:`1px solid ${manageGroupOpen?"#4338ca":"var(--border)"}`,borderRadius:8,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",gap:5}}>
+                👥 Group{hiddenCount>0?` (${hiddenCount} hidden)`:""}
+              </button>}
+            </div>
+            <p style={{fontSize:13,color:"var(--sub)",margin:"0 0 12px"}}>Year 6 Maths — {isTeacher?`${visibleStudents.length} student${visibleStudents.length!==1?"s":""}${hiddenCount>0?` · ${hiddenCount} hidden`:""}` :"select a unit to continue"}</p>
+            {/* Manage Group panel */}
+            {isTeacher&&manageGroupOpen&&(
+              <div style={{background:"var(--surface)",border:"1.5px solid var(--ind-200)",borderRadius:14,padding:"14px 16px",marginBottom:16,boxShadow:"var(--sh-md)"}}>
+                <p style={{fontSize:12,fontWeight:700,color:"var(--indigo)",margin:"0 0 10px",textTransform:"uppercase",letterSpacing:"0.05em"}}>Manage maths group</p>
+                <p style={{fontSize:12,color:"var(--sub)",margin:"0 0 12px",lineHeight:1.5}}>Students marked as hidden won't appear in the heatmap or outcome summary. Their data is kept — you can unhide them at any time.</p>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {students.map(st=>{
+                    const isHidden=hiddenStudents.has(st.id);
+                    return(
+                      <div key={st.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",background:isHidden?"#f8fafc":"#f0fdf4",border:`1px solid ${isHidden?"#e2e8f0":"#86efac"}`,borderRadius:9}}>
+                        <span style={{fontSize:13,fontWeight:600,color:isHidden?"#94a3b8":"#1e293b"}}>{st.name}{isHidden&&<span style={{marginLeft:6,fontSize:10,color:"#94a3b8",fontWeight:500}}>hidden</span>}</span>
+                        <button onClick={()=>toggleHideStudent(st.id,!isHidden)}
+                          style={{fontFamily:ff,fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:7,cursor:"pointer",border:"none",background:isHidden?"var(--ind-50)":"#fee2e2",color:isHidden?"var(--indigo)":"#dc2626",transition:"all 0.15s"}}>
+                          {isHidden?"Show":"Hide"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            {/* Student review takeover */}
+            {!isTeacher&&reviewActive&&(()=>{
+              const alreadyDone=!!(()=>{try{return sessionStorage.getItem(`solo_review_done_${reviewActive.startedAt}_${studentId}`);}catch{return false;}})();
+              if(alreadyDone||reviewMode==='done')return null;
+              const unit=UNITS.find(u=>u.id===reviewActive.unitId);
+              if(!unit)return null;
+              const prog=progress[studentId]||{};
+              const achievedCount=(PRETESTS[reviewActive.unitId]||[]).filter(s=>prog[`${reviewActive.unitId}_${s.outcomeId}`]).length;
+              return(
+                <div style={{background:"#fff7ed",border:"2px solid #fdba74",borderRadius:16,padding:"20px 20px 18px",marginBottom:20,boxShadow:"var(--sh-md)"}}>
+                  <div style={{display:"flex",alignItems:"flex-start",gap:14}}>
+                    <span style={{fontSize:32,flexShrink:0}}>📋</span>
+                    <div style={{flex:1}}>
+                      <p style={{fontSize:15,fontWeight:700,color:"#c2410c",margin:"0 0 4px"}}>Your teacher has started a Unit Review</p>
+                      <p style={{fontSize:13,color:"#92400e",margin:"0 0 12px",lineHeight:1.5}}>
+                        <strong>{unit.name}: {unit.subtitle}</strong><br/>
+                        {achievedCount>0?`You'll answer ${achievedCount} question${achievedCount!==1?"s":""} — one for each outcome you've completed.`:"Complete some outcomes first, then come back for your review."}
+                      </p>
+                      {achievedCount>0?(
+                        <button onClick={beginReview}
+                          style={{fontFamily:ff,fontSize:13,fontWeight:700,padding:"10px 24px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#f97316,#ea580c)",color:"#fff",cursor:"pointer",boxShadow:"0 4px 14px rgba(249,115,22,0.35)"}}>
+                          Begin Review →
+                        </button>
+                      ):(
+                        <span style={{fontSize:12,color:"#92400e",fontStyle:"italic"}}>No questions for you yet — your teacher will let you know when to start.</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(270px,1fr))",gap:14}}>
-              {UNITS.map(unit=>{
+              {UNITS.filter(unit=>isTeacher||!hiddenUnits.has(unit.id)).map(unit=>{
                 const uc=UC[unit.id];
+                const isHiddenUnit=hiddenUnits.has(unit.id);
                 let done=0,total=unit.outcomes.length;
                 if(isTeacher){
-                  const avg=students.reduce((sum,st)=>sum+(progress[st.id]?unit.outcomes.filter(o=>progress[st.id][`${unit.id}_${o.id}`]).length:0),0);
-                  done=students.length?Math.round(avg/students.length*10)/10:0;
+                  const avg=visibleStudents.reduce((sum,st)=>sum+(progress[st.id]?unit.outcomes.filter(o=>progress[st.id][`${unit.id}_${o.id}`]).length:0),0);
+                  done=visibleStudents.length?Math.round(avg/visibleStudents.length*10)/10:0;
                 } else {
                   done=progress[studentId]?unit.outcomes.filter(o=>progress[studentId][`${unit.id}_${o.id}`]).length:0;
                 }
                 const pct=Math.round(done/total*100);
-                const redDone=unit.outcomes.filter(o=>o.band==="red"&&(isTeacher?students.some(st=>progress[st.id]&&progress[st.id][`${unit.id}_${o.id}`]):progress[studentId]&&progress[studentId][`${unit.id}_${o.id}`])).length;
+                const redDone=unit.outcomes.filter(o=>o.band==="red"&&(isTeacher?visibleStudents.some(st=>progress[st.id]&&progress[st.id][`${unit.id}_${o.id}`]):progress[studentId]&&progress[studentId][`${unit.id}_${o.id}`])).length;
                 const redTotal=unit.outcomes.filter(o=>o.band==="red").length;
-                const yelDone=unit.outcomes.filter(o=>o.band==="yellow"&&(isTeacher?students.some(st=>progress[st.id]&&progress[st.id][`${unit.id}_${o.id}`]):progress[studentId]&&progress[studentId][`${unit.id}_${o.id}`])).length;
+                const yelDone=unit.outcomes.filter(o=>o.band==="yellow"&&(isTeacher?visibleStudents.some(st=>progress[st.id]&&progress[st.id][`${unit.id}_${o.id}`]):progress[studentId]&&progress[studentId][`${unit.id}_${o.id}`])).length;
                 const yelTotal=unit.outcomes.filter(o=>o.band==="yellow").length;
                 return(
                   <div key={unit.id}
-                    style={{background:"var(--surface)",borderRadius:16,boxShadow:"var(--sh-md)",cursor:"pointer",overflow:"hidden",transition:"transform 0.2s,box-shadow 0.2s",borderTop:`3px solid ${uc.dot}`}}
-                    onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="var(--sh-hov)";}}
+                    style={{background:"var(--surface)",borderRadius:16,boxShadow:"var(--sh-md)",cursor:"pointer",overflow:"hidden",transition:"transform 0.2s,box-shadow 0.2s",borderTop:`3px solid ${isHiddenUnit?"#e2e8f0":uc.dot}`,opacity:isHiddenUnit?0.55:1}}
+                    onMouseEnter={e=>{if(!isHiddenUnit){e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="var(--sh-hov)";}}}
                     onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow="var(--sh-md)";}}
-                    onClick={()=>openUnit(unit)}>
+                    onClick={()=>{if(!isHiddenUnit)openUnit(unit);}}>
                     <div style={{padding:"1.25rem 1.25rem 1rem"}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
-                        <div>
-                          <span style={{display:"inline-block",background:uc.bg,color:uc.text,fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:6,marginBottom:6,textTransform:"uppercase",letterSpacing:"0.06em"}}>{unit.name}</span>
-                          <h2 style={{fontSize:15,fontWeight:700,margin:0,color:"var(--text)"}}>{unit.subtitle}</h2>
+                        <div style={{flex:1,minWidth:0}}>
+                          <span style={{display:"inline-block",background:isHiddenUnit?"#f1f5f9":uc.bg,color:isHiddenUnit?"#94a3b8":uc.text,fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:6,marginBottom:6,textTransform:"uppercase",letterSpacing:"0.06em"}}>{unit.name}</span>
+                          <h2 style={{fontSize:15,fontWeight:700,margin:0,color:isHiddenUnit?"#94a3b8":"var(--text)"}}>{unit.subtitle}</h2>
                         </div>
-                        <span style={{fontSize:13,fontWeight:700,color:uc.text,flexShrink:0}}>{isTeacher?`avg ${done}/${total}`:`${done}/${total}`}</span>
+                        <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                          {!isHiddenUnit&&<span style={{fontSize:13,fontWeight:700,color:uc.text}}>{isTeacher?`avg ${done}/${total}`:`${done}/${total}`}</span>}
+                          {isTeacher&&(
+                            <button onClick={e=>{e.stopPropagation();toggleHideUnit(unit.id);}}
+                              title={isHiddenUnit?"Show to students":"Hide from students"}
+                              style={{fontFamily:ff,fontSize:13,padding:"3px 8px",borderRadius:6,border:`1px solid ${isHiddenUnit?"#c7d2fe":"#e2e8f0"}`,background:isHiddenUnit?"var(--ind-50)":"var(--surface)",color:isHiddenUnit?"var(--indigo)":"#94a3b8",cursor:"pointer",lineHeight:1,transition:"all 0.15s"}}>
+                              {isHiddenUnit?"👁 Show":"🚫 Hide"}
+                            </button>
+                          )}
+                        </div>
                       </div>
+                      {!isHiddenUnit&&<>
                       <div style={{background:"var(--ind-100)",borderRadius:99,height:8,marginBottom:12,overflow:"hidden"}}>
                         <div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,var(--indigo),var(--blue))",borderRadius:99,transition:"width 0.4s"}}/>
                       </div>
@@ -2692,23 +2975,120 @@ function App(){
                         {(()=>{
                           const gTotal=unit.outcomes.filter(o=>o.band==="green").length;
                           if(!gTotal)return null;
-                          const gDone=unit.outcomes.filter(o=>o.band==="green"&&(isTeacher?students.some(st=>progress[st.id]&&progress[st.id][`${unit.id}_${o.id}`]):progress[studentId]&&progress[studentId][`${unit.id}_${o.id}`])).length;
+                          const gDone=unit.outcomes.filter(o=>o.band==="green"&&(isTeacher?visibleStudents.some(st=>progress[st.id]&&progress[st.id][`${unit.id}_${o.id}`]):progress[studentId]&&progress[studentId][`${unit.id}_${o.id}`])).length;
                           return <span style={{fontSize:11,padding:"3px 9px",borderRadius:5,background:BAND.green.bg,color:BAND.green.text,fontWeight:600}}>Green {gDone}/{gTotal}</span>;
                         })()}
                       </div>
+                      </>}
+                      {isHiddenUnit&&<p style={{fontSize:12,color:"#94a3b8",margin:"4px 0 0",fontStyle:"italic"}}>Hidden from students</p>}
                     </div>
-                    {!isTeacher&&(unit.id==="u24"||unit.id==="u25"||unit.id==="u26"||unit.id==="u27")&&(
-                      <div style={{borderTop:"1px solid var(--border)",padding:"10px 1.25rem"}}>
-                        <button onClick={e=>{e.stopPropagation();startPretest(unit.id);}}
-                          style={{width:"100%",padding:"8px",fontSize:12,fontWeight:600,background:"var(--ind-50)",color:"var(--indigo)",border:"1.5px solid var(--ind-200)",borderRadius:9,cursor:"pointer",fontFamily:ff}}>
-                          📋 Pre-test / Post-test
-                        </button>
-                      </div>
-                    )}
+                    {!isTeacher&&!isHiddenUnit&&(unit.id==="u24"||unit.id==="u25"||unit.id==="u26"||unit.id==="u27")&&(()=>{
+                      const unitSnaps=(testSnapshots[studentId]||{})[unit.id]||[];
+                      const preSnap=unitSnaps[0]||null;
+                      const postSnap=unitSnaps.length>=2?unitSnaps[unitSnaps.length-1]:null;
+                      return(
+                        <div style={{borderTop:"1px solid var(--border)",padding:"10px 1.25rem"}}>
+                          {(preSnap||postSnap)&&(
+                            <div style={{display:"flex",gap:8,marginBottom:8}}>
+                              {preSnap&&<span style={{fontSize:11,padding:"3px 9px",borderRadius:5,background:"#f0f4ff",color:"#4338ca",fontWeight:600,border:"1px solid #c7d2fe"}}>Pre: {preSnap.passed_count}/{preSnap.total_count}</span>}
+                              {postSnap&&<span style={{fontSize:11,padding:"3px 9px",borderRadius:5,background:"#f0fdf4",color:"#16a34a",fontWeight:600,border:"1px solid #86efac"}}>Post: {postSnap.passed_count}/{postSnap.total_count}</span>}
+                            </div>
+                          )}
+                          <button onClick={e=>{e.stopPropagation();startPretest(unit.id);}}
+                            style={{width:"100%",padding:"8px",fontSize:12,fontWeight:600,background:"var(--ind-50)",color:"var(--indigo)",border:"1.5px solid var(--ind-200)",borderRadius:9,cursor:"pointer",fontFamily:ff}}>
+                            📋 {preSnap?"Retake as Post-test":"Pre-test / Post-test"}
+                          </button>
+                        </div>
+                      );
+                    })()}
+                    {/* Teacher review controls strip */}
+                    {isTeacher&&!isHiddenUnit&&(()=>{
+                      const isThisReview=reviewActive?.unitId===unit.id;
+                      return(
+                        <div onClick={e=>e.stopPropagation()} style={{borderTop:"1px solid var(--border)",padding:"9px 14px",background:isThisReview?"#fff7ed":"var(--surface)",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                          {isThisReview?(
+                            <>
+                              <span style={{fontSize:11,fontWeight:700,color:"#c2410c",display:"flex",alignItems:"center",gap:4,flex:1}}>
+                                <span style={{display:"inline-block",width:7,height:7,borderRadius:"50%",background:"#f97316",boxShadow:"0 0 0 3px rgba(249,115,22,0.2)"}}/>
+                                Review active
+                              </span>
+                              <button onClick={loadReviewResults} style={{fontFamily:ff,fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:7,border:"1px solid #e2e8f0",background:"#fff",color:"var(--sub)",cursor:"pointer"}}>
+                                📊 Results
+                              </button>
+                              <button onClick={stopUnitReview} style={{fontFamily:ff,fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:7,border:"1px solid #fca5a5",background:"#fff0f0",color:"#dc2626",cursor:"pointer"}}>
+                                ■ Stop
+                              </button>
+                            </>
+                          ):(
+                            <button onClick={()=>startUnitReview(unit.id)} style={{fontFamily:ff,fontSize:11,fontWeight:700,padding:"5px 12px",borderRadius:7,border:"1px solid var(--ind-200)",background:"var(--ind-50)",color:"var(--indigo)",cursor:"pointer",width:"100%",opacity:reviewActive&&!isThisReview?0.4:1}}>
+                              ▶ Start Unit Review
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
             </div>
+            {/* Review results panel */}
+            {isTeacher&&reviewResultsPanel&&(
+              <div style={{marginTop:20,background:"var(--surface)",border:"1.5px solid #fdba74",borderRadius:16,boxShadow:"var(--sh-md)",overflow:"hidden"}}>
+                <div style={{background:"#fff7ed",padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <div>
+                    <p style={{fontSize:13,fontWeight:700,color:"#c2410c",margin:0}}>📊 Review Results — {UNITS.find(u=>u.id===reviewResultsPanel.unitId)?.subtitle||reviewResultsPanel.unitId}</p>
+                    {!reviewResultsPanel.loading&&<p style={{fontSize:11,color:"#92400e",margin:"2px 0 0"}}>{reviewResultsPanel.data.length} of {visibleStudents.length} student{visibleStudents.length!==1?"s":""} completed</p>}
+                  </div>
+                  <button onClick={()=>setReviewResultsPanel(null)} style={{fontSize:18,background:"none",border:"none",cursor:"pointer",color:"#92400e",lineHeight:1,padding:"0 2px"}}>×</button>
+                </div>
+                {reviewResultsPanel.loading?(
+                  <p style={{textAlign:"center",padding:"20px 0",fontSize:13,color:"var(--muted)"}}>Loading results…</p>
+                ):(()=>{
+                  const unit=UNITS.find(u=>u.id===reviewResultsPanel.unitId);
+                  if(!unit)return null;
+                  const byStudent={};
+                  reviewResultsPanel.data.forEach(r=>{byStudent[r.student_id]=r;});
+                  return(
+                    <div style={{overflowX:"auto",padding:"12px 16px"}}>
+                      <table style={{borderCollapse:"collapse",minWidth:"100%",fontSize:12}}>
+                        <thead>
+                          <tr>
+                            <th style={{textAlign:"left",padding:"4px 8px 8px 0",fontWeight:600,color:"var(--sub)",minWidth:80}}>Student</th>
+                            {unit.outcomes.map(o=>{
+                              const bs=BAND[o.band];
+                              return(<th key={o.id} style={{padding:"4px 4px 8px",textAlign:"center"}}>
+                                <span style={{display:"inline-block",fontSize:9,fontWeight:700,color:bs.text,background:bs.bg,border:`1px solid ${bs.border}`,padding:"2px 5px",borderRadius:4,textTransform:"uppercase"}}>{o.id}</span>
+                              </th>);
+                            })}
+                            <th style={{padding:"4px 0 8px 10px",textAlign:"right",fontWeight:600,color:"var(--sub)"}}>Score</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {visibleStudents.map(s=>{
+                            const r=byStudent[s.id];
+                            return(<tr key={s.id}>
+                              <td style={{padding:"4px 8px 4px 0",fontWeight:500,color:"var(--text)"}}>{s.name}</td>
+                              {unit.outcomes.map(o=>{
+                                if(!r){return<td key={o.id} style={{padding:"4px",textAlign:"center"}}><span style={{fontSize:12,color:"#cbd5e1"}}>⏳</span></td>;}
+                                const res=r.by_outcome[o.id];
+                                if(!res){return<td key={o.id} style={{padding:"4px",textAlign:"center"}}><span style={{fontSize:10,color:"#e2e8f0"}}>–</span></td>;}
+                                return(<td key={o.id} style={{padding:"4px",textAlign:"center"}}>
+                                  <span style={{fontSize:13,fontWeight:700,color:res.passed?"#16a34a":"#dc2626"}}>{res.passed?"✓":"✗"}</span>
+                                </td>);
+                              })}
+                              <td style={{padding:"4px 0 4px 10px",textAlign:"right",fontWeight:600,color:r?(r.passed_count===r.total_count?"#16a34a":"#64748b"):"var(--muted)"}}>
+                                {r?`${r.passed_count}/${r.total_count}`:"—"}
+                              </td>
+                            </tr>);
+                          })}
+                        </tbody>
+                      </table>
+                      <p style={{fontSize:11,color:"var(--muted)",marginTop:8}}>⏳ not completed · – not tested (outcome not yet achieved)</p>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -2735,10 +3115,66 @@ function App(){
                 <div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,var(--indigo),var(--blue))",borderRadius:99,transition:"width 0.4s"}}/>
               </div>
             </div>
-            {unitResourcesLoading&&(
+            {/* Tab bar */}
+            {(()=>{
+              const extraRes=soloResources.filter(r=>r.outcome_id==="extra");
+              return(
+                <div style={{display:"flex",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,padding:3,gap:2,marginBottom:"1.25rem",boxShadow:"var(--sh-sm)"}}>
+                  {[{id:"outcomes",label:"Outcomes"},{id:"extra",label:"⭐ Beyond SOLO"}].map(tab=>(
+                    <button key={tab.id} onClick={()=>setStudentRubricTab(tab.id)}
+                      style={{fontFamily:ff,flex:1,padding:"8px 0",fontSize:12,fontWeight:700,border:"none",borderRadius:8,cursor:"pointer",transition:"all 0.15s",
+                        background:studentRubricTab===tab.id?"linear-gradient(135deg,var(--indigo),var(--blue))":"transparent",
+                        color:studentRubricTab===tab.id?"#fff":"var(--sub)",
+                        boxShadow:studentRubricTab===tab.id?"0 2px 8px rgba(67,56,202,0.25)":"none"}}>
+                      {tab.label}
+                      {tab.id==="extra"&&extraRes.length>0&&<span style={{marginLeft:5,fontSize:10,background:studentRubricTab==="extra"?"rgba(255,255,255,0.25)":"var(--ind-50)",color:studentRubricTab==="extra"?"#fff":"var(--indigo)",borderRadius:99,padding:"1px 5px",fontWeight:700}}>{extraRes.length}</span>}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
+            {unitResourcesLoading&&studentRubricTab==="outcomes"&&(
               <div style={{textAlign:"center",padding:"10px 0 4px",fontSize:12,color:"var(--muted)"}}>Loading resources…</div>
             )}
-            {["red","yellow","green"].filter(band=>selectedUnit.outcomes.some(o=>o.band===band)).map(band=>{
+            {/* Beyond SOLO tab */}
+            {studentRubricTab==="extra"&&(()=>{
+              const extraRes=soloResources.filter(r=>r.outcome_id==="extra");
+              const links=extraRes.filter(r=>r.type!=="question");
+              const questions=extraRes.filter(r=>r.type==="question");
+              return(
+                <div>
+                  {extraRes.length===0?(
+                    <div style={{textAlign:"center",padding:"3rem 1rem",color:"var(--muted)"}}>
+                      <div style={{fontSize:36,marginBottom:12}}>⭐</div>
+                      <p style={{fontSize:14,fontWeight:600,color:"var(--sub)",margin:"0 0 6px"}}>Extension resources coming soon</p>
+                      <p style={{fontSize:12,color:"var(--muted)",margin:0}}>Your teacher will add extra challenges and links here for students who are ready to go beyond the SOLO outcomes.</p>
+                    </div>
+                  ):(
+                    <>
+                      <p style={{fontSize:12,color:"var(--sub)",margin:"0 0 14px",lineHeight:1.5}}>You've mastered the core outcomes — here are some extension challenges and resources to take your learning further.</p>
+                      {links.length>0&&(
+                        <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:questions.length>0?20:0}}>
+                          {links.map((r,i)=>(
+                            <a key={i} href={r.url} target="_blank" rel="noreferrer"
+                              style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:12,textDecoration:"none",color:"var(--text)",boxShadow:"var(--sh-sm)",transition:"box-shadow 0.15s"}}
+                              onMouseEnter={e=>e.currentTarget.style.boxShadow="var(--sh-hov)"}
+                              onMouseLeave={e=>e.currentTarget.style.boxShadow="var(--sh-sm)"}>
+                              <span style={{fontSize:20,flexShrink:0}}>{r.type==="video"?"📹":r.type==="pdf"?"📄":r.type==="game"?"🎮":"🌐"}</span>
+                              <span style={{fontSize:13,fontWeight:600,flex:1}}>{r.label}</span>
+                              <span style={{fontSize:11,color:"var(--muted)",flexShrink:0}}>↗</span>
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                      {questions.length>0&&(
+                        <GrowQuiz questions={questions} outcomeId="extra" quizState={quizState} setQuizState={setQuizState}/>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })()}
+            {studentRubricTab==="outcomes"&&["red","yellow","green"].filter(band=>selectedUnit.outcomes.some(o=>o.band===band)).map(band=>{
               const bs=BAND[band];
               return(
                 <div key={band} style={{marginBottom:"1.5rem"}}>
@@ -2984,20 +3420,77 @@ function App(){
   // ── Pre-test / Post-test ──────────────────────────────────────────────────
   if(view==="pretest"){
     if(pretestMode==="done"&&pretestResults){
-      const {byOutcome,passed}=pretestResults;
+      const {byOutcome,passed,priorSnaps=[]}=pretestResults;
       const activeUnitId=pretestQList[0]?.unitId||"u24";
       const activePretestData=PRETESTS[activeUnitId]||[];
       const allIds=activePretestData.map(s=>s.outcomeId);
+      const isPostTest=priorSnaps.length>=1;
+      const preSnap=priorSnaps[0]||null;
+      // Build current result as snap-style object for comparison
+      const currentByOutcome={};
+      Object.entries(byOutcome).forEach(([id,o])=>{currentByOutcome[id]={short:o.short,correct:o.correct,total:o.total,passed:o.correct===o.total};});
       return(
         <div style={{display:"flex",flexDirection:"column",flex:1,fontFamily:ff}}>
-          <AppNav title="Pre-test Results"/>
+          <AppNav title={isPostTest?"Post-test Results":"Pre-test Results"}/>
           <div style={{flex:1,overflowY:"auto",padding:"1.5rem 1rem"}}>
             <div style={{maxWidth:520,margin:"0 auto"}}>
               <div style={{textAlign:"center",padding:"1.5rem 0 1.25rem"}}>
-                <div style={{width:60,height:60,background:"var(--ind-50)",border:"1px solid var(--ind-200)",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px",fontSize:24,boxShadow:"0 0 0 6px rgba(99,102,241,0.08)"}}>📋</div>
-                <h2 style={{fontSize:20,fontWeight:800,margin:"0 0 4px",color:"var(--text)",letterSpacing:"-0.01em"}}>Pre-test Complete</h2>
+                <div style={{width:60,height:60,background:isPostTest?"#f0fdf4":"var(--ind-50)",border:`1px solid ${isPostTest?"#86efac":"var(--ind-200)"}`,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px",fontSize:24,boxShadow:isPostTest?"0 0 0 6px rgba(134,239,172,0.15)":"0 0 0 6px rgba(99,102,241,0.08)"}}>
+                  {isPostTest?"📊":"📋"}
+                </div>
+                <h2 style={{fontSize:20,fontWeight:800,margin:"0 0 4px",color:"var(--text)",letterSpacing:"-0.01em"}}>{isPostTest?"Post-test Complete":"Pre-test Complete"}</h2>
                 <p style={{fontSize:13,color:"var(--sub)",margin:0}}>{passed.length} of {allIds.length} outcomes passed</p>
               </div>
+              {/* Pre vs post comparison when a prior snapshot exists */}
+              {isPostTest&&preSnap&&(()=>{
+                const prePassed=preSnap.passed_count;
+                const postPassed=passed.length;
+                const delta=postPassed-prePassed;
+                return(
+                  <div style={{background:"var(--surface)",borderRadius:12,boxShadow:"var(--sh-sm)",border:"1px solid var(--border)",padding:"14px 16px",marginBottom:16}}>
+                    <p style={{fontSize:11,fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.05em",margin:"0 0 10px"}}>Progress since pre-test</p>
+                    <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12}}>
+                      <div style={{flex:1,background:"#f8fafc",borderRadius:8,padding:"8px 12px",textAlign:"center"}}>
+                        <div style={{fontSize:11,color:"var(--muted)",fontWeight:600,marginBottom:2}}>PRE-TEST</div>
+                        <div style={{fontSize:18,fontWeight:800,color:"#475569"}}>{prePassed}<span style={{fontSize:12,fontWeight:500}}>/{preSnap.total_count}</span></div>
+                      </div>
+                      <div style={{fontSize:18,color:"var(--muted)"}}>→</div>
+                      <div style={{flex:1,background:delta>0?"#f0fdf4":delta<0?"#fff0f0":"#f8fafc",borderRadius:8,padding:"8px 12px",textAlign:"center",border:`1px solid ${delta>0?"#86efac":delta<0?"#fca5a5":"#e2e8f0"}`}}>
+                        <div style={{fontSize:11,color:"var(--muted)",fontWeight:600,marginBottom:2}}>POST-TEST</div>
+                        <div style={{fontSize:18,fontWeight:800,color:delta>0?"#16a34a":delta<0?"#dc2626":"#475569"}}>{postPassed}<span style={{fontSize:12,fontWeight:500}}>/{allIds.length}</span></div>
+                      </div>
+                      {delta!==0&&<div style={{fontSize:13,fontWeight:700,color:delta>0?"#16a34a":"#dc2626",flexShrink:0}}>{delta>0?`+${delta}`:delta}</div>}
+                    </div>
+                    {/* Per-outcome comparison */}
+                    <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                      {allIds.map(id=>{
+                        const pre=preSnap.by_outcome?.[id];
+                        const post=currentByOutcome[id];
+                        if(!pre||!post)return null;
+                        const preP=pre.passed;const postP=post.passed;
+                        const changed=preP!==postP;
+                        const improved=!preP&&postP;const regressed=preP&&!postP;
+                        const changeColor=improved?"#16a34a":regressed?"#dc2626":"#94a3b8";
+                        const changeLabel=improved?"✗ → ✓":regressed?"✓ → ✗":"—";
+                        return(
+                          <div key={id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid #f1f5f9"}}>
+                            <span style={{fontSize:12,flex:1,color:"var(--text)",fontWeight:500}}>{pre.short||post.short}</span>
+                            <span style={{fontSize:11,width:28,textAlign:"center",color:preP?"#16a34a":"#dc2626",fontWeight:700}}>{preP?"✓":"✗"}</span>
+                            <span style={{fontSize:10,color:"#cbd5e1"}}>→</span>
+                            <span style={{fontSize:11,width:28,textAlign:"center",color:postP?"#16a34a":"#dc2626",fontWeight:700}}>{postP?"✓":"✗"}</span>
+                            {changed&&<span style={{fontSize:10,fontWeight:700,color:changeColor,width:40,textAlign:"right",flexShrink:0}}>{changeLabel}</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+              {!isPostTest&&(
+                <div style={{background:"var(--ind-50)",border:"1px solid var(--ind-200)",borderRadius:10,padding:"10px 14px",marginBottom:16,fontSize:12,color:"var(--indigo)"}}>
+                  💡 Come back after practising to take your post-test and track your improvement.
+                </div>
+              )}
               <div style={{display:"flex",flexDirection:"column",marginBottom:"1.25rem"}}>
                 {allIds.map(id=>{
                   const section=activePretestData.find(s=>s.outcomeId===id);
@@ -3007,7 +3500,7 @@ function App(){
                     <div key={id} style={{background:"var(--surface)",borderRadius:10,boxShadow:"var(--sh-sm)",borderLeft:`3px solid ${isPassed?"#86efac":"#fca5a5"}`,padding:"12px 16px",marginBottom:10,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                       <div>
                         <div style={{fontSize:14,fontWeight:600,color:"var(--text)"}}>{section?.short}</div>
-                        <div style={{fontSize:12,color:"var(--sub)"}}>{isPassed?"Both questions correct":"Needs more practice"}</div>
+                        <div style={{fontSize:12,color:"var(--sub)"}}>{r?`${r.correct}/${r.total} correct`:""}{isPassed?" — passed":"Needs more practice"}</div>
                       </div>
                       <span style={{fontSize:16}}>{isPassed?"✓":"✗"}</span>
                     </div>
@@ -3127,6 +3620,150 @@ function App(){
         </div>
       </div>
     );
+  }
+
+  // ── Unit Review ───────────────────────────────────────────────────────────
+  if(view==="review"){
+    const reviewUnit=UNITS.find(u=>u.id===reviewActive?.unitId);
+
+    // Results screen
+    if(reviewMode==="done"&&reviewResults){
+      const{byOutcome,passedCount,totalCount}=reviewResults;
+      const pct=totalCount?Math.round(passedCount/totalCount*100):0;
+      const allPassed=passedCount===totalCount;
+      return(
+        <div style={{display:"flex",flexDirection:"column",flex:1,fontFamily:ff}}>
+          <AppNav title="Unit Review Complete"/>
+          <div style={{flex:1,overflowY:"auto",padding:"1.5rem 1rem"}}>
+            <div style={{maxWidth:520,margin:"0 auto"}}>
+              <div style={{textAlign:"center",padding:"1.5rem 0 1.25rem"}}>
+                <div style={{width:64,height:64,background:allPassed?"#f0fdf4":"#fff7ed",border:`1px solid ${allPassed?"#86efac":"#fdba74"}`,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px",fontSize:28,boxShadow:allPassed?"0 0 0 6px rgba(134,239,172,0.15)":"0 0 0 6px rgba(249,115,22,0.1)"}}>
+                  {allPassed?"🏆":"📋"}
+                </div>
+                <h2 style={{fontSize:20,fontWeight:800,margin:"0 0 4px",color:"var(--text)",letterSpacing:"-0.01em"}}>Review Complete!</h2>
+                <p style={{fontSize:13,color:"var(--sub)",margin:0}}>{reviewUnit?.name}: {reviewUnit?.subtitle}</p>
+                <div style={{display:"inline-flex",alignItems:"center",gap:8,margin:"14px 0 0",background:allPassed?"#f0fdf4":"#fff7ed",border:`1px solid ${allPassed?"#86efac":"#fdba74"}`,borderRadius:10,padding:"8px 16px"}}>
+                  <span style={{fontSize:22,fontWeight:800,color:allPassed?"#16a34a":"#c2410c"}}>{passedCount}</span>
+                  <span style={{fontSize:14,color:"var(--sub)"}}>of {totalCount} remembered</span>
+                  <span style={{fontSize:13,fontWeight:700,color:allPassed?"#16a34a":"#c2410c"}}>{pct}%</span>
+                </div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:"1.5rem"}}>
+                {Object.entries(byOutcome).map(([id,o])=>(
+                  <div key={id} style={{background:"var(--surface)",borderRadius:12,boxShadow:"var(--sh-sm)",borderLeft:`4px solid ${o.passed?"#86efac":"#fca5a5"}`,padding:"12px 16px",display:"flex",alignItems:"center",gap:12}}>
+                    <span style={{fontSize:20,flexShrink:0}}>{o.passed?"✓":"✗"}</span>
+                    <div style={{flex:1}}>
+                      <p style={{fontSize:14,fontWeight:600,margin:"0 0 2px",color:o.passed?"#16a34a":"var(--text)"}}>{o.short}</p>
+                      <p style={{fontSize:12,color:"var(--sub)",margin:0}}>{o.passed?"Still know it!":"Keep practising this one"}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {!allPassed&&(
+                <div style={{background:"var(--ind-50)",border:"1px solid var(--ind-200)",borderRadius:10,padding:"10px 14px",marginBottom:16,fontSize:12,color:"var(--indigo)"}}>
+                  {"💡 Open the outcomes you didn't get and practise them — your teacher will run a new review to check."}
+                </div>
+              )}
+              <div style={{display:"flex",justifyContent:"center"}}>
+                <button onClick={()=>{setReviewMode(null);setView("home");}}
+                  style={{padding:"13px 32px",border:"none",borderRadius:12,fontFamily:ff,fontSize:15,fontWeight:700,cursor:"pointer",background:"linear-gradient(135deg,var(--indigo),var(--blue))",color:"#fff",boxShadow:"0 4px 18px rgba(67,56,202,0.32)"}}>
+                  Continue to my work →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Running review
+    if(reviewMode==="running"&&reviewQList.length>0){
+      const current=reviewQList[reviewIdx];
+      if(!current)return null;
+      const q=current.q;
+      const pct=Math.round(reviewIdx/reviewQList.length*100);
+      const ok=reviewCanGo();
+      const pool=q.type==="order"?q.items.filter(item=>!reviewAns.orderSeq.includes(item)):[];
+      return(
+        <div style={{display:"flex",flexDirection:"column",flex:1,fontFamily:ff}}>
+          <AppNav title="Unit Review"
+            right={<span style={{fontSize:12,color:"rgba(255,255,255,0.6)",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{current.short}</span>}
+          />
+          <div style={{flex:1,display:"flex",flexDirection:"column",padding:"18px 18px 24px",minHeight:0}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexShrink:0}}>
+              <span style={{fontSize:12,fontWeight:700,color:"#c2410c",padding:"3px 9px",background:"#fff7ed",border:"1px solid #fdba74",borderRadius:6}}>Review</span>
+              <div style={{flex:1,background:"var(--ind-100)",borderRadius:99,height:6,overflow:"hidden"}}>
+                <div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#f97316,#ea580c)",borderRadius:99,transition:"width 0.3s"}}/>
+              </div>
+              <span style={{fontSize:12,color:"var(--muted)",fontWeight:600,flexShrink:0}}>{reviewIdx+1}/{reviewQList.length}</span>
+            </div>
+            <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,padding:"9px 14px",display:"flex",alignItems:"center",gap:8,marginBottom:14,flexShrink:0,boxShadow:"var(--sh-sm)"}}>
+              <span style={{fontSize:10,fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase",padding:"3px 9px",borderRadius:5,background:"#fff7ed",color:"#c2410c",flexShrink:0}}>Outcome</span>
+              <span style={{fontSize:13,fontWeight:600,color:"var(--sub)"}}>{current.short}</span>
+            </div>
+            <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:20,padding:"28px 26px 24px",boxShadow:"var(--sh-lg)",flex:1,display:"flex",flexDirection:"column",minHeight:0}}>
+              <p style={{fontSize:22,fontWeight:600,lineHeight:1.55,letterSpacing:"-0.02em",marginBottom:26,flexShrink:0,color:"var(--text)"}}>{q.text}</p>
+              <div style={{display:"flex",flexDirection:"column",gap:10,flex:1,minHeight:0}}>
+                {q.type==="input"&&(
+                  <div>
+                    <input autoFocus type="text" value={reviewAns.input} onChange={e=>setReviewAns(a=>({...a,input:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&ok&&handleReviewNext()}
+                      placeholder="Type your answer" style={{width:"100%",boxSizing:"border-box",padding:"12px 14px",border:"1.5px solid #cbd5e1",borderRadius:10,fontSize:16,outline:"none",fontFamily:ff}}/>
+                    <p style={{fontSize:12,color:"var(--muted)",margin:"8px 0 0"}}>Use fractions like 3/4 or whole numbers</p>
+                  </div>
+                )}
+                {q.type==="mc"&&(
+                  <>{q.options.map(opt=><button key={opt} onClick={()=>setReviewAns(a=>({...a,option:opt}))} style={Pb(reviewAns.option===opt)}>{opt}</button>)}</>
+                )}
+                {q.type==="truefalse"&&(
+                  <div style={{display:"flex",gap:12,flex:1}}>
+                    {["true","false"].map(val=><button key={val} onClick={()=>setReviewAns(a=>({...a,option:val}))} style={Pb(reviewAns.option===val,{textAlign:"center",justifyContent:"center"})}>{val.charAt(0).toUpperCase()+val.slice(1)}</button>)}
+                  </div>
+                )}
+                {q.type==="order"&&(
+                  <div>
+                    <p style={{fontSize:12,color:"var(--sub)",margin:"0 0 8px"}}>Click to build your order:</p>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap",minHeight:44,marginBottom:14,padding:8,background:"#f8fafc",borderRadius:8,border:"1px solid #e2e8f0",alignItems:"center"}}>
+                      {pool.length>0?pool.map(item=><button key={item} onClick={()=>setReviewAns(a=>({...a,orderSeq:[...a.orderSeq,item]}))} style={{padding:"7px 14px",borderRadius:8,border:"1px solid #e2e8f0",background:"#fff",cursor:"pointer",fontSize:14,fontWeight:500,fontFamily:ff}}>{item}</button>)
+                        :<span style={{fontSize:12,color:"var(--muted)"}}>All placed</span>}
+                    </div>
+                    {reviewAns.orderSeq.length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
+                      {reviewAns.orderSeq.map((item,i)=><span key={i} style={{display:"flex",alignItems:"center",gap:4}}>
+                        {i>0&&<span style={{color:"#cbd5e1"}}>{"→"}</span>}
+                        <button onClick={()=>setReviewAns(a=>({...a,orderSeq:a.orderSeq.filter((_,idx)=>idx!==i)}))} style={{padding:"7px 14px",borderRadius:8,border:"1.5px solid #bfdbfe",background:"#eff6ff",cursor:"pointer",fontSize:14,color:"#1d4ed8",fontWeight:600,fontFamily:ff}}>{item}</button>
+                      </span>)}
+                    </div>}
+                  </div>
+                )}
+                {q.type==="shade"&&reviewAns.shadedCells.length===q.cells&&(
+                  <div>
+                    <p style={{fontSize:12,color:"var(--sub)",margin:"0 0 8px"}}>Click cells to shade them:</p>
+                    <div style={{display:"flex",gap:3,marginBottom:8}}>
+                      {reviewAns.shadedCells.map((shaded,i)=><div key={i} onClick={()=>setReviewAns(a=>({...a,shadedCells:a.shadedCells.map((v,idx)=>idx===i?!v:v)}))}
+                        style={{flex:1,height:52,borderRadius:4,cursor:"pointer",background:shaded?"var(--indigo)":"#f8fafc",border:`1px solid ${shaded?"var(--indigo)":"#cbd5e1"}`,transition:"background 0.15s"}}/>)}
+                    </div>
+                    <p style={{fontSize:12,color:"var(--sub)",margin:0}}>{reviewAns.shadedCells.filter(Boolean).length} of {q.cells} cells shaded</p>
+                  </div>
+                )}
+                {q.type==="numberline"&&<NumberLineQ key={reviewIdx} q={q} ans={reviewAns} setAns={setReviewAns}/>}
+                {q.type==="match"&&<MatchQ key={reviewIdx} q={q} ans={reviewAns} setAns={setReviewAns}/>}
+                {q.type==="partition"&&<PartitionQ key={reviewIdx} q={q} ans={reviewAns} setAns={setReviewAns}/>}
+              </div>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:18,flexShrink:0}}>
+              {reviewQList.length<=15
+                ?<div style={{display:"flex",gap:5}}>{reviewQList.map((_,i)=><div key={i} style={{width:7,height:7,borderRadius:"50%",background:i<reviewIdx?"#f97316":i===reviewIdx?"#ea580c":"var(--ind-100)",transform:i===reviewIdx?"scale(1.3)":"none",transition:"all 0.15s"}}/>)}</div>
+                :<span style={{fontSize:12,color:"var(--muted)"}}>{reviewIdx+1} of {reviewQList.length}</span>
+              }
+              <button onClick={handleReviewNext} disabled={!ok}
+                style={{padding:"13px 32px",border:"none",borderRadius:12,fontFamily:ff,fontSize:15,fontWeight:700,cursor:ok?"pointer":"default",background:ok?"linear-gradient(135deg,#f97316,#ea580c)":"#e2e8f0",color:ok?"#fff":"var(--muted)",boxShadow:ok?"0 4px 18px rgba(249,115,22,0.35)":"none",transition:"all 0.2s"}}>
+                {reviewIdx===reviewQList.length-1?"Submit":"Next →"}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
   }
 
   // ── Assessment ────────────────────────────────────────────────────────────
@@ -3346,12 +3983,92 @@ function App(){
       }
 
       // ── Student rubric with attempt counts ───────────────────────────────
+      const unitSnapsForStudent=(testSnapshots[s.id]||{})[selectedUnit.id]||[];
+      const preSnapT=unitSnapsForStudent[0]||null;
+      const postSnapT=unitSnapsForStudent.length>=2?unitSnapsForStudent[unitSnapsForStudent.length-1]:null;
+      const activePretestData=PRETESTS[selectedUnit.id]||[];
+      const allPretestIds=activePretestData.map(sec=>sec.outcomeId);
       return(
         <div style={{display:"flex",flexDirection:"column",flex:1,fontFamily:ff}}>
           <AppNav title={s.name} right={<button onClick={()=>{setTeacherFocus(null);setTeacherAttemptKey(null);setTeacherAttemptIdx(null);}} style={{fontFamily:ff,fontSize:12,padding:"6px 12px",background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:8,color:"rgba(255,255,255,0.8)",cursor:"pointer"}}>← Class</button>}/>
           <div style={{flex:1,overflowY:"auto",padding:"1rem"}}>
             <div style={{maxWidth:520,margin:"0 auto"}}>
               <p style={{fontSize:13,color:"#64748b",margin:"0 0 1rem"}}>{selectedUnit.name}: {selectedUnit.subtitle} — {done}/{total} complete</p>
+              {/* Pre/Post assessment comparison */}
+              {unitSnapsForStudent.length>=1&&(
+                <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:"14px 16px",marginBottom:16,boxShadow:"var(--sh-sm)"}}>
+                  <p style={{fontSize:11,fontWeight:700,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em",margin:"0 0 10px"}}>📊 Pre / Post Assessment</p>
+                  {/* Summary row */}
+                  <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:12}}>
+                    <div style={{flex:1,background:"#f8fafc",borderRadius:8,padding:"8px 12px",textAlign:"center"}}>
+                      <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:2}}>Pre-test</div>
+                      <div style={{fontSize:16,fontWeight:800,color:"#475569"}}>{preSnapT.passed_count}<span style={{fontSize:11,fontWeight:500}}>/{preSnapT.total_count}</span></div>
+                      <div style={{fontSize:10,color:"#94a3b8",marginTop:1}}>{new Date(preSnapT.taken_at).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}</div>
+                    </div>
+                    <div style={{fontSize:16,color:"#cbd5e1"}}>→</div>
+                    {postSnapT?(
+                      <div style={{flex:1,background:"#f0fdf4",borderRadius:8,padding:"8px 12px",textAlign:"center",border:"1px solid #86efac"}}>
+                        <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:2}}>Post-test</div>
+                        <div style={{fontSize:16,fontWeight:800,color:postSnapT.passed_count>preSnapT.passed_count?"#16a34a":postSnapT.passed_count<preSnapT.passed_count?"#dc2626":"#475569"}}>
+                          {postSnapT.passed_count}<span style={{fontSize:11,fontWeight:500}}>/{postSnapT.total_count}</span>
+                        </div>
+                        <div style={{fontSize:10,color:"#94a3b8",marginTop:1}}>{new Date(postSnapT.taken_at).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}</div>
+                      </div>
+                    ):(
+                      <div style={{flex:1,background:"#fafafa",borderRadius:8,padding:"8px 12px",textAlign:"center",border:"1px solid #e2e8f0"}}>
+                        <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:2}}>Post-test</div>
+                        <div style={{fontSize:12,color:"#cbd5e1",fontStyle:"italic",marginTop:4}}>Not taken yet</div>
+                      </div>
+                    )}
+                    {postSnapT&&postSnapT.passed_count!==preSnapT.passed_count&&(
+                      <div style={{fontSize:13,fontWeight:800,color:postSnapT.passed_count>preSnapT.passed_count?"#16a34a":"#dc2626",flexShrink:0}}>
+                        {postSnapT.passed_count>preSnapT.passed_count?`+${postSnapT.passed_count-preSnapT.passed_count}`:postSnapT.passed_count-preSnapT.passed_count}
+                      </div>
+                    )}
+                  </div>
+                  {/* Per-outcome comparison table */}
+                  {allPretestIds.length>0&&(
+                    <div style={{borderTop:"1px solid #f1f5f9",paddingTop:10}}>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 32px 10px 32px",gap:"4px 6px",alignItems:"center",marginBottom:4}}>
+                        <span style={{fontSize:10,fontWeight:700,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.04em"}}>Outcome</span>
+                        <span style={{fontSize:10,fontWeight:700,color:"#94a3b8",textAlign:"center",textTransform:"uppercase"}}>Pre</span>
+                        <span/>
+                        <span style={{fontSize:10,fontWeight:700,color:"#94a3b8",textAlign:"center",textTransform:"uppercase"}}>Post</span>
+                      </div>
+                      {allPretestIds.map(id=>{
+                        const section=activePretestData.find(sec=>sec.outcomeId===id);
+                        const preO=preSnapT.by_outcome?.[id];
+                        const postO=postSnapT?.by_outcome?.[id];
+                        const preP=preO?.passed;
+                        const postP=postO?.passed;
+                        const improved=preP===false&&postP===true;
+                        const regressed=preP===true&&postP===false;
+                        return(
+                          <div key={id} style={{display:"grid",gridTemplateColumns:"1fr 32px 10px 32px",gap:"4px 6px",alignItems:"center",padding:"4px 0",borderBottom:"1px solid #f8fafc"}}>
+                            <span style={{fontSize:12,color:"#334155",lineHeight:1.3}}>{section?.short||id}</span>
+                            <span style={{fontSize:13,fontWeight:700,textAlign:"center",color:preP?"#16a34a":"#dc2626"}}>{preP!==undefined?(preP?"✓":"✗"):"—"}</span>
+                            <span style={{fontSize:9,color:"#cbd5e1",textAlign:"center"}}>→</span>
+                            <span style={{fontSize:13,fontWeight:700,textAlign:"center",color:postP===undefined?"#cbd5e1":postP?"#16a34a":improved?"#dc2626":"#dc2626"}}>{postP!==undefined?(postP?"✓":"✗"):"–"}{improved?" ↑":regressed?" ↓":""}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {/* All sittings history */}
+                  {unitSnapsForStudent.length>1&&(
+                    <div style={{marginTop:10,borderTop:"1px solid #f1f5f9",paddingTop:8}}>
+                      <p style={{fontSize:10,fontWeight:700,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.04em",margin:"0 0 6px"}}>All sittings ({unitSnapsForStudent.length})</p>
+                      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                        {unitSnapsForStudent.map((snap,i)=>(
+                          <span key={i} style={{fontSize:11,padding:"3px 9px",borderRadius:5,background:i===0?"#f0f4ff":"#f0fdf4",color:i===0?"#4338ca":"#16a34a",border:`1px solid ${i===0?"#c7d2fe":"#86efac"}`,fontWeight:600}}>
+                            {i===0?"Pre":"Post"} {i>1?i+1:""}: {snap.passed_count}/{snap.total_count} · {new Date(snap.taken_at).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
           {["red","yellow","green"].filter(band=>selectedUnit.outcomes.some(o=>o.band===band)).map(band=>{
             const bs=BAND[band];
             return(<div key={band} style={{marginBottom:"1.25rem"}}>
@@ -3391,10 +4108,15 @@ function App(){
     }
 
     const uc=UC[selectedUnit.id];
+    const visibleStudents=students.filter(st=>!hiddenStudents.has(st.id));
+    const hiddenCount=hiddenStudents.size;
     return(
       <div style={{display:"flex",flexDirection:"column",flex:1,fontFamily:ff}}>
         <AppNav title={`${selectedUnit.name}: ${selectedUnit.subtitle}`} right={<>
           <button onClick={()=>{setView("home");setTeacherFocus(null);}} style={{fontFamily:ff,fontSize:12,padding:"6px 12px",background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:8,color:"rgba(255,255,255,0.8)",cursor:"pointer"}}>← All units</button>
+          <button onClick={()=>setManageGroupOpen(v=>!v)} style={{fontFamily:ff,fontSize:12,fontWeight:600,padding:"5px 12px",background:manageGroupOpen?"rgba(255,255,255,0.25)":"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.25)",borderRadius:8,color:"#fff",cursor:"pointer",transition:"all 0.15s"}}>
+            👥{hiddenCount>0?` ${hiddenCount} hidden`:" Group"}
+          </button>
           <div style={{display:"flex",background:"rgba(255,255,255,0.1)",borderRadius:8,padding:2,gap:2}}>
             {["rubric","resources"].map(t=>(
               <button key={t} onClick={()=>setResourceTab(t)} style={{fontFamily:ff,fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:6,border:"none",cursor:"pointer",background:resourceTab===t?"#fff":"transparent",color:resourceTab===t?"var(--indigo)":"rgba(255,255,255,0.7)",transition:"all 0.15s"}}>
@@ -3407,7 +4129,31 @@ function App(){
         {resourceTab==="rubric"&&(
         <div style={{flex:1,overflowY:"auto",padding:"1rem"}}>
           <div style={{maxWidth:700,margin:"0 auto"}}>
-            <p style={{fontSize:13,color:"#64748b",margin:"0 0 1rem"}}>{students.length} students</p>
+            {/* Manage group panel */}
+            {manageGroupOpen&&(
+              <div style={{background:"#f0f4ff",border:"1.5px solid var(--ind-200)",borderRadius:14,padding:"14px 16px",marginBottom:16,boxShadow:"var(--sh-sm)"}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                  <p style={{fontSize:12,fontWeight:700,color:"var(--indigo)",margin:0,textTransform:"uppercase",letterSpacing:"0.05em"}}>Manage maths group</p>
+                  <button onClick={()=>setManageGroupOpen(false)} style={{fontSize:18,background:"none",border:"none",cursor:"pointer",color:"var(--sub)",lineHeight:1,padding:"0 2px"}}>×</button>
+                </div>
+                <p style={{fontSize:12,color:"var(--sub)",margin:"0 0 12px",lineHeight:1.5}}>Students marked as hidden won't appear in the heatmap or outcome summary. Their data is kept — you can unhide them at any time.</p>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {students.map(st=>{
+                    const isHidden=hiddenStudents.has(st.id);
+                    return(
+                      <div key={st.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",background:isHidden?"#f8fafc":"#fff",border:`1px solid ${isHidden?"#e2e8f0":"#86efac"}`,borderRadius:9}}>
+                        <span style={{fontSize:13,fontWeight:600,color:isHidden?"#94a3b8":"#1e293b"}}>{st.name}{isHidden&&<span style={{marginLeft:6,fontSize:10,color:"#94a3b8",fontWeight:500}}>hidden</span>}</span>
+                        <button onClick={()=>toggleHideStudent(st.id,!isHidden)}
+                          style={{fontFamily:ff,fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:7,cursor:"pointer",border:"none",background:isHidden?"var(--ind-50)":"#fee2e2",color:isHidden?"var(--indigo)":"#dc2626",transition:"all 0.15s"}}>
+                          {isHidden?"Show":"Hide"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <p style={{fontSize:13,color:"#64748b",margin:"0 0 1rem"}}>{visibleStudents.length} student{visibleStudents.length!==1?"s":""}{hiddenCount>0?` · ${hiddenCount} hidden`:""}</p>
         <div style={{overflowX:"auto",marginBottom:"1.75rem"}}>
           <table style={{borderCollapse:"collapse",minWidth:"100%"}}>
             <thead><tr>
@@ -3418,7 +4164,7 @@ function App(){
               <th style={{padding:"0 0 8px 8px"}}></th>
             </tr></thead>
             <tbody>
-              {students.map(s=>{
+              {visibleStudents.map(s=>{
                 const prog=progress[s.id];
                 const {done,total}=unitProgress(prog,selectedUnit.id);
                 return(<tr key={s.id}>
@@ -3436,19 +4182,54 @@ function App(){
           </table>
         </div>
         <p style={{fontSize:12,fontWeight:700,color:"#94a3b8",margin:"0 0 10px",textTransform:"uppercase",letterSpacing:"0.05em"}}>Completion by outcome</p>
-        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
           {selectedUnit.outcomes.map(o=>{
-            const n=students.filter(s=>progress[s.id][`${selectedUnit.id}_${o.id}`]).length;
-            const pct=Math.round(n/students.length*100);
+            const key=`${selectedUnit.id}_${o.id}`;
+            const n=visibleStudents.filter(s=>progress[s.id][key]).length;
+            const notYet=visibleStudents.filter(s=>!progress[s.id][key]);
+            const pct=visibleStudents.length?Math.round(n/visibleStudents.length*100):0;
             const bs=BAND[o.band];
-            return(<div key={o.id} style={{display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontSize:10,fontWeight:700,color:bs.text,width:20,flexShrink:0}}>{o.id.toUpperCase()}</span>
-              <span style={{fontSize:12,width:180,flexShrink:0,color:"#334155",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{o.short}</span>
-              <div style={{flex:1,background:"#f1f5f9",borderRadius:4,height:7,overflow:"hidden"}}>
-                <div style={{height:"100%",width:`${pct}%`,background:uc.dot,borderRadius:4}}/>
+            const allDone=n===visibleStudents.length&&visibleStudents.length>0;
+            return(
+              <div key={o.id}>
+                {/* Label row */}
+                <div style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:5}}>
+                  <span style={{fontSize:10,fontWeight:700,color:bs.text,background:bs.bg,border:`1px solid ${bs.border}`,padding:"2px 6px",borderRadius:4,flexShrink:0,marginTop:1}}>{o.id.toUpperCase()}</span>
+                  <span style={{fontSize:12,flex:1,color:"#334155",lineHeight:1.45}}>{o.label}</span>
+                </div>
+                {/* Bar + count row */}
+                <div style={{display:"flex",alignItems:"center",gap:8,paddingLeft:36}}>
+                  <div style={{flex:1,background:"#f1f5f9",borderRadius:4,height:7,overflow:"hidden"}}>
+                    <div style={{height:"100%",width:`${pct}%`,background:uc.dot,borderRadius:4,transition:"width 0.3s"}}/>
+                  </div>
+                  <div style={{position:"relative",flexShrink:0}}
+                    onMouseEnter={()=>setTooltipOutcome(o.id)}
+                    onMouseLeave={()=>setTooltipOutcome(null)}>
+                    <span style={{fontSize:11,fontWeight:600,color:allDone?"#16a34a":"#64748b",cursor:allDone?"default":"help",borderBottom:allDone?undefined:"1px dashed #94a3b8"}}>
+                      {n}/{visibleStudents.length}
+                    </span>
+                    {tooltipOutcome===o.id&&(
+                      <div style={{position:"absolute",right:0,bottom:"calc(100% + 6px)",background:"#1e293b",color:"#f8fafc",borderRadius:10,padding:"10px 12px",minWidth:160,maxWidth:240,boxShadow:"0 8px 24px rgba(0,0,0,0.25)",zIndex:50,pointerEvents:"none"}}>
+                        {allDone?(
+                          <p style={{fontSize:12,fontWeight:600,color:"#86efac",margin:0}}>✓ All students achieved</p>
+                        ):(
+                          <>
+                            <p style={{fontSize:10,fontWeight:700,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em",margin:"0 0 6px"}}>Not yet achieved ({notYet.length})</p>
+                            <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                              {notYet.map(s=>(
+                                <span key={s.id} style={{fontSize:12,color:"#fca5a5",fontWeight:500}}>✗ {s.name}</span>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                        {/* Arrow */}
+                        <div style={{position:"absolute",right:8,top:"100%",width:0,height:0,borderLeft:"5px solid transparent",borderRight:"5px solid transparent",borderTop:"5px solid #1e293b"}}/>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-              <span style={{fontSize:11,color:"#94a3b8",minWidth:28,textAlign:"right"}}>{n}/{students.length}</span>
-            </div>);
+            );
           })}
           </div>
           </div>
