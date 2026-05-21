@@ -2642,8 +2642,10 @@ function App(){
     else if(q.type==="mc"||q.type==="truefalse")given=pretestAns.option;
     else given=pretestAns.input;
     const correct=checkAnswer(given,q);
-    const newAnswers=[...pretestAnswers,{outcomeId:current.outcomeId,short:current.short,q,given,correct,unitId:current.unitId}];
+    const newAnswer={idx:currentItemIdx,outcomeId:current.outcomeId,short:current.short,q,given,correct,unitId:current.unitId};
+    const newAnswers=[...pretestAnswers.filter(a=>a.idx!==currentItemIdx),newAnswer];
     setPretestAnswers(newAnswers);
+    if(pretestFlagged.has(currentItemIdx)){const nf=new Set(pretestFlagged);nf.delete(currentItemIdx);setPretestFlagged(nf);}
 
     // Per-outcome immediate save
     if(studentId){
@@ -2730,6 +2732,16 @@ function App(){
     }
   }
 
+  function handlePretestJumpTo(targetIdx){
+    if(pretestInReview||targetIdx<0||targetIdx>=pretestQList.length)return;
+    if(pretestFlagged.has(targetIdx)){const nf=new Set(pretestFlagged);nf.delete(targetIdx);setPretestFlagged(nf);}
+    setPretestIdx(targetIdx);
+    setPretestAns(initAns(pretestQList[targetIdx].q));
+  }
+  function handlePretestBack(){
+    if(pretestInReview||pretestIdx===0)return;
+    handlePretestJumpTo(pretestIdx-1);
+  }
   function pretestCanGo(){
     const itemIdx=pretestInReview?pretestReviewQueue[pretestReviewPos]:pretestIdx;
     const q=pretestQList[itemIdx]?.q;
@@ -3794,7 +3806,34 @@ function App(){
             </span>
             <span style={{fontSize:13,fontWeight:600,color:b.text}}>{current.short}</span>
           </div>
-          {/* question card — fills remaining space */}
+          {/* sidebar + question area row */}
+          <div style={{flex:1,display:"flex",gap:10,minHeight:0}}>
+            {/* question-number sidebar */}
+            <div style={{width:64,flexShrink:0,display:"flex",flexWrap:"wrap",gap:2,alignContent:"flex-start",overflowY:"auto",paddingBottom:4}}>
+              {pretestQList.map((_,i)=>{
+                const sIsCurrent=pretestInReview?i===pretestReviewQueue[pretestReviewPos]:i===pretestIdx;
+                const sIsFlagged=pretestFlagged.has(i);
+                const sIsAnswered=pretestAnswers.some(a=>a.idx===i);
+                const sIsPending=pretestInReview&&pretestReviewQueue.slice(pretestReviewPos+1).includes(i);
+                const sIsClickable=!pretestInReview&&!sIsCurrent&&(i<pretestIdx||sIsFlagged);
+                const sdb=BAND[getBand(pretestQList[i].outcomeId)];
+                const sbg=sIsCurrent?"var(--indigo)":sIsFlagged||sIsPending?"#fef3c7":sIsAnswered?sdb.bg:"#f8fafc";
+                const sborder=sIsCurrent?"var(--indigo)":sIsFlagged||sIsPending?"#f59e0b":sIsAnswered?sdb.border:"#e2e8f0";
+                const scol=sIsCurrent?"#fff":sIsFlagged||sIsPending?"#92400e":sIsAnswered?sdb.text:"#94a3b8";
+                return(<button key={i} onClick={()=>sIsClickable&&handlePretestJumpTo(i)}
+                  title={sIsFlagged?"Flagged — click to return":sIsAnswered?"Answered":`Q${i+1}`}
+                  style={{width:28,height:22,boxSizing:"border-box",display:"flex",alignItems:"center",justifyContent:"center",
+                    fontSize:10,fontWeight:700,fontFamily:ff,borderRadius:5,
+                    border:`1.5px solid ${sborder}`,background:sbg,color:scol,
+                    cursor:sIsClickable?"pointer":"default",transition:"all 0.15s",position:"relative",outline:"none"}}>
+                  {i+1}
+                  {sIsFlagged&&<span style={{position:"absolute",top:-4,right:-3,fontSize:8,lineHeight:1,pointerEvents:"none"}}>🏳</span>}
+                </button>);
+              })}
+            </div>
+            {/* question + actions column */}
+            <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:0}}>
+          {/* question card */}
           <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:20,padding:"28px 26px 24px",boxShadow:"var(--sh-lg)",flex:1,display:"flex",flexDirection:"column",minHeight:0}}>
             {q.svg&&<div dangerouslySetInnerHTML={{__html:q.svg}} style={{marginBottom:16,borderRadius:8,overflow:"hidden"}}/>}
             <p style={{fontSize:22,fontWeight:600,lineHeight:1.55,letterSpacing:"-0.02em",marginBottom:26,flexShrink:0,color:"var(--text)"}}>{q.text}</p>
@@ -3846,31 +3885,18 @@ function App(){
           </div>
           {/* actions */}
           <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:18,flexShrink:0}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              {/* Progress dots — coloured by band, amber for flagged */}
-              {!pretestInReview&&pretestQList.length<=18
-                ?<div style={{display:"flex",gap:4,flexWrap:"wrap",maxWidth:160}}>{pretestQList.map((_,i)=>{
-                  const dotBand=getBand(pretestQList[i].outcomeId);
-                  const isFlagged=pretestFlagged.has(i);
-                  const isCurrent=i===pretestIdx;
-                  const isPast=i<pretestIdx&&!isFlagged;
-                  return <div key={i} style={{width:7,height:7,borderRadius:"50%",flexShrink:0,
-                    background:isCurrent?"var(--indigo)":isFlagged?"#f59e0b":isPast?BAND[dotBand].dot:"var(--ind-100)",
-                    transform:isCurrent?"scale(1.35)":"none",transition:"all 0.15s"}}/>
-                })}</div>
-                :<span style={{fontSize:12,color:"var(--muted)",fontWeight:600}}>{progressLabel}</span>
-              }
-              {/* Skip + Next buttons */}
-              <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                <button onClick={handlePretestSkip}
-                  style={Sb({fontSize:12,padding:"9px 14px",color:"#92400e",borderColor:"#fcd34d",background:"#fffbeb",fontWeight:600})}>
-                  {pretestInReview?"Leave as wrong ✗":"🏳 Skip for now"}
-                </button>
-                <button onClick={handlePretestNext} disabled={!ok}
-                  style={{padding:"12px 28px",border:"none",borderRadius:12,fontFamily:ff,fontSize:15,fontWeight:700,cursor:ok?"pointer":"default",background:ok?`linear-gradient(135deg,${b.dot},var(--indigo))`:"#e2e8f0",color:ok?"#fff":"var(--muted)",boxShadow:ok?"0 4px 18px rgba(67,56,202,0.32)":"none",transition:"all 0.2s",whiteSpace:"nowrap"}}>
-                  {nextBtnLabel}
-                </button>
-              </div>
+            <div style={{display:"flex",justifyContent:"flex-end",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+              {!pretestInReview&&pretestIdx>0&&(
+                <button onClick={handlePretestBack} style={Sb({fontSize:12,padding:"9px 14px"})}>← Back</button>
+              )}
+              <button onClick={handlePretestSkip}
+                style={Sb({fontSize:12,padding:"9px 14px",color:"#92400e",borderColor:"#fcd34d",background:"#fffbeb",fontWeight:600})}>
+                {pretestInReview?"Leave as wrong ✗":"🏳 Skip for now"}
+              </button>
+              <button onClick={handlePretestNext} disabled={!ok}
+                style={{padding:"12px 28px",border:"none",borderRadius:12,fontFamily:ff,fontSize:15,fontWeight:700,cursor:ok?"pointer":"default",background:ok?`linear-gradient(135deg,${b.dot},var(--indigo))`:"#e2e8f0",color:ok?"#fff":"var(--muted)",boxShadow:ok?"0 4px 18px rgba(67,56,202,0.32)":"none",transition:"all 0.2s",whiteSpace:"nowrap"}}>
+                {nextBtnLabel}
+              </button>
             </div>
             {/* Finish early link */}
             {!pretestInReview&&(
@@ -3882,6 +3908,8 @@ function App(){
               </div>
             )}
           </div>
+            </div>{/* end question+actions column */}
+          </div>{/* end sidebar+question row */}
         </div>
       </div>
     );
