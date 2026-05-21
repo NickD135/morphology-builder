@@ -1834,6 +1834,7 @@ const ADMIN_EMAIL="nickdeeney135@gmail.com";
 const ff="'Lexend',sans-serif";
 const Sb=(extra={})=>({fontFamily:ff,fontSize:13,padding:"7px 14px",border:"1px solid var(--border)",borderRadius:9,background:"var(--surface)",cursor:"pointer",color:"var(--sub)",boxShadow:"var(--sh-sm)",transition:"all 0.15s",...extra});
 const Pb=(active,extra={})=>({fontFamily:ff,textAlign:"left",display:"flex",alignItems:"center",flex:1,minHeight:58,padding:"0 20px",fontSize:16,fontWeight:active?700:500,borderRadius:13,cursor:"pointer",border:`2px solid ${active?"var(--indigo)":"#e2e8f0"}`,background:active?"var(--ind-50)":"#f8fafc",color:active?"var(--indigo)":"var(--text)",boxShadow:active?"0 0 0 3px rgba(99,102,241,0.12)":"none",transition:"var(--tx)",...extra});
+function getBand(outcomeId){const c=(outcomeId||"r").charAt(0);return c==="y"?"yellow":c==="g"?"green":"red";}
 
 function fmtTime(iso){
   if(!iso)return"";
@@ -2100,6 +2101,12 @@ function App(){
   const [pretestAnswers,setPretestAnswers]=useState([]);
   const [pretestAns,setPretestAns]=useState({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
   const [pretestResults,setPretestResults]=useState(null);
+  const [pretestFlagged,setPretestFlagged]=useState(new Set());
+  const [pretestShowEarlyExit,setPretestShowEarlyExit]=useState(false);
+  const [pretestSectionStart,setPretestSectionStart]=useState(null);
+  const [pretestInReview,setPretestInReview]=useState(false);
+  const [pretestReviewQueue,setPretestReviewQueue]=useState([]);
+  const [pretestReviewPos,setPretestReviewPos]=useState(0);
   const [testSnapshots,setTestSnapshots]=useState({}); // {studentId:{unitId:[{by_outcome,passed_count,total_count,taken_at}]}}
   const [tooltipOutcome,setTooltipOutcome]=useState(null);
   const [studentRubricTab,setStudentRubricTab]=useState("outcomes"); // "outcomes" | "extra"
@@ -2550,6 +2557,11 @@ function App(){
     setPretestQList(flat);
     setPretestResults(null);
     setPretestMode("running");
+    setPretestFlagged(new Set());
+    setPretestShowEarlyExit(false);
+    setPretestInReview(false);
+    setPretestReviewQueue([]);
+    setPretestReviewPos(0);
     // Check for a same-device draft
     let draft=null;
     if(studentId){
@@ -2568,12 +2580,14 @@ function App(){
     if(draft){
       setPretestResumeDraft(draft);
       setPretestShowResume(true);
+      setPretestSectionStart(null);
       setPretestIdx(draft.pretestIdx);
       setPretestAnswers(draft.pretestAnswers);
       setPretestAns(initAns(flat[draft.pretestIdx].q));
     } else {
       setPretestResumeDraft(null);
       setPretestShowResume(false);
+      setPretestSectionStart(getBand(flat[0].outcomeId));
       setPretestIdx(0);
       setPretestAnswers([]);
       setPretestAns(initAns(flat[0].q));
@@ -2581,8 +2595,43 @@ function App(){
     setView("pretest");
   }
 
+  function finishPretest(answers){
+    const activeUnitId=pretestQList[0]?.unitId||"u24";
+    // Build byOutcome with totals from full question list (so skipped questions count as wrong)
+    const byOutcome={};
+    pretestQList.forEach(item=>{
+      if(!byOutcome[item.outcomeId])byOutcome[item.outcomeId]={short:item.short,total:0,correct:0,wrong:[],unitId:item.unitId};
+      byOutcome[item.outcomeId].total++;
+    });
+    answers.forEach(a=>{
+      if(!byOutcome[a.outcomeId])return;
+      if(a.correct)byOutcome[a.outcomeId].correct++;
+      else byOutcome[a.outcomeId].wrong.push(a.q.text);
+    });
+    const passed=Object.keys(byOutcome).filter(id=>byOutcome[id].correct===byOutcome[id].total);
+    const priorSnaps=(testSnapshots[studentId]||{})[activeUnitId]||[];
+    if(studentId){
+      setProgress(p=>{
+        const updated={...p[studentId]};
+        passed.forEach(id=>{const uid=byOutcome[id].unitId||"u24";updated[`${uid}_${id}`]=true;});
+        return{...p,[studentId]:updated};
+      });
+      passed.forEach(id=>saveOutcome(studentId,`${byOutcome[id].unitId||"u24"}_${id}`,true));
+      const byOutcomeSnap={};
+      Object.entries(byOutcome).forEach(([id,o])=>{
+        const band=UNITS.find(u=>u.id===o.unitId)?.outcomes.find(oc=>oc.id===id)?.band||"red";
+        byOutcomeSnap[id]={short:o.short,correct:o.correct,total:o.total,passed:o.correct===o.total,band};
+      });
+      saveTestSnapshot(studentId,activeUnitId,byOutcomeSnap);
+      try{localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}
+    }
+    setPretestResults({byOutcome,passed,priorSnaps});
+    setPretestMode("done");
+  }
+
   function handlePretestNext(){
-    const current=pretestQList[pretestIdx];
+    const currentItemIdx=pretestInReview?pretestReviewQueue[pretestReviewPos]:pretestIdx;
+    const current=pretestQList[currentItemIdx];
     const q=current.q;
     let given;
     if(q.type==="order")given=pretestAns.orderSeq;
@@ -2596,7 +2645,7 @@ function App(){
     const newAnswers=[...pretestAnswers,{outcomeId:current.outcomeId,short:current.short,q,given,correct,unitId:current.unitId}];
     setPretestAnswers(newAnswers);
 
-    // Per-outcome immediate save: if this answer completes the outcome's pair and both are correct, save now
+    // Per-outcome immediate save
     if(studentId){
       const oid=current.outcomeId;
       const uid=current.unitId||"u24";
@@ -2607,52 +2656,83 @@ function App(){
       }
     }
 
-    // localStorage checkpoint after every question
-    if(studentId){
-      const nextIdx=pretestIdx+1;
-      try{
-        localStorage.setItem(
-          `solo_pretest_draft_${studentId}`,
-          JSON.stringify({unitId:current.unitId,pretestIdx:nextIdx,pretestAnswers:newAnswers})
-        );
-      }catch{}
-    }
-
-    if(pretestIdx<pretestQList.length-1){
-      setPretestIdx(pretestIdx+1);
-      setPretestAns(initAns(pretestQList[pretestIdx+1].q));
-    } else {
-      // Full completion — final save pass (idempotent upsert)
-      const byOutcome={};
-      newAnswers.forEach(a=>{if(!byOutcome[a.outcomeId])byOutcome[a.outcomeId]={short:a.short,total:0,correct:0,wrong:[],unitId:a.unitId};byOutcome[a.outcomeId].total++;if(a.correct)byOutcome[a.outcomeId].correct++;else byOutcome[a.outcomeId].wrong.push(a.q.text);});
-      const passed=Object.keys(byOutcome).filter(id=>byOutcome[id].correct===byOutcome[id].total);
-      const activeUnitId=pretestQList[0]?.unitId||"u24";
-      // Capture prior snapshots BEFORE saving so results screen can label pre vs post correctly
-      const priorSnaps=(testSnapshots[studentId]||{})[activeUnitId]||[];
+    if(!pretestInReview){
+      // localStorage checkpoint (main pass only)
       if(studentId){
-        setProgress(p=>{
-          const updated={...p[studentId]};
-          passed.forEach(id=>{const uid=byOutcome[id].unitId||"u24";updated[`${uid}_${id}`]=true;});
-          return{...p,[studentId]:updated};
-        });
-        passed.forEach(id=>saveOutcome(studentId,`${byOutcome[id].unitId||"u24"}_${id}`,true));
-        // Save snapshot — enrich byOutcome with passed boolean and band info
-        const byOutcomeSnap={};
-        Object.entries(byOutcome).forEach(([id,o])=>{
-          const band=UNITS.find(u=>u.id===o.unitId)?.outcomes.find(oc=>oc.id===id)?.band||"red";
-          byOutcomeSnap[id]={short:o.short,correct:o.correct,total:o.total,passed:o.correct===o.total,band};
-        });
-        saveTestSnapshot(studentId,activeUnitId,byOutcomeSnap);
-        // Clear draft on completion
-        try{localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}
+        try{
+          localStorage.setItem(
+            `solo_pretest_draft_${studentId}`,
+            JSON.stringify({unitId:current.unitId,pretestIdx:pretestIdx+1,pretestAnswers:newAnswers})
+          );
+        }catch{}
       }
-      setPretestResults({byOutcome,passed,priorSnaps});
-      setPretestMode("done");
+      if(pretestIdx<pretestQList.length-1){
+        const nextIdx=pretestIdx+1;
+        const currentBand=getBand(current.outcomeId);
+        const nextBand=getBand(pretestQList[nextIdx].outcomeId);
+        setPretestIdx(nextIdx);
+        setPretestAns(initAns(pretestQList[nextIdx].q));
+        if(nextBand!==currentBand)setPretestSectionStart(nextBand);
+      } else {
+        // End of main pass — enter review if flagged questions exist, else finish
+        const stillFlagged=[...pretestFlagged];
+        if(stillFlagged.length>0){
+          setPretestInReview(true);
+          setPretestReviewQueue(stillFlagged);
+          setPretestReviewPos(0);
+          setPretestAns(initAns(pretestQList[stillFlagged[0]].q));
+        } else {
+          finishPretest(newAnswers);
+        }
+      }
+    } else {
+      // In review pass
+      if(pretestReviewPos<pretestReviewQueue.length-1){
+        const nextPos=pretestReviewPos+1;
+        setPretestReviewPos(nextPos);
+        setPretestAns(initAns(pretestQList[pretestReviewQueue[nextPos]].q));
+      } else {
+        finishPretest(newAnswers);
+      }
+    }
+  }
+
+  function handlePretestSkip(){
+    if(pretestInReview){
+      // In review: skip = count as wrong, move on
+      if(pretestReviewPos<pretestReviewQueue.length-1){
+        const nextPos=pretestReviewPos+1;
+        setPretestReviewPos(nextPos);
+        setPretestAns(initAns(pretestQList[pretestReviewQueue[nextPos]].q));
+      } else {
+        finishPretest([...pretestAnswers]);
+      }
+    } else {
+      // Main pass: flag and defer this question
+      const newFlagged=new Set(pretestFlagged);
+      newFlagged.add(pretestIdx);
+      setPretestFlagged(newFlagged);
+      if(pretestIdx<pretestQList.length-1){
+        const nextIdx=pretestIdx+1;
+        const currentBand=getBand(pretestQList[pretestIdx].outcomeId);
+        const nextBand=getBand(pretestQList[nextIdx].outcomeId);
+        setPretestIdx(nextIdx);
+        setPretestAns(initAns(pretestQList[nextIdx].q));
+        if(nextBand!==currentBand)setPretestSectionStart(nextBand);
+      } else {
+        // Last question skipped — enter review with all flagged
+        const flaggedQueue=[...newFlagged];
+        setPretestInReview(true);
+        setPretestReviewQueue(flaggedQueue);
+        setPretestReviewPos(0);
+        setPretestAns(initAns(pretestQList[flaggedQueue[0]].q));
+      }
     }
   }
 
   function pretestCanGo(){
-    const q=pretestQList[pretestIdx]?.q;
+    const itemIdx=pretestInReview?pretestReviewQueue[pretestReviewPos]:pretestIdx;
+    const q=pretestQList[itemIdx]?.q;
     if(!q)return false;
     if(q.type==="input")return pretestAns.input.trim().length>0;
     if(q.type==="mc"||q.type==="truefalse")return pretestAns.option.length>0;
@@ -3601,26 +3681,99 @@ function App(){
       );
     }
 
-    const current=pretestQList[pretestIdx];
+    // Section transition / start screen
+    if(pretestSectionStart){
+      const psb=BAND[pretestSectionStart];
+      const sNameMap={red:"Red",yellow:"Yellow",green:"Green"};
+      const sDescMap={
+        red:"These questions cover the key foundations. Do your best on each one.",
+        yellow:"These questions build on the foundations.",
+        green:"These are the most challenging questions — give them your best shot!"
+      };
+      const sEmojiMap={red:"🔴",yellow:"🟡",green:"🟢"};
+      const activeUnitIdSS=pretestQList[0]?.unitId||"u24";
+      const isPostTestSS=((testSnapshots[studentId]||{})[activeUnitIdSS]||[]).length>=1;
+      return(
+        <div style={{display:"flex",flexDirection:"column",flex:1,fontFamily:ff}}>
+          <AppNav title={isPostTestSS?"Post-test":"Pre-test"}/>
+          <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"2rem 1.5rem"}}>
+            <div style={{background:psb.bg,border:`2px solid ${psb.border}`,borderRadius:20,padding:"2.5rem 2rem",maxWidth:380,width:"100%",textAlign:"center",boxShadow:"0 8px 32px rgba(0,0,0,0.1)"}}>
+              <div style={{width:72,height:72,background:psb.border,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px",fontSize:36,boxShadow:`0 0 0 10px ${psb.bg}`}}>
+                {sEmojiMap[pretestSectionStart]}
+              </div>
+              <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:psb.text,marginBottom:6}}>Now starting</div>
+              <h2 style={{fontSize:28,fontWeight:800,color:psb.text,margin:"0 0 12px",letterSpacing:"-0.01em"}}>
+                {sNameMap[pretestSectionStart]} Section
+              </h2>
+              <p style={{fontSize:14,color:psb.text,opacity:0.85,margin:"0 0 28px",lineHeight:1.6}}>
+                {sDescMap[pretestSectionStart]}
+              </p>
+              <button onClick={()=>setPretestSectionStart(null)}
+                style={{background:psb.text,color:"#fff",border:"none",borderRadius:12,padding:"14px 40px",fontSize:16,fontWeight:700,cursor:"pointer",fontFamily:ff,letterSpacing:"-0.01em"}}>
+                Let's go! →
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const currentItemIdx=pretestInReview?pretestReviewQueue[pretestReviewPos]:pretestIdx;
+    const current=pretestQList[currentItemIdx];
     if(!current)return null;
     const q=current.q;
-    const pct=Math.round(pretestIdx/pretestQList.length*100);
+    const currentBand=getBand(current.outcomeId);
+    const b=BAND[currentBand];
+    const pct=pretestInReview?100:Math.round(pretestIdx/pretestQList.length*100);
     const ok=pretestCanGo();
     const pool=q.type==="order"?q.items.filter(item=>!pretestAns.orderSeq.includes(item)):[];
+    const activeUnitIdR=pretestQList[0]?.unitId||"u24";
+    const isPostTestR=((testSnapshots[studentId]||{})[activeUnitIdR]||[]).length>=1;
+    const testTitleR=isPostTestR?"Post-test":"Pre-test";
+    const isLastMain=!pretestInReview&&pretestIdx===pretestQList.length-1;
+    const isLastReview=pretestInReview&&pretestReviewPos===pretestReviewQueue.length-1;
+    const hasFlagged=pretestFlagged.size>0;
+    const nextBtnLabel=isLastReview?"Submit ✓":isLastMain&&hasFlagged?`Review flagged (${pretestFlagged.size}) →`:isLastMain?"Submit ✓":"Next →";
+    const progressLabel=pretestInReview?`Review ${pretestReviewPos+1}/${pretestReviewQueue.length}`:`${pretestIdx+1}/${pretestQList.length}`;
 
     return(
       <div style={{display:"flex",flexDirection:"column",flex:1,fontFamily:ff}}>
-        <AppNav title="Pre-test"
-          right={<span style={{fontSize:12,color:"rgba(255,255,255,0.6)",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{current.short}</span>}
+        {/* Early exit confirmation modal */}
+        {pretestShowEarlyExit&&(
+          <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.55)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+            <div style={{background:"#fff",borderRadius:16,padding:"24px 28px",maxWidth:380,width:"100%",boxShadow:"0 20px 60px rgba(0,0,0,0.2)"}}>
+              <div style={{fontSize:28,marginBottom:12,textAlign:"center"}}>⏹️</div>
+              <h3 style={{margin:"0 0 10px",fontSize:18,fontWeight:800,color:"var(--text)",textAlign:"center"}}>End test early?</h3>
+              <p style={{margin:"0 0 20px",fontSize:14,color:"var(--sub)",lineHeight:1.6,textAlign:"center"}}>
+                Your answers so far will be saved. Questions you haven't answered will be counted as incorrect.
+              </p>
+              <div style={{display:"flex",gap:10}}>
+                <button onClick={()=>setPretestShowEarlyExit(false)} style={Sb({flex:1,padding:"11px 0",fontSize:14})}>Keep going</button>
+                <button onClick={()=>{setPretestShowEarlyExit(false);finishPretest([...pretestAnswers]);}}
+                  style={{flex:1,fontFamily:ff,fontSize:14,fontWeight:700,padding:"11px 0",border:"none",borderRadius:9,cursor:"pointer",background:"linear-gradient(135deg,#dc2626,#b91c1c)",color:"#fff"}}>Submit now</button>
+              </div>
+            </div>
+          </div>
+        )}
+        <AppNav title={testTitleR}
+          right={<span style={{fontSize:12,color:"rgba(255,255,255,0.6)",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{current.short}</span>}
         />
+        {/* Section colour banner */}
+        <div style={{background:b.bg,borderBottom:`2px solid ${b.border}`,padding:"7px 18px",display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+          <div style={{width:10,height:10,borderRadius:"50%",background:b.dot,flexShrink:0}}/>
+          <span style={{fontSize:13,fontWeight:700,color:b.text}}>
+            {currentBand==="red"?"Red Section":currentBand==="yellow"?"Yellow Section":"Green Section"}
+          </span>
+          {pretestInReview&&<span style={{fontSize:12,color:b.text,opacity:0.75,marginLeft:2}}>— Reviewing flagged questions</span>}
+        </div>
         <div style={{flex:1,display:"flex",flexDirection:"column",padding:"18px 18px 24px",minHeight:0}}>
           {/* topbar */}
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexShrink:0}}>
-            <button onClick={()=>{try{if(studentId)localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}setPretestShowResume(false);setPretestResumeDraft(null);setPretestMode(null);setView("home");}} style={Sb()}>✕ Exit</button>
+            <button onClick={()=>{try{if(studentId)localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}setPretestShowResume(false);setPretestResumeDraft(null);setPretestMode(null);setPretestInReview(false);setPretestFlagged(new Set());setView("home");}} style={Sb()}>✕ Exit</button>
             <div style={{flex:1,background:"var(--ind-100)",borderRadius:99,height:6,overflow:"hidden"}}>
-              <div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,var(--indigo),var(--blue))",borderRadius:99,transition:"width 0.3s"}}/>
+              <div style={{height:"100%",width:`${pct}%`,background:`linear-gradient(90deg,${b.dot},${b.border})`,borderRadius:99,transition:"width 0.3s"}}/>
             </div>
-            <span style={{fontSize:12,color:"var(--muted)",fontWeight:600,flexShrink:0}}>{pretestIdx+1}/{pretestQList.length}</span>
+            <span style={{fontSize:12,color:"var(--muted)",fontWeight:600,flexShrink:0}}>{progressLabel}</span>
           </div>
           {/* resume banner */}
           {pretestShowResume&&(
@@ -3634,10 +3787,12 @@ function App(){
               </div>
             </div>
           )}
-          {/* outcome strip */}
-          <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,padding:"9px 14px",display:"flex",alignItems:"center",gap:8,marginBottom:14,flexShrink:0,boxShadow:"var(--sh-sm)"}}>
-            <span style={{fontSize:10,fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase",padding:"3px 9px",borderRadius:5,background:"var(--ind-50)",color:"var(--indigo)",flexShrink:0}}>Pre-test</span>
-            <span style={{fontSize:13,fontWeight:600,color:"var(--sub)"}}>{current.short}</span>
+          {/* outcome strip — coloured to match section */}
+          <div style={{background:b.bg,border:`1px solid ${b.border}`,borderRadius:10,padding:"9px 14px",display:"flex",alignItems:"center",gap:8,marginBottom:14,flexShrink:0,boxShadow:"var(--sh-sm)"}}>
+            <span style={{fontSize:10,fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase",padding:"3px 9px",borderRadius:5,background:b.border,color:b.text,flexShrink:0}}>
+              {pretestInReview?"Flagged Review":testTitleR}
+            </span>
+            <span style={{fontSize:13,fontWeight:600,color:b.text}}>{current.short}</span>
           </div>
           {/* question card — fills remaining space */}
           <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:20,padding:"28px 26px 24px",boxShadow:"var(--sh-lg)",flex:1,display:"flex",flexDirection:"column",minHeight:0}}>
@@ -3684,21 +3839,48 @@ function App(){
                   <p style={{fontSize:12,color:"var(--sub)",margin:0}}>{pretestAns.shadedCells.filter(Boolean).length} of {q.cells} cells shaded</p>
                 </div>
               )}
-              {q.type==="numberline"&&<NumberLineQ key={pretestIdx} q={q} ans={pretestAns} setAns={setPretestAns}/>}
-              {q.type==="match"&&<MatchQ key={pretestIdx} q={q} ans={pretestAns} setAns={setPretestAns}/>}
-              {q.type==="partition"&&<PartitionQ key={pretestIdx} q={q} ans={pretestAns} setAns={setPretestAns}/>}
+              {q.type==="numberline"&&<NumberLineQ key={currentItemIdx} q={q} ans={pretestAns} setAns={setPretestAns}/>}
+              {q.type==="match"&&<MatchQ key={currentItemIdx} q={q} ans={pretestAns} setAns={setPretestAns}/>}
+              {q.type==="partition"&&<PartitionQ key={currentItemIdx} q={q} ans={pretestAns} setAns={setPretestAns}/>}
             </div>
           </div>
-          {/* actions row */}
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:18,flexShrink:0}}>
-            {pretestQList.length<=15
-              ?<div style={{display:"flex",gap:5}}>{pretestQList.map((_,i)=><div key={i} style={{width:7,height:7,borderRadius:"50%",background:i<pretestIdx?"var(--ind-mid)":i===pretestIdx?"var(--indigo)":"var(--ind-100)",transform:i===pretestIdx?"scale(1.3)":"none",transition:"all 0.15s"}}/>)}</div>
-              :<span style={{fontSize:12,color:"var(--muted)"}}>{pretestIdx+1} of {pretestQList.length}</span>
-            }
-            <button onClick={handlePretestNext} disabled={!ok}
-              style={{padding:"13px 32px",border:"none",borderRadius:12,fontFamily:ff,fontSize:15,fontWeight:700,cursor:ok?"pointer":"default",background:ok?"linear-gradient(135deg,var(--indigo),var(--blue))":"#e2e8f0",color:ok?"#fff":"var(--muted)",boxShadow:ok?"0 4px 18px rgba(67,56,202,0.32)":"none",transition:"all 0.2s"}}>
-              {pretestIdx===pretestQList.length-1?"Submit":"Next →"}
-            </button>
+          {/* actions */}
+          <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:18,flexShrink:0}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              {/* Progress dots — coloured by band, amber for flagged */}
+              {!pretestInReview&&pretestQList.length<=18
+                ?<div style={{display:"flex",gap:4,flexWrap:"wrap",maxWidth:160}}>{pretestQList.map((_,i)=>{
+                  const dotBand=getBand(pretestQList[i].outcomeId);
+                  const isFlagged=pretestFlagged.has(i);
+                  const isCurrent=i===pretestIdx;
+                  const isPast=i<pretestIdx&&!isFlagged;
+                  return <div key={i} style={{width:7,height:7,borderRadius:"50%",flexShrink:0,
+                    background:isCurrent?"var(--indigo)":isFlagged?"#f59e0b":isPast?BAND[dotBand].dot:"var(--ind-100)",
+                    transform:isCurrent?"scale(1.35)":"none",transition:"all 0.15s"}}/>
+                })}</div>
+                :<span style={{fontSize:12,color:"var(--muted)",fontWeight:600}}>{progressLabel}</span>
+              }
+              {/* Skip + Next buttons */}
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <button onClick={handlePretestSkip}
+                  style={Sb({fontSize:12,padding:"9px 14px",color:"#92400e",borderColor:"#fcd34d",background:"#fffbeb",fontWeight:600})}>
+                  {pretestInReview?"Leave as wrong ✗":"🏳 Skip for now"}
+                </button>
+                <button onClick={handlePretestNext} disabled={!ok}
+                  style={{padding:"12px 28px",border:"none",borderRadius:12,fontFamily:ff,fontSize:15,fontWeight:700,cursor:ok?"pointer":"default",background:ok?`linear-gradient(135deg,${b.dot},var(--indigo))`:"#e2e8f0",color:ok?"#fff":"var(--muted)",boxShadow:ok?"0 4px 18px rgba(67,56,202,0.32)":"none",transition:"all 0.2s",whiteSpace:"nowrap"}}>
+                  {nextBtnLabel}
+                </button>
+              </div>
+            </div>
+            {/* Finish early link */}
+            {!pretestInReview&&(
+              <div style={{display:"flex",justifyContent:"center"}}>
+                <button onClick={()=>setPretestShowEarlyExit(true)}
+                  style={{fontFamily:ff,fontSize:12,color:"var(--muted)",background:"none",border:"none",cursor:"pointer",padding:"2px 0",textDecoration:"underline",textDecorationStyle:"dotted"}}>
+                  Submit what I have so far
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
