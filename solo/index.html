@@ -2736,7 +2736,21 @@ function App(){
     if(pretestInReview||targetIdx<0||targetIdx>=pretestQList.length)return;
     if(pretestFlagged.has(targetIdx)){const nf=new Set(pretestFlagged);nf.delete(targetIdx);setPretestFlagged(nf);}
     setPretestIdx(targetIdx);
-    setPretestAns(initAns(pretestQList[targetIdx].q));
+    const q=pretestQList[targetIdx].q;
+    const prev=pretestAnswers.find(a=>a.idx===targetIdx);
+    if(prev){
+      const restored=initAns(q);
+      if(q.type==="mc"||q.type==="truefalse")restored.option=prev.given||"";
+      else if(q.type==="input")restored.input=prev.given||"";
+      else if(q.type==="order")restored.orderSeq=Array.isArray(prev.given)?prev.given:[];
+      else if(q.type==="shade")restored.shadedCells=restored.shadedCells.map((_,i)=>i<prev.given);
+      else if(q.type==="numberline")restored.nlPlaced=prev.given||{};
+      else if(q.type==="match")restored.matchPairs=prev.given||{};
+      else if(q.type==="partition")restored.partitionShaded=Array.isArray(prev.given)?prev.given:[];
+      setPretestAns(restored);
+    } else {
+      setPretestAns(initAns(q));
+    }
   }
   function handlePretestBack(){
     if(pretestInReview||pretestIdx===0)return;
