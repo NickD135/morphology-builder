@@ -2103,6 +2103,7 @@ function App(){
   const [pretestResults,setPretestResults]=useState(null);
   const [pretestFlagged,setPretestFlagged]=useState(new Set());
   const [pretestShowEarlyExit,setPretestShowEarlyExit]=useState(false);
+  const [pretestShowExitDialog,setPretestShowExitDialog]=useState(false);
   const [pretestSectionStart,setPretestSectionStart]=useState(null);
   const [pretestInReview,setPretestInReview]=useState(false);
   const [pretestReviewQueue,setPretestReviewQueue]=useState([]);
@@ -2559,6 +2560,7 @@ function App(){
     setPretestMode("running");
     setPretestFlagged(new Set());
     setPretestShowEarlyExit(false);
+    setPretestShowExitDialog(false);
     setPretestInReview(false);
     setPretestReviewQueue([]);
     setPretestReviewPos(0);
@@ -3766,6 +3768,39 @@ function App(){
 
     return(
       <div style={{display:"flex",flexDirection:"column",flex:1,fontFamily:ff}}>
+        {/* Exit dialog — 3 options */}
+        {pretestShowExitDialog&&(
+          <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.55)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+            <div style={{background:"#fff",borderRadius:16,padding:"24px 28px",maxWidth:360,width:"100%",boxShadow:"0 20px 60px rgba(0,0,0,0.2)"}}>
+              <div style={{fontSize:28,marginBottom:12,textAlign:"center"}}>🚪</div>
+              <h3 style={{margin:"0 0 6px",fontSize:18,fontWeight:800,color:"var(--text)",textAlign:"center"}}>Leaving the test?</h3>
+              <p style={{margin:"0 0 20px",fontSize:13,color:"var(--sub)",lineHeight:1.6,textAlign:"center"}}>Choose what to do with your progress.</p>
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                <button onClick={()=>{setPretestShowExitDialog(false);finishPretest([...pretestAnswers]);}}
+                  style={{fontFamily:ff,fontSize:14,fontWeight:700,padding:"12px 0",border:"none",borderRadius:9,cursor:"pointer",background:"linear-gradient(135deg,#dc2626,#b91c1c)",color:"#fff",textAlign:"center"}}>
+                  Finish test now
+                  <div style={{fontSize:11,fontWeight:400,opacity:0.85,marginTop:2}}>Record results — unanswered questions count as wrong</div>
+                </button>
+                <button onClick={()=>{
+                  if(studentId&&(pretestIdx>0||pretestAnswers.length>0)){
+                    try{
+                      const uid=pretestQList[0]?.unitId;
+                      localStorage.setItem(`solo_pretest_draft_${studentId}`,JSON.stringify({unitId:uid,pretestIdx,pretestAnswers}));
+                    }catch{}
+                  }
+                  setPretestShowExitDialog(false);setPretestMode(null);setPretestInReview(false);setPretestFlagged(new Set());setPretestShowResume(false);setPretestResumeDraft(null);setView("home");
+                }} style={{fontFamily:ff,fontSize:14,fontWeight:700,padding:"12px 0",border:"1.5px solid var(--ind-200)",borderRadius:9,cursor:"pointer",background:"var(--ind-50)",color:"var(--indigo)",textAlign:"center"}}>
+                  I'll come back later
+                  <div style={{fontSize:11,fontWeight:400,opacity:0.75,marginTop:2}}>Save your progress — resume from here next time</div>
+                </button>
+                <button onClick={()=>setPretestShowExitDialog(false)}
+                  style={Sb({fontSize:13,padding:"10px 0",textAlign:"center",width:"100%"})}>
+                  Never mind, keep going
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Early exit confirmation modal */}
         {pretestShowEarlyExit&&(
           <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.55)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
@@ -3797,7 +3832,7 @@ function App(){
         <div style={{flex:1,display:"flex",flexDirection:"column",padding:"18px 18px 24px",minHeight:0}}>
           {/* topbar */}
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexShrink:0}}>
-            <button onClick={()=>{try{if(studentId)localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}setPretestShowResume(false);setPretestResumeDraft(null);setPretestMode(null);setPretestInReview(false);setPretestFlagged(new Set());setView("home");}} style={Sb()}>✕ Exit</button>
+            <button onClick={()=>setPretestShowExitDialog(true)} style={Sb()}>✕ Exit</button>
             <div style={{flex:1,background:"var(--ind-100)",borderRadius:99,height:6,overflow:"hidden"}}>
               <div style={{height:"100%",width:`${pct}%`,background:`linear-gradient(90deg,${b.dot},${b.border})`,borderRadius:99,transition:"width 0.3s"}}/>
             </div>
