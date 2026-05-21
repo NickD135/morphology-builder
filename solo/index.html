@@ -3367,12 +3367,14 @@ function App(){
                       const allQuestions=dynRes.filter(r=>r.type==="question");
                       const hasResources=allLinks.length>0||allQuestions.length>0;
                       const isExpanded=expandedResource===resKey;
+                      const _latestUSSt=(testSnapshots[studentId]?.[selectedUnit.id]||[]).slice(-1)[0];
+                      const isRegressed=isDone&&_latestUSSt?.by_outcome?.[o.id]?.passed===false;
                       return(
-                        <div key={o.id} style={{background:"var(--surface)",borderRadius:12,boxShadow:"var(--sh-sm)",overflow:"hidden",border:isDone?"1px solid #86efac":"1px solid var(--border)"}}>
+                        <div key={o.id} style={{background:isRegressed?"#fff7ed":"var(--surface)",borderRadius:12,boxShadow:"var(--sh-sm)",overflow:"hidden",border:isRegressed?"1px solid #fb923c":isDone?"1px solid #86efac":"1px solid var(--border)"}}>
                           <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10}}>
-                            <div style={{width:26,height:26,borderRadius:"50%",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,background:isDone?"#dcfce7":"var(--ind-50)",color:isDone?"#16a34a":"var(--ind-mid)"}}>{isDone?"✓":i+1}</div>
+                            <div style={{width:26,height:26,borderRadius:"50%",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,background:isRegressed?"#fed7aa":isDone?"#dcfce7":"var(--ind-50)",color:isRegressed?"#ea580c":isDone?"#16a34a":"var(--ind-mid)"}}>{isRegressed?"⚠":isDone?"✓":i+1}</div>
                             <div style={{flex:1,minWidth:0}}>
-                              <p style={{fontSize:13,fontWeight:600,margin:"0 0 1px",color:isDone?"#16a34a":"var(--text)"}}>{o.short}</p>
+                              <p style={{fontSize:13,fontWeight:600,margin:"0 0 1px",color:isRegressed?"#ea580c":isDone?"#16a34a":"var(--text)"}}>{o.short}</p>
                               <p style={{fontSize:11,color:"var(--muted)",margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{o.label}</p>
                             </div>
                             <div style={{display:"flex",gap:6,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end"}}>
@@ -3389,7 +3391,7 @@ function App(){
                                 </button>
                               )}
                               {isDone
-                                ?<span style={{fontSize:11,fontWeight:700,color:"#16a34a",alignSelf:"center"}}>Done ✓</span>
+                                ?<span style={{fontSize:11,fontWeight:700,color:isRegressed?"#ea580c":"#16a34a",alignSelf:"center"}}>{isRegressed?"Review ⚠":"Done ✓"}</span>
                                 :<button onClick={()=>{setExpandedResource(null);if(o.showTask){setShowTaskOutcome(o);setShowTaskUnit(selectedUnit);setView("showTask");}else{startOutcome(o);}}} style={{fontFamily:ff,fontSize:12,padding:"7px 14px",background:"linear-gradient(135deg,var(--indigo),var(--blue))",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontWeight:700,minHeight:38,boxShadow:"0 2px 8px rgba(67,56,202,0.28)"}}>Show</button>}
                             </div>
                           </div>
@@ -4373,11 +4375,13 @@ function App(){
                   const n=(studentAttempts[key]||[]).length;
                   const lastAttempt=(studentAttempts[key]||[]).slice(-1)[0];
                   const ts=timestamps[s.id]?.[key];
+                  const _latestUST=(testSnapshots[s.id]?.[selectedUnit.id]||[]).slice(-1)[0];
+                  const isReg=d&&_latestUST?.by_outcome?.[o.id]?.passed===false;
                   return(
-                    <div key={o.id} style={{background:"#fff",border:`1px solid ${d?"#86efac":"#e2e8f0"}`,borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",gap:10}}>
-                      <div style={{width:18,height:18,borderRadius:"50%",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,background:d?"#dcfce7":"#f1f5f9",color:d?"#16a34a":"#94a3b8"}}>{d?"✓":""}</div>
+                    <div key={o.id} style={{background:isReg?"#fff7ed":"#fff",border:`1px solid ${isReg?"#fb923c":d?"#86efac":"#e2e8f0"}`,borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",gap:10}}>
+                      <div style={{width:18,height:18,borderRadius:"50%",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,background:isReg?"#fed7aa":d?"#dcfce7":"#f1f5f9",color:isReg?"#ea580c":d?"#16a34a":"#94a3b8"}}>{isReg?"⚠":d?"✓":""}</div>
                       <div style={{flex:1,minWidth:0}}>
-                        <p style={{fontSize:13,fontWeight:600,margin:"0 0 1px",color:d?"#16a34a":"#1e293b"}}>{o.short}</p>
+                        <p style={{fontSize:13,fontWeight:600,margin:"0 0 1px",color:isReg?"#ea580c":d?"#16a34a":"#1e293b"}}>{o.short}{isReg&&<span style={{fontSize:11,fontWeight:500,marginLeft:6,color:"#ea580c"}}>— needs review</span>}</p>
                         {d&&ts&&<p style={{fontSize:11,color:"#64748b",margin:"1px 0 0"}}>✓ {fmtTime(ts)}</p>}
                         {n>0&&<p style={{fontSize:11,color:"#94a3b8",margin:0}}>{n} attempt{n!==1?"s":""} · last: <span style={{color:lastAttempt.passed?"#16a34a":"#dc2626",fontWeight:600}}>{lastAttempt.correct}/{lastAttempt.total}</span></p>}
                       </div>
@@ -4421,9 +4425,9 @@ function App(){
             👥{hiddenCount>0?` ${hiddenCount} hidden`:" Group"}
           </button>
           <div style={{display:"flex",background:"rgba(255,255,255,0.1)",borderRadius:8,padding:2,gap:2}}>
-            {["rubric","resources"].map(t=>(
+            {["rubric","assessments","resources"].map(t=>(
               <button key={t} onClick={()=>setResourceTab(t)} style={{fontFamily:ff,fontSize:11,fontWeight:600,padding:"4px 10px",borderRadius:6,border:"none",cursor:"pointer",background:resourceTab===t?"#fff":"transparent",color:resourceTab===t?"var(--indigo)":"rgba(255,255,255,0.7)",transition:"all 0.15s"}}>
-                {t==="rubric"?"Rubric":"📚 Resources"}
+                {t==="rubric"?"Rubric":t==="assessments"?"📊 Results":"📚 Resources"}
               </button>
             ))}
           </div>
@@ -4501,8 +4505,10 @@ function App(){
                   <td style={{padding:"3px 8px 3px 0"}}><button onClick={()=>setTeacherFocus(s.id)} style={{fontSize:13,padding:"3px 10px",border:"1px solid #e2e8f0",borderRadius:6,background:"#fff",cursor:"pointer",color:"#1e293b",fontWeight:500}}>{s.name}</button></td>
                   {selectedUnit.outcomes.map(o=>{
                     const d=prog[`${selectedUnit.id}_${o.id}`];
+                    const _latestUS=(testSnapshots[s.id]?.[selectedUnit.id]||[]).slice(-1)[0];
+                    const isReg=d&&_latestUS?.by_outcome?.[o.id]?.passed===false;
                     return(<td key={o.id} style={{padding:"3px 2px",textAlign:"center",...sepStyle(o.id)}}>
-                      <div style={{width:22,height:22,borderRadius:4,margin:"0 auto",background:d?"#dcfce7":"#f8fafc",border:`1px solid ${d?"#86efac":"#e2e8f0"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:d?"#16a34a":"#cbd5e1"}}>{d?"✓":""}</div>
+                      <div style={{width:22,height:22,borderRadius:4,margin:"0 auto",background:isReg?"#fff7ed":d?"#dcfce7":"#f8fafc",border:`1px solid ${isReg?"#fb923c":d?"#86efac":"#e2e8f0"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:isReg?"#ea580c":d?"#16a34a":"#cbd5e1"}}>{isReg?"⚠":d?"✓":""}</div>
                     </td>);
                   })}
                   <td style={{padding:"3px 0 3px 8px",textAlign:"right"}}><span style={{fontSize:12,fontWeight:600,color:"#64748b"}}>{done}/{total}</span></td>
@@ -4586,6 +4592,96 @@ function App(){
             onSave={saveResource}
             onDelete={deleteResource}
           />
+        )}
+        {resourceTab==="assessments"&&(
+          <div style={{flex:1,overflowY:"auto",padding:"1rem"}}>
+            <div style={{maxWidth:700,margin:"0 auto"}}>
+              <p style={{fontSize:13,color:"#64748b",margin:"0 0 16px"}}>{selectedUnit.name}: {selectedUnit.subtitle} — pre/post test results</p>
+              {(()=>{
+                const activePretestData=PRETESTS[selectedUnit.id]||[];
+                const allPretestIds=activePretestData.map(sec=>sec.outcomeId);
+                return(
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    {visibleStudents.map(s=>{
+                      const snaps=(testSnapshots[s.id]||{})[selectedUnit.id]||[];
+                      const preSnap=snaps[0]||null;
+                      const postSnap=snaps.length>=2?snaps[snaps.length-1]:null;
+                      const latestSnap=snaps[snaps.length-1]||null;
+                      const regressions=selectedUnit.outcomes.filter(o=>{
+                        const d=progress[s.id]?.[`${selectedUnit.id}_${o.id}`];
+                        return d&&latestSnap?.by_outcome?.[o.id]?.passed===false;
+                      });
+                      const hasReg=regressions.length>0;
+                      return(
+                        <div key={s.id} style={{background:hasReg?"#fff7ed":"#fff",border:`1px solid ${hasReg?"#fb923c":"#e2e8f0"}`,borderRadius:12,padding:"14px 16px",boxShadow:"var(--sh-sm)"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:snaps.length>0?12:0}}>
+                            <button onClick={()=>setTeacherFocus(s.id)} style={{fontFamily:ff,fontSize:14,fontWeight:700,color:"#1e293b",background:"none",border:"none",cursor:"pointer",padding:0,textAlign:"left",flex:1}}>{s.name}</button>
+                            {hasReg&&<span style={{fontSize:11,fontWeight:700,color:"#ea580c",background:"#fff7ed",border:"1px solid #fb923c",borderRadius:6,padding:"2px 8px",flexShrink:0}}>⚠ {regressions.length} to review</span>}
+                            {snaps.length===0&&<span style={{fontSize:12,color:"#94a3b8",fontStyle:"italic"}}>No tests taken</span>}
+                          </div>
+                          {snaps.length>0&&(
+                            <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                              <div style={{flex:1,background:"#f0f4ff",borderRadius:8,padding:"8px 12px",textAlign:"center"}}>
+                                <div style={{fontSize:10,color:"#64748b",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:2}}>Pre-test</div>
+                                <div style={{fontSize:16,fontWeight:800,color:"#4338ca"}}>{preSnap.passed_count}<span style={{fontSize:11,fontWeight:500}}>/{preSnap.total_count}</span></div>
+                                <div style={{fontSize:10,color:"#94a3b8",marginTop:1}}>{new Date(preSnap.taken_at).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}</div>
+                              </div>
+                              <div style={{fontSize:14,color:"#cbd5e1",flexShrink:0}}>→</div>
+                              {postSnap?(
+                                <div style={{flex:1,background:"#f0fdf4",borderRadius:8,padding:"8px 12px",textAlign:"center",border:"1px solid #86efac"}}>
+                                  <div style={{fontSize:10,color:"#64748b",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:2}}>Post-test</div>
+                                  <div style={{fontSize:16,fontWeight:800,color:postSnap.passed_count>preSnap.passed_count?"#16a34a":postSnap.passed_count<preSnap.passed_count?"#dc2626":"#475569"}}>{postSnap.passed_count}<span style={{fontSize:11,fontWeight:500}}>/{postSnap.total_count}</span></div>
+                                  <div style={{fontSize:10,color:"#94a3b8",marginTop:1}}>{new Date(postSnap.taken_at).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}</div>
+                                </div>
+                              ):(
+                                <div style={{flex:1,background:"#fafafa",borderRadius:8,padding:"8px 12px",textAlign:"center",border:"1px solid #e2e8f0"}}>
+                                  <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:2}}>Post-test</div>
+                                  <div style={{fontSize:12,color:"#cbd5e1",fontStyle:"italic",marginTop:4}}>Not yet</div>
+                                </div>
+                              )}
+                              {postSnap&&(
+                                <div style={{fontSize:14,fontWeight:800,flexShrink:0,color:postSnap.passed_count>preSnap.passed_count?"#16a34a":postSnap.passed_count<preSnap.passed_count?"#dc2626":"#64748b"}}>
+                                  {postSnap.passed_count>preSnap.passed_count?`+${postSnap.passed_count-preSnap.passed_count}`:postSnap.passed_count===preSnap.passed_count?"=":postSnap.passed_count-preSnap.passed_count}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {/* Per-outcome pre→post grid when both tests taken */}
+                          {preSnap&&postSnap&&allPretestIds.length>0&&(
+                            <div style={{borderTop:"1px solid #f1f5f9",paddingTop:10,marginTop:12}}>
+                              <div style={{display:"grid",gridTemplateColumns:"1fr 32px 10px 32px",gap:"4px 6px",alignItems:"center",marginBottom:4}}>
+                                <span style={{fontSize:10,fontWeight:700,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.04em"}}>Outcome</span>
+                                <span style={{fontSize:10,fontWeight:700,color:"#94a3b8",textAlign:"center",textTransform:"uppercase"}}>Pre</span>
+                                <span/>
+                                <span style={{fontSize:10,fontWeight:700,color:"#94a3b8",textAlign:"center",textTransform:"uppercase"}}>Post</span>
+                              </div>
+                              {allPretestIds.map(id=>{
+                                const section=activePretestData.find(sec=>sec.outcomeId===id);
+                                const preO=preSnap.by_outcome?.[id];
+                                const postO=postSnap.by_outcome?.[id];
+                                const preP=preO?.passed;
+                                const postP=postO?.passed;
+                                const isAchieved=!!progress[s.id]?.[`${selectedUnit.id}_${id}`];
+                                const showWarn=isAchieved&&postP===false;
+                                return(
+                                  <div key={id} style={{display:"grid",gridTemplateColumns:"1fr 32px 10px 32px",gap:"4px 6px",alignItems:"center",padding:"4px 0",borderBottom:"1px solid #f8fafc"}}>
+                                    <span style={{fontSize:12,color:showWarn?"#ea580c":"#334155",lineHeight:1.3,fontWeight:showWarn?600:400}}>{section?.short||id}{showWarn&&" ⚠"}</span>
+                                    <span style={{fontSize:13,fontWeight:700,textAlign:"center",color:preP?"#16a34a":"#dc2626"}}>{preP!==undefined?(preP?"✓":"✗"):"—"}</span>
+                                    <span style={{fontSize:9,color:"#cbd5e1",textAlign:"center"}}>→</span>
+                                    <span style={{fontSize:13,fontWeight:700,textAlign:"center",color:postP===undefined?"#cbd5e1":postP?"#16a34a":"#dc2626"}}>{postP!==undefined?(postP?"✓":"✗"):"–"}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
         )}
       </div>
     );
