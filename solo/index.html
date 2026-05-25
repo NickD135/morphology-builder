@@ -28,207 +28,14 @@
   </style>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root"><div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#1e1b4b;flex-direction:column;gap:16px"><div style="width:52px;height:52px;border-radius:50%;border:4px solid rgba(255,255,255,0.15);border-top-color:#6366f1;animation:spin 0.8s linear infinite"></div><div style="color:rgba(255,255,255,0.7);font-family:sans-serif;font-size:14px;letter-spacing:0.03em">Loading…</div></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div>
   <script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.9/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script type="text/babel">
-    const { useState, useRef, useEffect } = React;
-
-
-// ─── Unit colours ────────────────────────────────────────────────────────────
-const UC = {
-  u24:{bg:"#eff6ff",border:"#93c5fd",text:"#1d4ed8",dot:"#3b82f6",dark:"#1e3a8a"},
-  u25:{bg:"#f0fdf4",border:"#86efac",text:"#166534",dot:"#22c55e",dark:"#14532d"},
-  u26:{bg:"#faf5ff",border:"#c4b5fd",text:"#6d28d9",dot:"#7c3aed",dark:"#4c1d95"},
-  u27:{bg:"#fff7ed",border:"#fdba74",text:"#c2410c",dot:"#f97316",dark:"#7c2d12"},
-};
-const BAND = {
-  red:   {bg:"#fff0f0",border:"#fca5a5",text:"#b91c1c",dot:"#ef4444"},
-  yellow:{bg:"#fffbeb",border:"#fcd34d",text:"#92400e",dot:"#f59e0b"},
-  green: {bg:"#f0fdf4",border:"#86efac",text:"#166534",dot:"#22c55e"},
-};
-
-// ─── Visual question components ───────────────────────────────────────────────
-
-function Frac({v,s=15,c="inherit"}){
-  const p=String(v).split("/");
-  if(p.length!==2)return <span style={{fontSize:s,color:c,fontWeight:700}}>{v}</span>;
-  return <span style={{display:"inline-flex",flexDirection:"column",alignItems:"center",lineHeight:1.1,verticalAlign:"middle",color:c}}>
-    <span style={{fontSize:s,fontWeight:700,lineHeight:1}}>{p[0]}</span>
-    <span style={{display:"block",height:1.5,background:"currentColor",width:"110%",margin:"1px 0"}}/>
-    <span style={{fontSize:s,fontWeight:700,lineHeight:1}}>{p[1]}</span>
-  </span>;
-}
-
-function useIsMobile(){ const [m,setM]=useState(()=>window.innerWidth<640); useEffect(()=>{const h=()=>setM(window.innerWidth<640);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);return m; }
-
-function NumberLineQ({q,ans,setAns}){
-  const lineRef=useRef(null);
-  const [held,setHeld]=useState(null);
-  const placed=ans.nlPlaced||{};
-  const unplaced=q.tokens.filter(t=>placed[t]===undefined);
-
-  function posFromEvent(e){
-    const rect=lineRef.current.getBoundingClientRect();
-    const clientX=e.touches?e.touches[0].clientX:e.changedTouches?e.changedTouches[0].clientX:e.clientX;
-    return Math.max(0.02,Math.min(0.97,(clientX-rect.left)/rect.width));
-  }
-  function pickUp(token){
-    if(held===token){setHeld(null);return;}
-    if(placed[token]!==undefined){const np={...placed};delete np[token];setAns(a=>({...a,nlPlaced:np}));}
-    setHeld(token);
-  }
-  function placeToken(e){
-    if(!held)return;
-    e.preventDefault();
-    const pos=posFromEvent(e);
-    setAns(a=>({...a,nlPlaced:{...(a.nlPlaced||{}),[held]:pos}}));
-    setHeld(null);
-  }
-  return(
-    <div>
-      <p style={{fontSize:13,color:"#64748b",margin:"0 0 14px",fontStyle:"italic"}}>
-        {held?<><strong style={{color:"#1e40af"}}>Tap the number line</strong> to place <strong style={{color:"#1e40af"}}>{held}</strong></>
-          :"Tap a fraction to pick it up, then tap the number line to place it."}
-      </p>
-      <div style={{display:"flex",gap:10,marginBottom:28,flexWrap:"wrap",minHeight:52}}>
-        {unplaced.map(t=>(
-          <button key={t} onClick={()=>pickUp(t)} style={{padding:"10px 20px",background:held===t?"#1e40af":"#eff6ff",color:held===t?"#fff":"#1d4ed8",border:`2px solid ${held===t?"#1e40af":"#93c5fd"}`,borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:16,display:"flex",alignItems:"center",gap:4,minHeight:44,boxShadow:held===t?"0 2px 8px rgba(30,64,175,0.3)":"none",transform:held===t?"scale(1.05)":"scale(1)",transition:"all 0.15s"}}>
-            <Frac v={t} s={14} c={held===t?"#fff":"#1d4ed8"}/>
-          </button>
-        ))}
-        {unplaced.length===0&&<span style={{fontSize:13,color:"#94a3b8",alignSelf:"center"}}>All placed — tap a token to move it</span>}
-      </div>
-      <div style={{padding:"40px 20px 36px",cursor:held?"crosshair":"default",background:held?"#f0f9ff":"#f8fafc",borderRadius:12,border:`1.5px solid ${held?"#93c5fd":"#e2e8f0"}`,transition:"all 0.15s",touchAction:"none"}}
-        onClick={placeToken} onTouchEnd={placeToken}>
-        <div ref={lineRef} style={{position:"relative",height:4,background:"#334155",borderRadius:2}}>
-          <div style={{position:"absolute",left:-8,top:-4,width:0,height:0,borderTop:"6px solid transparent",borderBottom:"6px solid transparent",borderRight:"10px solid #334155"}}/>
-          <div style={{position:"absolute",right:-8,top:-4,width:0,height:0,borderTop:"6px solid transparent",borderBottom:"6px solid transparent",borderLeft:"10px solid #334155"}}/>
-          {[0,0.25,0.5,0.75,1].map(p=>(
-            <div key={p} style={{position:"absolute",left:`${p*100}%`,top:-6,transform:"translateX(-50%)",display:"flex",flexDirection:"column",alignItems:"center"}}>
-              <div style={{width:2,height:16,background:"#334155"}}/>
-              <span style={{marginTop:4,fontSize:11,fontWeight:600,color:"#475569"}}>{p===0?"0":p===1?"1":""}</span>
-            </div>
-          ))}
-          {Object.entries(placed).map(([t,pos])=>(
-            <div key={t} onClick={e=>{e.stopPropagation();pickUp(t);}}
-              style={{position:"absolute",left:`${pos*100}%`,top:-42,transform:"translateX(-50%)",background:"#1e40af",color:"#fff",padding:"5px 12px",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",zIndex:2,boxShadow:"0 2px 6px rgba(30,64,175,0.35)",display:"flex",alignItems:"center",minHeight:36}}>
-              <Frac v={t} s={12} c="#fff"/>
-              <div style={{position:"absolute",left:"50%",top:"100%",marginLeft:-1,width:2,height:22,background:"#1e40af"}}/>
-            </div>
-          ))}
-        </div>
-      </div>
-      {Object.keys(placed).length>0&&<p style={{fontSize:11,color:"#94a3b8",margin:"8px 0 0",textAlign:"center"}}>Tap a placed fraction to move it</p>}
-    </div>
-  );
-}
-
-function MatchQ({q,ans,setAns}){
-  const [selLeft,setSelLeft]=useState(null);
-  const matched=ans.matchPairs||{};
-  const matchedLeft=Object.keys(matched);
-  const matchedRight=Object.values(matched);
-  function clickLeft(item){
-    if(matchedLeft.includes(item)){const nm={...matched};delete nm[item];setAns(a=>({...a,matchPairs:nm}));setSelLeft(item);return;}
-    setSelLeft(selLeft===item?null:item);
-  }
-  function clickRight(item){
-    if(matchedRight.includes(item)){const nm={...matched};const k=Object.keys(nm).find(k=>nm[k]===item);delete nm[k];setAns(a=>({...a,matchPairs:nm}));return;}
-    if(!selLeft)return;
-    setAns(a=>({...a,matchPairs:{...(a.matchPairs||{}),[selLeft]:item}}));
-    setSelLeft(null);
-  }
-  const isCorrect=l=>matched[l]&&q.pairs[l]===matched[l];
-  const card=(active,isM,ok)=>({padding:"10px 4px",borderRadius:10,fontWeight:700,fontSize:15,cursor:"pointer",textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",minHeight:48,
-    border:`2px solid ${isM?(ok?"#86efac":"#fca5a5"):active?"#3b82f6":"#e2e8f0"}`,
-    background:isM?(ok?"#dcfce7":"#fee2e2"):active?"#eff6ff":"#f8fafc",
-    color:isM?(ok?"#16a34a":"#dc2626"):active?"#1d4ed8":"#1e293b",transition:"all 0.15s"});
-  return(
-    <div>
-      <p style={{fontSize:12,color:"#64748b",margin:"0 0 14px",fontStyle:"italic"}}>
-        {selLeft?<><strong style={{color:"#1e40af"}}>Now click the matching fraction</strong> on the right</>
-          :"Click a fraction on the left, then click its equivalent on the right."}
-      </p>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 28px 1fr",gap:"8px 4px",alignItems:"center"}}>
-        <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",textAlign:"center",textTransform:"uppercase",letterSpacing:"0.05em"}}>Fraction</div>
-        <div/>
-        <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",textAlign:"center",textTransform:"uppercase",letterSpacing:"0.05em"}}>Equivalent</div>
-        {q.left.map((l,i)=>{
-          const r=q.right[i];
-          const lM=matchedLeft.includes(l);
-          const rMatchedTo=Object.keys(matched).find(k=>matched[k]===r);
-          const rM=!!rMatchedTo;
-          return[
-            <button key={`l${l}`} onClick={()=>clickLeft(l)} style={card(selLeft===l,lM,isCorrect(l))}>
-              <Frac v={l} s={13} c={lM?(isCorrect(l)?"#16a34a":"#dc2626"):selLeft===l?"#1d4ed8":"#1e293b"}/>
-            </button>,
-            <div key={`m${i}`} style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
-              {lM&&<div style={{height:2,width:"100%",background:isCorrect(l)?"#86efac":"#fca5a5",borderRadius:1}}/>}
-            </div>,
-            <button key={`r${r}`} onClick={()=>clickRight(r)} style={card(false,rM,rMatchedTo?isCorrect(rMatchedTo):false)}>
-              <Frac v={r} s={13} c={rM?(isCorrect(rMatchedTo)?"#16a34a":"#dc2626"):"#1e293b"}/>
-            </button>
-          ];
-        })}
-      </div>
-      <p style={{fontSize:11,color:"#94a3b8",margin:"10px 0 0",textAlign:"center"}}>Click a matched pair to undo it</p>
-    </div>
-  );
-}
-
-function PartitionQ({q,ans,setAns}){
-  const shaded=new Set(ans.partitionShaded||[]);
-  function toggle(i){const ns=new Set(shaded);ns.has(i)?ns.delete(i):ns.add(i);setAns(a=>({...a,partitionShaded:[...ns]}));}
-  const fracStr=`${q.target}/${q.parts}`;
-  const statusColor=shaded.size===q.target?"#16a34a":shaded.size>q.target?"#dc2626":"#64748b";
-  const statusMsg=shaded.size===q.target?`✓ ${fracStr} shaded`:shaded.size>q.target?"Too many — click to unshade":`${shaded.size}/${q.parts} shaded`;
-  if(q.shape==="circle"){
-    const sz=180,cx=90,cy=90,r=82;
-    return(
-      <div>
-        <p style={{fontSize:12,color:"#64748b",margin:"0 0 14px",fontStyle:"italic"}}>
-          Click the sections to shade <strong style={{color:"#1e40af"}}>{fracStr}</strong> of the circle.
-        </p>
-        <div style={{display:"flex",justifyContent:"center",marginBottom:8}}>
-          <svg width={sz} height={sz} style={{cursor:"pointer"}}>
-            {Array.from({length:q.parts},(_,i)=>{
-              const a1=(i/q.parts)*2*Math.PI-Math.PI/2,a2=((i+1)/q.parts)*2*Math.PI-Math.PI/2;
-              const x1=cx+r*Math.cos(a1),y1=cy+r*Math.sin(a1),x2=cx+r*Math.cos(a2),y2=cy+r*Math.sin(a2);
-              const large=q.parts<3?1:0;
-              return <path key={i} d={`M${cx},${cy} L${x1},${y1} A${r},${r},0,${large},1,${x2},${y2} Z`}
-                fill={shaded.has(i)?"#1e40af":"#dbeafe"} stroke="#fff" strokeWidth={2}
-                onClick={()=>toggle(i)} style={{transition:"fill 0.15s",cursor:"pointer"}}/>;
-            })}
-            <circle cx={cx} cy={cy} r={r} fill="none" stroke="#334155" strokeWidth={2}/>
-          </svg>
-        </div>
-        <p style={{fontSize:12,textAlign:"center",fontWeight:600,color:statusColor}}>{statusMsg}</p>
-      </div>
-    );
-  }
-  return(
-    <div>
-      <p style={{fontSize:12,color:"#64748b",margin:"0 0 14px",fontStyle:"italic"}}>
-        Click the parts to shade <strong style={{color:"#1e40af"}}>{fracStr}</strong> of the bar.
-      </p>
-      <div style={{display:"flex",gap:3,marginBottom:8}}>
-        {Array.from({length:q.parts},(_,i)=>(
-          <div key={i} onClick={()=>toggle(i)}
-            style={{flex:1,height:80,background:shaded.has(i)?"#1e40af":"#dbeafe",border:"2px solid #fff",borderRadius:4,cursor:"pointer",transition:"background 0.15s",display:"flex",alignItems:"center",justifyContent:"center"}}>
-            {shaded.has(i)&&<span style={{color:"rgba(255,255,255,0.5)",fontSize:20}}>✓</span>}
-          </div>
-        ))}
-      </div>
-      <p style={{fontSize:12,textAlign:"center",fontWeight:600,color:statusColor}}>{statusMsg}</p>
-    </div>
-  );
-}
-
+  <script>
 // ─── Question banks ───────────────────────────────────────────────────────────
-const UNITS = [
+var UNITS = [
   // ── Unit 24: Fractions ────────────────────────────────────────────────────
   { id:"u24", name:"Unit 24", subtitle:"Fractions", outcomes:[
     {id:"r1",band:"red",short:"Order unit fractions",label:"Compare and order unit fractions with denominators of 2,3,4,5,6,8 and 10 on a number line",questions:[
@@ -860,7 +667,7 @@ const UNITS = [
 
 // ─── Pre-test / Post-test (Unit 24 Fractions) ────────────────────────────────
 // 2 questions per outcome. Get both right → outcome auto-ticked.
-const PRETESTS = {
+var PRETESTS = {
 u24: [
   {outcomeId:"r1",short:"Order unit fractions",questions:[
     {id:1,type:"mc",text:"Which unit fraction is the largest?",options:["1/8","1/4","1/2","1/6"],answer:"1/2"},
@@ -1082,7 +889,7 @@ u27: [
 // Separate from assessment questions — immediate feedback, no rubric effect.
 // example: array of strings shown before questions begin.
 // questions: same type/answer format as assessment questions.
-const PRACTICE = {
+var PRACTICE = {
   u24_r1:{
     example:[
       "Unit fractions have 1 as the numerator. The bigger the denominator, the SMALLER the fraction.",
@@ -1679,7 +1486,7 @@ const PRACTICE = {
 // ─── Resources (Unit 24 Fractions) ───────────────────────────────────────────
 // Each entry: { label, url, type: "video"|"worksheet"|"activity" }
 // Keyed by "unitId_outcomeId" — add worksheet URLs here as you create them
-const RESOURCES = {
+var RESOURCES = {
   u24_r1:[
     {label:"Comparing unit fractions on a number line",url:"https://www.youtube.com/watch?v=Tuzn9WOoKQg",type:"video"},
   ],
@@ -1781,6 +1588,201 @@ const RESOURCES = {
     {label:"Bias in Survey Questions — 7th Grade Math",url:"https://www.youtube.com/watch?v=chbQDdJdcl4",type:"video"},
   ],
 };
+
+  </script>
+  <script type="text/babel" data-presets="react">
+    const { useState, useRef, useEffect } = React;
+
+
+// ─── Unit colours ────────────────────────────────────────────────────────────
+const UC = {
+  u24:{bg:"#eff6ff",border:"#93c5fd",text:"#1d4ed8",dot:"#3b82f6",dark:"#1e3a8a"},
+  u25:{bg:"#f0fdf4",border:"#86efac",text:"#166534",dot:"#22c55e",dark:"#14532d"},
+  u26:{bg:"#faf5ff",border:"#c4b5fd",text:"#6d28d9",dot:"#7c3aed",dark:"#4c1d95"},
+  u27:{bg:"#fff7ed",border:"#fdba74",text:"#c2410c",dot:"#f97316",dark:"#7c2d12"},
+};
+const BAND = {
+  red:   {bg:"#fff0f0",border:"#fca5a5",text:"#b91c1c",dot:"#ef4444"},
+  yellow:{bg:"#fffbeb",border:"#fcd34d",text:"#92400e",dot:"#f59e0b"},
+  green: {bg:"#f0fdf4",border:"#86efac",text:"#166534",dot:"#22c55e"},
+};
+
+// ─── Visual question components ───────────────────────────────────────────────
+
+function Frac({v,s=15,c="inherit"}){
+  const p=String(v).split("/");
+  if(p.length!==2)return <span style={{fontSize:s,color:c,fontWeight:700}}>{v}</span>;
+  return <span style={{display:"inline-flex",flexDirection:"column",alignItems:"center",lineHeight:1.1,verticalAlign:"middle",color:c}}>
+    <span style={{fontSize:s,fontWeight:700,lineHeight:1}}>{p[0]}</span>
+    <span style={{display:"block",height:1.5,background:"currentColor",width:"110%",margin:"1px 0"}}/>
+    <span style={{fontSize:s,fontWeight:700,lineHeight:1}}>{p[1]}</span>
+  </span>;
+}
+
+function useIsMobile(){ const [m,setM]=useState(()=>window.innerWidth<640); useEffect(()=>{const h=()=>setM(window.innerWidth<640);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);return m; }
+
+function NumberLineQ({q,ans,setAns}){
+  const lineRef=useRef(null);
+  const [held,setHeld]=useState(null);
+  const placed=ans.nlPlaced||{};
+  const unplaced=q.tokens.filter(t=>placed[t]===undefined);
+
+  function posFromEvent(e){
+    const rect=lineRef.current.getBoundingClientRect();
+    const clientX=e.touches?e.touches[0].clientX:e.changedTouches?e.changedTouches[0].clientX:e.clientX;
+    return Math.max(0.02,Math.min(0.97,(clientX-rect.left)/rect.width));
+  }
+  function pickUp(token){
+    if(held===token){setHeld(null);return;}
+    if(placed[token]!==undefined){const np={...placed};delete np[token];setAns(a=>({...a,nlPlaced:np}));}
+    setHeld(token);
+  }
+  function placeToken(e){
+    if(!held)return;
+    e.preventDefault();
+    const pos=posFromEvent(e);
+    setAns(a=>({...a,nlPlaced:{...(a.nlPlaced||{}),[held]:pos}}));
+    setHeld(null);
+  }
+  return(
+    <div>
+      <p style={{fontSize:13,color:"#64748b",margin:"0 0 14px",fontStyle:"italic"}}>
+        {held?<><strong style={{color:"#1e40af"}}>Tap the number line</strong> to place <strong style={{color:"#1e40af"}}>{held}</strong></>
+          :"Tap a fraction to pick it up, then tap the number line to place it."}
+      </p>
+      <div style={{display:"flex",gap:10,marginBottom:28,flexWrap:"wrap",minHeight:52}}>
+        {unplaced.map(t=>(
+          <button key={t} onClick={()=>pickUp(t)} style={{padding:"10px 20px",background:held===t?"#1e40af":"#eff6ff",color:held===t?"#fff":"#1d4ed8",border:`2px solid ${held===t?"#1e40af":"#93c5fd"}`,borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:16,display:"flex",alignItems:"center",gap:4,minHeight:44,boxShadow:held===t?"0 2px 8px rgba(30,64,175,0.3)":"none",transform:held===t?"scale(1.05)":"scale(1)",transition:"all 0.15s"}}>
+            <Frac v={t} s={14} c={held===t?"#fff":"#1d4ed8"}/>
+          </button>
+        ))}
+        {unplaced.length===0&&<span style={{fontSize:13,color:"#94a3b8",alignSelf:"center"}}>All placed — tap a token to move it</span>}
+      </div>
+      <div style={{padding:"40px 20px 36px",cursor:held?"crosshair":"default",background:held?"#f0f9ff":"#f8fafc",borderRadius:12,border:`1.5px solid ${held?"#93c5fd":"#e2e8f0"}`,transition:"all 0.15s",touchAction:"none"}}
+        onClick={placeToken} onTouchEnd={placeToken}>
+        <div ref={lineRef} style={{position:"relative",height:4,background:"#334155",borderRadius:2}}>
+          <div style={{position:"absolute",left:-8,top:-4,width:0,height:0,borderTop:"6px solid transparent",borderBottom:"6px solid transparent",borderRight:"10px solid #334155"}}/>
+          <div style={{position:"absolute",right:-8,top:-4,width:0,height:0,borderTop:"6px solid transparent",borderBottom:"6px solid transparent",borderLeft:"10px solid #334155"}}/>
+          {[0,0.25,0.5,0.75,1].map(p=>(
+            <div key={p} style={{position:"absolute",left:`${p*100}%`,top:-6,transform:"translateX(-50%)",display:"flex",flexDirection:"column",alignItems:"center"}}>
+              <div style={{width:2,height:16,background:"#334155"}}/>
+              <span style={{marginTop:4,fontSize:11,fontWeight:600,color:"#475569"}}>{p===0?"0":p===1?"1":""}</span>
+            </div>
+          ))}
+          {Object.entries(placed).map(([t,pos])=>(
+            <div key={t} onClick={e=>{e.stopPropagation();pickUp(t);}}
+              style={{position:"absolute",left:`${pos*100}%`,top:-42,transform:"translateX(-50%)",background:"#1e40af",color:"#fff",padding:"5px 12px",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",zIndex:2,boxShadow:"0 2px 6px rgba(30,64,175,0.35)",display:"flex",alignItems:"center",minHeight:36}}>
+              <Frac v={t} s={12} c="#fff"/>
+              <div style={{position:"absolute",left:"50%",top:"100%",marginLeft:-1,width:2,height:22,background:"#1e40af"}}/>
+            </div>
+          ))}
+        </div>
+      </div>
+      {Object.keys(placed).length>0&&<p style={{fontSize:11,color:"#94a3b8",margin:"8px 0 0",textAlign:"center"}}>Tap a placed fraction to move it</p>}
+    </div>
+  );
+}
+
+function MatchQ({q,ans,setAns}){
+  const [selLeft,setSelLeft]=useState(null);
+  const matched=ans.matchPairs||{};
+  const matchedLeft=Object.keys(matched);
+  const matchedRight=Object.values(matched);
+  function clickLeft(item){
+    if(matchedLeft.includes(item)){const nm={...matched};delete nm[item];setAns(a=>({...a,matchPairs:nm}));setSelLeft(item);return;}
+    setSelLeft(selLeft===item?null:item);
+  }
+  function clickRight(item){
+    if(matchedRight.includes(item)){const nm={...matched};const k=Object.keys(nm).find(k=>nm[k]===item);delete nm[k];setAns(a=>({...a,matchPairs:nm}));return;}
+    if(!selLeft)return;
+    setAns(a=>({...a,matchPairs:{...(a.matchPairs||{}),[selLeft]:item}}));
+    setSelLeft(null);
+  }
+  const isCorrect=l=>matched[l]&&q.pairs[l]===matched[l];
+  const card=(active,isM,ok)=>({padding:"10px 4px",borderRadius:10,fontWeight:700,fontSize:15,cursor:"pointer",textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",minHeight:48,
+    border:`2px solid ${isM?(ok?"#86efac":"#fca5a5"):active?"#3b82f6":"#e2e8f0"}`,
+    background:isM?(ok?"#dcfce7":"#fee2e2"):active?"#eff6ff":"#f8fafc",
+    color:isM?(ok?"#16a34a":"#dc2626"):active?"#1d4ed8":"#1e293b",transition:"all 0.15s"});
+  return(
+    <div>
+      <p style={{fontSize:12,color:"#64748b",margin:"0 0 14px",fontStyle:"italic"}}>
+        {selLeft?<><strong style={{color:"#1e40af"}}>Now click the matching fraction</strong> on the right</>
+          :"Click a fraction on the left, then click its equivalent on the right."}
+      </p>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 28px 1fr",gap:"8px 4px",alignItems:"center"}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",textAlign:"center",textTransform:"uppercase",letterSpacing:"0.05em"}}>Fraction</div>
+        <div/>
+        <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",textAlign:"center",textTransform:"uppercase",letterSpacing:"0.05em"}}>Equivalent</div>
+        {q.left.map((l,i)=>{
+          const r=q.right[i];
+          const lM=matchedLeft.includes(l);
+          const rMatchedTo=Object.keys(matched).find(k=>matched[k]===r);
+          const rM=!!rMatchedTo;
+          return[
+            <button key={`l${l}`} onClick={()=>clickLeft(l)} style={card(selLeft===l,lM,isCorrect(l))}>
+              <Frac v={l} s={13} c={lM?(isCorrect(l)?"#16a34a":"#dc2626"):selLeft===l?"#1d4ed8":"#1e293b"}/>
+            </button>,
+            <div key={`m${i}`} style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
+              {lM&&<div style={{height:2,width:"100%",background:isCorrect(l)?"#86efac":"#fca5a5",borderRadius:1}}/>}
+            </div>,
+            <button key={`r${r}`} onClick={()=>clickRight(r)} style={card(false,rM,rMatchedTo?isCorrect(rMatchedTo):false)}>
+              <Frac v={r} s={13} c={rM?(isCorrect(rMatchedTo)?"#16a34a":"#dc2626"):"#1e293b"}/>
+            </button>
+          ];
+        })}
+      </div>
+      <p style={{fontSize:11,color:"#94a3b8",margin:"10px 0 0",textAlign:"center"}}>Click a matched pair to undo it</p>
+    </div>
+  );
+}
+
+function PartitionQ({q,ans,setAns}){
+  const shaded=new Set(ans.partitionShaded||[]);
+  function toggle(i){const ns=new Set(shaded);ns.has(i)?ns.delete(i):ns.add(i);setAns(a=>({...a,partitionShaded:[...ns]}));}
+  const fracStr=`${q.target}/${q.parts}`;
+  const statusColor=shaded.size===q.target?"#16a34a":shaded.size>q.target?"#dc2626":"#64748b";
+  const statusMsg=shaded.size===q.target?`✓ ${fracStr} shaded`:shaded.size>q.target?"Too many — click to unshade":`${shaded.size}/${q.parts} shaded`;
+  if(q.shape==="circle"){
+    const sz=180,cx=90,cy=90,r=82;
+    return(
+      <div>
+        <p style={{fontSize:12,color:"#64748b",margin:"0 0 14px",fontStyle:"italic"}}>
+          Click the sections to shade <strong style={{color:"#1e40af"}}>{fracStr}</strong> of the circle.
+        </p>
+        <div style={{display:"flex",justifyContent:"center",marginBottom:8}}>
+          <svg width={sz} height={sz} style={{cursor:"pointer"}}>
+            {Array.from({length:q.parts},(_,i)=>{
+              const a1=(i/q.parts)*2*Math.PI-Math.PI/2,a2=((i+1)/q.parts)*2*Math.PI-Math.PI/2;
+              const x1=cx+r*Math.cos(a1),y1=cy+r*Math.sin(a1),x2=cx+r*Math.cos(a2),y2=cy+r*Math.sin(a2);
+              const large=q.parts<3?1:0;
+              return <path key={i} d={`M${cx},${cy} L${x1},${y1} A${r},${r},0,${large},1,${x2},${y2} Z`}
+                fill={shaded.has(i)?"#1e40af":"#dbeafe"} stroke="#fff" strokeWidth={2}
+                onClick={()=>toggle(i)} style={{transition:"fill 0.15s",cursor:"pointer"}}/>;
+            })}
+            <circle cx={cx} cy={cy} r={r} fill="none" stroke="#334155" strokeWidth={2}/>
+          </svg>
+        </div>
+        <p style={{fontSize:12,textAlign:"center",fontWeight:600,color:statusColor}}>{statusMsg}</p>
+      </div>
+    );
+  }
+  return(
+    <div>
+      <p style={{fontSize:12,color:"#64748b",margin:"0 0 14px",fontStyle:"italic"}}>
+        Click the parts to shade <strong style={{color:"#1e40af"}}>{fracStr}</strong> of the bar.
+      </p>
+      <div style={{display:"flex",gap:3,marginBottom:8}}>
+        {Array.from({length:q.parts},(_,i)=>(
+          <div key={i} onClick={()=>toggle(i)}
+            style={{flex:1,height:80,background:shaded.has(i)?"#1e40af":"#dbeafe",border:"2px solid #fff",borderRadius:4,cursor:"pointer",transition:"background 0.15s",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            {shaded.has(i)&&<span style={{color:"rgba(255,255,255,0.5)",fontSize:20}}>✓</span>}
+          </div>
+        ))}
+      </div>
+      <p style={{fontSize:12,textAlign:"center",fontWeight:600,color:statusColor}}>{statusMsg}</p>
+    </div>
+  );
+}
 
 // ─── Supabase ─────────────────────────────────────────────────────────────────
 const SUPABASE_URL  = 'https://kdpavfrzmmzknqfpodrl.supabase.co';
@@ -2157,6 +2159,7 @@ function App(){
     {text:"",correct:false}
   ]});
   const [quizState,setQuizState]=useState({});
+  const [teacherReviewOverrides,setTeacherReviewOverrides]=useState({}); // {studentId: Set<outcomeKey>}
 
   async function doClassLookup(){
     setLoginError("");
@@ -2208,6 +2211,8 @@ function App(){
       const {data:classRow}=await sb.from("classes").select("settings").eq("id",loginClassObj.id).single();
       setHiddenUnits(new Set(classRow?.settings?.soloHiddenUnits||[]));
       setReviewActive(classRow?.settings?.soloActiveReview||null);
+      const rawTRO=classRow?.settings?.soloTeacherReview||{};
+      setTeacherReviewOverrides(Object.fromEntries(Object.entries(rawTRO).map(([sid,keys])=>[sid,new Set(keys)])));
       setTestSnapshots({[student.id]:snaps});
       setStudents([student]);
       setProgress(prog);
@@ -2226,6 +2231,8 @@ function App(){
     const storedHiddenUnits=classRow?.settings?.soloHiddenUnits||[];
     setHiddenUnits(new Set(storedHiddenUnits));
     setReviewActive(classRow?.settings?.soloActiveReview||null);
+    const rawTRO=classRow?.settings?.soloTeacherReview||{};
+    setTeacherReviewOverrides(Object.fromEntries(Object.entries(rawTRO).map(([sid,keys])=>[sid,new Set(keys)])));
     setReviewResultsPanel(null);
     const {data:sr}=await sb.from("students").select("id,name,student_code").eq("class_id",classId).order("name");
     const sList=sr||[];
@@ -2270,6 +2277,26 @@ function App(){
       if(val)st[key]=now; else delete st[key];
       return {...prev,[sid]:st};
     });
+  }
+
+  async function setTeacherStatus(sid,key,status){
+    // status: 'green' | 'red' | 'review'
+    // green/red flip the completed flag; review = completed + override flag
+    const isCompleted=status==="green"||status==="review";
+    setProgress(p=>({...p,[sid]:{...p[sid],[key]:isCompleted}}));
+    saveOutcome(sid,key,isCompleted);
+    setTeacherReviewOverrides(prev=>{
+      const cur=new Set(prev[sid]||[]);
+      if(status==="review")cur.add(key); else cur.delete(key);
+      return {...prev,[sid]:cur};
+    });
+    // Persist overrides to classes.settings
+    const {data:cur}=await sb.from("classes").select("settings").eq("id",selectedClassId).single();
+    const existingTRO=cur?.settings?.soloTeacherReview||{};
+    const updatedSet=new Set(existingTRO[sid]||[]);
+    if(status==="review")updatedSet.add(key); else updatedSet.delete(key);
+    const merged={...(cur?.settings||{}),soloTeacherReview:{...existingTRO,[sid]:[...updatedSet]}};
+    await sb.from("classes").update({settings:merged}).eq("id",selectedClassId);
   }
 
   async function saveTestSnapshot(sid,uid,byOutcome){
@@ -2510,7 +2537,7 @@ function App(){
     try{if(studentId)localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}
     setView("login");setStudentId(null);setIsTeacher(false);setLoginClassCode("");setLoginClassObj(null);setLoginStep("class");setLoginCode("");setLoginEmail("");setLoginPassword("");setLoginError("");setSelectedUnit(null);setTeacherFocus(null);setStudents([]);setClasses([]);setSelectedClassId(null);setProgress({});setTimestamps({});setTestSnapshots({});setHiddenStudents(new Set());setHiddenUnits(new Set());setManageGroupOpen(false);setReviewActive(null);setReviewMode(null);setReviewQList([]);setReviewIdx(0);setReviewAnswers([]);setReviewResults(null);setReviewResultsPanel(null);setLoginMode("student");
     setExpandedResource(null);setPracticeOutcome(null);setPracticeUnit(null);setPracticePhase("example");setPracticeIdx(0);setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);setPracticeScore({correct:0,total:0});
-    setTeacherEmail("");setSoloResources([]);setResourceTab("rubric");setResourceOutcome(null);setAddingResource(false);setAddingToGlobal(false);setNewResType("video");setNewResLabel("");setNewResUrl("");setNewResQ({text:"",options:[{text:"",correct:true},{text:"",correct:false},{text:"",correct:false},{text:"",correct:false}]});setQuizState({});
+    setTeacherEmail("");setSoloResources([]);setResourceTab("rubric");setResourceOutcome(null);setAddingResource(false);setAddingToGlobal(false);setNewResType("video");setNewResLabel("");setNewResUrl("");setNewResQ({text:"",options:[{text:"",correct:true},{text:"",correct:false},{text:"",correct:false},{text:"",correct:false}]});setQuizState({});setTeacherReviewOverrides({});
   }
 
   useEffect(()=>{
@@ -2543,6 +2570,8 @@ function App(){
           const {data:classRow}=await sb.from("classes").select("settings").eq("id",sess.classId).single();
           setHiddenUnits(new Set(classRow?.settings?.soloHiddenUnits||[]));
           setReviewActive(classRow?.settings?.soloActiveReview||null);
+          const rawTRO=classRow?.settings?.soloTeacherReview||{};
+          setTeacherReviewOverrides(Object.fromEntries(Object.entries(rawTRO).map(([sid,keys])=>[sid,new Set(keys)])));
           setTestSnapshots({[student.id]:snaps});
           setStudents([student]);setProgress(prog);setTimestamps({[student.id]:ts});
           setStudentId(student.id);setLoginClassObj({id:sess.classId,name:sess.className});setView("home");
@@ -2661,12 +2690,13 @@ function App(){
     }
 
     if(!pretestInReview){
-      // localStorage checkpoint (main pass only)
+      // localStorage checkpoint (main pass only) — strip svg to avoid quota errors
       if(studentId){
         try{
+          const slimAns=a=>({...a,q:{...a.q,svg:undefined}});
           localStorage.setItem(
             `solo_pretest_draft_${studentId}`,
-            JSON.stringify({unitId:current.unitId,pretestIdx:pretestIdx+1,pretestAnswers:newAnswers})
+            JSON.stringify({unitId:current.unitId,pretestIdx:pretestIdx+1,pretestAnswers:newAnswers.map(slimAns)})
           );
         }catch{}
       }
@@ -3384,7 +3414,7 @@ function App(){
                       const hasResources=allLinks.length>0||allQuestions.length>0;
                       const isExpanded=expandedResource===resKey;
                       const _latestUSSt=(testSnapshots[studentId]?.[selectedUnit.id]||[]).slice(-1)[0];
-                      const isRegressed=isDone&&_latestUSSt?.by_outcome?.[o.id]?.passed===false;
+                      const isRegressed=isDone&&(_latestUSSt?.by_outcome?.[o.id]?.passed===false||(teacherReviewOverrides[studentId]||new Set()).has(resKey));
                       return(
                         <div key={o.id} style={{background:isRegressed?"#fff7ed":"var(--surface)",borderRadius:12,boxShadow:"var(--sh-sm)",overflow:"hidden",border:isRegressed?"1px solid #fb923c":isDone?"1px solid #86efac":"1px solid var(--border)"}}>
                           <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10}}>
@@ -3400,15 +3430,17 @@ function App(){
                                   📚 Grow
                                 </button>
                               )}
-                              {!unitResourcesLoading&&((unitPracticeQuestions[resKey]||[]).length>0||PRACTICE[resKey])&&!isDone&&(
+                              {!unitResourcesLoading&&((unitPracticeQuestions[resKey]||[]).length>0||PRACTICE[resKey])&&(!isDone||isRegressed)&&(
                                 <button onClick={()=>{setExpandedResource(null);startPractice(selectedUnit,o);}}
                                   style={{fontFamily:ff,fontSize:12,padding:"7px 12px",background:"#f0fdf4",color:"#16a34a",border:"1px solid #86efac",borderRadius:8,cursor:"pointer",fontWeight:600,minHeight:38}}>
                                   ✏️ Know
                                 </button>
                               )}
-                              {isDone
-                                ?<span style={{fontSize:11,fontWeight:700,color:isRegressed?"#ea580c":"#16a34a",alignSelf:"center"}}>{isRegressed?"Review ⚠":"Done ✓"}</span>
-                                :<button onClick={()=>{setExpandedResource(null);if(o.showTask){setShowTaskOutcome(o);setShowTaskUnit(selectedUnit);setView("showTask");}else{startOutcome(o);}}} style={{fontFamily:ff,fontSize:12,padding:"7px 14px",background:"linear-gradient(135deg,var(--indigo),var(--blue))",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontWeight:700,minHeight:38,boxShadow:"0 2px 8px rgba(67,56,202,0.28)"}}>Show</button>}
+                              {isDone&&!isRegressed
+                                ?<span style={{fontSize:11,fontWeight:700,color:"#16a34a",alignSelf:"center"}}>Done ✓</span>
+                                :<button onClick={()=>{setExpandedResource(null);if(o.showTask){setShowTaskOutcome(o);setShowTaskUnit(selectedUnit);setView("showTask");}else{startOutcome(o);}}} style={{fontFamily:ff,fontSize:12,padding:"7px 14px",background:isRegressed?"linear-gradient(135deg,#ea580c,#f97316)":"linear-gradient(135deg,var(--indigo),var(--blue))",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontWeight:700,minHeight:38,boxShadow:isRegressed?"0 2px 8px rgba(234,88,12,0.28)":"0 2px 8px rgba(67,56,202,0.28)"}}>
+                                  {isRegressed?"Reassess ⚠":"Show"}
+                                </button>}
                             </div>
                           </div>
                           {isExpanded&&hasResources&&(
@@ -3785,13 +3817,21 @@ function App(){
                   if(studentId&&(pretestIdx>0||pretestAnswers.length>0)){
                     try{
                       const uid=pretestQList[0]?.unitId;
-                      localStorage.setItem(`solo_pretest_draft_${studentId}`,JSON.stringify({unitId:uid,pretestIdx,pretestAnswers}));
+                      const slimAns=a=>({...a,q:{...a.q,svg:undefined}});
+                      localStorage.setItem(`solo_pretest_draft_${studentId}`,JSON.stringify({unitId:uid,pretestIdx,pretestAnswers:pretestAnswers.map(slimAns)}));
                     }catch{}
                   }
                   setPretestShowExitDialog(false);setPretestMode(null);setPretestInReview(false);setPretestFlagged(new Set());setPretestShowResume(false);setPretestResumeDraft(null);setView("home");
                 }} style={{fontFamily:ff,fontSize:14,fontWeight:700,padding:"12px 0",border:"1.5px solid var(--ind-200)",borderRadius:9,cursor:"pointer",background:"var(--ind-50)",color:"var(--indigo)",textAlign:"center"}}>
                   I'll come back later
                   <div style={{fontSize:11,fontWeight:400,opacity:0.75,marginTop:2}}>Save your progress — resume from here next time</div>
+                </button>
+                <button onClick={()=>{
+                  if(studentId){try{localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}}
+                  setPretestShowExitDialog(false);setPretestMode(null);setPretestInReview(false);setPretestFlagged(new Set());setPretestShowResume(false);setPretestResumeDraft(null);setView("home");
+                }} style={{fontFamily:ff,fontSize:14,fontWeight:700,padding:"12px 0",border:"1.5px solid #fca5a5",borderRadius:9,cursor:"pointer",background:"#fff0f0",color:"#dc2626",textAlign:"center"}}>
+                  Discard this attempt
+                  <div style={{fontSize:11,fontWeight:400,opacity:0.8,marginTop:2}}>Exit without recording anything — no results saved</div>
                 </button>
                 <button onClick={()=>setPretestShowExitDialog(false)}
                   style={Sb({fontSize:13,padding:"10px 0",textAlign:"center",width:"100%"})}>
@@ -4425,7 +4465,8 @@ function App(){
                   const lastAttempt=(studentAttempts[key]||[]).slice(-1)[0];
                   const ts=timestamps[s.id]?.[key];
                   const _latestUST=(testSnapshots[s.id]?.[selectedUnit.id]||[]).slice(-1)[0];
-                  const isReg=d&&_latestUST?.by_outcome?.[o.id]?.passed===false;
+                  const isReg=d&&(_latestUST?.by_outcome?.[o.id]?.passed===false||(teacherReviewOverrides[s.id]||new Set()).has(key));
+                  const tStatus=isReg?"review":d?"green":"red";
                   return(
                     <div key={o.id} style={{background:isReg?"#fff7ed":"#fff",border:`1px solid ${isReg?"#fb923c":d?"#86efac":"#e2e8f0"}`,borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",gap:10}}>
                       <div style={{width:18,height:18,borderRadius:"50%",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,background:isReg?"#fed7aa":d?"#dcfce7":"#f1f5f9",color:isReg?"#ea580c":d?"#16a34a":"#94a3b8"}}>{isReg?"⚠":d?"✓":""}</div>
@@ -4434,12 +4475,20 @@ function App(){
                         {d&&ts&&<p style={{fontSize:11,color:"#64748b",margin:"1px 0 0"}}>✓ {fmtTime(ts)}</p>}
                         {n>0&&<p style={{fontSize:11,color:"#94a3b8",margin:0}}>{n} attempt{n!==1?"s":""} · last: <span style={{color:lastAttempt.passed?"#16a34a":"#dc2626",fontWeight:600}}>{lastAttempt.correct}/{lastAttempt.total}</span></p>}
                       </div>
-                      <div style={{display:"flex",gap:6,flexShrink:0}}>
+                      <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
                         {n>0&&<button onClick={()=>{setTeacherAttemptKey(key);setTeacherAttemptIdx(null);}} style={Sb({fontSize:12,padding:"4px 10px"})}>Attempts</button>}
-                        <button onClick={()=>{const nv=!d;setProgress(p=>({...p,[s.id]:{...p[s.id],[key]:nv}}));saveOutcome(s.id,key,nv);}}
-                          style={{fontSize:12,padding:"4px 10px",borderRadius:8,cursor:"pointer",fontWeight:600,border:`1px solid ${d?"#fca5a5":"#86efac"}`,background:d?"#fff0f0":"#f0fdf4",color:d?"#dc2626":"#16a34a"}}>
-                          {d?"Unmark":"✓ Mark"}
-                        </button>
+                        <div style={{display:"flex",borderRadius:8,overflow:"hidden",border:"1px solid #e2e8f0"}}>
+                          {[["red","🔴","Not done"],["review","⚠","Review"],["green","✓","Done"]].map(([st,icon,label])=>(
+                            <button key={st} onClick={()=>setTeacherStatus(s.id,key,st)}
+                              title={label}
+                              style={{fontFamily:ff,fontSize:11,fontWeight:700,padding:"4px 9px",border:"none",cursor:"pointer",
+                                background:tStatus===st?(st==="green"?"#16a34a":st==="review"?"#ea580c":"#dc2626"):"#f8fafc",
+                                color:tStatus===st?"#fff":(st==="green"?"#16a34a":st==="review"?"#ea580c":"#dc2626"),
+                                borderRight:st!=="green"?"1px solid #e2e8f0":"none",transition:"all 0.15s"}}>
+                              {icon}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   );
