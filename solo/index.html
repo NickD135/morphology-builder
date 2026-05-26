@@ -2160,6 +2160,7 @@ function App(){
   ]});
   const [quizState,setQuizState]=useState({});
   const [teacherReviewOverrides,setTeacherReviewOverrides]=useState({}); // {studentId: Set<outcomeKey>}
+  const [teacherApprovedOverrides,setTeacherApprovedOverrides]=useState({}); // {studentId: Set<outcomeKey>} — teacher explicitly marked Done despite failed snapshot
 
   async function doClassLookup(){
     setLoginError("");
@@ -2213,6 +2214,8 @@ function App(){
       setReviewActive(classRow?.settings?.soloActiveReview||null);
       const rawTRO=classRow?.settings?.soloTeacherReview||{};
       setTeacherReviewOverrides(Object.fromEntries(Object.entries(rawTRO).map(([sid,keys])=>[sid,new Set(keys)])));
+      const rawTAO=classRow?.settings?.soloTeacherApproved||{};
+      setTeacherApprovedOverrides(Object.fromEntries(Object.entries(rawTAO).map(([sid,keys])=>[sid,new Set(keys)])));
       setTestSnapshots({[student.id]:snaps});
       setStudents([student]);
       setProgress(prog);
@@ -2233,6 +2236,8 @@ function App(){
     setReviewActive(classRow?.settings?.soloActiveReview||null);
     const rawTRO=classRow?.settings?.soloTeacherReview||{};
     setTeacherReviewOverrides(Object.fromEntries(Object.entries(rawTRO).map(([sid,keys])=>[sid,new Set(keys)])));
+    const rawTAO=classRow?.settings?.soloTeacherApproved||{};
+    setTeacherApprovedOverrides(Object.fromEntries(Object.entries(rawTAO).map(([sid,keys])=>[sid,new Set(keys)])));
     setReviewResultsPanel(null);
     const {data:sr}=await sb.from("students").select("id,name,student_code").eq("class_id",classId).order("name");
     const sList=sr||[];
@@ -2282,6 +2287,7 @@ function App(){
   async function setTeacherStatus(sid,key,status){
     // status: 'green' | 'red' | 'review'
     // green/red flip the completed flag; review = completed + override flag
+    // 'green' also adds to approvedOverrides so a failed snapshot doesn't re-trigger orange
     const isCompleted=status==="green"||status==="review";
     setProgress(p=>({...p,[sid]:{...p[sid],[key]:isCompleted}}));
     saveOutcome(sid,key,isCompleted);
@@ -2290,12 +2296,20 @@ function App(){
       if(status==="review")cur.add(key); else cur.delete(key);
       return {...prev,[sid]:cur};
     });
+    setTeacherApprovedOverrides(prev=>{
+      const cur=new Set(prev[sid]||[]);
+      if(status==="green")cur.add(key); else cur.delete(key);
+      return {...prev,[sid]:cur};
+    });
     // Persist overrides to classes.settings
     const {data:cur}=await sb.from("classes").select("settings").eq("id",selectedClassId).single();
     const existingTRO=cur?.settings?.soloTeacherReview||{};
-    const updatedSet=new Set(existingTRO[sid]||[]);
-    if(status==="review")updatedSet.add(key); else updatedSet.delete(key);
-    const merged={...(cur?.settings||{}),soloTeacherReview:{...existingTRO,[sid]:[...updatedSet]}};
+    const updatedTROSet=new Set(existingTRO[sid]||[]);
+    if(status==="review")updatedTROSet.add(key); else updatedTROSet.delete(key);
+    const existingTAO=cur?.settings?.soloTeacherApproved||{};
+    const updatedTAOSet=new Set(existingTAO[sid]||[]);
+    if(status==="green")updatedTAOSet.add(key); else updatedTAOSet.delete(key);
+    const merged={...(cur?.settings||{}),soloTeacherReview:{...existingTRO,[sid]:[...updatedTROSet]},soloTeacherApproved:{...existingTAO,[sid]:[...updatedTAOSet]}};
     await sb.from("classes").update({settings:merged}).eq("id",selectedClassId);
   }
 
@@ -2448,6 +2462,29 @@ function App(){
           total_count:totalCount
         });
         try{sessionStorage.setItem(`solo_review_done_${reviewActive.startedAt}_${studentId}`,'1');}catch{}
+        // Save a merged test snapshot so the teacher dashboard clears orange flags for passed outcomes
+        if(passedCount>0){
+          const {data:latestSnap}=await sb.from("solo_test_snapshots")
+            .select("by_outcome,passed_count,total_count")
+            .eq("student_id",studentId)
+            .eq("unit_id",reviewActive.unitId)
+            .order("taken_at",{ascending:false})
+            .limit(1)
+            .single();
+          if(latestSnap){
+            const mergedByOutcome={...(latestSnap.by_outcome||{})};
+            Object.entries(byOutcome).forEach(([oid,result])=>{
+              if(result.passed&&mergedByOutcome[oid])mergedByOutcome[oid]={...mergedByOutcome[oid],passed:true};
+            });
+            const newPassedCount=Object.values(mergedByOutcome).filter(o=>o.passed).length;
+            const newSnap={student_id:studentId,unit_id:reviewActive.unitId,by_outcome:mergedByOutcome,passed_count:newPassedCount,total_count:Object.keys(mergedByOutcome).length};
+            await sb.from("solo_test_snapshots").insert(newSnap);
+            setTestSnapshots(prev=>{
+              const existing=(prev[studentId]||{})[reviewActive.unitId]||[];
+              return{...prev,[studentId]:{...(prev[studentId]||{}),[reviewActive.unitId]:[...existing,{...newSnap,taken_at:new Date().toISOString()}]}};
+            });
+          }
+        }
       }
       setReviewResults({byOutcome,passedCount,totalCount});
       setReviewMode('done');
@@ -2572,6 +2609,8 @@ function App(){
           setReviewActive(classRow?.settings?.soloActiveReview||null);
           const rawTRO=classRow?.settings?.soloTeacherReview||{};
           setTeacherReviewOverrides(Object.fromEntries(Object.entries(rawTRO).map(([sid,keys])=>[sid,new Set(keys)])));
+          const rawTAO=classRow?.settings?.soloTeacherApproved||{};
+          setTeacherApprovedOverrides(Object.fromEntries(Object.entries(rawTAO).map(([sid,keys])=>[sid,new Set(keys)])));
           setTestSnapshots({[student.id]:snaps});
           setStudents([student]);setProgress(prog);setTimestamps({[student.id]:ts});
           setStudentId(student.id);setLoginClassObj({id:sess.classId,name:sess.className});setView("home");
@@ -3414,7 +3453,8 @@ function App(){
                       const hasResources=allLinks.length>0||allQuestions.length>0;
                       const isExpanded=expandedResource===resKey;
                       const _latestUSSt=(testSnapshots[studentId]?.[selectedUnit.id]||[]).slice(-1)[0];
-                      const isRegressed=isDone&&(_latestUSSt?.by_outcome?.[o.id]?.passed===false||(teacherReviewOverrides[studentId]||new Set()).has(resKey));
+                      const isApprovedS=(teacherApprovedOverrides[studentId]||new Set()).has(resKey);
+                      const isRegressed=isDone&&!isApprovedS&&(_latestUSSt?.by_outcome?.[o.id]?.passed===false||(teacherReviewOverrides[studentId]||new Set()).has(resKey));
                       return(
                         <div key={o.id} style={{background:isRegressed?"#fff7ed":"var(--surface)",borderRadius:12,boxShadow:"var(--sh-sm)",overflow:"hidden",border:isRegressed?"1px solid #fb923c":isDone?"1px solid #86efac":"1px solid var(--border)"}}>
                           <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10}}>
@@ -4465,7 +4505,8 @@ function App(){
                   const lastAttempt=(studentAttempts[key]||[]).slice(-1)[0];
                   const ts=timestamps[s.id]?.[key];
                   const _latestUST=(testSnapshots[s.id]?.[selectedUnit.id]||[]).slice(-1)[0];
-                  const isReg=d&&(_latestUST?.by_outcome?.[o.id]?.passed===false||(teacherReviewOverrides[s.id]||new Set()).has(key));
+                  const isApprovedT=(teacherApprovedOverrides[s.id]||new Set()).has(key);
+                  const isReg=d&&!isApprovedT&&(_latestUST?.by_outcome?.[o.id]?.passed===false||(teacherReviewOverrides[s.id]||new Set()).has(key));
                   const tStatus=isReg?"review":d?"green":"red";
                   return(
                     <div key={o.id} style={{background:isReg?"#fff7ed":"#fff",border:`1px solid ${isReg?"#fb923c":d?"#86efac":"#e2e8f0"}`,borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",gap:10}}>
@@ -4604,7 +4645,7 @@ function App(){
                   {selectedUnit.outcomes.map(o=>{
                     const d=prog[`${selectedUnit.id}_${o.id}`];
                     const _latestUS=(testSnapshots[s.id]?.[selectedUnit.id]||[]).slice(-1)[0];
-                    const isReg=d&&_latestUS?.by_outcome?.[o.id]?.passed===false;
+                    const isReg=d&&_latestUS?.by_outcome?.[o.id]?.passed===false&&!(teacherApprovedOverrides[s.id]||new Set()).has(`${selectedUnit.id}_${o.id}`);
                     return(<td key={o.id} style={{padding:"3px 2px",textAlign:"center",...sepStyle(o.id)}}>
                       <div style={{width:22,height:22,borderRadius:4,margin:"0 auto",background:isReg?"#fff7ed":d?"#dcfce7":"#f8fafc",border:`1px solid ${isReg?"#fb923c":d?"#86efac":"#e2e8f0"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:isReg?"#ea580c":d?"#16a34a":"#cbd5e1"}}>{isReg?"⚠":d?"✓":""}</div>
                     </td>);
@@ -4707,7 +4748,7 @@ function App(){
                       const latestSnap=snaps[snaps.length-1]||null;
                       const regressions=selectedUnit.outcomes.filter(o=>{
                         const d=progress[s.id]?.[`${selectedUnit.id}_${o.id}`];
-                        return d&&latestSnap?.by_outcome?.[o.id]?.passed===false;
+                        return d&&latestSnap?.by_outcome?.[o.id]?.passed===false&&!(teacherApprovedOverrides[s.id]||new Set()).has(`${selectedUnit.id}_${o.id}`);
                       });
                       const hasReg=regressions.length>0;
                       return(
