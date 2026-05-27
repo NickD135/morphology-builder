@@ -2302,15 +2302,21 @@ function App(){
       return {...prev,[sid]:cur};
     });
     // Persist overrides to classes.settings
-    const {data:cur}=await sb.from("classes").select("settings").eq("id",selectedClassId).single();
-    const existingTRO=cur?.settings?.soloTeacherReview||{};
-    const updatedTROSet=new Set(existingTRO[sid]||[]);
-    if(status==="review")updatedTROSet.add(key); else updatedTROSet.delete(key);
-    const existingTAO=cur?.settings?.soloTeacherApproved||{};
-    const updatedTAOSet=new Set(existingTAO[sid]||[]);
-    if(status==="green")updatedTAOSet.add(key); else updatedTAOSet.delete(key);
-    const merged={...(cur?.settings||{}),soloTeacherReview:{...existingTRO,[sid]:[...updatedTROSet]},soloTeacherApproved:{...existingTAO,[sid]:[...updatedTAOSet]}};
-    await sb.from("classes").update({settings:merged}).eq("id",selectedClassId);
+    try{
+      const {data:cur,error:selErr}=await sb.from("classes").select("settings").eq("id",selectedClassId).single();
+      if(selErr)throw selErr;
+      const existingTRO=cur?.settings?.soloTeacherReview||{};
+      const updatedTROSet=new Set(existingTRO[sid]||[]);
+      if(status==="review")updatedTROSet.add(key); else updatedTROSet.delete(key);
+      const existingTAO=cur?.settings?.soloTeacherApproved||{};
+      const updatedTAOSet=new Set(existingTAO[sid]||[]);
+      if(status==="green")updatedTAOSet.add(key); else updatedTAOSet.delete(key);
+      const merged={...(cur?.settings||{}),soloTeacherReview:{...existingTRO,[sid]:[...updatedTROSet]},soloTeacherApproved:{...existingTAO,[sid]:[...updatedTAOSet]}};
+      const {error:updErr}=await sb.from("classes").update({settings:merged}).eq("id",selectedClassId);
+      if(updErr)throw updErr;
+    }catch(e){
+      alert("Couldn't save status change — please reload and try again.\n\n"+e.message);
+    }
   }
 
   async function saveTestSnapshot(sid,uid,byOutcome){
@@ -2869,7 +2875,21 @@ function App(){
       const allCorrect=newAnswers.filter(a=>a.correct).length>=newAnswers.length-1;
       setResults({allCorrect,results:newAnswers});
       const key=`${selectedUnit.id}_${activeOutcome.id}`;
-      if(allCorrect&&studentId){setProgress(p=>({...p,[studentId]:{...p[studentId],[key]:true}}));saveOutcome(studentId,key,true);}
+      if(allCorrect&&studentId){
+        setProgress(p=>({...p,[studentId]:{...p[studentId],[key]:true}}));
+        saveOutcome(studentId,key,true);
+        const latestSnap=((testSnapshots[studentId]||{})[selectedUnit.id]||[]).slice(-1)[0]||null;
+        if(latestSnap&&latestSnap.by_outcome?.[activeOutcome.id]?.passed===false){
+          const mergedByOutcome={...latestSnap.by_outcome,[activeOutcome.id]:{...latestSnap.by_outcome[activeOutcome.id],passed:true}};
+          const newPassedCount=Object.values(mergedByOutcome).filter(o=>o.passed).length;
+          const newSnap={student_id:studentId,unit_id:selectedUnit.id,by_outcome:mergedByOutcome,passed_count:newPassedCount,total_count:Object.keys(mergedByOutcome).length};
+          sb.from("solo_test_snapshots").insert(newSnap);
+          setTestSnapshots(prev=>{
+            const existing=(prev[studentId]||{})[selectedUnit.id]||[];
+            return{...prev,[studentId]:{...(prev[studentId]||{}),[selectedUnit.id]:[...existing,{...newSnap,taken_at:new Date().toISOString()}]}};
+          });
+        }
+      }
       if(studentId){
         const record={ts:Date.now(),passed:allCorrect,correct:newAnswers.filter(a=>a.correct).length,total:newAnswers.length,
           results:newAnswers.map(a=>({text:a.q.text,type:a.q.type,given:fmtGiven(a.given,a.q),correct:a.correct}))};
