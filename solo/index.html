@@ -3619,7 +3619,6 @@ function App(){
   const [practiceSubmitted,setPracticeSubmitted]=useState(false);
   const [practiceCorrect,setPracticeCorrect]=useState(false);
   const [practiceAttempts,setPracticeAttempts]=useState(0);
-  const [practiceBookwork,setPracticeBookwork]=useState(false);
   const [learnUnit,setLearnUnit]=useState(null);
   const [learnOutcome,setLearnOutcome]=useState(null);
   const [learnStage,setLearnStage]=useState("hook"); // hook|learn|try|reflect
@@ -4420,7 +4419,6 @@ function App(){
     setPracticePhase("example");setPracticeIdx(0);
     setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
     setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);
-    setPracticeBookwork(false);
     setPracticeScore({correct:0,total:0});
     setView("practice");
   }
@@ -4464,7 +4462,6 @@ function App(){
       setPracticeIdx(i=>i+1);
       setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
       setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);
-      setPracticeBookwork(false);
     } else {
       if(!practiceCorrect)setPracticeScore(s=>({...s,total:s.total+1}));
       setPracticePhase("done");
@@ -5204,7 +5201,7 @@ function App(){
             </Coach>
           </div>
           <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
-            <button onClick={()=>{setPracticePhase("example");setPracticeIdx(0);setPracticeScore({correct:0,total:0});setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);setPracticeBookwork(false);setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});}}
+            <button onClick={()=>{setPracticePhase("example");setPracticeIdx(0);setPracticeScore({correct:0,total:0});setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});}}
               style={Sb({fontWeight:600})}>Try again</button>
             <button onClick={()=>setView("rubric")} style={Sb({background:uc.dark,color:"#fff",border:"none",fontWeight:600})}>Back to rubric</button>
           </div>
@@ -5256,9 +5253,6 @@ function App(){
     const pool=q.type==="order"?q.items.filter(item=>!practiceAns.orderSeq.includes(item)):[];
     const showAnswer=practiceSubmitted&&!practiceCorrect&&practiceAttempts>=2;
     const outcomeShortName=practiceOutcome?.short||"Practice";
-    const needsBookwork=["input","mc","truefalse"].includes(q.type);
-    const gateBookwork=needsBookwork&&!practiceBookwork&&!practiceSubmitted;
-    const bookworkPrompt=q.type==="input"?"Set out your working in your book, then type your answer here.":q.type==="truefalse"?"Decide in your book whether it's true or false — and why — then answer.":"Work it out in your book, then choose from the options.";
 
     return(
       <div style={{display:"flex",flexDirection:"column",flex:1,fontFamily:ff}}>
@@ -5284,17 +5278,7 @@ function App(){
             {q.svg&&<div dangerouslySetInnerHTML={{__html:q.svg}} style={{marginBottom:16,borderRadius:8,overflow:"hidden"}}/>}
             <p style={{fontSize:22,fontWeight:600,lineHeight:1.55,letterSpacing:"-0.02em",marginBottom:26,flexShrink:0,color:"var(--text)"}}>{q.text}</p>
             <div style={{display:"flex",flexDirection:"column",gap:10,flex:1,minHeight:0}}>
-              {gateBookwork&&(
-                <Coach mood="idle" reactKey={`bw${practiceIdx}`}>
-                  <p style={{fontSize:14,fontWeight:700,margin:"0 0 2px",color:"var(--text)"}}>✍️ Have a go in your maths book first.</p>
-                  <p style={{fontSize:12.5,color:"var(--sub)",margin:"0 0 10px",lineHeight:1.5}}>{bookworkPrompt}</p>
-                  <button onClick={()=>setPracticeBookwork(true)}
-                    style={{fontFamily:ff,fontSize:13,fontWeight:700,padding:"9px 18px",background:"linear-gradient(135deg,var(--indigo),var(--blue))",color:"#fff",border:"none",borderRadius:10,cursor:"pointer",boxShadow:"0 3px 12px rgba(67,56,202,0.28)"}}>
-                    I've worked it out ✏️
-                  </button>
-                </Coach>
-              )}
-              {!practiceSubmitted&&!gateBookwork&&<>
+              {!practiceSubmitted&&<>
                 {q.type==="input"&&(
                   <div>
                     <input autoFocus type="text" value={practiceAns.input} onChange={e=>setPracticeAns(a=>({...a,input:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&ok&&submitPracticeAnswer()}
@@ -5344,7 +5328,7 @@ function App(){
           </div>
           {/* actions row */}
           <div style={{display:"flex",justifyContent:"flex-end",alignItems:"center",gap:10,marginTop:18,flexShrink:0}}>
-            {!practiceSubmitted&&!gateBookwork&&(
+            {!practiceSubmitted&&(
               <button onClick={submitPracticeAnswer} disabled={!ok}
                 style={{padding:"13px 32px",border:"none",borderRadius:12,fontFamily:ff,fontSize:15,fontWeight:700,cursor:ok?"pointer":"default",background:ok?"linear-gradient(135deg,var(--indigo),var(--blue))":"#e2e8f0",color:ok?"#fff":"var(--muted)",boxShadow:ok?"0 4px 18px rgba(67,56,202,0.32)":"none",transition:"all 0.2s"}}>
                 Check answer
