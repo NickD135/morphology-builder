@@ -4466,7 +4466,16 @@ function coachLine(arr,i){return coachFmt(arr[((i%arr.length)+arr.length)%arr.le
 // server-side. Falls back to a deterministic browser voice ONLY if the cloud is unreachable
 // (offline / blocked network), and even then locks to one chosen voice so it stays consistent.
 var SOLO_TTS_SID="", SOLO_TTS_CID="";   // student auth for the TTS edge function
-var _soloTtsAudio=null, _soloTtsToken=0, _soloBrowserVoice=null;
+var _soloTtsToken=0, _soloBrowserVoice=null;
+// One shared <audio> element, "unlocked" on the first user gesture by playing a tiny silent
+// clip (built at runtime). After unlocking, programmatic play() works even after an await (the
+// TTS fetch) — this is the fix for "no sound" on browsers that block autoplay of fetched audio.
+// (The old browser-speech path wasn't autoplay-gated; an <audio> element is.)
+var _ttsEl=null, _ttsUnlocked=false;
+function _silentWav(){const n=160,b=new Uint8Array(44+n*2),dv=new DataView(b.buffer),s=(o,t)=>{for(let i=0;i<t.length;i++)dv.setUint8(o+i,t.charCodeAt(i));};s(0,"RIFF");dv.setUint32(4,36+n*2,true);s(8,"WAVE");s(12,"fmt ");dv.setUint32(16,16,true);dv.setUint16(20,1,true);dv.setUint16(22,1,true);dv.setUint32(24,8000,true);dv.setUint32(28,16000,true);dv.setUint16(32,2,true);dv.setUint16(34,16,true);s(36,"data");dv.setUint32(40,n*2,true);let bin="";for(let i=0;i<b.length;i++)bin+=String.fromCharCode(b[i]);return "data:audio/wav;base64,"+btoa(bin);}
+function _ttsAudioEl(){if(!_ttsEl){_ttsEl=new Audio();_ttsEl.preload="auto";}return _ttsEl;}
+function _ttsUnlock(){if(_ttsUnlocked)return;try{const el=_ttsAudioEl();el.src=_silentWav();const p=el.play();if(p&&p.then)p.then(()=>{try{el.pause();el.currentTime=0;}catch(e){}_ttsUnlocked=true;}).catch(()=>{});else _ttsUnlocked=true;}catch(e){}}
+if(typeof window!=="undefined"){["pointerdown","touchstart","keydown"].forEach(ev=>window.addEventListener(ev,_ttsUnlock,true));}
 function _pickBrowserVoice(){
   if(_soloBrowserVoice)return _soloBrowserVoice;
   const vs=(window.speechSynthesis&&window.speechSynthesis.getVoices())||[];
@@ -4501,12 +4510,29 @@ function _ttsChunks(text){
   if(cur)chunks.push(cur);
   return chunks;
 }
+// Play one URL on the shared element. Resolves true if it played to the end, false if the
+// browser refused to play it (autoplay block / load error) — caller then uses the browser voice.
+function _ttsPlay(url){
+  return new Promise(res=>{
+    let settled=false; const done=v=>{if(!settled){settled=true;res(v);}};
+    try{
+      const el=_ttsAudioEl();
+      el.onended=()=>done(true);
+      el.onerror=()=>done(false);
+      el.src=url;
+      const p=el.play();
+      if(p&&p.then)p.then(()=>{/* playback started; wait for onended */}).catch(()=>done(false));
+    }catch(e){done(false);}
+  });
+}
 async function ttsSpeak(text){
   const token=++_soloTtsToken; // a new tap cancels the previous playback/queue
-  try{if(_soloTtsAudio){_soloTtsAudio.pause();_soloTtsAudio=null;}}catch(e){}
+  _ttsUnlock();                // we're inside the click gesture — make sure audio is unlocked
+  try{const el=_ttsAudioEl();el.pause();}catch(e){}
   try{window.speechSynthesis&&window.speechSynthesis.cancel();}catch(e){}
   if(!SOLO_TTS_SID||!SOLO_TTS_CID){ttsBrowser(text);return;} // no student auth → browser fallback
   const chunks=_ttsChunks(text);
+  let played=false;
   for(const chunk of chunks){
     if(token!==_soloTtsToken)return;
     let url=null;
@@ -4517,8 +4543,11 @@ async function ttsSpeak(text){
       if(r.ok){const d=await r.json();url=d.audioUrl;}
     }catch(e){}
     if(token!==_soloTtsToken)return;
-    if(!url){ttsBrowser(text);return;} // cloud failed → read the rest with the browser voice
-    await new Promise(res=>{const a=new Audio(url);_soloTtsAudio=a;a.onended=res;a.onerror=()=>res();a.play().catch(()=>res());});
+    if(!url){ if(!played)ttsBrowser(text); return; }       // cloud failed → browser voice
+    const ok=await _ttsPlay(url);
+    if(token!==_soloTtsToken)return;
+    if(!ok){ if(!played)ttsBrowser(text); return; }        // couldn't play → browser voice
+    played=true;
   }
 }
 function SpeakBtn({text,label="Read this aloud"}){
