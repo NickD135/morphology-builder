@@ -36,8 +36,14 @@
     .lc-badge{animation:lcBadgePop 380ms cubic-bezier(.34,1.56,.64,1) both}
     .lc-check{display:inline-block;animation:lcCheckPop 440ms cubic-bezier(.34,1.56,.64,1) both}
     .lc-done{animation:lcHalo 800ms ease-out 1}
-    @media (prefers-reduced-motion:reduce){.lc-card,.lc-step,.lc-badge,.lc-check,.lc-done{animation:none!important}}
-    body.low-stim .lc-card,body.low-stim .lc-step,body.low-stim .lc-badge,body.low-stim .lc-check,body.low-stim .lc-done{animation:none!important}
+    @keyframes coachPop{0%{transform:scale(.88)}55%{transform:scale(1.09)}100%{transform:scale(1)}}
+    @keyframes coachShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-2.5px)}60%{transform:translateX(2.5px)}}
+    @keyframes coachBubble{from{opacity:0;transform:translateY(5px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+    .coach-pop{animation:coachPop 420ms cubic-bezier(.34,1.56,.64,1)}
+    .coach-shake{animation:coachShake 380ms ease-in-out}
+    .coach-bubble{animation:coachBubble 280ms cubic-bezier(.4,0,.2,1) both}
+    @media (prefers-reduced-motion:reduce){.lc-card,.lc-step,.lc-badge,.lc-check,.lc-done,.coach-pop,.coach-shake,.coach-bubble{animation:none!important}}
+    body.low-stim .lc-card,body.low-stim .lc-step,body.low-stim .lc-badge,body.low-stim .lc-check,body.low-stim .lc-done,body.low-stim .coach-pop,body.low-stim .coach-shake,body.low-stim .coach-bubble{animation:none!important}
   </style>
 </head>
 <body>
@@ -1862,15 +1868,15 @@ var PRACTICE = {
       "Careful: a zero is only 'trailing' if it's at the END. In 0.05 the zero is NOT trailing — it changes the value.",
     ],
     questions:[
-      {type:"truefalse",text:"True or false: 4.70 and 4.7 represent the same value.",answer:"true"},
-      {type:"mc",text:"Which of these is equal to 2.5?",options:["2.50 only","2.500 only","Neither — 2.5 is different","Both 2.50 and 2.500"],answer:"Both 2.50 and 2.500"},
-      {type:"input",text:"Write 6.3400 without trailing zeros.",answer:"6.34"},
-      {type:"truefalse",text:"True or false: 0.30 is greater than 0.3.",answer:"false"},
-      {type:"mc",text:"Which decimal is NOT equal to 0.9?",options:["0.90","0.900","0.09","0.9000"],answer:"0.09"},
-      {type:"input",text:"Write 5.20 without the unnecessary trailing zero.",answer:"5.2"},
-      {type:"truefalse",text:"True or false: 8.0 and 8 represent the same value.",answer:"true"},
-      {type:"mc",text:"A ribbon is labelled 1.40 m. Which is the same length?",options:["1.4 m","1.04 m","14 m","0.14 m"],answer:"1.4 m"},
-      {type:"input",text:"Write 0.700 without unnecessary trailing zeros.",answer:"0.7"},
+      {type:"truefalse",text:"True or false: 4.70 and 4.7 represent the same value.",answer:"true",why:"The 0 on the end sits in the hundredths place and adds nothing, so 4.70 = 4.7.",hint:"Does that last zero actually add any value?"},
+      {type:"mc",text:"Which of these is equal to 2.5?",options:["2.50 only","2.500 only","Neither — 2.5 is different","Both 2.50 and 2.500"],answer:"Both 2.50 and 2.500",why:"Extra zeros on the end never change the value, so 2.5 = 2.50 = 2.500.",hint:"Try reading each one out loud — do they sound like the same amount?"},
+      {type:"input",text:"Write 6.3400 without trailing zeros.",answer:"6.34",why:"Drop only the zeros at the very end: 6.3400 → 6.34. The 3 and 4 must stay.",hint:"Cross off zeros from the right, but stop at the last non-zero digit."},
+      {type:"truefalse",text:"True or false: 0.30 is greater than 0.3.",answer:"false",why:"They're equal — the extra 0 is a placeholder, so 0.30 = 0.3.",hint:"Is 0.30 actually bigger, or just written with an extra zero?"},
+      {type:"mc",text:"Which decimal is NOT equal to 0.9?",options:["0.90","0.900","0.09","0.9000"],answer:"0.09",why:"In 0.09 the zero is between the point and the 9, so it's NOT trailing — that makes it nine hundredths, not nine tenths.",hint:"Look for the zero that is NOT at the very end."},
+      {type:"input",text:"Write 5.20 without the unnecessary trailing zero.",answer:"5.2",why:"The final 0 is in the hundredths place and adds nothing, so 5.20 = 5.2.",hint:"Only the zero on the very end can go."},
+      {type:"truefalse",text:"True or false: 8.0 and 8 represent the same value.",answer:"true",why:"A trailing zero after the point adds nothing, so 8.0 is just 8.",hint:"Does '.0' add any extra amount?"},
+      {type:"mc",text:"A ribbon is labelled 1.40 m. Which is the same length?",options:["1.4 m","1.04 m","14 m","0.14 m"],answer:"1.4 m",why:"The end zero in 1.40 adds nothing, so 1.40 m = 1.4 m. (1.04 has the zero in a different place.)",hint:"Drop only the zero on the very end."},
+      {type:"input",text:"Write 0.700 without unnecessary trailing zeros.",answer:"0.7",why:"Both end zeros are placeholders, so 0.700 = 0.7.",hint:"Cross off zeros from the right until you hit a non-zero digit."},
     ]},
   u26_r8:{
     example:[
@@ -3196,6 +3202,49 @@ function fmtTime(iso){
 
 // ─── ResourcesPanel ───────────────────────────────────────────────────────────
 const TYPE_ICON={video:"📹",website:"🌐",pdf:"📄",worksheet:"📄",game:"🎮",question:"❓",project:"🚀"};
+
+// ─── Coach: a small reacting scientist + speech bubble (the "teacher in the room") ─
+function CoachFace({mood,size=40}){
+  // mood: idle | happy | think | oops
+  const ink="#4338ca", ring="#6366f1";
+  const mouth={
+    idle:"M18,31 Q24,35 30,31",
+    happy:"M15.5,30.5 Q24,40 32.5,30.5",
+    think:"M20.5,33 L27.5,33",
+    oops:"M18,33.5 Q24,30 30,33.5",
+  }[mood]||"M18,31 Q24,35 30,31";
+  const py=mood==="think"?18.6:20.6;
+  const px=mood==="think"?-1.3:0;
+  return(
+    <svg width={size} height={size} viewBox="0 0 48 48" style={{display:"block"}} aria-hidden="true">
+      <circle cx="24" cy="24" r="21" fill="#eef2ff" stroke={ring} strokeWidth="2"/>
+      <path d="M9,19.5 Q24,15 39,19.5" fill="none" stroke={ring} strokeWidth="2" opacity="0.45"/>
+      <circle cx="17" cy="20.5" r="6" fill="#fff" stroke={ring} strokeWidth="2"/>
+      <circle cx="31" cy="20.5" r="6" fill="#fff" stroke={ring} strokeWidth="2"/>
+      <circle cx={17+px} cy={py} r="2.4" fill={ink}/>
+      <circle cx={31+px} cy={py} r="2.4" fill={ink}/>
+      <path d={mouth} fill="none" stroke={ink} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+function Coach({mood="idle",reactKey,children}){
+  const anim=mood==="happy"?"coach-pop":mood==="oops"?"coach-shake":"";
+  return(
+    <div style={{display:"flex",gap:11,alignItems:"flex-start"}}>
+      <div key={reactKey} className={anim} style={{flexShrink:0,width:46,height:46,borderRadius:"50%",background:"linear-gradient(135deg,#eef2ff,#e0e7ff)",border:"1px solid var(--ind-200)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"var(--sh-sm)"}}>
+        <CoachFace mood={mood} size={40}/>
+      </div>
+      <div key={"b"+reactKey} className="coach-bubble" style={{flex:1,background:"var(--surface)",border:"1px solid var(--border)",borderRadius:13,borderTopLeftRadius:3,padding:"10px 13px",boxShadow:"var(--sh-sm)",minWidth:0}}>
+        {children}
+      </div>
+    </div>
+  );
+}
+// Teacher voice — deterministic pick by question index so it stays stable per question.
+var COACH_PRAISE=["Nice work — that's spot on!","Yes! You've got it.","Exactly right. Well done!","Brilliant — that's correct!","Spot on. Keep it up!"];
+var COACH_RETRY=["Hmm, not quite — take another look.","Close! Have another go.","Not yet — think it through once more.","Almost there. Try again."];
+var COACH_REVEAL=["No worries — let's learn from this one.","That's a tricky one — here's how it works.","Good effort. Let's see it together."];
+function coachLine(arr,i){return arr[((i%arr.length)+arr.length)%arr.length];}
 
 function LearnCard({learn,outcomeKey,studentId}){
   const ff2="'Lexend',sans-serif";
@@ -4991,16 +5040,15 @@ function App(){
       const pct=Math.round(practiceScore.correct/practiceScore.total*100)||0;
       return(
         <div style={{maxWidth:520,margin:"0 auto",padding:"1rem",fontFamily:ff}}>
-          <div style={{textAlign:"center",padding:"1.5rem 0 1.25rem"}}>
-            <div style={{width:60,height:60,borderRadius:"50%",background:pct>=80?"#dcfce7":"#fef9c3",border:`2px solid ${pct>=80?"#86efac":"#fcd34d"}`,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px",fontSize:22}}>
-              {pct>=80?"🌟":"👍"}
-            </div>
-            <h2 style={{fontSize:18,fontWeight:600,margin:"0 0 4px",color:"#0f172a"}}>Practice complete!</h2>
-            <p style={{fontSize:13,color:"#64748b",margin:"0 0 4px"}}>{practiceOutcome?.short}</p>
-            <p style={{fontSize:22,fontWeight:700,color:pct>=80?"#16a34a":"#f59e0b",margin:"8px 0 0"}}>{practiceScore.correct}/{practiceScore.total} correct</p>
-            {pct>=80
-              ?<p style={{fontSize:13,color:"#64748b",margin:"4px 0 0"}}>Great work — you're ready to try the Show assessment!</p>
-              :<p style={{fontSize:13,color:"#64748b",margin:"4px 0 0"}}>Keep going — review the worked example and try again.</p>}
+          <div style={{padding:"1.25rem 0"}}>
+            <Coach mood={pct>=80?"happy":"idle"} reactKey={`done-${pct}`}>
+              <p style={{fontSize:14,fontWeight:700,margin:"0 0 2px",color:pct>=80?"#16a34a":"var(--text)"}}>
+                {pct>=80?"Brilliant work!":"Good effort — you're getting there."}
+              </p>
+              <p style={{fontSize:13,color:"var(--sub)",margin:0,lineHeight:1.5}}>
+                You got <strong style={{color:pct>=80?"#16a34a":"#d97706"}}>{practiceScore.correct} of {practiceScore.total}</strong> on {practiceOutcome?.short}. {pct>=80?"You're ready to press Show and prove it!":"Have another look at the example, then try again — you'll get there."}
+              </p>
+            </Coach>
           </div>
           <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
             <button onClick={()=>{setPracticePhase("example");setPracticeIdx(0);setPracticeScore({correct:0,total:0});setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});}}
@@ -5020,6 +5068,11 @@ function App(){
               <p style={{fontSize:12,fontWeight:600,margin:"0 0 2px",color:"#64748b"}}>{practiceUnit?.name}: {practiceUnit?.subtitle}</p>
               <p style={{fontSize:14,fontWeight:600,margin:0,color:"#0f172a"}}>{practiceOutcome?.short}</p>
             </div>
+          </div>
+          <div style={{marginBottom:14}}>
+            <Coach mood="think" reactKey="ex-intro">
+              <p style={{fontSize:13.5,fontWeight:600,margin:0,color:"var(--text)",lineHeight:1.5}}>Let's look at one together first. Read it through with your book open — then have a go yourself.</p>
+            </Coach>
           </div>
           <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:12,padding:"1.5rem",marginBottom:12}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
@@ -5111,13 +5164,15 @@ function App(){
                 {q.type==="partition"&&<PartitionQ key={`p${practiceIdx}`} q={q} ans={practiceAns} setAns={setPracticeAns}/>}
               </>}
               {practiceSubmitted&&(
-                <div style={{padding:"14px",borderRadius:10,background:practiceCorrect?"#f0fdf4":"#fef2f2",border:`1px solid ${practiceCorrect?"#86efac":"#fca5a5"}`}}>
-                  <p style={{fontSize:14,fontWeight:600,margin:"0 0 4px",color:practiceCorrect?"#16a34a":"#dc2626"}}>
-                    {practiceCorrect?"✓ Correct!":practiceAttempts===1?"✗ Not quite — try again!":"✗ Incorrect"}
+                <Coach mood={practiceCorrect?"happy":(showAnswer?"idle":"oops")} reactKey={`${practiceIdx}-${practiceAttempts}-${practiceCorrect}`}>
+                  <p style={{fontSize:14,fontWeight:700,margin:"0 0 2px",color:practiceCorrect?"#16a34a":"#b45309"}}>
+                    {practiceCorrect?coachLine(COACH_PRAISE,practiceIdx):(showAnswer?coachLine(COACH_REVEAL,practiceIdx):coachLine(COACH_RETRY,practiceIdx))}
                   </p>
-                  {!practiceCorrect&&practiceAttempts===1&&<p style={{fontSize:13,color:"#64748b",margin:0}}>Review your working and have another go.</p>}
-                  {showAnswer&&<p style={{fontSize:13,color:"#475569",margin:"4px 0 0"}}>The correct answer is: <strong style={{color:"#16a34a"}}>{q.answer}</strong>{q.aliases?.length?` (also accepted: ${q.aliases.join(", ")})`:""}.</p>}
-                </div>
+                  {practiceCorrect&&q.why&&<p style={{fontSize:12.5,color:"var(--sub)",margin:0,lineHeight:1.5}}>{q.why}</p>}
+                  {!practiceCorrect&&!showAnswer&&q.hint&&<p style={{fontSize:12.5,color:"var(--sub)",margin:"2px 0 0",lineHeight:1.5}}>💡 {q.hint}</p>}
+                  {!practiceCorrect&&!showAnswer&&!q.hint&&<p style={{fontSize:12.5,color:"var(--sub)",margin:"2px 0 0",lineHeight:1.5}}>Check your working and have another go.</p>}
+                  {showAnswer&&<p style={{fontSize:13,color:"var(--text)",margin:"2px 0 0",lineHeight:1.5}}>The answer is <strong style={{color:"#16a34a"}}>{q.answer}</strong>{q.aliases?.length?` (also accepted: ${q.aliases.join(", ")})`:""}.{q.why?" "+q.why:""}</p>}
+                </Coach>
               )}
             </div>
           </div>
