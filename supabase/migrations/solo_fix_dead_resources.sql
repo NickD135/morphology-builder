@@ -15,20 +15,23 @@ update public.resources
   where unit_id = 'u24' and outcome_id = 'g5'
     and url = 'https://www.mathplayground.com/Fractions_Mixed.html';
 
--- u25_y1 — bias/survey website (old page 404s)
+-- u25_y1 — bias/survey website (old page 404s).
+-- Curated 2026-06-01: "Conducting a Survey" covers sampling + bias directly (better than the generic survey page).
 update public.resources
-  set url = 'https://www.mathsisfun.com/data/survey-questionnaire.html'
+  set url = 'https://www.mathsisfun.com/data/survey-conducting.html'
   where unit_id = 'u25' and outcome_id = 'y1'
     and url = 'https://www.mathsisfun.com/data/statistical-bias.html';
 
--- u25_y2 — misleading representations website (old page 404s)
+-- u25_y2 — misleading representations website (old page 404s).
+-- Curated 2026-06-01: the dedicated "Misleading Graphs and Stats" page (broken y-axis, pictographs, sample size).
 update public.resources
-  set url = 'https://www.mathsisfun.com/data/graphs-index.html'
+  set url = 'https://www.mathsisfun.com/data/misleading.html'
   where unit_id = 'u25' and outcome_id = 'y2'
     and url = 'https://www.mathsisfun.com/data/misleading-statistics.html';
 
--- u25_g4 — evaluate statistical claims website (old page 404s)
+-- u25_g4 — evaluate statistical claims website (old page 404s).
+-- Curated 2026-06-01: same dedicated "Misleading Graphs and Stats" page.
 update public.resources
-  set url = 'https://www.mathsisfun.com/data/index.html'
+  set url = 'https://www.mathsisfun.com/data/misleading.html'
   where unit_id = 'u25' and outcome_id = 'g4'
     and url = 'https://www.mathsisfun.com/data/misleading-statistics.html';
