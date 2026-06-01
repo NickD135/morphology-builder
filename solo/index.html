@@ -3805,13 +3805,25 @@ function NoteField({outcomeKey,studentId,label}){
   const noteKey="solo_note_"+(studentId||"anon")+"_"+outcomeKey;
   const [note,setNote]=useState(function(){try{return localStorage.getItem(noteKey)||"";}catch(e){return "";}});
   const [saved,setSaved]=useState(false);
-  function save(v){setNote(v);try{localStorage.setItem(noteKey,v);}catch(e){}setSaved(true);}
+  const timer=useRef(null);
+  const isRealStudent=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(studentId||"");
+  function save(v){
+    setNote(v);try{localStorage.setItem(noteKey,v);}catch(e){}setSaved(true);
+    if(isRealStudent){
+      const us=outcomeKey.indexOf("_");
+      const unit_id=outcomeKey.slice(0,us), outcome_id=outcomeKey.slice(us+1);
+      if(timer.current)clearTimeout(timer.current);
+      timer.current=setTimeout(function(){
+        try{sb.from("solo_reflections").upsert({student_id:studentId,unit_id:unit_id,outcome_id:outcome_id,reflection:v,updated_at:new Date().toISOString()},{onConflict:"student_id,unit_id,outcome_id"}).then(function(){},function(){});}catch(e){}
+      },1000);
+    }
+  }
   return(
     <div>
       <label style={{display:"block",fontSize:12,fontWeight:700,color:"var(--indigo)",margin:"0 0 6px"}}>{label}</label>
       <textarea value={note} onChange={e=>save(e.target.value)} rows={2} placeholder="Type one thing you learned…"
         style={{width:"100%",boxSizing:"border-box",fontFamily:ff2,fontSize:13,padding:"8px 10px",border:"1px solid var(--border)",borderRadius:8,resize:"vertical",color:"var(--text)"}}/>
-      {saved&&note.trim()&&<span style={{fontSize:11,color:"#16a34a",fontWeight:600}}><span className="lc-check" style={{marginRight:3}}>✓</span>Saved to this device</span>}
+      {saved&&note.trim()&&<span style={{fontSize:11,color:"#16a34a",fontWeight:600}}><span className="lc-check" style={{marginRight:3}}>✓</span>Saved{isRealStudent?" — your teacher can see this":" to this device"}</span>}
     </div>
   );
 }
@@ -4086,6 +4098,8 @@ function App(){
   const [isTeacher,setIsTeacher]=useState(false);
   const [loginError,setLoginError]=useState("");
   const [selectedUnit,setSelectedUnit]=useState(null);
+  const [reflections,setReflections]=useState({}); // teacher: `${studentId}_${outcomeId}` -> text
+  const [reflectionsOpen,setReflectionsOpen]=useState(null); // outcome id whose reflections panel is expanded
   const [activeOutcome,setActiveOutcome]=useState(null);
   const [qIdx,setQIdx]=useState(0);
   const [answers,setAnswers]=useState([]);
@@ -4864,6 +4878,19 @@ function App(){
     const classId=isTeacher?selectedClassId:(loginClassObj?.id||null);
     loadResources(unit.id,classId);
     loadUnitResources(unit);
+    if(isTeacher)loadReflections(unit.id);
+  }
+  async function loadReflections(unitId){
+    setReflectionsOpen(null);
+    const ids=students.map(s=>s.id);
+    if(!ids.length){setReflections({});return;}
+    try{
+      const {data,error}=await sb.from("solo_reflections").select("student_id,outcome_id,reflection").eq("unit_id",unitId).in("student_id",ids);
+      if(error){setReflections({});return;}
+      const map={};
+      (data||[]).forEach(r=>{ if(r.reflection&&r.reflection.trim()) map[`${r.student_id}_${r.outcome_id}`]=r.reflection; });
+      setReflections(map);
+    }catch(e){setReflections({});}
   }
   function startOutcome(o){setActiveOutcome(o);setQIdx(0);setAnswers([]);setAns(initAns(o.questions[0]));setResults(null);setView("assessment");}
   function handleNext(){
@@ -6902,6 +6929,27 @@ function App(){
                     )}
                   </div>
                 </div>
+                {/* Reflections (per outcome, across the class) */}
+                {(()=>{
+                  const refList=visibleStudents.map(s=>({name:s.name,text:reflections[`${s.id}_${o.id}`]})).filter(r=>r.text);
+                  if(!refList.length)return null;
+                  const open=reflectionsOpen===o.id;
+                  return(
+                    <div style={{paddingLeft:36,marginTop:7}}>
+                      <button onClick={()=>setReflectionsOpen(open?null:o.id)} style={{fontFamily:ff,fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:6,cursor:"pointer",background:open?"var(--indigo)":"#eef2ff",color:open?"#fff":"var(--indigo)",border:"1px solid var(--ind-200)"}}>💭 {refList.length} reflection{refList.length!==1?"s":""}{open?" ▲":" ▼"}</button>
+                      {open&&(
+                        <div style={{marginTop:8,display:"flex",flexDirection:"column",gap:6}}>
+                          {refList.map((r,i)=>(
+                            <div key={i} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:8,padding:"8px 11px"}}>
+                              <p style={{fontSize:11,fontWeight:700,color:"var(--indigo)",margin:"0 0 2px"}}>{r.name}</p>
+                              <p style={{fontSize:12.5,color:"#334155",margin:0,lineHeight:1.45,whiteSpace:"pre-wrap"}}>{r.text}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}
