@@ -2803,6 +2803,33 @@ var BEYOND = {
   },
 };
 
+// ─── Learn cards — guided lesson content (watch+note, step-reveal worked example) ─
+// Optional, keyed uNN_oid. Renders at the top of the Grow panel when present.
+// Degrades gracefully: outcomes without a LEARN entry render exactly as before.
+var LEARN = {
+  u26_r5:{
+    intro:"This is your lesson for trailing zeros and placing decimals on a number line. Work through each part with your maths book open, then press Know to practise.",
+    watch:{
+      count:2,
+      prompts:[
+        "Copy one number-line example from a video into your book, labelling 0, 0.5 and 1.",
+        "Write the rule in your own words: what happens to a decimal's value when you add a zero on the end (e.g. 0.5 → 0.50)?",
+        "Write your own pair of decimals that are equal, like 3.4 = 3.40.",
+      ],
+    },
+    workedExample:{
+      problem:"Where does 0.73 sit on a number line from 0 to 1?",
+      steps:[
+        "First find the two tenths it sits between: 0.73 is between 0.7 and 0.8.",
+        "Split the gap from 0.7 to 0.8 into 10 equal parts — each small part is one hundredth (0.01).",
+        "Count 3 parts past 0.7: 0.71, 0.72, 0.73 — so 0.73 is 3 hundredths past 0.7.",
+        "On the whole line from 0 to 1, that puts 0.73 past the middle (0.5) and just below three-quarters (0.75).",
+      ],
+    },
+    note:"what did you learn about trailing zeros or placing decimals on a number line?",
+  },
+};
+
   </script>
   <script type="text/babel" data-presets="react">
     const { useState, useRef, useEffect } = React;
@@ -3061,6 +3088,62 @@ function fmtTime(iso){
 
 // ─── ResourcesPanel ───────────────────────────────────────────────────────────
 const TYPE_ICON={video:"📹",website:"🌐",pdf:"📄",worksheet:"📄",game:"🎮",question:"❓",project:"🚀"};
+
+function LearnCard({learn,outcomeKey,studentId}){
+  const ff2="'Lexend',sans-serif";
+  const [revealed,setRevealed]=useState(0);
+  const noteKey="solo_note_"+(studentId||"anon")+"_"+outcomeKey;
+  const [note,setNote]=useState(function(){try{return localStorage.getItem(noteKey)||"";}catch(e){return "";}});
+  const [savedFlash,setSavedFlash]=useState(false);
+  function saveNote(v){setNote(v);try{localStorage.setItem(noteKey,v);}catch(e){}setSavedFlash(true);}
+  const we=learn.workedExample;
+  const cardBox={background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,padding:"12px 14px",marginBottom:10};
+  const hdr={fontSize:12,fontWeight:700,color:"var(--indigo)",margin:"0 0 8px"};
+  return(
+    <div style={{marginBottom:14}}>
+      {learn.intro&&(
+        <p style={{fontSize:12,color:"var(--sub)",margin:"0 0 12px",lineHeight:1.5}}>{learn.intro}</p>
+      )}
+      {learn.watch&&(
+        <div style={cardBox}>
+          <p style={hdr}>📹 Watch &amp; note in your book</p>
+          <p style={{fontSize:12,color:"var(--sub)",margin:"0 0 8px",lineHeight:1.5}}>Open the video{learn.watch.count>1?"s":""} below. As you watch, do these in your maths book:</p>
+          <ol style={{margin:0,paddingLeft:18,display:"flex",flexDirection:"column",gap:5}}>
+            {learn.watch.prompts.map((p,i)=>(
+              <li key={i} style={{fontSize:12,color:"var(--text)",lineHeight:1.5}}>{p}</li>
+            ))}
+          </ol>
+        </div>
+      )}
+      {we&&(
+        <div style={cardBox}>
+          <p style={hdr}>📝 Worked example — follow along in your book</p>
+          <p style={{fontSize:13,fontWeight:600,color:"var(--text)",margin:"0 0 10px"}}>{we.problem}</p>
+          <div style={{display:"flex",flexDirection:"column",gap:7}}>
+            {we.steps.slice(0,revealed).map((s,i)=>(
+              <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                <span style={{flexShrink:0,width:18,height:18,borderRadius:"50%",background:"var(--ind-50)",color:"var(--indigo)",fontSize:10,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",marginTop:1}}>{i+1}</span>
+                <span style={{fontSize:12,color:"var(--text)",lineHeight:1.5}}>{s}</span>
+              </div>
+            ))}
+          </div>
+          {revealed<we.steps.length
+            ?<button onClick={()=>setRevealed(r=>r+1)} style={{marginTop:revealed>0?10:0,fontFamily:ff2,fontSize:12,fontWeight:600,padding:"7px 14px",background:"var(--ind-50)",color:"var(--indigo)",border:"1px solid var(--ind-200)",borderRadius:8,cursor:"pointer"}}>{revealed===0?"Show me the first step":"Show next step"}</button>
+            :<p style={{margin:"10px 0 0",fontSize:12,fontWeight:600,color:"#16a34a"}}>✓ That's the full method — now press <strong>Know</strong> to practise.</p>}
+        </div>
+      )}
+      {learn.note&&(
+        <div style={{...cardBox,marginBottom:0}}>
+          <label style={{display:"block",fontSize:12,fontWeight:700,color:"var(--indigo)",margin:"0 0 6px"}}>✍️ Your turn — {learn.note}</label>
+          <textarea value={note} onChange={e=>saveNote(e.target.value)} rows={2}
+            placeholder="Type one thing you learned…"
+            style={{width:"100%",boxSizing:"border-box",fontFamily:ff2,fontSize:13,padding:"8px 10px",border:"1px solid var(--border)",borderRadius:8,resize:"vertical",color:"var(--text)"}}/>
+          {savedFlash&&note.trim()&&<span style={{fontSize:11,color:"#16a34a",fontWeight:600}}>Saved to this device ✓</span>}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function GrowQuiz({questions,outcomeId,quizState,setQuizState}){
   const ff2="'Lexend',sans-serif";
@@ -4746,6 +4829,9 @@ function App(){
                           </div>
                           {isExpanded&&hasResources&&(
                             <div style={{borderTop:"1px solid var(--border)",padding:"12px 14px",background:"var(--ind-50)"}}>
+                              {LEARN[resKey]&&(
+                                <LearnCard learn={LEARN[resKey]} outcomeKey={resKey} studentId={studentId}/>
+                              )}
                               {allLinks.length>0&&(
                                 <>
                                   <p style={{fontSize:11,fontWeight:700,color:"var(--sub)",margin:"0 0 8px",textTransform:"uppercase",letterSpacing:"0.05em"}}>Resources</p>
