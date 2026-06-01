@@ -2925,9 +2925,24 @@ var LEARN = {
       ],
     },
     tryIt:[
-      {question:"Write 6.3400 without any unnecessary trailing zeros.",answer:"6.34",explain:"Drop only the zeros on the very end — the 3 and the 4 must stay."},
-      {question:"True or false: 0.30 is bigger than 0.3?",answer:"False — they're equal.",explain:"The extra 0 is just a placeholder; it doesn't change the value."},
-      {question:"A ribbon is labelled 1.40 m. Write that length more simply.",answer:"1.4 m",explain:"The end zero adds nothing, so 1.40 m = 1.4 m."},
+      {question:"Write 6.3400 without any unnecessary trailing zeros.",answer:"6.34",explain:"Drop only the zeros on the very end — the 3 and the 4 must stay.",
+        hints:[
+          "Look at the zeros on the very end — do they actually add any value?",
+          "Cross zeros off from the right, but STOP as soon as you reach a digit that isn't zero.",
+          "6.3400 → cross off the last two zeros → 6.34. The 3 and the 4 have to stay.",
+        ]},
+      {question:"True or false: 0.30 is bigger than 0.3?",answer:"False — they're equal.",explain:"The extra 0 is just a placeholder; it doesn't change the value.",
+        hints:[
+          "Read both out loud: '30 hundredths' and '3 tenths'. Do they sound like the same amount?",
+          "A zero on the END of a decimal is just a placeholder — it doesn't make the number bigger.",
+          "0.30 = 0.3, so 0.30 is NOT bigger. They're equal, so the answer is False.",
+        ]},
+      {question:"A ribbon is labelled 1.40 m. Write that length more simply.",answer:"1.4 m",explain:"The end zero adds nothing, so 1.40 m = 1.4 m.",
+        hints:[
+          "Which zero in 1.40 is on the very end? Does it add anything?",
+          "Drop only the end zero — keep everything up to the last digit that isn't zero.",
+          "1.40 m → drop the end zero → 1.4 m.",
+        ]},
     ],
     reflect:{
       prompt:"In your book, finish this sentence in your own words: \"A zero on the end of a decimal doesn't change its value because…\"",
@@ -4069,6 +4084,7 @@ function App(){
   const [learnTryIdx,setLearnTryIdx]=useState(0);
   const [learnHookRevealed,setLearnHookRevealed]=useState(false);
   const [learnTryRevealed,setLearnTryRevealed]=useState(false);
+  const [learnHintIdx,setLearnHintIdx]=useState(0);
   const [practiceScore,setPracticeScore]=useState({correct:0,total:0});
   const [showDone,setShowDone]=useState(new Set()); // student: Set<"unitId_outcomeId">
   const [showTicks,setShowTicks]=useState(new Set()); // teacher: Set<"studentId::unitId::outcomeId">
@@ -4849,13 +4865,13 @@ function App(){
   function startLesson(unit,outcome){
     setLearnUnit(unit);setLearnOutcome(outcome);
     setLearnStage("hook");setLearnTryIdx(0);
-    setLearnHookRevealed(false);setLearnTryRevealed(false);
+    setLearnHookRevealed(false);setLearnTryRevealed(false);setLearnHintIdx(0);
     setExpandedResource(null);
     setView("learn");
   }
   function learnNextTry(){
     const t=(LEARN[`${learnUnit.id}_${learnOutcome.id}`]||{}).tryIt||[];
-    if(learnTryIdx<t.length-1){setLearnTryIdx(i=>i+1);setLearnTryRevealed(false);}
+    if(learnTryIdx<t.length-1){setLearnTryIdx(i=>i+1);setLearnTryRevealed(false);setLearnHintIdx(0);}
     else{setLearnStage("reflect");}
   }
   function startPractice(unit,outcome){
@@ -5586,25 +5602,34 @@ function App(){
               </div>
             )}
 
-            {learnStage==="try"&&tryQ&&(
+            {learnStage==="try"&&tryQ&&(()=>{
+              const hints=tryQ.hints||[];
+              const moreHints=learnHintIdx<hints.length;
+              return(
               <div>
-                <Coach mood="idle" reactKey={"try"+learnTryIdx}>
+                <Coach mood={learnTryRevealed?"happy":learnHintIdx>0?"think":"idle"} reactKey={"try"+learnTryIdx+"-"+learnHintIdx+"-"+learnTryRevealed}>
                   <p style={{fontSize:11,fontWeight:700,color:"var(--muted)",margin:"0 0 4px",textTransform:"uppercase",letterSpacing:"0.05em"}}>Try it in your book · {learnTryIdx+1} of {tryList.length}</p>
                   <p style={big}>{tryQ.question}</p>
-                  {!learnTryRevealed
-                    ?<p style={{...sub,marginTop:6}}>Work it out in your maths book, then check yourself.</p>
-                    :<div style={{marginTop:8}}><p style={{fontSize:14,fontWeight:700,color:"#16a34a",margin:"0 0 2px"}}>Answer: {tryQ.answer}</p><p style={sub}>{tryQ.explain}</p><p style={{...sub,marginTop:6,fontWeight:600}}>Tick it in your book if you got it.</p></div>}
+                  {!learnTryRevealed&&learnHintIdx===0&&<p style={{...sub,marginTop:6}}>Work it out in your maths book, then check yourself. Stuck? Ask me for a hint.</p>}
+                  {!learnTryRevealed&&hints.slice(0,learnHintIdx).map((hint,i)=>(
+                    <p key={i} style={{fontSize:13,color:"var(--text)",lineHeight:1.5,margin:"8px 0 0",paddingLeft:10,borderLeft:"2px solid var(--ind-200)"}}>💡 {hint}</p>
+                  ))}
+                  {learnTryRevealed&&<div style={{marginTop:8}}><p style={{fontSize:14,fontWeight:700,color:"#16a34a",margin:"0 0 2px"}}>Answer: {tryQ.answer}</p><p style={sub}>{tryQ.explain}</p><p style={{...sub,marginTop:6,fontWeight:600}}>Tick it in your book if you got it.</p></div>}
                 </Coach>
                 <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:16,flexWrap:"wrap"}}>
                   {!learnTryRevealed
-                    ?<button onClick={()=>setLearnTryRevealed(true)} style={primaryBtn}>Show the answer</button>
+                    ?<>
+                      {moreHints&&<button onClick={()=>setLearnHintIdx(i=>i+1)} style={ghostBtn}>{learnHintIdx===0?"I'm stuck — give me a hint 💭":"Still stuck — another hint"}</button>}
+                      <button onClick={()=>setLearnTryRevealed(true)} style={primaryBtn}>Show the answer</button>
+                    </>
                     :<>
                       <button onClick={learnNextTry} style={ghostBtn}>Not yet — that's ok</button>
                       <button onClick={learnNextTry} style={primaryBtn}>{learnTryIdx<tryList.length-1?"Got it — next →":"Got it →"}</button>
                     </>}
                 </div>
               </div>
-            )}
+              );
+            })()}
 
             {learnStage==="reflect"&&L.reflect&&(
               <div style={{display:"flex",flexDirection:"column",gap:14}}>
