@@ -4923,6 +4923,9 @@ function App(){
   const [reflectionsOpen,setReflectionsOpen]=useState(null); // outcome id whose reflections panel is expanded
   const [asmtReflections,setAsmtReflections]=useState({}); // teacher: `${studentId}_${outcomeId}` -> {answers,sc,st}
   const [asmtOpen,setAsmtOpen]=useState(null); // outcome id whose assessment-reflection panel is expanded
+  const [reflReactions,setReflReactions]=useState({}); // teacher view: `${studentId}_${outcomeId}` -> emoji (lesson)
+  const [asmtReactions,setAsmtReactions]=useState({}); // teacher view: `${studentId}_${outcomeId}` -> emoji (assessment)
+  const [myReactions,setMyReactions]=useState({}); // student view: `${unitId}_${outcomeId}` -> emoji (teacher's reaction to me)
   const [activeOutcome,setActiveOutcome]=useState(null);
   const [qIdx,setQIdx]=useState(0);
   const [answers,setAnswers]=useState([]);
@@ -5067,6 +5070,7 @@ function App(){
       setTimestamps({[student.id]:ts});
       setStudentId(student.id);
       { const _fn=(student.name||"").trim().split(/\s+/)[0]||""; setStudentName(_fn); COACH_NAME=_fn; }
+      loadMyReactions(student.id);
       setLoading(false);
       setView("home");
       try{sessionStorage.setItem('solo_session_v1',JSON.stringify({mode:'student',studentId:student.id,studentName:student.name,classId:loginClassObj.id,className:loginClassObj.name}));}catch{}
@@ -5424,7 +5428,7 @@ function App(){
     sb.auth.signOut();
     try{sessionStorage.removeItem('solo_session_v1');}catch{}
     try{if(studentId)localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}
-    setView("login");setStudentId(null);setStudentName("");COACH_NAME="";setIsTeacher(false);setLoginClassCode("");setLoginClassObj(null);setLoginStep("class");setLoginCode("");setLoginEmail("");setLoginPassword("");setLoginError("");setSelectedUnit(null);setTeacherFocus(null);setStudents([]);setClasses([]);setSelectedClassId(null);setProgress({});setTimestamps({});setTestSnapshots({});setHiddenStudents(new Set());setHiddenUnits(new Set());setManageGroupOpen(false);setReviewActive(null);setReviewMode(null);setReviewQList([]);setReviewIdx(0);setReviewAnswers([]);setReviewResults(null);setReviewResultsPanel(null);setLoginMode("student");
+    setView("login");setStudentId(null);setStudentName("");COACH_NAME="";setMyReactions({});setIsTeacher(false);setLoginClassCode("");setLoginClassObj(null);setLoginStep("class");setLoginCode("");setLoginEmail("");setLoginPassword("");setLoginError("");setSelectedUnit(null);setTeacherFocus(null);setStudents([]);setClasses([]);setSelectedClassId(null);setProgress({});setTimestamps({});setTestSnapshots({});setHiddenStudents(new Set());setHiddenUnits(new Set());setManageGroupOpen(false);setReviewActive(null);setReviewMode(null);setReviewQList([]);setReviewIdx(0);setReviewAnswers([]);setReviewResults(null);setReviewResultsPanel(null);setLoginMode("student");
     setExpandedResource(null);setPracticeOutcome(null);setPracticeUnit(null);setPracticePhase("example");setPracticeIdx(0);setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);setPracticeScore({correct:0,total:0});
     setTeacherEmail("");setSoloResources([]);setResourceTab("rubric");setResourceOutcome(null);setAddingResource(false);setAddingToGlobal(false);setNewResType("video");setNewResLabel("");setNewResUrl("");setNewResQ({text:"",options:[{text:"",correct:true},{text:"",correct:false},{text:"",correct:false},{text:"",correct:false}]});setQuizState({});setTeacherReviewOverrides({});
   }
@@ -5469,6 +5473,7 @@ function App(){
           setStudents([student]);setProgress(prog);setTimestamps({[student.id]:ts});
           setStudentId(student.id);setLoginClassObj({id:sess.classId,name:sess.className});setView("home");
           { const _fn=(student.name||"").trim().split(/\s+/)[0]||""; setStudentName(_fn); COACH_NAME=_fn; }
+      loadMyReactions(student.id);
         }
       }catch{}
     }
@@ -5722,6 +5727,38 @@ function App(){
       if(!asmtRes.error)(asmtRes.data||[]).forEach(r=>{ if(r.answers&&Object.keys(r.answers).length) amap[`${r.student_id}_${r.outcome_id}`]={answers:r.answers,sc:r.score_correct,st:r.score_total}; });
       setAsmtReflections(amap);
     }catch(e){setReflections({});setAsmtReflections({});}
+    // teacher reactions — best-effort; degrades to empty if the teacher_reaction column migration isn't run yet
+    try{
+      const [lr,ar]=await Promise.all([
+        sb.from("solo_reflections").select("student_id,outcome_id,teacher_reaction").eq("unit_id",unitId).in("student_id",ids),
+        sb.from("solo_assessment_reflections").select("student_id,outcome_id,teacher_reaction").eq("unit_id",unitId).in("student_id",ids)
+      ]);
+      const rr={},aa={};
+      if(!lr.error)(lr.data||[]).forEach(r=>{ if(r.teacher_reaction)rr[`${r.student_id}_${r.outcome_id}`]=r.teacher_reaction; });
+      if(!ar.error)(ar.data||[]).forEach(r=>{ if(r.teacher_reaction)aa[`${r.student_id}_${r.outcome_id}`]=r.teacher_reaction; });
+      setReflReactions(rr);setAsmtReactions(aa);
+    }catch(e){setReflReactions({});setAsmtReactions({});}
+  }
+  async function reactReflection(which,sid,oid,emoji){
+    const table=which==="asmt"?"solo_assessment_reflections":"solo_reflections";
+    const key=sid+"_"+oid;
+    const cur=(which==="asmt"?asmtReactions:reflReactions)[key];
+    const next=cur===emoji?null:emoji;
+    (which==="asmt"?setAsmtReactions:setReflReactions)(m=>({...m,[key]:next}));
+    try{await sb.from(table).update({teacher_reaction:next}).eq("student_id",sid).eq("unit_id",selectedUnit.id).eq("outcome_id",oid);}catch(e){}
+  }
+  // Student side: load the teacher's reactions to MY reflections, keyed `${unitId}_${outcomeId}`.
+  async function loadMyReactions(sid){
+    try{
+      const [lr,ar]=await Promise.all([
+        sb.from("solo_reflections").select("unit_id,outcome_id,teacher_reaction").eq("student_id",sid),
+        sb.from("solo_assessment_reflections").select("unit_id,outcome_id,teacher_reaction").eq("student_id",sid)
+      ]);
+      const m={};
+      if(!lr.error)(lr.data||[]).forEach(r=>{ if(r.teacher_reaction)m[`${r.unit_id}_${r.outcome_id}`]=r.teacher_reaction; });
+      if(!ar.error)(ar.data||[]).forEach(r=>{ if(r.teacher_reaction)m[`${r.unit_id}_${r.outcome_id}`]=r.teacher_reaction; });
+      setMyReactions(m);
+    }catch(e){}
   }
   function startOutcome(o){setActiveOutcome(o);setQIdx(0);setAnswers([]);setAns(initAns(o.questions[0]));setResults(null);setExitOpen(false);setView("assessment");}
   function handleNext(){
@@ -6407,6 +6444,7 @@ function App(){
                             <div style={{flex:1,minWidth:0}}>
                               <p style={{fontSize:13,fontWeight:600,margin:"0 0 1px",color:isRegressed?"#ea580c":isDone?"#16a34a":"var(--text)"}}>{o.short}</p>
                               <p style={{fontSize:11,color:"var(--muted)",margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{o.label}</p>
+                              {myReactions[resKey]&&<p style={{fontSize:11,fontWeight:700,color:"var(--indigo)",margin:"3px 0 0"}}>{myReactions[resKey]} Your teacher saw your reflection</p>}
                             </div>
                             <div style={{display:"flex",gap:6,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end"}}>
                               {!unitResourcesLoading&&hasResources&&(
@@ -7813,7 +7851,7 @@ function App(){
                 </div>
                 {/* Reflections (per outcome, across the class) */}
                 {(()=>{
-                  const refList=visibleStudents.map(s=>({name:s.name,text:reflections[`${s.id}_${o.id}`]})).filter(r=>r.text);
+                  const refList=visibleStudents.map(s=>({id:s.id,name:s.name,text:reflections[`${s.id}_${o.id}`]})).filter(r=>r.text);
                   if(!refList.length)return null;
                   const open=reflectionsOpen===o.id;
                   return(
@@ -7825,6 +7863,12 @@ function App(){
                             <div key={i} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:8,padding:"8px 11px"}}>
                               <p style={{fontSize:11,fontWeight:700,color:"var(--indigo)",margin:"0 0 2px"}}>{r.name}</p>
                               <p style={{fontSize:12.5,color:"#334155",margin:0,lineHeight:1.45,whiteSpace:"pre-wrap"}}>{r.text}</p>
+                              <div style={{display:"flex",gap:5,marginTop:6,alignItems:"center"}}>
+                                <span style={{fontSize:10,color:"var(--muted)",fontWeight:600,marginRight:2}}>React:</span>
+                                {["❤️","🌟","👍","💪"].map(em=>{const on=reflReactions[`${r.id}_${o.id}`]===em;return(
+                                  <button key={em} onClick={()=>reactReflection("lesson",r.id,o.id,em)} title="Send this reaction to the student"
+                                    style={{fontSize:14,lineHeight:1,padding:"3px 6px",borderRadius:6,cursor:"pointer",border:on?"1.5px solid var(--indigo)":"1px solid #e2e8f0",background:on?"#eef2ff":"#fff",opacity:on?1:0.6}}>{em}</button>);})}
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -7834,7 +7878,7 @@ function App(){
                 })()}
                 {/* Assessment reflections (after a Show, per outcome, across the class) */}
                 {(()=>{
-                  const aList=visibleStudents.map(s=>({name:s.name,a:asmtReflections[`${s.id}_${o.id}`]})).filter(r=>r.a);
+                  const aList=visibleStudents.map(s=>({id:s.id,name:s.name,a:asmtReflections[`${s.id}_${o.id}`]})).filter(r=>r.a);
                   if(!aList.length)return null;
                   const open=asmtOpen===o.id;
                   const LBL={didWell:"✅ Did well",trippedUp:"❓ Tripped up",nextStep:"➡️ Next step",trick:"⭐ What worked",stretch:"➡️ Wants to try"};
@@ -7849,6 +7893,12 @@ function App(){
                               {Object.keys(r.a.answers).map(k=>(
                                 <p key={k} style={{fontSize:12.5,color:"#334155",margin:"0 0 2px",lineHeight:1.4}}><span style={{fontWeight:700,color:"#0f766e"}}>{LBL[k]||k}:</span> {r.a.answers[k]}</p>
                               ))}
+                              <div style={{display:"flex",gap:5,marginTop:6,alignItems:"center"}}>
+                                <span style={{fontSize:10,color:"var(--muted)",fontWeight:600,marginRight:2}}>React:</span>
+                                {["❤️","🌟","👍","💪"].map(em=>{const on=asmtReactions[`${r.id}_${o.id}`]===em;return(
+                                  <button key={em} onClick={()=>reactReflection("asmt",r.id,o.id,em)} title="Send this reaction to the student"
+                                    style={{fontSize:14,lineHeight:1,padding:"3px 6px",borderRadius:6,cursor:"pointer",border:on?"1.5px solid #0d9488":"1px solid #e2e8f0",background:on?"#ccfbf1":"#fff",opacity:on?1:0.6}}>{em}</button>);})}
+                              </div>
                             </div>
                           ))}
                         </div>
