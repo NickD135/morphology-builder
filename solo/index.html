@@ -25,6 +25,19 @@
     body{background:var(--bg);font-family:'Lexend',sans-serif;color:var(--text)}
     #root{display:flex;flex-direction:column}
     @keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+    /* Learn card soul — gated for reduced-motion + low-stim below */
+    @keyframes lcCardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes lcStepIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes lcBadgePop{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.18)}100%{transform:scale(1);opacity:1}}
+    @keyframes lcCheckPop{0%{transform:scale(.4)}60%{transform:scale(1.28)}100%{transform:scale(1)}}
+    @keyframes lcHalo{0%{box-shadow:0 0 0 0 rgba(22,163,74,0)}30%{box-shadow:0 0 0 4px rgba(22,163,74,.3)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
+    .lc-card{animation:lcCardIn 440ms cubic-bezier(.4,0,.2,1) both}
+    .lc-step{animation:lcStepIn 300ms cubic-bezier(.4,0,.2,1) both}
+    .lc-badge{animation:lcBadgePop 380ms cubic-bezier(.34,1.56,.64,1) both}
+    .lc-check{display:inline-block;animation:lcCheckPop 440ms cubic-bezier(.34,1.56,.64,1) both}
+    .lc-done{animation:lcHalo 800ms ease-out 1}
+    @media (prefers-reduced-motion:reduce){.lc-card,.lc-step,.lc-badge,.lc-check,.lc-done{animation:none!important}}
+    body.low-stim .lc-card,body.low-stim .lc-step,body.low-stim .lc-badge,body.low-stim .lc-check,body.low-stim .lc-done{animation:none!important}
   </style>
 </head>
 <body>
@@ -3194,13 +3207,18 @@ function LearnCard({learn,outcomeKey,studentId}){
   const we=learn.workedExample;
   const cardBox={background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,padding:"12px 14px",marginBottom:10};
   const hdr={fontSize:12,fontWeight:700,color:"var(--indigo)",margin:"0 0 8px"};
+  const done=revealed>=we.steps.length;
   return(
     <div style={{marginBottom:14}}>
-      {learn.intro&&(
-        <p style={{fontSize:12,color:"var(--sub)",margin:"0 0 12px",lineHeight:1.5}}>{learn.intro}</p>
-      )}
+      <div className="lc-card" style={{display:"flex",alignItems:"center",gap:11,marginBottom:12,animationDelay:"0ms"}}>
+        <span style={{flexShrink:0,width:34,height:34,borderRadius:11,background:"linear-gradient(135deg,var(--indigo),var(--blue))",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,boxShadow:"0 3px 10px rgba(67,56,202,0.28)"}}>🔬</span>
+        <div style={{minWidth:0}}>
+          <p style={{fontSize:13,fontWeight:800,color:"var(--text)",margin:"0 0 1px",letterSpacing:"-0.01em"}}>Your lesson</p>
+          {learn.intro&&<p style={{fontSize:11.5,color:"var(--sub)",margin:0,lineHeight:1.45}}>{learn.intro}</p>}
+        </div>
+      </div>
       {learn.watch&&(
-        <div style={cardBox}>
+        <div className="lc-card" style={{...cardBox,animationDelay:"80ms"}}>
           <p style={hdr}>📹 Watch &amp; note in your book</p>
           <p style={{fontSize:12,color:"var(--sub)",margin:"0 0 8px",lineHeight:1.5}}>Open the video{learn.watch.count>1?"s":""} below. As you watch, do these in your maths book:</p>
           <ol style={{margin:0,paddingLeft:18,display:"flex",flexDirection:"column",gap:5}}>
@@ -3211,29 +3229,32 @@ function LearnCard({learn,outcomeKey,studentId}){
         </div>
       )}
       {we&&(
-        <div style={cardBox}>
-          <p style={hdr}>📝 Worked example — follow along in your book</p>
+        <div className={"lc-card"+(done?" lc-done":"")} style={{...cardBox,animationDelay:"160ms"}}>
+          <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",gap:8,marginBottom:8}}>
+            <p style={{...hdr,margin:0}}>📝 Worked example — follow along in your book</p>
+            {revealed>0&&<span style={{fontSize:11,color:"var(--muted)",fontWeight:600,flexShrink:0,whiteSpace:"nowrap"}}>Step {Math.min(revealed,we.steps.length)} of {we.steps.length}</span>}
+          </div>
           <p style={{fontSize:13,fontWeight:600,color:"var(--text)",margin:"0 0 10px"}}>{we.problem}</p>
           <div style={{display:"flex",flexDirection:"column",gap:7}}>
             {we.steps.slice(0,revealed).map((s,i)=>(
-              <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start"}}>
-                <span style={{flexShrink:0,width:18,height:18,borderRadius:"50%",background:"var(--ind-50)",color:"var(--indigo)",fontSize:10,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",marginTop:1}}>{i+1}</span>
+              <div key={i} className="lc-step" style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                <span className="lc-badge" style={{flexShrink:0,width:18,height:18,borderRadius:"50%",background:"var(--ind-50)",color:"var(--indigo)",fontSize:10,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",marginTop:1}}>{i+1}</span>
                 <span style={{fontSize:12,color:"var(--text)",lineHeight:1.5}}>{s}</span>
               </div>
             ))}
           </div>
-          {revealed<we.steps.length
+          {!done
             ?<button onClick={()=>setRevealed(r=>r+1)} style={{marginTop:revealed>0?10:0,fontFamily:ff2,fontSize:12,fontWeight:600,padding:"7px 14px",background:"var(--ind-50)",color:"var(--indigo)",border:"1px solid var(--ind-200)",borderRadius:8,cursor:"pointer"}}>{revealed===0?"Show me the first step":"Show next step"}</button>
-            :<p style={{margin:"10px 0 0",fontSize:12,fontWeight:600,color:"#16a34a"}}>✓ That's the full method — now press <strong>Know</strong> to practise.</p>}
+            :<p style={{margin:"10px 0 0",fontSize:12,fontWeight:600,color:"#16a34a"}}><span className="lc-check" style={{marginRight:3}}>✓</span>That's the full method — now press <strong>Know</strong> to practise.</p>}
         </div>
       )}
       {learn.note&&(
-        <div style={{...cardBox,marginBottom:0}}>
+        <div className="lc-card" style={{...cardBox,marginBottom:0,animationDelay:"240ms"}}>
           <label style={{display:"block",fontSize:12,fontWeight:700,color:"var(--indigo)",margin:"0 0 6px"}}>✍️ Your turn — {learn.note}</label>
           <textarea value={note} onChange={e=>saveNote(e.target.value)} rows={2}
             placeholder="Type one thing you learned…"
             style={{width:"100%",boxSizing:"border-box",fontFamily:ff2,fontSize:13,padding:"8px 10px",border:"1px solid var(--border)",borderRadius:8,resize:"vertical",color:"var(--text)"}}/>
-          {savedFlash&&note.trim()&&<span style={{fontSize:11,color:"#16a34a",fontWeight:600}}>Saved to this device ✓</span>}
+          {savedFlash&&note.trim()&&<span style={{fontSize:11,color:"#16a34a",fontWeight:600}}><span className="lc-check" style={{marginRight:3}}>✓</span>Saved to this device</span>}
         </div>
       )}
     </div>
