@@ -5073,6 +5073,116 @@ function App(){
     );
   }
 
+  // ── Guided lesson (Grow) ─────────────────────────────────────────────────
+  if(view==="learn"&&learnOutcome&&learnUnit){
+    const key=`${learnUnit.id}_${learnOutcome.id}`;
+    const L=LEARN[key]||{};
+    const stages=["hook","learn","try","reflect"];
+    const stageIdx=stages.indexOf(learnStage);
+    const tryList=L.tryIt||[];
+    const tryQ=tryList[learnTryIdx];
+    const res=(unitResources[key]||[]).length>0?unitResources[key]:(RESOURCES[key]||[]);
+    const big={fontSize:18,fontWeight:600,color:"var(--text)",lineHeight:1.5,margin:"0 0 4px"};
+    const sub={fontSize:13,color:"var(--sub)",lineHeight:1.55,margin:0};
+    const primaryBtn={fontFamily:ff,fontSize:14,fontWeight:700,padding:"11px 22px",border:"none",borderRadius:10,cursor:"pointer",background:"linear-gradient(135deg,var(--indigo),var(--blue))",color:"#fff",boxShadow:"0 3px 14px rgba(67,56,202,0.3)"};
+    const ghostBtn={fontFamily:ff,fontSize:13,fontWeight:600,padding:"10px 18px",borderRadius:10,cursor:"pointer",background:"var(--ind-50)",color:"var(--indigo)",border:"1px solid var(--ind-200)"};
+    return(
+      <div style={{display:"flex",flexDirection:"column",flex:1,fontFamily:ff}}>
+        <AppNav title="Lesson" right={<button onClick={()=>setView("rubric")} style={{fontFamily:ff,fontSize:12,padding:"6px 12px",background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:8,color:"rgba(255,255,255,0.8)",cursor:"pointer"}}>✕ Close</button>}/>
+        <div style={{flex:1,overflowY:"auto",padding:"18px"}}>
+          <div style={{maxWidth:560,margin:"0 auto"}}>
+            <div style={{marginBottom:18}}>
+              <p style={{fontSize:12,color:"var(--sub)",margin:"0 0 8px",fontWeight:600}}>{learnOutcome.short}{L.journey?` · part of your ${L.journey} journey`:""}</p>
+              <div style={{display:"flex",gap:6}}>
+                {stages.map((s,i)=><div key={s} style={{flex:1,height:5,borderRadius:99,background:i<=stageIdx?"linear-gradient(90deg,var(--indigo),var(--blue))":"var(--ind-100)",transition:"background 0.3s"}}/>)}
+              </div>
+            </div>
+
+            {learnStage==="hook"&&L.hook&&(
+              <div>
+                <Coach mood="think" reactKey="hook">
+                  <p style={{fontSize:12,fontWeight:700,color:"var(--indigo)",margin:"0 0 4px"}}>Before we start 🤔</p>
+                  <p style={big}>{L.hook.question}</p>
+                  {learnHookRevealed&&<p style={{...sub,marginTop:8}}>{L.hook.reveal}</p>}
+                </Coach>
+                <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:16,flexWrap:"wrap"}}>
+                  {!learnHookRevealed
+                    ?<button onClick={()=>setLearnHookRevealed(true)} style={primaryBtn}>{L.hook.revealLabel||"Show what's really going on"}</button>
+                    :<>
+                      <button onClick={()=>setLearnStage("learn")} style={ghostBtn}>It surprised me 😮</button>
+                      <button onClick={()=>setLearnStage("learn")} style={primaryBtn}>Got it — let's learn →</button>
+                    </>}
+                </div>
+              </div>
+            )}
+
+            {learnStage==="learn"&&(
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                <Coach mood="idle" reactKey="learn"><p style={{fontSize:13.5,fontWeight:600,margin:0,color:"var(--text)",lineHeight:1.5}}>Here's the idea. Watch, then follow the worked example with your book open.</p></Coach>
+                {L.watch&&(
+                  <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,padding:"12px 14px"}}>
+                    <p style={{fontSize:12,fontWeight:700,color:"var(--indigo)",margin:"0 0 8px"}}>📹 Watch &amp; note in your book</p>
+                    <ol style={{margin:0,paddingLeft:18,display:"flex",flexDirection:"column",gap:5}}>
+                      {L.watch.prompts.map((p,i)=><li key={i} style={{fontSize:12,color:"var(--text)",lineHeight:1.5}}>{p}</li>)}
+                    </ol>
+                    {res.length>0&&<div style={{display:"flex",flexDirection:"column",gap:6,marginTop:10}}>
+                      {res.map((r,i)=>(
+                        <a key={i} href={r.url} target="_blank" rel="noreferrer" style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:"var(--ind-50)",border:"1px solid var(--ind-200)",borderRadius:8,textDecoration:"none",color:"var(--text)"}}>
+                          <span style={{fontSize:16,flexShrink:0}}>{TYPE_ICON[r.type]||"🌐"}</span>
+                          <span style={{fontSize:12.5,fontWeight:600,flex:1}}>{r.label}</span><span style={{fontSize:11,color:"var(--muted)"}}>↗</span>
+                        </a>
+                      ))}
+                    </div>}
+                  </div>
+                )}
+                {L.workedExample&&<WorkedExample we={L.workedExample}/>}
+                <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
+                  <button onClick={()=>setLearnStage("hook")} style={ghostBtn}>← Back</button>
+                  <button onClick={()=>setLearnStage("try")} style={primaryBtn}>Try it yourself →</button>
+                </div>
+              </div>
+            )}
+
+            {learnStage==="try"&&tryQ&&(
+              <div>
+                <Coach mood="idle" reactKey={"try"+learnTryIdx}>
+                  <p style={{fontSize:11,fontWeight:700,color:"var(--muted)",margin:"0 0 4px",textTransform:"uppercase",letterSpacing:"0.05em"}}>Try it in your book · {learnTryIdx+1} of {tryList.length}</p>
+                  <p style={big}>{tryQ.question}</p>
+                  {!learnTryRevealed
+                    ?<p style={{...sub,marginTop:6}}>Work it out in your maths book, then check yourself.</p>
+                    :<div style={{marginTop:8}}><p style={{fontSize:14,fontWeight:700,color:"#16a34a",margin:"0 0 2px"}}>Answer: {tryQ.answer}</p><p style={sub}>{tryQ.explain}</p><p style={{...sub,marginTop:6,fontWeight:600}}>Tick it in your book if you got it.</p></div>}
+                </Coach>
+                <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:16,flexWrap:"wrap"}}>
+                  {!learnTryRevealed
+                    ?<button onClick={()=>setLearnTryRevealed(true)} style={primaryBtn}>Show the answer</button>
+                    :<>
+                      <button onClick={learnNextTry} style={ghostBtn}>Not yet — that's ok</button>
+                      <button onClick={learnNextTry} style={primaryBtn}>{learnTryIdx<tryList.length-1?"Got it — next →":"Got it →"}</button>
+                    </>}
+                </div>
+              </div>
+            )}
+
+            {learnStage==="reflect"&&L.reflect&&(
+              <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                <Coach mood="happy" reactKey="reflect">
+                  <p style={{fontSize:12,fontWeight:700,color:"var(--indigo)",margin:"0 0 4px"}}>One last thing ✍️</p>
+                  <p style={big}>{L.reflect.prompt}</p>
+                </Coach>
+                {L.reflect.note&&<div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,padding:"12px 14px"}}><NoteField outcomeKey={key} studentId={studentId} label={"Your turn — "+L.reflect.note}/></div>}
+                <Coach mood="happy" reactKey="reflect-close"><p style={{fontSize:13.5,fontWeight:600,margin:0,color:"var(--text)",lineHeight:1.5}}>Nice work — you've got {learnOutcome.short.toLowerCase()}. Ready to prove it?</p></Coach>
+                <div style={{display:"flex",justifyContent:"flex-end",gap:10,flexWrap:"wrap"}}>
+                  <button onClick={()=>setView("rubric")} style={ghostBtn}>Back to units</button>
+                  <button onClick={()=>startPractice(learnUnit,learnOutcome)} style={primaryBtn}>Go to Know practice →</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // ── Practice mode ────────────────────────────────────────────────────────
   if(view==="practice"){
     const pd=getPracticeData();
