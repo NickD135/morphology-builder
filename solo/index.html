@@ -4121,6 +4121,34 @@ function AssessmentReflect({studentId,classId,unitId,outcomeId,allCorrect,correc
     </div>
   );
 }
+function ExitDialog({open,onClose,icon,title,message,options}){
+  if(!open)return null;
+  const ff2="'Lexend',sans-serif";
+  const variant=v=>{
+    if(v==="danger")return{background:"linear-gradient(135deg,#dc2626,#b91c1c)",color:"#fff",border:"none"};
+    if(v==="primary")return{background:"var(--ind-50)",color:"var(--indigo)",border:"1.5px solid var(--ind-200)"};
+    if(v==="outlineDanger")return{background:"#fff0f0",color:"#dc2626",border:"1.5px solid #fca5a5"};
+    return{background:"#fff",color:"var(--text)",border:"1.5px solid var(--border)"};
+  };
+  return(
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.55)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:16,padding:"24px 28px",maxWidth:360,width:"100%",boxShadow:"0 20px 60px rgba(0,0,0,0.2)"}}>
+        <div style={{fontSize:28,marginBottom:12,textAlign:"center"}}>{icon||"🚪"}</div>
+        <h3 style={{margin:"0 0 6px",fontSize:18,fontWeight:800,color:"var(--text)",textAlign:"center"}}>{title}</h3>
+        {message&&<p style={{margin:"0 0 20px",fontSize:13,color:"var(--sub)",lineHeight:1.6,textAlign:"center"}}>{message}</p>}
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {options.map((o,i)=>(
+            <button key={i} onClick={o.onClick}
+              style={{fontFamily:ff2,fontSize:14,fontWeight:700,padding:"12px 0",borderRadius:9,cursor:"pointer",textAlign:"center",...variant(o.variant)}}>
+              {o.label}
+              {o.sub&&<div style={{fontSize:11,fontWeight:400,opacity:0.82,marginTop:2}}>{o.sub}</div>}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 function LearnCard({learn,outcomeKey,studentId}){
   const we=learn.workedExample;
   const cardBox={background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,padding:"12px 14px",marginBottom:10};
@@ -4440,6 +4468,7 @@ function App(){
   const [practiceOutcome,setPracticeOutcome]=useState(null);
   const [practiceUnit,setPracticeUnit]=useState(null);
   const [practicePhase,setPracticePhase]=useState("example");
+  const [exitOpen,setExitOpen]=useState(false); // shared Show/Grow/Know exit dialog
   const [practiceIdx,setPracticeIdx]=useState(0);
   const [practiceAns,setPracticeAns]=useState({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
   const [practiceSubmitted,setPracticeSubmitted]=useState(false);
@@ -5193,7 +5222,7 @@ function App(){
       setAsmtReflections(amap);
     }catch(e){setReflections({});setAsmtReflections({});}
   }
-  function startOutcome(o){setActiveOutcome(o);setQIdx(0);setAnswers([]);setAns(initAns(o.questions[0]));setResults(null);setView("assessment");}
+  function startOutcome(o){setActiveOutcome(o);setQIdx(0);setAnswers([]);setAns(initAns(o.questions[0]));setResults(null);setExitOpen(false);setView("assessment");}
   function handleNext(){
     const q=activeOutcome.questions[qIdx];
     let given;
@@ -5208,31 +5237,39 @@ function App(){
     const newAnswers=[...answers,{q,given,correct}];
     setAnswers(newAnswers);
     if(qIdx<activeOutcome.questions.length-1){setQIdx(qIdx+1);setAns(initAns(activeOutcome.questions[qIdx+1]));}
-    else{
-      const allCorrect=newAnswers.filter(a=>a.correct).length>=newAnswers.length-1;
-      setResults({allCorrect,results:newAnswers});
-      const key=`${selectedUnit.id}_${activeOutcome.id}`;
-      if(allCorrect&&studentId){
-        setProgress(p=>({...p,[studentId]:{...p[studentId],[key]:true}}));
-        saveOutcome(studentId,key,true);
-        const latestSnap=((testSnapshots[studentId]||{})[selectedUnit.id]||[]).slice(-1)[0]||null;
-        if(latestSnap&&latestSnap.by_outcome?.[activeOutcome.id]?.passed===false){
-          const mergedByOutcome={...latestSnap.by_outcome,[activeOutcome.id]:{...latestSnap.by_outcome[activeOutcome.id],passed:true}};
-          const newPassedCount=Object.values(mergedByOutcome).filter(o=>o.passed).length;
-          const newSnap={student_id:studentId,unit_id:selectedUnit.id,by_outcome:mergedByOutcome,passed_count:newPassedCount,total_count:Object.keys(mergedByOutcome).length};
-          sb.from("solo_test_snapshots").insert(newSnap);
-          setTestSnapshots(prev=>{
-            const existing=(prev[studentId]||{})[selectedUnit.id]||[];
-            return{...prev,[studentId]:{...(prev[studentId]||{}),[selectedUnit.id]:[...existing,{...newSnap,taken_at:new Date().toISOString()}]}};
-          });
-        }
-      }
-      if(studentId){
-        const record={ts:Date.now(),passed:allCorrect,correct:newAnswers.filter(a=>a.correct).length,total:newAnswers.length,
-          results:newAnswers.map(a=>({text:a.q.text,type:a.q.type,given:fmtGiven(a.given,a.q),correct:a.correct}))};
-        setAttempts(prev=>({...prev,[studentId]:{...(prev[studentId]||{}),[key]:[...((prev[studentId]||{})[key]||[]),record]}}));
+    else{finalizeAssessment(newAnswers);}
+  }
+  function finalizeAssessment(newAnswers){
+    const allCorrect=newAnswers.filter(a=>a.correct).length>=newAnswers.length-1;
+    setResults({allCorrect,results:newAnswers});
+    const key=`${selectedUnit.id}_${activeOutcome.id}`;
+    if(allCorrect&&studentId){
+      setProgress(p=>({...p,[studentId]:{...p[studentId],[key]:true}}));
+      saveOutcome(studentId,key,true);
+      const latestSnap=((testSnapshots[studentId]||{})[selectedUnit.id]||[]).slice(-1)[0]||null;
+      if(latestSnap&&latestSnap.by_outcome?.[activeOutcome.id]?.passed===false){
+        const mergedByOutcome={...latestSnap.by_outcome,[activeOutcome.id]:{...latestSnap.by_outcome[activeOutcome.id],passed:true}};
+        const newPassedCount=Object.values(mergedByOutcome).filter(o=>o.passed).length;
+        const newSnap={student_id:studentId,unit_id:selectedUnit.id,by_outcome:mergedByOutcome,passed_count:newPassedCount,total_count:Object.keys(mergedByOutcome).length};
+        sb.from("solo_test_snapshots").insert(newSnap);
+        setTestSnapshots(prev=>{
+          const existing=(prev[studentId]||{})[selectedUnit.id]||[];
+          return{...prev,[studentId]:{...(prev[studentId]||{}),[selectedUnit.id]:[...existing,{...newSnap,taken_at:new Date().toISOString()}]}};
+        });
       }
     }
+    if(studentId){
+      const record={ts:Date.now(),passed:allCorrect,correct:newAnswers.filter(a=>a.correct).length,total:newAnswers.length,
+        results:newAnswers.map(a=>({text:a.q.text,type:a.q.type,given:fmtGiven(a.given,a.q),correct:a.correct}))};
+      setAttempts(prev=>({...prev,[studentId]:{...(prev[studentId]||{}),[key]:[...((prev[studentId]||{})[key]||[]),record]}}));
+    }
+  }
+  // Finish the assessment from the exit dialog: score answered questions, mark the rest wrong.
+  function finishAssessmentNow(){
+    const o=activeOutcome;
+    const acc=[...answers];
+    for(let i=acc.length;i<o.questions.length;i++)acc.push({q:o.questions[i],given:null,correct:false});
+    finalizeAssessment(acc);
   }
   function canGo(){
     if(!activeOutcome)return false;
@@ -5252,12 +5289,22 @@ function App(){
     setLearnStage("hook");setLearnTryIdx(0);
     setLearnHookRevealed(false);setLearnTryRevealed(false);setLearnHintIdx(0);
     setExpandedResource(null);
+    setExitOpen(false);
     setView("learn");
   }
   function learnNextTry(){
     const t=(LEARN[`${learnUnit.id}_${learnOutcome.id}`]||{}).tryIt||[];
     if(learnTryIdx<t.length-1){setLearnTryIdx(i=>i+1);setLearnTryRevealed(false);setLearnHintIdx(0);}
     else{setLearnStage("reflect");}
+  }
+  function lessonDraftKey(){return (learnUnit&&learnOutcome)?`solo_note_${studentId}_${learnUnit.id}_${learnOutcome.id}`:null;}
+  function lessonHasDraft(){const k=lessonDraftKey();if(!k)return false;try{return !!(localStorage.getItem(k)||"").trim();}catch(e){return false;}}
+  function flushLessonReflection(){
+    const k=lessonDraftKey();if(!k)return;
+    let draft="";try{draft=localStorage.getItem(k)||"";}catch(e){}
+    if(!draft.trim())return;
+    const isReal=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(studentId||"");
+    if(isReal){try{sb.from("solo_reflections").upsert({student_id:studentId,unit_id:learnUnit.id,outcome_id:learnOutcome.id,reflection:draft,updated_at:new Date().toISOString()},{onConflict:"student_id,unit_id,outcome_id"}).then(function(){},function(){});}catch(e){}}
   }
   function startPractice(unit,outcome){
     setPracticeUnit(unit);setPracticeOutcome(outcome);
@@ -5267,6 +5314,7 @@ function App(){
     setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
     setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);
     setPracticeScore({correct:0,total:0});
+    setExitOpen(false);
     setView("practice");
   }
 
@@ -5932,7 +5980,15 @@ function App(){
     const ghostBtn={fontFamily:ff,fontSize:13,fontWeight:600,padding:"10px 18px",borderRadius:10,cursor:"pointer",background:"var(--ind-50)",color:"var(--indigo)",border:"1px solid var(--ind-200)"};
     return(
       <div style={{display:"flex",flexDirection:"column",flex:1,fontFamily:ff}}>
-        <AppNav title="Lesson" right={<button onClick={()=>setView("rubric")} style={{fontFamily:ff,fontSize:12,padding:"6px 12px",background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:8,color:"rgba(255,255,255,0.8)",cursor:"pointer"}}>✕ Close</button>}/>
+        <AppNav title="Lesson" right={<button onClick={()=>setExitOpen(true)} style={{fontFamily:ff,fontSize:12,padding:"6px 12px",background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:8,color:"rgba(255,255,255,0.8)",cursor:"pointer"}}>✕ Exit</button>}/>
+        <ExitDialog open={exitOpen} onClose={()=>setExitOpen(false)} icon="🚪" title="Leaving the lesson?" message={lessonHasDraft()?"You've written a reflection — send it to your teacher before you go?":"You can come back to this lesson any time."} options={lessonHasDraft()?[
+          {variant:"primary",label:"Send reflection & leave",sub:"Save your reflection for your teacher",onClick:()=>{setExitOpen(false);flushLessonReflection();setView("rubric");}},
+          {variant:"outlineDanger",label:"Leave without sending",sub:"Your reflection won't be sent",onClick:()=>{setExitOpen(false);setView("rubric");}},
+          {variant:"ghost",label:"Keep going",onClick:()=>setExitOpen(false)}
+        ]:[
+          {variant:"primary",label:"Leave the lesson",sub:"Head back to the unit",onClick:()=>{setExitOpen(false);setView("rubric");}},
+          {variant:"ghost",label:"Keep going",onClick:()=>setExitOpen(false)}
+        ]}/>
         <div style={{flex:1,overflowY:"auto",padding:"18px"}}>
           <div style={{maxWidth:560,margin:"0 auto"}}>
             <div style={{marginBottom:18}}>
@@ -6117,9 +6173,14 @@ function App(){
           right={<span style={{fontSize:12,color:"rgba(255,255,255,0.6)",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{outcomeShortName}</span>}
         />
         <div style={{flex:1,display:"flex",flexDirection:"column",padding:"18px 18px 24px",minHeight:0}}>
+          <ExitDialog open={exitOpen} onClose={()=>setExitOpen(false)} icon="🚪" title="Leave practice?" message="Practice isn't graded — nothing is lost." options={[
+            ...(practiceHasLesson?[]:[{variant:"primary",label:"← Back to the example",sub:"Re-read the worked example",onClick:()=>{setExitOpen(false);setPracticePhase("example");}}]),
+            {variant:practiceHasLesson?"primary":"outlineDanger",label:"Leave practice",sub:"Head back to the unit",onClick:()=>{setExitOpen(false);setView("rubric");}},
+            {variant:"ghost",label:"Keep going",onClick:()=>setExitOpen(false)}
+          ]}/>
           {/* topbar: back + progress bar + counter */}
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexShrink:0}}>
-            <button onClick={()=>practiceHasLesson?setView("rubric"):setPracticePhase("example")} style={Sb()}>{practiceHasLesson?"← Back":"← Example"}</button>
+            <button onClick={()=>setExitOpen(true)} style={Sb()}>✕ Exit</button>
             <div style={{flex:1,background:"var(--ind-100)",borderRadius:99,height:6,overflow:"hidden"}}>
               <div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,var(--indigo),var(--blue))",borderRadius:99,transition:"width 0.3s"}}/>
             </div>
@@ -6769,9 +6830,14 @@ function App(){
       <div style={{display:"flex",flexDirection:"column",flex:1,fontFamily:ff}}>
         <AppNav title={o.short}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",padding:"18px 18px 24px",minHeight:0}}>
+          <ExitDialog open={exitOpen} onClose={()=>setExitOpen(false)} icon="🚪" title="Leaving the assessment?" message="Choose what to do with this attempt." options={[
+            {variant:"danger",label:"Finish & record now",sub:"Score it now — unanswered questions count as wrong",onClick:()=>{setExitOpen(false);finishAssessmentNow();}},
+            {variant:"outlineDanger",label:"Discard this attempt",sub:"Leave without recording anything",onClick:()=>{setExitOpen(false);setView("rubric");}},
+            {variant:"ghost",label:"Never mind, keep going",onClick:()=>setExitOpen(false)}
+          ]}/>
           {/* topbar */}
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexShrink:0}}>
-            <button onClick={()=>setView("rubric")} style={Sb()}>← Back</button>
+            <button onClick={()=>setExitOpen(true)} style={Sb()}>✕ Exit</button>
             <div style={{flex:1,background:"var(--ind-100)",borderRadius:99,height:6,overflow:"hidden"}}>
               <div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,var(--indigo),var(--blue))",borderRadius:99,transition:"width 0.3s"}}/>
             </div>
