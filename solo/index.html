@@ -4860,7 +4860,9 @@ function App(){
   }
   function startPractice(unit,outcome){
     setPracticeUnit(unit);setPracticeOutcome(outcome);
-    setPracticePhase("example");setPracticeIdx(0);
+    // Skip the worked-example phase when the outcome has a Grow lesson (they've seen it there)
+    const hasLesson=!!(LEARN[`${unit.id}_${outcome.id}`]||{}).hook;
+    setPracticePhase(hasLesson?"questions":"example");setPracticeIdx(0);
     setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
     setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);
     setPracticeScore({correct:0,total:0});
@@ -5645,7 +5647,7 @@ function App(){
             </Coach>
           </div>
           <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
-            <button onClick={()=>{setPracticePhase("example");setPracticeIdx(0);setPracticeScore({correct:0,total:0});setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});}}
+            <button onClick={()=>{setPracticePhase(((LEARN[`${practiceUnit?.id}_${practiceOutcome?.id}`]||{}).hook)?"questions":"example");setPracticeIdx(0);setPracticeScore({correct:0,total:0});setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});}}
               style={Sb({fontWeight:600})}>Try again</button>
             <button onClick={()=>setView("rubric")} style={Sb({background:uc.dark,color:"#fff",border:"none",fontWeight:600})}>Back to rubric</button>
           </div>
@@ -5697,6 +5699,7 @@ function App(){
     const pool=q.type==="order"?q.items.filter(item=>!practiceAns.orderSeq.includes(item)):[];
     const showAnswer=practiceSubmitted&&!practiceCorrect&&practiceAttempts>=2;
     const outcomeShortName=practiceOutcome?.short||"Practice";
+    const practiceHasLesson=!!(LEARN[`${practiceUnit?.id}_${practiceOutcome?.id}`]||{}).hook;
 
     return(
       <div style={{display:"flex",flexDirection:"column",flex:1,fontFamily:ff}}>
@@ -5706,7 +5709,7 @@ function App(){
         <div style={{flex:1,display:"flex",flexDirection:"column",padding:"18px 18px 24px",minHeight:0}}>
           {/* topbar: back + progress bar + counter */}
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexShrink:0}}>
-            <button onClick={()=>setPracticePhase("example")} style={Sb()}>← Example</button>
+            <button onClick={()=>practiceHasLesson?setView("rubric"):setPracticePhase("example")} style={Sb()}>{practiceHasLesson?"← Back":"← Example"}</button>
             <div style={{flex:1,background:"var(--ind-100)",borderRadius:99,height:6,overflow:"hidden"}}>
               <div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,var(--indigo),var(--blue))",borderRadius:99,transition:"width 0.3s"}}/>
             </div>
