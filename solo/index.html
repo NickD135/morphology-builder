@@ -4360,11 +4360,32 @@ function Coach({mood="idle",reactKey,children}){
     </div>
   );
 }
-// Teacher voice — deterministic pick by question index so it stays stable per question.
-var COACH_PRAISE=["Nice work — that's spot on!","Yes! You've got it.","Exactly right. Well done!","Brilliant — that's correct!","Spot on. Keep it up!"];
-var COACH_RETRY=["Hmm, not quite — take another look.","Close! Have another go.","Not yet — think it through once more.","Almost there. Try again."];
-var COACH_REVEAL=["No worries — let's learn from this one.","That's a tricky one — here's how it works.","Good effort. Let's see it together."];
-function coachLine(arr,i){return arr[((i%arr.length)+arr.length)%arr.length];}
+// Coach voice — deterministic pick by question index so it stays stable per question.
+// Lines may include {name}; it's filled with the student's first name, or removed if unknown.
+var COACH_NAME="";
+var COACH_PRAISE=["Nice work, {name} — that's spot on!","Yes! You've got it.","Exactly right. Well done, {name}!","Brilliant — that's correct!","Spot on, {name}. Keep it up!","Nailed it, {name}!","Love it — that's exactly right.","Too easy for you, {name}!","Yes! That's the one.","Great thinking — correct!"];
+var COACH_RETRY=["Hmm, not quite — take another look.","Close, {name}! Have another go.","Not yet — think it through once more.","Almost there. Try again.","So close! One more look.","Good attempt — let's try that again."];
+var COACH_REVEAL=["No worries, {name} — let's learn from this one.","That's a tricky one — here's how it works.","Good effort. Let's see it together.","These ones are sneaky — here's the trick."];
+function coachFmt(s){const n=COACH_NAME;return n?s.replace(/\{name\}/g,n):s.replace(/,?\s*\{name\}/g,"");}
+function coachLine(arr,i){return coachFmt(arr[((i%arr.length)+arr.length)%arr.length]);}
+// Read-aloud (browser speech synthesis — vanilla, no dependency). Prefers an Australian voice.
+function ttsSpeak(text){
+  try{
+    if(typeof window==="undefined"||!("speechSynthesis"in window))return;
+    window.speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(String(text).replace(/\s+/g," ").trim());
+    const vs=window.speechSynthesis.getVoices()||[];
+    const v=vs.find(x=>/en-AU/i.test(x.lang))||vs.find(x=>/en-GB/i.test(x.lang))||vs.find(x=>/^en/i.test(x.lang));
+    if(v)u.voice=v; u.rate=0.95; u.pitch=1.02;
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+function SpeakBtn({text,label="Read this aloud"}){
+  return(
+    <button type="button" onClick={()=>ttsSpeak(text)} aria-label={label} title={label}
+      style={{flexShrink:0,width:30,height:30,borderRadius:8,border:"1px solid var(--ind-200)",background:"var(--ind-50)",color:"var(--indigo)",cursor:"pointer",fontSize:14,lineHeight:1,display:"inline-flex",alignItems:"center",justifyContent:"center"}}>🔊</button>
+  );
+}
 
 function WorkedExample({we,title="📝 Worked example — follow along in your book"}){
   const ff2="'Lexend',sans-serif";
@@ -4376,7 +4397,7 @@ function WorkedExample({we,title="📝 Worked example — follow along in your b
         <p style={{fontSize:12,fontWeight:700,color:"var(--indigo)",margin:0}}>{title}</p>
         {revealed>0&&<span style={{fontSize:11,color:"var(--muted)",fontWeight:600,flexShrink:0,whiteSpace:"nowrap"}}>Step {Math.min(revealed,we.steps.length)} of {we.steps.length}</span>}
       </div>
-      <p style={{fontSize:13,fontWeight:600,color:"var(--text)",margin:"0 0 10px"}}>{we.problem}</p>
+      <div style={{display:"flex",gap:8,alignItems:"flex-start",margin:"0 0 10px"}}><p style={{fontSize:13,fontWeight:600,color:"var(--text)",margin:0,flex:1}}>{we.problem}</p><SpeakBtn text={we.problem+". "+we.steps.slice(0,revealed).join(". ")}/></div>
       <div style={{display:"flex",flexDirection:"column",gap:7}}>
         {we.steps.slice(0,revealed).map((s,i)=>(
           <div key={i} className="lc-step" style={{display:"flex",gap:8,alignItems:"flex-start"}}>
@@ -4790,6 +4811,7 @@ function AppNav({title,right=null}){
 // ─── App ──────────────────────────────────────────────────────────────────────
 function App(){
   const [progress,setProgress]=useState({});
+  const [studentName,setStudentName]=useState("");
   const [students,setStudents]=useState([]);
   const [classes,setClasses]=useState([]);
   const [selectedClassId,setSelectedClassId]=useState(null);
@@ -4954,6 +4976,7 @@ function App(){
       setProgress(prog);
       setTimestamps({[student.id]:ts});
       setStudentId(student.id);
+      { const _fn=(student.name||"").trim().split(/\s+/)[0]||""; setStudentName(_fn); COACH_NAME=_fn; }
       setLoading(false);
       setView("home");
       try{sessionStorage.setItem('solo_session_v1',JSON.stringify({mode:'student',studentId:student.id,studentName:student.name,classId:loginClassObj.id,className:loginClassObj.name}));}catch{}
@@ -5311,7 +5334,7 @@ function App(){
     sb.auth.signOut();
     try{sessionStorage.removeItem('solo_session_v1');}catch{}
     try{if(studentId)localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}
-    setView("login");setStudentId(null);setIsTeacher(false);setLoginClassCode("");setLoginClassObj(null);setLoginStep("class");setLoginCode("");setLoginEmail("");setLoginPassword("");setLoginError("");setSelectedUnit(null);setTeacherFocus(null);setStudents([]);setClasses([]);setSelectedClassId(null);setProgress({});setTimestamps({});setTestSnapshots({});setHiddenStudents(new Set());setHiddenUnits(new Set());setManageGroupOpen(false);setReviewActive(null);setReviewMode(null);setReviewQList([]);setReviewIdx(0);setReviewAnswers([]);setReviewResults(null);setReviewResultsPanel(null);setLoginMode("student");
+    setView("login");setStudentId(null);setStudentName("");COACH_NAME="";setIsTeacher(false);setLoginClassCode("");setLoginClassObj(null);setLoginStep("class");setLoginCode("");setLoginEmail("");setLoginPassword("");setLoginError("");setSelectedUnit(null);setTeacherFocus(null);setStudents([]);setClasses([]);setSelectedClassId(null);setProgress({});setTimestamps({});setTestSnapshots({});setHiddenStudents(new Set());setHiddenUnits(new Set());setManageGroupOpen(false);setReviewActive(null);setReviewMode(null);setReviewQList([]);setReviewIdx(0);setReviewAnswers([]);setReviewResults(null);setReviewResultsPanel(null);setLoginMode("student");
     setExpandedResource(null);setPracticeOutcome(null);setPracticeUnit(null);setPracticePhase("example");setPracticeIdx(0);setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);setPracticeScore({correct:0,total:0});
     setTeacherEmail("");setSoloResources([]);setResourceTab("rubric");setResourceOutcome(null);setAddingResource(false);setAddingToGlobal(false);setNewResType("video");setNewResLabel("");setNewResUrl("");setNewResQ({text:"",options:[{text:"",correct:true},{text:"",correct:false},{text:"",correct:false},{text:"",correct:false}]});setQuizState({});setTeacherReviewOverrides({});
   }
@@ -5355,6 +5378,7 @@ function App(){
           setTestSnapshots({[student.id]:snaps});
           setStudents([student]);setProgress(prog);setTimestamps({[student.id]:ts});
           setStudentId(student.id);setLoginClassObj({id:sess.classId,name:sess.className});setView("home");
+          { const _fn=(student.name||"").trim().split(/\s+/)[0]||""; setStudentName(_fn); COACH_NAME=_fn; }
         }
       }catch{}
     }
@@ -6383,13 +6407,20 @@ function App(){
               <div style={{display:"flex",gap:6}}>
                 {stages.map((s,i)=><div key={s} style={{flex:1,height:5,borderRadius:99,background:i<=stageIdx?"linear-gradient(90deg,var(--indigo),var(--blue))":"var(--ind-100)",transition:"background 0.3s"}}/>)}
               </div>
+              {L.journey&&(()=>{
+                const prog=progress[studentId]||{};
+                const jo=learnUnit.outcomes.filter(o=>((LEARN[`${learnUnit.id}_${o.id}`]||{}).journey)===L.journey);
+                const jd=jo.filter(o=>prog[`${learnUnit.id}_${o.id}`]).length;
+                if(jo.length<2)return null;
+                return <p style={{fontSize:11,color:"var(--muted)",margin:"7px 0 0",fontWeight:600}}>⭐ You've proven {jd} of {jo.length} in your {L.journey} journey</p>;
+              })()}
             </div>
 
             {learnStage==="hook"&&L.hook&&(
               <div>
                 <Coach mood="think" reactKey="hook">
                   <p style={{fontSize:12,fontWeight:700,color:"var(--indigo)",margin:"0 0 4px"}}>Before we start 🤔</p>
-                  <p style={big}>{L.hook.question}</p>
+                  <div style={{display:"flex",gap:8,alignItems:"flex-start"}}><p style={{...big,flex:1}}>{L.hook.question}</p><SpeakBtn text={L.hook.question}/></div>
                   {learnHookRevealed&&<p style={{...sub,marginTop:8}}>{L.hook.reveal}</p>}
                 </Coach>
                 <div style={{display:"flex",justifyContent:"flex-end",gap:10,marginTop:16,flexWrap:"wrap"}}>
@@ -6437,7 +6468,7 @@ function App(){
               <div>
                 <Coach mood={learnTryRevealed?"happy":learnHintIdx>0?"think":"idle"} reactKey={"try"+learnTryIdx+"-"+learnHintIdx+"-"+learnTryRevealed}>
                   <p style={{fontSize:11,fontWeight:700,color:"var(--muted)",margin:"0 0 4px",textTransform:"uppercase",letterSpacing:"0.05em"}}>Try it in your book · {learnTryIdx+1} of {tryList.length}</p>
-                  <p style={big}>{tryQ.question}</p>
+                  <div style={{display:"flex",gap:8,alignItems:"flex-start"}}><p style={{...big,flex:1}}>{tryQ.question}</p><SpeakBtn text={tryQ.question}/></div>
                   {!learnTryRevealed&&learnHintIdx===0&&<p style={{...sub,marginTop:6}}>Work it out in your maths book, then check yourself. Stuck? Ask me for a hint.</p>}
                   {!learnTryRevealed&&hints.slice(0,learnHintIdx).map((hint,i)=>(
                     <p key={i} style={{fontSize:13,color:"var(--text)",lineHeight:1.5,margin:"8px 0 0",paddingLeft:10,borderLeft:"2px solid var(--ind-200)"}}>💡 {hint}</p>
@@ -6466,7 +6497,7 @@ function App(){
                   <p style={big}>{L.reflect.prompt}</p>
                 </Coach>
                 {L.reflect.note&&<div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,padding:"12px 14px"}}><NoteField outcomeKey={key} studentId={studentId} label={"Your turn — "+L.reflect.note}/></div>}
-                <Coach mood="happy" reactKey="reflect-close"><p style={{fontSize:13.5,fontWeight:600,margin:0,color:"var(--text)",lineHeight:1.5}}>Nice work — you've got {learnOutcome.short.toLowerCase()}. Ready to prove it?</p></Coach>
+                <Coach mood="happy" reactKey="reflect-close"><p style={{fontSize:13.5,fontWeight:600,margin:0,color:"var(--text)",lineHeight:1.5}}>Nice work{studentName?", "+studentName:""} — you've got {learnOutcome.short.toLowerCase()}. Ready to prove it?</p></Coach>
                 <div style={{display:"flex",justifyContent:"flex-end",gap:10,flexWrap:"wrap"}}>
                   <button onClick={()=>setView("rubric")} style={ghostBtn}>Back to units</button>
                   <button onClick={()=>startPractice(learnUnit,learnOutcome)} style={primaryBtn}>Go to Know practice →</button>
@@ -7182,8 +7213,14 @@ function App(){
                 <div style={{width:60,height:60,background:allCorrect?"#dcfce7":"var(--ind-50)",border:`1px solid ${allCorrect?"#86efac":"var(--ind-200)"}`,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px",fontSize:24,boxShadow:allCorrect?"0 0 0 6px rgba(134,239,172,0.2)":"0 0 0 6px rgba(99,102,241,0.08)"}}>
                   {allCorrect?"⭐":"📋"}
                 </div>
-                <h2 style={{fontSize:20,fontWeight:800,margin:"0 0 4px",color:"var(--text)",letterSpacing:"-0.01em"}}>{allCorrect?"All correct!":correct+" / "+total+" correct"}</h2>
+                <h2 style={{fontSize:20,fontWeight:800,margin:"0 0 4px",color:"var(--text)",letterSpacing:"-0.01em"}}>{allCorrect?(studentName?"Brilliant, "+studentName+"!":"All correct!"):correct+" / "+total+" correct"}</h2>
                 <p style={{fontSize:13,color:"var(--sub)",margin:0}}>{o.short}</p>
+                {allCorrect&&(()=>{
+                  const prog=progress[studentId]||{};
+                  const done=selectedUnit.outcomes.filter(oo=>prog[`${selectedUnit.id}_${oo.id}`]).length;
+                  const tot=selectedUnit.outcomes.length;
+                  return <p style={{fontSize:13,fontWeight:700,color:"#16a34a",margin:"8px 0 0"}}>🎉 You've now proven {done} of {tot} in {selectedUnit.subtitle}!</p>;
+                })()}
               </div>
               <div style={{display:"flex",flexDirection:"column",marginBottom:"1.25rem"}}>
                 {results.results.map((r,i)=>(
