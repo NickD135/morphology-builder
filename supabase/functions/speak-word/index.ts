@@ -24,8 +24,9 @@ function corsHeaders(req: Request) {
 
 // Google Cloud TTS language codes (BCP-47) and preferred voice names
 const VOICE_MAP: Record<string, { lang: string; voice?: string; gender: string }> = {
-  // English
-  'en':     { lang: 'en-AU',  voice: 'en-AU-Neural2-A', gender: 'FEMALE' },
+  // English — Chirp 3: HD (Google's most natural tier), Australian female voice "Aoede".
+  // Swap the name to en-AU-Chirp3-HD-Kore / -Leda / -Zephyr for a different female voice.
+  'en':     { lang: 'en-AU',  voice: 'en-AU-Chirp3-HD-Aoede', gender: 'FEMALE' },
   // High-priority Australian school languages
   'ar':     { lang: 'ar-XA',  voice: 'ar-XA-Neural2-A', gender: 'FEMALE' },
   'zh':     { lang: 'cmn-CN', voice: 'cmn-CN-Neural2-A', gender: 'FEMALE' },
@@ -142,8 +143,13 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Unauthorized — provide teacher auth or valid student_id + class_id' }, 401);
   }
 
-  // Build a cache key from text + language
-  const cacheKey = `tts/${language}/${text.toLowerCase().trim().replace(/[^a-z0-9\u0080-\uffff]+/g, '_')}.mp3`;
+  // Resolve the voice up front so it can be part of the cache key (changing the voice
+  // produces fresh cache entries instead of serving previously-cached audio for old voices).
+  const voiceConfig = VOICE_MAP[language] || VOICE_MAP['en'];
+  const voiceTag = (voiceConfig.voice || voiceConfig.gender).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+  // Build a cache key from voice + language + text
+  const cacheKey = `tts/${language}/${voiceTag}/${text.toLowerCase().trim().replace(/[^a-z0-9\u0080-\uffff]+/g, '_')}.mp3`;
 
   // Try to get existing cached audio URL
   const { data: existingFile } = await adminSb.storage.from('tts-cache').createSignedUrl(cacheKey, 3600);
@@ -151,32 +157,36 @@ Deno.serve(async (req: Request) => {
     return json({ audioUrl: existingFile.signedUrl, cached: true });
   }
 
-  // Not cached — call Google Cloud TTS
-  const voiceConfig = VOICE_MAP[language] || VOICE_MAP['en'];
-
-  const ttsBody: Record<string, unknown> = {
+  // Not cached — call Google Cloud TTS. (voiceConfig resolved above for the cache key.)
+  const isChirp = (vc: { voice?: string }) => /chirp/i.test(vc.voice || '');
+  const buildBody = (vc: { lang: string; voice?: string; gender: string }) => ({
     input: { text },
     voice: {
-      languageCode: voiceConfig.lang,
-      ssmlGender: voiceConfig.gender,
-      ...(voiceConfig.voice ? { name: voiceConfig.voice } : {}),
+      languageCode: vc.lang,
+      // Chirp 3: HD picks gender from the named voice; sending ssmlGender alongside can conflict.
+      ...(isChirp(vc) ? {} : { ssmlGender: vc.gender }),
+      ...(vc.voice ? { name: vc.voice } : {}),
     },
-    audioConfig: {
-      audioEncoding: 'MP3',
-      speakingRate: 0.9,
-      pitch: 0,
-    },
-  };
+    // Chirp 3: HD does not support the pitch parameter (or SSML); it does support speakingRate.
+    audioConfig: isChirp(vc)
+      ? { audioEncoding: 'MP3', speakingRate: 0.9 }
+      : { audioEncoding: 'MP3', speakingRate: 0.9, pitch: 0 },
+  });
+  const callTts = (vc: { lang: string; voice?: string; gender: string }) => fetch(
+    `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(buildBody(vc)) },
+  );
 
   try {
-    const ttsResp = await fetch(
-      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(ttsBody),
-      },
-    );
+    let ttsResp = await callTts(voiceConfig);
+
+    // Safety net: if a Chirp voice fails (e.g. name unavailable in this project/region),
+    // retry once with the standard neural voice so English TTS never silently breaks.
+    if (!ttsResp.ok && isChirp(voiceConfig)) {
+      const errText = await ttsResp.text().catch(() => '');
+      console.error('Chirp voice failed, falling back to Neural2:', ttsResp.status, errText);
+      ttsResp = await callTts({ lang: 'en-AU', voice: 'en-AU-Neural2-A', gender: 'FEMALE' });
+    }
 
     if (!ttsResp.ok) {
       const errText = await ttsResp.text().catch(() => '');
