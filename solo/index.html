@@ -4008,47 +4008,51 @@ function NoteField({outcomeKey,studentId,label}){
   const ff2="'Lexend',sans-serif";
   const noteKey="solo_note_"+(studentId||"anon")+"_"+outcomeKey;
   const [note,setNote]=useState(function(){try{return localStorage.getItem(noteKey)||"";}catch(e){return "";}});
-  const [sent,setSent]=useState(false);
+  const [status,setStatus]=useState("idle"); // idle | sending | sent | error
   const timer=useRef(null);
   const isRealStudent=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(studentId||"");
-  function pushToTeacher(v){
-    if(!isRealStudent||!v.trim())return;
+  async function pushToTeacher(v){
+    if(!isRealStudent||!v.trim())return true;
     const us=outcomeKey.indexOf("_");
     const unit_id=outcomeKey.slice(0,us), outcome_id=outcomeKey.slice(us+1);
-    try{sb.from("solo_reflections").upsert({student_id:studentId,unit_id:unit_id,outcome_id:outcome_id,reflection:v,updated_at:new Date().toISOString()},{onConflict:"student_id,unit_id,outcome_id"}).then(function(){},function(){});}catch(e){}
+    try{const {error}=await sb.from("solo_reflections").upsert({student_id:studentId,unit_id:unit_id,outcome_id:outcome_id,reflection:v,updated_at:new Date().toISOString()},{onConflict:"student_id,unit_id,outcome_id"});return !error;}catch(e){return false;}
   }
   function onChange(v){
     setNote(v);try{localStorage.setItem(noteKey,v);}catch(e){}
-    if(sent)setSent(false);
+    if(status!=="idle")setStatus("idle");
     // safety net: even if the student forgets the button, capture it after a pause
     if(isRealStudent){
       if(timer.current)clearTimeout(timer.current);
       timer.current=setTimeout(function(){pushToTeacher(v);},1500);
     }
   }
-  function submit(){
-    if(!note.trim())return;
+  async function submit(){
+    if(!note.trim()||status==="sending")return;
     if(timer.current)clearTimeout(timer.current);
-    pushToTeacher(note);
-    setSent(true);
+    setStatus("sending");
+    const ok=await pushToTeacher(note);
+    setStatus(ok?"sent":"error");
   }
   const canSend=note.trim().length>0;
+  const sent=status==="sent",sending=status==="sending",err=status==="error";
   return(
     <div>
       <label style={{display:"block",fontSize:12,fontWeight:700,color:"var(--indigo)",margin:"0 0 6px"}}>{label}</label>
       <textarea value={note} onChange={e=>onChange(e.target.value)} rows={2} placeholder="Type one thing you learned…"
         style={{width:"100%",boxSizing:"border-box",fontFamily:ff2,fontSize:13,padding:"8px 10px",border:"1px solid var(--border)",borderRadius:8,resize:"vertical",color:"var(--text)"}}/>
       <div style={{display:"flex",alignItems:"center",gap:10,marginTop:8,flexWrap:"wrap"}}>
-        <button onClick={submit} disabled={!canSend}
+        <button onClick={submit} disabled={!canSend||sending}
           style={{fontFamily:ff2,fontSize:13,fontWeight:700,padding:"8px 16px",borderRadius:8,border:"none",
-            cursor:canSend?"pointer":"default",transition:"background .2s",
-            background:sent?"#16a34a":(canSend?"var(--indigo)":"var(--border)"),
-            color:sent?"#fff":(canSend?"#fff":"var(--muted)")}}>
-          {sent?(<span><span className="lc-check" style={{marginRight:4}}>✓</span>{isRealStudent?"Sent to your teacher!":"Saved!"}</span>)
+            cursor:(canSend&&!sending)?"pointer":"default",transition:"background .2s",
+            background:sent?"#16a34a":err?"#dc2626":(canSend?"var(--indigo)":"var(--border)"),
+            color:(sent||err)?"#fff":(canSend?"#fff":"var(--muted)")}}>
+          {sending?"Sending…":sent?(<span><span className="lc-check" style={{marginRight:4}}>✓</span>{isRealStudent?"Sent to your teacher!":"Saved!"}</span>)
+            :err?"Couldn't send — tap to try again"
             :(isRealStudent?"Send to my teacher":"Save my answer")}
         </button>
         {sent&&isRealStudent&&<span style={{fontSize:12,color:"#16a34a",fontWeight:600}}>Your teacher can see this 🎉</span>}
         {sent&&!isRealStudent&&<span style={{fontSize:12,color:"var(--muted)",fontWeight:600}}>Saved to this device</span>}
+        {err&&<span style={{fontSize:12,color:"#dc2626",fontWeight:600}}>Check your internet and try again</span>}
       </div>
     </div>
   );
@@ -4065,21 +4069,23 @@ function AssessmentReflect({studentId,classId,unitId,outcomeId,allCorrect,correc
   const draftKey="solo_areflect_"+(studentId||"anon")+"_"+unitId+"_"+outcomeId;
   const [vals,setVals]=useState(function(){try{return JSON.parse(localStorage.getItem(draftKey)||"{}")||{};}catch(e){return {};}});
   const [open,setOpen]=useState(false);
-  const [sent,setSent]=useState(false);
+  const [status,setStatus]=useState("idle"); // idle | sending | sent | error
   function setField(k,v){
     const nv={...vals,[k]:v};setVals(nv);
     try{localStorage.setItem(draftKey,JSON.stringify(nv));}catch(e){}
-    if(sent)setSent(false);
+    if(status!=="idle")setStatus("idle");
   }
   const hasAny=prompts.some(p=>(vals[p.k]||"").trim());
-  function submit(){
-    if(!hasAny)return;
+  async function submit(){
+    if(!hasAny||status==="sending")return;
     const answers={};prompts.forEach(p=>{const t=(vals[p.k]||"").trim();if(t)answers[p.k]=t;});
-    if(isRealStudent){
-      try{sb.from("solo_assessment_reflections").upsert({student_id:studentId,class_id:classId||null,unit_id:unitId,outcome_id:outcomeId,score_correct:correct,score_total:total,answers:answers,updated_at:new Date().toISOString()},{onConflict:"student_id,unit_id,outcome_id"}).then(function(){},function(){});}catch(e){}
-    }
-    setSent(true);
+    if(!isRealStudent){setStatus("sent");return;}
+    setStatus("sending");
+    let ok=false;
+    try{const {error}=await sb.from("solo_assessment_reflections").upsert({student_id:studentId,class_id:classId||null,unit_id:unitId,outcome_id:outcomeId,score_correct:correct,score_total:total,answers:answers,updated_at:new Date().toISOString()},{onConflict:"student_id,unit_id,outcome_id"});ok=!error;}catch(e){ok=false;}
+    setStatus(ok?"sent":"error");
   }
+  const sent=status==="sent",sending=status==="sending",err=status==="error";
   if(!open){
     return(
       <div style={{textAlign:"center",marginBottom:"1.1rem"}}>
@@ -4101,13 +4107,16 @@ function AssessmentReflect({studentId,classId,unitId,outcomeId,allCorrect,correc
         ))}
       </div>
       <div style={{display:"flex",alignItems:"center",gap:10,marginTop:14,flexWrap:"wrap"}}>
-        <button onClick={submit} disabled={!hasAny}
-          style={{fontFamily:ff2,fontSize:13,fontWeight:700,padding:"9px 18px",borderRadius:8,border:"none",cursor:hasAny?"pointer":"default",transition:"background .2s",
-            background:sent?"#16a34a":(hasAny?"var(--indigo)":"var(--border)"),color:sent?"#fff":(hasAny?"#fff":"var(--muted)")}}>
-          {sent?(<span><span className="lc-check" style={{marginRight:4}}>✓</span>{isRealStudent?"Sent to your teacher!":"Saved!"}</span>):(isRealStudent?"Send to my teacher":"Save my answer")}
+        <button onClick={submit} disabled={!hasAny||sending}
+          style={{fontFamily:ff2,fontSize:13,fontWeight:700,padding:"9px 18px",borderRadius:8,border:"none",cursor:(hasAny&&!sending)?"pointer":"default",transition:"background .2s",
+            background:sent?"#16a34a":err?"#dc2626":(hasAny?"var(--indigo)":"var(--border)"),color:(sent||err)?"#fff":(hasAny?"#fff":"var(--muted)")}}>
+          {sending?"Sending…":sent?(<span><span className="lc-check" style={{marginRight:4}}>✓</span>{isRealStudent?"Sent to your teacher!":"Saved!"}</span>)
+            :err?"Couldn't send — tap to try again"
+            :(isRealStudent?"Send to my teacher":"Save my answer")}
         </button>
         {sent&&isRealStudent&&<span style={{fontSize:12,color:"#16a34a",fontWeight:600}}>Your teacher can see this 🎉</span>}
         {sent&&!isRealStudent&&<span style={{fontSize:12,color:"var(--muted)",fontWeight:600}}>Saved to this device</span>}
+        {err&&<span style={{fontSize:12,color:"#dc2626",fontWeight:600}}>Check your internet and try again</span>}
       </div>
     </div>
   );
