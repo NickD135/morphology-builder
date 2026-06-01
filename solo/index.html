@@ -4461,17 +4461,65 @@ var COACH_RETRY=["Hmm, not quite — take another look.","Close, {name}! Have an
 var COACH_REVEAL=["No worries, {name} — let's learn from this one.","That's a tricky one — here's how it works.","Good effort. Let's see it together.","These ones are sneaky — here's the trick."];
 function coachFmt(s){const n=COACH_NAME;return n?s.replace(/\{name\}/g,n):s.replace(/,?\s*\{name\}/g,"");}
 function coachLine(arr,i){return coachFmt(arr[((i%arr.length)+arr.length)%arr.length]);}
-// Read-aloud (browser speech synthesis — vanilla, no dependency). Prefers an Australian voice.
-function ttsSpeak(text){
+// Read-aloud. Primary: Google Cloud's neural Australian voice (en-AU-Neural2-A) via the
+// speak-word edge function — one consistent, smooth, female voice on every device, cached
+// server-side. Falls back to a deterministic browser voice ONLY if the cloud is unreachable
+// (offline / blocked network), and even then locks to one chosen voice so it stays consistent.
+var SOLO_TTS_SID="", SOLO_TTS_CID="";   // student auth for the TTS edge function
+var _soloTtsAudio=null, _soloTtsToken=0, _soloBrowserVoice=null;
+function _pickBrowserVoice(){
+  if(_soloBrowserVoice)return _soloBrowserVoice;
+  const vs=(window.speechSynthesis&&window.speechSynthesis.getVoices())||[];
+  if(!vs.length)return null;
+  const fem=/karen|catherine|tessa|samantha|fiona|moira|serena|female|zira|hazel|libby|natasha|aria|sonia/i;
+  _soloBrowserVoice=vs.find(x=>/en-AU/i.test(x.lang)&&fem.test(x.name))
+    ||vs.find(x=>/en-AU/i.test(x.lang))
+    ||vs.find(x=>/en-GB/i.test(x.lang)&&fem.test(x.name))
+    ||vs.find(x=>/en-GB/i.test(x.lang))
+    ||vs.find(x=>/^en/i.test(x.lang)&&fem.test(x.name))
+    ||vs.find(x=>/^en/i.test(x.lang))||null;
+  return _soloBrowserVoice;
+}
+function ttsBrowser(text){
   try{
-    if(typeof window==="undefined"||!("speechSynthesis"in window))return;
+    if(!("speechSynthesis"in window))return;
     window.speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(String(text).replace(/\s+/g," ").trim());
-    const vs=window.speechSynthesis.getVoices()||[];
-    const v=vs.find(x=>/en-AU/i.test(x.lang))||vs.find(x=>/en-GB/i.test(x.lang))||vs.find(x=>/^en/i.test(x.lang));
-    if(v)u.voice=v; u.rate=0.95; u.pitch=1.02;
-    window.speechSynthesis.speak(u);
+    const go=()=>{const u=new SpeechSynthesisUtterance(String(text).replace(/\s+/g," ").trim());const v=_pickBrowserVoice();if(v){u.voice=v;u.lang=v.lang;}else{u.lang="en-AU";}u.rate=0.9;u.pitch=1.0;window.speechSynthesis.speak(u);};
+    const vs=window.speechSynthesis.getVoices();
+    if(vs&&vs.length)go();
+    else{window.speechSynthesis.onvoiceschanged=()=>{window.speechSynthesis.onvoiceschanged=null;go();};}
   }catch(e){}
+}
+function _ttsChunks(text){
+  const clean=String(text).replace(/\s+/g," ").trim();
+  if(clean.length<=190)return clean?[clean]:[];
+  const parts=clean.match(/[^.!?]+[.!?]*/g)||[clean];
+  const chunks=[];let cur="";
+  for(const raw of parts){const p=raw.trim();if(!p)continue;
+    if(((cur?cur+" ":"")+p).length<=190){cur=(cur?cur+" ":"")+p;}
+    else{if(cur){chunks.push(cur);cur="";} if(p.length<=190){cur=p;}else{for(let i=0;i<p.length;i+=190)chunks.push(p.slice(i,i+190));}}}
+  if(cur)chunks.push(cur);
+  return chunks;
+}
+async function ttsSpeak(text){
+  const token=++_soloTtsToken; // a new tap cancels the previous playback/queue
+  try{if(_soloTtsAudio){_soloTtsAudio.pause();_soloTtsAudio=null;}}catch(e){}
+  try{window.speechSynthesis&&window.speechSynthesis.cancel();}catch(e){}
+  if(!SOLO_TTS_SID||!SOLO_TTS_CID){ttsBrowser(text);return;} // no student auth → browser fallback
+  const chunks=_ttsChunks(text);
+  for(const chunk of chunks){
+    if(token!==_soloTtsToken)return;
+    let url=null;
+    try{
+      const r=await fetch(SUPABASE_URL+"/functions/v1/speak-word",{method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer "+SUPABASE_ANON},
+        body:JSON.stringify({text:chunk,language:"en",student_id:SOLO_TTS_SID,class_id:SOLO_TTS_CID})});
+      if(r.ok){const d=await r.json();url=d.audioUrl;}
+    }catch(e){}
+    if(token!==_soloTtsToken)return;
+    if(!url){ttsBrowser(text);return;} // cloud failed → read the rest with the browser voice
+    await new Promise(res=>{const a=new Audio(url);_soloTtsAudio=a;a.onended=res;a.onerror=()=>res();a.play().catch(()=>res());});
+  }
 }
 function SpeakBtn({text,label="Read this aloud"}){
   return(
@@ -5073,6 +5121,7 @@ function App(){
       setTimestamps({[student.id]:ts});
       setStudentId(student.id);
       { const _fn=(student.name||"").trim().split(/\s+/)[0]||""; setStudentName(_fn); COACH_NAME=_fn; }
+      SOLO_TTS_SID=student.id; SOLO_TTS_CID=loginClassObj.id;
       loadMyReactions(student.id);
       setLoading(false);
       setView("home");
@@ -5431,7 +5480,7 @@ function App(){
     sb.auth.signOut();
     try{sessionStorage.removeItem('solo_session_v1');}catch{}
     try{if(studentId)localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}
-    setView("login");setStudentId(null);setStudentName("");COACH_NAME="";setMyReactions({});setIsTeacher(false);setLoginClassCode("");setLoginClassObj(null);setLoginStep("class");setLoginCode("");setLoginEmail("");setLoginPassword("");setLoginError("");setSelectedUnit(null);setTeacherFocus(null);setStudents([]);setClasses([]);setSelectedClassId(null);setProgress({});setTimestamps({});setTestSnapshots({});setHiddenStudents(new Set());setHiddenUnits(new Set());setManageGroupOpen(false);setReviewActive(null);setReviewMode(null);setReviewQList([]);setReviewIdx(0);setReviewAnswers([]);setReviewResults(null);setReviewResultsPanel(null);setLoginMode("student");
+    setView("login");setStudentId(null);setStudentName("");COACH_NAME="";SOLO_TTS_SID="";SOLO_TTS_CID="";setMyReactions({});setIsTeacher(false);setLoginClassCode("");setLoginClassObj(null);setLoginStep("class");setLoginCode("");setLoginEmail("");setLoginPassword("");setLoginError("");setSelectedUnit(null);setTeacherFocus(null);setStudents([]);setClasses([]);setSelectedClassId(null);setProgress({});setTimestamps({});setTestSnapshots({});setHiddenStudents(new Set());setHiddenUnits(new Set());setManageGroupOpen(false);setReviewActive(null);setReviewMode(null);setReviewQList([]);setReviewIdx(0);setReviewAnswers([]);setReviewResults(null);setReviewResultsPanel(null);setLoginMode("student");
     setExpandedResource(null);setPracticeOutcome(null);setPracticeUnit(null);setPracticePhase("example");setPracticeIdx(0);setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);setPracticeScore({correct:0,total:0});
     setTeacherEmail("");setSoloResources([]);setResourceTab("rubric");setResourceOutcome(null);setAddingResource(false);setAddingToGlobal(false);setNewResType("video");setNewResLabel("");setNewResUrl("");setNewResQ({text:"",options:[{text:"",correct:true},{text:"",correct:false},{text:"",correct:false},{text:"",correct:false}]});setQuizState({});setTeacherReviewOverrides({});
   }
@@ -5476,6 +5525,7 @@ function App(){
           setStudents([student]);setProgress(prog);setTimestamps({[student.id]:ts});
           setStudentId(student.id);setLoginClassObj({id:sess.classId,name:sess.className});setView("home");
           { const _fn=(student.name||"").trim().split(/\s+/)[0]||""; setStudentName(_fn); COACH_NAME=_fn; }
+          SOLO_TTS_SID=student.id; SOLO_TTS_CID=sess.classId;
       loadMyReactions(student.id);
         }
       }catch{}
