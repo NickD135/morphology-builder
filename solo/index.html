@@ -4008,26 +4008,48 @@ function NoteField({outcomeKey,studentId,label}){
   const ff2="'Lexend',sans-serif";
   const noteKey="solo_note_"+(studentId||"anon")+"_"+outcomeKey;
   const [note,setNote]=useState(function(){try{return localStorage.getItem(noteKey)||"";}catch(e){return "";}});
-  const [saved,setSaved]=useState(false);
+  const [sent,setSent]=useState(false);
   const timer=useRef(null);
   const isRealStudent=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(studentId||"");
-  function save(v){
-    setNote(v);try{localStorage.setItem(noteKey,v);}catch(e){}setSaved(true);
+  function pushToTeacher(v){
+    if(!isRealStudent||!v.trim())return;
+    const us=outcomeKey.indexOf("_");
+    const unit_id=outcomeKey.slice(0,us), outcome_id=outcomeKey.slice(us+1);
+    try{sb.from("solo_reflections").upsert({student_id:studentId,unit_id:unit_id,outcome_id:outcome_id,reflection:v,updated_at:new Date().toISOString()},{onConflict:"student_id,unit_id,outcome_id"}).then(function(){},function(){});}catch(e){}
+  }
+  function onChange(v){
+    setNote(v);try{localStorage.setItem(noteKey,v);}catch(e){}
+    if(sent)setSent(false);
+    // safety net: even if the student forgets the button, capture it after a pause
     if(isRealStudent){
-      const us=outcomeKey.indexOf("_");
-      const unit_id=outcomeKey.slice(0,us), outcome_id=outcomeKey.slice(us+1);
       if(timer.current)clearTimeout(timer.current);
-      timer.current=setTimeout(function(){
-        try{sb.from("solo_reflections").upsert({student_id:studentId,unit_id:unit_id,outcome_id:outcome_id,reflection:v,updated_at:new Date().toISOString()},{onConflict:"student_id,unit_id,outcome_id"}).then(function(){},function(){});}catch(e){}
-      },1000);
+      timer.current=setTimeout(function(){pushToTeacher(v);},1500);
     }
   }
+  function submit(){
+    if(!note.trim())return;
+    if(timer.current)clearTimeout(timer.current);
+    pushToTeacher(note);
+    setSent(true);
+  }
+  const canSend=note.trim().length>0;
   return(
     <div>
       <label style={{display:"block",fontSize:12,fontWeight:700,color:"var(--indigo)",margin:"0 0 6px"}}>{label}</label>
-      <textarea value={note} onChange={e=>save(e.target.value)} rows={2} placeholder="Type one thing you learned…"
+      <textarea value={note} onChange={e=>onChange(e.target.value)} rows={2} placeholder="Type one thing you learned…"
         style={{width:"100%",boxSizing:"border-box",fontFamily:ff2,fontSize:13,padding:"8px 10px",border:"1px solid var(--border)",borderRadius:8,resize:"vertical",color:"var(--text)"}}/>
-      {saved&&note.trim()&&<span style={{fontSize:11,color:"#16a34a",fontWeight:600}}><span className="lc-check" style={{marginRight:3}}>✓</span>Saved{isRealStudent?" — your teacher can see this":" to this device"}</span>}
+      <div style={{display:"flex",alignItems:"center",gap:10,marginTop:8,flexWrap:"wrap"}}>
+        <button onClick={submit} disabled={!canSend}
+          style={{fontFamily:ff2,fontSize:13,fontWeight:700,padding:"8px 16px",borderRadius:8,border:"none",
+            cursor:canSend?"pointer":"default",transition:"background .2s",
+            background:sent?"#16a34a":(canSend?"var(--indigo)":"var(--border)"),
+            color:sent?"#fff":(canSend?"#fff":"var(--muted)")}}>
+          {sent?(<span><span className="lc-check" style={{marginRight:4}}>✓</span>{isRealStudent?"Sent to your teacher!":"Saved!"}</span>)
+            :(isRealStudent?"Send to my teacher":"Save my answer")}
+        </button>
+        {sent&&isRealStudent&&<span style={{fontSize:12,color:"#16a34a",fontWeight:600}}>Your teacher can see this 🎉</span>}
+        {sent&&!isRealStudent&&<span style={{fontSize:12,color:"var(--muted)",fontWeight:600}}>Saved to this device</span>}
+      </div>
     </div>
   );
 }
