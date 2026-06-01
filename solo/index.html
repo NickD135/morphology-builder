@@ -4053,6 +4053,65 @@ function NoteField({outcomeKey,studentId,label}){
     </div>
   );
 }
+function AssessmentReflect({studentId,classId,unitId,outcomeId,allCorrect,correct,total}){
+  const ff2="'Lexend',sans-serif";
+  const isRealStudent=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(studentId||"");
+  const prompts=allCorrect
+    ?[{k:"trick",label:"⭐ The trick that worked",ph:"e.g. I lined up the decimal points"},
+      {k:"stretch",label:"➡️ Something harder I want to try next",ph:"e.g. decimals with 3 places"}]
+    :[{k:"didWell",label:"✅ One thing I did well",ph:"e.g. I got the place-value questions right"},
+      {k:"trippedUp",label:"❓ The bit that tripped me up",ph:"e.g. comparing 0.7 and 0.65"},
+      {k:"nextStep",label:"➡️ What I'll do next time",ph:"e.g. line the numbers up first"}];
+  const draftKey="solo_areflect_"+(studentId||"anon")+"_"+unitId+"_"+outcomeId;
+  const [vals,setVals]=useState(function(){try{return JSON.parse(localStorage.getItem(draftKey)||"{}")||{};}catch(e){return {};}});
+  const [open,setOpen]=useState(false);
+  const [sent,setSent]=useState(false);
+  function setField(k,v){
+    const nv={...vals,[k]:v};setVals(nv);
+    try{localStorage.setItem(draftKey,JSON.stringify(nv));}catch(e){}
+    if(sent)setSent(false);
+  }
+  const hasAny=prompts.some(p=>(vals[p.k]||"").trim());
+  function submit(){
+    if(!hasAny)return;
+    const answers={};prompts.forEach(p=>{const t=(vals[p.k]||"").trim();if(t)answers[p.k]=t;});
+    if(isRealStudent){
+      try{sb.from("solo_assessment_reflections").upsert({student_id:studentId,class_id:classId||null,unit_id:unitId,outcome_id:outcomeId,score_correct:correct,score_total:total,answers:answers,updated_at:new Date().toISOString()},{onConflict:"student_id,unit_id,outcome_id"}).then(function(){},function(){});}catch(e){}
+    }
+    setSent(true);
+  }
+  if(!open){
+    return(
+      <div style={{textAlign:"center",marginBottom:"1.1rem"}}>
+        <button onClick={()=>setOpen(true)} style={{fontFamily:ff2,fontSize:13,fontWeight:700,padding:"9px 18px",borderRadius:10,border:"1px solid var(--ind-200)",background:"var(--ind-50)",color:"var(--indigo)",cursor:"pointer"}}>📝 Reflect on how that went</button>
+      </div>
+    );
+  }
+  return(
+    <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:14,padding:"16px 18px",marginBottom:"1.25rem",boxShadow:"var(--sh-sm)"}}>
+      <p style={{fontSize:14,fontWeight:800,color:"var(--text)",margin:"0 0 2px"}}>Reflect on how that went</p>
+      <p style={{fontSize:12,color:"var(--sub)",margin:"0 0 12px"}}>A sentence each — this helps you and your teacher know what's next.</p>
+      <div style={{display:"flex",flexDirection:"column",gap:11}}>
+        {prompts.map(p=>(
+          <div key={p.k}>
+            <label style={{display:"block",fontSize:12,fontWeight:700,color:"var(--indigo)",margin:"0 0 5px"}}>{p.label}</label>
+            <input value={vals[p.k]||""} onChange={e=>setField(p.k,e.target.value)} placeholder={p.ph}
+              style={{width:"100%",boxSizing:"border-box",fontFamily:ff2,fontSize:13,padding:"9px 11px",border:"1px solid var(--border)",borderRadius:8,color:"var(--text)"}}/>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginTop:14,flexWrap:"wrap"}}>
+        <button onClick={submit} disabled={!hasAny}
+          style={{fontFamily:ff2,fontSize:13,fontWeight:700,padding:"9px 18px",borderRadius:8,border:"none",cursor:hasAny?"pointer":"default",transition:"background .2s",
+            background:sent?"#16a34a":(hasAny?"var(--indigo)":"var(--border)"),color:sent?"#fff":(hasAny?"#fff":"var(--muted)")}}>
+          {sent?(<span><span className="lc-check" style={{marginRight:4}}>✓</span>{isRealStudent?"Sent to your teacher!":"Saved!"}</span>):(isRealStudent?"Send to my teacher":"Save my answer")}
+        </button>
+        {sent&&isRealStudent&&<span style={{fontSize:12,color:"#16a34a",fontWeight:600}}>Your teacher can see this 🎉</span>}
+        {sent&&!isRealStudent&&<span style={{fontSize:12,color:"var(--muted)",fontWeight:600}}>Saved to this device</span>}
+      </div>
+    </div>
+  );
+}
 function LearnCard({learn,outcomeKey,studentId}){
   const we=learn.workedExample;
   const cardBox={background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,padding:"12px 14px",marginBottom:10};
@@ -4326,6 +4385,8 @@ function App(){
   const [selectedUnit,setSelectedUnit]=useState(null);
   const [reflections,setReflections]=useState({}); // teacher: `${studentId}_${outcomeId}` -> text
   const [reflectionsOpen,setReflectionsOpen]=useState(null); // outcome id whose reflections panel is expanded
+  const [asmtReflections,setAsmtReflections]=useState({}); // teacher: `${studentId}_${outcomeId}` -> {answers,sc,st}
+  const [asmtOpen,setAsmtOpen]=useState(null); // outcome id whose assessment-reflection panel is expanded
   const [activeOutcome,setActiveOutcome]=useState(null);
   const [qIdx,setQIdx]=useState(0);
   const [answers,setAnswers]=useState([]);
@@ -5107,16 +5168,21 @@ function App(){
     if(isTeacher)loadReflections(unit.id);
   }
   async function loadReflections(unitId){
-    setReflectionsOpen(null);
+    setReflectionsOpen(null);setAsmtOpen(null);
     const ids=students.map(s=>s.id);
-    if(!ids.length){setReflections({});return;}
+    if(!ids.length){setReflections({});setAsmtReflections({});return;}
     try{
-      const {data,error}=await sb.from("solo_reflections").select("student_id,outcome_id,reflection").eq("unit_id",unitId).in("student_id",ids);
-      if(error){setReflections({});return;}
+      const [lessonRes,asmtRes]=await Promise.all([
+        sb.from("solo_reflections").select("student_id,outcome_id,reflection").eq("unit_id",unitId).in("student_id",ids),
+        sb.from("solo_assessment_reflections").select("student_id,outcome_id,answers,score_correct,score_total").eq("unit_id",unitId).in("student_id",ids)
+      ]);
       const map={};
-      (data||[]).forEach(r=>{ if(r.reflection&&r.reflection.trim()) map[`${r.student_id}_${r.outcome_id}`]=r.reflection; });
+      if(!lessonRes.error)(lessonRes.data||[]).forEach(r=>{ if(r.reflection&&r.reflection.trim()) map[`${r.student_id}_${r.outcome_id}`]=r.reflection; });
       setReflections(map);
-    }catch(e){setReflections({});}
+      const amap={};
+      if(!asmtRes.error)(asmtRes.data||[]).forEach(r=>{ if(r.answers&&Object.keys(r.answers).length) amap[`${r.student_id}_${r.outcome_id}`]={answers:r.answers,sc:r.score_correct,st:r.score_total}; });
+      setAsmtReflections(amap);
+    }catch(e){setReflections({});setAsmtReflections({});}
   }
   function startOutcome(o){setActiveOutcome(o);setQIdx(0);setAnswers([]);setAns(initAns(o.questions[0]));setResults(null);setView("assessment");}
   function handleNext(){
@@ -6673,6 +6739,7 @@ function App(){
                   </div>
                 ))}
               </div>
+              {!isTeacher&&<AssessmentReflect studentId={studentId} classId={loginClassObj?.id||null} unitId={selectedUnit.id} outcomeId={o.id} allCorrect={allCorrect} correct={correct} total={total}/>}
               <div style={{display:"flex",gap:10,justifyContent:"center",marginTop:20}}>
                 <button onClick={()=>setView("rubric")} style={Sb()}>← Rubric</button>
                 {!allCorrect&&<button onClick={()=>{setQIdx(0);setAnswers([]);setAns(initAns(o.questions[0]));setResults(null);}} style={Sb({background:"linear-gradient(135deg,var(--indigo),var(--blue))",color:"#fff",border:"none",fontWeight:700,boxShadow:"0 4px 18px rgba(67,56,202,0.32)"})}>Try Again →</button>}
@@ -7169,6 +7236,30 @@ function App(){
                             <div key={i} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:8,padding:"8px 11px"}}>
                               <p style={{fontSize:11,fontWeight:700,color:"var(--indigo)",margin:"0 0 2px"}}>{r.name}</p>
                               <p style={{fontSize:12.5,color:"#334155",margin:0,lineHeight:1.45,whiteSpace:"pre-wrap"}}>{r.text}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+                {/* Assessment reflections (after a Show, per outcome, across the class) */}
+                {(()=>{
+                  const aList=visibleStudents.map(s=>({name:s.name,a:asmtReflections[`${s.id}_${o.id}`]})).filter(r=>r.a);
+                  if(!aList.length)return null;
+                  const open=asmtOpen===o.id;
+                  const LBL={didWell:"✅ Did well",trippedUp:"❓ Tripped up",nextStep:"➡️ Next step",trick:"⭐ What worked",stretch:"➡️ Wants to try"};
+                  return(
+                    <div style={{paddingLeft:36,marginTop:7}}>
+                      <button onClick={()=>setAsmtOpen(open?null:o.id)} style={{fontFamily:ff,fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:6,cursor:"pointer",background:open?"#0d9488":"#ccfbf1",color:open?"#fff":"#0f766e",border:"1px solid #99f6e4"}}>📋 {aList.length} assessment reflection{aList.length!==1?"s":""}{open?" ▲":" ▼"}</button>
+                      {open&&(
+                        <div style={{marginTop:8,display:"flex",flexDirection:"column",gap:6}}>
+                          {aList.map((r,i)=>(
+                            <div key={i} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:8,padding:"8px 11px"}}>
+                              <p style={{fontSize:11,fontWeight:700,color:"#0f766e",margin:"0 0 3px"}}>{r.name}{r.a.st!=null?<span style={{color:"var(--muted)",fontWeight:600}}> · {r.a.sc}/{r.a.st}</span>:null}</p>
+                              {Object.keys(r.a.answers).map(k=>(
+                                <p key={k} style={{fontSize:12.5,color:"#334155",margin:"0 0 2px",lineHeight:1.4}}><span style={{fontWeight:700,color:"#0f766e"}}>{LBL[k]||k}:</span> {r.a.answers[k]}</p>
+                              ))}
                             </div>
                           ))}
                         </div>
