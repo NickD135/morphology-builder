@@ -4453,6 +4453,9 @@ function Coach({mood="idle",reactKey,children}){
 // Coach voice — deterministic pick by question index so it stays stable per question.
 // Lines may include {name}; it's filled with the student's first name, or removed if unknown.
 var COACH_NAME="";
+// Becomes false the first time a teacher_reaction query fails (column not migrated yet),
+// so we stop re-requesting it and don't spam the console with 400s.
+var SOLO_REACTIONS_OK=true;
 var COACH_PRAISE=["Nice work, {name} — that's spot on!","Yes! You've got it.","Exactly right. Well done, {name}!","Brilliant — that's correct!","Spot on, {name}. Keep it up!","Nailed it, {name}!","Love it — that's exactly right.","Too easy for you, {name}!","Yes! That's the one.","Great thinking — correct!"];
 var COACH_RETRY=["Hmm, not quite — take another look.","Close, {name}! Have another go.","Not yet — think it through once more.","Almost there. Try again.","So close! One more look.","Good attempt — let's try that again."];
 var COACH_REVEAL=["No worries, {name} — let's learn from this one.","That's a tricky one — here's how it works.","Good effort. Let's see it together.","These ones are sneaky — here's the trick."];
@@ -5728,14 +5731,16 @@ function App(){
       setAsmtReflections(amap);
     }catch(e){setReflections({});setAsmtReflections({});}
     // teacher reactions — best-effort; degrades to empty if the teacher_reaction column migration isn't run yet
+    if(!SOLO_REACTIONS_OK)return;
     try{
       const [lr,ar]=await Promise.all([
         sb.from("solo_reflections").select("student_id,outcome_id,teacher_reaction").eq("unit_id",unitId).in("student_id",ids),
         sb.from("solo_assessment_reflections").select("student_id,outcome_id,teacher_reaction").eq("unit_id",unitId).in("student_id",ids)
       ]);
+      if(lr.error||ar.error){SOLO_REACTIONS_OK=false;return;}
       const rr={},aa={};
-      if(!lr.error)(lr.data||[]).forEach(r=>{ if(r.teacher_reaction)rr[`${r.student_id}_${r.outcome_id}`]=r.teacher_reaction; });
-      if(!ar.error)(ar.data||[]).forEach(r=>{ if(r.teacher_reaction)aa[`${r.student_id}_${r.outcome_id}`]=r.teacher_reaction; });
+      (lr.data||[]).forEach(r=>{ if(r.teacher_reaction)rr[`${r.student_id}_${r.outcome_id}`]=r.teacher_reaction; });
+      (ar.data||[]).forEach(r=>{ if(r.teacher_reaction)aa[`${r.student_id}_${r.outcome_id}`]=r.teacher_reaction; });
       setReflReactions(rr);setAsmtReactions(aa);
     }catch(e){setReflReactions({});setAsmtReactions({});}
   }
@@ -5749,14 +5754,16 @@ function App(){
   }
   // Student side: load the teacher's reactions to MY reflections, keyed `${unitId}_${outcomeId}`.
   async function loadMyReactions(sid){
+    if(!SOLO_REACTIONS_OK)return;
     try{
       const [lr,ar]=await Promise.all([
         sb.from("solo_reflections").select("unit_id,outcome_id,teacher_reaction").eq("student_id",sid),
         sb.from("solo_assessment_reflections").select("unit_id,outcome_id,teacher_reaction").eq("student_id",sid)
       ]);
+      if(lr.error||ar.error){SOLO_REACTIONS_OK=false;return;}
       const m={};
-      if(!lr.error)(lr.data||[]).forEach(r=>{ if(r.teacher_reaction)m[`${r.unit_id}_${r.outcome_id}`]=r.teacher_reaction; });
-      if(!ar.error)(ar.data||[]).forEach(r=>{ if(r.teacher_reaction)m[`${r.unit_id}_${r.outcome_id}`]=r.teacher_reaction; });
+      (lr.data||[]).forEach(r=>{ if(r.teacher_reaction)m[`${r.unit_id}_${r.outcome_id}`]=r.teacher_reaction; });
+      (ar.data||[]).forEach(r=>{ if(r.teacher_reaction)m[`${r.unit_id}_${r.outcome_id}`]=r.teacher_reaction; });
       setMyReactions(m);
     }catch(e){}
   }
