@@ -26,7 +26,7 @@ function corsHeaders(req: Request) {
 const VOICE_MAP: Record<string, { lang: string; voice?: string; gender: string }> = {
   // English — Chirp 3: HD (Google's most natural tier), Australian female voice "Aoede".
   // Swap the name to en-AU-Chirp3-HD-Kore / -Leda / -Zephyr for a different female voice.
-  'en':     { lang: 'en-AU',  voice: 'en-AU-Chirp3-HD-Aoede', gender: 'FEMALE' },
+  'en':     { lang: 'en-AU',  voice: 'en-AU-Chirp3-HD-Leda', gender: 'FEMALE' },
   // High-priority Australian school languages
   'ar':     { lang: 'ar-XA',  voice: 'ar-XA-Neural2-A', gender: 'FEMALE' },
   'zh':     { lang: 'cmn-CN', voice: 'cmn-CN-Neural2-A', gender: 'FEMALE' },
