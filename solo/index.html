@@ -5030,6 +5030,7 @@ function App(){
   const [results,setResults]=useState(null);
   const [teacherFocus,setTeacherFocus]=useState(null);
   const [attempts,setAttempts]=useState({});
+  const qStartRef=useRef(0); // start time of the current Show question (for per-question timing)
   const [teacherAttemptKey,setTeacherAttemptKey]=useState(null);
   const [teacherAttemptIdx,setTeacherAttemptIdx]=useState(null);
   const [pretestMode,setPretestMode]=useState(null);
@@ -5290,6 +5291,35 @@ function App(){
     const snapAt=latestSnap?.taken_at;
     if(doneAt&&snapAt&&new Date(doneAt)>=new Date(snapAt))return false;
     return true;
+  }
+
+  // Persist one Show attempt. Fire-and-forget: never blocks the student's flow,
+  // and never logs the teacher's own "View as Student" attempts.
+  function saveShowAttempt(outcomeId,results,correct,total,passed){
+    if(!studentId||isTeacher)return;
+    try{
+      sb.from("solo_show_attempts").insert({
+        student_id:studentId,
+        class_id:loginClassObj?.id||null,
+        unit_id:selectedUnit.id,
+        outcome_id:outcomeId,
+        correct,total,passed,
+        answers:results
+      });
+    }catch(e){}
+  }
+
+  // Guessing detection (read-time). An attempt is "quick" when its median
+  // time-per-question is under the threshold; an outcome is flagged when the
+  // student has 3+ quick failed attempts.
+  const GUESS_QUICK_MS=4000;
+  function attemptIsQuick(a){
+    const t=(a.results||[]).map(r=>r.ms).filter(m=>typeof m==="number"&&m>0).sort((x,y)=>x-y);
+    if(!t.length)return false;
+    return t[Math.floor(t.length/2)]<GUESS_QUICK_MS;
+  }
+  function outcomeGuessing(list){
+    return (list||[]).filter(a=>!a.passed&&attemptIsQuick(a)).length>=3;
   }
 
   async function toggleHideStudent(sid,shouldHide){
@@ -5591,6 +5621,28 @@ function App(){
     restoreSession();
   },[]);
 
+  // Lazy-load a student's Show attempts when the teacher opens them (per unit).
+  // Reconstructs the same in-memory shape finalizeAssessment builds so the
+  // existing attempt-list / attempt-detail views render unchanged.
+  useEffect(()=>{
+    if(!isTeacher||!teacherFocus||!selectedUnit)return;
+    let cancelled=false;
+    (async()=>{
+      const rows=await sbFetchAll(()=>sb.from("solo_show_attempts")
+        .select("outcome_id,correct,total,passed,answers,created_at")
+        .eq("student_id",teacherFocus).eq("unit_id",selectedUnit.id)
+        .order("created_at"));
+      if(cancelled)return;
+      const grouped={};
+      (rows||[]).forEach(r=>{
+        const k=`${selectedUnit.id}_${r.outcome_id}`;
+        (grouped[k]=grouped[k]||[]).push({ts:Date.parse(r.created_at),passed:r.passed,correct:r.correct,total:r.total,results:r.answers||[]});
+      });
+      setAttempts(prev=>({...prev,[teacherFocus]:grouped}));
+    })();
+    return()=>{cancelled=true;};
+  },[isTeacher,teacherFocus,selectedUnit]);
+
   function startPretest(unitId){
     const data=PRETESTS[unitId]||[];
     const flat=data.flatMap(section=>section.questions.map(q=>({outcomeId:section.outcomeId,short:section.short,q,unitId})));
@@ -5875,7 +5927,7 @@ function App(){
       setMyReactions(m);
     }catch(e){}
   }
-  function startOutcome(o){setActiveOutcome(o);setQIdx(0);setAnswers([]);setAns(initAns(o.questions[0]));setResults(null);setExitOpen(false);setView("assessment");}
+  function startOutcome(o){setActiveOutcome(o);setQIdx(0);setAnswers([]);setAns(initAns(o.questions[0]));setResults(null);setExitOpen(false);qStartRef.current=Date.now();setView("assessment");}
   function handleNext(){
     const q=activeOutcome.questions[qIdx];
     let given;
@@ -5887,9 +5939,10 @@ function App(){
     else if(q.type==="mc"||q.type==="truefalse")given=ans.option;
     else given=ans.input;
     const correct=checkAnswer(given,q);
-    const newAnswers=[...answers,{q,given,correct}];
+    const ms=Date.now()-(qStartRef.current||Date.now());
+    const newAnswers=[...answers,{q,given,correct,ms}];
     setAnswers(newAnswers);
-    if(qIdx<activeOutcome.questions.length-1){setQIdx(qIdx+1);setAns(initAns(activeOutcome.questions[qIdx+1]));}
+    if(qIdx<activeOutcome.questions.length-1){setQIdx(qIdx+1);setAns(initAns(activeOutcome.questions[qIdx+1]));qStartRef.current=Date.now();}
     else{finalizeAssessment(newAnswers);}
   }
   function finalizeAssessment(newAnswers){
@@ -5912,16 +5965,17 @@ function App(){
       }
     }
     if(studentId){
-      const record={ts:Date.now(),passed:allCorrect,correct:newAnswers.filter(a=>a.correct).length,total:newAnswers.length,
-        results:newAnswers.map(a=>({text:a.q.text,type:a.q.type,given:fmtGiven(a.given,a.q),correct:a.correct}))};
+      const recResults=newAnswers.map(a=>({text:a.q.text,type:a.q.type,given:fmtGiven(a.given,a.q),correct:a.correct,ms:a.ms||0}));
+      const record={ts:Date.now(),passed:allCorrect,correct:newAnswers.filter(a=>a.correct).length,total:newAnswers.length,results:recResults};
       setAttempts(prev=>({...prev,[studentId]:{...(prev[studentId]||{}),[key]:[...((prev[studentId]||{})[key]||[]),record]}}));
+      saveShowAttempt(activeOutcome.id,recResults,record.correct,record.total,allCorrect);
     }
   }
   // Finish the assessment from the exit dialog: score answered questions, mark the rest wrong.
   function finishAssessmentNow(){
     const o=activeOutcome;
     const acc=[...answers];
-    for(let i=acc.length;i<o.questions.length;i++)acc.push({q:o.questions[i],given:null,correct:false});
+    for(let i=acc.length;i<o.questions.length;i++)acc.push({q:o.questions[i],given:null,correct:false,ms:0});
     finalizeAssessment(acc);
   }
   function canGo(){
@@ -7608,7 +7662,10 @@ function App(){
                     <div key={i} style={{background:"#fff",border:`1px solid ${r.correct?"#86efac":"#fca5a5"}`,borderRadius:10,padding:"11px 14px"}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
                         <p style={{fontSize:13,margin:0,flex:1,color:"#1e293b",lineHeight:1.4}}>{r.text}</p>
-                        <span style={{fontSize:11,fontWeight:700,flexShrink:0,color:r.correct?"#16a34a":"#dc2626",paddingTop:1}}>{r.correct?"✓":"✗"}</span>
+                        <span style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,paddingTop:1}}>
+                          {typeof r.ms==="number"&&r.ms>0&&<span style={{fontSize:11,color:r.ms<GUESS_QUICK_MS?"#ea580c":"#94a3b8"}}>{(r.ms/1000).toFixed(1)}s</span>}
+                          <span style={{fontSize:11,fontWeight:700,color:r.correct?"#16a34a":"#dc2626"}}>{r.correct?"✓":"✗"}</span>
+                        </span>
                       </div>
                       {!r.correct&&<p style={{fontSize:12,color:"#64748b",margin:"6px 0 0"}}>Answer given: <span style={{color:"#dc2626",fontWeight:600}}>{r.given||"(blank)"}</span></p>}
                     </div>
@@ -7632,7 +7689,7 @@ function App(){
               <div style={{maxWidth:520,margin:"0 auto"}}>
                 <p style={{fontSize:12,color:"#64748b",margin:"0 0 1rem"}}>{s.name} · {outcomeAttempts.length} attempt{outcomeAttempts.length!==1?"s":""}</p>
             {outcomeAttempts.length===0
-              ? <p style={{fontSize:13,color:"#94a3b8",textAlign:"center",padding:"2rem 0"}}>No attempts recorded this session.</p>
+              ? <p style={{fontSize:13,color:"#94a3b8",textAlign:"center",padding:"2rem 0"}}>No attempts recorded yet.</p>
               : <div style={{display:"flex",flexDirection:"column",gap:8}}>
                   {[...outcomeAttempts].reverse().map((a,ri)=>{
                     const i=outcomeAttempts.length-1-ri;
@@ -7644,6 +7701,7 @@ function App(){
                           <div>
                             <span style={{fontSize:13,fontWeight:600,color:a.passed?"#16a34a":"#dc2626"}}>{a.passed?"Passed":"Not passed"}</span>
                             <span style={{fontSize:12,color:"#94a3b8",marginLeft:8}}>{a.correct}/{a.total} correct · {timeStr}</span>
+                            {attemptIsQuick(a)&&<span title="Median answer time under 4s" style={{marginLeft:6,fontSize:11,fontWeight:700,color:"#ea580c"}}>⚡ quick</span>}
                           </div>
                           <button onClick={()=>setTeacherAttemptIdx(i)} style={Sb({fontSize:12,padding:"4px 12px"})}>View</button>
                         </div>
@@ -7762,6 +7820,7 @@ function App(){
                   const key=`${selectedUnit.id}_${o.id}`;
                   const n=(studentAttempts[key]||[]).length;
                   const lastAttempt=(studentAttempts[key]||[]).slice(-1)[0];
+                  const guessing=outcomeGuessing(studentAttempts[key]);
                   const ts=timestamps[s.id]?.[key];
                   const _latestUST=(testSnapshots[s.id]?.[selectedUnit.id]||[]).slice(-1)[0];
                   const isApprovedT=(teacherApprovedOverrides[s.id]||new Set()).has(key);
@@ -7773,7 +7832,7 @@ function App(){
                       <div style={{flex:1,minWidth:0}}>
                         <p style={{fontSize:13,fontWeight:600,margin:"0 0 1px",color:isReg?"#ea580c":d?"#16a34a":"#1e293b"}}>{o.short}{isReg&&<span style={{fontSize:11,fontWeight:500,marginLeft:6,color:"#ea580c"}}>— needs review</span>}</p>
                         {d&&ts&&<p style={{fontSize:11,color:"#64748b",margin:"1px 0 0"}}>✓ {fmtTime(ts)}</p>}
-                        {n>0&&<p style={{fontSize:11,color:"#94a3b8",margin:0}}>{n} attempt{n!==1?"s":""} · last: <span style={{color:lastAttempt.passed?"#16a34a":"#dc2626",fontWeight:600}}>{lastAttempt.correct}/{lastAttempt.total}</span></p>}
+                        {n>0&&<p style={{fontSize:11,color:"#94a3b8",margin:0}}>{n} attempt{n!==1?"s":""} · last: <span style={{color:lastAttempt.passed?"#16a34a":"#dc2626",fontWeight:600}}>{lastAttempt.correct}/{lastAttempt.total}</span>{guessing&&<span title="3+ quick failed attempts — may be guessing" style={{marginLeft:6,color:"#ea580c",fontWeight:700}}>⚡ likely guessing</span>}</p>}
                       </div>
                       <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
                         {n>0&&<button onClick={()=>{setTeacherAttemptKey(key);setTeacherAttemptIdx(null);}} style={Sb({fontSize:12,padding:"4px 10px"})}>Attempts</button>}
