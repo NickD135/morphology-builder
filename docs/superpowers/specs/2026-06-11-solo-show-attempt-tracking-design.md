@@ -96,11 +96,16 @@ attempts never count toward the 3.
 
 ## Security / RLS
 
-Mirror `solo_test_snapshots`:
-- Students (anon) may INSERT rows.
-- Teachers (authenticated) may SELECT rows only for their own school, via
-  `class_id → classes` school chain (`get_my_school_id()` pattern).
-- No change to any existing policy.
+Mirror `solo_test_snapshots` / `solo_show_completions` exactly — these SOLO tables
+use **open policies** (`USING (true)` / `WITH CHECK (true)`), because students are
+anonymous (no `auth.uid()`), so a school-scoped INSERT check would block them:
+- `FOR SELECT USING (true)`
+- `FOR INSERT WITH CHECK (true)`
+- `class_id` is stored for indexing and future tightening (same as
+  `solo_show_completions`), not for an RLS predicate today.
+- No change to any existing policy. One new table, one migration, no backfill.
+- The migration must be run by Nick in the Supabase SQL editor (anon key cannot
+  create tables) — same as every other SOLO table.
 
 ## Loading & state
 
