@@ -4354,6 +4354,23 @@ const SUPABASE_URL  = 'https://kdpavfrzmmzknqfpodrl.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkcGF2ZnJ6bW16a25xZnBvZHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjgzOTIsImV4cCI6MjA5MDAwNDM5Mn0.n5fe7HvXWMsM4xN_iaU_N4xLkC5xD4y9Uoer_DG-dlg';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
+// PostgREST caps a single response at 1000 rows. Teacher dashboards load every
+// student's progress in one query, so a busy class silently loses rows past the
+// cap (showing fewer ticks than the student sees). sbFetchAll pages through the
+// full result set. makeQuery() must build a fresh, deterministically-ordered
+// query each call so .range() windows don't overlap or skip rows.
+async function sbFetchAll(makeQuery, pageSize=1000){
+  let from=0; const out=[];
+  for(;;){
+    const {data,error}=await makeQuery().range(from,from+pageSize-1);
+    if(error||!data) break;
+    out.push(...data);
+    if(data.length<pageSize) break;
+    from+=pageSize;
+  }
+  return out;
+}
+
 function buildEmptyProgress(studentList){
   const p={};
   studentList.forEach(s=>{
@@ -5177,7 +5194,7 @@ function App(){
     const snapMap={};
     if(sList.length>0){
       const ids=sList.map(s=>s.id);
-      const {data:rows}=await sb.from("solo_progress").select("student_id,outcome_key,updated_at").eq("completed",true).in("student_id",ids);
+      const rows=await sbFetchAll(()=>sb.from("solo_progress").select("student_id,outcome_key,updated_at").eq("completed",true).in("student_id",ids).order("student_id").order("outcome_key"));
       rows?.forEach(r=>{
         if(prog[r.student_id]){
           prog[r.student_id][r.outcome_key]=true;
@@ -5185,7 +5202,7 @@ function App(){
           ts[r.student_id][r.outcome_key]=r.updated_at;
         }
       });
-      const {data:snapRows}=await sb.from("solo_test_snapshots").select("student_id,unit_id,by_outcome,passed_count,total_count,taken_at").in("student_id",ids).order("taken_at");
+      const snapRows=await sbFetchAll(()=>sb.from("solo_test_snapshots").select("student_id,unit_id,by_outcome,passed_count,total_count,taken_at").in("student_id",ids).order("student_id").order("taken_at"));
       snapRows?.forEach(r=>{
         if(!snapMap[r.student_id])snapMap[r.student_id]={};
         if(!snapMap[r.student_id][r.unit_id])snapMap[r.student_id][r.unit_id]=[];
@@ -5194,7 +5211,7 @@ function App(){
     }
     const {data:hiddenRows}=await sb.from("solo_hidden_students").select("student_id").eq("class_id",classId);
     setHiddenStudents(new Set((hiddenRows||[]).map(r=>r.student_id)));
-    const {data:showRows2}=await sb.from("solo_show_completions").select("student_id,unit_id,outcome_id").eq("class_id",classId);
+    const showRows2=await sbFetchAll(()=>sb.from("solo_show_completions").select("student_id,unit_id,outcome_id").eq("class_id",classId).order("student_id").order("unit_id").order("outcome_id"));
     setShowTicks(new Set((showRows2||[]).map(r=>`${r.student_id}::${r.unit_id}::${r.outcome_id}`)));
     setManageGroupOpen(false);
     setTestSnapshots(snapMap);
