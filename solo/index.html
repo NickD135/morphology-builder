@@ -5280,6 +5280,18 @@ function App(){
     });
   }
 
+  // An outcome only counts as "needs review" if a test marked it failed AFTER
+  // the student last completed it. If they've since demonstrated it (Show) or
+  // aced it in a later test, an older failing snapshot no longer counts — this
+  // is robust even if the corrective snapshot write didn't persist.
+  function testFailedSinceDone(sid,unitId,outcomeId,latestSnap){
+    if(latestSnap?.by_outcome?.[outcomeId]?.passed!==false)return false;
+    const doneAt=timestamps[sid]?.[`${unitId}_${outcomeId}`];
+    const snapAt=latestSnap?.taken_at;
+    if(doneAt&&snapAt&&new Date(doneAt)>=new Date(snapAt))return false;
+    return true;
+  }
+
   async function toggleHideStudent(sid,shouldHide){
     if(shouldHide){
       await sb.from("solo_hidden_students").insert({class_id:selectedClassId,student_id:sid});
@@ -6539,7 +6551,7 @@ function App(){
                       const isExpanded=expandedResource===resKey;
                       const _latestUSSt=(testSnapshots[studentId]?.[selectedUnit.id]||[]).slice(-1)[0];
                       const isApprovedS=(teacherApprovedOverrides[studentId]||new Set()).has(resKey);
-                      const isRegressed=isDone&&!isApprovedS&&(_latestUSSt?.by_outcome?.[o.id]?.passed===false||(teacherReviewOverrides[studentId]||new Set()).has(resKey));
+                      const isRegressed=isDone&&!isApprovedS&&(testFailedSinceDone(studentId,selectedUnit.id,o.id,_latestUSSt)||(teacherReviewOverrides[studentId]||new Set()).has(resKey));
                       return(
                         <div key={o.id} style={{background:isRegressed?"#fff7ed":"var(--surface)",borderRadius:12,boxShadow:"var(--sh-sm)",overflow:"hidden",border:isRegressed?"1px solid #fb923c":isDone?"1px solid #86efac":"1px solid var(--border)"}}>
                           <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10}}>
@@ -7753,7 +7765,7 @@ function App(){
                   const ts=timestamps[s.id]?.[key];
                   const _latestUST=(testSnapshots[s.id]?.[selectedUnit.id]||[]).slice(-1)[0];
                   const isApprovedT=(teacherApprovedOverrides[s.id]||new Set()).has(key);
-                  const isReg=d&&!isApprovedT&&(_latestUST?.by_outcome?.[o.id]?.passed===false||(teacherReviewOverrides[s.id]||new Set()).has(key));
+                  const isReg=d&&!isApprovedT&&(testFailedSinceDone(s.id,selectedUnit.id,o.id,_latestUST)||(teacherReviewOverrides[s.id]||new Set()).has(key));
                   const tStatus=isReg?"review":d?"green":"red";
                   return(
                     <div key={o.id} style={{background:isReg?"#fff7ed":"#fff",border:`1px solid ${isReg?"#fb923c":d?"#86efac":"#e2e8f0"}`,borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",gap:10}}>
@@ -7892,7 +7904,7 @@ function App(){
                   {selectedUnit.outcomes.map(o=>{
                     const d=prog[`${selectedUnit.id}_${o.id}`];
                     const _latestUS=(testSnapshots[s.id]?.[selectedUnit.id]||[]).slice(-1)[0];
-                    const isReg=d&&_latestUS?.by_outcome?.[o.id]?.passed===false&&!(teacherApprovedOverrides[s.id]||new Set()).has(`${selectedUnit.id}_${o.id}`);
+                    const isReg=d&&testFailedSinceDone(s.id,selectedUnit.id,o.id,_latestUS)&&!(teacherApprovedOverrides[s.id]||new Set()).has(`${selectedUnit.id}_${o.id}`);
                     return(<td key={o.id} style={{padding:"3px 2px",textAlign:"center",...sepStyle(o.id)}}>
                       <div style={{width:22,height:22,borderRadius:4,margin:"0 auto",background:isReg?"#fff7ed":d?"#dcfce7":"#f8fafc",border:`1px solid ${isReg?"#fb923c":d?"#86efac":"#e2e8f0"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:isReg?"#ea580c":d?"#16a34a":"#cbd5e1"}}>{isReg?"⚠":d?"✓":""}</div>
                     </td>);
@@ -8052,7 +8064,7 @@ function App(){
                       const latestSnap=snaps[snaps.length-1]||null;
                       const regressions=selectedUnit.outcomes.filter(o=>{
                         const d=progress[s.id]?.[`${selectedUnit.id}_${o.id}`];
-                        return d&&latestSnap?.by_outcome?.[o.id]?.passed===false&&!(teacherApprovedOverrides[s.id]||new Set()).has(`${selectedUnit.id}_${o.id}`);
+                        return d&&testFailedSinceDone(s.id,selectedUnit.id,o.id,latestSnap)&&!(teacherApprovedOverrides[s.id]||new Set()).has(`${selectedUnit.id}_${o.id}`);
                       });
                       const hasReg=regressions.length>0;
                       return(
