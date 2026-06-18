@@ -5038,6 +5038,7 @@ function App(){
   const [pretestShowResume,setPretestShowResume]=useState(false);
   const [pretestQList,setPretestQList]=useState([]);
   const [pretestIdx,setPretestIdx]=useState(0);
+  const [pretestMaxIdx,setPretestMaxIdx]=useState(0);
   const [pretestAnswers,setPretestAnswers]=useState([]);
   const [pretestAns,setPretestAns]=useState({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
   const [pretestResults,setPretestResults]=useState(null);
@@ -5675,6 +5676,7 @@ function App(){
       setPretestShowResume(true);
       setPretestSectionStart(null);
       setPretestIdx(draft.pretestIdx);
+      setPretestMaxIdx(draft.pretestIdx);
       setPretestAnswers(draft.pretestAnswers);
       setPretestAns(initAns(flat[draft.pretestIdx].q));
     } else {
@@ -5682,6 +5684,7 @@ function App(){
       setPretestShowResume(false);
       setPretestSectionStart(getBand(flat[0].outcomeId));
       setPretestIdx(0);
+      setPretestMaxIdx(0);
       setPretestAnswers([]);
       setPretestAns(initAns(flat[0].q));
     }
@@ -5722,6 +5725,22 @@ function App(){
     setPretestMode("done");
   }
 
+  // Rebuild the answer-entry state for a question from a previously-saved answer,
+  // so navigating back/forward never wipes what the student already entered.
+  function restorePretestAns(idx,answers){
+    const q=pretestQList[idx].q;
+    const restored=initAns(q);
+    const prev=(answers||pretestAnswers).find(a=>a.idx===idx);
+    if(!prev)return restored;
+    if(q.type==="mc"||q.type==="truefalse")restored.option=prev.given||"";
+    else if(q.type==="input")restored.input=prev.given||"";
+    else if(q.type==="order")restored.orderSeq=Array.isArray(prev.given)?prev.given:[];
+    else if(q.type==="shade")restored.shadedCells=restored.shadedCells.map((_,i)=>i<prev.given);
+    else if(q.type==="numberline")restored.nlPlaced=prev.given||{};
+    else if(q.type==="match")restored.matchPairs=prev.given||{};
+    else if(q.type==="partition")restored.partitionShaded=Array.isArray(prev.given)?prev.given:[];
+    return restored;
+  }
   function handlePretestNext(){
     const currentItemIdx=pretestInReview?pretestReviewQueue[pretestReviewPos]:pretestIdx;
     const current=pretestQList[currentItemIdx];
@@ -5758,16 +5777,18 @@ function App(){
           const slimAns=a=>({...a,q:{...a.q,svg:undefined}});
           localStorage.setItem(
             `solo_pretest_draft_${studentId}`,
-            JSON.stringify({unitId:current.unitId,pretestIdx:pretestIdx+1,pretestAnswers:newAnswers.map(slimAns)})
+            JSON.stringify({unitId:current.unitId,pretestIdx:Math.max(pretestMaxIdx,pretestIdx+1),pretestAnswers:newAnswers.map(slimAns)})
           );
         }catch{}
       }
       if(pretestIdx<pretestQList.length-1){
-        const nextIdx=pretestIdx+1;
+        // If revisiting an earlier question, return to where they were; else go forward one.
+        const nextIdx=pretestIdx<pretestMaxIdx?pretestMaxIdx:pretestIdx+1;
         const currentBand=getBand(current.outcomeId);
         const nextBand=getBand(pretestQList[nextIdx].outcomeId);
         setPretestIdx(nextIdx);
-        setPretestAns(initAns(pretestQList[nextIdx].q));
+        setPretestAns(restorePretestAns(nextIdx,newAnswers));
+        if(nextIdx>pretestMaxIdx)setPretestMaxIdx(nextIdx);
         if(nextBand!==currentBand)setPretestSectionStart(nextBand);
       } else {
         // End of main pass — enter review if flagged questions exist, else finish
@@ -5809,11 +5830,12 @@ function App(){
       newFlagged.add(pretestIdx);
       setPretestFlagged(newFlagged);
       if(pretestIdx<pretestQList.length-1){
-        const nextIdx=pretestIdx+1;
+        const nextIdx=pretestIdx<pretestMaxIdx?pretestMaxIdx:pretestIdx+1;
         const currentBand=getBand(pretestQList[pretestIdx].outcomeId);
         const nextBand=getBand(pretestQList[nextIdx].outcomeId);
         setPretestIdx(nextIdx);
-        setPretestAns(initAns(pretestQList[nextIdx].q));
+        setPretestAns(restorePretestAns(nextIdx));
+        if(nextIdx>pretestMaxIdx)setPretestMaxIdx(nextIdx);
         if(nextBand!==currentBand)setPretestSectionStart(nextBand);
       } else {
         // Last question skipped — enter review with all flagged
@@ -5827,24 +5849,9 @@ function App(){
   }
 
   function handlePretestJumpTo(targetIdx){
-    if(pretestInReview||targetIdx<0||targetIdx>=pretestQList.length)return;
-    if(pretestFlagged.has(targetIdx)){const nf=new Set(pretestFlagged);nf.delete(targetIdx);setPretestFlagged(nf);}
+    if(pretestInReview||targetIdx<0||targetIdx>pretestMaxIdx||targetIdx>=pretestQList.length)return;
     setPretestIdx(targetIdx);
-    const q=pretestQList[targetIdx].q;
-    const prev=pretestAnswers.find(a=>a.idx===targetIdx);
-    if(prev){
-      const restored=initAns(q);
-      if(q.type==="mc"||q.type==="truefalse")restored.option=prev.given||"";
-      else if(q.type==="input")restored.input=prev.given||"";
-      else if(q.type==="order")restored.orderSeq=Array.isArray(prev.given)?prev.given:[];
-      else if(q.type==="shade")restored.shadedCells=restored.shadedCells.map((_,i)=>i<prev.given);
-      else if(q.type==="numberline")restored.nlPlaced=prev.given||{};
-      else if(q.type==="match")restored.matchPairs=prev.given||{};
-      else if(q.type==="partition")restored.partitionShaded=Array.isArray(prev.given)?prev.given:[];
-      setPretestAns(restored);
-    } else {
-      setPretestAns(initAns(q));
-    }
+    setPretestAns(restorePretestAns(targetIdx));
   }
   function handlePretestBack(){
     if(pretestInReview||pretestIdx===0)return;
@@ -7127,7 +7134,7 @@ function App(){
     const q=current.q;
     const currentBand=getBand(current.outcomeId);
     const b=BAND[currentBand];
-    const pct=pretestInReview?100:Math.round(pretestIdx/pretestQList.length*100);
+    const pct=pretestInReview?100:Math.round(Math.max(pretestIdx,pretestMaxIdx)/pretestQList.length*100);
     const ok=pretestCanGo();
     const pool=q.type==="order"?q.items.filter(item=>!pretestAns.orderSeq.includes(item)):[];
     const activeUnitIdR=pretestQList[0]?.unitId||"u24";
@@ -7136,7 +7143,8 @@ function App(){
     const isLastMain=!pretestInReview&&pretestIdx===pretestQList.length-1;
     const isLastReview=pretestInReview&&pretestReviewPos===pretestReviewQueue.length-1;
     const hasFlagged=pretestFlagged.size>0;
-    const nextBtnLabel=isLastReview?"Submit ✓":isLastMain&&hasFlagged?`Review flagged (${pretestFlagged.size}) →`:isLastMain?"Submit ✓":"Next →";
+    const isRevisitingR=!pretestInReview&&pretestIdx<pretestMaxIdx;
+    const nextBtnLabel=isLastReview?"Submit ✓":isRevisitingR?"Return →":isLastMain&&hasFlagged?`Review flagged (${pretestFlagged.size}) →`:isLastMain?"Submit ✓":"Next →";
     const progressLabel=pretestInReview?`Review ${pretestReviewPos+1}/${pretestReviewQueue.length}`:`${pretestIdx+1}/${pretestQList.length}`;
 
     return(
@@ -7224,7 +7232,7 @@ function App(){
             <div style={{background:"var(--ind-50)",border:"1px solid var(--ind-200)",borderRadius:10,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexShrink:0}}>
               <span style={{fontSize:13,color:"var(--indigo)",fontWeight:500}}>Continue where you left off? You were on question {pretestResumeDraft?.pretestIdx+1} of {pretestQList.length}.</span>
               <div style={{display:"flex",gap:8,flexShrink:0}}>
-                <button onClick={()=>{try{if(studentId)localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}setPretestShowResume(false);setPretestResumeDraft(null);setPretestIdx(0);setPretestAnswers([]);setPretestAns(initAns(pretestQList[0].q));}}
+                <button onClick={()=>{try{if(studentId)localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}setPretestShowResume(false);setPretestResumeDraft(null);setPretestIdx(0);setPretestMaxIdx(0);setPretestAnswers([]);setPretestAns(initAns(pretestQList[0].q));}}
                   style={{fontFamily:ff,fontSize:12,padding:"5px 10px",background:"#fff",border:"1px solid var(--ind-200)",borderRadius:7,cursor:"pointer",color:"var(--indigo)"}}>Start over</button>
                 <button onClick={()=>setPretestShowResume(false)}
                   style={{fontFamily:ff,fontSize:12,padding:"5px 12px",background:"var(--indigo)",border:"none",borderRadius:7,cursor:"pointer",color:"#fff",fontWeight:600}}>Continue →</button>
@@ -7247,13 +7255,13 @@ function App(){
                 const sIsFlagged=pretestFlagged.has(i);
                 const sIsAnswered=pretestAnswers.some(a=>a.idx===i);
                 const sIsPending=pretestInReview&&pretestReviewQueue.slice(pretestReviewPos+1).includes(i);
-                const sIsClickable=!pretestInReview&&!sIsCurrent&&(i<pretestIdx||sIsFlagged);
+                const sIsClickable=!pretestInReview&&!sIsCurrent&&i<=pretestMaxIdx;
                 const sdb=BAND[getBand(pretestQList[i].outcomeId)];
                 const sbg=sIsCurrent?"var(--indigo)":sIsFlagged||sIsPending?"#fef3c7":sIsAnswered?sdb.bg:"#f8fafc";
                 const sborder=sIsCurrent?"var(--indigo)":sIsFlagged||sIsPending?"#f59e0b":sIsAnswered?sdb.border:"#e2e8f0";
                 const scol=sIsCurrent?"#fff":sIsFlagged||sIsPending?"#92400e":sIsAnswered?sdb.text:"#94a3b8";
                 return(<button key={i} onClick={()=>sIsClickable&&handlePretestJumpTo(i)}
-                  title={sIsFlagged?"Flagged — click to return":sIsAnswered?"Answered":`Q${i+1}`}
+                  title={sIsFlagged?"Flagged — click to return":sIsClickable?`Q${i+1} — click to revisit`:`Q${i+1}`}
                   style={{width:28,height:22,boxSizing:"border-box",display:"flex",alignItems:"center",justifyContent:"center",
                     fontSize:10,fontWeight:700,fontFamily:ff,borderRadius:5,
                     border:`1.5px solid ${sborder}`,background:sbg,color:scol,
