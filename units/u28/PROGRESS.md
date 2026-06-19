@@ -4,6 +4,18 @@ Topic: Position (Cartesian plane, Lessons 1–4 / `MA3-GM-01`) + Chance (Lessons
 Stage 3 Year B. Source: `SOLO Units/SOLO Units/Unit 28/DoE Unit 28.zip`.
 Rubric (background source): `SOLO Units/u28/00_rubric_draft.md`.
 
+---
+
+## ✅ STATUS: COMPLETE (2026-06-19)
+
+Both deliverables shipped and verified; 12 outcomes (R1–R3 · Y1–Y6 · G1–G3).
+
+- **Deliverable A — in-app SOLO content** (`solo/index.html`): all six data structures (UNITS, PRETESTS, PRACTICE, LEARN, RESOURCES, BEYOND) + UC theme + gating. Live (commit on `main`, Vercel auto-deploys). Verified: node-eval clean, Playwright 0 console errors.
+- **Deliverable B — teacher program docx** (`units/u28/Maths_S3_YearB_Unit28_SOLO_Full_Program.docx` + `.pdf`): 18 pages (overview · 12-row Outcome Teaching Record · 12 lesson cards · 3-page resource appendix with worksheet checklist). Confirmed by Nick to render correctly in **Microsoft Word** and the PDF.
+- **Engine fixes made along the way** (`scripts/build_program_template.js`, benefit all future units): valid multi-column table grids (fixed the Word "100+ pages" bug), `cantSplit` rows + `pbPara()` page breaks (no fragments/blank pages), density tuning for 12-outcome units, and `buildAppendix()`.
+
+Confirmed resources all link-verified (oEmbed/curl). Nothing outstanding for Unit 28. Session logs below are the detailed trail.
+
 ## Session 1 — 2026-06-19
 
 **Stage 0 — complete + APPROVED.**
