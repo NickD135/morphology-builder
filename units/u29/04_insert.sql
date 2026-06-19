@@ -1,0 +1,53 @@
+-- Unit 29 — resource inserts for the Supabase `resources` table (Stage 4).
+-- Generated from units/u29/03_resources_staged.csv (every URL verified live in Stage 3).
+-- Run in the Supabase SQL editor (anon key cannot write). DO NOT auto-execute.
+-- Replaces any existing u29 rows, then inserts the verified set.
+
+DELETE FROM resources WHERE unit_id = 'u29';
+
+INSERT INTO resources (unit_id, outcome_id, type, label, url, scope, class_id) VALUES
+  ('u29', 'r1', 'video', 'Faces, Edges and Vertices of a Rectangular Prism | Math with Mr. J', 'https://www.youtube.com/watch?v=bQBCcWRIHHg', 'global', NULL),
+  ('u29', 'r1', 'video', 'Faces, Edges and Vertices of a Square Pyramid | Math with Mr. J', 'https://www.youtube.com/watch?v=60guabFsA_c', 'global', NULL),
+  ('u29', 'r1', 'video', '3D Figures - Prisms and Pyramids | Miacademy', 'https://www.youtube.com/watch?v=S5hfJi5TkFM', 'global', NULL),
+  ('u29', 'r1', 'worksheet', 'Corbettmaths — Properties of 3D Shapes (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/3d-shapes-pdf.pdf', 'global', NULL),
+  ('u29', 'r2', 'video', 'Prisms and Pyramids: Types of Prism and Pyramid | TutWay', 'https://www.youtube.com/watch?v=_QA53bHD9p4', 'global', NULL),
+  ('u29', 'r2', 'video', 'Identifying Prisms and Pyramids | ExampleSquare', 'https://www.youtube.com/watch?v=JmJpZlj-wPQ', 'global', NULL),
+  ('u29', 'r2', 'video', 'Faces, Edges and Vertices of a Hexagonal Pyramid | Math with Mr. J', 'https://www.youtube.com/watch?v=Pb_4BZK4oiU', 'global', NULL),
+  ('u29', 'r2', 'worksheet', 'Corbettmaths — Properties of 3D Shapes (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/3d-shapes-pdf.pdf', 'global', NULL),
+  ('u29', 'r3', 'video', 'Place Value to the Thousandths | Miacademy', 'https://www.youtube.com/watch?v=BsZJGMRWEK0', 'global', NULL),
+  ('u29', 'r3', 'video', 'Finding the Value of the Underlined Digit (Decimal Place Value) | Math with Mr. J', 'https://www.youtube.com/watch?v=2xGzQXn3WUQ', 'global', NULL),
+  ('u29', 'r3', 'video', 'Expanded Form with Decimals | Math with Mr. J', 'https://www.youtube.com/watch?v=GX8o-S6Vxig', 'global', NULL),
+  ('u29', 'r3', 'worksheet', 'Corbettmaths — Place Value (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/place-value-pdf.pdf', 'global', NULL),
+  ('u29', 'r4', 'video', 'Converting Metric Units for Capacity | Corbettmaths', 'https://www.youtube.com/watch?v=zGBN0ofKYpQ', 'global', NULL),
+  ('u29', 'r4', 'video', 'Measuring Capacity: Millilitres and Litres | Trinity Primary', 'https://www.youtube.com/watch?v=yxnJh4Jbclo', 'global', NULL),
+  ('u29', 'r4', 'worksheet', 'Corbettmaths — Metric Units (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/metric-units-pdf.pdf', 'global', NULL),
+  ('u29', 'y1', 'video', 'What''s a Net? | Math with Mr. J', 'https://www.youtube.com/watch?v=HBSLrN9LWBA', 'global', NULL),
+  ('u29', 'y1', 'video', 'Make Your Own 3D Shapes from Nets! (build demo) | Becky Seres', 'https://www.youtube.com/watch?v=zPGbFJLzj5c', 'global', NULL),
+  ('u29', 'y1', 'worksheet', 'Corbettmaths — Nets (PDF, print and fold)', 'https://corbettmaths.com/wp-content/uploads/2013/02/nets-pdf1.pdf', 'global', NULL),
+  ('u29', 'y2', 'video', 'Views and Elevations (technique demo) | Corbettmaths', 'https://www.youtube.com/watch?v=BnwoipoGWJ8', 'global', NULL),
+  ('u29', 'y2', 'video', 'Plans and Elevations | Minity Maths', 'https://www.youtube.com/watch?v=ITt37h7GeJY', 'global', NULL),
+  ('u29', 'y2', 'worksheet', 'Corbettmaths — Views and Elevations (PDF)', 'https://corbettmaths.com/wp-content/uploads/2015/03/views.pdf', 'global', NULL),
+  ('u29', 'y3', 'video', 'Make Your Own 3D Shapes from Nets! (build demo) | Becky Seres', 'https://www.youtube.com/watch?v=zPGbFJLzj5c', 'global', NULL),
+  ('u29', 'y3', 'video', 'What''s a Net? (nets to solids) | Math with Mr. J', 'https://www.youtube.com/watch?v=HBSLrN9LWBA', 'global', NULL),
+  ('u29', 'y3', 'worksheet', 'Corbettmaths — Nets (PDF, print, cut and build)', 'https://corbettmaths.com/wp-content/uploads/2013/02/nets-pdf1.pdf', 'global', NULL),
+  ('u29', 'y4', 'video', 'How to Measure Capacity (for Children) | Bodhaguru', 'https://www.youtube.com/watch?v=wXTG04MxB-E', 'global', NULL),
+  ('u29', 'y4', 'video', 'Capacity for Kids: Measuring Volume | TutWay', 'https://www.youtube.com/watch?v=xSbsbz7Ovb4', 'global', NULL),
+  ('u29', 'y4', 'video', 'Measuring Capacity: Millilitres and Litres | Trinity Primary', 'https://www.youtube.com/watch?v=yxnJh4Jbclo', 'global', NULL),
+  ('u29', 'y4', 'worksheet', 'Corbettmaths — Metric Units (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/metric-units-pdf.pdf', 'global', NULL),
+  ('u29', 'y5', 'video', 'Measuring Capacity and Reading Scales | Maths Everywhere', 'https://www.youtube.com/watch?v=GFTlete-nMM', 'global', NULL),
+  ('u29', 'y5', 'video', 'Place Value to the Thousandths | Miacademy', 'https://www.youtube.com/watch?v=BsZJGMRWEK0', 'global', NULL),
+  ('u29', 'y5', 'worksheet', 'Corbettmaths — Reading Scales (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/reading-scales-pdf.pdf', 'global', NULL),
+  ('u29', 'y6', 'video', 'Archimedes'' Eureka: Measuring Volume by Displacement | Manocha Academy', 'https://www.youtube.com/watch?v=X1VazJC8OLY', 'global', NULL),
+  ('u29', 'y6', 'video', 'Finding the Volume of an Irregular Object by Water Displacement | AllThingsChemistry', 'https://www.youtube.com/watch?v=7kNiVrL6uV8', 'global', NULL),
+  ('u29', 'y6', 'video', 'Volume by Water Displacement | Eric Pantano', 'https://www.youtube.com/watch?v=--HL4NiR6OU', 'global', NULL),
+  ('u29', 'g1', 'video', 'Volume of Rectangular Prisms | Math with Mr. J', 'https://www.youtube.com/watch?v=By7sVb2IhFs', 'global', NULL),
+  ('u29', 'g1', 'video', 'How to Find the Volume of a Triangular Prism | Math with Mr. J', 'https://www.youtube.com/watch?v=4pV7_NuGO2g', 'global', NULL),
+  ('u29', 'g1', 'worksheet', 'Corbettmaths — Volume of a Prism (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/volume-of-a-prism-pdf.pdf', 'global', NULL),
+  ('u29', 'g1', 'worksheet', 'Corbettmaths — Volume of a Cuboid (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/volume-of-a-cuboid-pdf.pdf', 'global', NULL),
+  ('u29', 'g2', 'video', '1 mL = 1 cm3 (volume-capacity link) | Scott Milam', 'https://www.youtube.com/watch?v=028tWJGCSdM', 'global', NULL),
+  ('u29', 'g2', 'video', 'Converting Metric Units for Capacity | Corbettmaths', 'https://www.youtube.com/watch?v=zGBN0ofKYpQ', 'global', NULL),
+  ('u29', 'g2', 'worksheet', 'Corbettmaths — Metric Units (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/metric-units-pdf.pdf', 'global', NULL),
+  ('u29', 'g3', 'video', 'What Shape is the Cross Section? (parallel and perpendicular) | Tom Teaches Math', 'https://www.youtube.com/watch?v=MeARCoXD03M', 'global', NULL),
+  ('u29', 'g3', 'video', 'Intro to Cross Sections / Slicing 3D Figures | Mark Wigand', 'https://www.youtube.com/watch?v=PcPBq0PYjAQ', 'global', NULL),
+  ('u29', 'g3', 'video', 'Views and Elevations | Corbettmaths', 'https://www.youtube.com/watch?v=BnwoipoGWJ8', 'global', NULL),
+  ('u29', 'g3', 'worksheet', 'Corbettmaths — Views and Elevations (PDF)', 'https://corbettmaths.com/wp-content/uploads/2015/03/views.pdf', 'global', NULL);

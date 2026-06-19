@@ -816,7 +816,7 @@ if (require.main === module) {
   });
 }
 
-module.exports = { buildProgramDocument, BAND_COLORS };
+module.exports = { buildProgramDocument, buildAppendix, BAND_COLORS };
 
 /**
  * ============================================================
