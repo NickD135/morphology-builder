@@ -515,10 +515,11 @@ function buildLessonCard(lesson) {
   }
 
   const LC = Math.floor(PW / 2), LC2 = PW - LC;
-  rows.push(new TableRow({ children: [hc("Learning intention", LC, DKBLUE, { size: 18 }), hc("Success criteria", LC2, DKBLUE, { size: 18 })] }));
+  rows.push(new TableRow({ children: [hc("Learning intention", LC, DKBLUE, { size: 18, colSpan: 3 }), hc("Success criteria", LC2, DKBLUE, { size: 18 })] }));
   rows.push(new TableRow({
     children: [
       new TableCell({
+        columnSpan: 3,
         borders: thins("DDDDDD"), width: { size: LC, type: WidthType.DXA }, shading: { fill: WHITE, type: ShadingType.CLEAR }, margins: { top: 80, bottom: 80, left: 130, right: 130 },
         children: [
           new Paragraph({ spacing: { before: 0, after: 20 }, children: [new TextRun({ text: "Students are learning to:", size: 17, italic: true, color: "666666", font: "Arial" })] }),
@@ -554,10 +555,10 @@ function buildLessonCard(lesson) {
   }));
 
   const KV = Math.floor(PW / 2), DIFF = PW - KV;
-  rows.push(new TableRow({ children: [hc("Key vocabulary", KV, DKBLUE, { size: 18 }), hc("Differentiation", DIFF, DKBLUE, { size: 18 })] }));
+  rows.push(new TableRow({ children: [hc("Key vocabulary", KV, DKBLUE, { size: 18, colSpan: 3 }), hc("Differentiation", DIFF, DKBLUE, { size: 18 })] }));
   rows.push(new TableRow({
     children: [
-      new TableCell({ borders: thins("DDDDDD"), width: { size: KV, type: WidthType.DXA }, shading: { fill: band.bg, type: ShadingType.CLEAR }, margins: { top: 70, bottom: 70, left: 130, right: 130 }, children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: lesson.vocab, size: 17, font: "Arial" })] })] }),
+      new TableCell({ columnSpan: 3, borders: thins("DDDDDD"), width: { size: KV, type: WidthType.DXA }, shading: { fill: band.bg, type: ShadingType.CLEAR }, margins: { top: 70, bottom: 70, left: 130, right: 130 }, children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: lesson.vocab, size: 17, font: "Arial" })] })] }),
       new TableCell({
         borders: thins("DDDDDD"), width: { size: DIFF, type: WidthType.DXA }, shading: { fill: WHITE, type: ShadingType.CLEAR }, margins: { top: 70, bottom: 70, left: 130, right: 130 },
         children: [
@@ -569,18 +570,25 @@ function buildLessonCard(lesson) {
   }));
 
   const AS = Math.floor(PW / 2), TN = PW - AS;
-  rows.push(new TableRow({ children: [hc("Assessment", AS, DKBLUE, { size: 18 }), hc("Teaching notes (annotate here)", TN, DKBLUE, { size: 18 })] }));
+  rows.push(new TableRow({ children: [hc("Assessment", AS, DKBLUE, { size: 18, colSpan: 3 }), hc("Teaching notes (annotate here)", TN, DKBLUE, { size: 18 })] }));
   rows.push(new TableRow({
     children: [
-      new TableCell({ borders: thins("DDDDDD"), width: { size: AS, type: WidthType.DXA }, shading: { fill: GREY, type: ShadingType.CLEAR }, margins: { top: 70, bottom: 70, left: 130, right: 130 }, children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: lesson.assessment, size: 17, font: "Arial" })] })] }),
+      new TableCell({ columnSpan: 3, borders: thins("DDDDDD"), width: { size: AS, type: WidthType.DXA }, shading: { fill: GREY, type: ShadingType.CLEAR }, margins: { top: 70, bottom: 70, left: 130, right: 130 }, children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: lesson.assessment, size: 17, font: "Arial" })] })] }),
       new TableCell({ borders: thins("DDDDDD"), width: { size: TN, type: WidthType.DXA }, shading: { fill: WHITE, type: ShadingType.CLEAR }, margins: { top: 70, bottom: 70, left: 130, right: 130 }, children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: "Taught as described / adapted / replaced -- note here:", size: 15, italic: true, color: "AAAAAA", font: "Arial" })] })] })
     ]
   }));
 
+  // 4-column grid shared by every row so the tblGrid is valid in Word
+  // (Word obeys the declared grid strictly; LibreOffice silently rebuilt
+  // it, which masked this). Column boundaries: M1, M2, then the page
+  // midpoint, then the rest. Every row's column spans sum to 4:
+  // full-width = colSpan 4; metadata = 1 + 1 + 2; half-splits = 3 + 1
+  // (cols 1-3 reach the midpoint, col 4 is the second half).
+  const CARD_GRID = [M1, M2, LC - M1 - M2, PW - LC];
   return mkTable([PW], [new TableRow({
     children: [new TableCell({
       borders: nobdrs, width: { size: PW, type: WidthType.DXA }, shading: { fill: WHITE, type: ShadingType.CLEAR }, margins: { top: 0, bottom: 0, left: 0, right: 0 },
-      children: [mkTable([PW], rows)]
+      children: [mkTable(CARD_GRID, rows)]
     })]
   })]);
 }

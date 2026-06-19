@@ -65,6 +65,18 @@ Result verified via LibreOffice round-trip render: 17→15 pages, **no blank or 
 
 Tooling note: LibreOffice (`soffice`) + `poppler-utils` are now installed in this Codespace, so the spec's round-trip render step can run here going forward.
 
+## Session 4 — 2026-06-19 — THE Word bug: malformed lesson-card table grid
+
+Nick opened the docx in real Microsoft Word and got **100+ pages** with broken tables — while LibreOffice rendered 15 clean pages. Root cause found in the shared engine: `buildLessonCard()` built each card's table with `mkTable([PW], rows)` — a **one-column `<w:tblGrid>`** — but the card's rows use `columnSpan: 4` (banner, structure, DoE/materials strips) and 2-cell half-splits. That is malformed OOXML: the declared grid says 1 column while rows reference up to 4. **LibreOffice silently rebuilds the grid from the cells (looks fine); Word obeys the declared grid literally**, so every card's columns collapsed, row heights ballooned, and each of the 12 cards exploded across many pages → 100+.
+
+Fix (shared engine, generalises to all units):
+- Card table now uses a real 4-column grid `CARD_GRID = [M1, M2, LC−M1−M2, PW−LC]` = `[1600, 1600, 4319, 7519]` (sums to PW=15038). Column boundaries hit M1, M2, the page midpoint, and the end.
+- Every row's column spans now sum to 4: full-width = `colSpan 4`; metadata = `1 + 1 + 2`; the three half-split rows (LI/SC, vocab/diff, assessment/notes) = `colSpan 3 + 1` (cols 1-3 reach the midpoint, col 4 is the second half). Added `columnSpan: 3` to each half-split's first header + body cell.
+
+Verified: card `tblGrid`s are now 4 columns (widths 1600/1600/4319/7519, sum 15038); gridSpans 4/2/3 present; LibreOffice still renders 15 clean pages (no regression); document.xml well-formed. This is valid OOXML Word will respect.
+
+Also committed the **PDF render** (`Maths_S3_YearB_Unit28_SOLO_Full_Program.pdf`, 15 pages) alongside the docx as a guaranteed-correct artifact. Page-1 outer/nested tables, the record (6-col), and banner tables were already grid-consistent — only the lesson-card table had the malformed grid.
+
 ---
 
 ## Build kit (everything the authoring session needs — derived this session)
