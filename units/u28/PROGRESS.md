@@ -27,4 +27,38 @@ Rubric (background source): `SOLO Units/u28/00_rubric_draft.md`.
 
 **Notes / open items for next session:**
 - This is a 12-outcome unit — comparable to Unit 26 (the gold standard). Expect the in-app authoring + verification to span multiple sessions; checkpoint by outcome code per spec §8.
-- Commit policy: nothing committed yet this session (awaiting Nicholas's go-ahead). When committing solo work the repo convention is direct to `main` (Vercel auto-deploys); co-author `Claude Opus 4.8`.
+- Commit policy: when committing solo work the repo convention is direct to `main` (Vercel auto-deploys); co-author `Claude Opus 4.8`.
+
+---
+
+## Build kit (everything the authoring session needs — derived this session)
+
+**Canonicality: CODE-canonical.** `resources?unit_id=eq.u28` returns `[]` (zero DB rows). So author `RESOURCES` in the hardcoded block; **no** Supabase rows, no staging-CSV/SQL step. (Aside: u27 unexpectedly has 51 DB rows — contradicts the 2026-06-01 "deleted" note; flagged to Nicholas, unrelated to u28.)
+
+**⚠️ No partial-unit exposure:** `hiddenUnits` is runtime teacher state, not a build flag. The instant `u28` enters the `UNITS` array it shows to students. → Author **all 12 outcomes** across all six structures, run the Playwright 0-console-errors gate, THEN add the `UNITS` entry + commit once. Don't commit a partial unit.
+
+**Where each structure lives in `solo/index.html` (u27 is the reference; insert u28 right after u27 in each):**
+| Structure | u27 block | Format (per u27_r1) |
+|---|---|---|
+| `var UNITS` | u27 obj starts line 695 | `{id:"u28",name:"Unit 28",subtitle:"Position & Chance",outcomes:[ {id:"r1",band:"red",short:"…",label:"…",questions:[10×{id,type,text,answer/options}]}, … ]}` |
+| `var PRETESTS` | `u27:` at 1123 | `u28:[ {outcomeId:"r1",short:"…",questions:[2×{id,type,text,answer}]}, … ]` |
+| `var PRACTICE` | `u27_r1:` at 2152 | `u28_r1:{example:[3-4 strings],questions:[~9×{type,text,answer/options}]}` |
+| `var RESOURCES` | `u27_r1:` at 2667 | `u28_r1:[{label,url,type:"video"|"worksheet"|"website"}]` (2–4 each) |
+| `var BEYOND` | `u27:` at 2852 | `u28:{resources:[Stage-4-A links],projects:[~4×{icon,title,description,tasks:[5-6]}]}` |
+| `var LEARN` | `u27_r1:` at 3951 | `u28_r1:{journey,hook:{question,reveal},watch:{count,prompts:[3]},workedExample:{problem,steps:[~4]},tryIt:[3×{question,answer,explain,hints:[3]}],reflect:{prompt,note}}` |
+| `const UC` | line 4167 | add `u28:{bg,border,text,dot,dark}` — **proposed teal/Cartesian theme:** `u28:{bg:"#ecfeff",border:"#67e8f9",text:"#0e7490",dot:"#06b6d4",dark:"#155e75"},` (cyan — distinct from u24 blue, u25 green, u26 purple, u27 orange) |
+| student gating | line 6317 (`unit.id==="u24"||…`) | add `||unit.id==="u28"` so u28 gets the same student treatment as 24–27 |
+
+**Question types:** `mc` (answer ∈ options[], 4 options, no dups), `input` (answer + `aliases[]` for `$`/comma/decimal/fraction variants), `truefalse` ("true"/"false"), `order` (items[]+answer[]). Unicode minus −. AUD/Aus spelling. For Cartesian outcomes, coordinates as text e.g. "(3, 5)" — `input` answers like "(3, 5)" need aliases "(3,5)".
+
+**Outcomes to author (from approved rubric — codes are DB keys, do not renumber):**
+- R1 first-quadrant plotting · R2 equally likely outcomes · R3 probabilities as fractions
+- Y1 four quadrants · Y2 translate · Y3 reflect · Y4 build random generators · Y5 not-equally-likely · Y6 observed vs expected + sampling
+- G1 linear relationships (Stage 4 A) · G2 sample space & P(event) (Stage 4 A) · G3 theoretical vs observed / relative frequency (Stage 4 A)
+
+**Resource sourcing plan (verify EVERY url — oEmbed for YouTube, curl for PDFs, per spec §3.5):**
+- Cartesian (R1/Y1/Y2/Y3): Math with Mr J "coordinate plane / four quadrants / plotting points", Corbettmaths "Coordinates" PDFs (`coordinates-pdf*.pdf`), reflections/translations videos. Mirror/fold demo video good for Y3.
+- Chance (R2/R3/Y4/Y5/Y6): Math with Mr J / Corbettmaths "Probability" (`probability-pdf*.pdf`), spinner/relative-frequency videos. Eddie Woo for any AU framing.
+- Green (G1/G2/G3 + BEYOND): Year 7 / Stage 4 — sample space, P(event)=fav/total, relative frequency via random number generator, plotting linear relationships.
+
+**Verification gate before commit:** node-eval each of the 6 blocks (parse clean, MC answer∈options, no dup options, arithmetic correct); load `solo/index.html` via Playwright → **0 console errors**; confirm every outcome has pretest+practice+resources+full LEARN lesson with a 3-step hint ladder on every tryIt.
