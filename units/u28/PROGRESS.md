@@ -44,7 +44,13 @@ All six `solo/index.html` data structures authored for u28 (12 outcomes: R1-R3, 
 
 **Canonicality:** CODE-canonical (zero `resources?unit_id=eq.u28` DB rows) — no Supabase seed needed.
 
-**Remaining (Deliverable B, optional):** the teacher program docx (`units/u28/unit_data.js` → `build_program_template.js` → LibreOffice → `validate.py`). Not started — the in-app content (Deliverable A, primary) is shipped.
+**Deliverable B (teacher program docx) — DONE this session too.**
+- Authored `units/u28/unit_data.js` (schema per `build_program_template.js`): 12 mini-lessons, one per outcome, in teaching order (Position cluster R1·Y1·Y2·Y3·G1, then Chance cluster R2·R3·Y4·Y5·Y6·G2·G3); page-2 Outcome Teaching Record in band/code order.
+- DoE lesson links mapped (Position L1-4, Chance L5-8); Green G1/G2/G3 marked "Original mini lesson" (no DoE source — not fabricated). Hands-on flags + materials set for R2, Y2, Y3, Y4, Y6 per Stage 0c modality tags (spinners, grid paper, mirror, counters, tally sheets).
+- Built `Maths_S3_YearB_Unit28_SOLO_Full_Program.docx` via `node scripts/build_program_template.js` (docx v8 installed locally).
+- **Validation:** LibreOffice/`soffice` is NOT installed in this Codespace, so the spec's docx→docx round-trip + `validate.py` could not run. Instead verified: `word/document.xml` well-formed XML; all 12 outcome codes + all 4 syllabus codes (MA3-GM-01, MA3-CHAN-01, MA4-LIN-C-01, MA4-PRO-C-01) present; 12 Activate + 12 Check steps (all cards have the full 4-step structure); page-1 (Working Mathematically, pre/post-test), page-2 (Outcome Teaching Record), Mini Lesson Sequence, strand-abbreviation footer all present; all band shading colours rendered. **Open item:** Nicholas should spot-read the docx in Word/LibreOffice — table-rendering nuances only surface after a real Word open (the Deliverable B gate per spec §6).
+
+Both deliverables for Unit 28 are now complete.
 
 ---
 
