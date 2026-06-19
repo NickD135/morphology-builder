@@ -29,6 +29,23 @@ Rubric (background source): `SOLO Units/u28/00_rubric_draft.md`.
 - This is a 12-outcome unit — comparable to Unit 26 (the gold standard). Expect the in-app authoring + verification to span multiple sessions; checkpoint by outcome code per spec §8.
 - Commit policy: when committing solo work the repo convention is direct to `main` (Vercel auto-deploys); co-author `Claude Opus 4.8`.
 
+## Session 2 — 2026-06-19 — IN-APP BUILD COMPLETE ✅
+
+All six `solo/index.html` data structures authored for u28 (12 outcomes: R1-R3, Y1-Y6, G1-G3), committed in one go per the no-partial-exposure rule:
+- `UNITS` u28 — 12 outcomes × 10 Show questions (120 Qs). Position (Cartesian) + Chance.
+- `PRETESTS` u28 — 2 questions per outcome (24).
+- `PRACTICE` u28_* — example block + ~9 questions each.
+- `LEARN` u28_* — full Grow lesson each (journey/hook/watch/workedExample/tryIt with 3-step hint ladder/reflect).
+- `RESOURCES` u28_* — 3-4 each. **Every URL verified**: 19+ YouTube via oEmbed (Math with Mr J, mrmaisonet, FuseSchool, Corbettmaths, MME, Mashup Math, Partners in Prime, etc.); Corbettmaths PDFs via curl (coordinates-pdf1/2, reflections, translations, probability, relative-frequency, listing-outcomes, drawing-linear-graphs).
+- `BEYOND` u28 — Stage 4 A resources (verified) + 4 multi-step projects (coordinate map, game designer, linear patterns, relative-frequency experiment).
+- `UC` u28 — cyan/Cartesian theme `{bg:#ecfeff,…}`. Student gating updated (`||unit.id==="u28"`).
+
+**Verification gate PASSED:** node-eval of all 6 blocks clean; MC answers ∈ options + no dup options; 3-hint ladder on every tryIt; ≥2 resources/outcome, no dup URLs within an outcome. Playwright load of `solo/index.html` → React app rendered, 0 JS/compile errors (only an environmental favicon 404 + the expected in-browser-Babel warning).
+
+**Canonicality:** CODE-canonical (zero `resources?unit_id=eq.u28` DB rows) — no Supabase seed needed.
+
+**Remaining (Deliverable B, optional):** the teacher program docx (`units/u28/unit_data.js` → `build_program_template.js` → LibreOffice → `validate.py`). Not started — the in-app content (Deliverable A, primary) is shipped.
+
 ---
 
 ## Build kit (everything the authoring session needs — derived this session)
