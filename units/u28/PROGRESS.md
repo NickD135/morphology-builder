@@ -77,6 +77,16 @@ Verified: card `tblGrid`s are now 4 columns (widths 1600/1600/4319/7519, sum 150
 
 Also committed the **PDF render** (`Maths_S3_YearB_Unit28_SOLO_Full_Program.pdf`, 15 pages) alongside the docx as a guaranteed-correct artifact. Page-1 outer/nested tables, the record (6-col), and banner tables were already grid-consistent — only the lesson-card table had the malformed grid.
 
+## Session 5 — 2026-06-19 — Resource appendix attached
+
+Nick confirmed the docx renders correctly in both Word and the PDF, then asked for the resource appendix at the bottom. Added it via the shared engine (`buildAppendix()`), Nicholas's "merged into the program file" workflow:
+
+- `unit_data.js`: `resource_appendix_attached: true` + `resources` (per-outcome, keyed by lowercase code, mirroring the verified set in solo/index.html) + `beyond_resources` (Stage 4 links + Maths-is-Fun interactives).
+- `buildAppendix()`: a banner, a **3-column resource table** (Type | Resource | clickable Link) with band-coloured per-outcome sub-headers and a "Beyond SOLO — Stage 4" group, then a **worksheet download checklist** (unique PDF worksheets, tick-boxes + links). Links use `ExternalHyperlink` (real, clickable). Grid kept strictly valid for Word — every row spans exactly 3 columns (resource rows = 3 cells; sub-headers = colSpan 3).
+- Page-1 fix: the "See Appendix for Resources" pointer added a line that re-overflowed page 1, so the page-1 citation is now shortened (drops the long strand summary) when the appendix is attached — net-neutral, page 1 still fits.
+
+Verified via round-trip: 18 pages (15 program + 3 appendix), document.xml well-formed, appendix table is a valid 3-col grid, 62 working hyperlinks, no blank/orphan pages. docx + refreshed PDF in `units/u28/`. Engine UNIT DATA SCHEMA doc updated with the new fields.
+
 ---
 
 ## Build kit (everything the authoring session needs — derived this session)

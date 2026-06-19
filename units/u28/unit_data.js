@@ -15,6 +15,94 @@ module.exports = {
   term: null,                      // left blank — confirm term placement with Nicholas
   duration: "2-3 weeks",
 
+  // Resource appendix is merged onto the end of this same program file
+  // (Nicholas's preferred workflow) → page-1 Resources line shows
+  // "See Appendix for Resources". Resources below mirror the verified
+  // set in solo/index.html (Deliverable A); every URL was oEmbed/curl
+  // checked. Keyed by outcome code (lowercase).
+  resource_appendix_attached: true,
+  resources: {
+    r1: [
+      { type: "video", label: "Plotting Points on a Coordinate Plane | Quadrant 1 | Math with Mr. J", url: "https://www.youtube.com/watch?v=v4vXkDHYDyk" },
+      { type: "video", label: "How to Plot Points on a Coordinate Plane (Quadrant 1) | Math with Mr. J", url: "https://www.youtube.com/watch?v=bZQkSjEzIEo" },
+      { type: "video", label: "Introduction to Coordinate Planes + Vocabulary | Math with Mr. J", url: "https://www.youtube.com/watch?v=qcb-mcREIi0" },
+      { type: "worksheet", label: "Corbettmaths — Coordinates (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/coordinates-pdf1.pdf" },
+    ],
+    r2: [
+      { type: "video", label: "An Intro to Probability | Basic Probability | Math with Mr. J", url: "https://www.youtube.com/watch?v=6IdNYdA6no8" },
+      { type: "video", label: "Probability For Kids — Likely, Unlikely, Impossible & Equally Likely", url: "https://www.youtube.com/watch?v=ad00GRc8BLg" },
+      { type: "video", label: "Math Antics — Basic Probability", url: "https://www.youtube.com/watch?v=KzfWUEJjG18" },
+    ],
+    r3: [
+      { type: "video", label: "An Intro to Finding Probability | Basic Probability | Math with Mr. J", url: "https://www.youtube.com/watch?v=zE-Y_QCHOt8" },
+      { type: "video", label: "Calculating Probability as a Fraction | EasyTeaching", url: "https://www.youtube.com/watch?v=PSMr1fXr71Y" },
+      { type: "video", label: "Finding Probability | Basic Probability | Math with Mr. J", url: "https://www.youtube.com/watch?v=QEdHtF1CKRQ" },
+      { type: "worksheet", label: "Corbettmaths — Probability (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/probability-pdf.pdf" },
+    ],
+    y1: [
+      { type: "video", label: "Plotting Points on a Coordinate Plane | All 4 Quadrants | Math with Mr. J", url: "https://www.youtube.com/watch?v=pl9nSVzRWvA" },
+      { type: "video", label: "Quadrants of the Coordinate Plane | Math with Mr. J", url: "https://www.youtube.com/watch?v=uc9hWu73Phw" },
+      { type: "video", label: "Identifying the Quadrant a Point Lies In | Math with Mr. J", url: "https://www.youtube.com/watch?v=PXn0T5QuwnY" },
+      { type: "worksheet", label: "Corbettmaths — Coordinates 2 (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/coordinates-pdf2.pdf" },
+    ],
+    y2: [
+      { type: "video", label: "Transformations — Translating on the Coordinate Plane | mrmaisonet", url: "https://www.youtube.com/watch?v=Ob3Kzl_tDH0" },
+      { type: "video", label: "Translating Shapes on the Coordinate Plane | mrmaisonet", url: "https://www.youtube.com/watch?v=2jCAlyNj0Mk" },
+      { type: "worksheet", label: "Corbettmaths — Translations (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/translations-pdf.pdf" },
+    ],
+    y3: [
+      { type: "video", label: "Reflecting Points Across the X-Axis and Y-Axis | Partners in Prime Math", url: "https://www.youtube.com/watch?v=XqvbbkOv_3k" },
+      { type: "video", label: "Reflections Over the X-Axis and Y-Axis Explained! | Mashup Math", url: "https://www.youtube.com/watch?v=ouNp8FtgiEE" },
+      { type: "worksheet", label: "Corbettmaths — Reflections (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/reflections-pdf.pdf" },
+    ],
+    y4: [
+      { type: "video", label: "Year 7 Chance — Express Probabilities as Decimals, Fractions and Percentages", url: "https://www.youtube.com/watch?v=piHXzRTs6IU" },
+      { type: "video", label: "Describing Probabilities Using Fractions, Decimals and Percentages | MATHUTO", url: "https://www.youtube.com/watch?v=KNtMcJBLKI8" },
+      { type: "video", label: "Probability with Spinners | Love2TeachMath", url: "https://www.youtube.com/watch?v=FnRe9qz5nck" },
+    ],
+    y5: [
+      { type: "video", label: "Theoretical Probability — Possible Outcomes Using a Spinner (unequal sections) | mrmaisonet", url: "https://www.youtube.com/watch?v=3QmNvODlnt8" },
+      { type: "video", label: "Finding Probability | Basic Probability | Math with Mr. J", url: "https://www.youtube.com/watch?v=QEdHtF1CKRQ" },
+      { type: "worksheet", label: "Corbettmaths — Probability (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2018/11/Probability-pdf.pdf" },
+    ],
+    y6: [
+      { type: "video", label: "Theoretical vs. Experimental Probability | Math with Mr. J", url: "https://www.youtube.com/watch?v=Ay5pnC-0bVI" },
+      { type: "video", label: "What is Experimental Probability? | Math with Mr. J", url: "https://www.youtube.com/watch?v=YP6y9KstyMM" },
+      { type: "worksheet", label: "Corbettmaths — Relative Frequency (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/relative-frequency-pdf.pdf" },
+    ],
+    g1: [
+      { type: "video", label: "Tables to Equations and Graphs — Linear Relationships | 7th Grade Math", url: "https://www.youtube.com/watch?v=7RnM0S3L1lY" },
+      { type: "video", label: "Plot Straight Line Graphs | FuseSchool", url: "https://www.youtube.com/watch?v=a6hIaNvWE78" },
+      { type: "video", label: "Introduction to Linear Relations: Tables and Graphs | BHNmath", url: "https://www.youtube.com/watch?v=klrGBHF_pZc" },
+      { type: "worksheet", label: "Corbettmaths — Drawing Linear Graphs (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/drawing-linear-graphs-pdf.pdf" },
+    ],
+    g2: [
+      { type: "video", label: "Sample Spaces | Statistics & Probability | FuseSchool", url: "https://www.youtube.com/watch?v=UX489ku79hU" },
+      { type: "video", label: "Grade 7 Math — Probability and Sample Space | JoAnn's School", url: "https://www.youtube.com/watch?v=uaAjzfRIJ5g" },
+      { type: "video", label: "What is Theoretical Probability? | Math with Mr. J", url: "https://www.youtube.com/watch?v=LNmNFnkngFw" },
+      { type: "worksheet", label: "Corbettmaths — Listing Outcomes (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/listing-outcomes-pdf.pdf" },
+    ],
+    g3: [
+      { type: "video", label: "Relative Frequency — Corbettmaths", url: "https://www.youtube.com/watch?v=MS6lnCTgTSw" },
+      { type: "video", label: "Probability — Relative Frequency (Video 1) | MME", url: "https://www.youtube.com/watch?v=4R6Hy-u6wAs" },
+      { type: "video", label: "Theoretical vs. Experimental Probability | Math with Mr. J", url: "https://www.youtube.com/watch?v=Ay5pnC-0bVI" },
+      { type: "worksheet", label: "Corbettmaths — Relative Frequency (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/relative-frequency-pdf.pdf" },
+    ],
+  },
+  beyond_resources: [
+    { type: "video", label: "Introduction to Linear Relations: Tables and Graphs | BHNmath", url: "https://www.youtube.com/watch?v=klrGBHF_pZc" },
+    { type: "video", label: "Plot Straight Line Graphs | FuseSchool", url: "https://www.youtube.com/watch?v=a6hIaNvWE78" },
+    { type: "video", label: "Sample Spaces | Statistics & Probability | FuseSchool", url: "https://www.youtube.com/watch?v=UX489ku79hU" },
+    { type: "video", label: "What is Theoretical Probability? | Math with Mr. J", url: "https://www.youtube.com/watch?v=LNmNFnkngFw" },
+    { type: "video", label: "Relative Frequency — Corbettmaths", url: "https://www.youtube.com/watch?v=MS6lnCTgTSw" },
+    { type: "worksheet", label: "Corbettmaths — Drawing Linear Graphs (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/drawing-linear-graphs-pdf.pdf" },
+    { type: "worksheet", label: "Corbettmaths — Listing Outcomes (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/listing-outcomes-pdf.pdf" },
+    { type: "worksheet", label: "Corbettmaths — Relative Frequency (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/relative-frequency-pdf.pdf" },
+    { type: "website", label: "Maths is Fun — Cartesian Coordinates (interactive)", url: "https://www.mathsisfun.com/data/cartesian-coordinates.html" },
+    { type: "website", label: "Maths is Fun — Probability (interactive)", url: "https://www.mathsisfun.com/data/probability.html" },
+    { type: "website", label: "Maths is Fun — Spinner Simulator (random generator)", url: "https://www.mathsisfun.com/data/spinner.html" },
+  ],
+
   syllabus_strands_summary: "Geometric Measure (Position) A & B and Chance A & B, extended with Stage 4 Linear Relationships A and Probability A",
   strand_abbreviations_note: "GM = Geometric Measure (Position). CHAN = Chance. LIN = Linear Relationships (Stage 4). PRO = Probability (Stage 4). A/B = syllabus content groups (A consolidated as Year A / prior learning, B taught as Year B / home content).",
 

@@ -27,7 +27,7 @@
 const {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   AlignmentType, BorderStyle, WidthType, ShadingType, VerticalAlign,
-  LevelFormat, PageBreak, TableLayoutType, PageOrientation
+  LevelFormat, PageBreak, TableLayoutType, PageOrientation, ExternalHyperlink
 } = require('docx');
 const fs = require('fs');
 const path = require('path');
@@ -274,12 +274,17 @@ function buildRightColumn(unit, rightWidth) {
       children: [new TextRun({ text: "See Appendix for Resources", size: 13, italic: true, font: "Arial", color: "555555" })]
     }));
   }
+  // When the appendix is attached, the "See Appendix" pointer already
+  // adds a line, so keep the citation to ONE line (drop the long strand
+  // summary — it's covered by the content-points headings + abbreviations
+  // note) so page 1 still fits. Standalone-appendix units keep the full
+  // citation.
+  const citation = unit.resource_appendix_attached
+    ? `Word Labs SOLO Tracker: wordlabs.app/solo  |  NSW DoE Stage 3 Year B Unit ${unit.unit_number}  |  NESA Mathematics K-10 Syllabus (2022)`
+    : `Word Labs SOLO Tracker: wordlabs.app/solo  |  NSW DoE Mathematics Stage 3 Year B Unit ${unit.unit_number} (DOCX)  |  NSW Mathematics K-10 Syllabus (2022) -- ${unit.syllabus_strands_summary}`;
   kids.push(new Paragraph({
     spacing: { before: 0, after: 0 },
-    children: [new TextRun({
-      text: `Word Labs SOLO Tracker: wordlabs.app/solo  |  NSW DoE Mathematics Stage 3 Year B Unit ${unit.unit_number} (DOCX)  |  NSW Mathematics K-10 Syllabus (2022) -- ${unit.syllabus_strands_summary}`,
-      size: 13, font: "Arial", color: "555555"
-    })]
+    children: [new TextRun({ text: citation, size: 13, font: "Arial", color: "555555" })]
   }));
 
   return kids;
@@ -681,6 +686,92 @@ function buildLessonSequence(unit) {
  * grid cramped to handwrite in, which works against the point of that
  * page, so treat shrinking margins as a fallback, not the first fix.
  */
+// ── Resource Appendix (optional, appended to the end of the program) ───────
+// Rendered when unit.resources is present. A full per-outcome resource
+// table (3-column grid: Type | Resource | Link, with clickable links) plus
+// a worksheet download checklist (Corbettmaths PDFs can't be fetched
+// server-side, so the teacher ticks them off as they download). Grid is
+// kept strictly valid for Word: every row spans exactly 3 columns
+// (resource rows = 3 cells; band sub-headers = 1 cell colSpan 3).
+const TYPE_LABEL = { video: "Video", worksheet: "Worksheet (print)", website: "Website" };
+
+function resLink(url) {
+  return new ExternalHyperlink({ link: url, children: [new TextRun({ text: url, size: 13, color: "0563C1", underline: {}, font: "Arial" })] });
+}
+
+function buildAppendix(unit) {
+  const children = [];
+  children.push(pbPara());
+
+  // Banner
+  children.push(mkTable([PW], [new TableRow({
+    children: [new TableCell({
+      borders: nobdrs, width: { size: PW, type: WidthType.DXA }, shading: { fill: NAVY, type: ShadingType.CLEAR },
+      margins: { top: 90, bottom: 90, left: 200, right: 200 },
+      children: [
+        new Paragraph({ spacing: { before: 0, after: 30 }, children: [new TextRun({ text: `Unit ${unit.unit_number} -- Resource Appendix`, bold: true, size: 28, color: WHITE, font: "Arial" })] }),
+        new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: "Every link verified. Videos open in a browser; worksheets are print-ready PDFs (see the download checklist at the end).", size: 15, color: MIDBLUE, font: "Arial" })] })
+      ]
+    })]
+  })]));
+  children.push(sp(50));
+
+  // Resource table — 3-column grid
+  const RT = 1700, RL = 6000, RU = PW - RT - RL;   // Type | Resource | Link
+  const rows = [new TableRow({ tableHeader: true, cantSplit: true, children: [
+    hc("Type", RT, DKBLUE, { size: 15, align: AlignmentType.LEFT }),
+    hc("Resource", RL, DKBLUE, { size: 15, align: AlignmentType.LEFT }),
+    hc("Link", RU, DKBLUE, { size: 15, align: AlignmentType.LEFT })
+  ] })];
+
+  const addGroup = (title, band, list) => {
+    if (!list || !list.length) return;
+    rows.push(new TableRow({ cantSplit: true, children: [new TableCell({
+      columnSpan: 3, borders: thins("DDDDDD"), width: { size: PW, type: WidthType.DXA },
+      shading: { fill: band.bg, type: ShadingType.CLEAR }, margins: { top: 50, bottom: 50, left: 110, right: 110 },
+      children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: title, bold: true, size: 15, color: band.hd, font: "Arial" })] })]
+    })] }));
+    list.forEach(r => {
+      rows.push(new TableRow({ cantSplit: true, children: [
+        tc(TYPE_LABEL[r.type] || r.type, RT, WHITE, { size: 13, mt: 40, mb: 40 }),
+        tc(r.label, RL, WHITE, { size: 14, mt: 40, mb: 40 }),
+        new TableCell({ borders: thins("DDDDDD"), width: { size: RU, type: WidthType.DXA }, shading: { fill: WHITE, type: ShadingType.CLEAR }, margins: { top: 40, bottom: 40, left: 110, right: 110 }, verticalAlign: VerticalAlign.TOP, children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [resLink(r.url)] })] })
+      ] }));
+    });
+  };
+
+  (unit.outcomes || []).forEach(o => {
+    const band = BAND_COLORS[o.code[0]];
+    addGroup(`${o.code} -- ${o.desc}`, band, unit.resources[o.code.toLowerCase()]);
+  });
+  if (unit.beyond_resources && unit.beyond_resources.length) {
+    addGroup("Beyond SOLO -- Stage 4 extension", BAND_COLORS.G, unit.beyond_resources);
+  }
+  children.push(mkTable([RT, RL, RU], rows));
+
+  // Worksheet download checklist — unique worksheet URLs
+  const seen = new Set();
+  const sheets = [];
+  const collect = (list) => (list || []).forEach(r => { if (r.type === "worksheet" && !seen.has(r.url)) { seen.add(r.url); sheets.push(r); } });
+  (unit.outcomes || []).forEach(o => collect(unit.resources[o.code.toLowerCase()]));
+  collect(unit.beyond_resources);
+
+  if (sheets.length) {
+    children.push(sp(120));
+    children.push(new Paragraph({ spacing: { before: 0, after: 30 }, children: [new TextRun({ text: "Worksheet download checklist", bold: true, size: 18, color: NAVY, font: "Arial" })] }));
+    children.push(new Paragraph({ spacing: { before: 0, after: 60 }, children: [new TextRun({ text: "Download and print these PDFs before the unit (or save to your class drive). Tick each as you go.", size: 14, italic: true, color: "666666", font: "Arial" })] }));
+    sheets.forEach(s => {
+      children.push(new Paragraph({ spacing: { before: 0, after: 40 }, children: [
+        new TextRun({ text: "❑  ", size: 18, font: "Arial", color: "888888" }),
+        new TextRun({ text: `${s.label}  --  `, size: 14, font: "Arial" }),
+        resLink(s.url)
+      ] }));
+    });
+  }
+
+  return children;
+}
+
 function buildProgramDocument(unit, opts) {
   opts = opts || {};
   const marginDxa = opts.marginDxa || 900;
@@ -688,7 +779,8 @@ function buildProgramDocument(unit, opts) {
   const children = [
     ...buildPage1(unit),
     ...buildPage2(unit),
-    ...buildLessonSequence(unit)
+    ...buildLessonSequence(unit),
+    ...(unit.resources ? buildAppendix(unit) : [])
   ];
 
   return new Document({
@@ -806,6 +898,18 @@ module.exports = { buildProgramDocument, BAND_COLORS };
  *       materials: ["grid paper", "counting squares", "ruler"]  // renders as a distinct materials strip
  *     },
  *     // ...
- *   ]
+ *   ],
+ *
+ *   // OPTIONAL — resource appendix appended to the end of the program.
+ *   // Present `resources` → buildAppendix() renders a per-outcome resource
+ *   // table (Type | Resource | clickable Link) + a worksheet download
+ *   // checklist. Set resource_appendix_attached: true so page 1's Resources
+ *   // line points to it (and the page-1 citation stays one line).
+ *   resource_appendix_attached: true,
+ *   resources: {                      // keyed by outcome code, lowercase
+ *     r1: [ { type: "video"|"worksheet"|"website", label: "...", url: "..." }, ... ],
+ *     // ... one key per outcome (r1, r2, y1, g1, ...)
+ *   },
+ *   beyond_resources: [ { type, label, url }, ... ]   // Stage 4 extension links
  * }
  */
