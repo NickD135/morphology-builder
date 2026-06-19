@@ -52,6 +52,19 @@ All six `solo/index.html` data structures authored for u28 (12 outcomes: R1-R3, 
 
 Both deliverables for Unit 28 are now complete.
 
+## Session 3 — 2026-06-19 — docx layout fixes (LibreOffice round-trip)
+
+Installed LibreOffice + poppler in the Codespace and ran the spec's docx→PDF round-trip. The first docx had real layout faults that only surface in a true Word/LibreOffice render (exactly what the spec warns about): page-1 overview overflowed onto page 2 with fragmented half-empty table cells, a blank page 2, and the 12-row Outcome Teaching Record spilling its last row + footer. Fixed in the **shared engine** (`scripts/build_program_template.js`) so every future dense unit benefits — not hand-edited:
+
+- **`cantSplit: true`** on Outcome Teaching Record rows (+ repeating header), Working Mathematically rows, and the blank pre/post-test rows → table rows never fragment mid-cell across a page break.
+- **`pbPara()`** helper (paragraph `pageBreakBefore: true`) replaces the three free-standing `PageBreak` paragraphs → a full page no longer orphans an empty paragraph onto the next page (this was the blank-page-2 cause).
+- **Page-1 density**: widened left column 6000→6700 DXA; trimmed section-heading lead spacing, inter-section spacers, content-point bullet spacing, header height, and outcomes/WM/blank-cell padding so the denser 13-content-point + 12-outcome overview fits one page.
+- **Record density**: reduced row padding + banner height so all 12 rows + the NESA footer fit on a single page.
+
+Result verified via LibreOffice round-trip render: 17→15 pages, **no blank or orphan pages**. Page 1 = overview (clean), page 2 = full 12-row record + footer, pages 3-15 = lesson cards (band-coloured, [HANDS-ON] tags on R2/Y2/Y3/Y4/Y6, "Original mini lesson" with no DoE link on Green G1-G3). docx regenerated and re-validated (document.xml well-formed; 12 lesson cards; all codes present).
+
+Tooling note: LibreOffice (`soffice`) + `poppler-utils` are now installed in this Codespace, so the spec's round-trip render step can run here going forward.
+
 ---
 
 ## Build kit (everything the authoring session needs — derived this session)

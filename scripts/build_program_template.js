@@ -104,6 +104,12 @@ function mkTable(cols, rows) {
 
 function sp(b) { return new Paragraph({ spacing: { before: b || 120, after: 0 }, children: [new TextRun("")] }); }
 
+// Page break that starts the FOLLOWING content on a new page via
+// pageBreakBefore (not a free-standing PageBreak run). A free-standing
+// PageBreak orphans onto — and blanks out — the next page whenever the
+// preceding page is completely full; pageBreakBefore never does.
+function pbPara() { return new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0 }, children: [new TextRun({ text: "", size: 2 })] }); }
+
 function bandPara(text) {
   return new Paragraph({
     spacing: { before: 0, after: 0 },
@@ -117,10 +123,10 @@ function buildHeader(unit) {
     children: [new TableCell({
       borders: nobdrs, width: { size: PW, type: WidthType.DXA },
       shading: { fill: NAVY, type: ShadingType.CLEAR },
-      margins: { top: 110, bottom: 110, left: 200, right: 200 },
+      margins: { top: 70, bottom: 70, left: 200, right: 200 },
       children: [
         new Paragraph({
-          spacing: { before: 0, after: 40 },
+          spacing: { before: 0, after: 30 },
           children: [
             new TextRun({ text: `Mathematics Stage 3 -- Year B -- Unit ${unit.unit_number}  `, bold: true, size: 28, color: WHITE, font: "Arial" }),
             new TextRun({ text: unit.unit_title, size: 22, color: MIDBLUE, font: "Arial" })
@@ -142,7 +148,7 @@ function buildOutcomesTable(unit, leftWidth) {
   const rows = [new TableRow({ children: [hc("Code", 900, DKBLUE, { size: 14 }), hc("Outcome descriptor", leftWidth - 900, DKBLUE, { size: 14 })] })];
   unit.syllabus_outcomes.forEach((o, i) => {
     const bg = i % 2 === 0 ? WHITE : GREY;
-    rows.push(new TableRow({ children: [tc(o.code, 900, LTBLUE, { bold: true, size: 15 }), tc(o.descriptor, leftWidth - 900, bg, { size: 15 })] }));
+    rows.push(new TableRow({ children: [tc(o.code, 900, LTBLUE, { bold: true, size: 15, mt: 36, mb: 36 }), tc(o.descriptor, leftWidth - 900, bg, { size: 15, mt: 36, mb: 36 })] }));
   });
   return mkTable([900, leftWidth - 900], rows);
 }
@@ -159,7 +165,7 @@ function buildContentPointsTable(unit, leftWidth) {
       children: [
         new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: band.heading, bold: true, size: 13, color: band.hd, font: "Arial" })] }),
         ...band.points.map((pt, i) => new Paragraph({
-          spacing: { before: i === 0 ? 20 : 0, after: i === band.points.length - 1 ? 0 : 18 },
+          spacing: { before: i === 0 ? 20 : 0, after: i === band.points.length - 1 ? 0 : 8 },
           children: [new TextRun({ text: pt, size: 13, font: "Arial" })]
         }))
       ]
@@ -188,17 +194,17 @@ function buildLeftColumn(unit, leftWidth) {
   const kids = [];
   kids.push(new Paragraph({ spacing: { before: 0, after: 60 }, children: [new TextRun({ text: "Syllabus outcomes", bold: true, size: 17, color: NAVY, font: "Arial" })] }));
   kids.push(buildOutcomesTable(unit, leftWidth));
-  kids.push(sp(80));
+  kids.push(sp(16));
 
-  kids.push(new Paragraph({ spacing: { before: 60, after: 60 }, children: [new TextRun({ text: "Syllabus content points (addressed through SOLO tracker)", bold: true, size: 17, color: NAVY, font: "Arial" })] }));
+  kids.push(new Paragraph({ spacing: { before: 24, after: 30 }, children: [new TextRun({ text: "Syllabus content points (addressed through SOLO tracker)", bold: true, size: 17, color: NAVY, font: "Arial" })] }));
   kids.push(new Paragraph({
     spacing: { before: 0, after: 60 },
     children: [new TextRun({ text: "All content points below are covered by students working independently through the SOLO tracker. Mini masterclasses target specific outcomes based on live tracker data.", size: 14, italic: true, color: "666666", font: "Arial" })]
   }));
   kids.push(buildContentPointsTable(unit, leftWidth));
-  kids.push(sp(80));
+  kids.push(sp(16));
 
-  kids.push(new Paragraph({ spacing: { before: 60, after: 40 }, children: [new TextRun({ text: "Teaching model", bold: true, size: 17, color: NAVY, font: "Arial" })] }));
+  kids.push(new Paragraph({ spacing: { before: 24, after: 30 }, children: [new TextRun({ text: "Teaching model", bold: true, size: 17, color: NAVY, font: "Arial" })] }));
   kids.push(new Paragraph({
     spacing: { before: 0, after: 0 },
     children: [new TextRun({
@@ -217,45 +223,45 @@ function buildRightColumn(unit, rightWidth) {
   const wmRows = [new TableRow({ children: [hc("Process", rightWidth / 2, DKBLUE, { size: 14, align: AlignmentType.LEFT }), hc("How it appears in this unit", rightWidth / 2, DKBLUE, { size: 14, align: AlignmentType.LEFT })] })];
   unit.working_mathematically.forEach((w, i) => {
     const bg = i % 2 === 0 ? WHITE : GREY;
-    wmRows.push(new TableRow({ children: [tc(w.process, rightWidth / 2, bg, { bold: true, size: 14 }), tc(w.description, rightWidth / 2, bg, { size: 14 })] }));
+    wmRows.push(new TableRow({ cantSplit: true, children: [tc(w.process, rightWidth / 2, bg, { bold: true, size: 13, mt: 22, mb: 22 }), tc(w.description, rightWidth / 2, bg, { size: 13, mt: 22, mb: 22 })] }));
   });
   kids.push(mkTable([rightWidth / 2, rightWidth / 2], wmRows));
-  kids.push(sp(80));
+  kids.push(sp(16));
 
   // Differentiation (blank fields — filled in by teacher)
-  kids.push(new Paragraph({ spacing: { before: 60, after: 40 }, children: [new TextRun({ text: "Differentiation", bold: true, size: 17, color: NAVY, font: "Arial" })] }));
+  kids.push(new Paragraph({ spacing: { before: 24, after: 30 }, children: [new TextRun({ text: "Differentiation", bold: true, size: 17, color: NAVY, font: "Arial" })] }));
   kids.push(mkTable([rightWidth / 2, rightWidth / 2], [
     new TableRow({ children: [hc("Support", rightWidth / 2, RED_HD, { size: 14 }), hc("HPGE / Extension", rightWidth / 2, GRN_HD, { size: 14 })] }),
     new TableRow({
       children: [
-        new TableCell({ borders: thins("DDDDDD"), width: { size: rightWidth / 2, type: WidthType.DXA }, shading: { fill: RED_BG, type: ShadingType.CLEAR }, margins: { top: 60, bottom: 60, left: 110, right: 110 }, children: [new Paragraph({ spacing: { before: 0, after: 20 }, children: [new TextRun({ text: "Students in this group:", size: 13, italic: true, color: "888888", font: "Arial" })] }), new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: "", size: 15, font: "Arial" })] })] }),
-        new TableCell({ borders: thins("DDDDDD"), width: { size: rightWidth / 2, type: WidthType.DXA }, shading: { fill: GRN_BG, type: ShadingType.CLEAR }, margins: { top: 60, bottom: 60, left: 110, right: 110 }, children: [new Paragraph({ spacing: { before: 0, after: 20 }, children: [new TextRun({ text: "Students in this group:", size: 13, italic: true, color: "888888", font: "Arial" })] }), new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: "", size: 15, font: "Arial" })] })] })
+        new TableCell({ borders: thins("DDDDDD"), width: { size: rightWidth / 2, type: WidthType.DXA }, shading: { fill: RED_BG, type: ShadingType.CLEAR }, margins: { top: 45, bottom: 70, left: 110, right: 110 }, children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: "Students in this group:", size: 13, italic: true, color: "888888", font: "Arial" })] })] }),
+        new TableCell({ borders: thins("DDDDDD"), width: { size: rightWidth / 2, type: WidthType.DXA }, shading: { fill: GRN_BG, type: ShadingType.CLEAR }, margins: { top: 45, bottom: 70, left: 110, right: 110 }, children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: "Students in this group:", size: 13, italic: true, color: "888888", font: "Arial" })] })] })
       ]
     })
   ]));
-  kids.push(sp(80));
+  kids.push(sp(16));
 
   // Pre-test (blank fields)
-  kids.push(new Paragraph({ spacing: { before: 60, after: 40 }, children: [new TextRun({ text: "Pre-test", bold: true, size: 17, color: NAVY, font: "Arial" })] }));
+  kids.push(new Paragraph({ spacing: { before: 24, after: 30 }, children: [new TextRun({ text: "Pre-test", bold: true, size: 17, color: NAVY, font: "Arial" })] }));
   kids.push(mkTable([700, rightWidth - 700], [
-    new TableRow({ children: [tc("Date", 700, LTBLUE, { bold: true, size: 14 }), tc("", rightWidth - 700, WHITE, { size: 14 })] }),
-    new TableRow({ children: [tc("Format", 700, LTBLUE, { bold: true, size: 14 }), tc("", rightWidth - 700, WHITE, { size: 14 })] }),
-    new TableRow({ children: [tc("Band placements / key findings", 700, LTBLUE, { bold: true, size: 14 }), tc("", rightWidth - 700, WHITE, { size: 14, mb: 80 })] })
+    new TableRow({ cantSplit: true, children: [tc("Date", 700, LTBLUE, { bold: true, size: 14, mt: 24, mb: 24 }), tc("", rightWidth - 700, WHITE, { size: 14, mt: 24, mb: 24 })] }),
+    new TableRow({ cantSplit: true, children: [tc("Format", 700, LTBLUE, { bold: true, size: 14, mt: 24, mb: 24 }), tc("", rightWidth - 700, WHITE, { size: 14, mt: 24, mb: 24 })] }),
+    new TableRow({ cantSplit: true, children: [tc("Band placements / key findings", 700, LTBLUE, { bold: true, size: 14, mt: 24, mb: 24 }), tc("", rightWidth - 700, WHITE, { size: 14, mt: 24, mb: 36 })] })
   ]));
-  kids.push(sp(80));
+  kids.push(sp(16));
 
   // Post-test (blank fields)
-  kids.push(new Paragraph({ spacing: { before: 60, after: 40 }, children: [new TextRun({ text: "Post-test / unit evaluation", bold: true, size: 17, color: NAVY, font: "Arial" })] }));
+  kids.push(new Paragraph({ spacing: { before: 24, after: 30 }, children: [new TextRun({ text: "Post-test / unit evaluation", bold: true, size: 17, color: NAVY, font: "Arial" })] }));
   kids.push(mkTable([700, rightWidth - 700], [
-    new TableRow({ children: [tc("Date", 700, LTBLUE, { bold: true, size: 14 }), tc("", rightWidth - 700, WHITE, { size: 14 })] }),
-    new TableRow({ children: [tc("Key findings", 700, LTBLUE, { bold: true, size: 14 }), tc("", rightWidth - 700, WHITE, { size: 14 })] }),
-    new TableRow({ children: [tc("Students who need further consolidation", 700, LTBLUE, { bold: true, size: 14 }), tc("", rightWidth - 700, WHITE, { size: 14 })] }),
-    new TableRow({ children: [tc("Next steps", 700, LTBLUE, { bold: true, size: 14 }), tc("", rightWidth - 700, WHITE, { size: 14, mb: 80 })] })
+    new TableRow({ cantSplit: true, children: [tc("Date", 700, LTBLUE, { bold: true, size: 14, mt: 24, mb: 24 }), tc("", rightWidth - 700, WHITE, { size: 14, mt: 24, mb: 24 })] }),
+    new TableRow({ cantSplit: true, children: [tc("Key findings", 700, LTBLUE, { bold: true, size: 14, mt: 24, mb: 24 }), tc("", rightWidth - 700, WHITE, { size: 14, mt: 24, mb: 24 })] }),
+    new TableRow({ cantSplit: true, children: [tc("Students who need further consolidation", 700, LTBLUE, { bold: true, size: 14, mt: 24, mb: 24 }), tc("", rightWidth - 700, WHITE, { size: 14, mt: 24, mb: 24 })] }),
+    new TableRow({ cantSplit: true, children: [tc("Next steps", 700, LTBLUE, { bold: true, size: 14, mt: 24, mb: 24 }), tc("", rightWidth - 700, WHITE, { size: 14, mt: 24, mb: 36 })] })
   ]));
-  kids.push(sp(80));
+  kids.push(sp(16));
 
   // Resources
-  kids.push(new Paragraph({ spacing: { before: 60, after: 40 }, children: [new TextRun({ text: "Resources", bold: true, size: 17, color: NAVY, font: "Arial" })] }));
+  kids.push(new Paragraph({ spacing: { before: 24, after: 30 }, children: [new TextRun({ text: "Resources", bold: true, size: 17, color: NAVY, font: "Arial" })] }));
   if (unit.resource_appendix_attached) {
     // Set unit.resource_appendix_attached = true when the resource
     // appendix has been merged onto the end of this same document
@@ -282,9 +288,9 @@ function buildRightColumn(unit, rightWidth) {
 function buildPage1(unit) {
   const children = [];
   children.push(buildHeader(unit));
-  children.push(sp(120));
+  children.push(sp(20));
 
-  const LEFT = 6000, RIGHT = PW - LEFT;
+  const LEFT = 6700, RIGHT = PW - LEFT;
   const leftKids = buildLeftColumn(unit, LEFT);
   const rightKids = buildRightColumn(unit, RIGHT);
 
@@ -310,12 +316,12 @@ function buildPage1(unit) {
 // ── Page 2: Outcome Teaching Record ────────────────────────────────────────
 function buildPage2(unit) {
   const children = [];
-  children.push(new Paragraph({ children: [new PageBreak()] }));
+  children.push(pbPara());
 
   children.push(mkTable([PW], [new TableRow({
     children: [new TableCell({
       borders: nobdrs, width: { size: PW, type: WidthType.DXA }, shading: { fill: NAVY, type: ShadingType.CLEAR },
-      margins: { top: 100, bottom: 100, left: 200, right: 200 },
+      margins: { top: 70, bottom: 70, left: 200, right: 200 },
       children: [new Paragraph({
         spacing: { before: 0, after: 0 },
         children: [
@@ -325,11 +331,12 @@ function buildPage2(unit) {
       })]
     })]
   })]));
-  children.push(sp(100));
+  children.push(sp(24));
 
   const T1 = 460, T2 = 2400, T3 = 4400, T4 = PW - T1 - T2 - T3 - 700 - 600, T5 = 700, T6 = 600;
 
   const tRows = [new TableRow({
+    tableHeader: true, cantSplit: true,
     children: [
       hc("Code", T1, DKBLUE, { size: 15 }), hc("Outcome", T2, DKBLUE, { size: 15 }),
       hc("Syllabus content point/s addressed", T3, DKBLUE, { size: 15 }),
@@ -342,27 +349,28 @@ function buildPage2(unit) {
     const band = BAND_COLORS[o.code[0]];
     const altBg = (i % 2 === 0) ? band.bg : WHITE;
     tRows.push(new TableRow({
+      cantSplit: true,
       children: [
-        new TableCell({ borders: thins("DDDDDD"), width: { size: T1, type: WidthType.DXA }, shading: { fill: band.bg, type: ShadingType.CLEAR }, margins: { top: 60, bottom: 60, left: 80, right: 80 }, verticalAlign: VerticalAlign.TOP, children: [new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 0 }, children: [new TextRun({ text: o.code, bold: true, size: 17, font: "Arial", color: band.hd })] })] }),
-        new TableCell({ borders: thins("DDDDDD"), width: { size: T2, type: WidthType.DXA }, shading: { fill: altBg, type: ShadingType.CLEAR }, margins: { top: 60, bottom: 60, left: 100, right: 100 }, verticalAlign: VerticalAlign.TOP, children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: o.desc, size: 15, font: "Arial", color: "111111" })] })] }),
-        new TableCell({ borders: thins("DDDDDD"), width: { size: T3, type: WidthType.DXA }, shading: { fill: altBg, type: ShadingType.CLEAR }, margins: { top: 60, bottom: 60, left: 100, right: 100 }, verticalAlign: VerticalAlign.TOP, children: o.content_point.split(" | ").map((pt, pi) => new Paragraph({ spacing: { before: pi === 0 ? 0 : 20, after: 0 }, children: [new TextRun({ text: pt, size: 13, font: "Arial", color: "444444" })] })) }),
+        new TableCell({ borders: thins("DDDDDD"), width: { size: T1, type: WidthType.DXA }, shading: { fill: band.bg, type: ShadingType.CLEAR }, margins: { top: 22, bottom: 22, left: 80, right: 80 }, verticalAlign: VerticalAlign.TOP, children: [new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 0 }, children: [new TextRun({ text: o.code, bold: true, size: 17, font: "Arial", color: band.hd })] })] }),
+        new TableCell({ borders: thins("DDDDDD"), width: { size: T2, type: WidthType.DXA }, shading: { fill: altBg, type: ShadingType.CLEAR }, margins: { top: 22, bottom: 22, left: 100, right: 100 }, verticalAlign: VerticalAlign.TOP, children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: o.desc, size: 15, font: "Arial", color: "111111" })] })] }),
+        new TableCell({ borders: thins("DDDDDD"), width: { size: T3, type: WidthType.DXA }, shading: { fill: altBg, type: ShadingType.CLEAR }, margins: { top: 22, bottom: 22, left: 100, right: 100 }, verticalAlign: VerticalAlign.TOP, children: o.content_point.split(" | ").map((pt, pi) => new Paragraph({ spacing: { before: pi === 0 ? 0 : 20, after: 0 }, children: [new TextRun({ text: pt, size: 13, font: "Arial", color: "444444" })] })) }),
         new TableCell({
-          borders: thins("DDDDDD"), width: { size: T4, type: WidthType.DXA }, shading: { fill: WHITE, type: ShadingType.CLEAR }, margins: { top: 60, bottom: 60, left: 100, right: 100 }, verticalAlign: VerticalAlign.TOP,
+          borders: thins("DDDDDD"), width: { size: T4, type: WidthType.DXA }, shading: { fill: WHITE, type: ShadingType.CLEAR }, margins: { top: 22, bottom: 22, left: 100, right: 100 }, verticalAlign: VerticalAlign.TOP,
           children: [
             new Paragraph({ spacing: { before: 0, after: 20 }, children: [new TextRun({ text: o.pairing_note || "", size: 12, italic: true, color: "BBBBBB", font: "Arial" })] }),
             new Paragraph({ spacing: { before: 20, after: 0 }, children: [new TextRun({ text: o.lesson_ref || "", bold: true, size: 15, color: "2E5F8A", font: "Arial" })] })
           ]
         }),
-        new TableCell({ borders: thins("DDDDDD"), width: { size: T5, type: WidthType.DXA }, shading: { fill: GREY, type: ShadingType.CLEAR }, margins: { top: 60, bottom: 60, left: 80, right: 80 }, children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: "", size: 14, font: "Arial" })] })] }),
-        new TableCell({ borders: thins("DDDDDD"), width: { size: T6, type: WidthType.DXA }, shading: { fill: GREY, type: ShadingType.CLEAR }, margins: { top: 60, bottom: 60, left: 80, right: 80 }, children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: "", size: 14, font: "Arial" })] })] })
+        new TableCell({ borders: thins("DDDDDD"), width: { size: T5, type: WidthType.DXA }, shading: { fill: GREY, type: ShadingType.CLEAR }, margins: { top: 22, bottom: 22, left: 80, right: 80 }, children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: "", size: 14, font: "Arial" })] })] }),
+        new TableCell({ borders: thins("DDDDDD"), width: { size: T6, type: WidthType.DXA }, shading: { fill: GREY, type: ShadingType.CLEAR }, margins: { top: 22, bottom: 22, left: 80, right: 80 }, children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun({ text: "", size: 14, font: "Arial" })] })] })
       ]
     }));
   });
 
   children.push(mkTable([T1, T2, T3, T4, T5, T6], tRows));
-  children.push(sp(80));
+  children.push(sp(24));
   children.push(new Paragraph({
-    spacing: { before: 60, after: 0 },
+    spacing: { before: 20, after: 0 },
     children: [new TextRun({
       text: `Syllabus outcomes and content from Mathematics K-10 Syllabus (2022) copyright NSW Education Standards Authority (NESA) for and on behalf of the Crown in right of the State of New South Wales, 2024. ${unit.strand_abbreviations_note || ""}`,
       size: 12, italic: true, color: "AAAAAA", font: "Arial"
@@ -375,7 +383,7 @@ function buildPage2(unit) {
 // ── Pages 3+: Mini Lesson Sequence ─────────────────────────────────────────
 function buildLessonSequenceHeader(unit) {
   const children = [];
-  children.push(new Paragraph({ children: [new PageBreak()] }));
+  children.push(pbPara());
 
   children.push(mkTable([PW], [new TableRow({
     children: [new TableCell({
@@ -627,7 +635,7 @@ function buildLessonSequence(unit) {
       // the behaviour Nicholas was manually achieving by hand for Unit 27.
       if (thisWeight >= HEAVY_LESSON_THRESHOLD || nextWeight >= HEAVY_LESSON_THRESHOLD) {
         children.push(sp(200));
-        children.push(new Paragraph({ children: [new PageBreak()] }));
+        children.push(pbPara());
       } else {
         // Still separate consecutive lessons visually with a rule and
         // spacing when they're sharing a page (matches Nicholas's manual
