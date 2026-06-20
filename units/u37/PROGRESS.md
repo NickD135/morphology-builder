@@ -41,9 +41,29 @@ After it's inserted, confirm the row count (`SELECT count(*) FROM resources WHER
 then start **Deliverable A** (in-app unit in `solo/index.html`). Resources are **DB-canonical** for
 u37 — do NOT hardcode a RESOURCES block; the app reads the DB and it overrides hardcoded resources.
 
-## Next (Deliverable A — not started)
-- Author 6 data structures in `solo/index.html` keyed `u37` / `u37_oid`: UNITS, PRETESTS, PRACTICE,
-  BEYOND, LEARN (+ UC colour theme, gating lists). RESOURCES come from the DB (no hardcode).
-- Colour theme: pick one distinct from u24 blue / u25 green / u26 purple / u27 orange / u28 cyan /
-  u36. (Suggest a warm/rose or amber not yet used — confirm against existing UC entries.)
-- Gate: 0 console errors via Playwright before adding the UNITS entry + committing once.
+## Session 2 — 2026-06-20 — Deliverable A COMPLETE
+
+SQL confirmed inserted in Supabase (REST API check via anon key: **42 rows**, exactly 3 per outcome
+— 2 video + 1 worksheet — across all 14 outcomes; both `JoAnn's` apostrophes stored correctly).
+Resources are DB-canonical: **no hardcoded RESOURCES block** for u37 (verified 0 `u37_` keys in the
+RESOURCES var).
+
+Authored all six data structures in `solo/index.html` (keyed `u37` / `u37_oid`):
+- **UNITS** — u37 entry, 14 outcomes (R1–R6, Y1–Y5, G1–G3), 10 Show questions each.
+- **PRETESTS** — `u37` block, 2 per outcome.
+- **PRACTICE** (Know) — 14 `u37_oid` entries, example[4] + ~9 questions each.
+- **BEYOND** — `u37` (Stage 4 links + 4 projects ×5–6 tasks).
+- **LEARN** (Grow) — 14 full lessons, 3-step hint ladder on every tryIt.
+- **UC** colour theme `u37` = slate (`#475569` dot — distinct from the 13 saturated hues in use);
+  added `||unit.id==="u37"` to the student gating list.
+
+**Verification (gate passed):**
+- Node-eval of the extracted blocks: structure OK (6 blocks, 14 outcomes, MC answer∈options, no dup
+  options, 3-hint ladders, counts), and **all 148 input questions pass arithmetic checks**.
+- Playwright load of `solo/index.html`: page compiles + React mounts; **0 code console errors**
+  (only the environmental `favicon.ico` 404 + standard in-browser Babel notice, present on every load).
+
+**Committed** to `solo/index.html`. Unit 37 fully complete (both deliverables).
+
+## Next
+Unit 38 — start at Deliverable B Stage 0 (DoE Unit 38).
