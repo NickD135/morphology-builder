@@ -32,11 +32,16 @@ Unit {MM}.
 
 For each unit run all stages in sequence without stopping for approval:
 
-Stage 0 — Extract "Students can" success criteria from the DoE unit document. Classify
-each as Red (Stage 3 Year A consolidation), Yellow (Stage 3 Year B home content), or
-Green (Stage 4 — must name the exact NESA Stage 4 content point, not just "extension").
+Stage 0 — Extract "Students can" success criteria from the DoE unit document. Read each
+content point's syllabus content group (**Year A** or **Year B**) from the DoE unit's own
+"Outcomes and content" grid (do NOT infer A/B from difficulty). Band by SOLO cognitive
+demand — recall/single-step → Red, applying/multi-step → Yellow — with one hard rule:
+**every Year A content point goes in Red, never Yellow** (Year B may be Red if simple or
+Yellow if applying). Green = Stage 4 (must name the exact NESA Stage 4 content point, not
+just "extension"). **Label every content point with its Year A/B group** in the rubric.
 Tag each outcome as written/digital-appropriate, hands-on-required, or hands-on-preferred
-per the spec. Write to `units/u{NN}/00_rubric_draft.md`.
+per the spec. Write to `units/u{NN}/00_rubric_draft.md`. (See the band rule in
+SOLO_PIPELINE_SPEC.md §0b — set 2026-06-20 after the Units 29–36 A/B audit.)
 
 Stage 1 — Map every rubric outcome to its exact NESA content point (quoted verbatim,
 not paraphrased) and the DoE lesson that addresses it (or explicitly note "no DoE lesson"

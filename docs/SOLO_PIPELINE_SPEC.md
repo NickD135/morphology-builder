@@ -110,21 +110,46 @@ Additive/Multiplicative Relations, Fractions, Geometric Measure, 2D/3D Spatial
 Structure, Non-Spatial Measurement, Data, Chance — each split into content groups
 **A** and **B**).
 
-**Band rule (validated on Unit 28):** the syllabus splits each sub-strand into
-content groups **A** and **B**. In practice for these Stage 3 Year B programs:
+**Band rule (current policy — set by Nicholas 2026-06-20 after the Units 29–36
+A/B audit). Read this carefully; it supersedes the old "A→Red / B→Yellow" rule.**
 
-- **Red** = content **group A** (≈ Year 5 material — prior-year, folded in for
-  consolidation). e.g. "Position A", "Chance A".
-- **Yellow** = content **group B** (≈ Year 6 — the home-year content for the
-  program being built). e.g. "Position B", "Chance B".
+Band by **SOLO cognitive demand** within the Stage 3 content, with **one hard
+constraint from the syllabus content groups**:
+
+- **Red** = recall / single-step / foundational outcomes **PLUS** *every* outcome
+  whose content point is in syllabus **content group A** (≈ Year 5 — prior-year
+  consolidation). **Content group A content ALWAYS goes in Red — never Yellow.**
+- **Yellow** = applying / multi-step / word-problem outcomes — but **only group B**
+  content. (A Year-6/group-B skill that is procedurally simple, e.g. "recall the
+  10%/25%/50% benchmarks" or "convert kg↔g", may still sit in Red by cognitive
+  demand — that's fine. The constraint is one-directional: A is never Yellow; B
+  can be either.)
 - **Green** = beyond Stage 3 → **Stage 4 group A** content (see 0d).
 
-The original spec warned at length not to conflate the content-group letter (A/B)
-with the two-year teaching cycle. Nicholas's clarification (2026-06-19) is that
-for these units the practical mapping **A → Year 5 → Red, B → Year 6 → Yellow**
-does hold — confirm it per unit against the DoE unit's own framing (which content
-it treats as *prior learning* vs *new core learning*), but it's a reliable
-starting point, not a trap.
+**Why this rule (the audit finding, 2026-06-20).** The syllabus A/B letter is
+*curriculum progression* (≈ Year 5 vs Year 6), **not difficulty**. Banding purely
+by cognitive demand produced two error modes across Units 29–36: (1) *A-in-Yellow*
+— a Year-5 consolidation skill that looks like "applying" (sketching 3D views,
+choosing capacity units, multi-number addition, mental strategies, estimation)
+landed in Yellow; (2) *B-in-Red* — a Year-6 skill that is procedurally simple
+landed in Red. Nicholas's decision: **fix mode (1) with the hard "A always Red"
+constraint; accept mode (2)** (simple B content in Red is pedagogically fine).
+Units 30 and 31 already satisfied this; Unit 29 was the worst offender (≈90% group
+A spread across Red and Yellow).
+
+**Determine A vs B from the DoE unit's own "Outcomes and content" grid** (a table
+near the end of `Mathematics-Stage3-Unit{NN}.docx` whose first cell reads "Outcomes
+and content"; each focus-area header row is labelled e.g. "Additive relations A" /
+"Additive relations B", and the content points sit beneath it). That grid is the
+authoritative A/B source — do **not** infer A/B from how hard the skill looks.
+
+**Label the A/B group on every content point in BOTH deliverables** (set by
+Nicholas 2026-06-20): the rubric (0e) and the program docx (Deliverable B — the
+Page-2 Outcome Teaching Record `content_point` field and the Page-1 content-points
+section) must state each content point's **Year A** or **Year B** group explicitly,
+so a teacher can see at a glance which year-level each outcome's content belongs to.
+Existing programs keep their current bands (not recoloured) but get the A/B labels
+added; all new units follow the band rule above from the start.
 
 ### 0c. Modality (hands-on) flag — informational only for Deliverable A
 
@@ -433,7 +458,9 @@ verified), not just between stages.
 | In-app content is the primary deliverable | Units 24–27 are six JS structures in `solo/index.html`; that's what students use. The original spec centred on a Word doc that no live unit had. |
 | Program docx kept as parallel Deliverable B | Nicholas wants it from Unit 28 on (teacher planning / NSW evidence), generated alongside the in-app content from the same rubric. |
 | Green = Stage 4 **A** content | Stage 4 B is too far past Year 6; A is the right extension pitch (confirmed Unit 28). |
-| Band A→Red (Year 5), B→Yellow (Year 6) | Syllabus content groups A/B map in practice to the consolidation vs home year for these Year B programs (confirmed Unit 28). Verify per unit against the DoE unit's prior-vs-new framing. |
+| ~~Band A→Red (Year 5), B→Yellow (Year 6)~~ — **superseded 2026-06-20** | Original rule. The Units 29–36 audit showed pure A/B→colour misfires both ways (A-in-Yellow, B-in-Red) because A/B is year-progression, not difficulty. |
+| Band by cognitive demand, but **Year A content always Red** (set 2026-06-20) | Keeps the recall-vs-applying intuition Nicholas wants while guaranteeing prior-year (group A) content never sits in Yellow. Group B may be Red (if simple) or Yellow (if applying). A/B is read from the DoE "Outcomes and content" grid, not inferred from difficulty. |
+| Label Year A/B on every content point in both deliverables (set 2026-06-20) | Teachers need to see which year-level each outcome's content belongs to. Rubric + program docx (Page-2 record + Page-1 content points) state Year A / Year B explicitly. Existing units keep their bands but get the labels retrofitted. |
 | Rubric stays in gitignored `SOLO Units/u{NN}/` | It's background source used to build everything else; doesn't need tracking. The real tracked checkpoint is `solo/index.html` git history + `units/u{NN}/PROGRESS.md`. |
 | Resource DB-vs-code canonicality is explicit | The app lets DB `resources` rows override hardcoded `RESOURCES`; mixing them silently breaks units (stale u26/u27 DB seeds had to be deleted). |
 | oEmbed for video verification | WebFetch can't read JS-rendered YouTube titles; oEmbed returns exact title/author and errors on dead/private videos. |
