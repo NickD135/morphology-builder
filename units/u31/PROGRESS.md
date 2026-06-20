@@ -56,3 +56,22 @@ Outstanding: Nick runs `04_insert.sql` in Supabase.
 ## Outcome → Mini Lesson map
 R1→1 R2→2 Y1→3 Y2→4 G1→5 Y3→6 Y4→7 R3→8 R4→9 G2→10 Y5→11 Y6→12 G3→13
 (DoE order L1-8, with each Stage-4 Green card placed beside the Stage-3 work it extends.)
+
+---
+
+## Session 2026-06-20 — Deliverable A (in-app SOLO Tracker build) — COMPLETE
+
+Built the playable in-app unit in `solo/index.html` (Number — Place Value,
+Percentages & Operations). All 13 outcomes (R1–R4 · Y1–Y6 · G1–G3) authored across
+every data structure; inserted after u30.
+
+- UNITS u31: 13 outcomes × 10 Show questions, banded red→yellow→green
+- PRETESTS 13×2; PRACTICE (Know) 13×(example[4]+9 Q); LEARN (Grow) 13 lessons, 3-step hint ladder on every try-it
+- BEYOND u31: 11 Stage-4 resources + 4 book projects (Smart Shopper, Order of Operations Challenge, Equation Solver, Big Numbers Small Numbers)
+- UC amber theme (#f59e0b) + student gating updated
+- RESOURCES DB-canonical (46 rows verified) — 0 hardcoded u31 keys
+
+Verification: Node-eval all blocks (MC answer ∈ options, no dups, full arithmetic
+re-check of ×÷/percentages/place-value/equations, 3-hint ladders); Playwright 0
+console errors; window.UNITS live with u31; 3 new Maths-is-Fun BEYOND links HTTP 200.
+Committed + pushed to main.
