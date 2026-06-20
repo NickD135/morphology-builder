@@ -1,0 +1,50 @@
+-- Unit 34 — resource inserts for the Supabase `resources` table.
+-- Generated from units/u34/03_resources_staged.csv (every URL verified live in Stage 3:
+-- 25 YouTube videos oEmbed-verified, all worksheets curl-verified HTTP 200).
+-- Run in the Supabase SQL editor (anon key cannot write). DO NOT auto-execute.
+
+DELETE FROM resources WHERE unit_id = 'u34';
+
+INSERT INTO resources (unit_id, outcome_id, type, label, url, scope, class_id) VALUES
+  ('u34', 'r1', 'video', 'Converting Between Fractions, Decimals, and Percents | A Mini Course | Math with Mr. J', 'https://www.youtube.com/watch?v=2vjbNZaFz3c', 'global', NULL),
+  ('u34', 'r1', 'video', 'Fractions to Percents | Math with Mr. J', 'https://www.youtube.com/watch?v=XXf4wHb2lYc', 'global', NULL),
+  ('u34', 'r1', 'worksheet', 'Corbettmaths — Fractions, Decimals, Percentages (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/fractions-decimals-percentages-pdf.pdf', 'global', NULL),
+  ('u34', 'r2', 'video', 'Kilograms and Grams | Converting kg to g and g to kg | Math with Mr. J', 'https://www.youtube.com/watch?v=zXUICZRXDwQ', 'global', NULL),
+  ('u34', 'r2', 'video', 'Metric Units of Mass | Convert mg, g, and kg | Math with Mr. J', 'https://www.youtube.com/watch?v=ptrKThVQwh4', 'global', NULL),
+  ('u34', 'r2', 'worksheet', 'Corbettmaths — Metric Units (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/metric-units-pdf.pdf', 'global', NULL),
+  ('u34', 'r3', 'video', 'Place Value to the Thousandths — Representing Decimal Numbers | Miacademy', 'https://www.youtube.com/watch?v=BsZJGMRWEK0', 'global', NULL),
+  ('u34', 'r3', 'video', 'Expanded Form with Decimals | Math with Mr. J', 'https://www.youtube.com/watch?v=GX8o-S6Vxig', 'global', NULL),
+  ('u34', 'r3', 'worksheet', 'Corbettmaths — Place Value (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/place-value-pdf.pdf', 'global', NULL),
+  ('u34', 'r3', 'worksheet', 'Corbettmaths — Ordering Decimals (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/ordering-decimals-pdf1.pdf', 'global', NULL),
+  ('u34', 'r4', 'video', 'Fractions: Finding the Original | Corbettmaths', 'https://www.youtube.com/watch?v=pdUg0UwXBHk', 'global', NULL),
+  ('u34', 'r4', 'video', 'Fractions of Numbers: Finding the Whole | Partners in Prime', 'https://www.youtube.com/watch?v=x0ljSSMfZXw', 'global', NULL),
+  ('u34', 'r4', 'worksheet', 'Corbettmaths — Fractions of Amounts (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/fractions-of-amounts-pdf.pdf', 'global', NULL),
+  ('u34', 'y1', 'video', 'Metric Mass Measurements — Grams, Kilograms, and Tonnes | Miacademy', 'https://www.youtube.com/watch?v=Nek4OfX8zKE', 'global', NULL),
+  ('u34', 'y1', 'video', 'Metric Units of Mass | Convert mg, g, and kg | Math with Mr. J', 'https://www.youtube.com/watch?v=ptrKThVQwh4', 'global', NULL),
+  ('u34', 'y1', 'worksheet', 'Corbettmaths — Metric Units (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/metric-units-pdf.pdf', 'global', NULL),
+  ('u34', 'y2', 'video', 'Metric Units of Length | Convert mm, cm, m and km | Math with Mr. J', 'https://www.youtube.com/watch?v=kOJFSH_Bn9U', 'global', NULL),
+  ('u34', 'y2', 'video', 'Meters and Centimeters | Converting m to cm and cm to m | Math with Mr. J', 'https://www.youtube.com/watch?v=gALZRL4v2NM', 'global', NULL),
+  ('u34', 'y2', 'worksheet', 'Corbettmaths — Metric Units (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/metric-units-pdf.pdf', 'global', NULL),
+  ('u34', 'y3', 'video', 'Same Area, Different Perimeter | Miss Hutchison', 'https://www.youtube.com/watch?v=bsl-r7dRSnc', 'global', NULL),
+  ('u34', 'y3', 'video', 'How to Find the Perimeter of a Rectangle | Math with Mr. J', 'https://www.youtube.com/watch?v=teMDmMxy550', 'global', NULL),
+  ('u34', 'y3', 'worksheet', 'Corbettmaths — Perimeter (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/perimeter-pdf.pdf', 'global', NULL),
+  ('u34', 'y4', 'video', 'Finding the Area of a Rectangle Using the Formula | Math with Mr. J', 'https://www.youtube.com/watch?v=1Ugk12y7TQM', 'global', NULL),
+  ('u34', 'y4', 'video', 'How to Find the Area of Rectangles and Squares | Math with Mr. J', 'https://www.youtube.com/watch?v=_ejDO6aPPzU', 'global', NULL),
+  ('u34', 'y4', 'worksheet', 'Corbettmaths — Area of a Rectangle (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-a-rectangle-pdf.pdf', 'global', NULL),
+  ('u34', 'y5', 'video', 'How to Find Perimeter | Math with Mr. J', 'https://www.youtube.com/watch?v=TSLc5p2VuYM', 'global', NULL),
+  ('u34', 'y5', 'video', 'Finding the Perimeter and Area of a Composite Shape | Math with Mr. J', 'https://www.youtube.com/watch?v=rBpsauKXPfs', 'global', NULL),
+  ('u34', 'y5', 'worksheet', 'Corbettmaths — Perimeter (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/perimeter-pdf.pdf', 'global', NULL),
+  ('u34', 'y6', 'video', 'Adding and Subtracting Decimals (How to) | Math with Mr. J', 'https://www.youtube.com/watch?v=PnwLv6khwk8', 'global', NULL),
+  ('u34', 'y6', 'video', 'How to Add and Subtract Decimals (Step-by-Step Examples) | Math with Mr. J', 'https://www.youtube.com/watch?v=Cg-_TeiaSa8', 'global', NULL),
+  ('u34', 'y6', 'worksheet', 'Corbettmaths — Adding Decimals (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/adding-decimals-pdf.pdf', 'global', NULL),
+  ('u34', 'y6', 'worksheet', 'Corbettmaths — Subtracting Decimals (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/subtracting-decimals-pdf.pdf', 'global', NULL),
+  ('u34', 'g1', 'video', 'Finding the Area of a Triangle | A Step-By-Step Guide | Math with Mr. J', 'https://www.youtube.com/watch?v=-ZPfB1uDjEw', 'global', NULL),
+  ('u34', 'g1', 'video', 'Area of Parallelograms | How to Find the Area of a Parallelogram | Math with Mr. J', 'https://www.youtube.com/watch?v=uj6k22WubCk', 'global', NULL),
+  ('u34', 'g1', 'worksheet', 'Corbettmaths — Area of a Triangle (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-a-triangle-pdf.pdf', 'global', NULL),
+  ('u34', 'g1', 'worksheet', 'Corbettmaths — Area of a Parallelogram (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-a-parallelogram-pdf.pdf', 'global', NULL),
+  ('u34', 'g2', 'video', 'How to Find the Area of a Composite Shape | L-Shaped Example | Math with Mr. J', 'https://www.youtube.com/watch?v=LAXHgQwcrDc', 'global', NULL),
+  ('u34', 'g2', 'video', 'Finding the Area of Composite Figures with Triangles | Math with Mr. J', 'https://www.youtube.com/watch?v=bo483Varm-U', 'global', NULL),
+  ('u34', 'g2', 'worksheet', 'Corbettmaths — Area of Compound Shapes (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-compound-shapes-pdf.pdf', 'global', NULL),
+  ('u34', 'g3', 'video', 'Perimeter of Composite Figures | Math with Mr. J', 'https://www.youtube.com/watch?v=4c_-Q5gADcQ', 'global', NULL),
+  ('u34', 'g3', 'video', 'Circumference of a Circle | Math with Mr. J', 'https://www.youtube.com/watch?v=_E0C5ECDS0U', 'global', NULL),
+  ('u34', 'g3', 'worksheet', 'Corbettmaths — Circumference (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/circumference-pdf.pdf', 'global', NULL);
