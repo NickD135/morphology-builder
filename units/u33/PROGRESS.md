@@ -44,3 +44,25 @@ Outstanding: Nick runs `04_insert.sql`.
 
 ### Outcome → Mini Lesson map
 Y4→1 R2→2 R1→3 Y1→4 R4→5 Y6→6 R3→7 Y2→8 Y3→9 Y5→10 G1→11 G2→12 G3→13
+
+---
+
+## Session 2026-06-20 — Deliverable A (in-app SOLO Tracker build) — COMPLETE
+
+Built the playable in-app unit in `solo/index.html` (Multiplication, Division &
+Rates). All 13 outcomes (R1–R4 · Y1–Y6 · G1–G3) authored across every data
+structure; inserted after u32.
+
+- UNITS u33: 13 outcomes × 10 Show questions, banded red→yellow→green
+- PRETESTS 13×2; PRACTICE (Know) 13×(example[4]+9 Q); LEARN (Grow) 13 lessons, 3-step hint ladder on every try-it
+- BEYOND u33: 11 Stage-4 resources + 4 book projects (Best Buy Investigator, Sharing in a Ratio, Order of Operations Master, Big Multiplication Challenge)
+- UC indigo theme (#6366f1) + student gating updated
+- RESOURCES DB-canonical (43 rows verified) — 0 hardcoded u33 keys
+
+Verification: Node-eval all blocks (MC answer ∈ options, no dups, full arithmetic
+recheck incl. integers/rates/ratios, 3-hint ladders); Playwright 0 console errors;
+window.UNITS live with u33 (13 outcomes), 10 total units. BEYOND website links
+HTTP 200 (two 404 Maths-is-Fun URLs swapped for working Unit-Price + Integers pages).
+Committed + pushed.
+
+All of Units 30–33 (this batch) plus Unit 29 are now live in the SOLO tracker.
