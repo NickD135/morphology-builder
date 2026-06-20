@@ -46,8 +46,22 @@ Y1→1 R4→2 Y2→3 R2→4 R3→5 R1→6 Y4→7 Y5→8 Y3→9 Y6→10 G1→11 G
 
 ---
 
-## Deliverable A (in-app SOLO Tracker build) — NOT STARTED
-Resources are **DB-canonical** once `04_insert.sql` is run (42 rows) — do NOT hardcode a u35 RESOURCES
-block in solo/index.html. Build after Nick confirms the SQL is inserted + the row count. Insert u35 after
-u34. Colour theme: pick one distinct from existing (u24 blue / u25 green / u26 purple / u27 orange /
-u28 cyan / u29 rose / u30 fuchsia / u31 amber / u32 teal / u33 indigo / u34 lime — check UC block before choosing).
+## ✅ Deliverable A (in-app SOLO Tracker build) — COMPLETE (2026-06-20)
+
+Built the playable in-app unit in `solo/index.html` (Add & Subtract Strategies, Decimals & Percentages).
+All 13 outcomes (R1–R4 · Y1–Y6 · G1–G3) authored across every data structure; inserted after u34.
+
+- UNITS u35: 13 outcomes × 10 Show questions, banded red→yellow→green
+- PRETESTS 13×2; PRACTICE (Know) 13×(example[4]+9 Q); LEARN (Grow) 13 lessons, 3-step hint ladder on every try-it
+- BEYOND u35: 9 Stage-4 resources + 4 book projects (Smart Shopper, Working Backwards, Decimal Detective, Time Planner)
+- UC **sky** theme (#0ea5e9) + student gating list updated (||unit.id==="u35")
+- RESOURCES **DB-canonical** (42 rows verified live in Supabase) — 0 hardcoded u35 keys
+
+**Verification:** SQL confirmed live in Supabase (42 rows, all 13 outcomes, 26 video + 16 worksheet).
+Node-eval all blocks (MC answer ∈ options, no dup options, ≥8 Know Qs, full LEARN schema with 3-hint
+ladders on every try-it); every numeric answer re-derived by hand (percentages, decimal add/sub, elapsed
+time, estimation, multi-step money, reverse percentages incl. GST). Playwright load → React mounts, normal
+login landing, 0 real console errors (only an environmental favicon 404). window.UNITS live with u35
+(13 outcomes), 12 units total.
+
+Both deliverables for Unit 35 are now complete. **Next: Unit 36 Deliverable B.**
