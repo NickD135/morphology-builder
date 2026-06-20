@@ -48,8 +48,22 @@ R1→1 R2→2 Y1→3 R3→4 Y6→5 R4→6 Y3→7 Y4→8 Y5→9 Y2→10 G1→11 G
 
 ---
 
-## Deliverable A (in-app SOLO Tracker build) — NOT STARTED
-Resources are **DB-canonical** once `04_insert.sql` is run (42 rows) — do NOT hardcode a u34 RESOURCES
-block in solo/index.html. Build after Nick confirms the SQL is inserted + the row count. Insert u34 after
-u33. Colour theme: pick one distinct from u24 blue / u25 green / u26 purple / u27 orange / u28 cyan /
-u29–u33 (check UC block in solo/index.html before choosing).
+## ✅ Deliverable A (in-app SOLO Tracker build) — COMPLETE (2026-06-20)
+
+Built the playable in-app unit in `solo/index.html` (Measurement — Mass, Length, Perimeter & Decimals).
+All 13 outcomes (R1–R4 · Y1–Y6 · G1–G3) authored across every data structure; inserted after u33.
+
+- UNITS u34: 13 outcomes × 10 Show questions, banded red→yellow→green
+- PRETESTS 13×2; PRACTICE (Know) 13×(example[4]+9 Q); LEARN (Grow) 13 lessons, 3-step hint ladder on every try-it
+- BEYOND u34: 10 Stage-4 resources + 4 book projects (Area Architect, Circle Investigator, Measurement Master, Same Area Different Perimeter)
+- UC **lime** theme (#84cc16) + student gating list updated (||unit.id==="u34")
+- RESOURCES **DB-canonical** (42 rows verified live in Supabase) — 0 hardcoded u34 keys
+
+**Verification:** SQL confirmed live in Supabase (42 rows, all 13 outcomes, 26 video + 16 worksheet).
+Node-eval all blocks (MC answer ∈ options, no dup options, ≥8 Know Qs, full LEARN schema with 3-hint
+ladders on every try-it); every numeric answer re-derived by hand (mass/length conversions, perimeter,
+area incl. triangle/parallelogram/composite, circumference π≈3.14, decimal add/sub, build-the-whole).
+Playwright load → React mounts, normal login landing, 0 real console errors (only an environmental
+favicon 404). window.UNITS live with u34 (13 outcomes), 11 units total.
+
+Both deliverables for Unit 34 are now complete. **Next: Unit 35 Deliverable B.**
