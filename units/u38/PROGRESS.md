@@ -37,7 +37,18 @@ SQL `units/u38/04_insert.sql` is ready to run in Supabase (expect **39 rows** fo
 After it's inserted, confirm the row count, then start **Deliverable A** (in-app unit in `solo/index.html`).
 Resources are **DB-canonical** for u38 — do NOT hardcode a RESOURCES block.
 
-## Next (Deliverable A — not started)
-- Author 6 data structures in `solo/index.html` keyed `u38` / `u38_oid`: UNITS, PRETESTS, PRACTICE,
-  BEYOND, LEARN (+ UC colour theme distinct from u24–u37, gating list). RESOURCES from the DB (no hardcode).
-- Gate: 0 console errors via Playwright before adding the UNITS entry + committing once.
+## Session 2 — 2026-06-20 — Deliverable A COMPLETE
+
+Nick inserted the SQL; DB-canonical confirmed via REST API (**39 rows**, 3 per outcome across all 13).
+No hardcoded RESOURCES block for u38 (verified 0 `u38_` keys in the RESOURCES var).
+
+Authored all six structures in `solo/index.html` (keyed `u38` / `u38_oid`):
+- UNITS (13 outcomes, 10 Show Q each), PRETESTS (2 each), PRACTICE/Know (example + ~9 each),
+  BEYOND (Stage 4 links + 4 projects), LEARN/Grow (13 lessons, 3-step hint ladder on every tryIt).
+- UC theme `u38` = emerald (`#10b981`, distinct from u37 slate); added `||unit.id==="u38"` to gating.
+
+**Verification (gate passed):** Node-eval structure OK (13 outcomes, MC answer∈options, no dup options,
+3-hint ladders, counts); auto-arithmetic OK; probability fractions / mode-range / subtraction items
+hand-verified. Playwright load: 0 code console errors (only favicon 404 + Babel notice).
+
+**Committed.** Unit 38 fully complete (both deliverables).
