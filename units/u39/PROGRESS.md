@@ -39,6 +39,26 @@ RESOURCES block in `solo/index.html` (the u26/u27 pattern) so the in-app unit is
 override the identical hardcoded ones (no behaviour change). If he prefers DB-canonical permanently, delete
 the hardcoded u39 RESOURCES block after inserting.
 
-## Next (Deliverable A)
-- Author 6 structures in `solo/index.html` keyed `u39` / `u39_oid`, **including a hardcoded RESOURCES block**.
-  UC theme distinct from u24–u38. 0 console errors via Playwright before committing.
+## Session 2 — 2026-06-20 — Deliverable A COMPLETE (ended up DB-canonical)
+
+**Resource canonicality — what actually happened:** I authored Deliverable A expecting CODE-canonical
+resources (Nick away). On verification I found the DB already held **39 u39 rows identical to the verified
+CSV** — the `04_insert.sql` had in fact been run. Since a unit must not be *both* DB- and code-canonical
+(DB rows win → hardcoded block becomes dead code + drift risk per the spec), I **removed the hardcoded u39
+RESOURCES block**, leaving u39 **DB-canonical** like u37/u38. (Also fixed an accidental duplicate resource
+line in a neighbouring outcome introduced during the insert.) Net: u39 resources live in the DB only.
+> The `unit_data_39.js` header comment still says "ships CODE-CANONICAL" — that's now stale; u39 is
+> DB-canonical. Left as-is (committed Deliverable B artifact); this note is the correction of record.
+
+Authored all six structures in `solo/index.html` (keyed `u39` / `u39_oid`):
+- UNITS (13 outcomes, 10 Show Q each), PRETESTS (2 each), PRACTICE/Know (example + ~9 each),
+  BEYOND (Stage 4 angle links + 4 projects), LEARN/Grow (13 lessons, 3-step hint ladder on every tryIt).
+- UC theme `u39` = warm stone (`#78716c`, distinct from u37 slate / u38 emerald); gating updated.
+- **No hardcoded RESOURCES block** (DB-canonical — 39 rows live, verified identical to the CSV).
+
+**Verification (gate passed):** Node-eval structure OK (13 outcomes, MC answer∈options, no dup options,
+3-hint ladders); auto-arithmetic (subtraction/division) OK; elapsed-time/angle items hand-verified.
+Playwright load: 0 code console errors (favicon 404 + Babel notice only), before and after the
+RESOURCES-block removal.
+
+**Committed.** Unit 39 fully complete (both deliverables).
