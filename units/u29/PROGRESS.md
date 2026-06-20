@@ -63,3 +63,40 @@ Nothing outstanding for Unit 29 except Nick's Stage-0 band confirmation + runnin
 R1→1 R2→2 Y1→3 Y2→4 Y3→5 G3→6 R3→7 R4→8 Y4→9 Y5→10 Y6→11 G1→12 G2→13
 (DoE teaching order: 3D-space cluster L1-4 first, then decimal/capacity/volume cluster L5-8, with each
 Green Stage-4 card placed beside the Stage-3 work it extends.)
+
+---
+
+## Session 2026-06-20 — Deliverable A (in-app SOLO Tracker build) — COMPLETE
+
+Built the playable in-app unit in `solo/index.html`, matching the Unit 28 / Unit 26
+gold standard. All 13 outcomes (R1–R4 · Y1–Y6 · G1–G3) fully authored across every
+data structure. Inserted u29 right after u28 in each block.
+
+| Structure | Status |
+|---|---|
+| `UNITS` u29 | ✅ 13 outcomes × 10 Show questions each; subtitle "3D Space, Volume & Capacity"; banded red→yellow→green |
+| `PRETESTS` u29 | ✅ 13 entries × 2 questions (both-correct auto-tick) |
+| `PRACTICE` u29_* (Know) | ✅ 13 keys, each example[4] + 9 questions |
+| `LEARN` u29_* (Grow) | ✅ 13 full guided lessons (journey/hook/watch/workedExample/tryIt/reflect); **every tryIt has a 3-step hint ladder** |
+| `BEYOND` u29 | ✅ 11 Stage-4 resources + 4 multi-step book projects (Box Designer, Displacement Lab, Capacity Converter, Architect's Views) |
+| `UC` u29 | ✅ rose theme `#f43f5e` (distinct from u24 blue / u25 green / u26 purple / u27 orange / u28 cyan) |
+| student gating | ✅ `||unit.id==="u29"` added to the pre/post-test gating list |
+
+**RESOURCES: DB-canonical — NOT hardcoded.** Verified 45 rows in the Supabase
+`resources` table for u29 (3–4 per outcome, all 13 outcomes) before building; left the
+hardcoded `RESOURCES` block with zero u29 keys so the DB set wins. The DB rows were
+already URL-verified in Deliverable B (do not re-verify).
+
+**Verification gate passed:**
+- Node-eval of all six blocks out of the HTML: MC answer ∈ options + no duplicate
+  options; truefalse/input/order well-formed; arithmetic & metric conversions checked;
+  3-hint ladder present on every tryIt; ≥3 example lines + ≥9 practice Qs per outcome;
+  0 hardcoded u29 RESOURCES.
+- Playwright load of `solo/index.html`: **0 real console errors** (only an environmental
+  favicon 404 + the standard in-browser-Babel warning). `window.UNITS` confirmed live
+  with u29 (13 outcomes) + all structures present.
+- 3 new Maths-is-Fun BEYOND website links curl-verified HTTP 200.
+
+Committed direct to `main` (Vercel auto-deploys). Co-author: Claude Opus 4.8.
+
+**Deliverable A is complete. Nothing outstanding for the in-app unit.**
