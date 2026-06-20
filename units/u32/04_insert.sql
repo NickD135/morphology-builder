@@ -1,0 +1,48 @@
+-- Unit 32 — resource inserts for the Supabase `resources` table (Stage 4).
+-- Generated from units/u32/03_resources_staged.csv (every URL verified live in Stage 3).
+-- Run in the Supabase SQL editor (anon key cannot write). DO NOT auto-execute.
+
+DELETE FROM resources WHERE unit_id = 'u32';
+
+INSERT INTO resources (unit_id, outcome_id, type, label, url, scope, class_id) VALUES
+  ('u32', 'r1', 'video', 'Intro to Symmetry (Part 1): Lines of Symmetry | Math with Mr. J', 'https://www.youtube.com/watch?v=dAqDwuHOi4g', 'global', NULL),
+  ('u32', 'r1', 'video', 'Intro to Symmetry (Part 2): Lines of Symmetry | Math with Mr. J', 'https://www.youtube.com/watch?v=Ae6kn4BqqrA', 'global', NULL),
+  ('u32', 'r1', 'video', 'Line and Rotational Symmetry | Mr Morley Maths', 'https://www.youtube.com/watch?v=RnqgIR8pljg', 'global', NULL),
+  ('u32', 'r1', 'worksheet', 'Corbettmaths — Symmetry (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/symmetry-pdf.pdf', 'global', NULL),
+  ('u32', 'r2', 'video', 'What is a Polygon? An Introductory Guide | Math with Mr. J', 'https://www.youtube.com/watch?v=mGrst2zkCl8', 'global', NULL),
+  ('u32', 'r2', 'video', 'How Do You Identify Regular and Irregular Polygons? (KS2) | Twinkl', 'https://www.youtube.com/watch?v=osr-fLanREs', 'global', NULL),
+  ('u32', 'r2', 'video', 'Regular & Irregular Polygons | IconMath', 'https://www.youtube.com/watch?v=UN57vvrMrY4', 'global', NULL),
+  ('u32', 'r3', 'video', '3 Types of Transformations: Translations, Reflections & Rotations | Turtlediary', 'https://www.youtube.com/watch?v=VJTxv-tRKj0', 'global', NULL),
+  ('u32', 'r3', 'video', 'Transformations: Translations, Reflections and Rotations | Math Defined', 'https://www.youtube.com/watch?v=YD3HIMUae_4', 'global', NULL),
+  ('u32', 'r3', 'worksheet', 'Corbettmaths — Translations (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/translations-pdf.pdf', 'global', NULL),
+  ('u32', 'r3', 'worksheet', 'Corbettmaths — Reflections (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/reflections-pdf.pdf', 'global', NULL),
+  ('u32', 'r4', 'video', 'Finding Factors of Numbers: What are Factors? | Primary School Made Easy', 'https://www.youtube.com/watch?v=f6LhwjjOsbg', 'global', NULL),
+  ('u32', 'r4', 'video', 'What are Factors and How are They Used? (KS2) | Twinkl', 'https://www.youtube.com/watch?v=rJcxEktyuRY', 'global', NULL),
+  ('u32', 'r4', 'worksheet', 'Corbettmaths — Factors (PDF)', 'https://corbettmaths.com/wp-content/uploads/2018/11/Factors-216-pdf.pdf', 'global', NULL),
+  ('u32', 'y1', 'video', '3 Types of Transformations: Translations, Reflections & Rotations | Turtlediary', 'https://www.youtube.com/watch?v=VJTxv-tRKj0', 'global', NULL),
+  ('u32', 'y1', 'video', 'Transformations: Translations, Reflections and Rotations | Math Defined', 'https://www.youtube.com/watch?v=YD3HIMUae_4', 'global', NULL),
+  ('u32', 'y1', 'worksheet', 'Corbettmaths — Rotations (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/rotations-pdf.pdf', 'global', NULL),
+  ('u32', 'y2', 'video', 'Finding the Area of a Composite Figure (Rectangles) | Math with Mr. J', 'https://www.youtube.com/watch?v=z4Lat1uOQI4', 'global', NULL),
+  ('u32', 'y2', 'video', 'Finding the Area of Composite Figures with Triangles | Math with Mr. J', 'https://www.youtube.com/watch?v=bo483Varm-U', 'global', NULL),
+  ('u32', 'y2', 'worksheet', 'Corbettmaths — Area of an L-Shape (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-an-l-shape-pdf.pdf', 'global', NULL),
+  ('u32', 'y2', 'worksheet', 'Corbettmaths — Area of Compound Shapes (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-compound-shapes-pdf.pdf', 'global', NULL),
+  ('u32', 'y3', 'video', 'Area of a Parallelogram and a Triangle | Virtual Elementary School', 'https://www.youtube.com/watch?v=l9ZagUlu8T4', 'global', NULL),
+  ('u32', 'y3', 'video', 'Find the Area of Triangles and Parallelograms | your math tutor', 'https://www.youtube.com/watch?v=IXxBaMWUUR4', 'global', NULL),
+  ('u32', 'y3', 'worksheet', 'Corbettmaths — Area of a Parallelogram (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-a-parallelogram-pdf.pdf', 'global', NULL),
+  ('u32', 'y4', 'video', 'Area of a Parallelogram and a Triangle | Virtual Elementary School', 'https://www.youtube.com/watch?v=l9ZagUlu8T4', 'global', NULL),
+  ('u32', 'y4', 'video', 'Find the Area of Triangles and Parallelograms | your math tutor', 'https://www.youtube.com/watch?v=IXxBaMWUUR4', 'global', NULL),
+  ('u32', 'y4', 'worksheet', 'Corbettmaths — Area of a Triangle (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-a-triangle-pdf.pdf', 'global', NULL),
+  ('u32', 'y5', 'video', 'How to Find Area: Rectangles, Triangles & More | Math with Mr. J', 'https://www.youtube.com/watch?v=LpyzdO2fXtA', 'global', NULL),
+  ('u32', 'y5', 'video', 'Area of a Parallelogram and a Triangle | Virtual Elementary School', 'https://www.youtube.com/watch?v=l9ZagUlu8T4', 'global', NULL),
+  ('u32', 'y5', 'worksheet', 'Corbettmaths — Area of a Triangle (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-a-triangle-pdf.pdf', 'global', NULL),
+  ('u32', 'g1', 'video', 'How to Find Area: Rectangles, Triangles & More | Math with Mr. J', 'https://www.youtube.com/watch?v=LpyzdO2fXtA', 'global', NULL),
+  ('u32', 'g1', 'video', 'Area of a Parallelogram and a Triangle | Virtual Elementary School', 'https://www.youtube.com/watch?v=l9ZagUlu8T4', 'global', NULL),
+  ('u32', 'g1', 'worksheet', 'Corbettmaths — Area of a Rectangle (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-a-rectangle-pdf.pdf', 'global', NULL),
+  ('u32', 'g1', 'worksheet', 'Corbettmaths — Area of a Parallelogram (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-a-parallelogram-pdf.pdf', 'global', NULL),
+  ('u32', 'g2', 'video', 'Area of a Parallelogram and a Triangle | Virtual Elementary School', 'https://www.youtube.com/watch?v=l9ZagUlu8T4', 'global', NULL),
+  ('u32', 'g2', 'video', 'Find the Area of Triangles and Parallelograms | your math tutor', 'https://www.youtube.com/watch?v=IXxBaMWUUR4', 'global', NULL),
+  ('u32', 'g2', 'worksheet', 'Corbettmaths — Area of a Triangle (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-a-triangle-pdf.pdf', 'global', NULL),
+  ('u32', 'g3', 'video', 'Finding the Area of Composite Figures with Triangles | Math with Mr. J', 'https://www.youtube.com/watch?v=bo483Varm-U', 'global', NULL),
+  ('u32', 'g3', 'video', 'Finding the Area of a Composite Figure (Rectangles) | Math with Mr. J', 'https://www.youtube.com/watch?v=z4Lat1uOQI4', 'global', NULL),
+  ('u32', 'g3', 'worksheet', 'Corbettmaths — Area of Compound Shapes (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-compound-shapes-pdf.pdf', 'global', NULL),
+  ('u32', 'g3', 'worksheet', 'Corbettmaths — Area of an L-Shape (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-an-l-shape-pdf.pdf', 'global', NULL);
