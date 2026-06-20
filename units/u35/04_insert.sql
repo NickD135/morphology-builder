@@ -1,0 +1,50 @@
+-- Unit 35 — resource inserts for the Supabase `resources` table.
+-- Generated from units/u35/03_resources_staged.csv (every URL verified live in Stage 3:
+-- YouTube videos oEmbed-verified, all worksheets curl-verified HTTP 200).
+-- Run in the Supabase SQL editor (anon key cannot write). DO NOT auto-execute.
+
+DELETE FROM resources WHERE unit_id = 'u35';
+
+INSERT INTO resources (unit_id, outcome_id, type, label, url, scope, class_id) VALUES
+  ('u35', 'r1', 'video', 'How to Find a Percent of a Number | Math with Mr. J', 'https://www.youtube.com/watch?v=5CAncQ4TZD4', 'global', NULL),
+  ('u35', 'r1', 'video', 'Converting Between Fractions, Decimals, and Percents | Math with Mr. J', 'https://www.youtube.com/watch?v=2vjbNZaFz3c', 'global', NULL),
+  ('u35', 'r1', 'worksheet', 'Corbettmaths — Percentages of an Amount (PDF)', 'https://corbettmaths.com/wp-content/uploads/2018/11/Percentages-of-amounts-234-pdf.pdf', 'global', NULL),
+  ('u35', 'r2', 'video', 'Place Value to the Thousandths — Representing Decimal Numbers | Miacademy', 'https://www.youtube.com/watch?v=BsZJGMRWEK0', 'global', NULL),
+  ('u35', 'r2', 'video', 'Expanded Form with Decimals | Math with Mr. J', 'https://www.youtube.com/watch?v=GX8o-S6Vxig', 'global', NULL),
+  ('u35', 'r2', 'worksheet', 'Corbettmaths — Place Value (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/place-value-pdf.pdf', 'global', NULL),
+  ('u35', 'r3', 'video', 'Adding and Subtracting Decimals (How to) | Math with Mr. J', 'https://www.youtube.com/watch?v=PnwLv6khwk8', 'global', NULL),
+  ('u35', 'r3', 'video', 'How to Add and Subtract Decimals (Step-by-Step Examples) | Math with Mr. J', 'https://www.youtube.com/watch?v=Cg-_TeiaSa8', 'global', NULL),
+  ('u35', 'r3', 'worksheet', 'Corbettmaths — Adding Decimals (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/adding-decimals-pdf.pdf', 'global', NULL),
+  ('u35', 'r3', 'worksheet', 'Corbettmaths — Subtracting Decimals (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/subtracting-decimals-pdf.pdf', 'global', NULL),
+  ('u35', 'r4', 'video', 'Calculating Elapsed Time Using a Timeline | EasyTeaching', 'https://www.youtube.com/watch?v=ML6r7BEZo7M', 'global', NULL),
+  ('u35', 'r4', 'video', 'Learn How to Find Elapsed Time | Mr. Tom Teaches', 'https://www.youtube.com/watch?v=Ths2BdqtO4s', 'global', NULL),
+  ('u35', 'r4', 'worksheet', 'Corbettmaths — Timetables (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/timetables-pdf.pdf', 'global', NULL),
+  ('u35', 'y1', 'video', 'How to Add & Subtract Large Numbers (Without a Calculator) | Math with Mr. J', 'https://www.youtube.com/watch?v=186wdnoAYJc', 'global', NULL),
+  ('u35', 'y1', 'video', 'Adding Large Numbers — A Quick Review | Math with Mr. J', 'https://www.youtube.com/watch?v=T9asFgfN5bg', 'global', NULL),
+  ('u35', 'y1', 'worksheet', 'Corbettmaths — Place Value (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/place-value-pdf.pdf', 'global', NULL),
+  ('u35', 'y2', 'video', 'How to Use Bridging to Support Mental Addition and Subtraction | Third Space Learning', 'https://www.youtube.com/watch?v=oDDC1thyc2Q', 'global', NULL),
+  ('u35', 'y2', 'video', 'Addition and Subtraction: The Compensation Strategy | Charlotte Dooley', 'https://www.youtube.com/watch?v=X3kgzlb8VrM', 'global', NULL),
+  ('u35', 'y2', 'worksheet', 'Corbettmaths — Place Value (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/place-value-pdf.pdf', 'global', NULL),
+  ('u35', 'y3', 'video', 'How to Add and Subtract Decimals (Step-by-Step Examples) | Math with Mr. J', 'https://www.youtube.com/watch?v=Cg-_TeiaSa8', 'global', NULL),
+  ('u35', 'y3', 'video', 'Estimating Decimal Sums | Math with Mr. J', 'https://www.youtube.com/watch?v=x05LHZJNKQ0', 'global', NULL),
+  ('u35', 'y3', 'worksheet', 'Corbettmaths — Subtracting Decimals (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/subtracting-decimals-pdf.pdf', 'global', NULL),
+  ('u35', 'y4', 'video', 'How to Find a Percent of a Number | Math with Mr. J', 'https://www.youtube.com/watch?v=5CAncQ4TZD4', 'global', NULL),
+  ('u35', 'y4', 'video', 'Converting Between Fractions, Decimals, and Percents | Math with Mr. J', 'https://www.youtube.com/watch?v=2vjbNZaFz3c', 'global', NULL),
+  ('u35', 'y4', 'worksheet', 'Corbettmaths — Percentages of an Amount (PDF)', 'https://corbettmaths.com/wp-content/uploads/2018/11/Percentages-of-amounts-234-pdf.pdf', 'global', NULL),
+  ('u35', 'y4', 'worksheet', 'Corbettmaths — Fractions, Decimals, Percentages (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/fractions-decimals-percentages-pdf.pdf', 'global', NULL),
+  ('u35', 'y5', 'video', 'Estimating Whole Number Sums & Differences | Math with Mr. J', 'https://www.youtube.com/watch?v=EvQf38lnAJc', 'global', NULL),
+  ('u35', 'y5', 'video', 'Estimating Decimal Sums | Math with Mr. J', 'https://www.youtube.com/watch?v=x05LHZJNKQ0', 'global', NULL),
+  ('u35', 'y5', 'worksheet', 'Corbettmaths — Estimation (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/estimation-pdf.pdf', 'global', NULL),
+  ('u35', 'y6', 'video', 'Multi-Step Word Problem (Addition', ' Subtraction', 'global', NULL),
+  ('u35', 'y6', 'video', 'How to Add & Subtract Large Numbers | Math with Mr. J', 'https://www.youtube.com/watch?v=186wdnoAYJc', 'global', NULL),
+  ('u35', 'y6', 'worksheet', 'Corbettmaths — Estimation (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/estimation-pdf.pdf', 'global', NULL),
+  ('u35', 'g1', 'video', 'How to Find a Percent of a Number | Math with Mr. J', 'https://www.youtube.com/watch?v=5CAncQ4TZD4', 'global', NULL),
+  ('u35', 'g1', 'video', 'Converting Between Fractions, Decimals, and Percents | Math with Mr. J', 'https://www.youtube.com/watch?v=2vjbNZaFz3c', 'global', NULL),
+  ('u35', 'g1', 'worksheet', 'Corbettmaths — Percentages of an Amount (PDF)', 'https://corbettmaths.com/wp-content/uploads/2018/11/Percentages-of-amounts-234-pdf.pdf', 'global', NULL),
+  ('u35', 'g2', 'video', 'Increasing/Decreasing by a Percentage | Corbettmaths', 'https://www.youtube.com/watch?v=tUtgC7ZrsRc', 'global', NULL),
+  ('u35', 'g2', 'video', 'Percentage Change | Corbettmaths', 'https://www.youtube.com/watch?v=Q2gRAS08fE0', 'global', NULL),
+  ('u35', 'g2', 'worksheet', 'Corbettmaths — Increasing/Decreasing by a Percentage (PDF)', 'https://corbettmaths.com/wp-content/uploads/2018/11/Increasing-by-a-Percentage-pdf.pdf', 'global', NULL),
+  ('u35', 'g2', 'worksheet', 'Corbettmaths — Percentage Change (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/percentage-change-pdf.pdf', 'global', NULL),
+  ('u35', 'g3', 'video', 'Percent Problems — Finding the Whole | Math with Mr. J', 'https://www.youtube.com/watch?v=9sMQEajxVwk', 'global', NULL),
+  ('u35', 'g3', 'video', 'How to Find a Percent of a Number | Math with Mr. J', 'https://www.youtube.com/watch?v=5CAncQ4TZD4', 'global', NULL),
+  ('u35', 'g3', 'worksheet', 'Corbettmaths — Reverse Percentages (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/reverse-percentages-pdf.pdf', 'global', NULL);

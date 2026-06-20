@@ -21,11 +21,11 @@ Top-level index for the Stage 3 Year B SOLO unit builds. Per-unit detail lives i
 | u31 | Number: Place Value, %, Multiplicative | ✅ complete | ✅ complete (committed 714566f) | ✅ 46 rows (SQL run) |
 | u32 | 2D Space & Area | ✅ complete | ✅ complete (committed e0d1dc9) | ✅ rows (SQL run) |
 | u33 | Multiplicative Strategies, Rates & Order of Ops | ✅ complete | ✅ complete (committed 409268a) | ✅ rows (SQL run) |
-| u34 | Measurement: Mass, Length, Perimeter & Decimals | ✅ complete | ❌ NOT BUILT | ⏳ 42 rows — `units/u34/04_insert.sql` NOT yet run |
-| u35 | (not yet inspected) | ❌ NOT STARTED | ❌ NOT BUILT | — |
+| u34 | Measurement: Mass, Length, Perimeter & Decimals | ✅ complete | ✅ complete (committed cd6c1fe) | ✅ 42 rows (SQL run) |
+| u35 | Add/Subtract Strategies, Decimals & Percentages | ✅ complete | ❌ NOT BUILT | ⏳ 42 rows — `units/u35/04_insert.sql` NOT yet run |
 | u36 | (not yet inspected) | ❌ NOT STARTED | ❌ NOT BUILT | — |
 
-**Outcome counts:** u29 = 13 (4R/6Y/3G) · u30 = 13 · u31 = 13 · u32 = 12 (4R/5Y/3G) · u33 = 13 · u34 = 13 (4R/6Y/3G).
+**Outcome counts:** u29 = 13 (4R/6Y/3G) · u30 = 13 · u31 = 13 · u32 = 12 (4R/5Y/3G) · u33 = 13 · u34 = 13 (4R/6Y/3G) · u35 = 13 (4R/6Y/3G).
 
 > The per-unit `units/u{NN}/PROGRESS.md` logs are authoritative. u29–u33 Deliverable A are live in
 > `solo/index.html` (git log 2c5b299…409268a). Current batch: u34, u35, u36 — Deliverable B then A per unit.
