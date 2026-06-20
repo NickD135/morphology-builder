@@ -48,10 +48,11 @@ Authored all six structures in `solo/index.html` (keyed `u40` / `u40_oid`):
   and a **hardcoded RESOURCES block** (code-canonical).
 - UC theme `u40` = violet (`#8b5cf6`, distinct from u37 slate / u38 emerald / u39 stone); gating updated.
 
-**Resource canonicality:** u40 is **CODE-CANONICAL** — DB confirmed to hold **0 u40 rows**, so the app falls
-back to the hardcoded RESOURCES (no both-sources anti-pattern). `04_insert.sql` holds the identical rows; if
-Nick later runs it, the DB rows would override the identical hardcoded ones (then the hardcoded u40 block can
-be deleted for cleanliness, as was done for u39).
+**Resource canonicality:** Initially shipped CODE-CANONICAL (hardcoded RESOURCES, DB empty). **Update
+(same session): Nick then inserted `04_insert.sql`** — DB confirmed to hold **39 u40 rows identical to the
+verified CSV**. To avoid the both-sources anti-pattern (DB rows win → hardcoded block becomes dead code), the
+**hardcoded u40 RESOURCES block was removed**, leaving u40 **DB-canonical** like u37/u38/u39. Re-verified: all
+six blocks eval clean and Playwright shows 0 code console errors after removal.
 
 **Verification (gate passed):** Node-eval structure OK (13 outcomes, all 6 blocks incl. RESOURCES with ≥2
 per outcome, MC answer∈options, no dup options, 3-hint ladders). Auto-arithmetic OK for all input questions

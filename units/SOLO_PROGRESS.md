@@ -27,7 +27,7 @@ Top-level index for the Stage 3 Year B SOLO unit builds. Per-unit detail lives i
 | u37 | Multiplicative Relations & Measurement | ✅ complete (6f14253) | ✅ complete (dd1b7ba) | ✅ 42 rows (SQL run) |
 | u38 | Chance & Data | ✅ complete (db0aec8) | ✅ complete (521c679) | ✅ 39 rows (SQL run) |
 | u39 | Time, Transformations & Angles | ✅ complete (d112a65) | ✅ complete (456c62c) | ✅ 39 rows (SQL run) |
-| u40 | Integers, Decimals, Percentages & the Cartesian Plane | ✅ complete (36d90d1) | ✅ complete (0d5c566) | code-canonical (no DB rows; SQL ready) |
+| u40 | Integers, Decimals, Percentages & the Cartesian Plane | ✅ complete (36d90d1) | ✅ complete (0d5c566) | ✅ 39 rows (SQL run; hardcoded block removed) |
 
 **Outcome counts:** u29 = 13 (4R/6Y/3G) · u30 = 13 · u31 = 13 · u32 = 12 (4R/5Y/3G) · u33 = 13 · u34 = 13 (4R/6Y/3G) · u35 = 13 (4R/6Y/3G) · u36 = 13 (4R/6Y/3G) · u37 = 14 (6R/5Y/3G) · u38 = 13 (4R/6Y/3G) · u39 = 13 (4R/6Y/3G) · u40 = 13 (5R/5Y/3G).
 
