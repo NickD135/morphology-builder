@@ -36,3 +36,22 @@ Outstanding: Nick runs `04_insert.sql`.
 
 ### Outcome → Mini Lesson map
 R1→1 R2→2 R3→3 Y1→4 R4→5 Y2→6 Y3→7 Y4→8 Y5→9 G1→10 G2→11 G3→12
+
+---
+
+## Session 2026-06-20 — Deliverable A (in-app SOLO Tracker build) — COMPLETE
+
+Built the playable in-app unit in `solo/index.html` (2D Shapes & Area). All 12
+outcomes (R1–R4 · Y1–Y5 · G1–G3 — no Y6) authored across every data structure;
+inserted after u31.
+
+- UNITS u32: 12 outcomes × 10 Show questions, banded red→yellow→green
+- PRETESTS 12×2; PRACTICE (Know) 12×(example[4]+9 Q); LEARN (Grow) 12 lessons, 3-step hint ladder on every try-it
+- BEYOND u32: 10 Stage-4 area resources + 4 book projects (Area Architect, Composite Shape Challenge, Transformation Station, Factors & Shapes)
+- UC teal theme (#14b8a6) + student gating updated
+- RESOURCES DB-canonical (41 rows verified) — 0 hardcoded u32 keys
+
+Verification: Node-eval all blocks (MC answer ∈ options, no dups, all area
+arithmetic re-checked, 3-hint ladders); Playwright 0 console errors; window.UNITS
+live with u32 (12 outcomes). BEYOND website links HTTP 200 (one 404 Maths-is-Fun
+triangle-area URL swapped for the working parallelogram page). Committed + pushed.
