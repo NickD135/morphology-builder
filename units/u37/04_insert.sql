@@ -1,0 +1,50 @@
+-- Unit 37 — resource inserts for the Supabase `resources` table.
+-- Generated from units/u37/03_resources_staged.csv (every URL verified live in Stage 3:
+-- 28 YouTube videos oEmbed-verified live with matching titles, 13 worksheets curl-verified HTTP 200).
+-- Run in the Supabase SQL editor (anon key cannot write). DO NOT auto-execute.
+
+DELETE FROM resources WHERE unit_id = 'u37';
+
+INSERT INTO resources (unit_id, outcome_id, type, label, url, scope, class_id) VALUES
+  ('u37', 'r1', 'video', 'Factors | Common Factors | Greatest Common Factor (GCF) | Math with Mr. J', 'https://www.youtube.com/watch?v=IRHwkNBpG_Q', 'global', NULL),
+  ('u37', 'r1', 'video', 'Multiples vs. Factors | What are Multiples and Factors? | Math with Mr. J', 'https://www.youtube.com/watch?v=1qPfLkOEuYY', 'global', NULL),
+  ('u37', 'r1', 'worksheet', 'Corbettmaths — Factors (PDF)', 'https://corbettmaths.com/wp-content/uploads/2018/11/Factors-216-pdf.pdf', 'global', NULL),
+  ('u37', 'r2', 'video', 'Prime and Composite Numbers | Math with Mr. J', 'https://www.youtube.com/watch?v=ydm2cxacPIM', 'global', NULL),
+  ('u37', 'r2', 'video', 'What are Prime Numbers? | Math with Mr. J', 'https://www.youtube.com/watch?v=5gBtzdM5M5k', 'global', NULL),
+  ('u37', 'r2', 'worksheet', 'Corbettmaths — Prime Numbers (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/prime-numbers-pdf.pdf', 'global', NULL),
+  ('u37', 'r3', 'video', 'Box Method Multiplication | 2-Digits x 2-Digits | Math with Mr. J', 'https://www.youtube.com/watch?v=n3q3XzzIGSY', 'global', NULL),
+  ('u37', 'r3', 'video', 'Multiplication: A Step-By-Step Review | How to Multiply | Math with Mr. J', 'https://www.youtube.com/watch?v=g5TmDrXeiR8', 'global', NULL),
+  ('u37', 'r3', 'worksheet', 'Corbettmaths — Multiplication (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/multiplication-pdf.pdf', 'global', NULL),
+  ('u37', 'r4', 'video', 'How to Find the Area of Rectangles and Squares | Math with Mr. J', 'https://www.youtube.com/watch?v=_ejDO6aPPzU', 'global', NULL),
+  ('u37', 'r4', 'video', 'How to Find the Area of a Rectangle | Math with Mr. J', 'https://www.youtube.com/watch?v=vqJmXGIF_1w', 'global', NULL),
+  ('u37', 'r4', 'worksheet', 'Corbettmaths — Area of a Rectangle (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-a-rectangle-pdf.pdf', 'global', NULL),
+  ('u37', 'r5', 'video', 'Same Perimeter', ' Different Areas (Grade 3) | MATH-N-ROLL', 'global', NULL),
+  ('u37', 'r5', 'video', 'Same Perimeter', ' Different Area (Grade 3 Math) | JoAnn's School', 'global', NULL),
+  ('u37', 'r5', 'worksheet', 'Corbettmaths — Area of Rectangles (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-rectangles-pdf.pdf', 'global', NULL),
+  ('u37', 'r6', 'video', 'Finding Volume with Unit Cubes | How to Find Volume | Math with Mr. J', 'https://www.youtube.com/watch?v=RxkRlIAucMk', 'global', NULL),
+  ('u37', 'r6', 'video', 'Volume of Rectangular Prisms | Math with Mr. J', 'https://www.youtube.com/watch?v=By7sVb2IhFs', 'global', NULL),
+  ('u37', 'r6', 'worksheet', 'Corbettmaths — Volume of a Cuboid (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/volume-of-a-cuboid-pdf.pdf', 'global', NULL),
+  ('u37', 'y1', 'video', 'Area of Parallelograms | How to Find the Area of a Parallelogram | Math with Mr. J', 'https://www.youtube.com/watch?v=uj6k22WubCk', 'global', NULL),
+  ('u37', 'y1', 'video', 'Area of a Parallelogram (6th Grade Math) | JoAnn''s School', 'https://www.youtube.com/watch?v=pNnZ-WgK0fs', 'global', NULL),
+  ('u37', 'y1', 'worksheet', 'Corbettmaths — Area of a Parallelogram (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-a-parallelogram-pdf1.pdf', 'global', NULL),
+  ('u37', 'y2', 'video', 'Finding the Area of a Triangle | A Step-By-Step Guide | Math with Mr. J', 'https://www.youtube.com/watch?v=-ZPfB1uDjEw', 'global', NULL),
+  ('u37', 'y2', 'video', 'How to Find the Area and Perimeter of a Triangle | Math with Mr. J', 'https://www.youtube.com/watch?v=JCWJihpZ-Lo', 'global', NULL),
+  ('u37', 'y2', 'worksheet', 'Corbettmaths — Area of a Triangle (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-a-triangle-pdf.pdf', 'global', NULL),
+  ('u37', 'y3', 'video', 'Volume of Rectangular Prisms | Math with Mr. J', 'https://www.youtube.com/watch?v=By7sVb2IhFs', 'global', NULL),
+  ('u37', 'y3', 'video', 'Volume of a Rectangular Prism (Mastery Check) | Math with Mr. J', 'https://www.youtube.com/watch?v=4i_XprDGeVs', 'global', NULL),
+  ('u37', 'y3', 'worksheet', 'Corbettmaths — Volume of a Cuboid (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/volume-of-a-cuboid-pdf.pdf', 'global', NULL),
+  ('u37', 'y4', 'video', 'Multiplication: A Step-By-Step Review | How to Multiply | Math with Mr. J', 'https://www.youtube.com/watch?v=g5TmDrXeiR8', 'global', NULL),
+  ('u37', 'y4', 'video', '2-Digit Multiplication: A Step-By-Step Review | Math with Mr. J', 'https://www.youtube.com/watch?v=yiZ3r9T_OJs', 'global', NULL),
+  ('u37', 'y4', 'worksheet', 'Corbettmaths — Multiplication (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/multiplication-pdf.pdf', 'global', NULL),
+  ('u37', 'y5', 'video', 'Volume of Rectangular Prism Word Problems | Wrestle with Math', 'https://www.youtube.com/watch?v=gIFR36JiKtI', 'global', NULL),
+  ('u37', 'y5', 'video', 'Volume of Composite Rectangular Prisms | Math with Mr. J', 'https://www.youtube.com/watch?v=dAKAfcqi3x4', 'global', NULL),
+  ('u37', 'y5', 'worksheet', 'Corbettmaths — Volume of a Cuboid (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/volume-of-a-cuboid-pdf.pdf', 'global', NULL),
+  ('u37', 'g1', 'video', 'Finding the Area of Composite Figures with Triangles | Math with Mr. J', 'https://www.youtube.com/watch?v=bo483Varm-U', 'global', NULL),
+  ('u37', 'g1', 'video', 'Finding the Area of a Composite Figure | Area of Composite Rectangles | Math with Mr. J', 'https://www.youtube.com/watch?v=z4Lat1uOQI4', 'global', NULL),
+  ('u37', 'g1', 'worksheet', 'Corbettmaths — Area of Compound Shapes (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-compound-shapes-pdf.pdf', 'global', NULL),
+  ('u37', 'g2', 'video', 'How to Find the Volume of a Triangular Prism | Math with Mr. J', 'https://www.youtube.com/watch?v=4pV7_NuGO2g', 'global', NULL),
+  ('u37', 'g2', 'video', 'Volume of Composite Rectangular Prisms | Math with Mr. J', 'https://www.youtube.com/watch?v=dAKAfcqi3x4', 'global', NULL),
+  ('u37', 'g2', 'worksheet', 'Corbettmaths — Volume of a Prism (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/volume-of-a-prism-pdf.pdf', 'global', NULL),
+  ('u37', 'g3', 'video', 'Prime Factorization | What is Prime Factorization? | Math with Mr. J', 'https://www.youtube.com/watch?v=EXU4ai9aViE', 'global', NULL),
+  ('u37', 'g3', 'video', 'Prime Factorization of 72 | Math with Mr. J', 'https://www.youtube.com/watch?v=kg4DP0QRL6c', 'global', NULL),
+  ('u37', 'g3', 'worksheet', 'Corbettmaths — Product of Primes (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/product-of-primes-pdf1.pdf', 'global', NULL);
