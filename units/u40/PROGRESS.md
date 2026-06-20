@@ -40,6 +40,23 @@ fully functional now whether or not the SQL is run. `04_insert.sql` holds the **
 DB promotion later (if run, DB rows override the identical hardcoded ones — no behaviour change; if Nick
 prefers DB-canonical, delete the hardcoded u40 RESOURCES block after inserting, as was done for u39).
 
-## Next (Deliverable A)
-- Author 6 structures in `solo/index.html` keyed `u40` / `u40_oid`, **including a hardcoded RESOURCES block**.
-  UC theme distinct from u24–u39. 0 console errors via Playwright before committing.
+## Session 2 — 2026-06-20 — Deliverable A COMPLETE (code-canonical)
+
+Authored all six structures in `solo/index.html` (keyed `u40` / `u40_oid`):
+- UNITS (13 outcomes, 10 Show Q each), PRETESTS (2 each), PRACTICE/Know (example + ~9 each),
+  BEYOND (Stage 4 links + 4 projects), LEARN/Grow (13 lessons, 3-step hint ladder on every tryIt),
+  and a **hardcoded RESOURCES block** (code-canonical).
+- UC theme `u40` = violet (`#8b5cf6`, distinct from u37 slate / u38 emerald / u39 stone); gating updated.
+
+**Resource canonicality:** u40 is **CODE-CANONICAL** — DB confirmed to hold **0 u40 rows**, so the app falls
+back to the hardcoded RESOURCES (no both-sources anti-pattern). `04_insert.sql` holds the identical rows; if
+Nick later runs it, the DB rows would override the identical hardcoded ones (then the hardcoded u40 block can
+be deleted for cleanliness, as was done for u39).
+
+**Verification (gate passed):** Node-eval structure OK (13 outcomes, all 6 blocks incl. RESOURCES with ≥2
+per outcome, MC answer∈options, no dup options, 3-hint ladders). Auto-arithmetic OK for all input questions
+**except** the Y5 order-of-operations items, which the naive left-to-right checker false-flags — those answers
+(2 + 3 × 4 = 14, 10 − 2 × 3 = 4, 6 + 8 ÷ 2 = 10, 3 × 4 + 5 = 17) are correct by BIDMAS and were hand-verified.
+Playwright load: 0 code console errors (favicon 404 + Babel notice only).
+
+**Committed.** Unit 40 fully complete (both deliverables). **All four units (37–40) done.**
