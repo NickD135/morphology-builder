@@ -24,11 +24,18 @@ Top-level index for the Stage 3 Year B SOLO unit builds. Per-unit detail lives i
 | u34 | Measurement: Mass, Length, Perimeter & Decimals | ✅ complete | ✅ complete (committed cd6c1fe) | ✅ 42 rows (SQL run) |
 | u35 | Add/Subtract Strategies, Decimals & Percentages | ✅ complete | ✅ complete (committed eaac609) | ✅ 42 rows (SQL run) |
 | u36 | Fractions & Chance | ✅ complete | ✅ complete (committed 2e82b23) | ✅ 39 rows (SQL run) |
+| u37 | Multiplicative Relations & Measurement | ✅ complete (6f14253) | ✅ complete (dd1b7ba) | ✅ 42 rows (SQL run) |
+| u38 | Chance & Data | ✅ complete (db0aec8) | ✅ complete (521c679) | ✅ 39 rows (SQL run) |
+| u39 | Time, Transformations & Angles | ✅ complete (d112a65) | ✅ complete (456c62c) | ✅ 39 rows (SQL run) |
+| u40 | Integers, Decimals, Percentages & the Cartesian Plane | ✅ complete (36d90d1) | ✅ complete (0d5c566) | code-canonical (no DB rows; SQL ready) |
 
-**Outcome counts:** u29 = 13 (4R/6Y/3G) · u30 = 13 · u31 = 13 · u32 = 12 (4R/5Y/3G) · u33 = 13 · u34 = 13 (4R/6Y/3G) · u35 = 13 (4R/6Y/3G) · u36 = 13 (4R/6Y/3G).
+**Outcome counts:** u29 = 13 (4R/6Y/3G) · u30 = 13 · u31 = 13 · u32 = 12 (4R/5Y/3G) · u33 = 13 · u34 = 13 (4R/6Y/3G) · u35 = 13 (4R/6Y/3G) · u36 = 13 (4R/6Y/3G) · u37 = 14 (6R/5Y/3G) · u38 = 13 (4R/6Y/3G) · u39 = 13 (4R/6Y/3G) · u40 = 13 (5R/5Y/3G).
 
-> The per-unit `units/u{NN}/PROGRESS.md` logs are authoritative. u29–u33 Deliverable A are live in
-> `solo/index.html` (git log 2c5b299…409268a). Current batch: u34, u35, u36 — Deliverable B then A per unit.
+> The per-unit `units/u{NN}/PROGRESS.md` logs are authoritative. u29–u39 Deliverable A are live in
+> `solo/index.html`. **Units 37–40 batch (2026-06-20):** u37/u38 DB-canonical (Nick inserted the SQL);
+> u39 ended up DB-canonical (SQL was inserted — hardcoded block removed); u40 is code-canonical (SQL not
+> inserted — hardcoded RESOURCES block; `04_insert.sql` ready for optional DB promotion). Units 38–40
+> Deliverable B was self-approved per Nick's away-session instruction (see each unit's PROGRESS.md).
 
 ---
 
