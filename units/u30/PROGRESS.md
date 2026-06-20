@@ -54,3 +54,22 @@ Outstanding: Nick runs `04_insert.sql` in Supabase.
 ## Outcome → Mini Lesson map
 R1→1 R2→2 R3→3 Y1→4 Y2→5 Y3→6 Y4→7 G1→8 G2→9 G3→10 R4→11 Y5→12 Y6→13
 (DoE order: Angles cluster L1-5 first with the Stage-4 angle Green cards beside it, then Time cluster L6-8.)
+
+---
+
+## Session 2026-06-20 — Deliverable A (in-app SOLO Tracker build) — COMPLETE
+
+Built the playable in-app unit in `solo/index.html` (Angles & Time), matching the
+Unit 28 / Unit 26 gold standard. All 13 outcomes (R1–R4 · Y1–Y6 · G1–G3) authored
+across every data structure; inserted after u29.
+
+- UNITS u30: 13 outcomes × 10 Show questions, subtitle "Angles & Time", banded red→yellow→green
+- PRETESTS u30: 13 × 2; PRACTICE (Know): 13 × (example[4]+9 Q); LEARN (Grow): 13 lessons, 3-step hint ladder on every try-it
+- BEYOND u30: 11 Stage-4 angle resources + 4 book projects (Angle Detective, Parallel Lines & Transversals, Timetable Master, Angles All Around)
+- UC fuchsia theme (#d946ef) + student gating updated
+- RESOURCES: DB-canonical (42 rows verified) — 0 hardcoded u30 keys
+
+Verification: Node-eval of all blocks (MC answer ∈ options, no dups, arithmetic/time
+conversions checked, 3-hint ladders, ≥7 practice Qs); Playwright 0 real console errors
+(only favicon 404 + Babel warning); window.UNITS confirmed live with u30; 3 new
+Maths-is-Fun BEYOND links HTTP 200. Committed + pushed to main.
