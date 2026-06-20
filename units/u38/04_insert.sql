@@ -1,0 +1,47 @@
+-- Unit 38 — resource inserts for the Supabase `resources` table.
+-- Generated from units/u38/03_resources_staged.csv (every URL verified live in Stage 3:
+-- 26 YouTube videos oEmbed-verified live with matching titles, 9 worksheets curl-verified HTTP 200).
+-- Run in the Supabase SQL editor (anon key cannot write). DO NOT auto-execute.
+
+DELETE FROM resources WHERE unit_id = 'u38';
+
+INSERT INTO resources (unit_id, outcome_id, type, label, url, scope, class_id) VALUES
+  ('u38', 'r1', 'video', 'What Is a Statistical Question? | Math Defined', 'https://www.youtube.com/watch?v=QZjbwzbCCNE', 'global', NULL),
+  ('u38', 'r1', 'video', 'Surveys in Statistics | LearnFree', 'https://www.youtube.com/watch?v=Y_EQfy-uk0Y', 'global', NULL),
+  ('u38', 'r1', 'worksheet', 'Corbettmaths — Bar Charts / Tally Charts / Pictograms (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/bar-charts-tally-charts-and-pictograms-pdf.pdf', 'global', NULL),
+  ('u38', 'r2', 'video', 'How to Make a Frequency Table | Math with Mr. J', 'https://www.youtube.com/watch?v=dcUiY2CidIQ', 'global', NULL),
+  ('u38', 'r2', 'video', 'How to Read a Frequency Table | Math with Mr. J', 'https://www.youtube.com/watch?v=g_pyxyJjgM8', 'global', NULL),
+  ('u38', 'r2', 'worksheet', 'Corbettmaths — Drawing Bar Charts (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/drawing-bar-charts-pdf.pdf', 'global', NULL),
+  ('u38', 'r3', 'video', 'An Intro to Probability | Basic Probability | Math with Mr. J', 'https://www.youtube.com/watch?v=6IdNYdA6no8', 'global', NULL),
+  ('u38', 'r3', 'video', 'Finding Probability | Basic Probability | Math with Mr. J', 'https://www.youtube.com/watch?v=QEdHtF1CKRQ', 'global', NULL),
+  ('u38', 'r3', 'worksheet', 'Corbettmaths — Probability (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/probability-pdf.pdf', 'global', NULL),
+  ('u38', 'r4', 'video', 'Theoretical vs. Experimental Probability | Math with Mr. J', 'https://www.youtube.com/watch?v=Ay5pnC-0bVI', 'global', NULL),
+  ('u38', 'r4', 'video', 'Frequency Tables and Dot Plots | Math with Mr. J', 'https://www.youtube.com/watch?v=ZQ5cXMx3Db0', 'global', NULL),
+  ('u38', 'r4', 'worksheet', 'Corbettmaths — Relative Frequency (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/relative-frequency-pdf.pdf', 'global', NULL),
+  ('u38', 'y1', 'video', 'An Intro to Finding Probability | Math with Mr. J', 'https://www.youtube.com/watch?v=zE-Y_QCHOt8', 'global', NULL),
+  ('u38', 'y1', 'video', 'Theoretical Probability — Possible Outcomes Using A Spinner | mrmaisonet', 'https://www.youtube.com/watch?v=3QmNvODlnt8', 'global', NULL),
+  ('u38', 'y1', 'worksheet', 'Corbettmaths — Probability (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/probability-pdf.pdf', 'global', NULL),
+  ('u38', 'y2', 'video', 'Theoretical vs. Experimental Probability | Math with Mr. J', 'https://www.youtube.com/watch?v=Ay5pnC-0bVI', 'global', NULL),
+  ('u38', 'y2', 'video', 'Experimental vs. Theoretical Probability Explained! | Mario''s Math Tutoring', 'https://www.youtube.com/watch?v=J0ijhF-cdFU', 'global', NULL),
+  ('u38', 'y2', 'worksheet', 'Corbettmaths — Relative Frequency (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/relative-frequency-pdf.pdf', 'global', NULL),
+  ('u38', 'y3', 'video', 'Fair and Unfair Games | Andrea Knechtel', 'https://www.youtube.com/watch?v=-X5vAmWQDuE', 'global', NULL),
+  ('u38', 'y3', 'video', 'Fair and Unfair Games (Project Maths) | TheMathsTutor.ie', 'https://www.youtube.com/watch?v=pDOfqsdZ7Hs', 'global', NULL),
+  ('u38', 'y3', 'worksheet', 'Corbettmaths — Probability (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/probability-pdf.pdf', 'global', NULL),
+  ('u38', 'y4', 'video', 'Sampling and Estimation | Dietmar Schaffner', 'https://www.youtube.com/watch?v=XiU7srCwokU', 'global', NULL),
+  ('u38', 'y4', 'video', 'Probability — Drawing Counters from a Bag | Tambuwal Maths Class', 'https://www.youtube.com/watch?v=-4JgsyckoLM', 'global', NULL),
+  ('u38', 'y4', 'worksheet', 'Corbettmaths — Relative Frequency (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/relative-frequency-pdf.pdf', 'global', NULL),
+  ('u38', 'y5', 'video', 'Averages (Mean/Median/Mode) & Range | Math with Mr. J', 'https://www.youtube.com/watch?v=e3uY2LraXts', 'global', NULL),
+  ('u38', 'y5', 'video', 'Reading Graphs (Simplifying Math) | Buffington', 'https://www.youtube.com/watch?v=C0-eJfOg3nc', 'global', NULL),
+  ('u38', 'y5', 'worksheet', 'Corbettmaths — Two-Way Tables (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/two-way-tables-pdf.pdf', 'global', NULL),
+  ('u38', 'y6', 'video', 'How to Spot a Misleading Graph | TED-Ed (Lea Gaslowitz)', 'https://www.youtube.com/watch?v=E91bGT9BjYk', 'global', NULL),
+  ('u38', 'y6', 'video', 'Misleading Graphs | Corbettmaths', 'https://www.youtube.com/watch?v=-rYUi_dfhY0', 'global', NULL),
+  ('u38', 'y6', 'worksheet', 'Corbettmaths — Reading Bar Charts (PDF)', 'https://corbettmaths.com/wp-content/uploads/2018/12/Reading-Bar-Charts.pdf', 'global', NULL),
+  ('u38', 'g1', 'video', 'Introduction to Probability — Sample Space & Tree Diagrams | The Organic Chemistry Tutor', 'https://www.youtube.com/watch?v=SkidyDQuupA', 'global', NULL),
+  ('u38', 'g1', 'video', 'An Intro to Probability | Basic Probability | Math with Mr. J', 'https://www.youtube.com/watch?v=6IdNYdA6no8', 'global', NULL),
+  ('u38', 'g1', 'worksheet', 'Corbettmaths — Listing Outcomes (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/listing-outcomes-pdf.pdf', 'global', NULL),
+  ('u38', 'g2', 'video', 'Complementary Events in Probability | Math and Stats Help', 'https://www.youtube.com/watch?v=hJbj7UQIJNw', 'global', NULL),
+  ('u38', 'g2', 'video', 'Theoretical vs. Experimental Probability | Math with Mr. J', 'https://www.youtube.com/watch?v=Ay5pnC-0bVI', 'global', NULL),
+  ('u38', 'g2', 'worksheet', 'Corbettmaths — Relative Frequency (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/relative-frequency-pdf.pdf', 'global', NULL),
+  ('u38', 'g3', 'video', 'Types of Data: Categorical and Numerical | EJFullerton', 'https://www.youtube.com/watch?v=Vem8Ro-cHIU', 'global', NULL),
+  ('u38', 'g3', 'video', 'Types of Data: Categorical vs Numerical Data | 365 Data Science', 'https://www.youtube.com/watch?v=DUcXZ08IdMo', 'global', NULL),
+  ('u38', 'g3', 'worksheet', 'Corbettmaths — Averages and Range (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/averages-and-range-pdf.pdf', 'global', NULL);
