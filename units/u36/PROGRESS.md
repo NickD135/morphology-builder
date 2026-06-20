@@ -48,9 +48,22 @@ R1→1 Y1→2 R2→3 R3→4 Y2→5 Y3→6 R4→7 Y4→8 Y5→9 Y6→10 G1→11 G
 
 ---
 
-## Deliverable A (in-app SOLO Tracker build) — NOT STARTED
-Resources are **DB-canonical** once `04_insert.sql` is run (39 rows) — do NOT hardcode a u36 RESOURCES
-block in solo/index.html. Build after Nick confirms the SQL is inserted + the row count. Insert u36 after
-u35. Colour theme: pick one distinct from existing (u24 blue / u25 green / u26 purple / u27 orange /
-u28 cyan / u29 rose / u30 fuchsia / u31 amber / u32 teal / u33 indigo / u34 lime / u35 sky — check UC block
-before choosing; e.g. violet #8b5cf6 or pink #ec4899).
+## ✅ Deliverable A (in-app SOLO Tracker build) — COMPLETE (2026-06-20)
+
+Built the playable in-app unit in `solo/index.html` (Fractions & Chance). All 13 outcomes
+(R1–R4 · Y1–Y6 · G1–G3) authored across every data structure; inserted after u35.
+
+- UNITS u36: 13 outcomes × 10 Show questions, banded red→yellow→green
+- PRETESTS 13×2; PRACTICE (Know) 13×(example[4]+9 Q); LEARN (Grow) 13 lessons, 3-step hint ladder on every try-it
+- BEYOND u36: 9 Stage-4 resources + 4 book projects (Fraction Chef, Probability Detective, Fraction Wall Builder, FDP Master)
+- UC **pink** theme (#ec4899) + student gating list updated (||unit.id==="u36")
+- RESOURCES **DB-canonical** (39 rows verified live in Supabase) — 0 hardcoded u36 keys
+
+**Verification:** SQL confirmed live in Supabase (39 rows, all 13 outcomes, 26 video + 13 worksheet).
+Node-eval all blocks (MC answer ∈ options, no dup options, ≥8 Know Qs, full LEARN schema with 3-hint
+ladders on every try-it); every answer re-derived by hand (fractions of numbers, complement, compare/order
+related denominators, add/subtract related & unlike denominators, multiply fractions, probability &
+complementary events). Playwright load → React mounts, normal login landing, 0 real console errors (only an
+environmental favicon 404). window.UNITS live with u36 (13 outcomes), 13 units total.
+
+Both deliverables for Unit 36 are now complete. **All three units (34, 35, 36) are done — both deliverables each.**
