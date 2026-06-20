@@ -23,7 +23,7 @@ Top-level index for the Stage 3 Year B SOLO unit builds. Per-unit detail lives i
 | u33 | Multiplicative Strategies, Rates & Order of Ops | ✅ complete | ✅ complete (committed 409268a) | ✅ rows (SQL run) |
 | u34 | Measurement: Mass, Length, Perimeter & Decimals | ✅ complete | ✅ complete (committed cd6c1fe) | ✅ 42 rows (SQL run) |
 | u35 | Add/Subtract Strategies, Decimals & Percentages | ✅ complete | ✅ complete (committed eaac609) | ✅ 42 rows (SQL run) |
-| u36 | Fractions & Chance | ✅ complete | ❌ NOT BUILT | ⏳ 39 rows — `units/u36/04_insert.sql` NOT yet run |
+| u36 | Fractions & Chance | ✅ complete | ✅ complete (committed 2e82b23) | ✅ 39 rows (SQL run) |
 
 **Outcome counts:** u29 = 13 (4R/6Y/3G) · u30 = 13 · u31 = 13 · u32 = 12 (4R/5Y/3G) · u33 = 13 · u34 = 13 (4R/6Y/3G) · u35 = 13 (4R/6Y/3G) · u36 = 13 (4R/6Y/3G).
 
