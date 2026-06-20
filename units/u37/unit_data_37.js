@@ -48,8 +48,8 @@ module.exports = {
       { type: "worksheet", label: "Corbettmaths — Area of a Rectangle (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/area-of-a-rectangle-pdf.pdf" },
     ],
     r5: [
-      { type: "video", label: "Same Perimeter, Different Areas (Grade 3) | MATH-N-ROLL", url: "https://www.youtube.com/watch?v=0Ho8Az8y4Mw" },
-      { type: "video", label: "Same Perimeter, Different Area (Grade 3 Math) | JoAnn's School", url: "https://www.youtube.com/watch?v=R4SNnVceMz4" },
+      { type: "video", label: "Same Perimeter — Different Areas (Grade 3) | MATH-N-ROLL", url: "https://www.youtube.com/watch?v=0Ho8Az8y4Mw" },
+      { type: "video", label: "Same Perimeter — Different Area (Grade 3 Math) | JoAnn's School", url: "https://www.youtube.com/watch?v=R4SNnVceMz4" },
       { type: "worksheet", label: "Corbettmaths — Area of Rectangles (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/area-of-rectangles-pdf.pdf" },
     ],
     r6: [
