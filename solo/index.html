@@ -13800,6 +13800,8 @@ function App(){
   const [hiddenStudents,setHiddenStudents]=useState(new Set()); // Set of student IDs hidden from class view
   const [manageGroupOpen,setManageGroupOpen]=useState(false);
   const [hiddenUnits,setHiddenUnits]=useState(new Set()); // Set of unit IDs hidden from student view
+  const [highlightedUnits,setHighlightedUnits]=useState(new Set()); // unit IDs glowing green for students
+  const [previewMode,setPreviewMode]=useState(false); // teacher previewing the app as a student
   const [reviewActive,setReviewActive]=useState(null); // {unitId, startedAt} from class settings, or null
   const [reviewMode,setReviewMode]=useState(null); // null | 'running' | 'done'
   const [reviewQList,setReviewQList]=useState([]);
@@ -13903,6 +13905,7 @@ function App(){
       setShowDone(sd);
       const {data:classRow}=await sb.from("classes").select("settings").eq("id",loginClassObj.id).single();
       setHiddenUnits(new Set(classRow?.settings?.soloHiddenUnits||[]));
+      setHighlightedUnits(new Set(classRow?.settings?.soloHighlightedUnits||[]));
       setReviewActive(classRow?.settings?.soloActiveReview||null);
       const rawTRO=classRow?.settings?.soloTeacherReview||{};
       setTeacherReviewOverrides(Object.fromEntries(Object.entries(rawTRO).map(([sid,keys])=>[sid,new Set(keys)])));
@@ -13928,6 +13931,7 @@ function App(){
     const {data:classRow}=await sb.from("classes").select("settings").eq("id",classId).single();
     const storedHiddenUnits=classRow?.settings?.soloHiddenUnits||[];
     setHiddenUnits(new Set(storedHiddenUnits));
+    setHighlightedUnits(new Set(classRow?.settings?.soloHighlightedUnits||[]));
     setReviewActive(classRow?.settings?.soloActiveReview||null);
     const rawTRO=classRow?.settings?.soloTeacherReview||{};
     setTeacherReviewOverrides(Object.fromEntries(Object.entries(rawTRO).map(([sid,keys])=>[sid,new Set(keys)])));
@@ -14086,6 +14090,42 @@ function App(){
     const {data:cur}=await sb.from("classes").select("settings").eq("id",selectedClassId).single();
     const merged={...(cur?.settings||{}),soloHiddenUnits:[...next]};
     await sb.from("classes").update({settings:merged}).eq("id",selectedClassId);
+  }
+
+  async function toggleHighlightUnit(unitId){
+    const next=new Set(highlightedUnits);
+    if(next.has(unitId))next.delete(unitId); else next.add(unitId);
+    setHighlightedUnits(next);
+    const {data:cur}=await sb.from("classes").select("settings").eq("id",selectedClassId).single();
+    const merged={...(cur?.settings||{}),soloHighlightedUnits:[...next]};
+    await sb.from("classes").update({settings:merged}).eq("id",selectedClassId);
+  }
+
+  // Teacher "Student View": preview the app as a student using a persistent hidden student row tied to
+  // this teacher (code TP-<auth8>). Progress saves on that row, hidden from all class data/averages.
+  async function enterStudentView(){
+    if(!selectedClassId)return;
+    try{
+      const {data:{session}}=await sb.auth.getSession();
+      const uid=session?.user?.id; if(!uid)return;
+      const code="TP-"+uid.replace(/-/g,"").slice(0,8).toUpperCase();
+      let {data:ps}=await sb.from("students").select("id,class_id").eq("student_code",code).maybeSingle();
+      if(!ps){
+        const {data:ins}=await sb.from("students").insert({class_id:selectedClassId,name:"\u{1F464} Teacher preview",student_code:code}).select("id,class_id").single();
+        ps=ins;
+        if(ps){await sb.from("solo_hidden_students").insert({class_id:selectedClassId,student_id:ps.id});}
+      }
+      if(!ps)return;
+      const pid=ps.id;
+      const {data:rows}=await sb.from("solo_progress").select("outcome_key").eq("student_id",pid).eq("completed",true);
+      const pmap={}; (rows||[]).forEach(r=>{pmap[r.outcome_key]=true;});
+      setProgress(p=>({...p,[pid]:pmap}));
+      setStudentId(pid);setStudentName("Preview");setIsTeacher(false);setPreviewMode(true);
+      setSelectedUnit(null);setView("home");
+    }catch(e){}
+  }
+  function exitStudentView(){
+    setPreviewMode(false);setIsTeacher(true);setStudentId(null);setStudentName("");setSelectedUnit(null);setView("home");
   }
 
   async function tickShow(sid,uid,oid,shouldTick){
@@ -14314,7 +14354,7 @@ function App(){
     sb.auth.signOut();
     try{sessionStorage.removeItem('solo_session_v1');}catch{}
     try{if(studentId)localStorage.removeItem(`solo_pretest_draft_${studentId}`);}catch{}
-    setView("login");setStudentId(null);setStudentName("");COACH_NAME="";SOLO_TTS_SID="";SOLO_TTS_CID="";setMyReactions({});setIsTeacher(false);setLoginClassCode("");setLoginClassObj(null);setLoginStep("class");setLoginCode("");setLoginEmail("");setLoginPassword("");setLoginError("");setSelectedUnit(null);setTeacherFocus(null);setStudents([]);setClasses([]);setSelectedClassId(null);setProgress({});setTimestamps({});setTestSnapshots({});setHiddenStudents(new Set());setHiddenUnits(new Set());setManageGroupOpen(false);setReviewActive(null);setReviewMode(null);setReviewQList([]);setReviewIdx(0);setReviewAnswers([]);setReviewResults(null);setReviewResultsPanel(null);setLoginMode("student");
+    setView("login");setStudentId(null);setStudentName("");COACH_NAME="";SOLO_TTS_SID="";SOLO_TTS_CID="";setMyReactions({});setIsTeacher(false);setLoginClassCode("");setLoginClassObj(null);setLoginStep("class");setLoginCode("");setLoginEmail("");setLoginPassword("");setLoginError("");setSelectedUnit(null);setTeacherFocus(null);setStudents([]);setClasses([]);setSelectedClassId(null);setProgress({});setTimestamps({});setTestSnapshots({});setHiddenStudents(new Set());setHiddenUnits(new Set());setHighlightedUnits(new Set());setPreviewMode(false);setManageGroupOpen(false);setReviewActive(null);setReviewMode(null);setReviewQList([]);setReviewIdx(0);setReviewAnswers([]);setReviewResults(null);setReviewResultsPanel(null);setLoginMode("student");
     setExpandedResource(null);setPracticeOutcome(null);setPracticeUnit(null);setPracticePhase("example");setPracticeIdx(0);setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);setPracticeScore({correct:0,total:0});
     setTeacherEmail("");setSoloResources([]);setResourceTab("rubric");setResourceOutcome(null);setAddingResource(false);setAddingToGlobal(false);setNewResType("video");setNewResLabel("");setNewResUrl("");setNewResQ({text:"",options:[{text:"",correct:true},{text:"",correct:false},{text:"",correct:false},{text:"",correct:false}]});setQuizState({});setTeacherReviewOverrides({});
   }
@@ -14350,6 +14390,7 @@ function App(){
           setShowDone(new Set((showRows||[]).map(r=>`${r.unit_id}_${r.outcome_id}`)));
           const {data:classRow}=await sb.from("classes").select("settings").eq("id",sess.classId).single();
           setHiddenUnits(new Set(classRow?.settings?.soloHiddenUnits||[]));
+          setHighlightedUnits(new Set(classRow?.settings?.soloHighlightedUnits||[]));
           setReviewActive(classRow?.settings?.soloActiveReview||null);
           const rawTRO=classRow?.settings?.soloTeacherReview||{};
           setTeacherReviewOverrides(Object.fromEntries(Object.entries(rawTRO).map(([sid,keys])=>[sid,new Set(keys)])));
@@ -14937,8 +14978,12 @@ function App(){
       <div style={{display:"flex",flexDirection:"column",flex:1,fontFamily:ff}}>
         <AppNav title="SOLO Tracker"
           right={<>
-            {nameDisplay&&<span style={{fontSize:12,padding:"4px 10px",background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:20,color:"rgba(255,255,255,0.8)"}}>{nameDisplay}</span>}
-            <button onClick={doLogout} style={{fontFamily:ff,fontSize:12,padding:"6px 12px",background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:8,color:"rgba(255,255,255,0.8)",cursor:"pointer"}}>Sign out</button>
+            {previewMode&&<span style={{fontSize:12,padding:"4px 10px",background:"rgba(34,197,94,0.22)",border:"1px solid rgba(134,239,172,0.45)",borderRadius:20,color:"#dcfce7"}}>👁 Previewing as student</span>}
+            {!previewMode&&nameDisplay&&<span style={{fontSize:12,padding:"4px 10px",background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:20,color:"rgba(255,255,255,0.8)"}}>{nameDisplay}</span>}
+            {isTeacher&&!previewMode&&<button onClick={enterStudentView} style={{fontFamily:ff,fontSize:12,padding:"6px 12px",background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.18)",borderRadius:8,color:"#fff",cursor:"pointer"}}>👁 Student View</button>}
+            {previewMode
+              ?<button onClick={exitStudentView} style={{fontFamily:ff,fontSize:12,fontWeight:700,padding:"6px 12px",background:"#16a34a",border:"1px solid #22c55e",borderRadius:8,color:"#fff",cursor:"pointer"}}>← Back to teacher</button>
+              :<button onClick={doLogout} style={{fontFamily:ff,fontSize:12,padding:"6px 12px",background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:8,color:"rgba(255,255,255,0.8)",cursor:"pointer"}}>Sign out</button>}
           </>}
         />
         <div style={{flex:1,overflowY:"auto",padding:"1.25rem 1rem"}}>
@@ -15009,6 +15054,7 @@ function App(){
               {UNITS.filter(unit=>isTeacher||!hiddenUnits.has(unit.id)).map(unit=>{
                 const uc=UC[unit.id];
                 const isHiddenUnit=hiddenUnits.has(unit.id);
+                const isHL=highlightedUnits.has(unit.id);
                 let done=0,total=unit.outcomes.length;
                 if(isTeacher){
                   const avg=visibleStudents.reduce((sum,st)=>sum+(progress[st.id]?unit.outcomes.filter(o=>progress[st.id][`${unit.id}_${o.id}`]).length:0),0);
@@ -15023,9 +15069,9 @@ function App(){
                 const yelTotal=unit.outcomes.filter(o=>o.band==="yellow").length;
                 return(
                   <div key={unit.id}
-                    style={{background:"var(--surface)",borderRadius:16,boxShadow:"var(--sh-md)",cursor:"pointer",overflow:"hidden",transition:"transform 0.2s,box-shadow 0.2s",borderTop:`3px solid ${isHiddenUnit?"#e2e8f0":uc.dot}`,opacity:isHiddenUnit?0.55:1}}
-                    onMouseEnter={e=>{if(!isHiddenUnit){e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="var(--sh-hov)";}}}
-                    onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow="var(--sh-md)";}}
+                    style={{background:"var(--surface)",borderRadius:16,boxShadow:isHL?"0 0 0 2px #86efac,0 8px 24px rgba(34,197,94,0.40)":"var(--sh-md)",cursor:"pointer",overflow:"hidden",transition:"transform 0.2s,box-shadow 0.2s",borderTop:`3px solid ${isHiddenUnit?"#e2e8f0":uc.dot}`,opacity:isHiddenUnit?0.55:1}}
+                    onMouseEnter={e=>{if(!isHiddenUnit){e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow=isHL?"0 0 0 2px #4ade80,0 12px 28px rgba(34,197,94,0.5)":"var(--sh-hov)";}}}
+                    onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow=isHL?"0 0 0 2px #86efac,0 8px 24px rgba(34,197,94,0.40)":"var(--sh-md)";}}
                     onClick={()=>{if(!isHiddenUnit)openUnit(unit);}}>
                     <div style={{padding:"1.25rem 1.25rem 1rem"}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
@@ -15033,15 +15079,20 @@ function App(){
                           <span style={{display:"inline-block",background:isHiddenUnit?"#f1f5f9":uc.bg,color:isHiddenUnit?"#94a3b8":uc.text,fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:6,marginBottom:6,textTransform:"uppercase",letterSpacing:"0.06em"}}>{unit.name}</span>
                           <h2 style={{fontSize:15,fontWeight:700,margin:0,color:isHiddenUnit?"#94a3b8":"var(--text)"}}>{unit.subtitle}</h2>
                         </div>
-                        <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end"}}>
                           {!isHiddenUnit&&<span style={{fontSize:13,fontWeight:700,color:uc.text}}>{isTeacher?`avg ${done}/${total}`:`${done}/${total}`}</span>}
-                          {isTeacher&&(
+                          {isTeacher&&(<>
+                            <button onClick={e=>{e.stopPropagation();toggleHighlightUnit(unit.id);}}
+                              title={isHL?"Remove highlight":"Highlight this unit for students"}
+                              style={{fontFamily:ff,fontSize:13,padding:"3px 8px",borderRadius:6,border:`1px solid ${isHL?"#86efac":"#e2e8f0"}`,background:isHL?"#f0fdf4":"var(--surface)",color:isHL?"#16a34a":"#94a3b8",cursor:"pointer",lineHeight:1,transition:"all 0.15s"}}>
+                              {isHL?"✨ Highlighted":"✨ Highlight"}
+                            </button>
                             <button onClick={e=>{e.stopPropagation();toggleHideUnit(unit.id);}}
                               title={isHiddenUnit?"Show to students":"Hide from students"}
                               style={{fontFamily:ff,fontSize:13,padding:"3px 8px",borderRadius:6,border:`1px solid ${isHiddenUnit?"#c7d2fe":"#e2e8f0"}`,background:isHiddenUnit?"var(--ind-50)":"var(--surface)",color:isHiddenUnit?"var(--indigo)":"#94a3b8",cursor:"pointer",lineHeight:1,transition:"all 0.15s"}}>
                               {isHiddenUnit?"👁 Show":"🚫 Hide"}
                             </button>
-                          )}
+                          </>)}
                         </div>
                       </div>
                       {!isHiddenUnit&&<>
