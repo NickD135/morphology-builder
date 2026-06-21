@@ -1,0 +1,467 @@
+/**
+ * Unit 23 — Length & Time (Stage 3 Year B).
+ * Deliverable B. Built from units/u23/00_rubric_draft.md + 01_mapping_review.md.
+ * Matches the UNIT DATA SCHEMA at the bottom of scripts/build_program_template.js.
+ *
+ * Measure length with metres/kilometres; perimeter of squares/rectangles/triangles; decimal notation
+ * for length + m↔km conversion; read/convert 12- and 24-hour time; side lengths needed for perimeter;
+ * compare perimeter & area of rectangles; elapsed time (bridging, rounding); timetables & duration.
+ * Green = Stage 4 area of triangles/composite figures, speed-distance-time rates, distance-time graphs.
+ *
+ * Banding: cognitive demand (early Year B unit, A/B mix). A/B group labelled on every content point.
+ *
+ * Program has the resource appendix merged; a standalone Unit23_Resource_Appendix.docx is also emitted.
+ * Every resource URL verified live in Stage 3 (units/u23/03_resources_staged.csv) and is DB-CANONICAL
+ * in the Supabase `resources` table (units/u23/04_insert.sql inserted + verified, 38 rows).
+ *
+ * Outcome -> Mini Lesson map: R1->1 R2->2 R3->3 R4->4 Y1->5 Y2->6 Y3->7 Y4->8 Y5->9 G1->10 G2->11 G3->12
+ */
+module.exports = {
+  unit_number: "23",
+  unit_title: "Length & Time",
+  term: null,
+  duration: "2-3 weeks",
+
+  resource_appendix_attached: true,
+
+  // Every URL verified live in Stage 3 (videos oEmbed-verified, worksheets curl HTTP 200);
+  // see units/u23/03_resources_staged.csv. DB-canonical (units/u23/04_insert.sql).
+  resources: {
+    r1: [
+      { type: "video", label: "Metric Units of Length | Convert mm, cm, m and km | Math with Mr. J", url: "https://www.youtube.com/watch?v=kOJFSH_Bn9U" },
+      { type: "video", label: "Common Metric Units of Length — kilometres, metres, centimetres and millimetres | Math Mammoth", url: "https://www.youtube.com/watch?v=CcrzyOqFmTU" },
+      { type: "worksheet", label: "Corbettmaths — Metric Units (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/metric-units-pdf.pdf" },
+    ],
+    r2: [
+      { type: "video", label: "How to Find the Perimeter of a Rectangle | Math with Mr. J", url: "https://www.youtube.com/watch?v=teMDmMxy550" },
+      { type: "video", label: "How to Find Perimeter | Math with Mr. J", url: "https://www.youtube.com/watch?v=TSLc5p2VuYM" },
+      { type: "worksheet", label: "Corbettmaths — Perimeter (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/perimeter-pdf.pdf" },
+    ],
+    r3: [
+      { type: "video", label: "Meters and Centimeters — Converting m to cm and cm to m | Math with Mr. J", url: "https://www.youtube.com/watch?v=gALZRL4v2NM" },
+      { type: "video", label: "Metric Units of Length | Convert mm, cm, m and km | Math with Mr. J", url: "https://www.youtube.com/watch?v=kOJFSH_Bn9U" },
+      { type: "worksheet", label: "Corbettmaths — Metric Units (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/metric-units-pdf.pdf" },
+    ],
+    r4: [
+      { type: "video", label: "The 24-Hour Clock | Mathematics Grade 5 | Periwinkle", url: "https://www.youtube.com/watch?v=Lj4YxVZWLVU" },
+      { type: "video", label: "Understanding the 24-Hour Clock | Smartli", url: "https://www.youtube.com/watch?v=dQ5vIHA4L5s" },
+      { type: "worksheet", label: "Corbettmaths Primary — Time (PDF)", url: "https://corbettmathsprimary.com/wp-content/uploads/2018/07/time-pdf.pdf" },
+    ],
+    y1: [
+      { type: "video", label: "Metric Units of Length | Convert mm, cm, m and km | Math with Mr. J", url: "https://www.youtube.com/watch?v=kOJFSH_Bn9U" },
+      { type: "video", label: "Meters and Centimeters — Converting m to cm and cm to m | Math with Mr. J", url: "https://www.youtube.com/watch?v=gALZRL4v2NM" },
+      { type: "worksheet", label: "Corbettmaths — Metric Units (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/metric-units-pdf.pdf" },
+    ],
+    y2: [
+      { type: "video", label: "How to Find the Perimeter of a Rectangle | Math with Mr. J", url: "https://www.youtube.com/watch?v=teMDmMxy550" },
+      { type: "video", label: "How to Find Perimeter | Math with Mr. J", url: "https://www.youtube.com/watch?v=TSLc5p2VuYM" },
+      { type: "worksheet", label: "Corbettmaths — Perimeter (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/perimeter-pdf.pdf" },
+    ],
+    y3: [
+      { type: "video", label: "Same Area Different Perimeter | Miss Hutchison", url: "https://www.youtube.com/watch?v=bsl-r7dRSnc" },
+      { type: "video", label: "Finding the Area of a Rectangle Using the Formula | Math with Mr. J", url: "https://www.youtube.com/watch?v=1Ugk12y7TQM" },
+      { type: "worksheet", label: "Corbettmaths — Perimeter (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/perimeter-pdf.pdf" },
+      { type: "worksheet", label: "Corbettmaths — Area of a Rectangle (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/area-of-a-rectangle-pdf.pdf" },
+    ],
+    y4: [
+      { type: "video", label: "Elapsed Time — T-Chart Strategy | Sally Osborne", url: "https://www.youtube.com/watch?v=4Eucvb7qFpk" },
+      { type: "video", label: "Calculating Elapsed Time Using a Timeline | EasyTeaching", url: "https://www.youtube.com/watch?v=ML6r7BEZo7M" },
+      { type: "worksheet", label: "Corbettmaths — Time Calculations (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2019/10/Time-Calculations-pdf.pdf" },
+    ],
+    y5: [
+      { type: "video", label: "Timetables — Primary | Corbettmaths", url: "https://www.youtube.com/watch?v=40BJ0o0VD-0" },
+      { type: "video", label: "How to Read Timetables | Maths Education | EasyTeaching", url: "https://www.youtube.com/watch?v=SZv_a0fjDfE" },
+      { type: "worksheet", label: "Corbettmaths — Timetables (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2018/11/Timetables-pdf.pdf" },
+    ],
+    g1: [
+      { type: "video", label: "Finding the Area of a Triangle — A Step-By-Step Guide | Math with Mr. J", url: "https://www.youtube.com/watch?v=-ZPfB1uDjEw" },
+      { type: "video", label: "How to Find the Area of a Composite Shape — L-Shaped Example | Math with Mr. J", url: "https://www.youtube.com/watch?v=LAXHgQwcrDc" },
+      { type: "worksheet", label: "Corbettmaths — Area of a Triangle (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/area-of-a-triangle-pdf.pdf" },
+      { type: "worksheet", label: "Corbettmaths — Area of Compound Shapes (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/area-of-compound-shapes-pdf.pdf" },
+    ],
+    g2: [
+      { type: "video", label: "Speed Distance Time | Corbettmaths", url: "https://www.youtube.com/watch?v=dHVK7IeLGT8" },
+      { type: "video", label: "Speed Distance Time (Alternative Approach) | Corbettmaths", url: "https://www.youtube.com/watch?v=dOnpaBN5DAk" },
+      { type: "worksheet", label: "Corbettmaths — Speed Distance Time (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2018/09/Speed-Distance-Time-pdf.pdf" },
+    ],
+    g3: [
+      { type: "video", label: "Distance Time Graphs | Corbettmaths", url: "https://www.youtube.com/watch?v=oxOiuqUfWKA" },
+      { type: "video", label: "Speed Distance Time | Corbettmaths", url: "https://www.youtube.com/watch?v=dHVK7IeLGT8" },
+      { type: "worksheet", label: "Corbettmaths — Distance-Time Graphs (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/distance-time-graphs-pdf.pdf" },
+    ],
+  },
+
+  beyond_resources: [
+    { type: "video", label: "Finding the Area of a Triangle — A Step-By-Step Guide | Math with Mr. J", url: "https://www.youtube.com/watch?v=-ZPfB1uDjEw" },
+    { type: "video", label: "Speed Distance Time | Corbettmaths", url: "https://www.youtube.com/watch?v=dHVK7IeLGT8" },
+    { type: "video", label: "Distance Time Graphs | Corbettmaths", url: "https://www.youtube.com/watch?v=oxOiuqUfWKA" },
+    { type: "worksheet", label: "Corbettmaths — Area of a Triangle (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/area-of-a-triangle-pdf.pdf" },
+    { type: "worksheet", label: "Corbettmaths — Distance-Time Graphs (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/distance-time-graphs-pdf.pdf" },
+  ],
+
+  syllabus_strands_summary: "Geometric Measure A & B, Non-spatial Measure A & B, Two-dimensional Spatial Structure A",
+  strand_abbreviations_note: "GM = Geometric measure. NSM = Non-spatial measure. 2DS = Two-dimensional spatial structure. A/B = syllabus content group (Year A ~ Year 5; Year B ~ Year 6).",
+
+  syllabus_outcomes: [
+    { code: "MAO-WM-01", descriptor: "Develops understanding and fluency in mathematics through exploring and connecting mathematical concepts, choosing and applying mathematical techniques to solve problems, and communicating their thinking and reasoning coherently and clearly." },
+    { code: "MA3-GM-02", descriptor: "Selects and uses the appropriate unit and device to measure lengths and distances including perimeters." },
+    { code: "MA3-NSM-02", descriptor: "Measures and compares duration, using 12- and 24-hour time." },
+    { code: "MA3-2DS-02", descriptor: "Selects and uses the appropriate unit to calculate areas, including areas of rectangles." },
+  ],
+
+  content_points: {
+    red: {
+      heading: "Measure length & perimeter (GM-A), decimal length (GM-B), 24-hour time (NSM-A)",
+      heading_short: "Red -- Foundation",
+      points: [
+        "Use a variety of measuring devices to measure lengths and distances; use metres and kilometres (GM-A).",
+        "Calculate perimeters of common 2D shapes, including squares, rectangles and triangles (GM-A).",
+        "Recognise the equivalence of whole-number and decimal length; interpret and record lengths in decimal notation (GM-B).",
+        "Compare 12- and 24-hour time and convert between them; read time using 24-hour language (NSM-A).",
+      ],
+    },
+    yellow: {
+      heading: "Convert units, perimeter & area, elapsed time & timetables (applying)",
+      heading_short: "Yellow -- Applying",
+      points: [
+        "Use place value to convert between metres and kilometres; convert to the same unit to compare lengths (GM-B).",
+        "Use efficient strategies for perimeter of a large rectangle; determine which side lengths are needed (GM-A).",
+        "Recognise same-perimeter rectangles can differ; compare perimeters of same-area rectangles; calculate area of rectangles (GM-A/B, 2DS-A).",
+        "Calculate elapsed time using bridging; round to the nearest minute or hour (NSM-B).",
+        "Read and use 12- and 24-hour timetables; solve duration problems (NSM-A/B).",
+      ],
+    },
+    green: {
+      heading: "Extended -- Stage 4 Area, Rates & Distance-Time Graphs",
+      heading_short: "Green -- Extension",
+      points: [
+        "Apply the formula for the area of a triangle (A = ½bh); find areas of composite figures (MA4-ARE-C-01).",
+        "Solve rate problems, including speed = distance / time; convert between units for rates (MA4-RAT-C-01).",
+        "Interpret distance-time graphs and describe a journey (MA4-RAT-C-01).",
+      ],
+    },
+  },
+
+  working_mathematically: [
+    { process: "Communicating", description: "Students record lengths in decimal notation, read 24-hour time and timetables, and explain how they found a perimeter or duration." },
+    { process: "Understanding and fluency", description: "Students measure with metres and kilometres, calculate perimeters, convert units of length, and calculate elapsed time." },
+    { process: "Reasoning", description: "Students reason that same-perimeter rectangles can differ in area, choose which side lengths are needed, and check durations are reasonable." },
+    { process: "Problem solving", description: "Students solve perimeter, conversion, timetable and duration problems, and (Stage 4) triangle/composite area, rate and distance-time-graph problems." },
+  ],
+
+  outcomes: [
+    { code: "R1", desc: "Measure length with metres and kilometres.", content_point: "GM-A: use a variety of measuring devices; use metres and kilometres for length and distances | MA3-GM-02 | Year A", lesson_ref: "Mini Lesson 1" },
+    { code: "R2", desc: "Calculate perimeter of squares, rectangles and triangles.", content_point: "GM-A: calculate perimeters of common 2D shapes, including squares, rectangles and triangles | MA3-GM-02 | Year A", lesson_ref: "Mini Lesson 2" },
+    { code: "R3", desc: "Record and interpret lengths in decimal notation.", content_point: "GM-B: equivalence of whole-number and decimal length; interpret and record lengths in decimal notation | MA3-GM-02 | Year B", lesson_ref: "Mini Lesson 3" },
+    { code: "R4", desc: "Read and convert 12- and 24-hour time.", content_point: "NSM-A: compare 12- and 24-hour time and convert; read time using 24-hour language | MA3-NSM-02 | Year A", lesson_ref: "Mini Lesson 4" },
+    { code: "Y1", desc: "Convert between metric units of length.", content_point: "GM-B: convert between metres and kilometres using place value; convert to the same unit to compare | MA3-GM-02 | Year B", lesson_ref: "Mini Lesson 5" },
+    { code: "Y2", desc: "Find side lengths needed and calculate perimeter.", content_point: "GM-A: efficient perimeter of a large rectangle; determine which side lengths are needed | MA3-GM-02 | Year A", lesson_ref: "Mini Lesson 6" },
+    { code: "Y3", desc: "Compare perimeter and area of rectangles.", content_point: "GM-A/B & 2DS-A: same-perimeter rectangles differ; compare same-area perimeters; area of rectangles | MA3-GM-02, MA3-2DS-02 | Year A/B", lesson_ref: "Mini Lesson 7" },
+    { code: "Y4", desc: "Calculate elapsed time.", content_point: "NSM-B: elapsed time from start/finish using bridging; round to the nearest minute or hour | MA3-NSM-02 | Year B", lesson_ref: "Mini Lesson 8" },
+    { code: "Y5", desc: "Read timetables and solve duration problems.", content_point: "NSM-A/B: read and use 12-/24-hour timetables; solve duration problems | MA3-NSM-02 | Year A/B", lesson_ref: "Mini Lesson 9" },
+    { code: "G1", desc: "Area and composite area.", content_point: "Stage 4 ARE: area of a triangle (A = 1/2 b h); area of composite figures | MA4-ARE-C-01 | Stage 4 (Core)", lesson_ref: "Mini Lesson 10" },
+    { code: "G2", desc: "Distance, speed and time (rates).", content_point: "Stage 4 RAT: solve rate problems incl. speed = distance / time; convert units for rates | MA4-RAT-C-01 | Stage 4 (Core)", lesson_ref: "Mini Lesson 11" },
+    { code: "G3", desc: "Interpret distance-time graphs.", content_point: "Stage 4 RAT: interpret distance-time graphs; describe a journey | MA4-RAT-C-01 | Stage 4 (Core)", lesson_ref: "Mini Lesson 12" },
+  ],
+
+  lessons: [
+    {
+      num: 1, band: "R",
+      title: "Measuring length with metres and kilometres",
+      outcomes: ["R1"], duration: "25-30 min",
+      syllabus: "MA3-GM-02, MAO-WM-01 | GM-A: measuring devices; metres and kilometres",
+      source: "DoE Lesson 8 (adapted)",
+      doeLink: "Lesson 8 -- Measuring distance and solving duration problems",
+      resources: "Rulers, tape measures, trundle wheel",
+      li: "choose a suitable device and unit to measure lengths and distances",
+      sc: [
+        "I can choose the right measuring device for a length or distance.",
+        "I can use metres for lengths and kilometres for longer distances.",
+        "I know 1 kilometre is 1000 metres.",
+      ],
+      steps: [
+        { label: "Activate (4 min):", content: "Would you measure the classroom in metres or kilometres? What about the trip to the next town?" },
+        { label: "Model (10 min):", content: "Match the device to the job: ruler/tape for metres, trundle wheel for the playground, kilometres for road distances. Show 1 km = 1000 m." },
+        { label: "Guided practice (10 min):", content: "Students measure several lengths with suitable devices and record them in metres or kilometres." },
+        { label: "Check (4 min):", content: "Exit question: which unit (m or km) would you use for the length of a pencil, a pool and a highway?" },
+      ],
+      vocab: "length, distance, metre, kilometre, measuring device, ruler, tape measure, trundle wheel",
+      support: "Provide a chart linking each device to the kind of length it measures.",
+      extension: "Estimate a distance first, then measure, and compare estimate to result.",
+      assessment: "Students choose units and devices to measure length — links to R1 in the SOLO Show task.",
+      is_hands_on: true,
+      materials: ["rulers", "tape measures", "trundle wheel"],
+    },
+    {
+      num: 2, band: "R",
+      title: "Calculating perimeter",
+      outcomes: ["R2"], duration: "25 min",
+      syllabus: "MA3-GM-02, MAO-WM-01 | GM-A: perimeter of squares, rectangles, triangles",
+      source: "DoE Lesson 3 (adapted)",
+      doeLink: "Lesson 3 -- Calculating perimeter",
+      resources: "Grid paper, 2D shape cards",
+      li: "calculate the perimeter of squares, rectangles and triangles",
+      sc: [
+        "I know perimeter is the total distance around the outside of a shape.",
+        "I can add the side lengths to find the perimeter.",
+        "I can use the shape's properties (e.g. a square has 4 equal sides).",
+      ],
+      steps: [
+        { label: "Activate (3 min):", content: "How far is it around the edge of this rectangle? What do we call that distance?" },
+        { label: "Model (10 min):", content: "Perimeter = add all sides. Rectangle 5 m by 3 m: 5 + 3 + 5 + 3 = 16 m. Square side 4 cm: 4 × 4 = 16 cm. Triangle: add the 3 sides." },
+        { label: "Guided practice (8 min):", content: "Students calculate perimeters of squares, rectangles and triangles." },
+        { label: "Check (4 min):", content: "Exit question: a rectangle is 6 cm by 2 cm. What is its perimeter?" },
+      ],
+      vocab: "perimeter, side, length, square, rectangle, triangle, total, distance around",
+      support: "Let students trace the outline and count grid squares.",
+      extension: "Find a missing side length given the perimeter and the other sides.",
+      assessment: "Students calculate perimeter — links to R2 in the SOLO Show task.",
+    },
+    {
+      num: 3, band: "R",
+      title: "Lengths in decimal notation",
+      outcomes: ["R3"], duration: "25-30 min",
+      syllabus: "MA3-GM-02, MAO-WM-01 | GM-B: decimal notation for length",
+      source: "DoE Lesson 1 & 2 (adapted)",
+      doeLink: "Lesson 1 -- Converting between metres and kilometres",
+      resources: "Metre tapes, place value charts",
+      li: "record and interpret lengths in decimal notation",
+      sc: [
+        "I can write a length in decimal notation (e.g. 1500 m = 1.5 km).",
+        "I know the equivalence of whole-number and decimal length.",
+        "I can interpret a decimal length and say what it means.",
+      ],
+      steps: [
+        { label: "Activate (4 min):", content: "A sign says 1.5 km. How many metres is that?" },
+        { label: "Model (10 min):", content: "1000 m = 1 km, so 1500 m = 1.5 km. 250 cm = 2.5 m. The decimal shows part of the larger unit. Read 2.75 km as 2 km and 750 m." },
+        { label: "Guided practice (10 min):", content: "Students write and interpret lengths in decimal notation." },
+        { label: "Check (4 min):", content: "Exit question: write 1750 m in kilometres using a decimal." },
+      ],
+      vocab: "length, decimal notation, metre, kilometre, equivalent, interpret, record",
+      support: "Use a place value chart aligning metres with the decimal places of kilometres.",
+      extension: "Order a set of lengths given in mixed units (m and km) by converting first.",
+      assessment: "Students record and interpret decimal lengths — links to R3 in the SOLO Show task.",
+    },
+    {
+      num: 4, band: "R",
+      title: "Reading and converting 12- and 24-hour time",
+      outcomes: ["R4"], duration: "25-30 min",
+      syllabus: "MA3-NSM-02, MAO-WM-01 | NSM-A: 24-hour time; convert 12<->24",
+      source: "DoE Lesson 7 (adapted)",
+      doeLink: "Lesson 7 -- Interpreting and using timetables",
+      resources: "Analog/digital clocks, 24-hour time cards",
+      li: "read 24-hour time and convert between 12- and 24-hour time",
+      sc: [
+        "I can read time written in 24-hour notation (e.g. 14:30).",
+        "I can convert 12-hour time to 24-hour time and back.",
+        "I know that after 12 noon you add 12 to the hour for 24-hour time.",
+      ],
+      steps: [
+        { label: "Activate (3 min):", content: "A bus leaves at 15:00. What time is that on a 12-hour clock?" },
+        { label: "Model (10 min):", content: "Up to noon, the hour is the same (9:00 am = 09:00). After noon, add 12: 3:00 pm = 15:00. Midnight = 00:00." },
+        { label: "Guided practice (10 min):", content: "Students convert times both ways between 12- and 24-hour notation." },
+        { label: "Check (4 min):", content: "Exit question: write 7:45 pm in 24-hour time, and 06:20 in 12-hour time." },
+      ],
+      vocab: "12-hour time, 24-hour time, am, pm, noon, midnight, convert",
+      support: "Provide a 12-to-24-hour conversion strip for the afternoon hours.",
+      extension: "Convert times that cross midnight (e.g. 11:50 pm) and explain.",
+      assessment: "Students read and convert time — links to R4 in the SOLO Show task.",
+    },
+    {
+      num: 5, band: "Y",
+      title: "Converting between metric units of length",
+      outcomes: ["Y1"], duration: "30 min",
+      syllabus: "MA3-GM-02, MAO-WM-01 | GM-B: convert m<->km; compare lengths",
+      source: "DoE Lesson 2 (adapted)",
+      doeLink: "Lesson 2 -- Converting and comparing units of length",
+      resources: "Place value charts, conversion cards",
+      li: "convert between metres and kilometres and compare lengths in the same unit",
+      sc: [
+        "I can convert metres to kilometres and back using place value (× or ÷ 1000).",
+        "I can convert lengths to the same unit before comparing them.",
+        "I know a larger unit needs fewer of them to measure the same length.",
+      ],
+      steps: [
+        { label: "Activate (4 min):", content: "Which is longer, 1300 m or 1.2 km?" },
+        { label: "Model (12 min):", content: "1000 m = 1 km, so divide by 1000 to go m → km (1300 m = 1.3 km) and multiply by 1000 to go km → m. Convert to the same unit to compare: 1300 m vs 1200 m → 1300 m is longer." },
+        { label: "Guided practice (10 min):", content: "Students convert and compare lengths given in mixed units." },
+        { label: "Check (4 min):", content: "Exit question: order 1.4 km, 1350 m and 1.25 km from shortest to longest." },
+      ],
+      vocab: "convert, metre, kilometre, place value, compare, unit, equivalent",
+      support: "Provide a m↔km conversion chart in multiples of 100 m.",
+      extension: "Convert and add lengths in mixed units, giving the total in kilometres.",
+      assessment: "Students convert and compare lengths — links to Y1 in the SOLO Show task.",
+    },
+    {
+      num: 6, band: "Y",
+      title: "Side lengths needed for perimeter",
+      outcomes: ["Y2"], duration: "30 min",
+      syllabus: "MA3-GM-02, MAO-WM-01 | GM-A: efficient perimeter; side lengths needed",
+      source: "DoE Lesson 4 (adapted)",
+      doeLink: "Lesson 4 -- Determining the side lengths needed to calculate perimeter",
+      resources: "Shape cards with some sides labelled",
+      li: "work out which side lengths are needed and find the perimeter efficiently",
+      sc: [
+        "I can use a shape's properties to find unlabelled side lengths.",
+        "I can find the perimeter of a large rectangle efficiently (e.g. 2 × (length + width)).",
+        "I can decide which measurements I actually need.",
+      ],
+      steps: [
+        { label: "Activate (4 min):", content: "A rectangle shows only its length and width. Do you need all four sides labelled?" },
+        { label: "Model (12 min):", content: "For a rectangle you only need length and width: perimeter = 2 × (l + w). A 25 m by 10 m field: 2 × (25 + 10) = 70 m. Use opposite sides being equal to fill gaps." },
+        { label: "Guided practice (10 min):", content: "Students find missing side lengths and calculate perimeters efficiently." },
+        { label: "Check (4 min):", content: "Exit question: a rectangle is 12 m by 8 m. Use 2 × (l + w) to find the perimeter." },
+      ],
+      vocab: "perimeter, side length, rectangle, opposite sides, efficient, formula, property",
+      support: "Label opposite sides in the same colour to show they are equal.",
+      extension: "Find the perimeter of an L-shape by working out the missing sides.",
+      assessment: "Students find side lengths and perimeter — links to Y2 in the SOLO Show task.",
+    },
+    {
+      num: 7, band: "Y",
+      title: "Comparing perimeter and area of rectangles",
+      outcomes: ["Y3"], duration: "30 min",
+      syllabus: "MA3-GM-02, MA3-2DS-02, MAO-WM-01 | GM-A/B & 2DS-A: perimeter vs area",
+      source: "DoE Lesson 5 (adapted)",
+      doeLink: "Lesson 5 -- Comparing perimeter and area of shapes",
+      resources: "Grid paper, square tiles",
+      li: "compare the perimeter and area of rectangles",
+      sc: [
+        "I can calculate the area of a rectangle (length × width).",
+        "I know rectangles with the same perimeter can have different areas.",
+        "I can compare the perimeters of rectangles that have the same area.",
+      ],
+      steps: [
+        { label: "Activate (4 min):", content: "Two rectangles both have a perimeter of 12 cm. Must they have the same area?" },
+        { label: "Model (12 min):", content: "Perimeter 12 cm: a 5 × 1 rectangle has area 5 cm²; a 3 × 3 has area 9 cm². Same perimeter, different area. Then compare two same-area rectangles' perimeters." },
+        { label: "Guided practice (10 min):", content: "Students build rectangles on grid paper and compare perimeter and area." },
+        { label: "Check (4 min):", content: "Exit question: a rectangle is 6 cm by 2 cm. Find its area and its perimeter." },
+      ],
+      vocab: "perimeter, area, rectangle, length, width, square centimetre, dimensions",
+      support: "Use square tiles so area (squares inside) and perimeter (edge) are concrete.",
+      extension: "Find all rectangles with whole-number sides and area 24 cm²; compare their perimeters.",
+      assessment: "Students compare perimeter and area — links to Y3 in the SOLO Show task.",
+      is_hands_on: true,
+      materials: ["grid paper", "square tiles"],
+    },
+    {
+      num: 8, band: "Y",
+      title: "Calculating elapsed time",
+      outcomes: ["Y4"], duration: "30 min",
+      syllabus: "MA3-NSM-02, MAO-WM-01 | NSM-B: elapsed time; bridging; rounding",
+      source: "DoE Lesson 6 (adapted)",
+      doeLink: "Lesson 6 -- Calculating elapsed time",
+      resources: "Timelines, clock faces",
+      li: "calculate elapsed time using bridging and round to the nearest minute or hour",
+      sc: [
+        "I can find the elapsed time between a start and finish time.",
+        "I can use bridging (jump to the next hour) to add or subtract time.",
+        "I can round a time answer to the nearest minute or hour.",
+      ],
+      steps: [
+        { label: "Activate (4 min):", content: "A film starts at 2:40 pm and ends at 4:15 pm. How long is it?" },
+        { label: "Model (12 min):", content: "Bridge to the next hour: 2:40 → 3:00 is 20 min, 3:00 → 4:15 is 1 h 15 min, total 1 h 35 min. Show the same on a timeline." },
+        { label: "Guided practice (10 min):", content: "Students calculate elapsed times using bridging and a timeline." },
+        { label: "Check (4 min):", content: "Exit question: from 9:50 am to 11:20 am, how much time has passed?" },
+      ],
+      vocab: "elapsed time, duration, start, finish, bridging, timeline, round, minute, hour",
+      support: "Provide a blank timeline to mark the hour jumps.",
+      extension: "Find a finish time given a start time and a duration that crosses the hour.",
+      assessment: "Students calculate elapsed time — links to Y4 in the SOLO Show task.",
+    },
+    {
+      num: 9, band: "Y",
+      title: "Reading timetables and solving duration problems",
+      outcomes: ["Y5"], duration: "30 min",
+      syllabus: "MA3-NSM-02, MAO-WM-01 | NSM-A/B: timetables; duration",
+      source: "DoE Lesson 7 (adapted)",
+      doeLink: "Lesson 7 -- Interpreting and using timetables",
+      resources: "Bus/train timetables (12- and 24-hour)",
+      li: "read 12- and 24-hour timetables and solve duration problems",
+      sc: [
+        "I can read a timetable and find the time of a given service.",
+        "I can work out how long a journey takes from a timetable.",
+        "I can solve duration problems using 12- and 24-hour time.",
+      ],
+      steps: [
+        { label: "Activate (4 min):", content: "A bus leaves at 09:15 and arrives at 09:50. How long is the trip?" },
+        { label: "Model (12 min):", content: "Read down a column for one service; across a row for one stop. Find departure and arrival, then calculate the duration (09:15 to 09:50 = 35 min)." },
+        { label: "Guided practice (10 min):", content: "Students answer questions from a real timetable, including journey durations." },
+        { label: "Check (4 min):", content: "Exit question: using the timetable, how long is the 14:10 service to its last stop at 14:55?" },
+      ],
+      vocab: "timetable, service, departure, arrival, duration, 24-hour time, journey",
+      support: "Highlight the row and column being read.",
+      extension: "Plan a two-leg journey with a connection and find the total time.",
+      assessment: "Students read timetables and find durations — links to Y5 in the SOLO Show task.",
+    },
+    {
+      num: 10, band: "G",
+      title: "Area of triangles and composite shapes",
+      outcomes: ["G1"], duration: "30 min",
+      syllabus: "MA4-ARE-C-01, MAO-WM-01 | Stage 4: area of a triangle; composite area",
+      source: "Original mini lesson (Stage 4 extension)",
+      li: "find the area of a triangle and of composite shapes",
+      sc: [
+        "I can use A = 1/2 x base x height to find the area of a triangle.",
+        "I can split a composite shape into rectangles and triangles.",
+        "I can add the parts to find the total area.",
+      ],
+      steps: [
+        { label: "Activate (4 min):", content: "A triangle has base 6 cm and height 4 cm. A rectangle with those sides is 24 cm². How does the triangle compare?" },
+        { label: "Model (12 min):", content: "Triangle = half a rectangle: A = 1/2 x 6 x 4 = 12 cm². For an L-shape, split into two rectangles, find each area, then add." },
+        { label: "Guided practice (10 min):", content: "Students find areas of triangles and composite shapes." },
+        { label: "Check (4 min):", content: "Exit question: find the area of a triangle with base 8 cm and height 5 cm." },
+      ],
+      vocab: "area, triangle, base, height, composite, rectangle, formula, square centimetre",
+      support: "Show the triangle as half of a drawn rectangle.",
+      extension: "Find the area of a composite shape made of a rectangle and a triangle.",
+      assessment: "Students find triangle and composite area — extends R2, Y2 and Y3.",
+    },
+    {
+      num: 11, band: "G",
+      title: "Distance, speed and time",
+      outcomes: ["G2"], duration: "30 min",
+      syllabus: "MA4-RAT-C-01, MAO-WM-01 | Stage 4: rates; speed = distance / time",
+      source: "Original mini lesson (Stage 4 extension)",
+      li: "use the relationship between distance, speed and time to solve problems",
+      sc: [
+        "I know speed = distance / time.",
+        "I can find distance, speed or time when I know the other two.",
+        "I can use sensible units (km/h, m/s).",
+      ],
+      steps: [
+        { label: "Activate (4 min):", content: "A car travels 120 km in 2 hours. How fast is it going?" },
+        { label: "Model (12 min):", content: "speed = distance / time = 120 / 2 = 60 km/h. distance = speed x time; time = distance / speed. Keep units matched." },
+        { label: "Guided practice (10 min):", content: "Students solve speed, distance and time problems." },
+        { label: "Check (4 min):", content: "Exit question: a runner covers 400 m in 80 s. What is their speed in m/s?" },
+      ],
+      vocab: "speed, distance, time, rate, km/h, m/s, average speed",
+      support: "Provide a distance-speed-time triangle to rearrange the formula.",
+      extension: "Convert a speed from km/h to m/s (or compare two speeds in different units).",
+      assessment: "Students solve speed-distance-time problems — extends R1, Y1, Y4 and Y5.",
+    },
+    {
+      num: 12, band: "G",
+      title: "Interpreting distance-time graphs",
+      outcomes: ["G3"], duration: "30 min",
+      syllabus: "MA4-RAT-C-01, MAO-WM-01 | Stage 4: distance-time graphs",
+      source: "Original mini lesson (Stage 4 extension)",
+      li: "read a distance-time graph and describe the journey",
+      sc: [
+        "I can read distance and time from a distance-time graph.",
+        "I know a steeper line means a faster speed, and a flat line means stopped.",
+        "I can describe a journey shown on a distance-time graph.",
+      ],
+      steps: [
+        { label: "Activate (4 min):", content: "On a distance-time graph, what does a flat (horizontal) line mean?" },
+        { label: "Model (12 min):", content: "Time is on the bottom, distance up the side. A rising line = moving away; steeper = faster. A flat line = stopped. A line back to zero = returning. Describe each part of a sample journey." },
+        { label: "Guided practice (10 min):", content: "Students read values and describe journeys from distance-time graphs." },
+        { label: "Check (4 min):", content: "Exit question: on a graph, a line is flat for 10 minutes. What is happening?" },
+      ],
+      vocab: "distance-time graph, axis, gradient, steeper, flat, stopped, journey, speed",
+      support: "Annotate a sample graph segment by segment.",
+      extension: "Sketch a distance-time graph for a described journey (out, stop, return).",
+      assessment: "Students interpret distance-time graphs — extends Y4 and Y5.",
+    },
+  ],
+};
