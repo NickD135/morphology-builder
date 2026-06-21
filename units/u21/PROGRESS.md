@@ -33,8 +33,21 @@ labelled on every content point. Green = Stage 4 Core.
 - Nick ran `04_insert.sql` in Supabase. DB verified: **31 rows / 10 outcomes** (20 video, 11 worksheet).
   Resources are now DB-canonical for u21. Stage 3 fully closed.
 
+## Session — 2026-06-21 (cont.) — Deliverable B COMPLETE ✅
+- **Stage 2 program docx** → `Maths_S3_YearB_Unit21_SOLO_Full_Program.docx` (+ `.pdf`) ✅
+  - Authored `unit_data_21.js` (10 outcomes R1–R3/Y1–Y4/G1–G3) from the approved rubric + mapping; verbatim
+    NESA content points with Year A/B labels; DoE lesson refs L1–L8 (Green = original Stage-4 cards).
+  - Resource appendix merged (`resource_appendix_attached: true`); all 31 resources are the DB-canonical set.
+  - **Gates passed:** 35 tables, 0 malformed `tblGrid` (gridSpans present); LibreOffice round-trip → **15-page
+    PDF**; eyeballed page 1 (overview), page 2 (Outcome Teaching Record), a lesson card, and the appendix —
+    all clean. PDF committed alongside the docx as the guaranteed-correct artifact (Nick opens the docx in
+    Word — the real table-validity gate).
+- **Stage 5 standalone appendix** → `Unit21_Resource_Appendix.docx` ✅ (via `build_appendix_standalone.js`).
+- Deliverable B for u21 is done. (Note: `docx@8` had to be reinstalled in the Codespace — `npm i docx@8`.)
+
 ## Next (resume here)
-- Per unit: Stage 2 program docx (`unit_data.js` → `build_program_template.js` → LibreOffice round-trip) →
-  Stage 5 resource appendix.
+- Nick spot-reads the u21 docx in Word.
+- Then either: Deliverable B for **u22 / u23** (same pipeline), or **Deliverable A** (in-app Grow/Know/Show)
+  for u21 in `solo/index.html` — resources DB-canonical, do NOT hardcode.
 - After SQL inserted + confirmed: Deliverable A (in-app Grow/Know/Show) — author all six structures in
   `solo/index.html` keyed `u21`, resources DB-canonical (do NOT hardcode).
