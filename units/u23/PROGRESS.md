@@ -32,8 +32,17 @@ labelled on every content point. Green = Stage 4 Core.
 - Nick ran `04_insert.sql` in Supabase. DB verified: **38 rows / 12 outcomes** (24 video, 14 worksheet).
   Resources are now DB-canonical for u23. Stage 3 fully closed.
 
-## Next (resume here)
-- Per unit: Stage 2 program docx (`unit_data.js` → `build_program_template.js` → LibreOffice round-trip) →
-  Stage 5 resource appendix.
+## Session — 2026-06-21 (cont.) — Deliverable B + A COMPLETE ✅
+- **Deliverable B** → `unit_data_23.js` (12 outcomes R1–R4/Y1–Y5/G1–G3) → docx + pdf + standalone appendix.
+  Gates: 39 tables / 0 malformed grids; 17-page LibreOffice PDF; pages 1–2 eyeballed clean.
+- **Deliverable A** → all six structures in `solo/index.html` keyed `u23` (inserted after u22):
+  UNITS (10 Show Qs/outcome), PRETESTS (2/outcome), PRACTICE (example + 9 Know Qs), BEYOND (4 Stage-4
+  projects + 9 resources), LEARN (full Grow lesson/outcome with 3-hint ladder on every tryIt).
+  UC orange theme + `||unit.id==="u23"` gating. RESOURCES not hardcoded (DB-canonical, 38 rows).
+  Gates: Node verification (MC∈options, no dups, arithmetic incl. perimeter/area/time/speed, 3-hint
+  ladders, completeness) all pass; Playwright load = 0 code console errors. Committed direct to main.
+
+## Unit 23 — DONE (both deliverables) ✅
+- Stage 3 resources (DB-canonical) ✅ · Deliverable B (docx + appendix) ✅ · Deliverable A (in-app) ✅.
 - After SQL inserted + confirmed: Deliverable A (in-app Grow/Know/Show) — author all six structures in
   `solo/index.html` keyed `u23`, resources DB-canonical (do NOT hardcode).
