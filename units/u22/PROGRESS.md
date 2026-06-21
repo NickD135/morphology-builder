@@ -28,9 +28,12 @@ labelled on every content point. Green = Stage 4 Core.
 - **Stage 4 SQL** → `04_insert.sql` ✅ generated from the staged CSV (DB-canonical; apostrophes escaped).
   Confirmed `resources` table currently has **0** rows for u22 — net-new inserts; `DELETE` is a safe no-op.
 
+## Session — 2026-06-21 (cont.) — SQL inserted ✅
+- Nick ran `04_insert.sql` in Supabase. DB verified: **35 rows / 11 outcomes** (22 video, 13 worksheet).
+  Resources are now DB-canonical for u22. Stage 3 fully closed.
+
 ## Next (resume here)
-- **Nick spot-checks `03_resources_staged.csv`**, then runs `units/u22/04_insert.sql` in the Supabase SQL
-  editor (anon key can't write). Confirm the row count after insert. — **GATE: do NOT run SQL myself.**
-- Then per unit: Stage 2 program docx → Stage 5 resource appendix.
+- Per unit: Stage 2 program docx (`unit_data.js` → `build_program_template.js` → LibreOffice round-trip) →
+  Stage 5 resource appendix.
 - After SQL inserted + confirmed: Deliverable A (in-app Grow/Know/Show) — author all six structures in
   `solo/index.html` keyed `u22`, resources DB-canonical (do NOT hardcode).
