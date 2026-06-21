@@ -14855,6 +14855,10 @@ function checkAnswer(given,q){
     if(!Array.isArray(given))return false;
     return given.length===q.target;
   }
+  if(q.type==="plot"){
+    if(!given||typeof given!=="object")return false;
+    return Number(given.x)===q.answer.x&&Number(given.y)===q.answer.y;
+  }
   const u=norm(given);
   if(u===norm(q.answer))return true;
   return(q.aliases||[]).some(a=>u===norm(a));
@@ -14865,10 +14869,11 @@ function fmtGiven(given,q){
   if(q.type==="numberline")return"Number line placement submitted";
   if(q.type==="match")return"Matching attempt submitted";
   if(q.type==="partition")return`${Array.isArray(given)?given.length:0} parts shaded`;
+  if(q.type==="plot")return given?`(${given.x}, ${given.y})`:"(blank)";
   return String(given)||"(blank)";
 }
 function initAns(q){
-  return{input:"",option:"",orderSeq:[],shadedCells:q.type==="shade"?new Array(q.cells).fill(false):[],nlPlaced:{},matchPairs:{},partitionShaded:[]};
+  return{input:"",option:"",orderSeq:[],shadedCells:q.type==="shade"?new Array(q.cells).fill(false):[],nlPlaced:{},matchPairs:{},partitionShaded:[],plot:null};
 }
 function unitProgress(prog,unitId){ const u=UNITS.find(u=>u.id===unitId); if(!u)return{done:0,total:0}; const total=u.outcomes.length; const done=u.outcomes.filter(o=>prog[`${unitId}_${o.id}`]).length; return{done,total}; }
 
@@ -15685,7 +15690,7 @@ function App(){
   const [activeOutcome,setActiveOutcome]=useState(null);
   const [qIdx,setQIdx]=useState(0);
   const [answers,setAnswers]=useState([]);
-  const [ans,setAns]=useState({input:"",option:"",orderSeq:[],shadedCells:[]});
+  const [ans,setAns]=useState({input:"",option:"",orderSeq:[],shadedCells:[],plot:null});
   const [results,setResults]=useState(null);
   const [teacherFocus,setTeacherFocus]=useState(null);
   const [attempts,setAttempts]=useState({});
@@ -15699,7 +15704,7 @@ function App(){
   const [pretestIdx,setPretestIdx]=useState(0);
   const [pretestMaxIdx,setPretestMaxIdx]=useState(0);
   const [pretestAnswers,setPretestAnswers]=useState([]);
-  const [pretestAns,setPretestAns]=useState({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
+  const [pretestAns,setPretestAns]=useState({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[],plot:null});
   const [pretestResults,setPretestResults]=useState(null);
   const [pretestFlagged,setPretestFlagged]=useState(new Set());
   const [pretestShowEarlyExit,setPretestShowEarlyExit]=useState(false);
@@ -15721,7 +15726,7 @@ function App(){
   const [reviewQList,setReviewQList]=useState([]);
   const [reviewIdx,setReviewIdx]=useState(0);
   const [reviewAnswers,setReviewAnswers]=useState([]);
-  const [reviewAns,setReviewAns]=useState({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
+  const [reviewAns,setReviewAns]=useState({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[],plot:null});
   const [reviewResults,setReviewResults]=useState(null); // {byOutcome, passedCount, totalCount}
   const [reviewResultsPanel,setReviewResultsPanel]=useState(null); // null | {loading, data, unitId}
   const [sortOrder,setSortOrder]=useState("name"); // "name" | "progress"
@@ -15732,7 +15737,7 @@ function App(){
   const [practicePhase,setPracticePhase]=useState("example");
   const [exitOpen,setExitOpen]=useState(false); // shared Show/Grow/Know exit dialog
   const [practiceIdx,setPracticeIdx]=useState(0);
-  const [practiceAns,setPracticeAns]=useState({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
+  const [practiceAns,setPracticeAns]=useState({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[],plot:null});
   const [practiceSubmitted,setPracticeSubmitted]=useState(false);
   const [practiceCorrect,setPracticeCorrect]=useState(false);
   const [practiceAttempts,setPracticeAttempts]=useState(0);
@@ -16105,7 +16110,7 @@ function App(){
     setReviewQList(qList);
     setReviewIdx(0);
     setReviewAnswers([]);
-    setReviewAns({input:"",option:"",orderSeq:[],shadedCells:qList[0].q.type==="shade"?Array(qList[0].q.cells||0).fill(false):[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
+    setReviewAns({input:"",option:"",orderSeq:[],shadedCells:qList[0].q.type==="shade"?Array(qList[0].q.cells||0).fill(false):[],nlPlaced:{},matchPairs:{},partitionShaded:[],plot:null});
     setReviewMode('running');
     setView('review');
   }
@@ -16141,7 +16146,7 @@ function App(){
     if(reviewIdx<reviewQList.length-1){
       const next=reviewQList[reviewIdx+1];
       setReviewIdx(reviewIdx+1);
-      setReviewAns({input:"",option:"",orderSeq:[],shadedCells:next.q.type==="shade"?Array(next.q.cells||0).fill(false):[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
+      setReviewAns({input:"",option:"",orderSeq:[],shadedCells:next.q.type==="shade"?Array(next.q.cells||0).fill(false):[],nlPlaced:{},matchPairs:{},partitionShaded:[],plot:null});
     } else {
       const byOutcome={};
       newAnswers.forEach(a=>{byOutcome[a.outcomeId]={short:a.short,passed:a.correct,correct:a.correct?1:0,total:1};});
@@ -16725,7 +16730,7 @@ function App(){
     // Skip the worked-example phase when the outcome has a Grow lesson (they've seen it there)
     const hasLesson=!!(LEARN[`${unit.id}_${outcome.id}`]||{}).hook;
     setPracticePhase(hasLesson?"questions":"example");setPracticeIdx(0);
-    setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
+    setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[],plot:null});
     setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);
     setPracticeScore({correct:0,total:0});
     setExitOpen(false);
@@ -16763,13 +16768,13 @@ function App(){
   function nextPracticeQuestion(){
     const pd=getPracticeData();if(!pd)return;
     if(!practiceCorrect&&practiceAttempts===1){
-      setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
+      setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[],plot:null});
       setPracticeSubmitted(false);setPracticeCorrect(false);
       return;
     }
     if(practiceIdx<pd.questions.length-1){
       setPracticeIdx(i=>i+1);
-      setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});
+      setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[],plot:null});
       setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);
     } else {
       if(!practiceCorrect)setPracticeScore(s=>({...s,total:s.total+1}));
@@ -17555,7 +17560,7 @@ function App(){
             </Coach>
           </div>
           <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
-            <button onClick={()=>{setPracticePhase(((LEARN[`${practiceUnit?.id}_${practiceOutcome?.id}`]||{}).hook)?"questions":"example");setPracticeIdx(0);setPracticeScore({correct:0,total:0});setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});}}
+            <button onClick={()=>{setPracticePhase(((LEARN[`${practiceUnit?.id}_${practiceOutcome?.id}`]||{}).hook)?"questions":"example");setPracticeIdx(0);setPracticeScore({correct:0,total:0});setPracticeSubmitted(false);setPracticeCorrect(false);setPracticeAttempts(0);setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[],plot:null});}}
               style={Sb({fontWeight:600})}>Try again</button>
             <button onClick={()=>setView("rubric")} style={Sb({background:uc.dark,color:"#fff",border:"none",fontWeight:600})}>Back to rubric</button>
           </div>
@@ -17698,7 +17703,7 @@ function App(){
             )}
             {practiceSubmitted&&<>
               {!practiceCorrect&&practiceAttempts===1&&(
-                <button onClick={()=>{setPracticeSubmitted(false);setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[]});}}
+                <button onClick={()=>{setPracticeSubmitted(false);setPracticeAns({input:"",option:"",orderSeq:[],shadedCells:[],nlPlaced:{},matchPairs:{},partitionShaded:[],plot:null});}}
                   style={Sb({fontWeight:600,borderColor:"#f59e0b",color:"#92400e"})}>Try again</button>
               )}
               <button onClick={nextPracticeQuestion}
