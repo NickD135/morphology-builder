@@ -29,6 +29,18 @@ Top-level index for the Stage 3 Year B SOLO unit builds. Per-unit detail lives i
 | u39 | Time, Transformations & Angles | ✅ complete (d112a65) | ✅ complete (456c62c) | ✅ 39 rows (SQL run) |
 | u40 | Integers, Decimals, Percentages & the Cartesian Plane | ✅ complete (36d90d1) | ✅ complete (0d5c566) | ✅ 39 rows (SQL run; hardcoded block removed) |
 
+### Units 21–23 — Year B early units (Place Value/Decimals · Add-Subtract/Decimals · Length/Time)
+
+| Unit | Topic | Stage 3 resources (DB) | Deliverable B (docx) | Deliverable A (in-app) |
+|---|---|---|---|---|
+| u21 | Place Value, Decimals & Powers of 10 | ✅ 31 rows (SQL run + verified) | ✅ complete (cbebbf0) | ✅ complete (e969f5e) |
+| u22 | Add/Subtract Strategies & Decimals | ✅ 35 rows (SQL run + verified) | ⬜ next | ⬜ |
+| u23 | Length & Time | ✅ 38 rows (SQL run + verified) | ⬜ next | ⬜ |
+
+> u21–u23 banded by **cognitive demand** (A-heavy early Year B units — see `feedback_solo_band_a_heavy_units`).
+> Resources are **DB-canonical** (do NOT hardcode RESOURCES for these in `solo/index.html`). u21 done end-to-end
+> 2026-06-21. Next: Deliverable B then A for u22 and u23 (same pipeline; reuse the u21 `unit_data_21.js` shape).
+
 **Outcome counts:** u29 = 13 (4R/6Y/3G) · u30 = 13 · u31 = 13 · u32 = 12 (4R/5Y/3G) · u33 = 13 · u34 = 13 (4R/6Y/3G) · u35 = 13 (4R/6Y/3G) · u36 = 13 (4R/6Y/3G) · u37 = 14 (6R/5Y/3G) · u38 = 13 (4R/6Y/3G) · u39 = 13 (4R/6Y/3G) · u40 = 13 (5R/5Y/3G).
 
 > The per-unit `units/u{NN}/PROGRESS.md` logs are authoritative. u29–u39 Deliverable A are live in
