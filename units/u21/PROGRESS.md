@@ -45,9 +45,22 @@ labelled on every content point. Green = Stage 4 Core.
 - **Stage 5 standalone appendix** → `Unit21_Resource_Appendix.docx` ✅ (via `build_appendix_standalone.js`).
 - Deliverable B for u21 is done. (Note: `docx@8` had to be reinstalled in the Codespace — `npm i docx@8`.)
 
-## Next (resume here)
-- Nick spot-reads the u21 docx in Word.
-- Then either: Deliverable B for **u22 / u23** (same pipeline), or **Deliverable A** (in-app Grow/Know/Show)
-  for u21 in `solo/index.html` — resources DB-canonical, do NOT hardcode.
+## Session — 2026-06-21 (cont.) — Deliverable A COMPLETE ✅
+- Authored all six structures in `solo/index.html` keyed `u21` (10 outcomes r1–r3/y1–y4/g1–g3, inserted
+  before u24 so it displays first):
+  - **UNITS** — 10 Show questions/outcome (mc/input/truefalse; large numbers use mc to avoid space-parsing).
+  - **PRETESTS** — 2/outcome. **PRACTICE** — example + 9 Know questions/outcome.
+  - **BEYOND** — 4 Stage-4 projects + 9 resources (Powers of 10, Decimal Operator, Order of Operations, Place Value).
+  - **LEARN** — full Grow lesson/outcome (hook→watch→workedExample→tryIt[3-hint ladder]→reflect).
+  - **UC** theme `u21` (violet, distinct from neighbours) + added `||unit.id==="u21"` to the student gating list.
+- **RESOURCES intentionally NOT hardcoded** — u21 is DB-canonical (31 rows in Supabase `resources`); the
+  app reads the DB and the render guard `(unitResources[key]||[])` handles absence safely.
+- **Gates passed:** Node verification script (extracts + evals all 6 blocks) → MC answer∈options, no dup
+  options, arithmetic correct, every LEARN tryIt has exactly 3 hints, every outcome has pretest+practice+LEARN.
+  Playwright load of `solo/index.html` → **0 code console errors** (only the favicon 404 + the standard
+  in-browser Babel notice). Committed direct to main (Vercel auto-deploys).
+
+## Unit 21 — DONE (both deliverables) ✅
+- Stage 3 resources (DB-canonical) ✅ · Deliverable B (docx + appendix) ✅ · Deliverable A (in-app) ✅.
 - After SQL inserted + confirmed: Deliverable A (in-app Grow/Know/Show) — author all six structures in
   `solo/index.html` keyed `u21`, resources DB-canonical (do NOT hardcode).
