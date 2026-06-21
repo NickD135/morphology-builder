@@ -1,0 +1,46 @@
+-- Unit 23 — resource inserts for the Supabase `resources` table.
+-- Generated from units/u23/03_resources_staged.csv (every URL verified live in Stage 3 via oEmbed/curl).
+-- DB-CANONICAL: these rows override any hardcoded RESOURCES. Run in the Supabase SQL editor (anon key cannot write).
+-- Gated workflow: Nick runs this. DO NOT auto-execute.
+
+DELETE FROM resources WHERE unit_id = 'u23';
+
+INSERT INTO resources (unit_id, outcome_id, type, label, url, scope, class_id) VALUES
+  ('u23', 'r1', 'video', 'Metric Units of Length | Convert mm, cm, m and km | Math with Mr. J', 'https://www.youtube.com/watch?v=kOJFSH_Bn9U', 'global', NULL),
+  ('u23', 'r1', 'video', 'Common Metric Units of Length — kilometres, metres, centimetres and millimetres | Math Mammoth', 'https://www.youtube.com/watch?v=CcrzyOqFmTU', 'global', NULL),
+  ('u23', 'r1', 'worksheet', 'Corbettmaths — Metric Units (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/metric-units-pdf.pdf', 'global', NULL),
+  ('u23', 'r2', 'video', 'How to Find the Perimeter of a Rectangle | Math with Mr. J', 'https://www.youtube.com/watch?v=teMDmMxy550', 'global', NULL),
+  ('u23', 'r2', 'video', 'How to Find Perimeter | Math with Mr. J', 'https://www.youtube.com/watch?v=TSLc5p2VuYM', 'global', NULL),
+  ('u23', 'r2', 'worksheet', 'Corbettmaths — Perimeter (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/perimeter-pdf.pdf', 'global', NULL),
+  ('u23', 'r3', 'video', 'Meters and Centimeters — Converting m to cm and cm to m | Math with Mr. J', 'https://www.youtube.com/watch?v=gALZRL4v2NM', 'global', NULL),
+  ('u23', 'r3', 'video', 'Metric Units of Length | Convert mm, cm, m and km | Math with Mr. J', 'https://www.youtube.com/watch?v=kOJFSH_Bn9U', 'global', NULL),
+  ('u23', 'r3', 'worksheet', 'Corbettmaths — Metric Units (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/metric-units-pdf.pdf', 'global', NULL),
+  ('u23', 'r4', 'video', 'The 24-Hour Clock | Mathematics Grade 5 | Periwinkle', 'https://www.youtube.com/watch?v=Lj4YxVZWLVU', 'global', NULL),
+  ('u23', 'r4', 'video', 'Understanding the 24-Hour Clock | Smartli', 'https://www.youtube.com/watch?v=dQ5vIHA4L5s', 'global', NULL),
+  ('u23', 'r4', 'worksheet', 'Corbettmaths Primary — Time (PDF)', 'https://corbettmathsprimary.com/wp-content/uploads/2018/07/time-pdf.pdf', 'global', NULL),
+  ('u23', 'y1', 'video', 'Metric Units of Length | Convert mm, cm, m and km | Math with Mr. J', 'https://www.youtube.com/watch?v=kOJFSH_Bn9U', 'global', NULL),
+  ('u23', 'y1', 'video', 'Meters and Centimeters — Converting m to cm and cm to m | Math with Mr. J', 'https://www.youtube.com/watch?v=gALZRL4v2NM', 'global', NULL),
+  ('u23', 'y1', 'worksheet', 'Corbettmaths — Metric Units (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/metric-units-pdf.pdf', 'global', NULL),
+  ('u23', 'y2', 'video', 'How to Find the Perimeter of a Rectangle | Math with Mr. J', 'https://www.youtube.com/watch?v=teMDmMxy550', 'global', NULL),
+  ('u23', 'y2', 'video', 'How to Find Perimeter | Math with Mr. J', 'https://www.youtube.com/watch?v=TSLc5p2VuYM', 'global', NULL),
+  ('u23', 'y2', 'worksheet', 'Corbettmaths — Perimeter (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/perimeter-pdf.pdf', 'global', NULL),
+  ('u23', 'y3', 'video', 'Same Area Different Perimeter | Miss Hutchison', 'https://www.youtube.com/watch?v=bsl-r7dRSnc', 'global', NULL),
+  ('u23', 'y3', 'video', 'Finding the Area of a Rectangle Using the Formula | Math with Mr. J', 'https://www.youtube.com/watch?v=1Ugk12y7TQM', 'global', NULL),
+  ('u23', 'y3', 'worksheet', 'Corbettmaths — Perimeter (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/perimeter-pdf.pdf', 'global', NULL),
+  ('u23', 'y3', 'worksheet', 'Corbettmaths — Area of a Rectangle (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-a-rectangle-pdf.pdf', 'global', NULL),
+  ('u23', 'y4', 'video', 'Elapsed Time — T-Chart Strategy | Sally Osborne', 'https://www.youtube.com/watch?v=4Eucvb7qFpk', 'global', NULL),
+  ('u23', 'y4', 'video', 'Calculating Elapsed Time Using a Timeline | EasyTeaching', 'https://www.youtube.com/watch?v=ML6r7BEZo7M', 'global', NULL),
+  ('u23', 'y4', 'worksheet', 'Corbettmaths — Time Calculations (PDF)', 'https://corbettmaths.com/wp-content/uploads/2019/10/Time-Calculations-pdf.pdf', 'global', NULL),
+  ('u23', 'y5', 'video', 'Timetables — Primary | Corbettmaths', 'https://www.youtube.com/watch?v=40BJ0o0VD-0', 'global', NULL),
+  ('u23', 'y5', 'video', 'How to Read Timetables | Maths Education | EasyTeaching', 'https://www.youtube.com/watch?v=SZv_a0fjDfE', 'global', NULL),
+  ('u23', 'y5', 'worksheet', 'Corbettmaths — Timetables (PDF)', 'https://corbettmaths.com/wp-content/uploads/2018/11/Timetables-pdf.pdf', 'global', NULL),
+  ('u23', 'g1', 'video', 'Finding the Area of a Triangle — A Step-By-Step Guide | Math with Mr. J', 'https://www.youtube.com/watch?v=-ZPfB1uDjEw', 'global', NULL),
+  ('u23', 'g1', 'video', 'How to Find the Area of a Composite Shape — L-Shaped Example | Math with Mr. J', 'https://www.youtube.com/watch?v=LAXHgQwcrDc', 'global', NULL),
+  ('u23', 'g1', 'worksheet', 'Corbettmaths — Area of a Triangle (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-a-triangle-pdf.pdf', 'global', NULL),
+  ('u23', 'g1', 'worksheet', 'Corbettmaths — Area of Compound Shapes (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/area-of-compound-shapes-pdf.pdf', 'global', NULL),
+  ('u23', 'g2', 'video', 'Speed Distance Time | Corbettmaths', 'https://www.youtube.com/watch?v=dHVK7IeLGT8', 'global', NULL),
+  ('u23', 'g2', 'video', 'Speed Distance Time (Alternative Approach) | Corbettmaths', 'https://www.youtube.com/watch?v=dOnpaBN5DAk', 'global', NULL),
+  ('u23', 'g2', 'worksheet', 'Corbettmaths — Speed Distance Time (PDF)', 'https://corbettmaths.com/wp-content/uploads/2018/09/Speed-Distance-Time-pdf.pdf', 'global', NULL),
+  ('u23', 'g3', 'video', 'Distance Time Graphs | Corbettmaths', 'https://www.youtube.com/watch?v=oxOiuqUfWKA', 'global', NULL),
+  ('u23', 'g3', 'video', 'Speed Distance Time | Corbettmaths', 'https://www.youtube.com/watch?v=dHVK7IeLGT8', 'global', NULL),
+  ('u23', 'g3', 'worksheet', 'Corbettmaths — Distance-Time Graphs (PDF)', 'https://corbettmaths.com/wp-content/uploads/2013/02/distance-time-graphs-pdf.pdf', 'global', NULL);

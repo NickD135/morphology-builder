@@ -17,14 +17,20 @@ labelled on every content point. Green = Stage 4 Core.
   Worked the three rubrics ahead during the outage so resource curation can be done holistically across
   u21–u23 (they share place-value/decimal/measurement resources) once search recovers.
 
-## Session — 2026-06-21 — still paused at Stage 3 (Nick stepped out)
-- No change to u23 content. Stages 0–1 remain ✅; Stage 3 still the next action.
-- WebSearch not retried this session. Resume below when Nick is back.
+## Session — 2026-06-21 — Stage 3 resources COMPLETE ✅ (WebSearch recovered)
+- WebSearch back online — resumed resource curation, done holistically across u21–u23.
+- **Stage 3** → `03_resources_staged.csv` ✅ — **38 rows / 12 outcomes** (every outcome ≥2: video + worksheet,
+  no duplicate URLs within an outcome). Reused verified u34 length/perimeter/area + u39/u35 time/elapsed
+  resources; new for measuring length (R1), reading timetables (Y5), speed–distance–time (G2) and
+  distance–time graphs (G3) — Corbettmaths Speed-Distance-Time + Distance-Time-Graphs PDFs.
+- **Verification gate passed:** all video IDs confirmed live via YouTube oEmbed (title + author match);
+  all worksheet PDFs confirmed `200` via `curl`.
+- **Stage 4 SQL** → `04_insert.sql` ✅ generated from the staged CSV (DB-canonical; apostrophes escaped).
+  Confirmed `resources` table currently has **0** rows for u23 — net-new inserts; `DELETE` is a safe no-op.
 
-## Next (resume here — start with resources)
-- **Stage 3 resources** (curate holistically across u21–u23 — they share place-value / decimal /
-  measurement videos & worksheets; reuse already-verified u39/u40 resources where they fit). Verify every
-  URL live: YouTube via oEmbed, worksheets via `curl` 200-check. Labels comma-free, apostrophes escaped.
-- Then per unit: Stage 2 program docx → Stage 4 SQL (`units/uNN/04_insert.sql`) → Stage 5 appendix.
-- **Stop at the SQL gate** for Nick to insert (gated workflow — Nick is present). Do NOT run SQL in Supabase.
-- After SQL inserted + confirmed: Deliverable A (in-app Grow/Know/Show) per unit.
+## Next (resume here)
+- **Nick spot-checks `03_resources_staged.csv`**, then runs `units/u23/04_insert.sql` in the Supabase SQL
+  editor (anon key can't write). Confirm the row count after insert. — **GATE: do NOT run SQL myself.**
+- Then per unit: Stage 2 program docx → Stage 5 resource appendix.
+- After SQL inserted + confirmed: Deliverable A (in-app Grow/Know/Show) — author all six structures in
+  `solo/index.html` keyed `u23`, resources DB-canonical (do NOT hardcode).
