@@ -174,11 +174,17 @@ Steps:
    `sudo apt-get install -y libreoffice-writer poppler-utils` (and `npm install docx@8`).
 4. **Commit the rebuilt docx + PDF** alongside the code changes.
 
-⚠️ **Units before u28** (e.g. u27) have program docx that **predate the `unit_data.js` pipeline** — they
-have no data source to regenerate from. For those, syncing the program doc means EITHER authoring a
-full `units/uNN/unit_data.js` first (a larger task — the whole Deliverable-B program, not just
-resources) OR editing the existing docx/appendix by hand. Flag this to Nick rather than attempting a
-fragile in-place docx edit; treat it as a separate task.
+⚠️ **Units before u28** (e.g. u27) have program docx that **predate the `unit_data.js` pipeline**.
+Two paths:
+- **Refresh just the Resource Appendix (lighter, recommended):** create a minimal
+  `units/uNN/unit_data.js` with only `unit_number`, `unit_name`, `outcomes:[{code,desc}]` and the
+  `resources` map, then run **`node scripts/build_appendix_only.js units/uNN/unit_data.js`** → a
+  standalone, updated `Unit{NN}_Resource_Appendix.docx`. Convert + eyeball + commit. (Done for u27,
+  2026-06-21.)
+- **Full program refresh (larger):** author the complete `unit_data.js` (overview + all lessons) and
+  run the full `build_program_template.js`. Needed only if the program docx embeds the resource list
+  *inline* (check with `unzip -p "<docx>" word/document.xml | grep -c corbettmaths`). Flag to Nick —
+  it means reconstructing the whole program; don't hand-edit the docx.
 
 ## PHASE 4 — Assessment & content fixes (in code)
 
