@@ -41,6 +41,15 @@ Top-level index for the Stage 3 Year B SOLO unit builds. Per-unit detail lives i
 > Resources are **DB-canonical** (do NOT hardcode RESOURCES for these in `solo/index.html`). **All three
 > (u21, u22, u23) done end-to-end 2026-06-21** — Stage 3 resources + Deliverable B + Deliverable A complete.
 
+### Session 2026-06-21 — also shipped (UI polish on the home unit-card grid)
+- **Equal-height unit cards** (`f4ad502`): cards are now a flex column with `body flex:1`, so the
+  Pre-test/Post-test footer (student) and review-controls strip (teacher) sit flush at the bottom of
+  every card instead of floating with a gap on shorter cards.
+- **Progress bar + Highlight/Hide + band pills pinned to the bottom** (`e0ccc2b`): post-header content is
+  wrapped in a `margin-top:auto` block, so the progress bar and Red/Yellow/Green pills land consistently
+  just above the footer line regardless of how long each unit's subtitle is.
+- Both verified via Playwright (0 code console errors) and pushed to `main`.
+
 **Outcome counts:** u29 = 13 (4R/6Y/3G) · u30 = 13 · u31 = 13 · u32 = 12 (4R/5Y/3G) · u33 = 13 · u34 = 13 (4R/6Y/3G) · u35 = 13 (4R/6Y/3G) · u36 = 13 (4R/6Y/3G) · u37 = 14 (6R/5Y/3G) · u38 = 13 (4R/6Y/3G) · u39 = 13 (4R/6Y/3G) · u40 = 13 (5R/5Y/3G).
 
 > The per-unit `units/u{NN}/PROGRESS.md` logs are authoritative. u29–u39 Deliverable A are live in
