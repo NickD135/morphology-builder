@@ -17,6 +17,14 @@ labelled on every content point. Green = Stage 4 Core.
   Worked the three rubrics ahead during the outage so resource curation can be done holistically across
   u21–u23 (they share place-value/decimal/measurement resources) once search recovers.
 
-## Next (resume when WebSearch is back)
-- Stage 3 resources (holistic across u21–u23) → Stage 2 program docx → Stage 4 SQL → Stage 5 appendix.
-- Then stop at the SQL gate for Nick to insert (gated workflow — Nick is present).
+## Session — 2026-06-21 — still paused at Stage 3 (Nick stepped out)
+- No change to u23 content. Stages 0–1 remain ✅; Stage 3 still the next action.
+- WebSearch not retried this session. Resume below when Nick is back.
+
+## Next (resume here — start with resources)
+- **Stage 3 resources** (curate holistically across u21–u23 — they share place-value / decimal /
+  measurement videos & worksheets; reuse already-verified u39/u40 resources where they fit). Verify every
+  URL live: YouTube via oEmbed, worksheets via `curl` 200-check. Labels comma-free, apostrophes escaped.
+- Then per unit: Stage 2 program docx → Stage 4 SQL (`units/uNN/04_insert.sql`) → Stage 5 appendix.
+- **Stop at the SQL gate** for Nick to insert (gated workflow — Nick is present). Do NOT run SQL in Supabase.
+- After SQL inserted + confirmed: Deliverable A (in-app Grow/Know/Show) per unit.
