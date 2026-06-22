@@ -52,3 +52,24 @@ Authored all six structures in `solo/index.html` (keyed `u38` / `u38_oid`):
 hand-verified. Playwright load: 0 code console errors (only favicon 404 + Babel notice).
 
 **Committed.** Unit 38 fully complete (both deliverables).
+
+## Session — 2026-06-22 — Visuals/interactive pass (UNIT_REVIEW_PLAYBOOK)
+
+u38 built before the visual-upgrade pass. Resources already DB-canonical, alignment sound → pure
+Phase 5/6 visuals.
+
+**New component:** added a reusable **`barChart`** visual type to `Visual` in `solo/index.html`
+(vertical column graph: y-axis with ticks, value + category labels, per-bar colour via `colOf`,
+`hideValues`/`max`/`title` opts). First data-display visual; reusable for future data units.
+Spec: `{type:"barChart",bars:[{label,value,color?}],caption,title?,max?,hideValues?}`.
+
+Added (existing spinner/dice/counterBag + new barChart):
+- **Grow:** worked `visual` on 12 outcomes (r2,r3,r4,y1,y2,y3,y4,y5,y6,g1,g2,g3) + interactive
+  **spinner** on **y1**. r1 (categorical vs numerical) left without — not visual.
+- **Know:** worked `exampleVisual` on 11 outcomes (r2,r3,y1,y2,y3,y4,y5,y6,g1,g2,g3).
+- **Show:** 8 structure-only question visuals across r2,r3,y1,y3,y5,g1,g3.
+- **Pre/post test:** 2 (r3 counterBag, y1 spinner).
+
+**Verify (3 gates):** Node parse of all 4 structures OK; app render gate 0 code console errors
+(favicon only); standalone harness rendered all barChart/spinner/counterBag/dice specs correctly
+(eyeballed, incl. new barChart axis/ticks/labels) — harness deleted. No resource/program-doc changes.
