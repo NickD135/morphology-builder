@@ -61,3 +61,27 @@ per outcome, MC answer∈options, no dup options, 3-hint ladders). Auto-arithmet
 Playwright load: 0 code console errors (favicon 404 + Babel notice only).
 
 **Committed.** Unit 40 fully complete (both deliverables). **All four units (37–40) done.**
+
+## Session — 2026-06-22 — Visuals/interactive pass (UNIT_REVIEW_PLAYBOOK)
+
+u40 built before the visual-upgrade pass. Resources DB-canonical, alignment sound → pure Phase 5/6
+visuals. All existing Visual/Interactive types (numberLine, percentGrid, coordinateGrid, barModel,
+machine, InteractivePercent) — no new component needed.
+
+⚠️ Note: u40 revisits curriculum-wide topics, so many Show/pretest question texts are duplicated in
+earlier units — unreliable to anchor edits on. Focused visuals on the uniquely-keyed `u40_*` Grow
+and Know blocks, plus a few Show questions anchored via their unique outcome openers.
+
+Added:
+- **Grow:** worked `visual` on 9 outcomes (r2 numberLine, r3 percentGrid, r5 coordinateGrid, y1
+  percentGrid, y3 barModel, y4 numberLine, g1 numberLine, g2 percentGrid, g3 coordinateGrid) +
+  interactive **percent** on r3 and interactive **percent (of 50)** on g2. Skipped r1 (duplicated
+  lesson), r4/y2/y5 (place-value/order-of-ops — not strongly visual).
+- **Know:** worked `exampleVisual` on the same 9 outcomes.
+- **Show:** 4 structure-only visuals (r2 numberLine, r5 ×2 coordinateGrid, g1 numberLine, g3 machine
+  table) via unique outcome-opener anchors.
+
+**Verify (3 gates):** Node parse of all 4 structures OK; app render gate 0 code console errors
+(favicon only); standalone harness rendered numberLine (jumps/points/decimals), percentGrid,
+coordinateGrid (point + linear), barModel and machine specs correctly (eyeballed) — harness deleted.
+No resource/program-doc changes.
