@@ -65,5 +65,27 @@ Authored all six data structures in `solo/index.html` (keyed `u37` / `u37_oid`):
 
 **Committed** to `solo/index.html`. Unit 37 fully complete (both deliverables).
 
+## Session 3 — 2026-06-22 — Visuals/interactive pass (UNIT_REVIEW_PLAYBOOK)
+
+u37 was built before the visual-upgrade playbook pass applied to u27–u36. Resources were already
+DB-verified/canonical (42 rows) and alignment was sound, so this pass was purely Phase 5/6 visuals.
+
+Added (all using existing, shipped Visual/Interactive components — no new types):
+- **Grow (LEARN):** worked `visual` on the workedExample of all 11 spatial outcomes (r3,r4,r5,r6,
+  y1,y2,y3,y4,y5,g1,g2) + 2 interactive widgets — `interactive` area model on **r3** and
+  `interactive` volume builder on **r6**.
+- **Know (PRACTICE):** worked `exampleVisual` on the same 11 spatial outcomes + 1 structure-only
+  question visual (r3 q1).
+- **Show (UNITS):** 14 structure-only question visuals (areaModel showProducts:false, areaShape
+  rect/parallelogram/triangle, prismVolume, polygon house, solid3d triPrism) across r3,r4,r5,r6,
+  y1,y2,y3,g1,g2 — structure-only per the assessment-integrity rule.
+- **Pre/post test (PRETESTS):** 4 structure-only visuals (r3 areaModel, r4 rect, r6 prism, y1 parallelogram).
+- g3 (prime factorisation / index notation) left without a visual — not spatial.
+
+**Verify (3 gates passed):** Node parse of UNITS/PRETESTS/PRACTICE/LEARN OK; u37 areaModel &
+prismVolume specs arithmetic-checked against answers; app render gate 0 code console errors
+(favicon 404 only); standalone Visual harness rendered all 9 u37 spec families correctly (eyeballed),
+then harness deleted. No resource changes → no SQL and no program-doc resync needed.
+
 ## Next
-Unit 38 — start at Deliverable B Stage 0 (DoE Unit 38).
+Unit 38 — visuals/interactive pass (same playbook Phase 5/6).
