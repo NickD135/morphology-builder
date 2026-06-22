@@ -12678,6 +12678,7 @@ u25_g4:{
     hook:{question:"You flip a fair coin 10 times and get 7 heads. Is the coin broken? Then you flip it 1000 times and get 503 heads. What's going on? Write your thinking.",reveal:"The coin is fine! With FEW trials, results wobble away from the expected 50%. With MANY trials, the observed result gets close to the expected. Expected frequency = probability × number of trials."},
     watch:{count:1,prompts:["Write the difference between expected and observed frequency.","If you roll a dice 60 times, how many 4s would you expect?","What happens to observed results as the number of trials grows?"]},
     workedExample:{problem:"A fair coin is flipped 80 times. How many heads would you expect?",steps:["P(heads) = 1/2.","Expected frequency = probability × number of trials.","1/2 × 80 = 40.","So you'd expect about 40 heads (the observed number may differ a little)."],visual:{type:"spinner",sections:[{color:"blue",label:"H"},{color:"orange",label:"T"}],caption:"A coin models as P(heads) = 1/2 → expect 1/2 × 80 = 40"}},
+    interactive:{type:"spinner",sections:[{color:"blue",label:"H"},{color:"orange",label:"T"}],target:"H",caption:"Flip a few times and it wobbles; flip 100s of times and observed P(H) settles near 0.5."},
     tryIt:[
       {question:"A fair dice is rolled 60 times. About how many 5s would you expect?",answer:"10",explain:"1/6 × 60 = 10.",hints:["P(5) = 1/6.","1/6 of 60.","10."]},
       {question:"You draw a counter, note its colour and put it BACK each time. This is sampling…?",answer:"with replacement",explain:"Returning it keeps the chances the same each draw.",hints:["You return the object before the next draw.","The bag stays the same each time.","Sampling with replacement."]},
@@ -12714,6 +12715,7 @@ u25_g4:{
     hook:{question:"In theory, P(heads) is 1/2. But you flip a coin 20 times and get 13 heads. Which is the 'theoretical' and which is the 'observed' probability? Write your answer.",reveal:"Theoretical = 1/2 (what should happen in fair conditions). Observed = 13/20 (the relative frequency you actually got). The more times you repeat the experiment — especially with a random number generator — the closer the observed gets to the theoretical.",visual:{type:"spinner",sections:[{color:"blue",label:"H"},{color:"orange",label:"T"}],caption:"Theoretical P(heads) = 1/2; observed was 13/20"}},
     watch:{count:1,prompts:["Write the difference between theoretical and observed probability.","How do you calculate an observed probability (relative frequency)?","What happens to the observed probability as trials increase?"]},
     workedExample:{problem:"A coin is flipped 40 times and lands heads 18 times. What is the observed probability of heads?",steps:["Observed probability = times it happened ÷ number of trials.","Heads happened 18 times out of 40.","Write it as a fraction: 18/40.","18/40 = 9/20 (the relative frequency of heads)."]},
+    interactive:{type:"spinner",sections:[{color:"red",label:"R"},{color:"blue",label:"B"},{color:"green",label:"G"},{color:"yellow",label:"Y"}],target:"R",caption:"Theoretical P(red) = 1/4 = 0.25. Spin 100s of times and watch the observed fraction close in on it."},
     tryIt:[
       {question:"Observed probability (relative frequency) is found by…?",answer:"repeating trials and recording results",explain:"You run the experiment many times and count.",hints:["It comes from real trials, not theory.","You repeat and record.","Repeating trials and recording results."]},
       {question:"A spinner is spun 100 times and lands red 25 times. Write the relative frequency of red.",answer:"25/100",explain:"25 reds out of 100 spins: 25/100 (= 1/4).",hints:["Times it happened ÷ number of trials.","25 out of 100.","25/100."]},
@@ -15160,6 +15162,72 @@ function InteractiveAreaModel({spec}){
       {spec.caption&&<p style={{fontSize:11,color:C.mut,margin:"10px 0 0",textAlign:"center"}}>{spec.caption}</p>}
     </div>
   );
+}
+
+// Interactive spinner — spin (one or ×10), tally outcomes, and watch the observed
+// relative frequency approach the theoretical probability as trials grow (u28 y6/g3).
+function InteractiveSpinner({spec}){
+  if(!spec)return null;
+  const sections=spec.sections||[]; const tot=sections.reduce((a,s)=>a+(s.weight||1),0)||1;
+  const target=spec.target!=null?spec.target:(sections[0]&&sections[0].label);
+  const [counts,setCounts]=useState({});
+  const [rot,setRot]=useState(0);
+  const C={ink:"#334155",mut:"#64748b",ind:"#4338ca",bd:"#c7d2fe",fill:"#eef2ff",grn:"#16a34a"};
+  const COL={red:"#ef4444",blue:"#3b82f6",green:"#22c55e",yellow:"#eab308",purple:"#a855f7",orange:"#f97316",pink:"#ec4899",grey:"#94a3b8",gray:"#94a3b8",gold:"#f59e0b"};
+  const colOf=(c)=>c?(COL[(""+c).toLowerCase()]||c):"#6366f1";
+  const R=64,cx=78,cy=74; let ang=-Math.PI/2;
+  const wedges=sections.map((s,i)=>{
+    const a0=ang,a1=ang+(s.weight||1)/tot*2*Math.PI; ang=a1;
+    const lg=(a1-a0)>Math.PI?1:0,mid=(a0+a1)/2;
+    const x0=cx+R*Math.cos(a0),y0=cy+R*Math.sin(a0),x1=cx+R*Math.cos(a1),y1=cy+R*Math.sin(a1);
+    const lx=cx+R*0.62*Math.cos(mid),ly=cy+R*0.62*Math.sin(mid);
+    return {s,i,mid,path:"M "+cx+" "+cy+" L "+x0+" "+y0+" A "+R+" "+R+" 0 "+lg+" 1 "+x1+" "+y1+" z",lx,ly};
+  });
+  const total=Object.values(counts).reduce((a,b)=>a+b,0);
+  const lowStim=typeof document!=="undefined"&&document.body.classList.contains("low-stim");
+  const pick=()=>{let r=Math.random()*tot,acc=0;for(const w of wedges){acc+=(w.s.weight||1);if(r<=acc)return w;}return wedges[wedges.length-1];};
+  const land=(w)=>setRot((w.mid+Math.PI/2)*180/Math.PI);
+  const spinOnce=()=>{const w=pick();land(w);setCounts(c=>({...c,[w.s.label]:(c[w.s.label]||0)+1}));};
+  const spinMany=(n)=>{const add={};let last=null;for(let i=0;i<n;i++){const w=pick();add[w.s.label]=(add[w.s.label]||0)+1;last=w;}if(last)land(last);setCounts(c=>{const nc={...c};Object.keys(add).forEach(k=>nc[k]=(nc[k]||0)+add[k]);return nc;});};
+  const reset=()=>{setCounts({});setRot(0);};
+  const tgtW=(sections.find(s=>s.label===target)||{}).weight||1;
+  const obs=total>0?((counts[target]||0)/total):0, theo=tgtW/tot;
+  const btn=(bg,fg,bd)=>({fontFamily:ff,fontSize:13,fontWeight:700,padding:"8px 14px",borderRadius:9,cursor:"pointer",background:bg,color:fg,border:bd||"none"});
+  return(
+    <div style={{background:"#fff",border:"1px solid "+C.bd,borderRadius:10,padding:"14px",margin:"2px 0 14px"}} role="group" aria-label={"Interactive spinner experiment, tracking "+target}>
+      <p style={{fontSize:12,fontWeight:700,color:C.ind,margin:"0 0 2px"}}>🎯 Spin it yourself</p>
+      <p style={{fontSize:12,color:C.mut,margin:"0 0 10px"}}>Spin lots of times and watch the observed fraction for <b>{target}</b> creep towards the theoretical probability.</p>
+      <svg viewBox="0 0 156 156" width="100%" style={{maxWidth:170,display:"block",margin:"0 auto 8px"}}>
+        {wedges.map((w,i)=><g key={i}><path d={w.path} fill={colOf(w.s.color)} stroke="#fff" strokeWidth="2"/>{w.s.label&&<text x={w.lx} y={w.ly+4} textAnchor="middle" fontSize="11" fontWeight="800" fill="#fff" stroke="#0f172a" strokeWidth="2.5" style={{paintOrder:"stroke"}}>{w.s.label}</text>}</g>)}
+        <circle cx={cx} cy={cy} r={R} fill="none" stroke={C.ink} strokeWidth="2"/>
+        <g transform={"rotate("+rot+" "+cx+" "+cy+")"} style={{transition:lowStim?"none":"transform 0.5s cubic-bezier(.2,.8,.2,1)"}}>
+          <line x1={cx} y1={cy} x2={cx} y2={cy-R+12} stroke={C.ink} strokeWidth="3"/>
+          <path d={"M "+cx+" "+(cy-R+4)+" l -5 10 l 10 0 z"} fill={C.ink}/>
+        </g>
+        <circle cx={cx} cy={cy} r="5" fill={C.ink}/>
+      </svg>
+      <div style={{display:"flex",justifyContent:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+        <button onClick={spinOnce} style={btn("linear-gradient(135deg,var(--indigo),var(--blue))","#fff")}>Spin</button>
+        <button onClick={()=>spinMany(10)} style={btn(C.fill,C.ind,"1px solid "+C.bd)}>Spin ×10</button>
+        <button onClick={()=>spinMany(100)} style={btn(C.fill,C.ind,"1px solid "+C.bd)}>Spin ×100</button>
+        {total>0&&<button onClick={reset} style={btn(C.fill,C.ind,"1px solid "+C.bd)}>Reset</button>}
+      </div>
+      {total>0&&<table style={{margin:"0 auto 8px",borderCollapse:"collapse",fontSize:12.5}}><tbody>
+        {sections.map((s,i)=><tr key={i} style={{background:s.label===target?C.fill:"transparent"}}><td style={{padding:"2px 10px",fontWeight:700,color:C.ink}}><span style={{display:"inline-block",width:10,height:10,borderRadius:2,background:colOf(s.color),marginRight:6,verticalAlign:"middle"}}/>{s.label}</td><td style={{padding:"2px 10px",textAlign:"right",color:C.ink}}>{counts[s.label]||0}</td></tr>)}
+      </tbody></table>}
+      <p aria-live="polite" style={{fontSize:12.5,textAlign:"center",color:C.ink,margin:0,lineHeight:1.5}}>{total===0?"Theoretical P("+target+") = "+tgtW+"/"+tot+" = "+theo.toFixed(2)+". Start spinning!":"After "+total+" spins — observed P("+target+") = "+(counts[target]||0)+"/"+total+" = "+obs.toFixed(2)+" · theoretical = "+theo.toFixed(2)}</p>
+      {spec.caption&&<p style={{fontSize:11,color:C.mut,margin:"8px 0 0",textAlign:"center"}}>{spec.caption}</p>}
+    </div>
+  );
+}
+
+// Dispatcher: a Grow lesson's L.interactive is rendered through this so any interactive
+// widget type can be hosted by the same hook. Falls back to the static Visual.
+function InteractiveWidget({spec}){
+  if(!spec||!spec.type)return null;
+  if(spec.type==="areaModel")return <InteractiveAreaModel spec={spec}/>;
+  if(spec.type==="spinner")return <InteractiveSpinner spec={spec}/>;
+  return <Visual spec={spec}/>;
 }
 
 function Visual({spec}){
@@ -17615,7 +17683,7 @@ function App(){
                   </div>
                 )}
                 {L.workedExample&&<WorkedExample we={L.workedExample}/>}
-                {L.interactive&&<InteractiveAreaModel spec={L.interactive}/>}
+                {L.interactive&&<InteractiveWidget spec={L.interactive}/>}
                 <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
                   <button onClick={()=>setLearnStage("hook")} style={ghostBtn}>← Back</button>
                   <button onClick={()=>setLearnStage("try")} style={primaryBtn}>Try it yourself →</button>
