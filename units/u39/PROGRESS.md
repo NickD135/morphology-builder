@@ -62,3 +62,24 @@ Playwright load: 0 code console errors (favicon 404 + Babel notice only), before
 RESOURCES-block removal.
 
 **Committed.** Unit 39 fully complete (both deliverables).
+
+## Session — 2026-06-22 — Visuals/interactive pass (UNIT_REVIEW_PLAYBOOK)
+
+u39 built before the visual-upgrade pass. Resources already DB-canonical, alignment sound → pure
+Phase 5/6 visuals.
+
+**New component:** added a reusable **`parallelLines`** visual type to `Visual` (two parallel lines
+with chevron marks + transversal; angle labels via `marks:[{at:'top'|'bottom', spot:'ul|ur|ll|lr',
+label}]`). Needed for g2 corresponding/alternate/co-interior — not buildable from existing types.
+
+Added (existing angle/clock/coordinateGrid/polygon/areaShape + new parallelLines):
+- **Grow:** worked `visual` on all 13 outcomes + interactive **angle** on **r2** (measure) and
+  interactive **clock** on **y6** (12/24-hour).
+- **Know:** worked `exampleVisual` on all 13 outcomes.
+- **Show:** 16 structure-only question visuals (angle for angle outcomes, parallelLines for g2,
+  clock for time, polygon-mirror + coordinateGrid for transformations).
+
+**Verify (3 gates):** Node parse of all 4 structures OK; app render gate 0 code console errors
+(favicon only); standalone harness rendered all angle (incl. multi-arc/protractor/reflex),
+clock, polygon-mirror, coordinateGrid, areaShape and the new parallelLines (alternate-Z &
+co-interior-C) specs correctly (eyeballed) — harness deleted. No resource/program-doc changes.
