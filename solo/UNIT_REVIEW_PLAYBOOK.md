@@ -27,6 +27,13 @@ through it on their own, in their books. That means:
   it, and the resources must show it.
 - **Concepts that are spatial/visual must have visuals** — explaining in text alone fails students
   without strong visual-spatial reasoning.
+- **Where a visual would help, ask whether an _interactive_ visual would help more.** A static diagram
+  shows the idea; an interactive one lets the student *do* the idea. Reach for interactive visuals
+  especially (a) when **teaching a brand-new concept** that is hard to grasp from text or a still
+  picture — let the student manipulate it and see the result, and (b) when **scaffolding** — an
+  interactive scaffold (drag, plot, partition, build, adjust) lets a student grow into the concept
+  hands-on, doing the thinking themselves rather than just reading it. Default to static where a
+  picture is enough; prefer interactive where the *doing* is the learning.
 
 When a rubric point bundles **two genuinely different skills** (e.g. "area model AND algorithm"),
 consider **splitting it into two outcomes** so each can be assessed and taught on its own.
@@ -200,7 +207,19 @@ Apply the alignment fixes from Phase 1 to PRETESTS / UNITS questions / PRACTICE 
 ## PHASE 5 — Visuals audit (which outcomes benefit)
 
 Go through every outcome and decide if a diagram unlocks it. Rule of thumb: **if the concept is
-spatial, it needs a visual.** Common SOLO → visual mappings (extend as needed):
+spatial, it needs a visual.** Then make a **second pass for interactivity**: for each outcome that
+benefits from a visual, ask *"would the student learn this better by manipulating it than by looking
+at it?"* Flag two cases in particular:
+- **New-concept teaching** — when the Grow/Know is introducing an idea the student has never met and
+  text + a still picture won't land it, an **interactive visual** (they move/build/plot and watch what
+  happens) does the explaining.
+- **Scaffolding** — where a student needs support to reach an outcome, an **interactive scaffold**
+  (drag the parts, partition the shape, fill the table, adjust the model) lets them grow into the
+  concept hands-on instead of being shown the answer. This is the difference between *seeing* the
+  method and *practising* it with guard-rails.
+
+Common SOLO → visual mappings (extend as needed). Mark each as **static** (a diagram is enough) or
+**interactive** (the doing is the point — e.g. the `plot` question type students place points on):
 
 | Concept | Visual type |
 |---|---|
@@ -214,7 +233,9 @@ spatial, it needs a visual.** Common SOLO → visual mappings (extend as needed)
 | Probability (spinners, dice, bags of counters) | `spinner` / `dice` / `counterBag` *(build for u28)* |
 | Expected vs observed | bar chart *(build when needed)* |
 
-Output a prioritised table: outcome → visual type → where it goes (questions / Grow / Know).
+Output a prioritised table: outcome → visual type → **static or interactive** → where it goes
+(questions / Grow / Know). For anything marked interactive, note whether the interaction exists
+already (e.g. `plot`) or needs building (Phase 6).
 
 ## PHASE 6 — Build & apply visuals
 
@@ -229,6 +250,19 @@ Existing spec types & key params:
 - `fraction` `{n, d}` (proper only) · `sharing` `{items, groups}` (handles improper)
 
 **Adding a NEW visual type:** add a branch inside `Visual` and document its spec in the memory file.
+
+**Interactive visuals & scaffolds:** `Visual` renders static SVG. Interactivity lives in the
+**question/answer layer** — an interactive visual is a question *type* the student manipulates and that
+captures their answer (the `plot` type is the worked example: students place points on a grid, the
+answer is the placement). To add a new interactive type you wire it end-to-end like `plot`: a render
+branch, an answer-capture path in the pretest/Know/Show answer state (`pretestAns`, etc.), grading, and
+the draft/restore plumbing — heavier than a static spec, so scope it deliberately. Two flavours:
+- **Interactive teaching visual** (new concept) — put it in the **Grow hook/worked example or Know
+  example**, with full feedback, so the student discovers the idea by doing.
+- **Interactive scaffold** (support) — a guided, hands-on version of the task with guard-rails
+  (snapping, limited options, immediate feedback) so a struggling student can reach the outcome. Keep
+  the **assessment-integrity rule**: a scaffold belongs in Grow/Know, not in the pre/post test, where
+  the interaction must capture the answer *without* pre-solving it for them.
 
 **Wiring is already done** — add visuals as pure content by putting a field on the data:
 - `q.visual` on any question object (covers Know, pre/post-test, Show — they share one render).
