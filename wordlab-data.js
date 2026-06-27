@@ -2643,10 +2643,18 @@ const WordLabData = (() => {
     var key = ealdCode + ':' + text.toLowerCase().trim();
     if (_ttsCache[key]) return; // already cached or loading
     _ttsCache[key] = 'loading';
+    // speak-word verifies a teacher JWT OR a valid student_id+class_id. Students log in
+    // anonymously, so pass the session ids or the request 401s and cloud TTS is lost.
+    var _sess = getSession();
+    var _ttsBody = { text: text, language: ealdCode };
+    if (_sess && _sess.studentId && _sess.classId) {
+      _ttsBody.student_id = _sess.studentId;
+      _ttsBody.class_id = _sess.classId;
+    }
     fetch(SUPABASE_URL + '/functions/v1/speak-word', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: text, language: ealdCode }),
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON },
+      body: JSON.stringify(_ttsBody),
     }).then(function(resp) {
       if (!resp.ok) throw new Error('TTS API ' + resp.status);
       return resp.json();
