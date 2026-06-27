@@ -14671,6 +14671,24 @@ u25_g4:{
   },
 };
 
+// ─── Randomise multiple-choice option order ───────────────────────────────────
+// The question banks list the correct answer first in every `options` array. Without
+// shuffling, the correct answer would always be the top button in every quiz, practice
+// and graded "Show" assessment — trivially gameable and a poor assessment. Grading is
+// by value (checkAnswer compares the chosen string to q.answer), so reordering the
+// options array is safe. Runs once at load so every quiz mode gets a randomised order.
+(function shuffleAllMcOptions(){
+  function shuffle(arr){ for(var i=arr.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=arr[i]; arr[i]=arr[j]; arr[j]=t; } }
+  function walk(node){
+    if(Array.isArray(node)){ node.forEach(walk); return; }
+    if(node&&typeof node==="object"){
+      if(node.type==="mc"&&Array.isArray(node.options)&&node.options.length>1){ shuffle(node.options); }
+      for(var k in node){ var v=node[k]; if(v&&typeof v==="object") walk(v); }
+    }
+  }
+  try{ [UNITS,PRETESTS,PRACTICE,BEYOND].forEach(walk); }catch(e){ /* never block app load on this */ }
+})();
+
 </script>
   <script type="text/babel" data-presets="react">
     const { useState, useRef, useEffect } = React;
