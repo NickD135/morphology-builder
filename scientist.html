@@ -1075,6 +1075,10 @@ async function render() {
 
   // Restart effect on the big scientist card now that #sciSVGBig exists
   if (typeof WLScientist !== 'undefined') WLScientist._restartEffects(sd);
+
+  // Keep the persistent header widget (avatar, quarks, level) in sync after any
+  // customisation, purchase or equip — render() rebuilds #main-content only.
+  if (typeof WLScientist !== 'undefined' && WLScientist.refresh) WLScientist.refresh();
 }
 
 function renderShopSection(title, items, field, sd) {
@@ -1229,7 +1233,7 @@ async function buyEffect(effectId, cost) {
   try {
     result = await WordLabData.purchase('effect_' + effectId, cost);
   } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
-  if (!result.success) { alert('Not enough quarks!'); return; }
+  if (!result.success) { alert(purchaseFailMsg(result)); return; }
   try {
     await WordLabData.saveScientist({ effect: effectId });
   } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
@@ -1267,7 +1271,7 @@ async function shopBuy(itemId, cost, field) {
   try {
     result = await WordLabData.purchase(itemId, cost);
   } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
-  if (!result.success) { alert('Not enough quarks!'); return; }
+  if (!result.success) { alert(purchaseFailMsg(result)); return; }
   const updates = {};
   updates[field] = itemId;
   if (field==='head'||field==='face'||field==='pet'||field==='wings') updates[field] = itemId==='none'?null:itemId;
@@ -1312,7 +1316,7 @@ async function shopBuyDance(danceId, cost, tier) {
   try {
     result = await WordLabData.purchase('dance_' + danceId, cost);
   } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
-  if (!result.success) { alert('Not enough quarks!'); return; }
+  if (!result.success) { alert(purchaseFailMsg(result)); return; }
   const sci = await WordLabData.getScientist() || {};
   const dances = Object.assign({}, sci.dances || {});
   dances[tier] = danceId;
@@ -1498,12 +1502,19 @@ async function buyCustomItem(itemId, cost, type) {
   try {
     result = await WordLabData.purchase('custom_' + itemId, cost);
   } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
-  if (!result.success) { alert('Not enough quarks!'); return; }
+  if (!result.success) { alert(purchaseFailMsg(result)); return; }
   await render();
 }
 
+// Turns a failed purchase result into a clear, kid-friendly message.
+function purchaseFailMsg(result) {
+  const reason = (result && result.reason ? String(result.reason) : '').toLowerCase();
+  if (reason.includes('own')) return 'You already own this — no need to buy it again!';
+  return 'Not enough quarks!';
+}
+
 async function claimCustomItem(itemId, type) {
-  const current = await WordLabData.getScientist();
+  const current = await WordLabData.getScientist() || {};
   const owned = current.owned || [];
   if (!owned.includes('custom_' + itemId)) {
     try {
@@ -1520,7 +1531,7 @@ async function equipCustomItem(itemId) {
   const imageData = cached.image_data;
 
   // Ensure item is in owned list
-  const current = await WordLabData.getScientist();
+  const current = await WordLabData.getScientist() || {};
   const owned = current.owned || [];
   const customSlots = Object.assign({}, current.customSlots || {});
   const updates = {};
