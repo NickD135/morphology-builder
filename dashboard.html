@@ -1656,11 +1656,16 @@ async function loadExtensionData(){
   const studentIds = currentClass.students.map(s=>s.id);
   if(!studentIds.length) return;
   try {
-    const { data } = await dbSb()
-      .from('student_progress')
-      .select('student_id,activity,category,correct,total,total_time')
-      .in('student_id', studentIds)
-      .eq('is_extension', true);
+    // Page past PostgREST's ~1000-row cap so no student is silently dropped.
+    const data = await WordLabData.sbFetchAllRows(function(from, to) {
+      return dbSb()
+        .from('student_progress')
+        .select('student_id,activity,category,correct,total,total_time')
+        .in('student_id', studentIds)
+        .eq('is_extension', true)
+        .order('student_id')
+        .range(from, to);
+    });
     (data||[]).forEach(row => {
       if(!extensionData[row.student_id]) extensionData[row.student_id]={};
       if(!extensionData[row.student_id][row.activity]) extensionData[row.student_id][row.activity]={};
@@ -6208,10 +6213,15 @@ async function loadSpellingSetsData() {
     // Load spelling progress for all students
     var studentIds = currentClass.students.map(function(s) { return s.id; });
     if (studentIds.length) {
-      var { data: prog } = await dbSb().from('student_progress')
-        .select('student_id, category, correct, total, total_time')
-        .eq('activity', 'spelling-set')
-        .in('student_id', studentIds);
+      // Page past PostgREST's ~1000-row cap so no student is silently dropped.
+      var prog = await WordLabData.sbFetchAllRows(function(from, to) {
+        return dbSb().from('student_progress')
+          .select('student_id, category, correct, total, total_time')
+          .eq('activity', 'spelling-set')
+          .in('student_id', studentIds)
+          .order('student_id')
+          .range(from, to);
+      });
       _spellingProgress = {};
       (prog || []).forEach(function(r) {
         if (!_spellingProgress[r.student_id]) _spellingProgress[r.student_id] = {};

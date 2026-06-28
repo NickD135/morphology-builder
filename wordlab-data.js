@@ -94,6 +94,24 @@ const WordLabData = (() => {
     throw lastErr;
   }
 
+  // Fetch every row of a query, paging past PostgREST's server-side row cap
+  // (responses are capped at ~1000 rows regardless of .limit(), which silently
+  // dropped whole students' progress on busy classes). makeRangeQuery(from,to)
+  // must return a query builder with a stable .order() applied.
+  async function sbFetchAllRows(makeRangeQuery, pageSize) {
+    pageSize = pageSize || 1000;
+    var out = [], from = 0;
+    for (;;) {
+      var res = await sbCall(function() { return makeRangeQuery(from, from + pageSize - 1); });
+      if (res && res.error) throw res.error;
+      var data = (res && res.data) || [];
+      out = out.concat(data);
+      if (data.length < pageSize) break;
+      from += pageSize;
+    }
+    return out;
+  }
+
   // ── HTML escaping (XSS prevention) ───────────────────────────
   const _ESC_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
   function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) { return _ESC_MAP[c]; }); }
@@ -496,29 +514,24 @@ const WordLabData = (() => {
     let charRows = [];
 
     if (studentIds.length) {
-      // Fetch progress in batches to avoid Supabase row limits
-      const BATCH = 5;
-      const progBatches = [];
-      for (let i = 0; i < studentIds.length; i += BATCH) {
-        progBatches.push(studentIds.slice(i, i + BATCH));
-      }
-      const [charResult, ...progResults] = await Promise.all([
+      // PostgREST caps responses at ~1000 rows regardless of .limit(), so a busy
+      // class (8000+ progress rows) must be paged through or whole students are
+      // silently dropped from the dashboard. Page with .range() until exhausted.
+      const [charResult, allProgress] = await Promise.all([
         sbCall(() => sb().from('student_character')
           .select('student_id, quarks, xp, badges, scientist, stats')
           .in('student_id', studentIds)),
-        ...progBatches.map(batch =>
-          sbCall(() => sb().from('student_progress')
+        sbFetchAllRows(function(from, to) {
+          return sb().from('student_progress')
             .select('student_id, activity, category, correct, total, total_time, updated_at, is_extension')
-            .in('student_id', batch)
-            .limit(50000))
-        )
+            .in('student_id', studentIds)
+            .order('student_id')
+            .range(from, to);
+        })
       ]);
       if (charResult.error) throw charResult.error;
       charRows = charResult.data || [];
-      for (const pr of progResults) {
-        if (pr.error) throw pr.error;
-        progressRows = progressRows.concat(pr.data || []);
-      }
+      progressRows = allProgress;
     }
 
     const charMap = {};
@@ -2862,6 +2875,7 @@ const WordLabData = (() => {
 
   return {
     getTeacherSession, getTeacherRecord, requireTeacherAuth, teacherSignOut, _sb: sb,
+    sbFetchAllRows,
     createClass, getClasses, getClass, verifyPassword,
     addStudent, addStudentsBulk, removeStudent, deleteClass, regenerateStudentCode,
     lookupClassByCode, verifyStudentCode,
