@@ -572,6 +572,36 @@
       font-size:11px; color:#fff; font-weight:700;
       pointer-events:none;
     }
+
+    /* ── Task 5: Mini-SVG previews for Head / Face / Wings cards ── */
+    /* Wrapper fills the 70px preview area; the SVG is the trusted buildSVG output */
+    .lab-mini{
+      position:relative;
+      width:100%;
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+    }
+    .lab-mini svg{
+      height:100%;   /* 70 px — shows full character */
+      width:auto;
+      display:block;
+      flex-shrink:0;
+      overflow:visible;  /* wings extend outside viewBox */
+    }
+    /* Face zoom: enlarge and shift up so the face accessory (y ≈ 28–58 SVG units)
+       fills the 70 px crop window.
+       Math: SVG at 175 px tall, top=-25 px → visible y-range ≈ 17–65 SVG units
+       (i.e. (25/175)*120 = 17.1 to (95/175)*120 = 65.1) — captures eyes + all face accessories */
+    .lab-mini--face svg{
+      height:175px;
+      position:absolute;
+      top:-25px;
+      left:50%;
+      transform:translateX(-50%);
+    }
   </style>
 </head>
 <body>
@@ -944,6 +974,40 @@ WL._patternBg = function(patId) {
   return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")';
 };
 
+/* ── WL.miniPreview — mini real-SVG scientist for Head/Face/Wings ──
+ * Builds a minimal scientist object (neutral outfit, only the single
+ * accessory from `item` set), renders it via WLScientist.buildSVG,
+ * and wraps the result in a .lab-mini div sized to the 70 px preview area.
+ * For 'faces': adds .lab-mini--face to zoom/crop to the face region.
+ * innerHTML is intentional here — the SVG comes only from our trusted
+ * WLScientist.buildSVG builder, never from user-supplied strings.
+ */
+WL.miniPreview = function(cat, item) {
+  if (typeof WLScientist === 'undefined') { return document.createElement('span'); }
+
+  /* Minimal scientist: default skin, plain white coat, no accessories */
+  var base = {
+    skinTone:    (WL.scientist && WL.scientist.skinTone) || '#FDBCB4',
+    coatColor:   '#ffffff',
+    coatPattern: 'plain',
+    head:        null,
+    face:        null,
+    wings:       null,
+  };
+
+  /* Set ONLY the field for this category (skip 'none' — null shows bare scientist) */
+  if (item.id !== 'none') {
+    base[cat.field] = item.id;
+  }
+
+  var wrap = document.createElement('div');
+  /* .lab-mini--face triggers the CSS zoom/crop that reveals face accessories */
+  wrap.className = 'lab-mini' + (cat.id === 'faces' ? ' lab-mini--face' : '');
+  wrap.setAttribute('aria-hidden', 'true');
+  wrap.innerHTML = WLScientist.buildSVG(base, 'neutral'); // trusted SVG builder — not user input
+  return wrap;
+};
+
 /* ── WL.cardEl — builds one card <button> ───────────────────────── */
 WL.cardEl = function(item, cat) {
   var isFree   = !!(item.free || item.cost === 0);
@@ -1003,13 +1067,25 @@ WL.cardEl = function(item, cat) {
     if (bgImg) ps.style.backgroundImage = bgImg;
     preview.appendChild(ps);
 
+  } else if ((cat.id === 'heads' || cat.id === 'faces' || cat.id === 'wings') && item.id !== 'none') {
+    /* Task 5: real mini-SVG preview via WLScientist.buildSVG (one renderer only) */
+    preview.appendChild(WL.miniPreview(cat, item));
+
+  } else if (cat.id === 'heads' || cat.id === 'faces' || cat.id === 'wings') {
+    /* 'None' item — no accessory equipped; show no-entry glyph */
+    var noneGlyph = document.createElement('span');
+    noneGlyph.className = 'lab-card-icon';
+    noneGlyph.setAttribute('aria-hidden', 'true');
+    noneGlyph.textContent = '🚫';
+    preview.appendChild(noneGlyph);
+
   } else {
-    /* Head / Face / Wings / Effects / Dances — icon preview (Task 5–6 adds mini-SVG) */
-    var iconEl = document.createElement('span');
-    iconEl.className = 'lab-card-icon';
-    iconEl.setAttribute('aria-hidden', 'true');
-    iconEl.textContent = item.icon || '?';
-    preview.appendChild(iconEl);
+    /* Effects / Dances / Custom — icon fallback (Tasks 6–8) */
+    var iconFbEl = document.createElement('span');
+    iconFbEl.className = 'lab-card-icon';
+    iconFbEl.setAttribute('aria-hidden', 'true');
+    iconFbEl.textContent = item.icon || '?';
+    preview.appendChild(iconFbEl);
   }
   btn.appendChild(preview);
 
