@@ -3,7 +3,7 @@
 // Arrays renamed to match the WLShopData interface:
 //   coatColors      → colours    (24 items)
 //   coatPatterns    → patterns   (10 items)
-//   headAccessories → heads      (26 items)
+//   headAccessories → heads      (27 items)
 //   faceAccessories → faces      (19 items)
 //   wings           → wings       (5 items)
 // SHOP.dances is a tier-keyed object in the source; flattened into an array of 22

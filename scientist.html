@@ -1064,6 +1064,7 @@ WL.renderStage = function(mood) {
   podium.setAttribute('aria-hidden', 'true');
 
   // Character wrapper — SVG string is from our own trusted builder, not user input
+  var _oldChar = WL.charEl;   // capture BEFORE reassign — needed to stop stale effect loops
   const wrap = document.createElement('div');
   wrap.className = 'lab-charwrap lab-bob';
   wrap.setAttribute('aria-label', 'Your scientist character');
@@ -1075,14 +1076,17 @@ WL.renderStage = function(mood) {
   stage.appendChild(podium);
   stage.appendChild(wrap);
 
-  // Re-apply live particle effect after the character node is replaced.
-  // Without this, any previous WLEffects.start() was attached to the old,
-  // now-detached DOM node — the effect would silently die on every renderStage call.
+  // Stop any effect loop on the OLD (now-detached) character node.
+  // Must be unconditional (not gated by _calm()) so low-stim toggling mid-session
+  // doesn't leave orphaned setInterval/RAF loops pinning the detached node in memory.
+  if (typeof WLEffects !== 'undefined') {
+    try { if (_oldChar) WLEffects.stop(_oldChar); } catch(e) {}
+  }
+  // Re-apply live particle effect on the NEW character node (unless calm mode suppresses it).
   // Use _calm() so body.low-stim, sessionStorage flag, AND prefers-reduced-motion all suppress.
   if (typeof WLEffects !== 'undefined' && WL.scientist && WL.scientist.effect) {
     var _effectId = WL.scientist.effect;
     if (!_calm()) {
-      try { WLEffects.stop(WL.charEl); } catch(e) {}
       try { WLEffects.start(_effectId, WL.charEl); } catch(e) {}
     }
   }
@@ -1594,7 +1598,23 @@ WL.renderShopHeader = function() {
   hdr.innerHTML = '';   // safe — clearing our own DOM
 
   var cat   = WL.CATS.find(function(c) { return c.id === WL.activeCat; });
-  var count = (cat && cat.src) ? cat.src().length : 0;
+
+  /* Compute item count text — omit "N in" when a clean count isn't available.
+   * Badges has no src; Custom has no src but WL.customItems is loaded async. */
+  var countText;
+  if (cat && cat.src) {
+    countText = cat.src().length + ' in ' + cat.label;
+  } else if (cat && cat.id === 'custom') {
+    // WL.customItems is null until fetched; use length once loaded, else omit number
+    countText = (WL.customItems !== null)
+      ? WL.customItems.length + ' in ' + cat.label
+      : cat.label;
+  } else if (cat) {
+    // Badges and any other no-src category: omit number to avoid showing 0
+    countText = cat.label;
+  } else {
+    countText = '';
+  }
 
   /* Title — Fredoka 25px #4a3416 per spec §12.3 */
   var titleEl = document.createElement('div');
@@ -1604,7 +1624,7 @@ WL.renderShopHeader = function() {
   /* Item count */
   var countEl = document.createElement('div');
   countEl.className = 'sh-count';
-  countEl.textContent = count + ' in ' + (cat ? cat.label : '');
+  countEl.textContent = countText;
 
   /* Subtext */
   var subEl = document.createElement('div');
@@ -2237,9 +2257,10 @@ WL.setCategory = function(id) {
 /* ── WL.equip — writes field, saves to Supabase, re-renders ─────── */
 WL.equip = async function(cat, item) {
   if (!cat.field) return;   // dances / badges handled in Tasks 6–7
-  WL.scientist[cat.field] = item.id;
+  var normId = (item.id === 'none') ? null : item.id;  // normalise None → null (matches original)
+  WL.scientist[cat.field] = normId;
   try {
-    await WordLabData.saveScientist({ [cat.field]: item.id });
+    await WordLabData.saveScientist({ [cat.field]: normId });
   } catch (e) {
     console.error('[WL.equip] saveScientist failed:', e);
   }
