@@ -1574,6 +1574,29 @@ Full checklist document: `docs/nsw-doe-approval-checklist.md`
 
 ---
 
+### PHASE 7.26 — Session 2026-06-29 (Lab Shop reskin)
+
+Reskinned `scientist.html` to match the Claude design-feature "Lab Shop" mockup — a single-screen
+dressing-room + shop — built subagent-driven from a spec + plan (`docs/superpowers/specs|plans/2026-06-29-lab-shop-*`).
+
+- [x] Single-screen two-pane layout: left = real `WLScientist` SVG character on a glowing podium + stats card; right = category-pill shop
+- [x] One renderer kept (SVG character), CSS-character mockup rejected — no ripple to game pages, no orphaned outfits
+- [x] 9 category pills: Colours · Patterns · Head · Face · Wings · Effects · Dances · Badges · Custom (Dances/Badges/Custom folded in as pills)
+- [x] Accurate previews: colour/pattern swatches; mini real-SVG scientists for head/face/wings
+- [x] Buy flow: confirm + not-enough modals (focus-trapped, Esc, restore), atomic `purchase()`, quark pop/shake, scientist reactions (happy-face + spin/burst/speech)
+- [x] Badge-gating parity: cost-0 badge-locked cosmetics not equippable/buyable without the badge
+- [x] Surprise-me randomiser (owned/available items only); live effect preview survives stage re-renders
+- [x] Low-stim + reduced-motion: hides Effects/Dances pills, suppresses all decorative motion, equipping still works; redundant injected header widget hidden
+- [x] WCAG AA: landmarks, real-button pills/cards, `aria-current`/`aria-live`, role=list/listitem, keyboard nav
+- [x] Mobile responsive: stacks under 760px, 44px touch targets, verified 320–480px
+- [x] Built in parallel `scientist-new.html`, swapped in at the end; exact mockup values pinned in spec §12 + verbatim mockup file
+- [x] Shared catalogue extracted to `wordlab-shop-data.js` (single source of truth)
+- [x] Verified live as test student incl. orphan check: a pre-existing outfit (coat/head/face/effect/dance) resolves as owned+equipped — no orphaned purchases
+- [ ] Post-merge: smoke-test custom-item equip with real teacher-made `shop_items` (test class had none)
+- [ ] Phase 2 (later): animated worlds backdrop + ~7 new effects; Phase 3: SVG hair, pet expansion, port mockup art into the SVG renderer
+
+---
+
 ### PHASE 8 — Growth & Integrations (Later)
 
 - [ ] Google Classroom integration (roster import via Google API)
