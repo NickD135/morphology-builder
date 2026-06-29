@@ -270,8 +270,14 @@ must visually match the patterns the real SVG coat uses. Implementation should r
 existing pattern definitions where they already exist rather than the mockup's, to keep the
 swatch preview consistent with the worn result.
 
-### 12.7 Open implementation question (decide during planning)
-**Typography:** the mockup uses Fredoka + Nunito; the live app standard is **Lexend**.
-Default decision: **keep Lexend** for site-wide consistency and treat Fredoka as an optional
-accent for the big stat numbers / shop title only. Flag for the user if they want full
-Fredoka/Nunito instead.
+### 12.7 Typography decision (resolved)
+**Keep Lexend** as the body/UI font for site-wide consistency. Use **Fredoka** (weight 600)
+only as an accent on the large stat numbers, the LVL value, the shop title, and item prices —
+i.e. where the mockup uses Fredoka for "chunky" display numerals. Do **not** introduce Nunito.
+Fredoka is loaded via Google Fonts alongside the existing Lexend link.
+
+### 12.8 Mockup reference file
+The original design-feature artifact is preserved in-repo at
+`docs/superpowers/specs/2026-06-29-lab-shop-mockup.html` as the ground-truth visual reference
+(especially for the Phase 2/3 `buildWorldDecor` / `buildEffectLayer` / `buildHair` functions).
+It is a reference only — it is never served or linked from the app.
