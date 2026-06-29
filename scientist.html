@@ -2,1606 +2,2790 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Word Labs – My Scientist</title>
-  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="wordlab-common.css">
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    /* ── Lab Shop — palette tokens (spec §12.2) ── */
     :root{
-      --accent:#4338ca; --accent-rgb:67,56,202;
-      --bg:#f0f4f8;
-      --indigo-line:#c7d2fe;
-      --amber-soft:#fffbeb; --amber-line:#fde68a; --amber-text:#78350f;
-      --ok:#15803d;
+      --lab-bg:#15131f;
+      --topbar:linear-gradient(180deg,#33324a,#2a2940);
+      --brand:linear-gradient(135deg,#7b6bff,#5a39c7);
+      --panel:linear-gradient(180deg,#faf3da,#f3e9c8);
+      --panel-edge:#e5d49e;
+      --accent:#5a39c7;
+      --accent-2:#7b6bff;
     }
-    body{ font-family:'Lexend',sans-serif; background:var(--bg); color:var(--text); }
 
-    /* Header — brand sub tightened to match unified design system */
-    .brandSub{ font-size:9px; font-weight:800; color:rgba(255,255,255,.6); letter-spacing:.22em; text-transform:uppercase; display:block; margin-top:2px; }
-    .headerRight{ gap:8px; flex-wrap:wrap; }
-    #wlPillSlot{ display:inline-flex; align-items:center; }
+    /* Prevent background flash */
+    body{ background:#15131f; overflow:hidden; }
 
-    /* Tabs */
-    .wrap{ max-width:1100px; margin:0 auto; padding:32px 24px; }
-    .tabRow{ display:flex; gap:8px; margin-bottom:28px; flex-wrap:wrap; }
-    .tabBtn{ border:2px solid var(--line); background:#fff; border-radius:14px; padding:10px 20px; font-weight:800; font-size:13px; cursor:pointer; color:var(--muted); transition:all .15s; font-family:'Lexend',sans-serif; }
-    .tabBtn.active{ background:var(--indigo); color:#fff; border-color:var(--indigo); }
-    .tabBtn:hover:not(.active){ border-color:#cbd5e1; color:var(--text); }
-    .tabPanel{ display:none; }
-    .tabPanel.active{ display:block; }
+    /* ── Main layout scaffold (spec §12.3) ── */
+    .labshop{
+      height:100vh;
+      display:flex;
+      flex-direction:column;
+      background:var(--lab-bg);
+      font-family:'Lexend',sans-serif;
+      color:#3a3550;
+      overflow:hidden;
+    }
 
-    /* My Scientist tab */
-    .sciLayout{ display:grid; grid-template-columns:240px 1fr; gap:24px; }
-    @media(max-width:700px){ .sciLayout{ grid-template-columns:1fr; } }
-    .sciCard{ background:var(--panel); border:2px solid var(--line); border-radius:24px; padding:24px; display:flex; flex-direction:column; align-items:center; gap:16px; }
-    .sciSVGWrap{ width:180px; height:220px; margin:0 auto; }
-    .sciName{ font-size:20px; font-weight:900; color:#312e81; }
-    .sciTitle{ font-size:13px; font-weight:700; color:var(--indigo-2); }
-    .xpBar{ width:100%; }
-    .xpBarLabels{ display:flex; justify-content:space-between; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:4px; }
-    .xpBarTrack{ width:100%; height:10px; background:var(--line); border-radius:999px; overflow:hidden; }
-    .xpBarFill{ height:100%; background:linear-gradient(90deg,var(--indigo),var(--indigo-2)); border-radius:999px; transition:width .4s ease; }
-    .quarksDisplay{ display:flex; align-items:center; gap:8px; font-size:22px; font-weight:900; color:var(--indigo); }
-    .statsGrid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; }
-    .statBox{ background:var(--indigo-soft); border:1px solid var(--indigo-line); border-radius:14px; padding:10px; text-align:center; }
-    .statVal{ font-size:22px; font-weight:900; color:var(--indigo); }
-    .statLbl{ font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); }
+    /* Top bar — 58 px fixed (spec §12.3) */
+    .lab-topbar{
+      height:58px;
+      flex:0 0 58px;
+      background:var(--topbar);
+      display:flex;
+      align-items:center;
+      padding:0 20px;
+      gap:14px;
+      border-bottom:2px solid rgba(0,0,0,.3);
+      box-shadow:0 4px 18px rgba(0,0,0,.25);
+      z-index:40;
+    }
 
-    /* Customise panel */
-    .customPanel{ background:var(--panel); border:2px solid var(--line); border-radius:24px; padding:24px; display:flex; flex-direction:column; gap:20px; }
-    .custSection{ }
-    .custLabel{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.18em; color:var(--indigo); margin-bottom:10px; }
-    .swatchRow{ display:flex; gap:8px; flex-wrap:wrap; }
-    .swatch{ width:32px; height:32px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:all .15s; }
-    .swatch.active{ border-color:var(--indigo); box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--indigo); }
-    .swatch.locked{ opacity:.35; cursor:not-allowed; }
-    .optRow{ display:flex; gap:8px; flex-wrap:wrap; }
-    .optPill{ border:2px solid var(--line); background:#fff; border-radius:12px; padding:7px 14px; font-size:12px; font-weight:800; cursor:pointer; color:var(--muted); transition:all .15s; font-family:'Lexend',sans-serif; }
-    .optPill.active{ background:var(--indigo); color:#fff; border-color:var(--indigo); }
-    .optPill:hover:not(.active):not(.locked){ border-color:#cbd5e1; color:var(--text); }
-    .optPill.locked{ opacity:.4; cursor:not-allowed; }
+    /* Main area */
+    .lab-main{
+      flex:1;
+      min-height:0;
+      display:flex;
+    }
 
-    /* Badges tab */
-    .badgesGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; }
-    .badgeCard{ background:var(--panel); border:2px solid var(--line); border-radius:18px; padding:16px; text-align:center; }
-    .badgeCard.earned{ background:var(--indigo-soft); border-color:var(--indigo-line); }
-    .badgeCard.legendary{ background:var(--amber-soft); border-color:var(--amber-line); }
-    .badgeCard.legendary.earned{ background:#fffbeb; border-color:#f59e0b; }
-    .badgeIcon{ font-size:32px; margin-bottom:6px; }
-    .badgeName{ font-size:13px; font-weight:900; color:#312e81; margin-bottom:3px; }
-    .badgeDesc{ font-size:11px; color:var(--muted); font-weight:600; line-height:1.4; }
-    .badgeLocked{ opacity:.45; }
-    .badgeSectionTitle{ font-size:13px; font-weight:900; text-transform:uppercase; letter-spacing:.16em; color:var(--amber-text); margin:24px 0 12px; }
+    /* Left pane — character stage + stats (spec §12.3) */
+    .lab-left{
+      flex:1 1 50%;
+      min-width:380px;
+      display:flex;
+      flex-direction:column;
+      background:var(--lab-bg);
+    }
 
-    /* Shop tab */
-    .shopBalance{ background:var(--indigo-soft); border:2px solid var(--indigo-line); border-radius:18px; padding:16px 24px; display:flex; align-items:center; gap:12px; margin-bottom:24px; }
-    .shopBalanceAmt{ font-size:28px; font-weight:900; color:var(--indigo); }
-    .shopBalanceLbl{ font-size:13px; font-weight:700; color:var(--muted); }
-    .shopSection{ margin-bottom:28px; }
-    .shopSectionTitle{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.18em; color:var(--indigo); margin-bottom:12px; padding-bottom:8px; border-bottom:2px solid var(--line); }
-    .shopGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
-    .badgePinsGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; }
-    .shopItem{ background:var(--panel); border:2px solid var(--line); border-radius:16px; padding:14px; text-align:center; display:flex; flex-direction:column; gap:6px; }
-    .shopItem.owned{ border-color:var(--indigo-line); background:var(--indigo-soft); }
-    .shopItem.locked{ opacity:.5; }
-    .shopItemIcon{ font-size:22px; }
-    .shopItemName{ font-size:12px; font-weight:800; color:#1e1b4b; }
-    .shopItemCost{ font-size:11px; font-weight:700; color:var(--muted); }
-    .shopBtn{ border:none; border-radius:10px; padding:7px 12px; font-size:11px; font-weight:900; cursor:pointer; font-family:'Lexend',sans-serif; transition:all .15s; }
-    .shopBtn.buy{ background:var(--indigo); color:#fff; }
-    .shopBtn.buy:hover{ background:#3730a3; }
-    .shopBtn.equip{ background:var(--green-soft); color:var(--ok); border:2px solid var(--green-line); }
-    .shopBtn.equipped{ background:var(--line); color:var(--muted); cursor:default; }
-    .shopBtn.cantafford{ background:var(--line); color:var(--muted); cursor:not-allowed; }
+    /* Right pane — shop (spec §12.3) */
+    .lab-shop-panel{
+      flex:1 1 50%;
+      min-width:420px;
+      background:var(--panel);
+      border-left:3px solid var(--panel-edge);
+      display:flex;
+      flex-direction:column;
+      box-shadow:-10px 0 30px rgba(0,0,0,.2);
+    }
 
-    /* Login prompt */
-    .loginPrompt{ background:var(--panel); border:2px solid var(--line); border-radius:24px; padding:48px; text-align:center; max-width:480px; margin:80px auto; }
-    .loginPromptIcon{ font-size:48px; margin-bottom:12px; }
-    .loginPromptTitle{ font-size:22px; font-weight:900; color:#312e81; margin-bottom:8px; }
-    .loginPromptDesc{ font-size:14px; color:var(--muted); font-weight:600; margin-bottom:20px; }
-    .loginPromptBtn{ border:none; background:var(--indigo); color:#fff; font-weight:900; font-size:14px; padding:14px 28px; border-radius:16px; cursor:pointer; font-family:'Lexend',sans-serif; }
+    /* Fredoka accent class */
+    .fred{ font-family:'Fredoka',sans-serif; font-weight:600; }
 
-    /* ── Low-stim mode ── */
-    .low-stim .tabBtn[data-tab="dances"],
-    .low-stim .tabBtn[data-tab="effects"],
-    .low-stim #tab-dances,
-    .low-stim #tab-effects,
-    .low-stim #effectCustSection { display:none !important; }
-  </style>
+    /* ── Top bar internals ── */
+    .tb-brand-group{
+      display:flex;
+      align-items:center;
+      gap:11px;
+    }
+    .tb-brand-tile{
+      width:36px; height:36px;
+      border-radius:11px;
+      background:var(--brand);
+      display:flex; align-items:center; justify-content:center;
+      font-size:19px;
+      box-shadow:0 3px 10px rgba(90,57,199,.5);
+      flex-shrink:0;
+    }
+    .tb-brand-text{ line-height:1; }
+    .tb-brand-name{
+      font-family:'Fredoka',sans-serif;
+      font-weight:600;
+      font-size:18px;
+      color:#fff;
+      display:block;
+    }
+    .tb-brand-sub{
+      font-size:9px;
+      letter-spacing:2px;
+      color:#9a96c4;
+      font-weight:800;
+      text-transform:uppercase;
+      display:block;
+      margin-top:2px;
+    }
+    .tb-spacer{ flex:1; }
 
-  <!-- ═══ DRESSING ROOM THEME ═══ -->
-  <style>
-  /* ── Scene ── */
-  .dressing-scene{
-    position:fixed; inset:0; z-index:0; pointer-events:none;
-    display:flex; flex-direction:column;
-  }
-  .dressing-wall{
-    flex:0 0 62%; background:#f5f0e8;
-    position:relative; overflow:hidden;
-  }
-  /* Subtle warm paper texture */
-  .dressing-wall::before{
-    content:''; position:absolute; inset:0;
-    background:
-      radial-gradient(ellipse 500px 350px at 22% 45%, rgba(255,190,60,.1) 0%, transparent 65%),
-      radial-gradient(ellipse 300px 220px at 78% 35%, rgba(255,190,60,.07) 0%, transparent 65%),
-      radial-gradient(ellipse 200px 160px at 50% 20%, rgba(255,210,80,.06) 0%, transparent 60%);
-  }
-  /* Lower wood panelling */
-  .dressing-wall::after{
-    content:''; position:absolute; bottom:0; left:0; right:0; height:32%;
-    background:#a07828;
-    background-image: repeating-linear-gradient(
-      90deg, rgba(0,0,0,.06) 0, rgba(0,0,0,.06) 2px,
-      transparent 2px, transparent 80px
-    );
-    border-top:5px solid #b8860b;
-    box-shadow:inset 0 10px 20px rgba(0,0,0,.08);
-  }
-  /* Overhead bulb row */
-  .bulb-row{
-    position:absolute; top:4px; left:50%; transform:translateX(-50%);
-    display:flex; gap:28px; padding:0 10px;
-  }
-  .bulb{
-    width:13px; height:17px;
-    border-radius:50% 50% 40% 40%;
-    background:radial-gradient(circle at 38% 32%, #fffde0, #ffe96b 55%, #f5c518 100%);
-    box-shadow:0 0 10px 4px rgba(255,200,50,.42);
-    animation:bulbPulse 3s ease-in-out infinite;
-  }
-  .bulb:nth-child(2){animation-delay:.55s;}
-  .bulb:nth-child(3){animation-delay:1.1s;}
-  .bulb:nth-child(4){animation-delay:1.65s;}
-  .bulb:nth-child(5){animation-delay:2.2s;}
-  .bulb:nth-child(6){animation-delay:2.75s;}
-  .bulb:nth-child(7){animation-delay:.3s;}
-  .bulb-wire{
-    position:absolute; top:-18px; left:50%; transform:translateX(-50%);
-    width:1.5px; height:18px; background:#888;
-  }
-  @keyframes bulbPulse{
-    0%,100%{box-shadow:0 0 10px 4px rgba(255,200,50,.42);}
-    50%{box-shadow:0 0 20px 8px rgba(255,200,50,.72);}
-  }
-  /* Mirror frame on wall (decorative left side) */
-  .mirror-frame{
-    position:absolute; left:4%; top:6%;
-    width:110px; height:140px;
-    border-radius:50%;
-    border:8px solid #b8860b;
-    background:radial-gradient(ellipse, rgba(255,230,150,.18), rgba(184,134,11,.06));
-    box-shadow:0 0 0 3px rgba(184,134,11,.2), 0 0 20px 8px rgba(255,190,50,.14);
-  }
-  /* Mirror corner bulbs */
-  .mirror-bulb{
-    position:absolute;
-    width:9px; height:9px; border-radius:50%;
-    background:radial-gradient(circle at 38% 35%, #fffde0, #ffe96b 55%, #f5c518);
-    box-shadow:0 0 8px 3px rgba(255,200,50,.5);
-    animation:bulbPulse 3s ease-in-out infinite;
-  }
-  /* Trophy shelf */
-  .trophy-shelf{
-    position:absolute; right:4%; top:10%;
-    width:130px;
-  }
-  .trophy-shelf-board{
-    height:8px; background:#8B6914;
-    border-top:2px solid #b8860b; border-radius:2px;
-    box-shadow:0 2px 6px rgba(0,0,0,.2);
-  }
-  .trophy-items{
-    display:flex; justify-content:space-around; align-items:flex-end;
-    padding-bottom:4px;
-  }
-  .trophy-item{ font-size:26px; }
-  /* Coat hook */
-  .coat-hook{
-    position:absolute; left:18%; top:5%;
-    display:flex; flex-direction:column; align-items:center;
-  }
-  .hook-base{
-    width:16px; height:8px; background:#555; border-radius:2px;
-  }
-  .hook-arm{
-    width:3px; height:18px; background:#555;
-    transform:rotate(12deg) translateX(-2px);
-    transform-origin:top center;
-    border-radius:0 0 3px 3px;
-  }
-  .coat-emoji{ font-size:28px; margin-top:0; opacity:.75; }
-  /* Desk nameplate */
-  .desk-corner{
-    position:absolute; right:6%; bottom:8%;
-    background:#3d2b1f; border-radius:6px 6px 0 0;
-    width:90px; height:10px;
-  }
-  .desk-corner::before{
-    content:'SCIENTIST';
-    position:absolute; top:-20px; left:50%; transform:translateX(-50%);
-    background:#3d2b1f; color:#fbbf24; border-radius:4px;
-    font-size:7px; font-weight:900; letter-spacing:.15em;
-    padding:3px 8px; white-space:nowrap; font-family:'Lexend',sans-serif;
-  }
+    /* Quark pill (spec §12.2) */
+    #quarkPill{
+      display:flex;
+      align-items:center;
+      gap:9px;
+      background:rgba(123,107,255,.16);
+      border:1.5px solid rgba(150,135,255,.4);
+      padding:6px 15px 6px 10px;
+      border-radius:999px;
+    }
+    .tb-quark-orb{
+      width:23px; height:23px;
+      border-radius:50%;
+      background:radial-gradient(circle at 35% 30%,#b9a6ff,#6d4ad6);
+      display:flex; align-items:center; justify-content:center;
+      font-size:12px;
+      flex-shrink:0;
+    }
+    #quarkValue{
+      font-family:'Fredoka',sans-serif;
+      font-weight:600;
+      font-size:16px;
+      color:#fff;
+    }
+    .tb-quark-label{
+      font-size:10px;
+      color:#b6b0e0;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.6px;
+    }
 
-  /* Herringbone floor */
-  .dressing-floor{
-    flex:1; position:relative;
-    background:#c4a35a;
-    background-image:
-      repeating-linear-gradient(45deg,  rgba(80,50,10,.12) 0, rgba(80,50,10,.12) 2px, transparent 2px, transparent 16px),
-      repeating-linear-gradient(-45deg, rgba(80,50,10,.12) 0, rgba(80,50,10,.12) 2px, transparent 2px, transparent 16px);
-    border-top:4px solid #8B6914;
-  }
-  /* Side skirting */
-  .skirting{
-    position:absolute; bottom:0; width:80px; height:60%;
-    background:#8B6914; border-radius:4px 4px 0 0;
-    border-top:5px solid #a07828; opacity:.6;
-  }
-  .skirting.left{ left:8px; }
-  .skirting.right{ right:8px; }
+    /* Student name pill */
+    .tb-name-pill{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      background:rgba(255,255,255,.1);
+      border:1.5px solid rgba(255,255,255,.18);
+      padding:6px 13px;
+      border-radius:999px;
+    }
+    .tb-name-avatar{
+      width:21px; height:21px;
+      border-radius:50%;
+      background:linear-gradient(135deg,#8a7bff,#5a39c7);
+      display:flex; align-items:center; justify-content:center;
+      font-size:11px;
+      flex-shrink:0;
+      /* decorative — screenreader-hidden via aria-hidden */
+    }
+    #studentName{
+      color:#fff;
+      font-weight:800;
+      font-size:13px;
+    }
 
-  /* Warm dust particles */
-  .dust-r{
-    position:fixed; border-radius:50%;
-    background:rgba(255,200,80,.32);
-    pointer-events:none; z-index:1;
-    animation:dustR linear infinite;
-  }
-  @keyframes dustR{
-    0%{transform:translateY(30px) translateX(0);opacity:0;}
-    15%{opacity:.55;}
-    85%{opacity:.2;}
-    100%{transform:translateY(-60px) translateX(var(--rdx,10px));opacity:0;}
-  }
+    /* Home link pill */
+    .tb-home-link{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      background:rgba(255,255,255,.07);
+      padding:6px 13px;
+      border-radius:999px;
+      color:#cfcbe8;
+      font-weight:700;
+      font-size:13px;
+      text-decoration:none;
+      transition:background .15s, color .15s;
+    }
+    .tb-home-link:hover{ background:rgba(255,255,255,.13); color:#fff; }
 
-  /* ── Layout overrides ── */
-  body{ background:#f0ebe0!important; }
-  #wlLoginBtn{
-    background:rgba(255,255,255,.08)!important; border:1px solid rgba(255,255,255,.15)!important;
-    border-radius:9px!important; color:rgba(255,255,255,.8)!important;
-    font-size:11px!important; padding:6px 10px!important;
-  }
+    /* ── Stage: character on glowing podium (Task 2 — spec §12.2/§12.3) ── */
+    .lab-stage{
+      flex:1;
+      min-height:0;
+      position:relative;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+    }
 
-  .wrap{ max-width:1100px; margin:0 auto; padding:24px; position:relative; z-index:2; }
+    /* Radial glow podium behind character */
+    .lab-podium{
+      position:absolute;
+      left:50%; top:58%;
+      transform:translate(-50%,-50%);
+      width:240px; height:160px;
+      border-radius:50%;
+      background:radial-gradient(ellipse at center, rgba(240,200,90,.7) 0%, transparent 68%);
+      animation:ringPulse 3s ease-in-out infinite;
+      pointer-events:none;
+    }
+    @media(prefers-reduced-motion:reduce){ .lab-podium{ animation:none; } }
+    body.low-stim .lab-podium{ animation:none; }
 
-  /* ── Tabs: folder tab style ── */
-  .tabRow{
-    display:flex; gap:0; margin-bottom:0!important;
-    border-bottom:3px solid rgba(184,134,11,.35);
-    flex-wrap:wrap;
-  }
-  .tabBtn{
-    border:2px solid rgba(184,134,11,.3)!important;
-    border-bottom:none!important;
-    background:rgba(210,190,155,.65)!important;
-    border-radius:10px 10px 0 0!important;
-    padding:9px 20px!important;
-    font-size:12px!important; font-weight:900!important;
-    color:rgba(60,30,5,.6)!important;
-    margin-right:3px; cursor:pointer;
-    transition:all .15s;
-    backdrop-filter:blur(4px);
-  }
-  .tabBtn.active{
-    background:rgba(250,247,242,.96)!important;
-    border-color:rgba(184,134,11,.45)!important;
-    color:#1a0a05!important;
-    position:relative; top:2px;
-    box-shadow:0 -2px 8px rgba(184,134,11,.15)!important;
-  }
-  .tabBtn:hover:not(.active){
-    background:rgba(225,205,170,.75)!important;
-    color:rgba(30,10,0,.7)!important;
-  }
-  .tabPanel{
-    background:rgba(250,247,242,.92);
-    border:2px solid rgba(184,134,11,.3);
-    border-top:none; border-radius:0 0 18px 18px;
-    padding:24px;
-    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
-  }
+    /* Character wrapper — SVG is 0 0 80 120; width 180px gives good stage size */
+    .lab-charwrap{
+      position:relative;
+      z-index:1;
+      width:180px;
+      flex-shrink:0;
+    }
+    .lab-charwrap svg{
+      width:100%;
+      height:auto;
+      display:block;
+    }
 
-  /* ── Scientist card (mirror station) ── */
-  .sciCard{
-    background:rgba(250,247,242,.95)!important;
-    border:2px solid rgba(184,134,11,.35)!important;
-    border-radius:20px!important;
-    box-shadow:0 4px 20px rgba(100,60,10,.12)!important;
-    position:relative;
-  }
-  /* Oval mirror glow behind character */
-  .sciSVGWrap{
-    position:relative!important;
-    width:200px!important; height:240px!important;
-  }
-  .sciSVGWrap::before{
-    content:''; position:absolute; top:50%; left:50%;
-    transform:translate(-50%,-50%);
-    width:180px; height:220px; border-radius:50%;
-    background:radial-gradient(ellipse, rgba(255,230,130,.22), rgba(184,134,11,.06) 70%, transparent);
-    border:5px solid #b8860b;
-    box-shadow:0 0 22px 8px rgba(255,200,50,.2), inset 0 0 16px 4px rgba(255,200,50,.08);
-    z-index:0;
-  }
-  .sciSVGWrap > *{ position:relative; z-index:1; }
-  /* Ensure the SVG character renders ABOVE particle effects (which use z-index 8-13) */
-  .sciSVGWrap > svg, .sciSVGWrap > div > svg, #sciSVGBig svg { position:relative; z-index:15!important; }
-  /* Idle bob */
-  #sciSVGBig svg{ animation:sciIdleBob 3s ease-in-out infinite; display:block; }
-  @keyframes sciIdleBob{
-    0%,100%{ transform:translateY(0); }
-    50%{ transform:translateY(-3px); }
-  }
-  /* Happy spin on customise */
-  .sci-spin{ animation:sciSpin .55s cubic-bezier(.4,0,.2,1) 1!important; }
-  @keyframes sciSpin{
-    0%{ transform:rotate(0deg) scale(1); }
-    50%{ transform:rotate(180deg) scale(1.08); }
-    100%{ transform:rotate(360deg) scale(1); }
-  }
-  /* Nameplate */
-  .sciName{
-    background:#1a0a05!important; color:#fbbf24!important;
-    border-radius:6px!important; padding:5px 18px!important;
-    font-size:17px!important; letter-spacing:.05em!important;
-    box-shadow:0 2px 8px rgba(0,0,0,.25)!important;
-    border:1px solid rgba(184,134,11,.4)!important;
-  }
-  .sciTitle{ color:#7c5c20!important; font-size:12px!important; }
+    /* ── Stats card (Task 2 — spec §12.2) ── */
+    .lab-stats{
+      background:linear-gradient(180deg,#faf3da,#f0e4c0);
+      border-top:3px solid #e5d49e;
+      padding:13px 16px 15px;
+      flex-shrink:0;
+    }
+    .lab-stats-top{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin-bottom:9px;
+    }
+    /* LVL badge — spec: 42px, radius 13px, gold gradient */
+    .lab-lvl-badge{
+      width:42px; height:42px;
+      border-radius:13px;
+      background:linear-gradient(135deg,#ffd24a,#e0a02a);
+      display:flex; align-items:center; justify-content:center;
+      flex-shrink:0;
+      box-shadow:0 3px 8px rgba(224,160,42,.4);
+    }
+    .lab-lvl-num{
+      font-family:'Fredoka',sans-serif;
+      font-weight:600;
+      font-size:22px;
+      color:#fff;
+      line-height:1;
+    }
+    .lab-level-meta{ flex:1; min-width:0; }
+    .lab-level-title{
+      font-size:13px;
+      font-weight:700;
+      color:#4a3416;
+      line-height:1.2;
+    }
+    .lab-xp-next{
+      font-size:11px;
+      font-weight:600;
+      color:#9a7a3a;
+      margin-top:2px;
+    }
+    /* XP bar — spec: track #e7d7a6, fill purple gradient */
+    .lab-xp-bar-wrap{ margin-bottom:9px; }
+    .lab-xp-track{
+      width:100%;
+      height:8px;
+      background:#e7d7a6;
+      border-radius:999px;
+      overflow:hidden;
+    }
+    .lab-xp-fill{
+      height:100%;
+      background:linear-gradient(90deg,#8a7bff,#6d4ad6);
+      border-radius:999px;
+      transition:width .4s ease;
+    }
+    /* 4-tile stat grid — spec: repeat(4,1fr), gap 8px */
+    .lab-stat-grid{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:8px;
+    }
+    /* Stat tile — spec: bg #fffdf2, border 1.5px solid #ecdba6, radius 13px */
+    .lab-stat-tile{
+      background:#fffdf2;
+      border:1.5px solid #ecdba6;
+      border-radius:13px;
+      padding:7px 4px 6px;
+      text-align:center;
+    }
+    /* Stat number (Fredoka) — colour per spec §12.2 */
+    .lab-stat-num{
+      font-family:'Fredoka',sans-serif;
+      font-weight:600;
+      font-size:20px;
+      line-height:1;
+      display:block;
+    }
+    /* Stat label — spec: #8a6a2a */
+    .lab-stat-lbl{
+      font-size:9px;
+      font-weight:700;
+      color:#8a6a2a;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+      margin-top:3px;
+      display:block;
+    }
 
-  /* XP bar: film strip / warm tones */
-  .xpBarLabels{ color:#7c5c20!important; }
-  .xpBarTrack{ background:rgba(180,140,55,.22)!important; height:12px!important; border-radius:999px!important; }
-  .xpBarFill{ background:linear-gradient(90deg,#b8860b,#fbbf24)!important; }
+    /* ── Right pane placeholders (Tasks 4–8 add content) ── */
+    .lab-grid{
+      flex:1;
+      overflow-y:auto;
+      padding:8px 22px 26px;
+    }
 
-  /* Quarks: coin purse */
-  .quarksDisplay{ color:#7c4400!important; font-size:20px!important; }
-  .quarksDisplay span{ color:#a07828!important; }
+    /* ── Phase 1 keyframes (spec §12.4) ── */
+    @keyframes floatY    { 0%,100%{transform:translateY(0)}   50%{transform:translateY(-9px)} }
+    @keyframes idleBob   { 0%,100%{transform:translateY(0)}   50%{transform:translateY(-6px)} }
+    @keyframes ringPulse { 0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.55}
+                           50%{transform:translate(-50%,-50%) scale(1.12);opacity:.9} }
+    @keyframes speechPop { 0%  {transform:translate(-50%,8px) scale(.6);opacity:0}
+                           60% {transform:translate(-50%,-4px) scale(1.06);opacity:1}
+                           100%{transform:translate(-50%,0) scale(1);opacity:1} }
+    @keyframes modalPop  { 0%  {transform:scale(.82) translateY(14px);opacity:0}
+                           100%{transform:scale(1) translateY(0);opacity:1} }
+    @keyframes overlayFade { from{opacity:0} to{opacity:1} }
 
-  /* Stats: record card */
-  .statsGrid .statBox{
-    background:rgba(255,248,225,.85)!important;
-    border:1px solid rgba(184,134,11,.22)!important;
-    border-radius:12px!important;
-  }
-  .statVal{ color:#7c4400!important; font-size:20px!important; }
-  .statLbl{ color:#a07828!important; }
+    .lab-bob{ animation:idleBob 4s ease-in-out infinite; }
+    @media(prefers-reduced-motion:reduce){ .lab-bob{ animation:none; } }
+    body.low-stim .lab-bob{ animation:none; }
 
-  /* ── Customisation panel: warm paper ── */
-  .customPanel{
-    background:rgba(252,249,242,.95)!important;
-    border:2px solid rgba(184,134,11,.3)!important;
-    border-radius:20px!important;
-    box-shadow:0 4px 16px rgba(100,60,10,.1)!important;
-    background-image:repeating-linear-gradient(
-      0deg, transparent 0, transparent 23px,
-      rgba(184,134,11,.04) 24px
-    )!important;
-  }
-  /* Specimen drawer labels */
-  .custLabel{
-    color:#7c4400!important; font-size:10px!important;
-    letter-spacing:.2em!important; padding-bottom:6px!important;
-    border-bottom:1px solid rgba(184,134,11,.2)!important;
-    margin-bottom:10px!important;
-  }
-  /* Swatches: gold ring on active */
-  .swatch{ width:34px!important; height:34px!important; border:3px solid rgba(184,134,11,.2)!important; }
-  .swatch.active{
-    border-color:#b8860b!important;
-    box-shadow:0 0 0 2px #fff, 0 0 0 4px #b8860b!important;
-  }
-  /* Wardrobe tags */
-  .optPill{
-    background:rgba(255,248,225,.9)!important;
-    border:1.5px solid rgba(184,134,11,.28)!important;
-    border-radius:10px!important; color:#3d2b1f!important;
-    font-size:11px!important; padding:6px 13px!important;
-  }
-  .optPill.active{
-    background:rgba(251,191,36,.15)!important;
-    border-color:#b8860b!important; color:#7c4400!important;
-  }
-  .optPill:hover:not(.active):not(.locked){
-    border-color:#b8860b!important; background:rgba(255,240,180,.7)!important;
-  }
-  .optPill.locked{ opacity:.38!important; }
+    /* Low-stim: hide Effects and Dances category pills (spec §6) */
+    body.low-stim [data-cat="effects"],
+    body.low-stim [data-cat="dances"]{ display:none !important; }
 
-  /* Donut crown notice */
-  .customPanel [style*="fdf4ff"]{
-    background:rgba(255,248,225,.9)!important;
-    border-color:rgba(184,134,11,.35)!important;
-  }
+    /* Low-stim: disable ALL decorative animations on this page */
+    body.low-stim .lab-card,
+    body.low-stim .lab-bob,
+    body.low-stim .lab-podium,
+    body.low-stim .lab-charwrap { animation:none !important; }
 
-  /* ── Login prompt ── */
-  .loginPrompt{
-    background:rgba(250,247,242,.96)!important;
-    border-color:rgba(184,134,11,.3)!important;
-  }
-  .loginPromptTitle{ color:#3d2b1f!important; }
-  .loginPromptBtn{ background:#b45309!important; }
+    /* Carry-forward fix 1: wordlab-scientist.js auto-injects #wlScientistWidget into
+     * the first <header> it finds (fallback when #wlPillSlot is absent).
+     * The new top bar already shows all relevant info — hide the injected widget. */
+    #wlScientistWidget { display:none !important; }
 
-  /* ── BADGES TAB ── */
-  /* Aged paper background for badgesGrid */
-  #tab-badges .badgesGrid{
-    background:none;
-  }
-  .badgeCard{
-    background:rgba(255,255,255,.88)!important;
-    border:2px solid rgba(184,134,11,.25)!important;
-    border-radius:18px!important;
-    box-shadow:0 3px 10px rgba(100,60,10,.1), 0 1px 3px rgba(0,0,0,.06)!important;
-  }
-  .badgeCard.earned{
-    background:rgba(255,248,220,.92)!important;
-    border-color:rgba(184,134,11,.45)!important;
-    box-shadow:0 3px 12px rgba(184,134,11,.18), 0 0 0 1px rgba(184,134,11,.12)!important;
-  }
-  .badgeCard.badgeLocked{ opacity:.5!important; filter:grayscale(.6)!important; }
+    /* ── Mobile: stack panes vertically below 760 px (spec §8) ── */
+    @media(max-width:760px){
+      body{ overflow:auto; }
+      .labshop{ height:auto; min-height:100vh; overflow:visible; }
+      .lab-main{ flex-direction:column; overflow-y:auto; }
+      .lab-left{ min-width:0; flex:none; }
+      .lab-stage{ min-height:230px; }
+      .lab-shop-panel{ min-width:0; flex:none; border-left:none; border-top:3px solid var(--panel-edge); box-shadow:none; }
+      #itemGrid{ grid-template-columns:repeat(auto-fill,minmax(128px,1fr)); }
+    }
+    /* ── Top bar + modals: condense for very narrow viewports (≤480 px) ── */
+    @media(max-width:480px){
+      .lab-topbar{ height:auto; flex-wrap:wrap; padding:8px 12px; gap:8px; }
+      .tb-brand-text{ display:none; }
+      .tb-spacer{ display:none; }
+      .tb-quark-label{ display:none; }
+      #quarkPill{ padding:5px 10px 5px 8px; }
+      .tb-name-pill{ padding:5px 10px; }
+      .tb-home-link{ padding:5px 10px; font-size:12px; }
+      .lab-modal-card{ padding:18px 16px 16px; }
+    }
 
-  /* Legendary section: dark velvet */
-  .badgeSectionTitle{
-    color:#fbbf24!important; font-size:14px!important;
-    text-shadow:0 0 12px rgba(251,191,36,.5)!important;
-    border-top:1px solid rgba(251,191,36,.2);
-    padding-top:20px; margin-top:28px!important;
-  }
-  #tab-badges > .badgesGrid:last-child .badgeCard.legendary{
-    background:#1a0a2e!important;
-    border-color:rgba(251,191,36,.35)!important;
-    color:#fde68a!important;
-    box-shadow:0 0 0 1px rgba(251,191,36,.15), 0 4px 20px rgba(0,0,0,.35)!important;
-  }
-  #tab-badges > .badgesGrid:last-child .badgeCard.legendary .badgeName{ color:#fde68a!important; }
-  #tab-badges > .badgesGrid:last-child .badgeCard.legendary .badgeDesc{ color:rgba(253,230,138,.65)!important; }
-  #tab-badges > .badgesGrid:last-child .badgeCard.legendary.earned{
-    background:#1a0a2e!important;
-    border-color:rgba(251,191,36,.65)!important;
-    box-shadow:0 0 0 1px rgba(251,191,36,.3), 0 0 20px 4px rgba(251,191,36,.15), 0 4px 20px rgba(0,0,0,.35)!important;
-    animation:legendGlow 2.5s ease-in-out infinite;
-  }
-  @keyframes legendGlow{
-    0%,100%{ box-shadow:0 0 0 1px rgba(251,191,36,.3), 0 0 20px 4px rgba(251,191,36,.15), 0 4px 20px rgba(0,0,0,.35)!important; }
-    50%{ box-shadow:0 0 0 1px rgba(251,191,36,.55), 0 0 30px 8px rgba(251,191,36,.28), 0 4px 20px rgba(0,0,0,.35)!important; }
-  }
+    /* ══════════════════════════════════════════════════════════════
+       Task 4: Category pills, shop header, item grid + cards
+       Spec §12.2 / §12.3 — exact values
+       ══════════════════════════════════════════════════════════════ */
 
-  /* ── SHOP TAB ── */
-  .shopBalance{
-    background:rgba(255,248,215,.9)!important;
-    border:2px solid rgba(184,134,11,.35)!important;
-    border-radius:16px!important;
-  }
-  .shopBalanceAmt{ color:#7c4400!important; }
-  .shopBalanceLbl{ color:#a07828!important; }
-  /* Shop department signs */
-  .shopSectionTitle{
-    background:#3d2b1f!important; color:#fde68a!important;
-    border-radius:8px!important; padding:6px 14px!important;
-    border-bottom:none!important; letter-spacing:.18em!important;
-    font-size:10px!important; margin-bottom:12px!important;
-    box-shadow:0 2px 6px rgba(0,0,0,.2)!important;
-  }
-  /* Shelf-style shop items */
-  .shopItem{
-    background:rgba(255,252,242,.92)!important;
-    border:2px solid rgba(184,134,11,.22)!important;
-    border-radius:14px!important;
-    box-shadow:0 3px 0 rgba(139,105,20,.25), 0 3px 8px rgba(0,0,0,.06)!important;
-    transition:transform .15s!important;
-  }
-  .shopItem:hover{ transform:translateY(-1px)!important; }
-  .shopItem.owned{
-    background:rgba(255,248,215,.92)!important;
-    border-color:rgba(184,134,11,.4)!important;
-  }
-  .shopItem.legendary{
-    border-color:rgba(251,191,36,.5)!important;
-    animation:shopLegendGlow 2.5s ease-in-out infinite;
-  }
-  @keyframes shopLegendGlow{
-    0%,100%{ box-shadow:0 3px 0 rgba(139,105,20,.25), 0 0 8px rgba(251,191,36,.15)!important; }
-    50%{ box-shadow:0 3px 0 rgba(139,105,20,.25), 0 0 18px rgba(251,191,36,.3)!important; }
-  }
-  .shopItemIcon{ font-size:30px!important; }
-  .shopItemName{ color:#3d2b1f!important; font-weight:800!important; }
-  .shopItemCost{ color:#a07828!important; font-weight:700!important; }
-  /* Buy button: amber */
-  .shopBtn.buy{
-    background:#b45309!important; color:#fff!important;
-    border-radius:10px!important; font-size:11px!important;
-    box-shadow:0 2px 6px rgba(180,83,9,.3)!important;
-  }
-  .shopBtn.buy:hover{ background:#92400e!important; }
-  /* Equip button: indigo outline */
-  .shopBtn.equip{
-    background:#fff!important; color:var(--indigo)!important;
-    border:2px solid var(--indigo)!important; border-radius:10px!important;
-  }
-  .shopBtn.equip:hover{ background:var(--indigo-soft)!important; }
-  .shopBtn.equipped{
-    background:rgba(67,56,202,.12)!important; color:var(--indigo)!important;
-    border:1px solid rgba(67,56,202,.3)!important; border-radius:10px!important;
-    font-size:11px!important;
-  }
-  .shopBtn.cantafford{
-    background:rgba(220,38,38,.08)!important; color:#b91c1c!important;
-    border:1px solid rgba(220,38,38,.2)!important; border-radius:10px!important;
-    font-size:10px!important;
-  }
+    /* ── Pill rail (spec §12.3) ── */
+    #pillRail{
+      padding:13px 22px 8px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      flex-shrink:0;
+      border-bottom:1.5px solid #e5d49e;
+    }
+    .lab-pill{
+      display:inline-flex;
+      align-items:center;
+      gap:5px;
+      padding:8px 14px;
+      border-radius:999px;
+      font-size:13.5px;
+      font-family:'Lexend',sans-serif;
+      font-weight:600;
+      cursor:pointer;
+      border:2px solid #e5d49e;
+      background:#fffdf2;
+      color:#7a5a1e;
+      min-height:44px;
+      transition:background .12s,color .12s,border-color .12s,box-shadow .12s;
+    }
+    .lab-pill.lab-pill-active{
+      background:linear-gradient(135deg,#7b6bff,#5a39c7);
+      border-color:#5a39c7;
+      color:#fff;
+      box-shadow:0 4px 12px rgba(90,57,199,.35);
+    }
+    .lab-pill:focus-visible{
+      outline:3px solid #7b6bff;
+      outline-offset:2px;
+    }
 
-  @media(max-width:700px){
-    .dressing-scene{ display:none; }
-    body{ background:linear-gradient(160deg,#3d2b1f 0%,#8B6914 60%,#c4a35a 100%)!important; }
-  }
-  @media(max-width:480px){
-    .shopGrid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr))!important;}
-    .badgesGrid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr))!important;}
-    .sciCard svg{width:100px!important;height:auto!important;}
-    .tabBtn{padding:10px 14px!important;min-height:44px!important;font-size:12px!important;}
-    .optPill{padding:10px 14px!important;min-height:44px!important;font-size:12px!important;}
-  }
+    /* ── Shop header (spec §12.3) ── */
+    #shopHeader{
+      padding:16px 24px 11px;
+      border-bottom:1.5px solid #e5d49e;
+      flex-shrink:0;
+    }
+    .sh-title{
+      font-family:'Fredoka',sans-serif;
+      font-weight:600;
+      font-size:25px;
+      color:#4a3416;
+      margin:0 0 3px;
+    }
+    .sh-count{
+      font-size:12px;
+      color:#9a7a3a;
+      font-weight:600;
+      margin-bottom:4px;
+    }
+    .sh-sub{
+      font-size:12px;
+      color:#8a6a2a;
+      margin-bottom:9px;
+    }
+    .sh-surprise{
+      background:linear-gradient(135deg,#ffb43c,#f5841f);
+      border:2px solid #e0741a;
+      box-shadow:0 4px 10px rgba(245,132,31,.4);
+      color:#fff;
+      font-family:'Lexend',sans-serif;
+      font-weight:700;
+      font-size:13px;
+      padding:7px 16px;
+      border-radius:999px;
+      cursor:pointer;
+      min-height:44px;
+      transition:opacity .15s;
+    }
+    .sh-surprise:hover{ opacity:.9; }
+    .sh-surprise:focus-visible{ outline:3px solid #f5841f; outline-offset:2px; }
+
+    /* ── Item grid (spec §12.3) — overrides flex:1 from .lab-grid ── */
+    #itemGrid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(156px,1fr));
+      gap:14px;
+      align-content:start;
+      perspective:1100px;
+    }
+
+    /* ── Item card (spec §12.2) ── */
+    .lab-card{
+      position:relative;
+      background:linear-gradient(180deg,#fdf7e0,#f6edcf);
+      border:2px solid #ecdba6;
+      border-radius:18px;
+      box-shadow:0 6px 14px rgba(120,80,20,.12);
+      padding:12px 12px 14px;
+      cursor:pointer;
+      text-align:left;
+      font-family:'Lexend',sans-serif;
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      width:100%;
+      min-height:44px;
+      /* Float animation — duration staggered per card via --card-delay */
+      animation:floatY 3.4s ease-in-out infinite;
+    }
+    .lab-card:hover{ box-shadow:0 10px 20px rgba(120,80,20,.2); }
+    .lab-card:focus-visible{ outline:3px solid #7b6bff; outline-offset:2px; }
+    /* Equipped state */
+    .lab-card.is-equipped{
+      border-color:#b9a6ff;
+      background:linear-gradient(180deg,#fff8e6,#f3ead0);
+      box-shadow:0 8px 18px rgba(90,57,199,.18);
+    }
+    /* Rarity border overrides */
+    .lab-card.is-legendary{
+      border-color:#e0a02a;
+      box-shadow:0 8px 20px rgba(224,160,42,.28),inset 0 0 16px rgba(255,210,90,.2);
+    }
+    .lab-card.is-epic{
+      border-color:#cf9ae8;
+      box-shadow:0 8px 18px rgba(177,79,216,.2);
+    }
+    @media(prefers-reduced-motion:reduce){ .lab-card{ animation:none; } }
+    body.low-stim .lab-card{ animation:none !important; }
+
+    /* Card preview area — 70px per spec §12.3 */
+    .lab-card-preview{
+      height:70px;
+      border-radius:12px;
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-shrink:0;
+      margin-bottom:3px;
+    }
+    /* Colour swatch */
+    .lab-swatch{
+      width:100%;
+      height:100%;
+      border-radius:10px;
+    }
+    /* Pattern swatch — SVG bg-image applied inline */
+    .lab-swatch-pattern{
+      width:100%;
+      height:100%;
+      border-radius:10px;
+      background-color:#e8e8e8;
+    }
+    /* Icon fallback for Head/Face/Wings (Task 5 upgrades to mini-SVG) */
+    .lab-card-icon{
+      font-size:34px;
+      line-height:1;
+    }
+
+    /* Card name */
+    .lab-card-name{
+      font-size:12.5px;
+      font-weight:700;
+      color:#4a3416;
+      line-height:1.2;
+    }
+    /* Card price — Fredoka accent, per spec §12.2 */
+    .lab-card-price{
+      font-family:'Fredoka',sans-serif;
+      font-weight:600;
+      font-size:13px;
+      color:#6e4f1e;
+    }
+    .lab-card-price.is-free{ color:#3f8a4a; }
+
+    /* Action indicator — styled like a button but is a <div> so no nested-button HTML violation */
+    .lab-card-act{
+      background:#fff;
+      color:#5a39c7;
+      border:2px solid #b9a6ff;
+      box-shadow:0 3px 0 #d9ccff;
+      border-radius:11px;
+      font-family:'Lexend',sans-serif;
+      font-weight:700;
+      font-size:12px;
+      padding:8px 0;
+      text-align:center;
+      margin-top:auto;
+    }
+    .lab-card-act.is-equipped{
+      background:#e7e0fb;
+      border-color:#cabdf5;
+    }
+
+    /* Rarity badge — top left */
+    .lab-rarity{
+      position:absolute;
+      top:8px; left:9px;
+      font-size:9px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+      padding:2px 7px;
+      border-radius:999px;
+      line-height:1.4;
+      pointer-events:none;
+    }
+    .lab-rarity-legendary{ background:#e0a02a; color:#fff; }
+    .lab-rarity-epic{      background:#b14fd8; color:#fff; }
+    .lab-rarity-rare{      background:#2f8fd8; color:#fff; }
+
+    /* ── Task 7: Badges view ── */
+    /* Full-height scrollable container that renders inside #itemGrid */
+    .lab-badges-wrap{
+      grid-column:1/-1;
+      display:flex;
+      flex-direction:column;
+      gap:0;
+    }
+    .lab-badges-section-title{
+      font-size:11px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.14em;
+      color:#9a7a3a;
+      margin:20px 0 10px;
+      padding-bottom:5px;
+      border-bottom:1px dashed #e5d49e;
+    }
+    .lab-badges-section-title:first-child{ margin-top:4px; }
+
+    /* Pin-strip grid — matches badgePinsGrid in scientist.html */
+    .lab-pins-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
+      gap:9px;
+    }
+    .lab-pin-card{
+      background:linear-gradient(180deg,#fdf7e0,#f6edcf);
+      border:2px solid #ecdba6;
+      border-radius:14px;
+      padding:11px 10px;
+      text-align:center;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:4px;
+    }
+    .lab-pin-card.is-pinned{
+      border-color:#f59e0b;
+      background:linear-gradient(135deg,#fffbeb,#fef3c7);
+    }
+    .lab-pin-icon{ font-size:26px; line-height:1; }
+    .lab-pin-name{ font-size:11px; font-weight:800; color:#4a3416; }
+    .lab-pin-sub{  font-size:9px;  color:#b45309; font-weight:600; }
+    .lab-pin-btn{
+      margin-top:3px;
+      background:#fff;
+      color:#5a39c7;
+      border:2px solid #b9a6ff;
+      box-shadow:0 2px 0 #d9ccff;
+      border-radius:8px;
+      font-family:'Lexend',sans-serif;
+      font-weight:700;
+      font-size:11px;
+      padding:5px 10px;
+      cursor:pointer;
+      min-height:32px;
+      width:100%;
+      transition:opacity .12s;
+    }
+    .lab-pin-btn:hover{ opacity:.85; }
+    .lab-pin-btn:focus-visible{ outline:3px solid #7b6bff; outline-offset:2px; }
+    .lab-pin-btn.is-pinned{
+      background:#e7e0fb;
+      border-color:#cabdf5;
+      color:#3a2590;
+    }
+    .lab-pin-btn.is-capped{
+      background:#f3f3f3;
+      border-color:#ccc;
+      color:#888;
+      cursor:default;
+      box-shadow:none;
+    }
+
+    /* Badge catalogue grid */
+    .lab-badge-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+      gap:10px;
+      margin-bottom:8px;
+    }
+    .lab-badge-card{
+      background:linear-gradient(180deg,#fdf7e0,#f6edcf);
+      border:2px solid #ecdba6;
+      border-radius:14px;
+      padding:12px 10px;
+      text-align:center;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:3px;
+    }
+    .lab-badge-card.is-earned{
+      background:#eef2ff;
+      border-color:#c7d2fe;
+    }
+    .lab-badge-card.is-legendary{
+      background:#fffbeb;
+      border-color:#fcd34d;
+    }
+    .lab-badge-card.is-legendary.is-earned{
+      background:#fffbeb;
+      border-color:#f59e0b;
+      box-shadow:0 4px 12px rgba(245,158,11,.2);
+    }
+    /* Locked state: dimmed + grayscale, plus text label (not colour-only) */
+    .lab-badge-card.is-locked{
+      opacity:.5;
+      filter:grayscale(.6);
+    }
+    .lab-badge-icon{ font-size:28px; line-height:1; }
+    .lab-badge-name{ font-size:12px; font-weight:800; color:#312e81; }
+    .lab-badge-desc{ font-size:10px; color:#6e5a2a; font-weight:600; line-height:1.4; }
+    /* Locked label — visible text on top of the greyscale card (not colour-only) */
+    .lab-badge-locked-label{
+      font-size:10px;
+      font-weight:800;
+      color:#888;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      margin-top:2px;
+    }
+
+    /* Equipped chip — top right */
+    .lab-equipped-chip{
+      position:absolute;
+      top:8px; right:9px;
+      width:22px; height:22px;
+      border-radius:50%;
+      background:linear-gradient(135deg,#7b6bff,#5a39c7);
+      box-shadow:0 3px 8px rgba(90,57,199,.5);
+      display:flex; align-items:center; justify-content:center;
+      font-size:11px; color:#fff; font-weight:700;
+      pointer-events:none;
+    }
+
+    /* ── Task 5: Mini-SVG previews for Head / Face / Wings cards ── */
+    /* Wrapper fills the 70px preview area; the SVG is the trusted buildSVG output */
+    .lab-mini{
+      position:relative;
+      width:100%;
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+    }
+    .lab-mini svg{
+      height:100%;   /* 70 px — shows full character */
+      width:auto;
+      display:block;
+      flex-shrink:0;
+      overflow:visible;  /* wings extend outside viewBox */
+    }
+    /* Face zoom: enlarge and shift up so the face accessory (y ≈ 28–58 SVG units)
+       fills the 70 px crop window.
+       Math: SVG at 175 px tall, top=-25 px → visible y-range ≈ 17–65 SVG units
+       (i.e. (25/175)*120 = 17.1 to (95/175)*120 = 65.1) — captures eyes + all face accessories */
+    .lab-mini--face svg{
+      height:175px;
+      position:absolute;
+      top:-25px;
+      left:50%;
+      transform:translateX(-50%);
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       Task 9: Buying flow — modals, badge-locked state, reactions
+       ══════════════════════════════════════════════════════════════ */
+
+    /* Badge-locked card — dimmed, not interactive */
+    .lab-card.is-badge-locked {
+      opacity: .45;
+      cursor: default;
+    }
+    .lab-card-act.is-locked {
+      background: #f3f3f3;
+      color: #888;
+      border-color: #ccc;
+      box-shadow: none;
+    }
+
+    /* Modal overlay (spec §12.3) */
+    .lab-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(20,16,34,.55);
+      backdrop-filter: blur(3px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 900;
+      animation: overlayFade .15s ease both;
+    }
+    .lab-modal-overlay[hidden] { display: none !important; }
+
+    /* Modal card (spec §12.2) */
+    .lab-modal-card {
+      background: linear-gradient(180deg,#fffdf4,#f7eecf);
+      border: 3px solid #e5d49e;
+      border-radius: 24px;
+      width: 340px;
+      max-width: calc(100vw - 32px);
+      padding: 26px 24px 22px;
+      animation: modalPop .22s cubic-bezier(.34,1.56,.64,1) both;
+      position: relative;
+    }
+    /* Not-enough variant */
+    .lab-modal-not-enough .lab-modal-card { border-color: #f0b8a0; }
+
+    .lab-modal-heading {
+      font-family: 'Fredoka', sans-serif;
+      font-weight: 600;
+      font-size: 20px;
+      color: #4a3416;
+      margin: 0 0 14px;
+    }
+    .lab-modal-not-enough .lab-modal-heading { color: #c0392b; }
+
+    .lab-modal-preview {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .lab-modal-preview-swatch {
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+      border: 2px solid #ecdba6;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      overflow: hidden;
+    }
+    .lab-modal-item-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #4a3416;
+    }
+    .lab-modal-item-cost {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 13px;
+      color: #6e4f1e;
+      margin-top: 3px;
+    }
+    .lab-modal-balance {
+      font-size: 12px;
+      color: #9a7a3a;
+      background: #fdf6e0;
+      border: 1px solid #e5d49e;
+      border-radius: 8px;
+      padding: 7px 10px;
+      margin-bottom: 18px;
+    }
+    .lab-modal-balance strong { color: #4a3416; }
+
+    .lab-modal-actions { display: flex; gap: 10px; }
+
+    .lab-modal-buy {
+      flex: 1;
+      background: linear-gradient(135deg,#7b6bff,#5a39c7);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 5px 0 #4226a8;
+      font-family: 'Lexend', sans-serif;
+      font-weight: 800;
+      font-size: 14px;
+      padding: 12px 0;
+      cursor: pointer;
+      min-height: 44px;
+      transition: opacity .12s;
+    }
+    .lab-modal-buy:hover { opacity: .9; }
+    .lab-modal-buy:focus-visible { outline: 3px solid #7b6bff; outline-offset: 2px; }
+
+    .lab-modal-cancel, .lab-modal-close {
+      background: #fff;
+      color: #5a39c7;
+      border: 2px solid #b9a6ff;
+      border-radius: 12px;
+      font-family: 'Lexend', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 12px 16px;
+      cursor: pointer;
+      min-height: 44px;
+      transition: opacity .12s;
+    }
+    .lab-modal-close { width: 100%; text-align: center; }
+    .lab-modal-cancel:hover, .lab-modal-close:hover { opacity: .9; }
+    .lab-modal-cancel:focus-visible, .lab-modal-close:focus-visible {
+      outline: 3px solid #7b6bff;
+      outline-offset: 2px;
+    }
+
+    /* Speech bubble — pops above the scientist character */
+    #speechBubble {
+      position: absolute;
+      bottom: calc(100% + 10px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fff;
+      border: 2px solid #b9a6ff;
+      border-radius: 14px;
+      padding: 7px 14px;
+      font-family: 'Lexend', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      color: #4a3416;
+      white-space: nowrap;
+      pointer-events: none;
+      animation: speechPop .3s cubic-bezier(.34,1.56,.64,1) both;
+      z-index: 500;
+    }
+    #speechBubble::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: #b9a6ff;
+    }
+    body.low-stim #speechBubble { display: none !important; }
+
+    /* Burst particle layer (fixed overlay, pointer-events: none) */
+    #burstLayer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 800;
+      overflow: hidden;
+    }
+    .burst-dot {
+      position: absolute;
+      font-size: 16px;
+      line-height: 1;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
+
 <a href="#main-content" class="skip-link">Skip to main content</a>
-<!-- ── Dressing Room Scene ── -->
-<div class="dressing-scene" aria-hidden="true">
-  <div class="dressing-wall">
-    <!-- Overhead lightbulb row -->
-    <div class="bulb-row">
-      <div style="position:relative"><div class="bulb-wire"></div><div class="bulb"></div></div>
-      <div style="position:relative"><div class="bulb-wire"></div><div class="bulb"></div></div>
-      <div style="position:relative"><div class="bulb-wire"></div><div class="bulb"></div></div>
-      <div style="position:relative"><div class="bulb-wire"></div><div class="bulb"></div></div>
-      <div style="position:relative"><div class="bulb-wire"></div><div class="bulb"></div></div>
-      <div style="position:relative"><div class="bulb-wire"></div><div class="bulb"></div></div>
-      <div style="position:relative"><div class="bulb-wire"></div><div class="bulb"></div></div>
-    </div>
-    <!-- Mirror frame (left side decoration) -->
-    <div class="mirror-frame">
-      <div class="mirror-bulb" style="top:-6px;left:50%;transform:translateX(-50%);"></div>
-      <div class="mirror-bulb" style="top:10%;right:-6px;animation-delay:.4s"></div>
-      <div class="mirror-bulb" style="top:35%;right:-7px;animation-delay:.8s"></div>
-      <div class="mirror-bulb" style="top:60%;right:-7px;animation-delay:1.2s"></div>
-      <div class="mirror-bulb" style="bottom:5%;right:-6px;animation-delay:.6s"></div>
-      <div class="mirror-bulb" style="bottom:-6px;left:50%;transform:translateX(-50%);animation-delay:1.4s"></div>
-      <div class="mirror-bulb" style="bottom:5%;left:-6px;animation-delay:1s"></div>
-      <div class="mirror-bulb" style="top:60%;left:-7px;animation-delay:.2s"></div>
-      <div class="mirror-bulb" style="top:35%;left:-7px;animation-delay:1.6s"></div>
-      <div class="mirror-bulb" style="top:10%;left:-6px;animation-delay:.7s"></div>
-    </div>
-    <!-- Coat hook -->
-    <div class="coat-hook">
-      <div class="hook-base"></div>
-      <div class="hook-arm"></div>
-      <div class="coat-emoji">🥼</div>
-    </div>
-    <!-- Trophy shelf -->
-    <div class="trophy-shelf">
-      <div class="trophy-items">
-        <div class="trophy-item">🏆</div>
-        <div class="trophy-item">🥇</div>
-        <div class="trophy-item">⭐</div>
+
+<div class="labshop">
+
+  <header class="lab-topbar" role="banner">
+
+    <!-- Brand -->
+    <div class="tb-brand-group">
+      <div class="tb-brand-tile" aria-hidden="true">🧪</div>
+      <div class="tb-brand-text">
+        <span class="tb-brand-name fred">Word Labs</span>
+        <span class="tb-brand-sub">MY SCIENTIST</span>
       </div>
-      <div class="trophy-shelf-board"></div>
     </div>
-    <!-- Personal desk corner -->
-    <div class="desk-corner"></div>
-  </div>
-  <div class="dressing-floor">
-    <div class="skirting left"></div>
-    <div class="skirting right"></div>
-  </div>
-</div>
-<div id="dressingDust" style="position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden;"></div>
 
-<header class="header" role="banner">
-  <div class="headerInner">
-    <a class="brand" href="landing.html">
-      <div class="brandIcon">🧪</div>
-      <div><span class="brandName">Word Labs</span><span class="brandSub">My Scientist</span></div>
-    </a>
-    <div class="headerRight">
-      <span id="wlPillSlot"></span>
-      <button id="wlLoginBtn" onclick="wlShowLogin()" style="border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);border-radius:9px;padding:6px 10px;font-weight:700;font-size:12px;cursor:pointer;font-family:'Lexend',sans-serif;color:rgba(255,255,255,.8);">👤 Log in</button>
-      <a href="landing.html" class="topBtn">🏠 Home</a>
+    <div class="tb-spacer"></div>
+
+    <!-- Quark balance — aria-live so screen readers announce changes -->
+    <div id="quarkPill" role="status" aria-live="polite" aria-label="Quark balance">
+      <div class="tb-quark-orb" aria-hidden="true">⚛</div>
+      <span id="quarkValue" class="fred">—</span>
+      <span class="tb-quark-label">quarks</span>
+    </div>
+
+    <!-- Student name -->
+    <div class="tb-name-pill">
+      <div class="tb-name-avatar" aria-hidden="true">🧑‍🔬</div>
+      <span id="studentName">…</span>
+    </div>
+
+    <!-- Home -->
+    <a href="landing.html" class="tb-home-link" aria-label="Home">🏠 Home</a>
+
+  </header><!-- /.lab-topbar -->
+
+  <main class="lab-main" id="main-content" role="main">
+
+    <!-- Left pane: stage + stats -->
+    <section class="lab-left" aria-label="Your scientist">
+      <div id="stage" class="lab-stage"></div>
+      <div id="statsCard" class="lab-stats"></div>
+    </section>
+
+    <!-- Right pane: Lab Shop -->
+    <section class="lab-shop-panel" aria-label="Lab Shop">
+      <div id="shopHeader"></div>
+      <nav id="pillRail" aria-label="Shop categories"></nav>
+      <div id="itemGrid" class="lab-grid" role="list"></div>
+    </section>
+
+  </main><!-- /#main-content -->
+
+  <!-- ── Task 9: Confirm-purchase modal ── -->
+  <div id="confirmModal" class="lab-modal-overlay" role="dialog" aria-modal="true"
+       aria-labelledby="confirmHeading" hidden>
+    <div class="lab-modal-card" id="confirmCard">
+      <h2 class="lab-modal-heading" id="confirmHeading">Get this item?</h2>
+      <div class="lab-modal-preview" id="confirmPreview"></div>
+      <div class="lab-modal-balance" id="confirmBalance"></div>
+      <div class="lab-modal-actions">
+        <button class="lab-modal-cancel" id="confirmCancel" type="button">Cancel</button>
+        <button class="lab-modal-buy"    id="confirmBuyBtn" type="button">Buy &amp; Equip</button>
+      </div>
     </div>
   </div>
-</header>
 
-<div class="wrap" id="main-content" role="main" aria-live="polite">
-  <!-- Filled by JS -->
-</div>
+  <!-- ── Task 9: Not-enough-quarks modal ── -->
+  <div id="notEnoughModal" class="lab-modal-overlay lab-modal-not-enough" role="dialog"
+       aria-modal="true" aria-labelledby="notEnoughHeading" hidden>
+    <div class="lab-modal-card" id="notEnoughCard">
+      <h2 class="lab-modal-heading" id="notEnoughHeading">Not enough quarks!</h2>
+      <div class="lab-modal-preview" id="notEnoughPreview"></div>
+      <p id="notEnoughMsg" aria-live="assertive"
+         style="font-size:13px;color:#c0392b;margin:0 0 14px;font-weight:600;"></p>
+      <div class="lab-modal-actions">
+        <button class="lab-modal-close" id="notEnoughClose" type="button">
+          OK, I'll keep earning ⚛
+        </button>
+      </div>
+    </div>
+  </div>
 
+  <!-- Burst layer — particle reactions, aria-hidden from screen readers -->
+  <div id="burstLayer" aria-hidden="true"></div>
+
+</div><!-- /.labshop -->
+
+<!-- ── Scripts — same order and attributes as scientist.html ── -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="wordlab-stage.js"></script>
 <script src="wordlab-data.js"></script>
 <script defer src="wordlab-scientist.js"></script>
 <script defer src="wordlab-audio.js"></script>
 <script defer src="wordlab-effects.js"></script>
+<!-- wordlab-shop-data.js created in Task 3 — 404 is harmless until then -->
+<script defer src="wordlab-shop-data.js"></script>
+
 <script>
-// ── Shop catalogue ────────────────────────────────────────────
-const SHOP = {
-  coatColors: [
-    {id:'#ffffff',   name:'Classic White',    cost:0,   free:true},
-    {id:'#bfdbfe',   name:'Lab Blue',         cost:50},
-    {id:'#bbf7d0',   name:'Mint Green',       cost:50},
-    {id:'#ddd6fe',   name:'Lavender',         cost:50},
-    {id:'#fed7aa',   name:'Peach',            cost:50},
-    {id:'#fef08a',   name:'Sunshine Yellow',  cost:50},
-    {id:'#fecaca',   name:'Red Alert',        cost:80},
-    {id:'#1e1b4b',   name:'Midnight Black',   cost:150},
-    {id:'#fbbf24',   name:'Gold Rush',        cost:200},
-    {id:'#d1fae5',   name:'Emerald Glow',     cost:80},
-    {id:'#fce7f3',   name:'Bubble Gum',       cost:80},
-    {id:'#374151',   name:'Graphite',         cost:150},
-    {id:'#7c3aed',   name:'Deep Purple',      cost:150},
-    {id:'#fef3c7',   name:'Cream',            cost:50},
-    {id:'#0ea5e9',   name:'Ocean Blue',       cost:80},
-    {id:'#f43f5e',   name:'Coral',            cost:80},
-    {id:'#14b8a6',   name:'Turquoise',        cost:100},
-    {id:'#84cc16',   name:'Lime Zest',        cost:80},
-    {id:'#f97316',   name:'Flame Orange',     cost:100},
-    {id:'#06b6d4',   name:'Ice Blue',         cost:120},
-    {id:'#166534',   name:'Forest Green',     cost:150},
-    {id:'#be185d',   name:'Hot Pink',         cost:150},
-    {id:'holographic',name:'Holographic',     cost:800, legendary:true},
-    {id:'rainbow',   name:'Rainbow Lab',      cost:500, legendary:true},
-  ],
-  coatPatterns: [
-    {id:'plain',     name:'Plain',      cost:0,   free:true},
-    {id:'stripes',   name:'Stripes',    cost:100},
-    {id:'molecules', name:'Molecules',  cost:150},
-    {id:'stars',     name:'Stars',      cost:120},
-    {id:'dots',      name:'Polka Dots',  cost:100},
-    {id:'chevrons',  name:'Chevrons',    cost:120},
-    {id:'hearts',    name:'Hearts',      cost:100},
-    {id:'lightning', name:'Lightning',   cost:150},
-    {id:'dna',       name:'DNA Helix',   cost:200},
-    {id:'plaid',     name:'Plaid',       cost:120},
-  ],
-  headAccessories: [
-    {id:'none',        name:'None',           cost:0,  free:true,  icon:'❌'},
-    {id:'goggles_head',name:'Goggles',        cost:80,             icon:'🥽'},
-    {id:'grad_cap',    name:'Grad Cap',       cost:120,            icon:'🎓'},
-    {id:'top_hat',     name:'Top Hat',        cost:150,            icon:'🎩'},
-    {id:'hard_hat',    name:'Hard Hat',       cost:100,            icon:'⛑️'},
-    {id:'beanie',        name:'Beanie',         cost:80,              icon:'🧢'},
-    {id:'party_hat',     name:'Party Hat',      cost:50,              icon:'🎉'},
-    {id:'wizard_hat',    name:'Wizard Hat',     cost:200,             icon:'🪄'},
-    {id:'space_helmet',  name:'Space Helmet',  cost:250,            icon:'🪐'},
-    {id:'chef_hat',      name:'Chef Hat',      cost:100,            icon:'👨‍🍳'},
-    {id:'pirate_hat',    name:'Pirate Hat',    cost:150,            icon:'🏴‍☠️'},
-    {id:'headphones',    name:'Headphones',    cost:120,            icon:'🎧'},
-    {id:'cat_ears',      name:'Cat Ears',      cost:80,             icon:'😺'},
-    {id:'bunny_ears',    name:'Bunny Ears',    cost:100,            icon:'🐰'},
-    {id:'dino_spikes',   name:'Dino Spikes',   cost:150,            icon:'🦕'},
-    {id:'unicorn_horn',  name:'Unicorn Horn',  cost:200,            icon:'🦄'},
-    {id:'propeller_cap', name:'Propeller Cap', cost:60,             icon:'🧢'},
-    {id:'tiara',         name:'Tiara',         cost:180,            icon:'👸'},
-    {id:'viking_helmet', name:'Viking Helmet', cost:200,            icon:'⚔️'},
-    {id:'antenna',       name:'Antenna',       cost:300,            icon:'👽'},
-    {id:'flower_crown',  name:'Flower Crown',   cost:0,  requiresBadge:'all_activities', icon:'🌸'},
-    {id:'halo',          name:'Halo',           cost:0,  requiresBadge:'answered_200',   icon:'😇'},
-    {id:'ninja_headband',name:'Ninja Headband', cost:0,  requiresBadge:'streak_15',      icon:'🥷'},
-    {id:'crown',         name:'Crown',          cost:0,  legendary:true, requiresBadge:'legend_morpheme', icon:'👑'},
-    {id:'flame_crown',   name:'Flame Crown',    cost:600, legendary:true, requiresBadge:'streak_20',       icon:'🔥'},
-    {id:'ice_crown',     name:'Ice Crown',      cost:500, legendary:true, requiresBadge:'answered_500',    icon:'❄️'},
-    {id:'galaxy_halo',   name:'Galaxy Halo',    cost:800, legendary:true, requiresBadge:'legend_sessions', icon:'🌌'},
-  ],
-  faceAccessories: [
-    {id:'none',           name:'None',          cost:0, free:true,  icon:'❌'},
-    {id:'glasses',        name:'Glasses',       cost:60,            icon:'👓'},
-    {id:'monocle',        name:'Monocle',       cost:100,           icon:'🧐'},
-    {id:'safety_goggles', name:'Safety Goggles',cost:80,            icon:'🥽'},
-    {id:'mask',             name:'Lab Mask',        cost:60,                            icon:'😷'},
-    {id:'sunglasses',       name:'Sunglasses',      cost:80,                            icon:'🕶️'},
-    {id:'star_sticker',     name:'Star Sticker',    cost:50,                            icon:'⭐'},
-    {id:'eye_patch',     name:'Eye Patch',     cost:60,             icon:'🏴‍☠️'},
-    {id:'moustache',     name:'Moustache',     cost:80,             icon:'🥸'},
-    {id:'round_glasses', name:'Round Glasses',  cost:70,             icon:'🤓'},
-    {id:'bandaid',       name:'Bandaid',        cost:40,             icon:'🩹'},
-    {id:'blush',         name:'Rosy Cheeks',    cost:50,             icon:'😊'},
-    {id:'face_paint',    name:'Face Paint',     cost:100,            icon:'⚡'},
-    {id:'bubble_gum',    name:'Bubble Gum',     cost:60,             icon:'🫧'},
-    {id:'nose_bandage',  name:'Lab Accident',   cost:40,             icon:'🤕'},
-    {id:'magnifying_glass', name:'Magnifying Glass',cost:0, requiresBadge:'answered_100', icon:'🔍'},
-    {id:'laser_eyes',      name:'Laser Eyes',      cost:700, legendary:true, requiresBadge:'legend_streak',    icon:'🔴'},
-    {id:'diamond_monocle', name:'Diamond Monocle', cost:500, legendary:true, requiresBadge:'quarks_1000',      icon:'💎'},
-    {id:'glowing_mask',    name:'Glowing Mask',    cost:400, legendary:true, requiresBadge:'legend_collector', icon:'🎭'},
-  ],
-  wings: [
-    {id:'none',          name:'None',           cost:0,   free:true,  icon:'❌'},
-    {id:'angel_wings',   name:'Angel Wings',    cost:600, legendary:true, requiresBadge:'answered_750',     icon:'🪽'},
-    {id:'fire_wings',    name:'Fire Wings',     cost:800, legendary:true, requiresBadge:'legend_streak',    icon:'🔥'},
-    {id:'crystal_wings', name:'Crystal Wings',  cost:700, legendary:true, requiresBadge:'legend_morpheme',  icon:'💎'},
-    {id:'shadow_wings',  name:'Shadow Wings',   cost:900, legendary:true, requiresBadge:'legend_polymath',  icon:'🖤'},
-  ],
-  pets: [
-    {id:'none',       name:'None',         cost:0,  free:true,  icon:'❌'},
-    {id:'cat',        name:'Grey Cat',     cost:120,             icon:'🐱'},
-    {id:'ginger_cat', name:'Ginger Cat',   cost:120,             icon:'🐈'},
-    {id:'puppy',      name:'Puppy',        cost:150,             icon:'🐶'},
-    {id:'bird',       name:'Bluebird',     cost:100,             icon:'🐦'},
-    {id:'frog',       name:'Lab Frog',     cost:80,              icon:'🐸'},
-    {id:'owl',        name:'Wise Owl',     cost:200,             icon:'🦉'},
-    {id:'dragon',     name:'Baby Dragon',  cost:500, legendary:true, icon:'🐉'},
-    {id:'horse',      name:'Mini Horse',   cost:200,             icon:'🐴'},
-    {id:'hamster',    name:'Hamster',      cost:100,             icon:'🐹'},
-  ],
-  dances: {
-    correct: [
-      {id:'bounce',   name:'Bounce',     cost:0,   free:true, icon:'⬆️',  desc:'Simple bounce (default)'},
-      {id:'nod',      name:'Nod',        cost:30,             icon:'😄',  desc:'Happy nod side to side'},
-      {id:'wink',     name:'Wink',       cost:50,             icon:'😉',  desc:'Playful wink and scale'},
-    ],
-    streak3: [
-      {id:'default3', name:'Excited',    cost:0,   free:true, icon:'😃',  desc:'Default streak reaction'},
-      {id:'spin',     name:'Spin',       cost:60,             icon:'🌀',  desc:'Full 360 spin'},
-      {id:'hop',      name:'Hop',        cost:80,             icon:'🦘',  desc:'Happy multi-hop'},
-    ],
-    streak5: [
-      {id:'default5', name:'Streak Bounce',cost:0, free:true, icon:'✨',  desc:'Default bounce'},
-      {id:'backflip', name:'Backflip',   cost:120,            icon:'🤸',  desc:'Full rotation flip'},
-      {id:'moonwalk', name:'Moonwalk',   cost:150,            icon:'🕺',  desc:'Slide left and right'},
-      {id:'wave',     name:'Wave',       cost:100,            icon:'👋',  desc:'Excited wave'},
-    ],
-    streak10: [
-      {id:'default10',name:'Big Bounce', cost:0,   free:true, icon:'⚡',  desc:'Default big bounce'},
-      {id:'rocket',   name:'Rocket Launch',cost:200,          icon:'🚀',  desc:'Fly up and back down'},
-      {id:'disco',    name:'Disco',      cost:250,            icon:'🪩',  desc:'Flash rainbow colours'},
-      {id:'breakdance',name:'Breakdance',cost:220,            icon:'🤖',  desc:'Spin and scale'},
-    ],
-    streak15: [
-      {id:'default15',name:'Celebration',cost:0,   free:true, icon:'🎉',  desc:'Default celebration'},
-      {id:'fireworks',name:'Fireworks',  cost:400,            icon:'🎆',  desc:'Burst and scale'},
-      {id:'victory',  name:'Victory Lap',cost:350,            icon:'🏆',  desc:'Triumphant orbit'},
-      {id:'supersaiyan',name:'Super Saiyan',cost:450,         icon:'💥',  desc:'Power up glow'},
-    ],
-    streak30: [
-      {id:'default30',name:'Legendary',  cost:0,   free:true, icon:'🌈',  desc:'Default legendary'},
-      {id:'portal',   name:'Portal Warp',cost:800,  legendary:true, icon:'🌀',  desc:'Warp in and out of existence'},
-      {id:'quantum',  name:'Quantum Dance',cost:1000,legendary:true,icon:'⚛️', desc:'Glitch through dimensions'},
-      {id:'supernova',name:'Supernova',  cost:900,  legendary:true, icon:'🌟',  desc:'Explode and reform'},
-    ],
-  },
+/* ── WL namespace — page state and boot ──────────────────────── */
+const WL = window.WL = {
+  scientist: null,
+  stats:     null,
+  quarks:    0,
+  owned:     [],
+  activeCat: 'colours'
 };
-const SKIN_TONES = ['#FDBCB4','#F1C27D','#E0AC69','#C68642','#8D5524','#FFCBA4'];
 
-// ── Active tab tracking ───────────────────────────────────────
-let _activeTab = 'scientist';
+/* Update the quark balance pill (XSS-safe via textContent) */
+WL.renderQuarks = function() {
+  document.getElementById('quarkValue').textContent =
+    (WL.quarks || 0).toLocaleString('en-AU');
+};
 
-// ── Render ────────────────────────────────────────────────────
-async function render() {
-  const sd = (typeof WordLabData !== 'undefined') ? await WordLabData.getStudentData() : null;
-  const wrap = document.getElementById('main-content');
+/* ── Task 2: Stage renderer ──────────────────────────────────────
+ * Renders the REAL character via WLScientist.buildSVG — one renderer only.
+ * Spec §12.2/§12.3: 180 px wide on radial glow podium with idle-bob.
+ * WL.charEl is stored here and reused by Task 9 reactions.
+ */
+WL.renderStage = function(mood) {
+  mood = mood || 'neutral';
+  const stage = document.getElementById('stage');
+  if (!stage) return;
+  if (!WL.scientist || typeof WLScientist === 'undefined') return;
+  stage.innerHTML = '';
 
-  // Check donut crown status
-  let crownActive = false;
-  if (sd && typeof WordLabData !== 'undefined') {
-    const session = WordLabData.getSession();
-    if (session && session.classId) {
-      const enabled = await WordLabData.getClassCrownEnabled(session.classId);
-      if (enabled) {
-        const leaderId = await WordLabData.getClassLeader(session.classId);
-        if (leaderId && leaderId === session.studentId) {
-          crownActive = true;
-          sd.scientist = Object.assign({}, sd.scientist, { head: 'donut_crown' });
-        }
-      }
+  // Glowing podium ellipse (decorative — hidden from AT)
+  const podium = document.createElement('div');
+  podium.className = 'lab-podium';
+  podium.setAttribute('aria-hidden', 'true');
+
+  // Character wrapper — SVG string is from our own trusted builder, not user input
+  const wrap = document.createElement('div');
+  wrap.className = 'lab-charwrap lab-bob';
+  wrap.setAttribute('aria-label', 'Your scientist character');
+  wrap.setAttribute('role', 'img');
+  wrap.innerHTML = WLScientist.buildSVG(WL.scientist, mood); // trusted SVG builder
+
+  WL.charEl = wrap;      // stored for Task 9 reactions
+
+  stage.appendChild(podium);
+  stage.appendChild(wrap);
+
+  // Re-apply live particle effect after the character node is replaced.
+  // Without this, any previous WLEffects.start() was attached to the old,
+  // now-detached DOM node — the effect would silently die on every renderStage call.
+  // Use _calm() so body.low-stim, sessionStorage flag, AND prefers-reduced-motion all suppress.
+  if (typeof WLEffects !== 'undefined' && WL.scientist && WL.scientist.effect) {
+    var _effectId = WL.scientist.effect;
+    if (!_calm()) {
+      try { WLEffects.stop(WL.charEl); } catch(e) {}
+      try { WLEffects.start(_effectId, WL.charEl); } catch(e) {}
     }
   }
+};
 
-  if (!sd) {
-    wrap.innerHTML = `<div class="loginPrompt">
-      <div class="loginPromptIcon">🧪</div>
-      <div class="loginPromptTitle">Log in to see your scientist</div>
-      <div class="loginPromptDesc">Pick your class and name to access your personal scientist character, quarks, and badges.</div>
-      <button class="loginPromptBtn" onclick="wlShowLogin()">👤 Log in</button>
-    </div>`;
+/* ── Task 2: Stats card renderer ─────────────────────────────────
+ * Builds the parchment stats card in #statsCard exactly per spec §12.2.
+ * Level + title computation copied verbatim from scientist.html (line 810):
+ *   const lvl = sd.level;  (sd.level = getLevel(char.xp))
+ * Badge count from scientist.html (line 843): sd.badges.length
+ * All text set via textContent (XSS-safe).
+ */
+WL.renderStats = function() {
+  const card = document.getElementById('statsCard');
+  if (!card) return;
+
+  // Level/title — scientist.html line 810: const lvl = sd.level;
+  // getStudentData() returns data.level = getLevel(char.xp)
+  // WordLabData.getLevel is exported (wordlab-data.js line 2888)
+  const lvl = WL.level || WordLabData.getLevel(WL.xp || 0);
+
+  const s         = WL.stats || {};
+  const correct   = s.totalCorrect  || 0;
+  const answered  = s.totalAnswered || 0;
+  const sessions  = s.sessions      || 0;
+  // Accuracy — spec: round(totalCorrect/totalAnswered*100) or 0
+  const acc       = answered ? Math.round(correct / answered * 100) : 0;
+  // Badge count — scientist.html line 843: sd.badges.length
+  const badgeCount = (WL.badges || []).length;
+
+  card.innerHTML = '';   // safe — clearing our own DOM
+
+  // — Top row: LVL badge + level title + XP to next —
+  const top = document.createElement('div');
+  top.className = 'lab-stats-top';
+
+  const lvlBadge = document.createElement('div');
+  lvlBadge.className = 'lab-lvl-badge';
+  lvlBadge.setAttribute('aria-hidden', 'true');   // number repeated in title text
+  const lvlNum = document.createElement('span');
+  lvlNum.className = 'lab-lvl-num';   // Fredoka applied via class
+  lvlNum.textContent = lvl.level;
+  lvlBadge.appendChild(lvlNum);
+
+  const meta = document.createElement('div');
+  meta.className = 'lab-level-meta';
+
+  const titleEl = document.createElement('div');
+  titleEl.className = 'lab-level-title';
+  // scientist.html line 833: Level ${lvl.level} · ${lvl.title}
+  titleEl.textContent = 'Level ' + lvl.level + ' · ' + lvl.title;
+
+  const nextEl = document.createElement('div');
+  nextEl.className = 'lab-xp-next';
+  // scientist.html line 835: ${lvl.xpToNext} XP to next
+  nextEl.textContent = lvl.xpToNext + ' XP to next';
+
+  meta.appendChild(titleEl);
+  meta.appendChild(nextEl);
+  top.appendChild(lvlBadge);
+  top.appendChild(meta);
+  card.appendChild(top);
+
+  // — XP bar — spec: track #e7d7a6, fill purple gradient; progress from lvl.progress
+  // scientist.html line 836: width:${lvl.progress}%
+  const barWrap = document.createElement('div');
+  barWrap.className = 'lab-xp-bar-wrap';
+  const track = document.createElement('div');
+  track.className = 'lab-xp-track';
+  track.setAttribute('role', 'progressbar');
+  track.setAttribute('aria-valuenow', String(lvl.progress));
+  track.setAttribute('aria-valuemin', '0');
+  track.setAttribute('aria-valuemax', '100');
+  track.setAttribute('aria-label', 'XP progress to next level, ' + lvl.progress + '%');
+  const fill = document.createElement('div');
+  fill.className = 'lab-xp-fill';
+  fill.style.width = lvl.progress + '%';
+  track.appendChild(fill);
+  barWrap.appendChild(track);
+  card.appendChild(barWrap);
+
+  // — 4-tile stat grid — spec §12.2: Correct #3f8a4a · Accuracy #6d4ad6 · Sessions #2f8fd8 · Badges #e0a02a
+  const grid = document.createElement('div');
+  grid.className = 'lab-stat-grid';
+  grid.setAttribute('aria-label', 'Statistics');
+
+  [
+    { label: 'Correct',  value: correct,          colour: '#3f8a4a' },
+    { label: 'Accuracy', value: acc + '%',   colour: '#6d4ad6' },  // % without template literal
+    { label: 'Sessions', value: sessions,          colour: '#2f8fd8' },
+    { label: 'Badges',   value: badgeCount,        colour: '#e0a02a' },
+  ].forEach(function(t) {
+    const tile = document.createElement('div');
+    tile.className = 'lab-stat-tile';
+    const num = document.createElement('span');
+    num.className = 'lab-stat-num';   // Fredoka weight via .fred applied in CSS
+    num.style.color = t.colour;
+    num.textContent = t.value;
+    const lbl = document.createElement('span');
+    lbl.className = 'lab-stat-lbl';
+    lbl.textContent = t.label;        // text label — never colour-only (WCAG)
+    tile.appendChild(num);
+    tile.appendChild(lbl);
+    grid.appendChild(tile);
+  });
+  card.appendChild(grid);
+};
+
+/* Boot — load student data and hydrate the top bar */
+WL.boot = async function() {
+  if (typeof WordLabData === 'undefined') {
+    // Non-deferred scripts not yet executed — retry
+    setTimeout(WL.boot, 100);
     return;
   }
 
-  const lvl  = sd.level;
-  const sci  = sd.scientist || {};
-  const owned = sci.owned || [];
-
-  wrap.innerHTML = `
-    <div class="tabRow">
-      <button class="tabBtn active" data-tab="scientist" onclick="switchTab('scientist',this)">🧬 My Scientist</button>
-      <button class="tabBtn" data-tab="badges" onclick="switchTab('badges',this)">🏅 Badges</button>
-      <button class="tabBtn" data-tab="shop" onclick="switchTab('shop',this)">🛍️ Lab Shop</button>
-      <button class="tabBtn" data-tab="dances" onclick="switchTab('dances',this)">💃 Dances</button>
-      <button class="tabBtn" data-tab="effects" onclick="switchTab('effects',this)">✨ Effects</button>
-      <button class="tabBtn" data-tab="custom" onclick="switchTab('custom',this)">🎨 Custom</button>
-    </div>
-
-    <!-- TAB 1: My Scientist -->
-    <div id="tab-scientist" class="tabPanel active">
-      <div class="sciLayout">
-        <div class="sciCard">
-          <div style="position:relative;width:100%;">
-            <!-- Pet tank hidden for now -->
-            <div class="sciSVGWrap" id="sciSVGBig">${WLScientist.buildSVG(sci,'neutral')}</div>
-          </div>
-          <div class="sciName">${sd.name}</div>
-          <div class="sciTitle">Level ${lvl.level} · ${lvl.title}</div>
-          <div class="xpBar">
-            <div class="xpBarLabels"><span>Lv ${lvl.level}</span><span>${lvl.xpToNext} XP to next</span></div>
-            <div class="xpBarTrack"><div class="xpBarFill" style="width:${lvl.progress}%"></div></div>
-            <div style="text-align:center;font-size:11px;font-weight:700;color:var(--muted);margin-top:4px;">${(sd.xp || 0).toLocaleString()} XP total</div>
-          </div>
-          <div class="quarksDisplay">⚛️ ${sd.quarks} <span style="font-size:13px;color:var(--muted);font-weight:700;">quarks</span></div>
-          <div class="statsGrid">
-            <div class="statBox"><div class="statVal">${sd.stats.totalCorrect}</div><div class="statLbl">Correct</div></div>
-            <div class="statBox"><div class="statVal">${sd.stats.sessions}</div><div class="statLbl">Sessions</div></div>
-            <div class="statBox"><div class="statVal">${sd.badges.length}</div><div class="statLbl">Badges</div></div>
-            <div class="statBox"><div class="statVal">${sd.stats.activitiesPlayed.length}</div><div class="statLbl">Activities</div></div>
-          </div>
-        </div>
-
-        <div class="customPanel">
-          <div class="custSection">
-            <div class="custLabel">Skin Tone</div>
-            <div class="swatchRow">${SKIN_TONES.map(t=>`<div class="swatch${t===sci.skinTone?' active':''}" style="background:${t};" onclick="applyOption('skinTone','${t}')" title="${t}"></div>`).join('')}</div>
-          </div>
-          ${(()=>{
-            const hasCoatDesign = !!(sci.customSlots && sci.customSlots.coat);
-            const overrideNote = hasCoatDesign
-              ? `<div style="font-size:11px;font-weight:700;color:var(--muted);margin-top:6px;">Hidden by coat design — unequip from the Shop to change.</div>`
-              : '';
-            const wrapStyle = hasCoatDesign ? ' style="opacity:.35;pointer-events:none;"' : '';
-            return `
-          <div class="custSection">
-            <div class="custLabel">Coat Colour</div>
-            <div class="swatchRow"${wrapStyle}>${SHOP.coatColors.filter(c=> sd.is_teacher || c.free || owned.includes(c.id) || c.id===sci.coatColor).map(c=>{
-              return '<div class="swatch' + (c.id===sci.coatColor?' active':'') + '" style="background:' + (c.id==='rainbow'?'linear-gradient(135deg,#f87171,#fb923c,#facc15,#4ade80,#60a5fa,#a78bfa)':c.id) + ';" onclick="applyOption(\'coatColor\',\'' + c.id + '\')" title="' + c.name + '"></div>';
-            }).join('')}</div>
-            ${overrideNote}
-          </div>
-          <div class="custSection">
-            <div class="custLabel">Coat Pattern</div>
-            <div class="optRow"${wrapStyle}>${SHOP.coatPatterns.filter(p=> sd.is_teacher || p.free || owned.includes(p.id)).map(p=>{
-              return '<button class="optPill' + (p.id===sci.coatPattern?' active':'') + '" onclick="applyOption(\'coatPattern\',\'' + p.id + '\')">' + p.name + '</button>';
-            }).join('')}</div>
-            ${overrideNote}
-          </div>`;
-          })()}
-          <div class="custSection">
-            <div class="custLabel">Head Accessory</div>
-            ${crownActive
-              ? `<div style="background:#fdf4ff;border:2px solid #e879f9;border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:10px;">
-                  <span style="font-size:28px;">🍩</span>
-                  <div>
-                    <div style="font-size:13px;font-weight:900;color:#7e22ce;">You're wearing the Donut Crown!</div>
-                    <div style="font-size:11px;font-weight:700;color:#a21caf;">You have the most correct answers in your class. Keep it up!</div>
-                  </div>
-                </div>`
-              : `<div class="optRow">${SHOP.headAccessories.filter(a=> sd.is_teacher || a.free || owned.includes(a.id)).map(a=>{
-                  const cur = sci.head||'none';
-                  return `<button class="optPill${a.id===cur?' active':''}" onclick="applyOption('head',${a.id==='none'?'null':"'"+a.id+"'"})">${a.icon} ${a.name}</button>`;
-                }).join('')}</div>`
-            }
-          </div>
-          <div class="custSection">
-            <div class="custLabel">Face Accessory</div>
-            <div class="optRow">${SHOP.faceAccessories.filter(a=> sd.is_teacher || a.free || owned.includes(a.id)).map(a=>{
-              const cur = sci.face||'none';
-              return `<button class="optPill${a.id===cur?' active':''}" onclick="applyOption('face',${a.id==='none'?'null':"'"+a.id+"'"})">${a.icon} ${a.name}</button>`;
-            }).join('')}</div>
-          </div>
-          <div class="custSection">
-            <div class="custLabel">Wings</div>
-            <div class="optRow">${SHOP.wings.filter(a=> sd.is_teacher || a.free || owned.includes(a.id)).map(a=>{
-              const cur = sci.wings||'none';
-              return `<button class="optPill${a.id===cur?' active':''}" onclick="applyOption('wings',${a.id==='none'?'null':"'"+a.id+"'"})">${a.icon} ${a.name}</button>`;
-            }).join('')}</div>
-          </div>
-          <!-- Pet companion section hidden for now -->
-          <div class="custSection" id="effectCustSection">
-            <div class="custLabel">Particle Effect</div>
-            ${renderCurrentEffect(sd)}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB 2: Badges -->
-    <div id="tab-badges" class="tabPanel">
-      <!-- Badge Pins section -->
-      <div class="shopSection" style="margin-bottom:20px;">
-        <div class="shopSectionTitle">📌 Badge Pins <span style="font-size:10px;font-weight:700;color:var(--muted);margin-left:6px;">Pin up to 3 badges on your lab coat!</span></div>
-        <div class="badgePinsGrid">
-          ${(function() {
-            const pins = (sci.displayBadges || []);
-            const allB = [].concat(WordLabData.ALL_BADGES, WordLabData.LEGENDARY_BADGES);
-            const earnedBadges = allB.filter(b => sd.badges.includes(b.id));
-            var items = '';
-
-            // Streak Flame — always available as first option
-            var streakDays = 0;
-            try { streakDays = WordLabData.updateDailyStreak().count || 0; } catch(e) {}
-            var flameLabel = streakDays > 0 ? streakDays + ' day streak' : 'No streak yet';
-            var flamePinned = pins.includes('streak_flame');
-            var flameCanPin = pins.length < 3;
-            var flameBtn = '';
-            if (flamePinned) {
-              flameBtn = '<button class="shopBtn equipped" onclick="unpinBadge(\'streak_flame\')">📌 Pinned</button>';
-            } else if (flameCanPin) {
-              flameBtn = '<button class="shopBtn equip" onclick="pinBadge(\'streak_flame\')">Pin</button>';
-            } else {
-              flameBtn = '<span class="shopBtn cantafford">3 pinned</span>';
-            }
-            var flameIntensity = streakDays >= 30 ? 'Legendary' : streakDays >= 14 ? 'Blazing' : streakDays >= 7 ? 'Hot' : streakDays >= 3 ? 'Warming' : 'Spark';
-            items += '<div class="shopItem owned" style="border-color:#f59e0b;background:linear-gradient(135deg,#fffbeb,#fef3c7);">' +
-              '<div class="shopItemIcon" style="font-size:28px;">🔥</div>' +
-              '<div class="shopItemName" style="color:#92400e;">Streak Flame</div>' +
-              '<div class="shopItemCost" style="font-size:9px;color:#b45309;">' + flameIntensity + ' — ' + flameLabel + '</div>' +
-              flameBtn +
-            '</div>';
-
-            if (earnedBadges.length === 0 && !flamePinned) {
-              items += '<div style="color:var(--muted);font-size:12px;font-weight:700;padding:12px;grid-column:span 2;">Earn badges to pin more on your coat!</div>';
-            }
-            items += earnedBadges.map(b => {
-              const isPinned = pins.includes(b.id);
-              const canPin = pins.length < 3;
-              let btn = '';
-              if (isPinned) {
-                btn = '<button class="shopBtn equipped" onclick="unpinBadge(\'' + b.id + '\')">📌 Pinned</button>';
-              } else if (canPin) {
-                btn = '<button class="shopBtn equip" onclick="pinBadge(\'' + b.id + '\')">Pin</button>';
-              } else {
-                btn = '<span class="shopBtn cantafford">3 pinned</span>';
-              }
-              return '<div class="shopItem owned">' +
-                '<div class="shopItemIcon">' + b.icon + '</div>' +
-                '<div class="shopItemName">' + b.label + '</div>' +
-                '<div class="shopItemCost" style="font-size:9px;">Free</div>' +
-                btn +
-              '</div>';
-            }).join('');
-            return items;
-          })()}
-        </div>
-      </div>
-      <div class="badgesGrid">
-        ${WordLabData.ALL_BADGES.map(b=>{
-          const earned = sd.badges.includes(b.id);
-          return `<div class="badgeCard${earned?' earned':' badgeLocked'}">
-            <div class="badgeIcon">${b.icon}</div>
-            <div class="badgeName">${b.label}</div>
-            <div class="badgeDesc">${b.desc}</div>
-          </div>`;
-        }).join('')}
-      </div>
-      <div class="badgeSectionTitle">⭐ Legendary Badges</div>
-      <div class="badgesGrid">
-        ${WordLabData.LEGENDARY_BADGES.map(b=>{
-          const earned = sd.badges.includes(b.id);
-          return `<div class="badgeCard legendary${earned?' earned':' badgeLocked'}">
-            <div class="badgeIcon">${b.icon}</div>
-            <div class="badgeName">${b.label}</div>
-            <div class="badgeDesc">${b.desc}</div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>
-
-    <!-- TAB 3: Shop -->
-    <div id="tab-shop" class="tabPanel">
-      <div class="shopBalance">
-        <span style="font-size:28px;">⚛️</span>
-        <div><div class="shopBalanceAmt">${sd.quarks}</div><div class="shopBalanceLbl">quarks available</div></div>
-      </div>
-      ${renderShopSection('Coat Colours',       SHOP.coatColors,      'coatColor',    sd)}
-      ${renderShopSection('Coat Patterns',      SHOP.coatPatterns,    'coatPattern',  sd)}
-      ${renderShopSection('Head Accessories',   SHOP.headAccessories, 'head',         sd)}
-      ${renderShopSection('Face Accessories',   SHOP.faceAccessories, 'face',         sd)}
-      ${renderShopSection('Wings',              SHOP.wings,           'wings',        sd)}
-      <!-- Pet shop section hidden for now -->
-      <div class="shopSection">
-        <div class="shopSectionTitle">✨ Particle Effects</div>
-        <div class="shopGrid" id="effectsGrid">${renderEffectsSection(sd)}</div>
-      </div>
-      <div id="customItemsSection" class="shopSection" style="display:none;">
-        <div class="shopSectionTitle">🎨 Custom Items</div>
-        <div class="shopGrid" id="customItemsGrid"></div>
-      </div>
-    </div>
-
-    <!-- TAB 4: Dance Moves -->
-    <div id="tab-dances" class="tabPanel">
-      <div class="shopBalance">
-        <span style="font-size:28px;">⚛️</span>
-        <div><div class="shopBalanceAmt">${sd.quarks}</div><div class="shopBalanceLbl">quarks available</div></div>
-      </div>
-      <p style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:16px;">Buy dance moves that play when you get correct answers and streaks!</p>
-      ${renderDanceSection('Correct Answer ⬆️', SHOP.dances.correct, 'correct', sd)}
-      ${renderDanceSection('3 Streak 🔥', SHOP.dances.streak3, 'streak3', sd)}
-      ${renderDanceSection('5 Streak ⚡', SHOP.dances.streak5, 'streak5', sd)}
-      ${renderDanceSection('10 Streak 💪', SHOP.dances.streak10, 'streak10', sd)}
-      ${renderDanceSection('15 Streak 🎉', SHOP.dances.streak15, 'streak15', sd)}
-      ${renderDanceSection('30+ Streak 🌟 Legendary', SHOP.dances.streak30, 'streak30', sd)}
-    </div>
-
-    <!-- TAB 5: Particle Effects -->
-    <div id="tab-effects" class="tabPanel">
-      <div class="shopBalance">
-        <span style="font-size:28px;">⚛️</span>
-        <div><div class="shopBalanceAmt">${sd.quarks}</div><div class="shopBalanceLbl">quarks available</div></div>
-      </div>
-      ${renderCurrentEffect(sd)}
-      <div style="margin-top:20px;">
-        <div class="shopSectionTitle">✨ All Particle Effects</div>
-        <div class="shopGrid">${renderEffectsSection(sd)}</div>
-      </div>
-    </div>
-
-    <!-- TAB 5: Custom Items -->
-    <div id="tab-custom" class="tabPanel">
-      <div class="shopBalance">
-        <span style="font-size:28px;">⚛️</span>
-        <div><div class="shopBalanceAmt">${sd.quarks}</div><div class="shopBalanceLbl">quarks available</div></div>
-      </div>
-      <div class="shopSection">
-        <div class="shopSectionTitle">🎨 Custom Items from Your Teacher</div>
-        <div class="shopGrid" id="customItemsGridTab"></div>
-        <div id="customItemsTabEmpty" style="color:#64748b;font-size:13px;font-style:italic;padding:16px;">Loading custom items...</div>
-      </div>
-    </div>
-  `;
-
-  // Restore active tab after re-render
-  if (_activeTab !== 'scientist') {
-    const tabPanel = document.getElementById('tab-' + _activeTab);
-    const tabBtns = document.querySelectorAll('.tabBtn');
-    if (tabPanel) {
-      document.querySelectorAll('.tabPanel').forEach(p => p.classList.remove('active'));
-      tabBtns.forEach(b => b.classList.remove('active'));
-      tabPanel.classList.add('active');
-      tabBtns.forEach(b => { if (b.getAttribute('data-tab') === _activeTab) b.classList.add('active'); });
-    }
-  }
-  // Load custom items if on shop or custom tab
-  if (_activeTab === 'shop' || _activeTab === 'custom') {
-    loadCustomShopItems(sd);
+  /* Auth guard: redirect to landing if no student session */
+  const session = WordLabData.getSession();
+  if (!session) {
+    window.location.href = 'landing.html';
+    return;
   }
 
-  // Restart effect on the big scientist card now that #sciSVGBig exists
-  if (typeof WLScientist !== 'undefined') WLScientist._restartEffects(sd);
-
-  // Keep the persistent header widget (avatar, quarks, level) in sync after any
-  // customisation, purchase or equip — render() rebuilds #main-content only.
-  if (typeof WLScientist !== 'undefined' && WLScientist.refresh) WLScientist.refresh();
-}
-
-function renderShopSection(title, items, field, sd) {
-  const sci   = sd.scientist || {};
-  const owned = sci.owned || [];
-  const curVal = (field==='head'||field==='face'||field==='pet'||field==='wings') ? (sci[field]||null) : sci[field];
-  const esc = WordLabData.escapeHtml;
-  return `<div class="shopSection">
-    <div class="shopSectionTitle">${title}</div>
-    <div class="shopGrid">${items.map(item => {
-      const safeId = esc(item.id);
-      const safeField = esc(field);
-      const isOwned   = sd.is_teacher || item.free || owned.includes(item.id) || item.id === '#ffffff' || item.id === 'plain' || item.id === 'none';
-      const isEquipped= item.id === curVal || (item.id==='none' && !curVal);
-      const canAfford = sd.quarks >= item.cost;
-      const reqBadge  = item.requiresBadge;
-      const hasReqBadge = sd.is_teacher || !reqBadge || sd.badges.includes(reqBadge);
-      const allBadges = [...(WordLabData.ALL_BADGES||[]), ...(WordLabData.LEGENDARY_BADGES||[])];
-      const reqBadgeLabel = reqBadge ? (allBadges.find(b=>b.id===reqBadge)||{}).label : '';
-      let btn = '';
-      if (isEquipped) {
-        btn = `<span class="shopBtn equipped">✓ Equipped</span>`;
-      } else if (isOwned) {
-        btn = `<button class="shopBtn equip" onclick="shopEquip('${safeField}','${safeId}')">Equip</button>`;
-      } else if (!hasReqBadge) {
-        btn = `<span class="shopBtn cantafford">🔒 Requires: ${reqBadgeLabel}</span>`;
-      } else if (item.cost === 0 && reqBadge) {
-        btn = `<button class="shopBtn buy" onclick="shopBuy('${safeId}',0,'${safeField}')">🏅 Claim Free</button>`;
-      } else if (canAfford) {
-        btn = `<button class="shopBtn buy" onclick="shopBuy('${safeId}',${item.cost},'${safeField}')">⚛️ ${item.cost}</button>`;
-      } else {
-        btn = `<span class="shopBtn cantafford">Need ${item.cost - sd.quarks} more ⚛️</span>`;
-      }
-      const preview = item.id.startsWith('#') ? `<div class="shopItemIcon" style="width:24px;height:24px;border-radius:50%;background:${item.id};border:2px solid var(--line);margin:0 auto;"></div>` : `<div class="shopItemIcon">${item.icon||'🎨'}</div>`;
-      return `<div class="shopItem${isOwned?' owned':''}${item.legendary?' legendary':''}">
-        ${preview}
-        <div class="shopItemName">${item.name}</div>
-        <div class="shopItemCost">${item.free?'Free':item.legendary?'Legendary':(item.cost===0&&item.requiresBadge)?'🏅 Badge':('⚛️ '+item.cost)}</div>
-        ${btn}
-      </div>`;
-    }).join('')}</div>
-  </div>`;
-}
-
-function renderDanceSection(title, items, tier, sd) {
-  const sci = sd.scientist || {};
-  const owned = sci.owned || [];
-  const esc = WordLabData.escapeHtml;
-  const safeTier = esc(tier);
-  const equippedId = (sci.dances || {})[tier] || items[0].id;
-  return `<div class="shopSection">
-    <div class="shopSectionTitle">${title}</div>
-    <div class="shopGrid">${items.map(function(item) {
-      const safeId = esc(item.id);
-      const isOwned = sd.is_teacher || item.free || owned.includes('dance_' + item.id);
-      const isEquipped = item.id === equippedId || (item.free && !((sci.dances||{})[tier]) && item === items[0]);
-      const canAfford = sd.quarks >= item.cost;
-      let btn = '';
-      if (isEquipped) {
-        btn = '<span class="shopBtn equipped">✓ Equipped</span>';
-      } else if (isOwned) {
-        btn = '<button class="shopBtn equip" onclick="shopEquipDance(\'' + safeTier + '\',\'' + safeId + '\')">Equip</button>';
-      } else if (canAfford) {
-        btn = '<button class="shopBtn buy" onclick="shopBuyDance(\'' + safeId + '\',' + item.cost + ',\'' + safeTier + '\')">⚛️ ' + item.cost + '</button>';
-      } else {
-        btn = '<span class="shopBtn cantafford">Need ' + (item.cost - sd.quarks) + ' more ⚛️</span>';
-      }
-      return '<div class="shopItem' + (isOwned ? ' owned' : '') + (item.legendary ? ' legendary' : '') + '">' +
-        '<div class="shopItemIcon">' + item.icon + '</div>' +
-        '<div class="shopItemName">' + item.name + '</div>' +
-        '<div class="shopItemCost" style="font-size:9px;color:var(--muted);">' + item.desc + '</div>' +
-        '<div class="shopItemCost">' + (item.free ? 'Free' : item.legendary ? 'Legendary' : '⚛️ ' + item.cost) + '</div>' +
-        btn +
-        '<button class="shopBtn" style="background:none;border:1px solid var(--line);color:var(--muted);font-size:9px;margin-top:2px;" onclick="previewDance(\'' + item.id + '\')">▶ Preview</button>' +
-      '</div>';
-    }).join('')}</div>
-  </div>`;
-}
-
-function renderEffectsSection(sd) {
-  if (typeof WLEffects === 'undefined') return '<div style="color:#64748b;font-size:13px;">Effects loading...</div>';
-  const sci = sd.scientist || {};
-  const owned = sci.owned || [];
-  const curEffect = sci.effect || null;
-  const isTeacher = sd.is_teacher;
-  const rarityColors = { common:'#94a3b8', rare:'#3b82f6', epic:'#a855f7', legendary:'#f59e0b' };
-  const rarityBg    = { common:'#f8fafc',  rare:'#eff6ff',  epic:'#faf5ff',  legendary:'#fffbeb' };
-
-  return Object.entries(WLEffects.EFFECTS).map(([id, eff]) => {
-    const effectOwnId = 'effect_' + id;
-    const isOwned = isTeacher || eff.cost === 0 || owned.includes(effectOwnId);
-    const hasBadge = isTeacher || !eff.requiresBadge || sd.badges.includes(eff.requiresBadge);
-    const canAfford = sd.quarks >= eff.cost;
-    const isEquipped = curEffect === id;
-    const borderColor = rarityColors[eff.rarity] || '#e2e8f0';
-    const bgColor = rarityBg[eff.rarity] || '#fff';
-
-    let btn = '';
-    if (!hasBadge) {
-      btn = `<span class="shopBtn cantafford" title="Requires ${eff.requiresBadge} badge">🔒 Badge needed</span>`;
-    } else if (isOwned && isEquipped) {
-      btn = `<button class="shopBtn equipped" onclick="applyEffect(null)">✓ Equipped — Remove</button>`;
-    } else if (isOwned) {
-      btn = `<button class="shopBtn equip" onclick="applyEffect('${id}')">Equip</button>`;
-    } else if (canAfford) {
-      btn = `<button class="shopBtn buy" onclick="buyEffect('${id}',${eff.cost})">⚛️ ${eff.cost}</button>`;
-    } else {
-      btn = `<span class="shopBtn cantafford">Need ${eff.cost - sd.quarks} more ⚛️</span>`;
-    }
-
-    return `<div class="shopItem" id="effectCard_${id}" style="border:3px solid ${borderColor};background:${bgColor};position:relative;">
-      <div style="font-size:28px;">${eff.icon}</div>
-      <div class="shopItemName">${eff.name}</div>
-      <div style="font-size:10px;font-weight:700;color:${borderColor};text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">${eff.rarity}</div>
-      <div style="font-size:10px;color:#64748b;text-align:center;margin-bottom:4px;">${eff.desc}</div>
-      ${btn}
-    </div>`;
-  }).join('');
-}
-
-function renderCurrentEffect(sd) {
-  if (typeof WLEffects === 'undefined') return '';
-  const curEffect = (sd.scientist||{}).effect || null;
-  if (!curEffect || !WLEffects.EFFECTS[curEffect]) {
-    return `<div style="color:#64748b;font-size:13px;font-style:italic;">No effect equipped. Visit the shop to add one!</div>`;
-  }
-  const eff = WLEffects.EFFECTS[curEffect];
-  return `<div style="display:flex;align-items:center;gap:10px;background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:10px 14px;">
-    <span style="font-size:24px;">${eff.icon}</span>
-    <div>
-      <div style="font-size:13px;font-weight:900;color:#312e81;">${eff.name}</div>
-      <div style="font-size:11px;color:#64748b;">${eff.desc}</div>
-    </div>
-    <button style="margin-left:auto;border:none;background:#fee2e2;color:#dc2626;font-weight:800;font-size:11px;border-radius:8px;padding:4px 10px;cursor:pointer;" onclick="applyEffect(null)">Remove</button>
-  </div>`;
-}
-
-async function applyEffect(effectId) {
-  try {
-    await WordLabData.saveScientist({ effect: effectId });
-  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
-  await render();
-  // render() recreates #sciSVGBig so restart effect afterwards
-  if (typeof WLScientist !== 'undefined') {
-    const sd = await WordLabData.getStudentData();
-    WLScientist._restartEffects(sd);
-  }
-}
-
-async function buyEffect(effectId, cost) {
-  let result;
-  try {
-    result = await WordLabData.purchase('effect_' + effectId, cost);
-  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
-  if (!result.success) { alert(purchaseFailMsg(result)); return; }
-  try {
-    await WordLabData.saveScientist({ effect: effectId });
-  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
-  if (typeof WLEffects !== 'undefined' && document.getElementById('wlScientistWidget')) {
-    WLEffects.start(effectId, document.getElementById('wlScientistWidget'));
-  }
-  await render();
-}
-
-function switchTab(id, btn) {
-  _activeTab = id;
-  document.querySelectorAll('.tabPanel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tabBtn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-'+id).classList.add('active');
-  btn.classList.add('active');
-  if (id === 'shop' || id === 'custom') {
-    WordLabData.getStudentData().then(sd => { if (sd) loadCustomShopItems(sd); });
-  }
-}
-
-async function applyOption(field, value) {
-  const updates = {};
-  updates[field] = value === 'null' ? null : value;
-  try {
-    await WordLabData.saveScientist(updates);
-  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
-  const sci = await WordLabData.getScientist();
-  // buildSVG returns trusted SVG markup from internal data only
-  document.getElementById('sciSVGBig').innerHTML = WLScientist.buildSVG(sci, 'neutral');
-  await render();
-}
-
-async function shopBuy(itemId, cost, field) {
-  let result;
-  try {
-    result = await WordLabData.purchase(itemId, cost);
-  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
-  if (!result.success) { alert(purchaseFailMsg(result)); return; }
-  const updates = {};
-  updates[field] = itemId;
-  if (field==='head'||field==='face'||field==='pet'||field==='wings') updates[field] = itemId==='none'?null:itemId;
-  try {
-    await WordLabData.saveScientist(updates);
-  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
-  await render();
-}
-
-async function shopEquip(field, itemId) {
-  const updates = {};
-  updates[field] = (itemId==='none' || itemId==='null') ? null : itemId;
-  try {
-    await WordLabData.saveScientist(updates);
-  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
-  await render();
-}
-
-// ── Badge Pins ────────────────────────────────────────────────
-async function pinBadge(badgeId) {
-  const sci = await WordLabData.getScientist() || {};
-  const pins = (sci.displayBadges || []).slice();
-  if (pins.length >= 3 || pins.includes(badgeId)) return;
-  pins.push(badgeId);
-  try {
-    await WordLabData.saveScientist({ displayBadges: pins });
-  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
-  await render();
-}
-async function unpinBadge(badgeId) {
-  const sci = await WordLabData.getScientist() || {};
-  const pins = (sci.displayBadges || []).filter(function(id) { return id !== badgeId; });
-  try {
-    await WordLabData.saveScientist({ displayBadges: pins });
-  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
-  await render();
-}
-
-// ── Dance Moves ───────────────────────────────────────────────
-async function shopBuyDance(danceId, cost, tier) {
-  let result;
-  try {
-    result = await WordLabData.purchase('dance_' + danceId, cost);
-  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
-  if (!result.success) { alert(purchaseFailMsg(result)); return; }
-  const sci = await WordLabData.getScientist() || {};
-  const dances = Object.assign({}, sci.dances || {});
-  dances[tier] = danceId;
-  try {
-    await WordLabData.saveScientist({ dances: dances });
-  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
-  await render();
-}
-async function shopEquipDance(tier, danceId) {
-  const sci = await WordLabData.getScientist() || {};
-  const dances = Object.assign({}, sci.dances || {});
-  dances[tier] = danceId;
-  try {
-    await WordLabData.saveScientist({ dances: dances });
-  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
-  await render();
-}
-function previewDance(danceId) {
-  if (typeof WLScientist !== 'undefined' && WLScientist._previewDance) {
-    WLScientist._previewDance(danceId);
-  }
-}
-
-// ── Custom shop items from Supabase ───────────────────────────
-const _SUPABASE_URL  = 'https://kdpavfrzmmzknqfpodrl.supabase.co';
-const _SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkcGF2ZnJ6bW16a25xZnBvZHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjgzOTIsImV4cCI6MjA5MDAwNDM5Mn0.n5fe7HvXWMsM4xN_iaU_N4xLkC5xD4y9Uoer_DG-dlg';
-let _sciSb = null;
-function getSciSb() {
-  if (!_sciSb) _sciSb = window.supabase.createClient(_SUPABASE_URL, _SUPABASE_ANON);
-  return _sciSb;
-}
-
-// Cache of custom shop items: id → { item_type, image_data } (image_data = URL or base64)
-let _customItemsData = {};
-
-async function loadCustomShopItems(sd) {
-  const section = document.getElementById('customItemsSection');
-  const grid    = document.getElementById('customItemsGrid');
-  const tabGrid = document.getElementById('customItemsGridTab');
-  const tabEmpty = document.getElementById('customItemsTabEmpty');
-  if (!section && !grid && !tabGrid) return;
-
-  let items;
-  try {
-    const { data, error } = await getSciSb().from('shop_items').select('id,name,item_type,rarity,unlock_method,quark_cost,is_active,available_from,available_until,milestone_type,milestone_threshold,secret_code,limited_days,release_date,image_url,image_data').eq('is_active', true);
-    if (error) throw error;
-    items = data || [];
-  } catch(e) {
-    return; // silently fail — custom items are optional
+  /* Low-stim: refresh setting from class DB record and apply body.low-stim.
+   * wordlab-data.js auto-applies from sessionStorage at parse time (synchronous),
+   * but calling loadLowStimMode here refreshes from the DB so changes the teacher
+   * made since last login are picked up. Fire-and-forget: no need to await here
+   * since rendering proceeds regardless of the outcome. */
+  if (session.classId && typeof WordLabData.loadLowStimMode === 'function') {
+    WordLabData.loadLowStimMode(session.classId).catch(function() {});
   }
 
-  // Populate cache so equipCustomItem can find image_data without another DB call
-  _customItemsData = {};
-  items.forEach(item => {
-    const url = item.image_url && item.image_url.trim() !== 'null' && item.image_url.startsWith('http') ? item.image_url.trim() : null;
-    _customItemsData[item.id] = { item_type: item.item_type, image_data: url || item.image_data };
+  const data = await WordLabData.getStudentData();
+  if (!data) {
+    window.location.href = 'landing.html';
+    return;
+  }
+
+  WL.scientist = data.scientist || {};
+  WL.stats     = data.stats    || {};
+  WL.quarks    = data.quarks   || 0;
+  WL.xp        = data.xp      || 0;
+  WL.level     = data.level;            // { level, title, progress, xpToNext } — from getLevel()
+  WL.badges    = data.badges   || [];   // array of earned badge IDs — scientist.html: sd.badges.length
+  WL.owned     = WL.scientist.owned || [];
+
+  /* XSS-safe: textContent only */
+  document.getElementById('studentName').textContent =
+    data.name || session.studentName || 'Scientist';
+
+  WL.renderQuarks();
+
+  /* Later tasks attach WL.renderStage / WL.renderStats / WL.renderShop */
+  if (typeof WL.renderStage === 'function') WL.renderStage();
+  if (typeof WL.renderStats  === 'function') WL.renderStats();
+  if (typeof WL.renderShop   === 'function') WL.renderShop();
+};
+
+document.addEventListener('DOMContentLoaded', WL.boot);
+
+/* ══════════════════════════════════════════════════════════════════
+   Task 4: Category pills + Colours / Patterns grids + live equip
+   ══════════════════════════════════════════════════════════════════
+
+   ownKey format — confirmed from scientist.html:
+     colours / patterns / heads / faces / wings → bare item.id     (lines 862,869,885,893,900)
+     dances   → 'dance_'  + item.id                                (line 1136)
+     effects  → 'effect_' + item.id                                (line 1171)
+     custom   → 'custom_' + item.id                                (line 1416)
+
+   field names confirmed from scientist.html renderShopSection calls (lines 1002–1006):
+     coatColor, coatPattern, head, face, wings, effect
+*/
+
+/* ── WL.CATS — 9 Phase 1 categories ────────────────────────────── */
+WL.CATS = [
+  {id:'colours', label:'Colours', icon:'🎨', field:'coatColor',   src:function(){ return WLShopData.colours;  }},
+  {id:'patterns',label:'Patterns',icon:'▦',  field:'coatPattern', src:function(){ return WLShopData.patterns; }},
+  {id:'heads',   label:'Head',    icon:'🎩', field:'head',         src:function(){ return WLShopData.heads;    }},
+  {id:'faces',   label:'Face',    icon:'👓', field:'face',         src:function(){ return WLShopData.faces;    }},
+  {id:'wings',   label:'Wings',   icon:'🪽', field:'wings',        src:function(){ return WLShopData.wings;    }},
+  {id:'effects', label:'Effects', icon:'✨', field:'effect',       src:function(){ return WL.effectList ? WL.effectList() : []; }},
+  {id:'dances',  label:'Dances',  icon:'💃', src:function(){ return (typeof WLShopData !== 'undefined') ? WLShopData.dances : []; }},  // Task 6
+  {id:'badges',  label:'Badges',  icon:'🏅'},   // Task 7
+  {id:'custom',  label:'Custom',  icon:'🎨'},   // Task 8
+];
+
+/* ── WL.effectList — Task 6: adapter over WLEffects.EFFECTS ───────
+ * Maps each WLEffects.EFFECTS entry to a flat item object compatible with
+ * WL.cardEl. Icons sourced from WLEffects.EFFECTS[id].icon — confirmed
+ * from scientist.html renderEffectsSection (each card shows eff.icon at 28px).
+ * Generic ✨ fallback used if an entry lacks an icon property.
+ */
+WL.effectList = function() {
+  if (typeof WLEffects === 'undefined' || !WLEffects.EFFECTS) return [];
+  return Object.entries(WLEffects.EFFECTS).map(function(entry) {
+    var id = entry[0], e = entry[1];
+    return {
+      id:       id,
+      name:     e.name,
+      cost:     e.cost     || 0,
+      free:     (e.cost    || 0) === 0,
+      rarity:   e.rarity   || 'common',
+      requires: e.requiresBadge || null,
+      icon:     e.icon     || '✨',
+      desc:     e.desc     || '',
+    };
+  });
+};
+
+/* ── WL.ownKey — must EXACTLY match scientist.html's owned[] keys ─ */
+WL.ownKey = function(cat, item) {
+  if (cat.id === 'dances')  return 'dance_'  + item.id;
+  if (cat.id === 'effects') return 'effect_' + item.id;
+  if (cat.id === 'custom')  return 'custom_' + item.id;
+  return item.id;   // colours, patterns, heads, faces, wings: bare id
+};
+
+/* ── Swatch helpers ─────────────────────────────────────────────── */
+
+/* _colourBg: CSS background value for a coat-colour swatch.
+ * Matches scientist.html line 863 rainbow/holographic logic.
+ */
+WL._colourBg = function(item) {
+  if (item.id === 'rainbow')
+    return 'linear-gradient(135deg,#f87171,#fb923c,#facc15,#4ade80,#60a5fa,#a78bfa)';
+  if (item.id === 'holographic')
+    return 'linear-gradient(135deg,#c0d0ff,#d4b0ff,#ffd4f8,#ffa8d0,#ffb8a8,#ffe0a0)';
+  return item.id;   // hex colour string
+};
+
+/* _patternBg: CSS background-image value for a pattern swatch.
+ * Uses SVG data URIs that reuse the EXACT pattern shapes from wordlab-scientist.js
+ * (lines 166–191) so the swatch preview matches the worn coat result.
+ * Returns null for 'plain' (no overlay needed).
+ */
+WL._patternBg = function(patId) {
+  if (patId === 'plain') return null;
+  var base = '#e8e8e8';
+  var pats = {
+    stripes:
+      '<pattern id="p" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">' +
+      '<rect width="8" height="8" fill="' + base + '"/>' +
+      '<line x1="0" y1="0" x2="8" y2="8" stroke="rgba(0,0,0,0.25)" stroke-width="2"/></pattern>',
+    molecules:
+      '<pattern id="p" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse">' +
+      '<rect width="14" height="14" fill="' + base + '"/>' +
+      '<circle cx="7" cy="7" r="2" fill="rgba(0,0,0,0.18)"/>' +
+      '<circle cx="2" cy="2" r="1.2" fill="rgba(0,0,0,0.12)"/>' +
+      '<circle cx="12" cy="12" r="1.2" fill="rgba(0,0,0,0.12)"/></pattern>',
+    stars:
+      '<pattern id="p" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse">' +
+      '<rect width="12" height="12" fill="' + base + '"/>' +
+      '<text x="2" y="10" font-size="8" opacity="0.35">&#9733;</text></pattern>',
+    dots:
+      '<pattern id="p" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">' +
+      '<rect width="10" height="10" fill="' + base + '"/>' +
+      '<circle cx="5" cy="5" r="2.5" fill="rgba(0,0,0,0.18)"/></pattern>',
+    chevrons:
+      '<pattern id="p" x="0" y="0" width="12" height="8" patternUnits="userSpaceOnUse">' +
+      '<rect width="12" height="8" fill="' + base + '"/>' +
+      '<path d="M0,4 L6,0 L12,4" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="1.5"/></pattern>',
+    hearts:
+      '<pattern id="p" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse">' +
+      '<rect width="12" height="12" fill="' + base + '"/>' +
+      '<path d="M6,10 C2,7 0,4 3,2 C5,1 6,3 6,3 C6,3 7,1 9,2 C12,4 10,7 6,10Z"' +
+      ' fill="rgba(0,0,0,0.15)"/></pattern>',
+    lightning:
+      '<pattern id="p" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse">' +
+      '<rect width="14" height="14" fill="' + base + '"/>' +
+      '<path d="M8,1 L5,6 L8,6 L4,13" fill="none" stroke="rgba(0,0,0,0.22)" stroke-width="1.2"/></pattern>',
+    dna:
+      '<pattern id="p" x="0" y="0" width="10" height="20" patternUnits="userSpaceOnUse">' +
+      '<rect width="10" height="20" fill="' + base + '"/>' +
+      '<path d="M2,0 Q5,5 8,10 Q5,15 2,20" fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="1"/>' +
+      '<path d="M8,0 Q5,5 2,10 Q5,15 8,20" fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="1"/>' +
+      '<line x1="3" y1="5" x2="7" y2="5" stroke="rgba(0,0,0,0.1)" stroke-width="0.8"/>' +
+      '<line x1="3" y1="15" x2="7" y2="15" stroke="rgba(0,0,0,0.1)" stroke-width="0.8"/></pattern>',
+    plaid:
+      '<pattern id="p" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse">' +
+      '<rect width="12" height="12" fill="' + base + '"/>' +
+      '<line x1="0" y1="4" x2="12" y2="4" stroke="rgba(0,0,0,0.15)" stroke-width="2"/>' +
+      '<line x1="0" y1="10" x2="12" y2="10" stroke="rgba(0,0,0,0.1)" stroke-width="1"/>' +
+      '<line x1="4" y1="0" x2="4" y2="12" stroke="rgba(0,0,0,0.15)" stroke-width="2"/>' +
+      '<line x1="10" y1="0" x2="10" y2="12" stroke="rgba(0,0,0,0.1)" stroke-width="1"/></pattern>',
+  };
+  if (!pats[patId]) return null;
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60">' +
+            '<defs>' + pats[patId] + '</defs>' +
+            '<rect width="60" height="60" fill="url(#p)"/></svg>';
+  return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")';
+};
+
+/* ── WL.miniPreview — mini real-SVG scientist for Head/Face/Wings ──
+ * Builds a minimal scientist object (neutral outfit, only the single
+ * accessory from `item` set), renders it via WLScientist.buildSVG,
+ * and wraps the result in a .lab-mini div sized to the 70 px preview area.
+ * For 'faces': adds .lab-mini--face to zoom/crop to the face region.
+ * innerHTML is intentional here — the SVG comes only from our trusted
+ * WLScientist.buildSVG builder, never from user-supplied strings.
+ */
+WL.miniPreview = function(cat, item) {
+  if (typeof WLScientist === 'undefined') { return document.createElement('span'); }
+
+  /* Minimal scientist: default skin, plain white coat, no accessories */
+  var base = {
+    skinTone:    (WL.scientist && WL.scientist.skinTone) || '#FDBCB4',
+    coatColor:   '#ffffff',
+    coatPattern: 'plain',
+    head:        null,
+    face:        null,
+    wings:       null,
+  };
+
+  /* Set ONLY the field for this category (skip 'none' or falsy — null shows bare scientist) */
+  if (item.id && item.id !== 'none') {
+    base[cat.field] = item.id;
+  }
+
+  var wrap = document.createElement('div');
+  /* .lab-mini--face triggers the CSS zoom/crop that reveals face accessories */
+  wrap.className = 'lab-mini' + (cat.id === 'faces' ? ' lab-mini--face' : '');
+  wrap.setAttribute('aria-hidden', 'true');
+  wrap.innerHTML = WLScientist.buildSVG(base, 'neutral'); // trusted SVG builder — not user input
+  return wrap;
+};
+
+/* ── WL.cardEl — builds one card <button> ───────────────────────── */
+WL.cardEl = function(item, cat) {
+  var isFree   = !!(item.free || item.cost === 0);
+  var isOwned  = isFree || WL.owned.includes(WL.ownKey(cat, item));
+
+  /* ── Task 9: Badge-gating — matches scientist.html renderShopSection (lines 1097-1107)
+   * and renderEffectsSection (lines 1172-1181).
+   * Effects expose badge via item.requires; all other categories use item.requiresBadge.
+   * Rule: if item has a requiresBadge/requires field AND student doesn't hold that badge
+   *       → item is badge-locked: cannot be equipped OR purchased with quarks.
+   */
+  var reqBadge = (cat.id === 'effects') ? item.requires : item.requiresBadge;
+  var hasReqBadge = !reqBadge || (WL.badges && WL.badges.includes(reqBadge));
+  var isLocked = !hasReqBadge;   // true = badge gate is blocking
+
+  // Dances: equipped state is keyed per-tier, not a single scientist field.
+  // Task 6: (WL.scientist.dances||{})[item.tier] === item.id
+  var equipped;
+  if (cat.id === 'dances') {
+    var dancesMap = (WL.scientist && WL.scientist.dances) || {};
+    equipped = (dancesMap[item.tier] === item.id);
+  } else {
+    equipped = !!(WL.scientist && cat.field && WL.scientist[cat.field] === item.id);
+  }
+  var rarity   = WLShopData.rarityOf(item);  // 'legendary'|'epic'|'rare'|'common'
+
+  /* Outer card — a real <button> with role="listitem" (grid has role="list") */
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.setAttribute('role', 'listitem');
+  btn.className = 'lab-card' +
+    (equipped           ? ' is-equipped'     : '') +
+    (isLocked           ? ' is-badge-locked' : '') +
+    (rarity==='legendary'? ' is-legendary'   : '') +
+    (rarity==='epic'     ? ' is-epic'        : '');
+
+  /* Staggered float animation: delay is random-feeling (idx not available here, id used).
+   * Duration varies per card per spec §12.4: (3 + (idLen % 4) * 0.4)s — gives 3.0–4.2 s range.
+   * Delay: (idLen % 5) * 0.2s — small phase offset so not all cards move in unison. */
+  var idLen = item.id.length;
+  btn.style.animationDuration = (3 + (idLen % 4) * 0.4).toFixed(1) + 's';
+  btn.style.animationDelay    = ((idLen % 5) * 0.2).toFixed(1) + 's';
+
+  /* aria-label: name + price + state (no colour-only meaning) */
+  var priceLabel = isFree ? 'free' : item.cost + ' quarks';
+  var stateLabel = isLocked  ? 'badge locked'
+                : equipped   ? 'equipped'
+                : isOwned    ? 'owned'
+                : 'not owned';
+  btn.setAttribute('aria-label', item.name + ', ' + priceLabel + ', ' + stateLabel);
+
+  /* ── Rarity badge (top-left, only for non-common) ── */
+  if (rarity !== 'common') {
+    var badge = document.createElement('span');
+    badge.className = 'lab-rarity lab-rarity-' + rarity;
+    badge.setAttribute('aria-hidden', 'true');  // conveyed by aria-label above
+    badge.textContent = rarity.charAt(0).toUpperCase() + rarity.slice(1);
+    btn.appendChild(badge);
+  }
+
+  /* ── Equipped chip (top-right) ── */
+  if (equipped) {
+    var chip = document.createElement('span');
+    chip.className = 'lab-equipped-chip';
+    chip.setAttribute('aria-hidden', 'true');
+    chip.textContent = '✓';
+    btn.appendChild(chip);
+  }
+
+  /* ── Preview area (70px per spec §12.3) ── */
+  var preview = document.createElement('div');
+  preview.className = 'lab-card-preview';
+
+  if (cat.id === 'colours') {
+    var swatch = document.createElement('div');
+    swatch.className = 'lab-swatch';
+    swatch.style.background = WL._colourBg(item);
+    preview.appendChild(swatch);
+
+  } else if (cat.id === 'patterns') {
+    var ps = document.createElement('div');
+    ps.className = 'lab-swatch-pattern';
+    var bgImg = WL._patternBg(item.id);
+    if (bgImg) ps.style.backgroundImage = bgImg;
+    preview.appendChild(ps);
+
+  } else if ((cat.id === 'heads' || cat.id === 'faces' || cat.id === 'wings') && item.id && item.id !== 'none') {
+    /* Task 5: real mini-SVG preview via WLScientist.buildSVG (one renderer only) */
+    preview.appendChild(WL.miniPreview(cat, item));
+
+  } else if (cat.id === 'heads' || cat.id === 'faces' || cat.id === 'wings') {
+    /* 'None' item — no accessory equipped; show no-entry glyph */
+    var noneGlyph = document.createElement('span');
+    noneGlyph.className = 'lab-card-icon';
+    noneGlyph.setAttribute('aria-hidden', 'true');
+    noneGlyph.textContent = '🚫';
+    preview.appendChild(noneGlyph);
+
+  } else {
+    /* Effects / Dances / Custom — icon fallback (Tasks 6–8) */
+    var iconFbEl = document.createElement('span');
+    iconFbEl.className = 'lab-card-icon';
+    iconFbEl.setAttribute('aria-hidden', 'true');
+    iconFbEl.textContent = item.icon || '?';
+    preview.appendChild(iconFbEl);
+  }
+  btn.appendChild(preview);
+
+  /* ── Item name (XSS-safe via textContent) ── */
+  var nameEl = document.createElement('div');
+  nameEl.className = 'lab-card-name';
+  nameEl.textContent = item.name;
+  btn.appendChild(nameEl);
+
+  /* ── Price (Fredoka accent) ── */
+  var priceEl = document.createElement('div');
+  priceEl.className = 'lab-card-price' + (isFree ? ' is-free' : '');
+  priceEl.textContent = isFree ? 'FREE' : '⚛ ' + item.cost;
+  btn.appendChild(priceEl);
+
+  /* ── Action indicator (<div> styled as button — avoids nested <button> HTML violation) ── */
+  var actEl = document.createElement('div');
+  var actClass = 'lab-card-act';
+  var actText;
+  if (isLocked) {
+    actClass += ' is-locked';
+    actText = '🔒 Badge needed';
+  } else if (equipped) {
+    actClass += ' is-equipped';
+    actText = '✓ Equipped';
+  } else if (isOwned) {
+    actText = 'Equip';
+  } else {
+    actText = 'Get it';
+  }
+  actEl.className = actClass;
+  actEl.setAttribute('aria-hidden', 'true');  // state conveyed by card's aria-label
+  actEl.textContent = actText;
+  btn.appendChild(actEl);
+
+  /* Click handler — passes btn as triggerEl so focus returns to card after modal closes */
+  btn.addEventListener('click', function() { WL.select(cat, item, btn); });
+
+  return btn;
+};
+
+/* ── WL.renderPills — builds pill buttons into #pillRail ─────────── */
+WL.renderPills = function() {
+  var rail = document.getElementById('pillRail');
+  if (!rail) return;
+  rail.innerHTML = '';   // safe — clearing our own DOM
+
+  WL.CATS.forEach(function(cat) {
+    var active = (cat.id === WL.activeCat);
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'lab-pill' + (active ? ' lab-pill-active' : '');
+    btn.setAttribute('data-cat', cat.id);   // CRITICAL: used by low-stim CSS selectors
+    btn.id = 'pill-' + cat.id;
+    if (active) btn.setAttribute('aria-current', 'true');
+
+    var iconSpan = document.createElement('span');
+    iconSpan.setAttribute('aria-hidden', 'true');
+    iconSpan.textContent = cat.icon;
+
+    var lblSpan = document.createElement('span');
+    lblSpan.textContent = cat.label;
+
+    btn.appendChild(iconSpan);
+    btn.appendChild(document.createTextNode(' '));
+    btn.appendChild(lblSpan);
+
+    btn.addEventListener('click', function() { WL.setCategory(cat.id); });
+    rail.appendChild(btn);
+  });
+};
+
+/* ── WL.renderShopHeader ─────────────────────────────────────────── */
+WL.renderShopHeader = function() {
+  var hdr = document.getElementById('shopHeader');
+  if (!hdr) return;
+  hdr.innerHTML = '';   // safe — clearing our own DOM
+
+  var cat   = WL.CATS.find(function(c) { return c.id === WL.activeCat; });
+  var count = (cat && cat.src) ? cat.src().length : 0;
+
+  /* Title — Fredoka 25px #4a3416 per spec §12.3 */
+  var titleEl = document.createElement('div');
+  titleEl.className = 'sh-title';
+  titleEl.textContent = '🛍️ Lab Shop';
+
+  /* Item count */
+  var countEl = document.createElement('div');
+  countEl.className = 'sh-count';
+  countEl.textContent = count + ' in ' + (cat ? cat.label : '');
+
+  /* Subtext */
+  var subEl = document.createElement('div');
+  subEl.className = 'sh-sub';
+  subEl.textContent = 'Spend quarks to customise your scientist';
+
+  /* 🎲 Surprise me button — wired in Task 10; render now as no-op */
+  var surBtn = document.createElement('button');
+  surBtn.type = 'button';
+  surBtn.className = 'sh-surprise';
+  surBtn.textContent = '🎲 Surprise me';
+  surBtn.setAttribute('aria-label', 'Surprise me — randomise outfit with owned items');
+  surBtn.addEventListener('click', function() {
+    if (typeof WL.surprise === 'function') WL.surprise();
   });
 
-  const today   = new Date();
-  const dayOfWk = today.getDay(); // 0=Sun, 6=Sat
-  const isWeekend = (dayOfWk === 0 || dayOfWk === 6);
+  hdr.appendChild(titleEl);
+  hdr.appendChild(countEl);
+  hdr.appendChild(subEl);
+  hdr.appendChild(surBtn);
+};
 
-  const visible = items.filter(item => {
-    const m = item.unlock_method;
+/* ── WL.renderDancesGrid — Task 6: dances grouped by tier ───────────
+ * Tier keys from scientist.html shopEquipDance / WLShopData.dancesByTier:
+ *   'correct' | 'streak3' | 'streak5' | 'streak10' | 'streak15' | 'streak30'
+ * Each tier gets a section heading (grid-column: 1/-1) followed by dance cards.
+ */
+WL.renderDancesGrid = function(grid, cat) {
+  var tierLabels = {
+    correct:  'Correct Answer',
+    streak3:  '3+ Answer Streak',
+    streak5:  '5+ Answer Streak',
+    streak10: '10+ Answer Streak',
+    streak15: '15+ Answer Streak',
+    streak30: '30+ Answer Streak — Legendary',
+  };
+  var tierOrder = ['correct','streak3','streak5','streak10','streak15','streak30'];
+  tierOrder.forEach(function(tier) {
+    var tierDances = WLShopData.dancesByTier[tier];
+    if (!tierDances || tierDances.length === 0) return;
+
+    // Tier section heading — spans all grid columns
+    var heading = document.createElement('div');
+    heading.style.cssText = 'grid-column:1/-1;font-size:11px;font-weight:800;' +
+      'color:#6a4a1a;text-transform:uppercase;letter-spacing:.07em;' +
+      'padding:14px 0 5px;border-bottom:1.5px solid #e5d49e;margin-bottom:2px;';
+    heading.textContent = tierLabels[tier] || tier;
+    heading.setAttribute('aria-hidden', 'true');  // tier announced via card aria-labels
+    grid.appendChild(heading);
+
+    // Dance cards for this tier
+    tierDances.forEach(function(item) {
+      grid.appendChild(WL.cardEl(item, cat));
+    });
+  });
+};
+
+/* ── WL.renderGrid ───────────────────────────────────────────────── */
+WL.renderGrid = function() {
+  var cat  = WL.CATS.find(function(c) { return c.id === WL.activeCat; });
+  var grid = document.getElementById('itemGrid');
+  if (!grid) return;
+  grid.innerHTML = '';   // safe — clearing our own DOM
+
+  // Task 6: Dances — tier-grouped renderer (separate from flat-card loop)
+  if (WL.activeCat === 'dances' && typeof WLShopData !== 'undefined') {
+    WL.renderDancesGrid(grid, cat);
+    return;
+  }
+
+  // Task 7: Badges — dedicated renderer
+  if (WL.activeCat === 'badges') {
+    WL.renderBadges();
+    return;
+  }
+
+  // Task 8: Custom teacher-made items — async load + dedicated renderer
+  if (WL.activeCat === 'custom') {
+    WL.loadCustom().then(function() { WL.renderCustom(); });
+    return;
+  }
+
+  if (!cat || !cat.src) {
+    var stub = document.createElement('p');
+    stub.style.cssText = 'color:#9a7a3a;font-size:13px;padding:20px 0;grid-column:1/-1;';
+    stub.textContent = 'Nothing here yet.';
+    grid.appendChild(stub);
+    return;
+  }
+
+  var items = cat.src();
+  if (!items || items.length === 0) {
+    var empty = document.createElement('p');
+    empty.style.cssText = 'color:#9a7a3a;font-size:13px;padding:20px 0;grid-column:1/-1;';
+    empty.textContent = 'Nothing here yet.';
+    grid.appendChild(empty);
+    return;
+  }
+
+  items.forEach(function(item) {
+    grid.appendChild(WL.cardEl(item, cat));
+  });
+};
+
+/* ── Task 7: WL.togglePin / WL.unpinBadge ───────────────────────
+ * Ported from scientist.html pinBadge() / unpinBadge() (lines 1294–1311).
+ * Uses WL.scientist (already in memory) + saveScientist, then re-renders
+ * both the grid (pin buttons update) and the stage (coat pins appear).
+ */
+WL.togglePin = async function(badgeId) {
+  var pins = (WL.scientist.displayBadges || []).slice();
+  if (pins.includes(badgeId)) {
+    // Unpin
+    pins = pins.filter(function(id) { return id !== badgeId; });
+  } else {
+    // Pin — enforce 3-cap
+    if (pins.length >= 3) return;
+    pins.push(badgeId);
+  }
+  WL.scientist.displayBadges = pins;
+  try {
+    await WordLabData.saveScientist({ displayBadges: pins });
+  } catch(e) {
+    console.error('[WL.togglePin] saveScientist failed:', e);
+  }
+  // Re-render stage so pins appear/disappear on coat; re-render grid to update buttons
+  WL.renderStage();
+  WL.renderGrid();
+};
+
+/* ── Task 7: WL.renderBadges ────────────────────────────────────
+ * Ported from scientist.html tab-badges (lines 914–993) and pinBadge /
+ * unpinBadge helpers. Restyled to the parchment grid. Locked badges
+ * show a text "Locked" label (not colour-only). All text via textContent.
+ */
+WL.renderBadges = function() {
+  var grid = document.getElementById('itemGrid');
+  if (!grid) return;
+  grid.innerHTML = '';   // safe — clearing our own DOM
+
+  var wrap = document.createElement('div');
+  wrap.className = 'lab-badges-wrap';
+
+  var sci    = WL.scientist || {};
+  var pins   = (sci.displayBadges || []).slice();
+  var earned = WL.badges || [];  // array of badge IDs earned — loaded in WL.boot()
+
+  // ── Section 1: Badge Pins ──────────────────────────────────────
+  var pinTitle = document.createElement('div');
+  pinTitle.className = 'lab-badges-section-title';
+  pinTitle.textContent = '📌 Badge Pins — pin up to 3 on your lab coat';
+  wrap.appendChild(pinTitle);
+
+  var pinsGrid = document.createElement('div');
+  pinsGrid.className = 'lab-pins-grid';
+  pinsGrid.setAttribute('role', 'list');
+
+  // Streak Flame — always available (same as scientist.html)
+  var streakDays = 0;
+  try { streakDays = WordLabData.updateDailyStreak().count || 0; } catch(e) {}
+  var flameLabel     = streakDays > 0 ? streakDays + ' day streak' : 'No streak yet';
+  var flameIntensity = streakDays >= 30 ? 'Legendary' :
+                       streakDays >= 14 ? 'Blazing'   :
+                       streakDays >= 7  ? 'Hot'        :
+                       streakDays >= 3  ? 'Warming'   : 'Spark';
+  var flamePinned = pins.includes('streak_flame');
+  var flameCard = document.createElement('div');
+  flameCard.className = 'lab-pin-card' + (flamePinned ? ' is-pinned' : '');
+  flameCard.setAttribute('role', 'listitem');
+
+  var flameIcon = document.createElement('div');
+  flameIcon.className = 'lab-pin-icon';
+  flameIcon.textContent = '🔥';
+
+  var flameName = document.createElement('div');
+  flameName.className = 'lab-pin-name';
+  flameName.textContent = 'Streak Flame';
+
+  var flameSub = document.createElement('div');
+  flameSub.className = 'lab-pin-sub';
+  flameSub.textContent = flameIntensity + ' — ' + flameLabel;
+
+  flameCard.appendChild(flameIcon);
+  flameCard.appendChild(flameName);
+  flameCard.appendChild(flameSub);
+
+  var flameBtn = document.createElement('button');
+  if (flamePinned) {
+    flameBtn.className = 'lab-pin-btn is-pinned';
+    flameBtn.textContent = '📌 Pinned';
+  } else if (pins.length < 3) {
+    flameBtn.className = 'lab-pin-btn';
+    flameBtn.textContent = 'Pin';
+  } else {
+    flameBtn.className = 'lab-pin-btn is-capped';
+    flameBtn.textContent = '3 pinned';
+    flameBtn.setAttribute('aria-disabled', 'true');
+    flameBtn.disabled = true;
+  }
+  flameBtn.setAttribute('aria-label', (flamePinned ? 'Unpin' : 'Pin') + ' Streak Flame badge');
+  (function(id) {
+    flameBtn.addEventListener('click', function() { WL.togglePin(id); });
+  })('streak_flame');
+  flameCard.appendChild(flameBtn);
+  pinsGrid.appendChild(flameCard);
+
+  // Earned badges — available to pin
+  var allBadgeDefs = [].concat(
+    (typeof WordLabData !== 'undefined' && WordLabData.ALL_BADGES)        || [],
+    (typeof WordLabData !== 'undefined' && WordLabData.LEGENDARY_BADGES)  || []
+  );
+  var earnedDefs = allBadgeDefs.filter(function(b) { return earned.includes(b.id); });
+
+  earnedDefs.forEach(function(b) {
+    var isPinned = pins.includes(b.id);
+    var card = document.createElement('div');
+    card.className = 'lab-pin-card' + (isPinned ? ' is-pinned' : '');
+    card.setAttribute('role', 'listitem');
+
+    var icon = document.createElement('div');
+    icon.className = 'lab-pin-icon';
+    icon.textContent = b.icon;
+
+    var name = document.createElement('div');
+    name.className = 'lab-pin-name';
+    name.textContent = b.label;
+
+    var sub = document.createElement('div');
+    sub.className = 'lab-pin-sub';
+    sub.textContent = 'Earned';
+
+    var btn = document.createElement('button');
+    if (isPinned) {
+      btn.className = 'lab-pin-btn is-pinned';
+      btn.textContent = '📌 Pinned';
+    } else if (pins.length < 3) {
+      btn.className = 'lab-pin-btn';
+      btn.textContent = 'Pin';
+    } else {
+      btn.className = 'lab-pin-btn is-capped';
+      btn.textContent = '3 pinned';
+      btn.setAttribute('aria-disabled', 'true');
+      btn.disabled = true;
+    }
+    btn.setAttribute('aria-label', (isPinned ? 'Unpin' : 'Pin') + ' ' + b.label + ' badge');
+    (function(id) {
+      btn.addEventListener('click', function() { WL.togglePin(id); });
+    })(b.id);
+
+    card.appendChild(icon);
+    card.appendChild(name);
+    card.appendChild(sub);
+    card.appendChild(btn);
+    pinsGrid.appendChild(card);
+  });
+
+  if (earnedDefs.length === 0 && !earned.includes('streak_flame')) {
+    var noBadges = document.createElement('div');
+    noBadges.style.cssText = 'color:#9a7a3a;font-size:12px;font-weight:700;padding:10px;grid-column:1/-1;';
+    noBadges.textContent = 'Earn badges to pin more on your coat!';
+    pinsGrid.appendChild(noBadges);
+  }
+
+  wrap.appendChild(pinsGrid);
+
+  // ── Section 2: All Badges catalogue ───────────────────────────
+  var catTitle = document.createElement('div');
+  catTitle.className = 'lab-badges-section-title';
+  catTitle.textContent = '🏅 All Badges';
+  wrap.appendChild(catTitle);
+
+  var badgeGrid = document.createElement('div');
+  badgeGrid.className = 'lab-badge-grid';
+  badgeGrid.setAttribute('role', 'list');
+
+  var allBadges = (typeof WordLabData !== 'undefined' && WordLabData.ALL_BADGES) || [];
+  allBadges.forEach(function(b) {
+    var isEarned = earned.includes(b.id);
+    var card = document.createElement('div');
+    card.className = 'lab-badge-card' + (isEarned ? ' is-earned' : ' is-locked');
+    card.setAttribute('role', 'listitem');
+    if (!isEarned) card.setAttribute('aria-label', b.label + ' — locked');
+
+    var icon = document.createElement('div');
+    icon.className = 'lab-badge-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = b.icon;
+
+    var name = document.createElement('div');
+    name.className = 'lab-badge-name';
+    name.textContent = b.label;
+
+    var desc = document.createElement('div');
+    desc.className = 'lab-badge-desc';
+    desc.textContent = b.desc;
+
+    card.appendChild(icon);
+    card.appendChild(name);
+    card.appendChild(desc);
+
+    if (!isEarned) {
+      var lockedLbl = document.createElement('div');
+      lockedLbl.className = 'lab-badge-locked-label';
+      lockedLbl.textContent = '🔒 Locked';
+      card.appendChild(lockedLbl);
+    }
+
+    badgeGrid.appendChild(card);
+  });
+  wrap.appendChild(badgeGrid);
+
+  // ── Section 3: Legendary Badges ───────────────────────────────
+  var legendTitle = document.createElement('div');
+  legendTitle.className = 'lab-badges-section-title';
+  legendTitle.textContent = '⭐ Legendary Badges';
+  wrap.appendChild(legendTitle);
+
+  var legendGrid = document.createElement('div');
+  legendGrid.className = 'lab-badge-grid';
+  legendGrid.setAttribute('role', 'list');
+
+  var legendaryBadges = (typeof WordLabData !== 'undefined' && WordLabData.LEGENDARY_BADGES) || [];
+  legendaryBadges.forEach(function(b) {
+    var isEarned = earned.includes(b.id);
+    var card = document.createElement('div');
+    card.className = 'lab-badge-card is-legendary' + (isEarned ? ' is-earned' : ' is-locked');
+    card.setAttribute('role', 'listitem');
+    if (!isEarned) card.setAttribute('aria-label', b.label + ' — locked');
+
+    var icon = document.createElement('div');
+    icon.className = 'lab-badge-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = b.icon;
+
+    var name = document.createElement('div');
+    name.className = 'lab-badge-name';
+    name.textContent = b.label;
+
+    var desc = document.createElement('div');
+    desc.className = 'lab-badge-desc';
+    desc.textContent = b.desc;
+
+    card.appendChild(icon);
+    card.appendChild(name);
+    card.appendChild(desc);
+
+    if (!isEarned) {
+      var lockedLbl = document.createElement('div');
+      lockedLbl.className = 'lab-badge-locked-label';
+      lockedLbl.textContent = '🔒 Locked';
+      card.appendChild(lockedLbl);
+    }
+
+    legendGrid.appendChild(card);
+  });
+  wrap.appendChild(legendGrid);
+
+  grid.appendChild(wrap);
+};
+
+/* ── Task 8: Custom teacher-made items ───────────────────────────────
+ *
+ * WL._customItemsData: id → {item_type, image_data} cache
+ *   (image_data is a resolved URL or base64 — no extra DB call in equipCustom)
+ * WL.customItems: filtered array of visible shop_items (null = not yet loaded)
+ *
+ * Sources:
+ *   loadCustom  ← scientist.html loadCustomShopItems()      lines 1352–1430
+ *   equipCustom ← scientist.html equipCustomItem()           lines 1527–1557
+ */
+
+WL._customItemsData = {};
+WL.customItems      = null;   // null = not yet fetched
+
+/* WL.loadCustom — fetches shop_items once, caches result.
+ * Exact select columns, active/seasonal/limited filter, and milestone
+ * auto-unlock ported verbatim from scientist.html (lines 1364–1430).
+ */
+WL.loadCustom = async function() {
+  if (WL.customItems !== null) return;   // already loaded — use cache
+
+  var items;
+  try {
+    var result = await WordLabData._sb
+      .from('shop_items')
+      .select('id,name,item_type,rarity,unlock_method,quark_cost,is_active,available_from,available_until,milestone_type,milestone_threshold,secret_code,limited_days,release_date,image_url,image_data')
+      .eq('is_active', true);
+    if (result.error) throw result.error;
+    items = result.data || [];
+  } catch(e) {
+    WL.customItems = [];   // mark as attempted so we don't retry on every click
+    return;
+  }
+
+  // Populate image cache so WL.equipCustom can find image_data without another DB call
+  WL._customItemsData = {};
+  items.forEach(function(item) {
+    var url = item.image_url && item.image_url.trim() !== 'null' && item.image_url.startsWith('http')
+      ? item.image_url.trim() : null;
+    WL._customItemsData[item.id] = { item_type: item.item_type, image_data: url || item.image_data };
+  });
+
+  var today     = new Date();
+  var dayOfWk   = today.getDay();   // 0=Sun, 6=Sat
+  var isWeekend = (dayOfWk === 0 || dayOfWk === 6);
+
+  var visible = items.filter(function(item) {
+    var m = item.unlock_method;
     if (m === 'purchase' || m === 'gifted' || m === 'milestone' || m === 'secret_code') return true;
     if (m === 'seasonal') {
-      const from  = item.available_from  ? new Date(item.available_from)  : null;
-      const until = item.available_until ? new Date(item.available_until) : null;
+      var from  = item.available_from  ? new Date(item.available_from)  : null;
+      var until = item.available_until ? new Date(item.available_until) : null;
       return (!from || today >= from) && (!until || today <= until);
     }
     if (m === 'weekend') return isWeekend;
     if (m === 'limited') {
-      const release = item.release_date ? new Date(item.release_date) : null;
+      var release = item.release_date ? new Date(item.release_date) : null;
       if (!release) return false;
-      const days = item.limited_days || 30;
-      const expiry = new Date(release.getTime() + days * 86400000);
+      var days   = item.limited_days || 30;
+      var expiry = new Date(release.getTime() + days * 86400000);
       return today <= expiry;
     }
     return true;
   });
 
-  if (!visible.length) {
-    if (tabEmpty) tabEmpty.textContent = 'No custom items available yet. Your teacher can create items in the Item Creator!';
-    return;
-  }
-  if (section) section.style.display = 'block';
-
-  const rarityBorder = { common:'#94a3b8', rare:'#3b82f6', epic:'#a855f7', legendary:'#f59e0b' };
-  const owned = (sd.scientist||{}).owned || [];
-  const isTeacher = sd.is_teacher;
-  const stats = sd.stats || {};
-
-  // Auto-unlock milestone items the student has earned
+  // Auto-unlock milestone items the student has already earned
+  var stats = WL.stats || {};
   var milestoneUnlocked = [];
   visible.forEach(function(item) {
     if (item.unlock_method !== 'milestone') return;
-    if (owned.includes('custom_' + item.id)) return;
-    var mt = item.milestone_type || 'totalCorrect';
+    if (WL.owned.includes('custom_' + item.id)) return;
+    var mt     = item.milestone_type || 'totalCorrect';
     var thresh = item.milestone_threshold || 0;
-    var val = stats[mt] || 0;
+    var val    = stats[mt] || 0;
     if (val >= thresh) milestoneUnlocked.push(item.id);
   });
   if (milestoneUnlocked.length > 0) {
-    // Grant all earned milestone items
-    var newOwned = owned.slice();
+    var newOwned = WL.owned.slice();
     milestoneUnlocked.forEach(function(id) { newOwned.push('custom_' + id); });
     WordLabData.saveScientist({ owned: newOwned }).catch(function() {});
-    // Update local reference so buttons show correctly
-    milestoneUnlocked.forEach(function(id) { owned.push('custom_' + id); });
+    milestoneUnlocked.forEach(function(id) { WL.owned.push('custom_' + id); });
   }
 
-  const esc = WordLabData.escapeHtml;
-  const itemsHtml = visible.map(item => {
-    const border = rarityBorder[item.rarity] || '#e2e8f0';
-    const safeId = esc(item.id);
-    const safeName = esc(item.name);
-    const safeType = esc(item.item_type);
-    const isOwned = isTeacher || owned.includes('custom_' + item.id);
-    const canAfford = isTeacher || sd.quarks >= (item.quark_cost || 0);
+  WL.customItems = visible;
+};
 
-    let preview = '';
-    const rawUrl = item.image_url && item.image_url.trim() !== 'null' && item.image_url.startsWith('http') ? item.image_url.trim() : null;
-    const imgSrc = rawUrl || item.image_data;
+/* WL.renderCustom — renders WL.customItems into #itemGrid using DOM methods.
+ * XSS-safe: all user-supplied strings (names, rarity) written via textContent.
+ * Images set via img.src property — never via raw innerHTML.
+ * Card style matches the parchment .lab-card used by WL.cardEl.
+ */
+WL.renderCustom = function() {
+  var grid = document.getElementById('itemGrid');
+  if (!grid) return;
+  grid.innerHTML = '';   // safe — clearing our own DOM
+
+  var items = WL.customItems || [];
+  if (items.length === 0) {
+    var msg = document.createElement('p');
+    msg.style.cssText = 'color:#9a7a3a;font-size:13px;padding:20px 0;grid-column:1/-1;text-align:center;line-height:1.6;';
+    msg.textContent = 'No custom items yet. Your teacher can create them in the Item Creator!';
+    grid.appendChild(msg);
+    return;
+  }
+
+  var rarityCardClass  = { legendary:'is-legendary', epic:'is-epic', rare:'is-rare' };
+  var rarityLabelClass = { legendary:'lab-rarity-legendary', epic:'lab-rarity-epic', rare:'lab-rarity-rare' };
+
+  var customSlots = (WL.scientist && WL.scientist.customSlots) || {};
+  var catObj = WL.CATS.find(function(c) { return c.id === 'custom'; });
+
+  items.forEach(function(item, idx) {
+    var isOwned   = WL.owned.includes('custom_' + item.id);
+    var isFree    = (item.quark_cost === 0 && item.unlock_method !== 'milestone' && item.unlock_method !== 'gifted');
+    var isEquipped = (customSlots[item.item_type] === item.id);
+
+    // ── Card button ──────────────────────────────────────────────────
+    var card = document.createElement('button');
+    card.className = 'lab-card' +
+      (rarityCardClass[item.rarity] ? ' ' + rarityCardClass[item.rarity] : '') +
+      (isEquipped ? ' is-equipped' : '');
+    card.style.setProperty('--card-delay', (idx * 0.18) + 's');
+    card.setAttribute('type', 'button');
+    card.setAttribute('role', 'listitem');  // grid has role="list"
+    card.setAttribute('aria-label',
+      item.name + (isEquipped ? ' (equipped)' : (isOwned || isFree ? ' (owned)' : '')));
+
+    // ── Rarity badge — top left (not for common; colour is supplemented by text) ──
+    if (item.rarity && item.rarity !== 'common') {
+      var badge = document.createElement('div');
+      badge.className = 'lab-rarity ' + (rarityLabelClass[item.rarity] || '');
+      badge.setAttribute('aria-hidden', 'true');
+      badge.textContent = item.rarity;   // textContent — XSS-safe
+      card.appendChild(badge);
+    }
+
+    // ── Equipped chip — top right ─────────────────────────────────────
+    if (isEquipped) {
+      var chip = document.createElement('div');
+      chip.className = 'lab-equipped-chip';
+      chip.setAttribute('aria-hidden', 'true');
+      chip.textContent = '✓';
+      card.appendChild(chip);
+    }
+
+    // ── Image preview ─────────────────────────────────────────────────
+    var previewWrap = document.createElement('div');
+    previewWrap.className = 'lab-card-preview';
+
+    var rawUrl = item.image_url && item.image_url.trim() !== 'null' && item.image_url.startsWith('http')
+      ? item.image_url.trim() : null;
+    var imgSrc = rawUrl || item.image_data;
     if (imgSrc) {
-      preview = `<img src="${esc(imgSrc)}" style="width:60px;height:60px;object-fit:contain;border-radius:6px;" alt="${safeName}">`;
+      var img = document.createElement('img');
+      img.src   = imgSrc;           // set as property — never via innerHTML
+      img.alt   = '';               // decorative; label is on the card <button>
+      img.style.cssText = 'width:60px;height:60px;object-fit:contain;border-radius:8px;';
+      previewWrap.appendChild(img);
     } else {
-      preview = `<div style="font-size:28px;">🎨</div>`;
+      var placeholder = document.createElement('div');
+      placeholder.className = 'lab-card-icon';
+      placeholder.setAttribute('aria-hidden', 'true');
+      placeholder.textContent = '🎨';
+      previewWrap.appendChild(placeholder);
+    }
+    card.appendChild(previewWrap);
+
+    // ── Item name (textContent — XSS-safe) ────────────────────────────
+    var nameEl = document.createElement('div');
+    nameEl.className = 'lab-card-name';
+    nameEl.textContent = item.name;   // textContent — XSS-safe
+    card.appendChild(nameEl);
+
+    // ── Rarity line ───────────────────────────────────────────────────
+    if (item.rarity) {
+      var rarityLine = document.createElement('div');
+      rarityLine.className = 'lab-card-price';
+      rarityLine.setAttribute('aria-hidden', 'true');
+      rarityLine.textContent = item.rarity.charAt(0).toUpperCase() + item.rarity.slice(1);
+      card.appendChild(rarityLine);
     }
 
-    const equippedSlot = ((sd.scientist||{}).customSlots||{})[item.item_type];
-    const isEquipped = equippedSlot === item.id;
-    let btn = '';
-    if (isTeacher || isOwned) {
-      btn = `<button class="shopBtn equip" onclick="equipCustomItem('${safeId}')">${isEquipped ? '✓ Equipped' : 'Equip'}</button>`;
-    } else if (item.unlock_method === 'secret_code') {
-      btn = `<button class="shopBtn buy" onclick="enterSecretCode('${safeId}','${esc((item.secret_code||'').replace(/'/g,"\\'"))}')">🔑 Enter Code</button>`;
+    // ── Action indicator ──────────────────────────────────────────────
+    var act = document.createElement('div');
+    act.className = 'lab-card-act' + (isEquipped ? ' is-equipped' : '');
+    act.setAttribute('aria-hidden', 'true');
+
+    if (isEquipped) {
+      act.textContent = '✓ Equipped';
+    } else if (isOwned || isFree) {
+      act.textContent = 'Equip';
     } else if (item.unlock_method === 'gifted') {
-      btn = `<span class="shopBtn cantafford">🎁 Teacher gift</span>`;
+      act.textContent = '🎁 Teacher gift';
     } else if (item.unlock_method === 'milestone') {
-      var mt = item.milestone_type || 'totalCorrect';
+      var mt     = item.milestone_type || 'totalCorrect';
       var thresh = item.milestone_threshold || 0;
-      var progress = stats[mt] || 0;
-      if (progress >= thresh) {
-        btn = `<button class="shopBtn equip" onclick="equipCustomItem('${safeId}')">🏅 Unlocked! Equip</button>`;
-      } else {
-        btn = `<span class="shopBtn cantafford">🏅 ${progress}/${thresh}</span>`;
-      }
-    } else if (canAfford && item.quark_cost > 0) {
-      btn = `<button class="shopBtn buy" onclick="buyCustomItem('${safeId}',${item.quark_cost},'${safeType}')">⚛️ ${item.quark_cost}</button>`;
-    } else if (item.quark_cost === 0) {
-      btn = `<button class="shopBtn equip" onclick="equipCustomItem('${safeId}')">Claim Free</button>`;
+      var prog   = (WL.stats || {})[mt] || 0;
+      act.textContent = prog >= thresh ? '🏅 Unlocked' : '🏅 ' + prog + '/' + thresh;
+    } else if (item.quark_cost > 0) {
+      act.textContent = '⚛️ ' + item.quark_cost;
     } else {
-      btn = `<span class="shopBtn cantafford">Need ${(item.quark_cost||0)-sd.quarks} more ⚛️</span>`;
+      act.textContent = 'Claim Free';
     }
+    card.appendChild(act);
 
-    return `<div class="shopItem" style="border:3px solid ${border};">
-      ${preview}
-      <div class="shopItemName">${safeName}</div>
-      <div class="shopItemCost" style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">${esc(item.rarity)}</div>
-      ${btn}
-    </div>`;
-  }).join('');
+    // ── Click → WL.select ─────────────────────────────────────────────
+    (function(it, cardEl) {
+      cardEl.addEventListener('click', function() { WL.select(catObj, it, cardEl); });
+    })(item, card);
 
-  if (grid) grid.innerHTML = itemsHtml;
-  // Also populate the dedicated Custom tab grid
-  if (tabGrid) { tabGrid.innerHTML = itemsHtml; }
-  if (tabEmpty) { tabEmpty.style.display = 'none'; }
-}
+    grid.appendChild(card);
+  });
+};
 
-async function enterSecretCode(itemId, correctCode) {
-  const entered = prompt('Enter the secret code:');
-  if (!entered) return;
-  if (entered.trim().toUpperCase() === correctCode.toUpperCase()) {
-    await claimCustomItem(itemId, 'custom');
-    alert('Correct! Item unlocked!');
-  } else {
-    alert('That\'s not quite right. Try again!');
-  }
-}
-
-async function buyCustomItem(itemId, cost, type) {
-  let result;
-  try {
-    result = await WordLabData.purchase('custom_' + itemId, cost);
-  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
-  if (!result.success) { alert(purchaseFailMsg(result)); return; }
-  await render();
-}
-
-// Turns a failed purchase result into a clear, kid-friendly message.
-function purchaseFailMsg(result) {
-  const reason = (result && result.reason ? String(result.reason) : '').toLowerCase();
-  if (reason.includes('own')) return 'You already own this — no need to buy it again!';
-  return 'Not enough quarks!';
-}
-
-async function claimCustomItem(itemId, type) {
-  const current = await WordLabData.getScientist() || {};
-  const owned = current.owned || [];
-  if (!owned.includes('custom_' + itemId)) {
-    try {
-      await WordLabData.saveScientist({ owned: [...owned, 'custom_' + itemId] });
-    } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
-  }
-  await render();
-}
-
-async function equipCustomItem(itemId) {
-  const cached = _customItemsData[itemId];
+/* WL.equipCustom — ported verbatim from scientist.html equipCustomItem()
+ * (lines 1527–1557). Writes customSlots[item_type] + customSlots['_img_<type>'],
+ * persists via saveScientist, then re-renders stage + grid.
+ * Toggle: clicking an already-equipped item unequips it (sets slot to null).
+ */
+WL.equipCustom = async function(item) {
+  var cached = WL._customItemsData[item.id];
   if (!cached) return;
-  const itemType = cached.item_type;
-  const imageData = cached.image_data;
+  var itemType  = cached.item_type;
+  var imageData = cached.image_data;
 
-  // Ensure item is in owned list
-  const current = await WordLabData.getScientist() || {};
-  const owned = current.owned || [];
-  const customSlots = Object.assign({}, current.customSlots || {});
-  const updates = {};
+  // Read fresh scientist data so we don't overwrite concurrent changes
+  var current     = await WordLabData.getScientist() || {};
+  var owned       = current.owned || [];
+  var customSlots = Object.assign({}, current.customSlots || {});
+  var updates     = {};
 
-  if (!owned.includes('custom_' + itemId)) {
-    updates.owned = [...owned, 'custom_' + itemId];
+  if (!owned.includes('custom_' + item.id)) {
+    updates.owned = owned.concat(['custom_' + item.id]);
   }
 
-  // Toggle: if already equipped in this slot, unequip; otherwise equip
-  if (customSlots[itemType] === itemId) {
+  // Toggle equip
+  if (customSlots[itemType] === item.id) {
     customSlots[itemType] = null;
   } else {
-    customSlots[itemType] = itemId;
-    // Store image_data in the slot so buildSVG can render it without a DB call
+    customSlots[itemType] = item.id;
+    // Store image so buildSVG can render the overlay without a DB call
     customSlots['_img_' + itemType] = imageData;
   }
   updates.customSlots = customSlots;
 
   try {
     await WordLabData.saveScientist(updates);
-  } catch(e) { alert('Could not save: ' + (e.message || e)); return; }
-  await render();
+  } catch(e) {
+    console.error('[WL.equipCustom] saveScientist failed:', e);
+    return;
+  }
+
+  // Update in-memory state so renderStage and renderCustom see the change immediately
+  WL.scientist.customSlots = customSlots;
+  if (updates.owned) WL.owned = updates.owned.slice();
+
+  WL.renderStage();
+  WL.renderGrid();
+  WL.react();
+};
+
+/* ── WL.setCategory ─────────────────────────────────────────────── */
+WL.setCategory = function(id) {
+  WL.activeCat = id;
+  WL.renderPills();
+  WL.renderShopHeader();
+  WL.renderGrid();
+};
+
+/* ── WL.equip — writes field, saves to Supabase, re-renders ─────── */
+WL.equip = async function(cat, item) {
+  if (!cat.field) return;   // dances / badges handled in Tasks 6–7
+  WL.scientist[cat.field] = item.id;
+  try {
+    await WordLabData.saveScientist({ [cat.field]: item.id });
+  } catch (e) {
+    console.error('[WL.equip] saveScientist failed:', e);
+  }
+  WL.renderStage();
+  WL.renderGrid();
+  WL.react();
+};
+
+/* ── WL.equipEffect — Task 6 ─────────────────────────────────────────
+ * Sets scientist.effect, saves via saveScientist, re-renders grid, and
+ * previews the live effect on the stage character (unless low-stim).
+ * Passing id='none' removes the effect.
+ * Effect icons shown on cards come from WLEffects.EFFECTS[id].icon.
+ */
+WL.equipEffect = async function(id) {
+  WL.scientist.effect = (id === 'none' ? null : id);
+  try {
+    await WordLabData.saveScientist({ effect: WL.scientist.effect });
+  } catch(e) { console.error('[WL.equipEffect] saveScientist failed:', e); }
+  WL.renderGrid();
+  // Preview effect on stage character (unless low-stim or reduced-motion or removing)
+  // Use _calm() so body.low-stim, sessionStorage flag, AND prefers-reduced-motion all suppress.
+  if (typeof WLEffects !== 'undefined') {
+    if (!_calm() && id !== 'none') {
+      WLEffects.stop(WL.charEl);
+      WLEffects.start(id, WL.charEl);
+    } else {
+      WLEffects.stop(WL.charEl);
+    }
+  }
+  WL.react();
+};
+
+/* ── WL.equipDance — Task 6 ──────────────────────────────────────────
+ * Exact persistence shape from scientist.html shopEquipDance (line 1328):
+ *   dances = Object.assign({}, sci.dances || {});
+ *   dances[tier] = danceId;
+ *   saveScientist({ dances: dances });
+ * Tier keys: 'correct' | 'streak3' | 'streak5' | 'streak10' | 'streak15' | 'streak30'
+ */
+WL.equipDance = async function(tier, danceId) {
+  var dances = Object.assign({}, (WL.scientist.dances) || {});
+  dances[tier] = danceId;
+  WL.scientist.dances = dances;
+  try {
+    await WordLabData.saveScientist({ dances: dances });
+  } catch(e) { console.error('[WL.equipDance] saveScientist failed:', e); }
+  WL.renderGrid();
+  WL.react();
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   Task 9: Buying flow — full WL.select, modals, purchase, reactions
+   ═══════════════════════════════════════════════════════════════════
+
+   Purchase semantics (matched EXACTLY from scientist.html):
+   ─────────────────────────────────────────────────────────
+   scientist.html calls WordLabData.purchase(itemId, cost) which runs the
+   atomic_purchase Postgres RPC. That RPC deducts quarks AND adds the
+   item to the student's owned[] in the DB atomically. purchase() returns
+   { success, quarks, reason } but does NOT return the updated owned[].
+
+   After a successful purchase, scientist.html calls saveScientist({field:id})
+   to equip the item, then render() which re-fetches getStudentData() to
+   refresh the owned[] client-side.
+
+   On this page there is no render() re-fetch, so we manually push
+   WL.ownKey(cat, item) to WL.owned[] (client-side mirror of DB state) after
+   a confirmed purchase. We do NOT call saveScientist({ owned }) — the atomic
+   RPC already persisted the owned update server-side.
+
+   Badge-gating rule (copied from scientist.html renderShopSection line 1097-1107
+   and renderEffectsSection lines 1172-1181):
+   ─────────────────────────────────────────────────────────────────────────────
+   Regular shop items use item.requiresBadge; effects use eff.requiresBadge
+   (mapped to item.requires in WL.effectList). If the student doesn't hold the
+   required badge (WL.badges.includes(reqBadge) is false), the item is LOCKED:
+   it cannot be equipped OR purchased with quarks — the click is a no-op.
+   This is exactly scientist.html's behaviour (locked items show "🔒 Requires:"
+   with no buy or equip button).
+*/
+
+/* ── _calm() guard — suppress all motion/sound in low-stim or reduced-motion.
+ *
+ * Carry-forward fix (Task 11): WL.equipEffect previously used WordLabData.isLowStimMode()
+ * directly, while _calm() used body.low-stim. Now _calm() is the single source of truth
+ * and WL.equipEffect delegates to it, so all three sources are checked consistently:
+ *
+ *   1. body.low-stim       — set by loadLowStimMode() (wordlab-data.js line 721) and
+ *                             auto-applied from sessionStorage at parse time (line 2938).
+ *   2. isLowStimMode()     — reads sessionStorage 'wl_low_stim'; catches the brief window
+ *                             between page load and the first DOMContentLoaded callback.
+ *   3. prefers-reduced-motion — honours the OS/browser accessibility setting.
+ */
+function _calm() {
+  return document.body.classList.contains('low-stim') ||
+         (typeof WordLabData !== 'undefined' &&
+          typeof WordLabData.isLowStimMode === 'function' &&
+          WordLabData.isLowStimMode()) ||
+         window.matchMedia('(prefers-reduced-motion:reduce)').matches;
 }
 
-// ── Init ──────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', function() {
-  if (typeof WordLabData === 'undefined') return;
-  WordLabData.initLoginUI({ accentColor:'#4338ca', accentSoft:'#eef2ff', accentLine:'#c7d2fe', accentText:'#312e81' });
-  var session = WordLabData.getSession();
-  var btn = document.getElementById('wlLoginBtn');
-  if (btn) {
-    btn.onclick = function() { wlShowLogin(); };
-    if (session) btn.style.display = 'none';
+/* ── WL.equipFor — dispatches to the right equip function by cat.id ── */
+WL.equipFor = function(cat, item) {
+  if (cat.id === 'effects') {
+    var alreadyOn = WL.scientist && WL.scientist.effect === item.id;
+    WL.equipEffect(alreadyOn ? 'none' : item.id);
+  } else if (cat.id === 'dances') {
+    WL.equipDance(item.tier, item.id);
+  } else if (cat.id === 'custom') {
+    WL.equipCustom(item);
+  } else {
+    WL.equip(cat, item);
   }
-  render();
-  const origPick = WordLabData._pick.bind(WordLabData);
-  WordLabData._pick = function(sid, sname, cid) { origPick(sid, sname, cid); render(); };
-});
+};
 
-// ── Patch applyOption to trigger spin ──────────────────────────
-const _origApply = applyOption;
-window.applyOption = async function(field, value) {
-  await _origApply(field, value);
-  // Trigger happy spin on character SVG
-  var svg = document.querySelector('#sciSVGBig svg');
-  if(svg){ svg.classList.remove('sci-spin'); void svg.offsetWidth; svg.classList.add('sci-spin'); }
+/* ── Focus-trap helpers ───────────────────────────────────────────── */
+var _modalTrigger = null;   // element that opened the modal — restored on close
+
+function _focusTrap(modal, e) {
+  var focusable = Array.from(modal.querySelectorAll(
+    'button:not([disabled]),input:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])'
+  ));
+  if (!focusable.length) return;
+  var first = focusable[0], last = focusable[focusable.length - 1];
+  if (e.shiftKey) {
+    if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+  } else {
+    if (document.activeElement === last)  { e.preventDefault(); first.focus(); }
+  }
+}
+
+/* ── WL.openConfirm ───────────────────────────────────────────────── */
+WL.openConfirm = function(cat, item, triggerEl) {
+  /* Cost field: custom items use quark_cost, all others use cost */
+  var cost = WL.costOf(cat, item);
+  WL.pending = { cat: cat, item: item, cost: cost };
+  _modalTrigger = triggerEl || null;
+
+  /* Populate preview */
+  var prev  = document.getElementById('confirmPreview');
+  var bal   = document.getElementById('confirmBalance');
+  if (prev) {
+    prev.innerHTML = '';
+    var sw = document.createElement('div');
+    sw.className = 'lab-modal-preview-swatch';
+    if (cat.id === 'colours') {
+      sw.style.background = WL._colourBg(item);
+    } else if (cat.id === 'patterns') {
+      var pbg = WL._patternBg(item.id);
+      sw.style.background = '#e8e8e8';
+      if (pbg) sw.style.backgroundImage = pbg;
+    } else if ((cat.id === 'heads' || cat.id === 'faces' || cat.id === 'wings') && item.id && item.id !== 'none') {
+      sw.appendChild(WL.miniPreview(cat, item));
+    } else {
+      sw.textContent = item.icon || '?';
+    }
+    var info = document.createElement('div');
+    var nm   = document.createElement('div');
+    nm.className = 'lab-modal-item-name';
+    nm.textContent = item.name;   // textContent = XSS-safe
+    var pr   = document.createElement('div');
+    pr.className  = 'lab-modal-item-cost';
+    pr.textContent = '⚛ ' + cost + ' quarks';
+    info.appendChild(nm);
+    info.appendChild(pr);
+    prev.appendChild(sw);
+    prev.appendChild(info);
+  }
+  if (bal) {
+    var after = WL.quarks - cost;
+    bal.innerHTML = '';   // clear
+    var bt = document.createElement('span');
+    bt.textContent = 'Balance after purchase: ';
+    var bv = document.createElement('strong');
+    bv.textContent = after.toLocaleString('en-AU') + ' quarks';
+    bal.appendChild(bt);
+    bal.appendChild(bv);
+  }
+
+  var modal = document.getElementById('confirmModal');
+  modal.removeAttribute('hidden');
+  document.getElementById('confirmBuyBtn').focus();
+
+  /* Esc + overlay-click to close */
+  modal._onKey = function(e) {
+    if (e.key === 'Escape') { WL.closeConfirm(); }
+    else if (e.key === 'Tab') { _focusTrap(document.getElementById('confirmCard'), e); }
+  };
+  modal._onOverlay = function(e) {
+    if (e.target === modal) WL.closeConfirm();
+  };
+  document.addEventListener('keydown', modal._onKey);
+  modal.addEventListener('click', modal._onOverlay);
+};
+
+/* ── WL.closeConfirm ─────────────────────────────────────────────── */
+WL.closeConfirm = function() {
+  var modal = document.getElementById('confirmModal');
+  modal.setAttribute('hidden', '');
+  if (modal._onKey)     { document.removeEventListener('keydown', modal._onKey); modal._onKey = null; }
+  if (modal._onOverlay) { modal.removeEventListener('click', modal._onOverlay); modal._onOverlay = null; }
+  if (_modalTrigger) { _modalTrigger.focus(); _modalTrigger = null; }
+};
+
+/* ── WL.costOf — unified price accessor for regular and custom items ──
+ * Custom items use quark_cost; all others use cost.
+ * Used everywhere a price is read in the buy flow. */
+WL.costOf = function(cat, item) {
+  return (cat && cat.id === 'custom') ? (item.quark_cost || 0) : (item.cost || 0);
+};
+
+/* ── WL.openNotEnough ─────────────────────────────────────────────── */
+WL.openNotEnough = function(item, cat, triggerEl) {
+  _modalTrigger = triggerEl || null;
+  var prev = document.getElementById('notEnoughPreview');
+  var msg  = document.getElementById('notEnoughMsg');
+  if (prev) {
+    prev.innerHTML = '';
+    var sw = document.createElement('div');
+    sw.className = 'lab-modal-preview-swatch';
+    var catObj = cat || WL.CATS.find(function(c) { return c.id === WL.activeCat; });
+    if (catObj && catObj.id === 'colours') {
+      sw.style.background = WL._colourBg(item);
+    } else if (catObj && catObj.id === 'patterns') {
+      var pbg = WL._patternBg(item.id);
+      sw.style.background = '#e8e8e8';
+      if (pbg) sw.style.backgroundImage = pbg;
+    } else {
+      sw.textContent = item.icon || '?';
+    }
+    var info = document.createElement('div');
+    var nm   = document.createElement('div');
+    nm.className = 'lab-modal-item-name';
+    nm.textContent = item.name;
+    var pr   = document.createElement('div');
+    pr.className  = 'lab-modal-item-cost';
+    pr.textContent = '⚛ ' + WL.costOf(cat, item) + ' quarks';
+    info.appendChild(nm);
+    info.appendChild(pr);
+    prev.appendChild(sw);
+    prev.appendChild(info);
+  }
+  if (msg) {
+    var need = WL.costOf(cat, item) - WL.quarks;
+    msg.textContent = 'You need ' + (need > 0 ? need : 0) + ' more quarks — keep playing to earn them!';
+  }
+
+  var modal = document.getElementById('notEnoughModal');
+  modal.removeAttribute('hidden');
+  document.getElementById('notEnoughClose').focus();
+
+  modal._onKey = function(e) {
+    if (e.key === 'Escape') { WL.closeNotEnough(); }
+    else if (e.key === 'Tab') { _focusTrap(document.getElementById('notEnoughCard'), e); }
+  };
+  modal._onOverlay = function(e) {
+    if (e.target === modal) WL.closeNotEnough();
+  };
+  document.addEventListener('keydown', modal._onKey);
+  modal.addEventListener('click', modal._onOverlay);
+};
+
+/* ── WL.closeNotEnough ───────────────────────────────────────────── */
+WL.closeNotEnough = function() {
+  var modal = document.getElementById('notEnoughModal');
+  modal.setAttribute('hidden', '');
+  if (modal._onKey)     { document.removeEventListener('keydown', modal._onKey); modal._onKey = null; }
+  if (modal._onOverlay) { modal.removeEventListener('click', modal._onOverlay); modal._onOverlay = null; }
+  if (_modalTrigger) { _modalTrigger.focus(); _modalTrigger = null; }
+};
+
+/* Wire up persistent button handlers (once, on first call via boot) */
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('confirmBuyBtn').addEventListener('click', function() { WL.confirmBuy(); });
+    document.getElementById('confirmCancel').addEventListener('click', function() { WL.closeConfirm(); });
+    document.getElementById('notEnoughClose').addEventListener('click', function() { WL.closeNotEnough(); });
+  });
+})();
+
+/* ── WL.confirmBuy ───────────────────────────────────────────────── */
+WL.confirmBuy = async function() {
+  if (!WL.pending) return;
+  var cat  = WL.pending.cat, item = WL.pending.item;
+  var cost = WL.pending.cost !== undefined ? WL.pending.cost : WL.costOf(cat, item);
+  var key  = WL.ownKey(cat, item);
+
+  var res;
+  try {
+    res = await WordLabData.purchase(key, cost);
+  } catch(e) {
+    console.error('[WL.confirmBuy] purchase threw:', e);
+    res = null;
+  }
+
+  /* purchase() returns { success, quarks, reason }.
+   * On failure: close confirm, show not-enough (handles edge cases like
+   * concurrent spend or server-side insufficient-funds check).
+   * Save trigger BEFORE closeConfirm() nulls _modalTrigger. */
+  var savedTrigger = _modalTrigger;
+  if (!res || !res.success) {
+    WL.closeConfirm();
+    WL.openNotEnough(item, cat, savedTrigger);
+    return;
+  }
+
+  /* Success — update client-side state to mirror what the DB already did.
+   * purchase() via atomic_purchase RPC already added key to owned[] in DB,
+   * so we just mirror it here. We do NOT call saveScientist({ owned }) —
+   * that would double-write and the RPC already persisted it.
+   * Pattern matches scientist.html (render() → getStudentData() refreshes
+   * owned from DB; here we mirror manually instead). */
+  WL.quarks = res.quarks;
+  WL.owned.push(key);
+  WL.renderQuarks();
+  WL.popQuark();        // animate quark pill
+
+  WL.closeConfirm();
+  WL.equipFor(cat, item);   // saves the equipped field + re-renders
+};
+
+/* ── WL.surprise — Task 10: randomise all 5 visual outfit fields ───
+ * Picks a random AVAILABLE item per field (free OR owned), excluding any
+ * item the student hasn't badge-unlocked yet.  Uses the same badge-gate
+ * rule as WL.select/WL.cardEl so badge-locked cosmetics are never picked.
+ * Only the 5 visual outfit fields are randomised; effects, dances, badges,
+ * and custom are left untouched.
+ */
+WL.surprise = async function() {
+  var updates = {};
+  [
+    ['colours',  'coatColor'],
+    ['patterns', 'coatPattern'],
+    ['heads',    'head'],
+    ['faces',    'face'],
+    ['wings',    'wings']
+  ].forEach(function(pair) {
+    var catId = pair[0], field = pair[1];
+    var cat = WL.CATS.find(function(c) { return c.id === catId; });
+    if (!cat || !cat.src) return;
+
+    var available = cat.src().filter(function(it) {
+      /* Badge-gate — same rule as WL.select and WL.cardEl.
+       * Effects use item.requires; visual outfit categories use item.requiresBadge. */
+      var reqBadge    = it.requiresBadge;
+      var hasReqBadge = !reqBadge || (WL.badges && WL.badges.includes(reqBadge));
+      if (!hasReqBadge) return false;                 // locked: skip
+
+      /* Free (cost 0) or already owned */
+      var isFree = !!(it.free || it.cost === 0);
+      return isFree || WL.owned.includes(WL.ownKey(cat, it));
+    });
+
+    if (available.length) {
+      var pick = available[Math.floor(Math.random() * available.length)];
+      updates[field]         = pick.id;
+      WL.scientist[field]    = pick.id;
+    }
+  });
+
+  await WordLabData.saveScientist(updates);
+  WL.renderStage();
+  WL.renderGrid();
+  if (!_calm()) { WL.speech('Surprise! 🎲'); WL.spin(); WL.burst(); }
+};
+
+/* ── WL.select — FULL version (Task 9) ──────────────────────────── */
+WL.select = function(cat, item, triggerEl) {
+  /* Badge-gating check — FIRST, before owned/afford (scientist.html line 1106, 1180).
+   * Effects use item.requires; all other categories use item.requiresBadge. */
+  var reqBadge    = (cat.id === 'effects') ? item.requires : item.requiresBadge;
+  var hasReqBadge = !reqBadge || (WL.badges && WL.badges.includes(reqBadge));
+  if (!hasReqBadge) return;   // Badge-locked: no-op (matches scientist.html)
+
+  /* Ownership check */
+  var isFree  = !!(item.free || item.cost === 0 ||
+    (cat.id === 'custom' && item.quark_cost === 0 &&
+     item.unlock_method !== 'milestone' && item.unlock_method !== 'gifted'));
+  var isOwned = isFree || WL.owned.includes(WL.ownKey(cat, item));
+
+  if (isOwned) {
+    WL.equipFor(cat, item);
+    return;
+  }
+
+  /* Not owned — check afford */
+  var cost = WL.costOf(cat, item);
+  if (WL.quarks < cost) {
+    WL.openNotEnough(item, cat, triggerEl || null);
+    WL.shakeBalance();
+    return;
+  }
+
+  WL.openConfirm(cat, item, triggerEl || null);
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   Task 9: Reactions — spin, burst, popQuark, shakeBalance, speech
+   Spec §12.5 (exact glyphs, colours, timings)
+   ═══════════════════════════════════════════════════════════════════ */
+
+var _SPEECH_PHRASES = [
+  'Looking sharp! ✨', 'Ooh, love it! 💜', 'Lab-tastic! 🧪',
+  'So cool! 😎', 'New look unlocked!', 'Spelling AND style!',
+  'Wowza! 🌟', 'Fresh fit! ⚡', 'Science of style!', 'Quark well spent!'
+];
+
+/* speech — show a speech bubble above the scientist character */
+WL.speech = function(text) {
+  if (_calm()) return;
+  /* Remove existing bubble */
+  var old = document.getElementById('speechBubble');
+  if (old) old.remove();
+
+  /* Anchor to WL.charEl (the character wrap) */
+  var anchor = WL.charEl || document.getElementById('stage');
+  if (!anchor) return;
+
+  var bubble = document.createElement('div');
+  bubble.id = 'speechBubble';
+  bubble.setAttribute('aria-hidden', 'true');
+  bubble.textContent = text;
+  anchor.style.position = 'relative';
+  anchor.appendChild(bubble);
+
+  setTimeout(function() { if (bubble.parentNode) bubble.remove(); }, 2000);
+};
+
+/* spin — 40% chance rotateY spin, else double-hop (spec §12.5) */
+WL.spin = function() {
+  if (_calm()) return;
+  var el = WL.charEl;
+  if (!el) return;
+  if (Math.random() < 0.4) {
+    /* RotateY spin over 820ms */
+    el.animate(
+      [
+        { transform: 'translateY(0) rotateY(0deg)' },
+        { transform: 'translateY(-12px) rotateY(180deg)' },
+        { transform: 'translateY(0) rotateY(360deg)' }
+      ],
+      { duration: 820, easing: 'cubic-bezier(.34,1.56,.64,1)', fill: 'none' }
+    );
+  } else {
+    /* Double-hop over 660ms */
+    el.animate(
+      [
+        { transform: 'translateY(0)' },
+        { transform: 'translateY(-14px)' },
+        { transform: 'translateY(0)' },
+        { transform: 'translateY(-8px)' },
+        { transform: 'translateY(0)' }
+      ],
+      { duration: 660, easing: 'cubic-bezier(.34,1.56,.64,1)', fill: 'none' }
+    );
+  }
+};
+
+/* burst — 18 particles with exact glyphs and colours from spec §12.5 */
+WL.burst = function() {
+  if (_calm()) return;
+  var layer = document.getElementById('burstLayer');
+  if (!layer) return;
+
+  /* Origin: centre of the stage section */
+  var stage = document.getElementById('stage');
+  var rect  = stage ? stage.getBoundingClientRect() : { left: window.innerWidth / 2, top: window.innerHeight / 2, width: 0, height: 0 };
+  var ox = rect.left + rect.width  / 2;
+  var oy = rect.top  + rect.height / 2;
+
+  var glyphs  = ['✦','✧','★','✦','●'];
+  var colours = ['#f7d24a','#ff8fc4','#7df0ff','#b18bff','#7ed321','#ff9a4a'];
+
+  for (var i = 0; i < 18; i++) {
+    (function() {
+      var span = document.createElement('span');
+      span.className = 'burst-dot';
+      span.textContent = glyphs[Math.floor(Math.random() * glyphs.length)];
+      span.style.color  = colours[Math.floor(Math.random() * colours.length)];
+      span.style.left   = ox + 'px';
+      span.style.top    = oy + 'px';
+
+      var angle    = Math.random() * Math.PI * 2;
+      var dist     = 50 + Math.random() * 95;     // 50–145 px (spec §12.5)
+      var dur      = 700  + Math.random() * 350;  // 700–1050 ms (spec §12.5)
+      var tx = Math.cos(angle) * dist;
+      var ty = Math.sin(angle) * dist;
+
+      layer.appendChild(span);
+
+      var anim = span.animate(
+        [
+          { transform: 'translate(0,0) scale(.2)', opacity: 1 },
+          { transform: 'translate(' + tx + 'px,' + ty + 'px) scale(1.15)', opacity: 0 }
+        ],
+        { duration: dur, easing: 'ease-out', fill: 'forwards' }
+      );
+      anim.onfinish = function() { span.remove(); };
+    })();
+  }
+};
+
+/* popQuark — scale animation on the quark pill on successful buy (spec §12.5) */
+WL.popQuark = function() {
+  var pill = document.getElementById('quarkPill');
+  if (!pill) return;
+  pill.animate(
+    [{ transform: 'scale(1)' }, { transform: 'scale(1.16)' }, { transform: 'scale(1)' }],
+    { duration: 420, easing: 'cubic-bezier(.34,1.56,.64,1)', fill: 'none' }
+  );
+};
+
+/* shakeBalance — horizontal shake on quark pill for insufficient funds (spec §12.5) */
+WL.shakeBalance = function() {
+  var pill = document.getElementById('quarkPill');
+  if (!pill) return;
+  pill.animate(
+    [
+      { transform: 'translateX(0)' },
+      { transform: 'translateX(-6px)' },
+      { transform: 'translateX(6px)' },
+      { transform: 'translateX(0)' }
+    ],
+    { duration: 300, easing: 'ease-in-out', fill: 'none' }
+  );
+};
+
+/* react — called after equip: happy face + speech + spin + burst + revert (guarded by calm()) */
+WL.react = function() {
+  if (_calm()) return;
+  WL.renderStage('happy');   // face → happy; also sets WL.charEl to new node
+  var phrase = _SPEECH_PHRASES[Math.floor(Math.random() * _SPEECH_PHRASES.length)];
+  WL.speech(phrase);         // anchors to updated WL.charEl
+  WL.spin();                 // animates updated WL.charEl
+  WL.burst();
+  setTimeout(function() { WL.renderStage('neutral'); }, 1000);
+};
+
+/* ── WL.renderShop — orchestrator called from WL.boot() ──────────── */
+WL.renderShop = function() {
+  WL.renderPills();
+  WL.renderShopHeader();
+  WL.renderGrid();
 };
 </script>
-<script>
-// Warm dust particles
-(function(){
-  var wrap = document.getElementById('dressingDust');
-  if(!wrap) return;
-  for(var i=0;i<18;i++){
-    var p = document.createElement('div');
-    p.className = 'dust-r';
-    var size = (Math.random()*2.5+1)+'px';
-    var left = (15+Math.random()*70)+'%';
-    var dur  = (8+Math.random()*12)+'s';
-    var del  = (Math.random()*14)+'s';
-    var dx   = ((Math.random()-.5)*50)+'px';
-    p.style.cssText = 'width:'+size+';height:'+size+';left:'+left+';bottom:'+(5+Math.random()*55)+'%;'
-      +'animation-duration:'+dur+';animation-delay:'+del+';--rdx:'+dx+';';
-    wrap.appendChild(p);
-  }
-})();
-</script>
 
-<div class="footer">
-  🧪 Word Labs · <a href="landing.html">Home</a> · <a href="about.html">About</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a href="pricing.html">Pricing</a> · <a href="mailto:nick@wordlabs.app">Contact</a>
-</div>
 </body>
 </html>
