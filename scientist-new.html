@@ -1405,11 +1405,16 @@ WL.renderGrid = function() {
     return;
   }
 
+  // Task 8: Custom teacher-made items — async load + dedicated renderer
+  if (WL.activeCat === 'custom') {
+    WL.loadCustom().then(function() { WL.renderCustom(); });
+    return;
+  }
+
   if (!cat || !cat.src) {
-    /* Custom — stubbed until Task 8 */
     var stub = document.createElement('p');
     stub.style.cssText = 'color:#9a7a3a;font-size:13px;padding:20px 0;grid-column:1/-1;';
-    stub.textContent = 'Coming in a later update.';
+    stub.textContent = 'Nothing here yet.';
     grid.appendChild(stub);
     return;
   }
@@ -1679,6 +1684,266 @@ WL.renderBadges = function() {
   grid.appendChild(wrap);
 };
 
+/* ── Task 8: Custom teacher-made items ───────────────────────────────
+ *
+ * WL._customItemsData: id → {item_type, image_data} cache
+ *   (image_data is a resolved URL or base64 — no extra DB call in equipCustom)
+ * WL.customItems: filtered array of visible shop_items (null = not yet loaded)
+ *
+ * Sources:
+ *   loadCustom  ← scientist.html loadCustomShopItems()      lines 1352–1430
+ *   equipCustom ← scientist.html equipCustomItem()           lines 1527–1557
+ */
+
+WL._customItemsData = {};
+WL.customItems      = null;   // null = not yet fetched
+
+/* WL.loadCustom — fetches shop_items once, caches result.
+ * Exact select columns, active/seasonal/limited filter, and milestone
+ * auto-unlock ported verbatim from scientist.html (lines 1364–1430).
+ */
+WL.loadCustom = async function() {
+  if (WL.customItems !== null) return;   // already loaded — use cache
+
+  var items;
+  try {
+    var result = await WordLabData._sb
+      .from('shop_items')
+      .select('id,name,item_type,rarity,unlock_method,quark_cost,is_active,available_from,available_until,milestone_type,milestone_threshold,secret_code,limited_days,release_date,image_url,image_data')
+      .eq('is_active', true);
+    if (result.error) throw result.error;
+    items = result.data || [];
+  } catch(e) {
+    WL.customItems = [];   // mark as attempted so we don't retry on every click
+    return;
+  }
+
+  // Populate image cache so WL.equipCustom can find image_data without another DB call
+  WL._customItemsData = {};
+  items.forEach(function(item) {
+    var url = item.image_url && item.image_url.trim() !== 'null' && item.image_url.startsWith('http')
+      ? item.image_url.trim() : null;
+    WL._customItemsData[item.id] = { item_type: item.item_type, image_data: url || item.image_data };
+  });
+
+  var today     = new Date();
+  var dayOfWk   = today.getDay();   // 0=Sun, 6=Sat
+  var isWeekend = (dayOfWk === 0 || dayOfWk === 6);
+
+  var visible = items.filter(function(item) {
+    var m = item.unlock_method;
+    if (m === 'purchase' || m === 'gifted' || m === 'milestone' || m === 'secret_code') return true;
+    if (m === 'seasonal') {
+      var from  = item.available_from  ? new Date(item.available_from)  : null;
+      var until = item.available_until ? new Date(item.available_until) : null;
+      return (!from || today >= from) && (!until || today <= until);
+    }
+    if (m === 'weekend') return isWeekend;
+    if (m === 'limited') {
+      var release = item.release_date ? new Date(item.release_date) : null;
+      if (!release) return false;
+      var days   = item.limited_days || 30;
+      var expiry = new Date(release.getTime() + days * 86400000);
+      return today <= expiry;
+    }
+    return true;
+  });
+
+  // Auto-unlock milestone items the student has already earned
+  var stats = WL.stats || {};
+  var milestoneUnlocked = [];
+  visible.forEach(function(item) {
+    if (item.unlock_method !== 'milestone') return;
+    if (WL.owned.includes('custom_' + item.id)) return;
+    var mt     = item.milestone_type || 'totalCorrect';
+    var thresh = item.milestone_threshold || 0;
+    var val    = stats[mt] || 0;
+    if (val >= thresh) milestoneUnlocked.push(item.id);
+  });
+  if (milestoneUnlocked.length > 0) {
+    var newOwned = WL.owned.slice();
+    milestoneUnlocked.forEach(function(id) { newOwned.push('custom_' + id); });
+    WordLabData.saveScientist({ owned: newOwned }).catch(function() {});
+    milestoneUnlocked.forEach(function(id) { WL.owned.push('custom_' + id); });
+  }
+
+  WL.customItems = visible;
+};
+
+/* WL.renderCustom — renders WL.customItems into #itemGrid using DOM methods.
+ * XSS-safe: all user-supplied strings (names, rarity) written via textContent.
+ * Images set via img.src property — never via raw innerHTML.
+ * Card style matches the parchment .lab-card used by WL.cardEl.
+ */
+WL.renderCustom = function() {
+  var grid = document.getElementById('itemGrid');
+  if (!grid) return;
+  grid.innerHTML = '';   // safe — clearing our own DOM
+
+  var items = WL.customItems || [];
+  if (items.length === 0) {
+    var msg = document.createElement('p');
+    msg.style.cssText = 'color:#9a7a3a;font-size:13px;padding:20px 0;grid-column:1/-1;text-align:center;line-height:1.6;';
+    msg.textContent = 'No custom items yet. Your teacher can create them in the Item Creator!';
+    grid.appendChild(msg);
+    return;
+  }
+
+  var rarityCardClass  = { legendary:'is-legendary', epic:'is-epic', rare:'is-rare' };
+  var rarityLabelClass = { legendary:'lab-rarity-legendary', epic:'lab-rarity-epic', rare:'lab-rarity-rare' };
+
+  var customSlots = (WL.scientist && WL.scientist.customSlots) || {};
+  var catObj = WL.CATS.find(function(c) { return c.id === 'custom'; });
+
+  items.forEach(function(item, idx) {
+    var isOwned   = WL.owned.includes('custom_' + item.id);
+    var isFree    = (item.quark_cost === 0 && item.unlock_method !== 'milestone' && item.unlock_method !== 'gifted');
+    var isEquipped = (customSlots[item.item_type] === item.id);
+
+    // ── Card button ──────────────────────────────────────────────────
+    var card = document.createElement('button');
+    card.className = 'lab-card' +
+      (rarityCardClass[item.rarity] ? ' ' + rarityCardClass[item.rarity] : '') +
+      (isEquipped ? ' is-equipped' : '');
+    card.style.setProperty('--card-delay', (idx * 0.18) + 's');
+    card.setAttribute('type', 'button');
+    card.setAttribute('aria-label',
+      item.name + (isEquipped ? ' (equipped)' : (isOwned || isFree ? ' (owned)' : '')));
+
+    // ── Rarity badge — top left (not for common; colour is supplemented by text) ──
+    if (item.rarity && item.rarity !== 'common') {
+      var badge = document.createElement('div');
+      badge.className = 'lab-rarity ' + (rarityLabelClass[item.rarity] || '');
+      badge.setAttribute('aria-hidden', 'true');
+      badge.textContent = item.rarity;   // textContent — XSS-safe
+      card.appendChild(badge);
+    }
+
+    // ── Equipped chip — top right ─────────────────────────────────────
+    if (isEquipped) {
+      var chip = document.createElement('div');
+      chip.className = 'lab-equipped-chip';
+      chip.setAttribute('aria-hidden', 'true');
+      chip.textContent = '✓';
+      card.appendChild(chip);
+    }
+
+    // ── Image preview ─────────────────────────────────────────────────
+    var previewWrap = document.createElement('div');
+    previewWrap.className = 'lab-card-preview';
+
+    var rawUrl = item.image_url && item.image_url.trim() !== 'null' && item.image_url.startsWith('http')
+      ? item.image_url.trim() : null;
+    var imgSrc = rawUrl || item.image_data;
+    if (imgSrc) {
+      var img = document.createElement('img');
+      img.src   = imgSrc;           // set as property — never via innerHTML
+      img.alt   = '';               // decorative; label is on the card <button>
+      img.style.cssText = 'width:60px;height:60px;object-fit:contain;border-radius:8px;';
+      previewWrap.appendChild(img);
+    } else {
+      var placeholder = document.createElement('div');
+      placeholder.className = 'lab-card-icon';
+      placeholder.setAttribute('aria-hidden', 'true');
+      placeholder.textContent = '🎨';
+      previewWrap.appendChild(placeholder);
+    }
+    card.appendChild(previewWrap);
+
+    // ── Item name (textContent — XSS-safe) ────────────────────────────
+    var nameEl = document.createElement('div');
+    nameEl.className = 'lab-card-name';
+    nameEl.textContent = item.name;   // textContent — XSS-safe
+    card.appendChild(nameEl);
+
+    // ── Rarity line ───────────────────────────────────────────────────
+    if (item.rarity) {
+      var rarityLine = document.createElement('div');
+      rarityLine.className = 'lab-card-price';
+      rarityLine.setAttribute('aria-hidden', 'true');
+      rarityLine.textContent = item.rarity.charAt(0).toUpperCase() + item.rarity.slice(1);
+      card.appendChild(rarityLine);
+    }
+
+    // ── Action indicator ──────────────────────────────────────────────
+    var act = document.createElement('div');
+    act.className = 'lab-card-act' + (isEquipped ? ' is-equipped' : '');
+    act.setAttribute('aria-hidden', 'true');
+
+    if (isEquipped) {
+      act.textContent = '✓ Equipped';
+    } else if (isOwned || isFree) {
+      act.textContent = 'Equip';
+    } else if (item.unlock_method === 'gifted') {
+      act.textContent = '🎁 Teacher gift';
+    } else if (item.unlock_method === 'milestone') {
+      var mt     = item.milestone_type || 'totalCorrect';
+      var thresh = item.milestone_threshold || 0;
+      var prog   = (WL.stats || {})[mt] || 0;
+      act.textContent = prog >= thresh ? '🏅 Unlocked' : '🏅 ' + prog + '/' + thresh;
+    } else if (item.quark_cost > 0) {
+      act.textContent = '⚛️ ' + item.quark_cost;
+    } else {
+      act.textContent = 'Claim Free';
+    }
+    card.appendChild(act);
+
+    // ── Click → WL.select ─────────────────────────────────────────────
+    (function(it) {
+      card.addEventListener('click', function() { WL.select(catObj, it); });
+    })(item);
+
+    grid.appendChild(card);
+  });
+};
+
+/* WL.equipCustom — ported verbatim from scientist.html equipCustomItem()
+ * (lines 1527–1557). Writes customSlots[item_type] + customSlots['_img_<type>'],
+ * persists via saveScientist, then re-renders stage + grid.
+ * Toggle: clicking an already-equipped item unequips it (sets slot to null).
+ */
+WL.equipCustom = async function(item) {
+  var cached = WL._customItemsData[item.id];
+  if (!cached) return;
+  var itemType  = cached.item_type;
+  var imageData = cached.image_data;
+
+  // Read fresh scientist data so we don't overwrite concurrent changes
+  var current     = await WordLabData.getScientist() || {};
+  var owned       = current.owned || [];
+  var customSlots = Object.assign({}, current.customSlots || {});
+  var updates     = {};
+
+  if (!owned.includes('custom_' + item.id)) {
+    updates.owned = owned.concat(['custom_' + item.id]);
+  }
+
+  // Toggle equip
+  if (customSlots[itemType] === item.id) {
+    customSlots[itemType] = null;
+  } else {
+    customSlots[itemType] = item.id;
+    // Store image so buildSVG can render the overlay without a DB call
+    customSlots['_img_' + itemType] = imageData;
+  }
+  updates.customSlots = customSlots;
+
+  try {
+    await WordLabData.saveScientist(updates);
+  } catch(e) {
+    console.error('[WL.equipCustom] saveScientist failed:', e);
+    return;
+  }
+
+  // Update in-memory state so renderStage and renderCustom see the change immediately
+  WL.scientist.customSlots = customSlots;
+  if (updates.owned) WL.owned = updates.owned.slice();
+
+  WL.renderStage();
+  WL.renderGrid();
+  WL.react();
+};
+
 /* ── WL.setCategory ─────────────────────────────────────────────── */
 WL.setCategory = function(id) {
   WL.activeCat = id;
@@ -1743,7 +2008,8 @@ WL.equipDance = async function(tier, danceId) {
 
 /* ── WL.select — if owned, equip; else no-op (Task 9 adds buy modal) */
 WL.select = function(cat, item) {
-  var isFree  = !!(item.free || item.cost === 0);
+  var isFree  = !!(item.free || item.cost === 0 ||
+    (cat.id === 'custom' && item.quark_cost === 0 && item.unlock_method !== 'milestone' && item.unlock_method !== 'gifted'));
   var isOwned = isFree || WL.owned.includes(WL.ownKey(cat, item));
   if (!isOwned) return;   // Task 9 adds confirm/not-enough modals
   if (cat.id === 'effects') {
@@ -1752,6 +2018,8 @@ WL.select = function(cat, item) {
     WL.equipEffect(alreadyOn ? 'none' : item.id);
   } else if (cat.id === 'dances') {
     WL.equipDance(item.tier, item.id);
+  } else if (cat.id === 'custom') {
+    WL.equipCustom(item);
   } else {
     WL.equip(cat, item);
   }
