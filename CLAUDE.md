@@ -1592,7 +1592,10 @@ dressing-room + shop — built subagent-driven from a spec + plan (`docs/superpo
 - [x] Built in parallel `scientist-new.html`, swapped in at the end; exact mockup values pinned in spec §12 + verbatim mockup file
 - [x] Shared catalogue extracted to `wordlab-shop-data.js` (single source of truth)
 - [x] Verified live as test student incl. orphan check: a pre-existing outfit (coat/head/face/effect/dance) resolves as owned+equipped — no orphaned purchases
+- [x] Merged to `main` **locally** (fast-forward) — NOT pushed; nothing deployed yet (push auto-deploys to production)
+- [ ] **NEXT: spacing/visual polish** — layout looks rough; tighten padding/gaps on shop grid, pills, cards, top bar, stage/stats proportions vs mockup (`docs/superpowers/specs/2026-06-29-lab-shop-mockup.html`, spec §12.3)
 - [ ] Post-merge: smoke-test custom-item equip with real teacher-made `shop_items` (test class had none)
+- [ ] Deferred cosmetic (final review, non-blocking): inline-Fredoka on `.lab-stat-num`, dances `src` used for header count, "Already owned"→not-enough edge case, ARIA list-nesting nit
 - [ ] Phase 2 (later): animated worlds backdrop + ~7 new effects; Phase 3: SVG hair, pet expansion, port mockup art into the SVG renderer
 
 ---
