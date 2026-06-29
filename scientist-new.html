@@ -340,6 +340,17 @@
     body.low-stim [data-cat="effects"],
     body.low-stim [data-cat="dances"]{ display:none !important; }
 
+    /* Low-stim: disable ALL decorative animations on this page */
+    body.low-stim .lab-card,
+    body.low-stim .lab-bob,
+    body.low-stim .lab-podium,
+    body.low-stim .lab-charwrap { animation:none !important; }
+
+    /* Carry-forward fix 1: wordlab-scientist.js auto-injects #wlScientistWidget into
+     * the first <header> it finds (fallback when #wlPillSlot is absent).
+     * The new top bar already shows all relevant info — hide the injected widget. */
+    #wlScientistWidget { display:none !important; }
+
     /* ── Mobile: stack panes vertically below 760 px (spec §8) ── */
     @media(max-width:760px){
       body{ overflow:auto; }
@@ -1053,12 +1064,10 @@ WL.renderStage = function(mood) {
   // Re-apply live particle effect after the character node is replaced.
   // Without this, any previous WLEffects.start() was attached to the old,
   // now-detached DOM node — the effect would silently die on every renderStage call.
+  // Use _calm() so body.low-stim, sessionStorage flag, AND prefers-reduced-motion all suppress.
   if (typeof WLEffects !== 'undefined' && WL.scientist && WL.scientist.effect) {
     var _effectId = WL.scientist.effect;
-    var _lowStim  = typeof WordLabData !== 'undefined' &&
-                    typeof WordLabData.isLowStimMode === 'function' &&
-                    WordLabData.isLowStimMode();
-    if (!_lowStim) {
+    if (!_calm()) {
       try { WLEffects.stop(WL.charEl); } catch(e) {}
       try { WLEffects.start(_effectId, WL.charEl); } catch(e) {}
     }
@@ -1181,6 +1190,15 @@ WL.boot = async function() {
   if (!session) {
     window.location.href = 'landing.html';
     return;
+  }
+
+  /* Low-stim: refresh setting from class DB record and apply body.low-stim.
+   * wordlab-data.js auto-applies from sessionStorage at parse time (synchronous),
+   * but calling loadLowStimMode here refreshes from the DB so changes the teacher
+   * made since last login are picked up. Fire-and-forget: no need to await here
+   * since rendering proceeds regardless of the outcome. */
+  if (session.classId && typeof WordLabData.loadLowStimMode === 'function') {
+    WordLabData.loadLowStimMode(session.classId).catch(function() {});
   }
 
   const data = await WordLabData.getStudentData();
@@ -1365,8 +1383,8 @@ WL.miniPreview = function(cat, item) {
     wings:       null,
   };
 
-  /* Set ONLY the field for this category (skip 'none' — null shows bare scientist) */
-  if (item.id !== 'none') {
+  /* Set ONLY the field for this category (skip 'none' or falsy — null shows bare scientist) */
+  if (item.id && item.id !== 'none') {
     base[cat.field] = item.id;
   }
 
@@ -1404,18 +1422,22 @@ WL.cardEl = function(item, cat) {
   }
   var rarity   = WLShopData.rarityOf(item);  // 'legendary'|'epic'|'rare'|'common'
 
-  /* Outer card — a real <button> per plan requirement "Cards are real <button>s" */
+  /* Outer card — a real <button> with role="listitem" (grid has role="list") */
   var btn = document.createElement('button');
   btn.type = 'button';
+  btn.setAttribute('role', 'listitem');
   btn.className = 'lab-card' +
     (equipped           ? ' is-equipped'     : '') +
     (isLocked           ? ' is-badge-locked' : '') +
     (rarity==='legendary'? ' is-legendary'   : '') +
     (rarity==='epic'     ? ' is-epic'        : '');
 
-  /* Staggered float animation delay: (id.length % 5) * 0.2s per spec §12.4 */
-  var delay = ((item.id.length % 5) * 0.2).toFixed(1) + 's';
-  btn.style.animationDelay = delay;
+  /* Staggered float animation: delay is random-feeling (idx not available here, id used).
+   * Duration varies per card per spec §12.4: (3 + (idLen % 4) * 0.4)s — gives 3.0–4.2 s range.
+   * Delay: (idLen % 5) * 0.2s — small phase offset so not all cards move in unison. */
+  var idLen = item.id.length;
+  btn.style.animationDuration = (3 + (idLen % 4) * 0.4).toFixed(1) + 's';
+  btn.style.animationDelay    = ((idLen % 5) * 0.2).toFixed(1) + 's';
 
   /* aria-label: name + price + state (no colour-only meaning) */
   var priceLabel = isFree ? 'free' : item.cost + ' quarks';
@@ -1460,7 +1482,7 @@ WL.cardEl = function(item, cat) {
     if (bgImg) ps.style.backgroundImage = bgImg;
     preview.appendChild(ps);
 
-  } else if ((cat.id === 'heads' || cat.id === 'faces' || cat.id === 'wings') && item.id !== 'none') {
+  } else if ((cat.id === 'heads' || cat.id === 'faces' || cat.id === 'wings') && item.id && item.id !== 'none') {
     /* Task 5: real mini-SVG preview via WLScientist.buildSVG (one renderer only) */
     preview.appendChild(WL.miniPreview(cat, item));
 
@@ -1724,6 +1746,7 @@ WL.renderBadges = function() {
 
   var pinsGrid = document.createElement('div');
   pinsGrid.className = 'lab-pins-grid';
+  pinsGrid.setAttribute('role', 'list');
 
   // Streak Flame — always available (same as scientist.html)
   var streakDays = 0;
@@ -1736,6 +1759,7 @@ WL.renderBadges = function() {
   var flamePinned = pins.includes('streak_flame');
   var flameCard = document.createElement('div');
   flameCard.className = 'lab-pin-card' + (flamePinned ? ' is-pinned' : '');
+  flameCard.setAttribute('role', 'listitem');
 
   var flameIcon = document.createElement('div');
   flameIcon.className = 'lab-pin-icon';
@@ -1784,6 +1808,7 @@ WL.renderBadges = function() {
     var isPinned = pins.includes(b.id);
     var card = document.createElement('div');
     card.className = 'lab-pin-card' + (isPinned ? ' is-pinned' : '');
+    card.setAttribute('role', 'listitem');
 
     var icon = document.createElement('div');
     icon.className = 'lab-pin-icon';
@@ -1839,6 +1864,7 @@ WL.renderBadges = function() {
 
   var badgeGrid = document.createElement('div');
   badgeGrid.className = 'lab-badge-grid';
+  badgeGrid.setAttribute('role', 'list');
 
   var allBadges = (typeof WordLabData !== 'undefined' && WordLabData.ALL_BADGES) || [];
   allBadges.forEach(function(b) {
@@ -1884,6 +1910,7 @@ WL.renderBadges = function() {
 
   var legendGrid = document.createElement('div');
   legendGrid.className = 'lab-badge-grid';
+  legendGrid.setAttribute('role', 'list');
 
   var legendaryBadges = (typeof WordLabData !== 'undefined' && WordLabData.LEGENDARY_BADGES) || [];
   legendaryBadges.forEach(function(b) {
@@ -2047,6 +2074,7 @@ WL.renderCustom = function() {
       (isEquipped ? ' is-equipped' : '');
     card.style.setProperty('--card-delay', (idx * 0.18) + 's');
     card.setAttribute('type', 'button');
+    card.setAttribute('role', 'listitem');  // grid has role="list"
     card.setAttribute('aria-label',
       item.name + (isEquipped ? ' (equipped)' : (isOwned || isFree ? ' (owned)' : '')));
 
@@ -2218,9 +2246,10 @@ WL.equipEffect = async function(id) {
     await WordLabData.saveScientist({ effect: WL.scientist.effect });
   } catch(e) { console.error('[WL.equipEffect] saveScientist failed:', e); }
   WL.renderGrid();
-  // Preview effect on stage character (unless low-stim or removing)
+  // Preview effect on stage character (unless low-stim or reduced-motion or removing)
+  // Use _calm() so body.low-stim, sessionStorage flag, AND prefers-reduced-motion all suppress.
   if (typeof WLEffects !== 'undefined') {
-    if (!WordLabData.isLowStimMode() && id !== 'none') {
+    if (!_calm() && id !== 'none') {
       WLEffects.stop(WL.charEl);
       WLEffects.start(id, WL.charEl);
     } else {
@@ -2279,11 +2308,18 @@ WL.equipDance = async function(tier, danceId) {
    with no buy or equip button).
 */
 
-/* ── calm() guard — suppress all motion/sound in low-stim or reduced-motion.
- * Primary: document.body.classList.contains('low-stim') — this is what the
- * CSS guards use and what loadLowStimMode() sets (wordlab-data.js line 721).
- * Also check the sessionStorage flag via WordLabData.isLowStimMode() for cases
- * where the class hasn't been applied yet, and prefers-reduced-motion. */
+/* ── _calm() guard — suppress all motion/sound in low-stim or reduced-motion.
+ *
+ * Carry-forward fix (Task 11): WL.equipEffect previously used WordLabData.isLowStimMode()
+ * directly, while _calm() used body.low-stim. Now _calm() is the single source of truth
+ * and WL.equipEffect delegates to it, so all three sources are checked consistently:
+ *
+ *   1. body.low-stim       — set by loadLowStimMode() (wordlab-data.js line 721) and
+ *                             auto-applied from sessionStorage at parse time (line 2938).
+ *   2. isLowStimMode()     — reads sessionStorage 'wl_low_stim'; catches the brief window
+ *                             between page load and the first DOMContentLoaded callback.
+ *   3. prefers-reduced-motion — honours the OS/browser accessibility setting.
+ */
 function _calm() {
   return document.body.classList.contains('low-stim') ||
          (typeof WordLabData !== 'undefined' &&
@@ -2342,7 +2378,7 @@ WL.openConfirm = function(cat, item, triggerEl) {
       var pbg = WL._patternBg(item.id);
       sw.style.background = '#e8e8e8';
       if (pbg) sw.style.backgroundImage = pbg;
-    } else if ((cat.id === 'heads' || cat.id === 'faces' || cat.id === 'wings') && item.id !== 'none') {
+    } else if ((cat.id === 'heads' || cat.id === 'faces' || cat.id === 'wings') && item.id && item.id !== 'none') {
       sw.appendChild(WL.miniPreview(cat, item));
     } else {
       sw.textContent = item.icon || '?';
