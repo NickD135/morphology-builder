@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Labs – My Scientist</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="wordlab-common.css">
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ── Lab Shop — palette tokens (spec §12.2) ── */
+    :root{
+      --lab-bg:#15131f;
+      --topbar:linear-gradient(180deg,#33324a,#2a2940);
+      --brand:linear-gradient(135deg,#7b6bff,#5a39c7);
+      --panel:linear-gradient(180deg,#faf3da,#f3e9c8);
+      --panel-edge:#e5d49e;
+      --accent:#5a39c7;
+      --accent-2:#7b6bff;
+    }
+
+    /* Prevent background flash */
+    body{ background:#15131f; overflow:hidden; }
+
+    /* ── Main layout scaffold (spec §12.3) ── */
+    .labshop{
+      height:100vh;
+      display:flex;
+      flex-direction:column;
+      background:var(--lab-bg);
+      font-family:'Lexend',sans-serif;
+      color:#3a3550;
+      overflow:hidden;
+    }
+
+    /* Top bar — 58 px fixed (spec §12.3) */
+    .lab-topbar{
+      height:58px;
+      flex:0 0 58px;
+      background:var(--topbar);
+      display:flex;
+      align-items:center;
+      padding:0 20px;
+      gap:14px;
+      border-bottom:2px solid rgba(0,0,0,.3);
+      box-shadow:0 4px 18px rgba(0,0,0,.25);
+      z-index:40;
+    }
+
+    /* Main area */
+    .lab-main{
+      flex:1;
+      min-height:0;
+      display:flex;
+    }
+
+    /* Left pane — character stage + stats (spec §12.3) */
+    .lab-left{
+      flex:1 1 50%;
+      min-width:380px;
+      display:flex;
+      flex-direction:column;
+      background:var(--lab-bg);
+    }
+
+    /* Right pane — shop (spec §12.3) */
+    .lab-shop-panel{
+      flex:1 1 50%;
+      min-width:420px;
+      background:var(--panel);
+      border-left:3px solid var(--panel-edge);
+      display:flex;
+      flex-direction:column;
+      box-shadow:-10px 0 30px rgba(0,0,0,.2);
+    }
+
+    /* Fredoka accent class */
+    .fred{ font-family:'Fredoka',sans-serif; font-weight:600; }
+
+    /* ── Top bar internals ── */
+    .tb-brand-group{
+      display:flex;
+      align-items:center;
+      gap:11px;
+    }
+    .tb-brand-tile{
+      width:36px; height:36px;
+      border-radius:11px;
+      background:var(--brand);
+      display:flex; align-items:center; justify-content:center;
+      font-size:19px;
+      box-shadow:0 3px 10px rgba(90,57,199,.5);
+      flex-shrink:0;
+    }
+    .tb-brand-text{ line-height:1; }
+    .tb-brand-name{
+      font-family:'Fredoka',sans-serif;
+      font-weight:600;
+      font-size:18px;
+      color:#fff;
+      display:block;
+    }
+    .tb-brand-sub{
+      font-size:9px;
+      letter-spacing:2px;
+      color:#9a96c4;
+      font-weight:800;
+      text-transform:uppercase;
+      display:block;
+      margin-top:2px;
+    }
+    .tb-spacer{ flex:1; }
+
+    /* Quark pill (spec §12.2) */
+    #quarkPill{
+      display:flex;
+      align-items:center;
+      gap:9px;
+      background:rgba(123,107,255,.16);
+      border:1.5px solid rgba(150,135,255,.4);
+      padding:6px 15px 6px 10px;
+      border-radius:999px;
+    }
+    .tb-quark-orb{
+      width:23px; height:23px;
+      border-radius:50%;
+      background:radial-gradient(circle at 35% 30%,#b9a6ff,#6d4ad6);
+      display:flex; align-items:center; justify-content:center;
+      font-size:12px;
+      flex-shrink:0;
+    }
+    #quarkValue{
+      font-family:'Fredoka',sans-serif;
+      font-weight:600;
+      font-size:16px;
+      color:#fff;
+    }
+    .tb-quark-label{
+      font-size:10px;
+      color:#b6b0e0;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.6px;
+    }
+
+    /* Student name pill */
+    .tb-name-pill{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      background:rgba(255,255,255,.1);
+      border:1.5px solid rgba(255,255,255,.18);
+      padding:6px 13px;
+      border-radius:999px;
+    }
+    .tb-name-avatar{
+      width:21px; height:21px;
+      border-radius:50%;
+      background:linear-gradient(135deg,#8a7bff,#5a39c7);
+      display:flex; align-items:center; justify-content:center;
+      font-size:11px;
+      flex-shrink:0;
+      /* decorative — screenreader-hidden via aria-hidden */
+    }
+    #studentName{
+      color:#fff;
+      font-weight:800;
+      font-size:13px;
+    }
+
+    /* Home link pill */
+    .tb-home-link{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      background:rgba(255,255,255,.07);
+      padding:6px 13px;
+      border-radius:999px;
+      color:#cfcbe8;
+      font-weight:700;
+      font-size:13px;
+      text-decoration:none;
+      transition:background .15s, color .15s;
+    }
+    .tb-home-link:hover{ background:rgba(255,255,255,.13); color:#fff; }
+
+    /* ── Left pane placeholders (Task 2 adds content) ── */
+    .lab-stage{
+      flex:1;
+      min-height:0;
+      position:relative;
+      overflow:hidden;
+    }
+    .lab-stats{
+      /* parchment stats card — contents added in Task 2 */
+    }
+
+    /* ── Right pane placeholders (Tasks 4–8 add content) ── */
+    .lab-grid{
+      flex:1;
+      overflow-y:auto;
+      padding:8px 22px 26px;
+    }
+
+    /* ── Phase 1 keyframes (spec §12.4) ── */
+    @keyframes floatY    { 0%,100%{transform:translateY(0)}   50%{transform:translateY(-9px)} }
+    @keyframes idleBob   { 0%,100%{transform:translateY(0)}   50%{transform:translateY(-6px)} }
+    @keyframes ringPulse { 0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.55}
+                           50%{transform:translate(-50%,-50%) scale(1.12);opacity:.9} }
+    @keyframes speechPop { 0%  {transform:translate(-50%,8px) scale(.6);opacity:0}
+                           60% {transform:translate(-50%,-4px) scale(1.06);opacity:1}
+                           100%{transform:translate(-50%,0) scale(1);opacity:1} }
+    @keyframes modalPop  { 0%  {transform:scale(.82) translateY(14px);opacity:0}
+                           100%{transform:scale(1) translateY(0);opacity:1} }
+    @keyframes overlayFade { from{opacity:0} to{opacity:1} }
+
+    .lab-bob{ animation:idleBob 4s ease-in-out infinite; }
+    @media(prefers-reduced-motion:reduce){ .lab-bob{ animation:none; } }
+    body.low-stim .lab-bob{ animation:none; }
+
+    /* Low-stim: hide Effects and Dances category pills (spec §6) */
+    body.low-stim [data-cat="effects"],
+    body.low-stim [data-cat="dances"]{ display:none !important; }
+
+    /* ── Mobile: stack panes vertically below 760 px (spec §8) ── */
+    @media(max-width:760px){
+      body{ overflow:auto; }
+      .labshop{ height:auto; min-height:100vh; overflow:visible; }
+      .lab-main{ flex-direction:column; }
+      .lab-left{ min-width:0; }
+      .lab-shop-panel{ min-width:0; border-left:none; border-top:3px solid var(--panel-edge); }
+    }
+  </style>
+</head>
+<body>
+
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<div class="labshop">
+
+  <header class="lab-topbar" role="banner">
+
+    <!-- Brand -->
+    <div class="tb-brand-group">
+      <div class="tb-brand-tile" aria-hidden="true">🧪</div>
+      <div class="tb-brand-text">
+        <span class="tb-brand-name fred">Word Labs</span>
+        <span class="tb-brand-sub">MY SCIENTIST</span>
+      </div>
+    </div>
+
+    <div class="tb-spacer"></div>
+
+    <!-- Quark balance — aria-live so screen readers announce changes -->
+    <div id="quarkPill" role="status" aria-live="polite" aria-label="Quark balance">
+      <div class="tb-quark-orb" aria-hidden="true">⚛</div>
+      <span id="quarkValue" class="fred">—</span>
+      <span class="tb-quark-label">quarks</span>
+    </div>
+
+    <!-- Student name -->
+    <div class="tb-name-pill">
+      <div class="tb-name-avatar" aria-hidden="true">🧑‍🔬</div>
+      <span id="studentName">…</span>
+    </div>
+
+    <!-- Home -->
+    <a href="landing.html" class="tb-home-link" aria-label="Home">🏠 Home</a>
+
+  </header><!-- /.lab-topbar -->
+
+  <main class="lab-main" id="main-content" role="main">
+
+    <!-- Left pane: stage + stats -->
+    <section class="lab-left" aria-label="Your scientist">
+      <div id="stage" class="lab-stage"></div>
+      <div id="statsCard" class="lab-stats"></div>
+    </section>
+
+    <!-- Right pane: Lab Shop -->
+    <section class="lab-shop-panel" aria-label="Lab Shop">
+      <div id="shopHeader"></div>
+      <nav id="pillRail" aria-label="Shop categories"></nav>
+      <div id="itemGrid" class="lab-grid" role="list"></div>
+    </section>
+
+  </main><!-- /#main-content -->
+
+</div><!-- /.labshop -->
+
+<!-- ── Scripts — same order and attributes as scientist.html ── -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="wordlab-stage.js"></script>
+<script src="wordlab-data.js"></script>
+<script defer src="wordlab-scientist.js"></script>
+<script defer src="wordlab-audio.js"></script>
+<script defer src="wordlab-effects.js"></script>
+<!-- wordlab-shop-data.js created in Task 3 — 404 is harmless until then -->
+<script defer src="wordlab-shop-data.js"></script>
+
+<script>
+/* ── WL namespace — page state and boot ──────────────────────── */
+const WL = window.WL = {
+  scientist: null,
+  stats:     null,
+  quarks:    0,
+  owned:     [],
+  activeCat: 'colours'
+};
+
+/* Update the quark balance pill (XSS-safe via textContent) */
+WL.renderQuarks = function() {
+  document.getElementById('quarkValue').textContent =
+    (WL.quarks || 0).toLocaleString('en-AU');
+};
+
+/* Boot — load student data and hydrate the top bar */
+WL.boot = async function() {
+  if (typeof WordLabData === 'undefined') {
+    // Non-deferred scripts not yet executed — retry
+    setTimeout(WL.boot, 100);
+    return;
+  }
+
+  /* Auth guard: redirect to landing if no student session */
+  const session = WordLabData.getSession();
+  if (!session) {
+    window.location.href = 'landing.html';
+    return;
+  }
+
+  const data = await WordLabData.getStudentData();
+  if (!data) {
+    window.location.href = 'landing.html';
+    return;
+  }
+
+  WL.scientist = data.scientist || {};
+  WL.stats     = data.stats    || {};
+  WL.quarks    = data.quarks   || 0;
+  WL.owned     = WL.scientist.owned || [];
+
+  /* XSS-safe: textContent only */
+  document.getElementById('studentName').textContent =
+    data.name || session.studentName || 'Scientist';
+
+  WL.renderQuarks();
+
+  /* Later tasks attach WL.renderStage / WL.renderStats / WL.renderShop */
+  if (typeof WL.renderStage === 'function') WL.renderStage();
+  if (typeof WL.renderStats  === 'function') WL.renderStats();
+  if (typeof WL.renderShop   === 'function') WL.renderShop();
+};
+
+document.addEventListener('DOMContentLoaded', WL.boot);
+</script>
+
+</body>
+</html>
