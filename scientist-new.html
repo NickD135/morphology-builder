@@ -2512,6 +2512,51 @@ WL.confirmBuy = async function() {
   WL.equipFor(cat, item);   // saves the equipped field + re-renders
 };
 
+/* ── WL.surprise — Task 10: randomise all 5 visual outfit fields ───
+ * Picks a random AVAILABLE item per field (free OR owned), excluding any
+ * item the student hasn't badge-unlocked yet.  Uses the same badge-gate
+ * rule as WL.select/WL.cardEl so badge-locked cosmetics are never picked.
+ * Only the 5 visual outfit fields are randomised; effects, dances, badges,
+ * and custom are left untouched.
+ */
+WL.surprise = async function() {
+  var updates = {};
+  [
+    ['colours',  'coatColor'],
+    ['patterns', 'coatPattern'],
+    ['heads',    'head'],
+    ['faces',    'face'],
+    ['wings',    'wings']
+  ].forEach(function(pair) {
+    var catId = pair[0], field = pair[1];
+    var cat = WL.CATS.find(function(c) { return c.id === catId; });
+    if (!cat || !cat.src) return;
+
+    var available = cat.src().filter(function(it) {
+      /* Badge-gate — same rule as WL.select and WL.cardEl.
+       * Effects use item.requires; visual outfit categories use item.requiresBadge. */
+      var reqBadge    = it.requiresBadge;
+      var hasReqBadge = !reqBadge || (WL.badges && WL.badges.includes(reqBadge));
+      if (!hasReqBadge) return false;                 // locked: skip
+
+      /* Free (cost 0) or already owned */
+      var isFree = !!(it.free || it.cost === 0);
+      return isFree || WL.owned.includes(WL.ownKey(cat, it));
+    });
+
+    if (available.length) {
+      var pick = available[Math.floor(Math.random() * available.length)];
+      updates[field]         = pick.id;
+      WL.scientist[field]    = pick.id;
+    }
+  });
+
+  await WordLabData.saveScientist(updates);
+  WL.renderStage();
+  WL.renderGrid();
+  if (!_calm()) { WL.speech('Surprise! 🎲'); WL.spin(); WL.burst(); }
+};
+
 /* ── WL.select — FULL version (Task 9) ──────────────────────────── */
 WL.select = function(cat, item, triggerEl) {
   /* Badge-gating check — FIRST, before owned/afford (scientist.html line 1106, 1180).
