@@ -560,6 +560,130 @@
     .lab-rarity-epic{      background:#b14fd8; color:#fff; }
     .lab-rarity-rare{      background:#2f8fd8; color:#fff; }
 
+    /* ── Task 7: Badges view ── */
+    /* Full-height scrollable container that renders inside #itemGrid */
+    .lab-badges-wrap{
+      grid-column:1/-1;
+      display:flex;
+      flex-direction:column;
+      gap:0;
+    }
+    .lab-badges-section-title{
+      font-size:11px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.14em;
+      color:#9a7a3a;
+      margin:20px 0 10px;
+      padding-bottom:5px;
+      border-bottom:1px dashed #e5d49e;
+    }
+    .lab-badges-section-title:first-child{ margin-top:4px; }
+
+    /* Pin-strip grid — matches badgePinsGrid in scientist.html */
+    .lab-pins-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
+      gap:9px;
+    }
+    .lab-pin-card{
+      background:linear-gradient(180deg,#fdf7e0,#f6edcf);
+      border:2px solid #ecdba6;
+      border-radius:14px;
+      padding:11px 10px;
+      text-align:center;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:4px;
+    }
+    .lab-pin-card.is-pinned{
+      border-color:#f59e0b;
+      background:linear-gradient(135deg,#fffbeb,#fef3c7);
+    }
+    .lab-pin-icon{ font-size:26px; line-height:1; }
+    .lab-pin-name{ font-size:11px; font-weight:800; color:#4a3416; }
+    .lab-pin-sub{  font-size:9px;  color:#b45309; font-weight:600; }
+    .lab-pin-btn{
+      margin-top:3px;
+      background:#fff;
+      color:#5a39c7;
+      border:2px solid #b9a6ff;
+      box-shadow:0 2px 0 #d9ccff;
+      border-radius:8px;
+      font-family:'Lexend',sans-serif;
+      font-weight:700;
+      font-size:11px;
+      padding:5px 10px;
+      cursor:pointer;
+      min-height:32px;
+      width:100%;
+      transition:opacity .12s;
+    }
+    .lab-pin-btn:hover{ opacity:.85; }
+    .lab-pin-btn:focus-visible{ outline:3px solid #7b6bff; outline-offset:2px; }
+    .lab-pin-btn.is-pinned{
+      background:#e7e0fb;
+      border-color:#cabdf5;
+      color:#3a2590;
+    }
+    .lab-pin-btn.is-capped{
+      background:#f3f3f3;
+      border-color:#ccc;
+      color:#888;
+      cursor:default;
+      box-shadow:none;
+    }
+
+    /* Badge catalogue grid */
+    .lab-badge-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+      gap:10px;
+      margin-bottom:8px;
+    }
+    .lab-badge-card{
+      background:linear-gradient(180deg,#fdf7e0,#f6edcf);
+      border:2px solid #ecdba6;
+      border-radius:14px;
+      padding:12px 10px;
+      text-align:center;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:3px;
+    }
+    .lab-badge-card.is-earned{
+      background:#eef2ff;
+      border-color:#c7d2fe;
+    }
+    .lab-badge-card.is-legendary{
+      background:#fffbeb;
+      border-color:#fcd34d;
+    }
+    .lab-badge-card.is-legendary.is-earned{
+      background:#fffbeb;
+      border-color:#f59e0b;
+      box-shadow:0 4px 12px rgba(245,158,11,.2);
+    }
+    /* Locked state: dimmed + grayscale, plus text label (not colour-only) */
+    .lab-badge-card.is-locked{
+      opacity:.5;
+      filter:grayscale(.6);
+    }
+    .lab-badge-icon{ font-size:28px; line-height:1; }
+    .lab-badge-name{ font-size:12px; font-weight:800; color:#312e81; }
+    .lab-badge-desc{ font-size:10px; color:#6e5a2a; font-weight:600; line-height:1.4; }
+    /* Locked label — visible text on top of the greyscale card (not colour-only) */
+    .lab-badge-locked-label{
+      font-size:10px;
+      font-weight:800;
+      color:#888;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      margin-top:2px;
+    }
+
     /* Equipped chip — top right */
     .lab-equipped-chip{
       position:absolute;
@@ -713,6 +837,20 @@ WL.renderStage = function() {
 
   stage.appendChild(podium);
   stage.appendChild(wrap);
+
+  // Re-apply live particle effect after the character node is replaced.
+  // Without this, any previous WLEffects.start() was attached to the old,
+  // now-detached DOM node — the effect would silently die on every renderStage call.
+  if (typeof WLEffects !== 'undefined' && WL.scientist && WL.scientist.effect) {
+    var _effectId = WL.scientist.effect;
+    var _lowStim  = typeof WordLabData !== 'undefined' &&
+                    typeof WordLabData.isLowStimMode === 'function' &&
+                    WordLabData.isLowStimMode();
+    if (!_lowStim) {
+      try { WLEffects.stop(WL.charEl); } catch(e) {}
+      try { WLEffects.start(_effectId, WL.charEl); } catch(e) {}
+    }
+  }
 };
 
 /* ── Task 2: Stats card renderer ─────────────────────────────────
@@ -1261,8 +1399,14 @@ WL.renderGrid = function() {
     return;
   }
 
+  // Task 7: Badges — dedicated renderer
+  if (WL.activeCat === 'badges') {
+    WL.renderBadges();
+    return;
+  }
+
   if (!cat || !cat.src) {
-    /* Badges / Custom — stubbed until Tasks 7–8 */
+    /* Custom — stubbed until Task 8 */
     var stub = document.createElement('p');
     stub.style.cssText = 'color:#9a7a3a;font-size:13px;padding:20px 0;grid-column:1/-1;';
     stub.textContent = 'Coming in a later update.';
@@ -1282,6 +1426,257 @@ WL.renderGrid = function() {
   items.forEach(function(item) {
     grid.appendChild(WL.cardEl(item, cat));
   });
+};
+
+/* ── Task 7: WL.togglePin / WL.unpinBadge ───────────────────────
+ * Ported from scientist.html pinBadge() / unpinBadge() (lines 1294–1311).
+ * Uses WL.scientist (already in memory) + saveScientist, then re-renders
+ * both the grid (pin buttons update) and the stage (coat pins appear).
+ */
+WL.togglePin = async function(badgeId) {
+  var pins = (WL.scientist.displayBadges || []).slice();
+  if (pins.includes(badgeId)) {
+    // Unpin
+    pins = pins.filter(function(id) { return id !== badgeId; });
+  } else {
+    // Pin — enforce 3-cap
+    if (pins.length >= 3) return;
+    pins.push(badgeId);
+  }
+  WL.scientist.displayBadges = pins;
+  try {
+    await WordLabData.saveScientist({ displayBadges: pins });
+  } catch(e) {
+    console.error('[WL.togglePin] saveScientist failed:', e);
+  }
+  // Re-render stage so pins appear/disappear on coat; re-render grid to update buttons
+  WL.renderStage();
+  WL.renderGrid();
+};
+
+/* ── Task 7: WL.renderBadges ────────────────────────────────────
+ * Ported from scientist.html tab-badges (lines 914–993) and pinBadge /
+ * unpinBadge helpers. Restyled to the parchment grid. Locked badges
+ * show a text "Locked" label (not colour-only). All text via textContent.
+ */
+WL.renderBadges = function() {
+  var grid = document.getElementById('itemGrid');
+  if (!grid) return;
+  grid.innerHTML = '';   // safe — clearing our own DOM
+
+  var wrap = document.createElement('div');
+  wrap.className = 'lab-badges-wrap';
+
+  var sci    = WL.scientist || {};
+  var pins   = (sci.displayBadges || []).slice();
+  var earned = WL.badges || [];  // array of badge IDs earned — loaded in WL.boot()
+
+  // ── Section 1: Badge Pins ──────────────────────────────────────
+  var pinTitle = document.createElement('div');
+  pinTitle.className = 'lab-badges-section-title';
+  pinTitle.textContent = '📌 Badge Pins — pin up to 3 on your lab coat';
+  wrap.appendChild(pinTitle);
+
+  var pinsGrid = document.createElement('div');
+  pinsGrid.className = 'lab-pins-grid';
+
+  // Streak Flame — always available (same as scientist.html)
+  var streakDays = 0;
+  try { streakDays = WordLabData.updateDailyStreak().count || 0; } catch(e) {}
+  var flameLabel     = streakDays > 0 ? streakDays + ' day streak' : 'No streak yet';
+  var flameIntensity = streakDays >= 30 ? 'Legendary' :
+                       streakDays >= 14 ? 'Blazing'   :
+                       streakDays >= 7  ? 'Hot'        :
+                       streakDays >= 3  ? 'Warming'   : 'Spark';
+  var flamePinned = pins.includes('streak_flame');
+  var flameCard = document.createElement('div');
+  flameCard.className = 'lab-pin-card' + (flamePinned ? ' is-pinned' : '');
+
+  var flameIcon = document.createElement('div');
+  flameIcon.className = 'lab-pin-icon';
+  flameIcon.textContent = '🔥';
+
+  var flameName = document.createElement('div');
+  flameName.className = 'lab-pin-name';
+  flameName.textContent = 'Streak Flame';
+
+  var flameSub = document.createElement('div');
+  flameSub.className = 'lab-pin-sub';
+  flameSub.textContent = flameIntensity + ' — ' + flameLabel;
+
+  flameCard.appendChild(flameIcon);
+  flameCard.appendChild(flameName);
+  flameCard.appendChild(flameSub);
+
+  var flameBtn = document.createElement('button');
+  if (flamePinned) {
+    flameBtn.className = 'lab-pin-btn is-pinned';
+    flameBtn.textContent = '📌 Pinned';
+  } else if (pins.length < 3) {
+    flameBtn.className = 'lab-pin-btn';
+    flameBtn.textContent = 'Pin';
+  } else {
+    flameBtn.className = 'lab-pin-btn is-capped';
+    flameBtn.textContent = '3 pinned';
+    flameBtn.setAttribute('aria-disabled', 'true');
+    flameBtn.disabled = true;
+  }
+  flameBtn.setAttribute('aria-label', (flamePinned ? 'Unpin' : 'Pin') + ' Streak Flame badge');
+  (function(id) {
+    flameBtn.addEventListener('click', function() { WL.togglePin(id); });
+  })('streak_flame');
+  flameCard.appendChild(flameBtn);
+  pinsGrid.appendChild(flameCard);
+
+  // Earned badges — available to pin
+  var allBadgeDefs = [].concat(
+    (typeof WordLabData !== 'undefined' && WordLabData.ALL_BADGES)        || [],
+    (typeof WordLabData !== 'undefined' && WordLabData.LEGENDARY_BADGES)  || []
+  );
+  var earnedDefs = allBadgeDefs.filter(function(b) { return earned.includes(b.id); });
+
+  earnedDefs.forEach(function(b) {
+    var isPinned = pins.includes(b.id);
+    var card = document.createElement('div');
+    card.className = 'lab-pin-card' + (isPinned ? ' is-pinned' : '');
+
+    var icon = document.createElement('div');
+    icon.className = 'lab-pin-icon';
+    icon.textContent = b.icon;
+
+    var name = document.createElement('div');
+    name.className = 'lab-pin-name';
+    name.textContent = b.label;
+
+    var sub = document.createElement('div');
+    sub.className = 'lab-pin-sub';
+    sub.textContent = 'Earned';
+
+    var btn = document.createElement('button');
+    if (isPinned) {
+      btn.className = 'lab-pin-btn is-pinned';
+      btn.textContent = '📌 Pinned';
+    } else if (pins.length < 3) {
+      btn.className = 'lab-pin-btn';
+      btn.textContent = 'Pin';
+    } else {
+      btn.className = 'lab-pin-btn is-capped';
+      btn.textContent = '3 pinned';
+      btn.setAttribute('aria-disabled', 'true');
+      btn.disabled = true;
+    }
+    btn.setAttribute('aria-label', (isPinned ? 'Unpin' : 'Pin') + ' ' + b.label + ' badge');
+    (function(id) {
+      btn.addEventListener('click', function() { WL.togglePin(id); });
+    })(b.id);
+
+    card.appendChild(icon);
+    card.appendChild(name);
+    card.appendChild(sub);
+    card.appendChild(btn);
+    pinsGrid.appendChild(card);
+  });
+
+  if (earnedDefs.length === 0 && !earned.includes('streak_flame')) {
+    var noBadges = document.createElement('div');
+    noBadges.style.cssText = 'color:#9a7a3a;font-size:12px;font-weight:700;padding:10px;grid-column:1/-1;';
+    noBadges.textContent = 'Earn badges to pin more on your coat!';
+    pinsGrid.appendChild(noBadges);
+  }
+
+  wrap.appendChild(pinsGrid);
+
+  // ── Section 2: All Badges catalogue ───────────────────────────
+  var catTitle = document.createElement('div');
+  catTitle.className = 'lab-badges-section-title';
+  catTitle.textContent = '🏅 All Badges';
+  wrap.appendChild(catTitle);
+
+  var badgeGrid = document.createElement('div');
+  badgeGrid.className = 'lab-badge-grid';
+
+  var allBadges = (typeof WordLabData !== 'undefined' && WordLabData.ALL_BADGES) || [];
+  allBadges.forEach(function(b) {
+    var isEarned = earned.includes(b.id);
+    var card = document.createElement('div');
+    card.className = 'lab-badge-card' + (isEarned ? ' is-earned' : ' is-locked');
+    card.setAttribute('role', 'listitem');
+    if (!isEarned) card.setAttribute('aria-label', b.label + ' — locked');
+
+    var icon = document.createElement('div');
+    icon.className = 'lab-badge-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = b.icon;
+
+    var name = document.createElement('div');
+    name.className = 'lab-badge-name';
+    name.textContent = b.label;
+
+    var desc = document.createElement('div');
+    desc.className = 'lab-badge-desc';
+    desc.textContent = b.desc;
+
+    card.appendChild(icon);
+    card.appendChild(name);
+    card.appendChild(desc);
+
+    if (!isEarned) {
+      var lockedLbl = document.createElement('div');
+      lockedLbl.className = 'lab-badge-locked-label';
+      lockedLbl.textContent = '🔒 Locked';
+      card.appendChild(lockedLbl);
+    }
+
+    badgeGrid.appendChild(card);
+  });
+  wrap.appendChild(badgeGrid);
+
+  // ── Section 3: Legendary Badges ───────────────────────────────
+  var legendTitle = document.createElement('div');
+  legendTitle.className = 'lab-badges-section-title';
+  legendTitle.textContent = '⭐ Legendary Badges';
+  wrap.appendChild(legendTitle);
+
+  var legendGrid = document.createElement('div');
+  legendGrid.className = 'lab-badge-grid';
+
+  var legendaryBadges = (typeof WordLabData !== 'undefined' && WordLabData.LEGENDARY_BADGES) || [];
+  legendaryBadges.forEach(function(b) {
+    var isEarned = earned.includes(b.id);
+    var card = document.createElement('div');
+    card.className = 'lab-badge-card is-legendary' + (isEarned ? ' is-earned' : ' is-locked');
+    card.setAttribute('role', 'listitem');
+    if (!isEarned) card.setAttribute('aria-label', b.label + ' — locked');
+
+    var icon = document.createElement('div');
+    icon.className = 'lab-badge-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = b.icon;
+
+    var name = document.createElement('div');
+    name.className = 'lab-badge-name';
+    name.textContent = b.label;
+
+    var desc = document.createElement('div');
+    desc.className = 'lab-badge-desc';
+    desc.textContent = b.desc;
+
+    card.appendChild(icon);
+    card.appendChild(name);
+    card.appendChild(desc);
+
+    if (!isEarned) {
+      var lockedLbl = document.createElement('div');
+      lockedLbl.className = 'lab-badge-locked-label';
+      lockedLbl.textContent = '🔒 Locked';
+      card.appendChild(lockedLbl);
+    }
+
+    legendGrid.appendChild(card);
+  });
+  wrap.appendChild(legendGrid);
+
+  grid.appendChild(wrap);
 };
 
 /* ── WL.setCategory ─────────────────────────────────────────────── */
