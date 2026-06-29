@@ -883,13 +883,33 @@ WL.CATS = [
   {id:'faces',   label:'Face',    icon:'👓', field:'face',         src:function(){ return WLShopData.faces;    }},
   {id:'wings',   label:'Wings',   icon:'🪽', field:'wings',        src:function(){ return WLShopData.wings;    }},
   {id:'effects', label:'Effects', icon:'✨', field:'effect',       src:function(){ return WL.effectList ? WL.effectList() : []; }},
-  {id:'dances',  label:'Dances',  icon:'💃'},   // Task 6
+  {id:'dances',  label:'Dances',  icon:'💃', src:function(){ return (typeof WLShopData !== 'undefined') ? WLShopData.dances : []; }},  // Task 6
   {id:'badges',  label:'Badges',  icon:'🏅'},   // Task 7
   {id:'custom',  label:'Custom',  icon:'🎨'},   // Task 8
 ];
 
-/* ── Effect list stub (Task 6 fills this in) ────────────────────── */
-WL.effectList = WL.effectList || function(){ return []; };
+/* ── WL.effectList — Task 6: adapter over WLEffects.EFFECTS ───────
+ * Maps each WLEffects.EFFECTS entry to a flat item object compatible with
+ * WL.cardEl. Icons sourced from WLEffects.EFFECTS[id].icon — confirmed
+ * from scientist.html renderEffectsSection (each card shows eff.icon at 28px).
+ * Generic ✨ fallback used if an entry lacks an icon property.
+ */
+WL.effectList = function() {
+  if (typeof WLEffects === 'undefined' || !WLEffects.EFFECTS) return [];
+  return Object.entries(WLEffects.EFFECTS).map(function(entry) {
+    var id = entry[0], e = entry[1];
+    return {
+      id:       id,
+      name:     e.name,
+      cost:     e.cost     || 0,
+      free:     (e.cost    || 0) === 0,
+      rarity:   e.rarity   || 'common',
+      requires: e.requiresBadge || null,
+      icon:     e.icon     || '✨',
+      desc:     e.desc     || '',
+    };
+  });
+};
 
 /* ── WL.ownKey — must EXACTLY match scientist.html's owned[] keys ─ */
 WL.ownKey = function(cat, item) {
@@ -1012,7 +1032,15 @@ WL.miniPreview = function(cat, item) {
 WL.cardEl = function(item, cat) {
   var isFree   = !!(item.free || item.cost === 0);
   var isOwned  = isFree || WL.owned.includes(WL.ownKey(cat, item));
-  var equipped = !!(WL.scientist && WL.scientist[cat.field] === item.id);
+  // Dances: equipped state is keyed per-tier, not a single scientist field.
+  // Task 6: (WL.scientist.dances||{})[item.tier] === item.id
+  var equipped;
+  if (cat.id === 'dances') {
+    var dancesMap = (WL.scientist && WL.scientist.dances) || {};
+    equipped = (dancesMap[item.tier] === item.id);
+  } else {
+    equipped = !!(WL.scientist && cat.field && WL.scientist[cat.field] === item.id);
+  }
   var rarity   = WLShopData.rarityOf(item);  // 'legendary'|'epic'|'rare'|'common'
 
   /* Outer card — a real <button> per plan requirement "Cards are real <button>s" */
@@ -1185,6 +1213,41 @@ WL.renderShopHeader = function() {
   hdr.appendChild(surBtn);
 };
 
+/* ── WL.renderDancesGrid — Task 6: dances grouped by tier ───────────
+ * Tier keys from scientist.html shopEquipDance / WLShopData.dancesByTier:
+ *   'correct' | 'streak3' | 'streak5' | 'streak10' | 'streak15' | 'streak30'
+ * Each tier gets a section heading (grid-column: 1/-1) followed by dance cards.
+ */
+WL.renderDancesGrid = function(grid, cat) {
+  var tierLabels = {
+    correct:  'Correct Answer',
+    streak3:  '3+ Answer Streak',
+    streak5:  '5+ Answer Streak',
+    streak10: '10+ Answer Streak',
+    streak15: '15+ Answer Streak',
+    streak30: '30+ Answer Streak — Legendary',
+  };
+  var tierOrder = ['correct','streak3','streak5','streak10','streak15','streak30'];
+  tierOrder.forEach(function(tier) {
+    var tierDances = WLShopData.dancesByTier[tier];
+    if (!tierDances || tierDances.length === 0) return;
+
+    // Tier section heading — spans all grid columns
+    var heading = document.createElement('div');
+    heading.style.cssText = 'grid-column:1/-1;font-size:11px;font-weight:800;' +
+      'color:#6a4a1a;text-transform:uppercase;letter-spacing:.07em;' +
+      'padding:14px 0 5px;border-bottom:1.5px solid #e5d49e;margin-bottom:2px;';
+    heading.textContent = tierLabels[tier] || tier;
+    heading.setAttribute('aria-hidden', 'true');  // tier announced via card aria-labels
+    grid.appendChild(heading);
+
+    // Dance cards for this tier
+    tierDances.forEach(function(item) {
+      grid.appendChild(WL.cardEl(item, cat));
+    });
+  });
+};
+
 /* ── WL.renderGrid ───────────────────────────────────────────────── */
 WL.renderGrid = function() {
   var cat  = WL.CATS.find(function(c) { return c.id === WL.activeCat; });
@@ -1192,8 +1255,14 @@ WL.renderGrid = function() {
   if (!grid) return;
   grid.innerHTML = '';   // safe — clearing our own DOM
 
+  // Task 6: Dances — tier-grouped renderer (separate from flat-card loop)
+  if (WL.activeCat === 'dances' && typeof WLShopData !== 'undefined') {
+    WL.renderDancesGrid(grid, cat);
+    return;
+  }
+
   if (!cat || !cat.src) {
-    /* Badges / Custom / Dances without src — stubbed until Tasks 6–8 */
+    /* Badges / Custom — stubbed until Tasks 7–8 */
     var stub = document.createElement('p');
     stub.style.cssText = 'color:#9a7a3a;font-size:13px;padding:20px 0;grid-column:1/-1;';
     stub.textContent = 'Coming in a later update.';
@@ -1237,12 +1306,60 @@ WL.equip = async function(cat, item) {
   WL.react();
 };
 
+/* ── WL.equipEffect — Task 6 ─────────────────────────────────────────
+ * Sets scientist.effect, saves via saveScientist, re-renders grid, and
+ * previews the live effect on the stage character (unless low-stim).
+ * Passing id='none' removes the effect.
+ * Effect icons shown on cards come from WLEffects.EFFECTS[id].icon.
+ */
+WL.equipEffect = async function(id) {
+  WL.scientist.effect = (id === 'none' ? null : id);
+  try {
+    await WordLabData.saveScientist({ effect: WL.scientist.effect });
+  } catch(e) { console.error('[WL.equipEffect] saveScientist failed:', e); }
+  WL.renderGrid();
+  // Preview effect on stage character (unless low-stim or removing)
+  if (typeof WLEffects !== 'undefined') {
+    if (!WordLabData.isLowStimMode() && id !== 'none') {
+      WLEffects.stop(WL.charEl);
+      WLEffects.start(id, WL.charEl);
+    } else {
+      WLEffects.stop(WL.charEl);
+    }
+  }
+};
+
+/* ── WL.equipDance — Task 6 ──────────────────────────────────────────
+ * Exact persistence shape from scientist.html shopEquipDance (line 1328):
+ *   dances = Object.assign({}, sci.dances || {});
+ *   dances[tier] = danceId;
+ *   saveScientist({ dances: dances });
+ * Tier keys: 'correct' | 'streak3' | 'streak5' | 'streak10' | 'streak15' | 'streak30'
+ */
+WL.equipDance = async function(tier, danceId) {
+  var dances = Object.assign({}, (WL.scientist.dances) || {});
+  dances[tier] = danceId;
+  WL.scientist.dances = dances;
+  try {
+    await WordLabData.saveScientist({ dances: dances });
+  } catch(e) { console.error('[WL.equipDance] saveScientist failed:', e); }
+  WL.renderGrid();
+};
+
 /* ── WL.select — if owned, equip; else no-op (Task 9 adds buy modal) */
 WL.select = function(cat, item) {
   var isFree  = !!(item.free || item.cost === 0);
   var isOwned = isFree || WL.owned.includes(WL.ownKey(cat, item));
-  if (isOwned) WL.equip(cat, item);
-  // Not owned → Task 9 adds confirm/not-enough modals
+  if (!isOwned) return;   // Task 9 adds confirm/not-enough modals
+  if (cat.id === 'effects') {
+    // Toggle: equipping the already-equipped effect removes it
+    var alreadyOn = WL.scientist && WL.scientist.effect === item.id;
+    WL.equipEffect(alreadyOn ? 'none' : item.id);
+  } else if (cat.id === 'dances') {
+    WL.equipDance(item.tier, item.id);
+  } else {
+    WL.equip(cat, item);
+  }
 };
 
 /* ── WL.react — no-op placeholder (Task 9 adds spin/burst/speech) ── */
