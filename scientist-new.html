@@ -1026,7 +1026,8 @@ WL.renderQuarks = function() {
  * Spec §12.2/§12.3: 180 px wide on radial glow podium with idle-bob.
  * WL.charEl is stored here and reused by Task 9 reactions.
  */
-WL.renderStage = function() {
+WL.renderStage = function(mood) {
+  mood = mood || 'neutral';
   const stage = document.getElementById('stage');
   if (!stage) return;
   if (!WL.scientist || typeof WLScientist === 'undefined') return;
@@ -1042,7 +1043,7 @@ WL.renderStage = function() {
   wrap.className = 'lab-charwrap lab-bob';
   wrap.setAttribute('aria-label', 'Your scientist character');
   wrap.setAttribute('role', 'img');
-  wrap.innerHTML = WLScientist.buildSVG(WL.scientist, 'neutral'); // trusted SVG builder
+  wrap.innerHTML = WLScientist.buildSVG(WL.scientist, mood); // trusted SVG builder
 
   WL.charEl = wrap;      // stored for Task 9 reactions
 
@@ -2226,6 +2227,7 @@ WL.equipEffect = async function(id) {
       WLEffects.stop(WL.charEl);
     }
   }
+  WL.react();
 };
 
 /* ── WL.equipDance — Task 6 ──────────────────────────────────────────
@@ -2243,6 +2245,7 @@ WL.equipDance = async function(tier, danceId) {
     await WordLabData.saveScientist({ dances: dances });
   } catch(e) { console.error('[WL.equipDance] saveScientist failed:', e); }
   WL.renderGrid();
+  WL.react();
 };
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -2322,7 +2325,7 @@ function _focusTrap(modal, e) {
 /* ── WL.openConfirm ───────────────────────────────────────────────── */
 WL.openConfirm = function(cat, item, triggerEl) {
   /* Cost field: custom items use quark_cost, all others use cost */
-  var cost = (cat.id === 'custom') ? (item.quark_cost || 0) : (item.cost || 0);
+  var cost = WL.costOf(cat, item);
   WL.pending = { cat: cat, item: item, cost: cost };
   _modalTrigger = triggerEl || null;
 
@@ -2392,6 +2395,13 @@ WL.closeConfirm = function() {
   if (_modalTrigger) { _modalTrigger.focus(); _modalTrigger = null; }
 };
 
+/* ── WL.costOf — unified price accessor for regular and custom items ──
+ * Custom items use quark_cost; all others use cost.
+ * Used everywhere a price is read in the buy flow. */
+WL.costOf = function(cat, item) {
+  return (cat && cat.id === 'custom') ? (item.quark_cost || 0) : (item.cost || 0);
+};
+
 /* ── WL.openNotEnough ─────────────────────────────────────────────── */
 WL.openNotEnough = function(item, cat, triggerEl) {
   _modalTrigger = triggerEl || null;
@@ -2417,14 +2427,14 @@ WL.openNotEnough = function(item, cat, triggerEl) {
     nm.textContent = item.name;
     var pr   = document.createElement('div');
     pr.className  = 'lab-modal-item-cost';
-    pr.textContent = '⚛ ' + (item.cost || 0) + ' quarks';
+    pr.textContent = '⚛ ' + WL.costOf(cat, item) + ' quarks';
     info.appendChild(nm);
     info.appendChild(pr);
     prev.appendChild(sw);
     prev.appendChild(info);
   }
   if (msg) {
-    var need = (item.cost || 0) - WL.quarks;
+    var need = WL.costOf(cat, item) - WL.quarks;
     msg.textContent = 'You need ' + (need > 0 ? need : 0) + ' more quarks — keep playing to earn them!';
   }
 
@@ -2465,7 +2475,7 @@ WL.closeNotEnough = function() {
 WL.confirmBuy = async function() {
   if (!WL.pending) return;
   var cat  = WL.pending.cat, item = WL.pending.item;
-  var cost = WL.pending.cost !== undefined ? WL.pending.cost : (item.cost || 0);
+  var cost = WL.pending.cost !== undefined ? WL.pending.cost : WL.costOf(cat, item);
   var key  = WL.ownKey(cat, item);
 
   var res;
@@ -2522,7 +2532,7 @@ WL.select = function(cat, item, triggerEl) {
   }
 
   /* Not owned — check afford */
-  var cost = (cat.id === 'custom') ? (item.quark_cost || 0) : (item.cost || 0);
+  var cost = WL.costOf(cat, item);
   if (WL.quarks < cost) {
     WL.openNotEnough(item, cat, triggerEl || null);
     WL.shakeBalance();
@@ -2561,7 +2571,7 @@ WL.speech = function(text) {
   anchor.style.position = 'relative';
   anchor.appendChild(bubble);
 
-  setTimeout(function() { if (bubble.parentNode) bubble.remove(); }, 2200);
+  setTimeout(function() { if (bubble.parentNode) bubble.remove(); }, 2000);
 };
 
 /* spin — 40% chance rotateY spin, else double-hop (spec §12.5) */
@@ -2663,13 +2673,15 @@ WL.shakeBalance = function() {
   );
 };
 
-/* react — called after equip: speech + spin + burst (guarded by calm()) */
+/* react — called after equip: happy face + speech + spin + burst + revert (guarded by calm()) */
 WL.react = function() {
   if (_calm()) return;
+  WL.renderStage('happy');   // face → happy; also sets WL.charEl to new node
   var phrase = _SPEECH_PHRASES[Math.floor(Math.random() * _SPEECH_PHRASES.length)];
-  WL.speech(phrase);
-  WL.spin();
+  WL.speech(phrase);         // anchors to updated WL.charEl
+  WL.spin();                 // animates updated WL.charEl
   WL.burst();
+  setTimeout(function() { WL.renderStage('neutral'); }, 1000);
 };
 
 /* ── WL.renderShop — orchestrator called from WL.boot() ──────────── */
