@@ -185,15 +185,132 @@
     }
     .tb-home-link:hover{ background:rgba(255,255,255,.13); color:#fff; }
 
-    /* ── Left pane placeholders (Task 2 adds content) ── */
+    /* ── Stage: character on glowing podium (Task 2 — spec §12.2/§12.3) ── */
     .lab-stage{
       flex:1;
       min-height:0;
       position:relative;
+      display:flex;
+      align-items:center;
+      justify-content:center;
       overflow:hidden;
     }
+
+    /* Radial glow podium behind character */
+    .lab-podium{
+      position:absolute;
+      left:50%; top:58%;
+      transform:translate(-50%,-50%);
+      width:240px; height:160px;
+      border-radius:50%;
+      background:radial-gradient(ellipse at center, rgba(240,200,90,.7) 0%, transparent 68%);
+      animation:ringPulse 3s ease-in-out infinite;
+      pointer-events:none;
+    }
+    @media(prefers-reduced-motion:reduce){ .lab-podium{ animation:none; } }
+    body.low-stim .lab-podium{ animation:none; }
+
+    /* Character wrapper — SVG is 0 0 80 120; width 180px gives good stage size */
+    .lab-charwrap{
+      position:relative;
+      z-index:1;
+      width:180px;
+      flex-shrink:0;
+    }
+    .lab-charwrap svg{
+      width:100%;
+      height:auto;
+      display:block;
+    }
+
+    /* ── Stats card (Task 2 — spec §12.2) ── */
     .lab-stats{
-      /* parchment stats card — contents added in Task 2 */
+      background:linear-gradient(180deg,#faf3da,#f0e4c0);
+      border-top:3px solid #e5d49e;
+      padding:13px 16px 15px;
+      flex-shrink:0;
+    }
+    .lab-stats-top{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin-bottom:9px;
+    }
+    /* LVL badge — spec: 42px, radius 13px, gold gradient */
+    .lab-lvl-badge{
+      width:42px; height:42px;
+      border-radius:13px;
+      background:linear-gradient(135deg,#ffd24a,#e0a02a);
+      display:flex; align-items:center; justify-content:center;
+      flex-shrink:0;
+      box-shadow:0 3px 8px rgba(224,160,42,.4);
+    }
+    .lab-lvl-num{
+      font-family:'Fredoka',sans-serif;
+      font-weight:600;
+      font-size:22px;
+      color:#fff;
+      line-height:1;
+    }
+    .lab-level-meta{ flex:1; min-width:0; }
+    .lab-level-title{
+      font-size:13px;
+      font-weight:700;
+      color:#4a3416;
+      line-height:1.2;
+    }
+    .lab-xp-next{
+      font-size:11px;
+      font-weight:600;
+      color:#9a7a3a;
+      margin-top:2px;
+    }
+    /* XP bar — spec: track #e7d7a6, fill purple gradient */
+    .lab-xp-bar-wrap{ margin-bottom:9px; }
+    .lab-xp-track{
+      width:100%;
+      height:8px;
+      background:#e7d7a6;
+      border-radius:999px;
+      overflow:hidden;
+    }
+    .lab-xp-fill{
+      height:100%;
+      background:linear-gradient(90deg,#8a7bff,#6d4ad6);
+      border-radius:999px;
+      transition:width .4s ease;
+    }
+    /* 4-tile stat grid — spec: repeat(4,1fr), gap 8px */
+    .lab-stat-grid{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:8px;
+    }
+    /* Stat tile — spec: bg #fffdf2, border 1.5px solid #ecdba6, radius 13px */
+    .lab-stat-tile{
+      background:#fffdf2;
+      border:1.5px solid #ecdba6;
+      border-radius:13px;
+      padding:7px 4px 6px;
+      text-align:center;
+    }
+    /* Stat number (Fredoka) — colour per spec §12.2 */
+    .lab-stat-num{
+      font-family:'Fredoka',sans-serif;
+      font-weight:600;
+      font-size:20px;
+      line-height:1;
+      display:block;
+    }
+    /* Stat label — spec: #8a6a2a */
+    .lab-stat-lbl{
+      font-size:9px;
+      font-weight:700;
+      color:#8a6a2a;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+      margin-top:3px;
+      display:block;
     }
 
     /* ── Right pane placeholders (Tasks 4–8 add content) ── */
@@ -315,6 +432,138 @@ WL.renderQuarks = function() {
     (WL.quarks || 0).toLocaleString('en-AU');
 };
 
+/* ── Task 2: Stage renderer ──────────────────────────────────────
+ * Renders the REAL character via WLScientist.buildSVG — one renderer only.
+ * Spec §12.2/§12.3: 180 px wide on radial glow podium with idle-bob.
+ * WL.charEl is stored here and reused by Task 9 reactions.
+ */
+WL.renderStage = function() {
+  const stage = document.getElementById('stage');
+  if (!stage) return;
+  if (!WL.scientist || typeof WLScientist === 'undefined') return;
+  stage.innerHTML = '';
+
+  // Glowing podium ellipse (decorative — hidden from AT)
+  const podium = document.createElement('div');
+  podium.className = 'lab-podium';
+  podium.setAttribute('aria-hidden', 'true');
+
+  // Character wrapper — SVG string is from our own trusted builder, not user input
+  const wrap = document.createElement('div');
+  wrap.className = 'lab-charwrap lab-bob';
+  wrap.setAttribute('aria-label', 'Your scientist character');
+  wrap.setAttribute('role', 'img');
+  wrap.innerHTML = WLScientist.buildSVG(WL.scientist, 'neutral'); // trusted SVG builder
+
+  WL.charEl = wrap;      // stored for Task 9 reactions
+
+  stage.appendChild(podium);
+  stage.appendChild(wrap);
+};
+
+/* ── Task 2: Stats card renderer ─────────────────────────────────
+ * Builds the parchment stats card in #statsCard exactly per spec §12.2.
+ * Level + title computation copied verbatim from scientist.html (line 810):
+ *   const lvl = sd.level;  (sd.level = getLevel(char.xp))
+ * Badge count from scientist.html (line 843): sd.badges.length
+ * All text set via textContent (XSS-safe).
+ */
+WL.renderStats = function() {
+  const card = document.getElementById('statsCard');
+  if (!card) return;
+
+  // Level/title — scientist.html line 810: const lvl = sd.level;
+  // getStudentData() returns data.level = getLevel(char.xp)
+  // WordLabData.getLevel is exported (wordlab-data.js line 2888)
+  const lvl = WL.level || WordLabData.getLevel(WL.xp || 0);
+
+  const s         = WL.stats || {};
+  const correct   = s.totalCorrect  || 0;
+  const answered  = s.totalAnswered || 0;
+  const sessions  = s.sessions      || 0;
+  // Accuracy — spec: round(totalCorrect/totalAnswered*100) or 0
+  const acc       = answered ? Math.round(correct / answered * 100) : 0;
+  // Badge count — scientist.html line 843: sd.badges.length
+  const badgeCount = (WL.badges || []).length;
+
+  card.innerHTML = '';   // safe — clearing our own DOM
+
+  // — Top row: LVL badge + level title + XP to next —
+  const top = document.createElement('div');
+  top.className = 'lab-stats-top';
+
+  const lvlBadge = document.createElement('div');
+  lvlBadge.className = 'lab-lvl-badge';
+  lvlBadge.setAttribute('aria-hidden', 'true');   // number repeated in title text
+  const lvlNum = document.createElement('span');
+  lvlNum.className = 'lab-lvl-num';   // Fredoka applied via class
+  lvlNum.textContent = lvl.level;
+  lvlBadge.appendChild(lvlNum);
+
+  const meta = document.createElement('div');
+  meta.className = 'lab-level-meta';
+
+  const titleEl = document.createElement('div');
+  titleEl.className = 'lab-level-title';
+  // scientist.html line 833: Level ${lvl.level} · ${lvl.title}
+  titleEl.textContent = 'Level ' + lvl.level + ' · ' + lvl.title;
+
+  const nextEl = document.createElement('div');
+  nextEl.className = 'lab-xp-next';
+  // scientist.html line 835: ${lvl.xpToNext} XP to next
+  nextEl.textContent = lvl.xpToNext + ' XP to next';
+
+  meta.appendChild(titleEl);
+  meta.appendChild(nextEl);
+  top.appendChild(lvlBadge);
+  top.appendChild(meta);
+  card.appendChild(top);
+
+  // — XP bar — spec: track #e7d7a6, fill purple gradient; progress from lvl.progress
+  // scientist.html line 836: width:${lvl.progress}%
+  const barWrap = document.createElement('div');
+  barWrap.className = 'lab-xp-bar-wrap';
+  const track = document.createElement('div');
+  track.className = 'lab-xp-track';
+  track.setAttribute('role', 'progressbar');
+  track.setAttribute('aria-valuenow', String(lvl.progress));
+  track.setAttribute('aria-valuemin', '0');
+  track.setAttribute('aria-valuemax', '100');
+  track.setAttribute('aria-label', 'XP progress to next level, ' + lvl.progress + '%');
+  const fill = document.createElement('div');
+  fill.className = 'lab-xp-fill';
+  fill.style.width = lvl.progress + '%';
+  track.appendChild(fill);
+  barWrap.appendChild(track);
+  card.appendChild(barWrap);
+
+  // — 4-tile stat grid — spec §12.2: Correct #3f8a4a · Accuracy #6d4ad6 · Sessions #2f8fd8 · Badges #e0a02a
+  const grid = document.createElement('div');
+  grid.className = 'lab-stat-grid';
+  grid.setAttribute('aria-label', 'Statistics');
+
+  [
+    { label: 'Correct',  value: correct,          colour: '#3f8a4a' },
+    { label: 'Accuracy', value: acc + '%',   colour: '#6d4ad6' },  // % without template literal
+    { label: 'Sessions', value: sessions,          colour: '#2f8fd8' },
+    { label: 'Badges',   value: badgeCount,        colour: '#e0a02a' },
+  ].forEach(function(t) {
+    const tile = document.createElement('div');
+    tile.className = 'lab-stat-tile';
+    const num = document.createElement('span');
+    num.className = 'lab-stat-num';   // Fredoka weight via .fred applied in CSS
+    num.style.color = t.colour;
+    num.textContent = t.value;
+    const lbl = document.createElement('span');
+    lbl.className = 'lab-stat-lbl';
+    lbl.textContent = t.label;        // text label — never colour-only (WCAG)
+    tile.appendChild(num);
+    tile.appendChild(lbl);
+    grid.appendChild(tile);
+  });
+  card.appendChild(grid);
+};
+
 /* Boot — load student data and hydrate the top bar */
 WL.boot = async function() {
   if (typeof WordLabData === 'undefined') {
@@ -339,6 +588,9 @@ WL.boot = async function() {
   WL.scientist = data.scientist || {};
   WL.stats     = data.stats    || {};
   WL.quarks    = data.quarks   || 0;
+  WL.xp        = data.xp      || 0;
+  WL.level     = data.level;            // { level, title, progress, xpToNext } — from getLevel()
+  WL.badges    = data.badges   || [];   // array of earned badge IDs — scientist.html: sd.badges.length
   WL.owned     = WL.scientist.owned || [];
 
   /* XSS-safe: textContent only */
