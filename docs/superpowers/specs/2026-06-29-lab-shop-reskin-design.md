@@ -182,3 +182,96 @@ Drive the running app with Playwright as a test student:
   field) + the ~7 new effects.
 - **Phase 3 — New content:** SVG hair (one category at a time), pet expansion, and porting
   the mockup's art style into the SVG renderer.
+
+---
+
+## 12. Visual reference — exact values lifted from the mockup
+
+These are copied verbatim from the design-feature mockup (`Lab Shop.dc.html`) so the build
+matches it precisely. The implementation should use these literal values, not approximations.
+Everything here is plain CSS — the mockup's React/`x-dc`/`DCLogic` framework is NOT used.
+The character-building JS (`buildHair`/`buildHead`/`buildFace`/`buildWings`/`buildParticles`/
+`buildEffectLayer`/`buildWorldDecor`) is NOT used in Phase 1 (we render the real SVG character;
+worlds/effects/hair are Phase 2/3) — keep the original mockup file as the reference for those.
+
+### 12.1 Fonts
+- Headings, numbers, buttons: **Fredoka**, weight 600 (already? — add via Google Fonts).
+- Body: **Nunito** (400/600/700/800). *(Note: the live app standard is Lexend — confirm in
+  §12.7 whether to use the mockup's Fredoka/Nunito or keep Lexend. Default: keep Lexend for
+  consistency, treat Fredoka/Nunito as optional.)*
+
+### 12.2 Palette
+| Token | Value |
+|---|---|
+| App / stage background | `#15131f` |
+| Top bar | `linear-gradient(180deg,#33324a,#2a2940)`; border-bottom `2px solid rgba(0,0,0,.3)`; shadow `0 4px 18px rgba(0,0,0,.25)` |
+| Brand icon tile | `linear-gradient(135deg,#7b6bff,#5a39c7)` |
+| Quark pill | bg `rgba(123,107,255,.16)`, border `1.5px solid rgba(150,135,255,.4)`; orb `radial-gradient(circle at 35% 30%,#b9a6ff,#6d4ad6)` |
+| Stats card | `linear-gradient(180deg,#faf3da,#f0e4c0)`, border-top `3px solid #e5d49e` |
+| Stat tile | bg `#fffdf2`, border `1.5px solid #ecdba6`, radius 13px; label `#8a6a2a` |
+| Stat numbers | Correct `#3f8a4a` · Accuracy `#6d4ad6` · Sessions `#2f8fd8` · Badges `#e0a02a` |
+| LVL badge | `linear-gradient(135deg,#ffd24a,#e0a02a)` |
+| XP bar | track `#e7d7a6`; fill `linear-gradient(90deg,#8a7bff,#6d4ad6)` |
+| Shop panel | `linear-gradient(180deg,#faf3da,#f3e9c8)`, border-left `3px solid #e5d49e`, shadow `-10px 0 30px rgba(0,0,0,.2)` |
+| Shop title / subtext | title `#4a3416`; subtext `#9a7a3a`; meta `#8a6a2a` |
+| Surprise-me button | `linear-gradient(135deg,#ffb43c,#f5841f)`, border `2px solid #e0741a`, shadow `0 4px 10px rgba(245,132,31,.4)` |
+| Pill (active) | `linear-gradient(135deg,#7b6bff,#5a39c7)`, border `2px solid #5a39c7`, shadow `0 4px 12px rgba(90,57,199,.35)`, text `#fff` |
+| Pill (inactive) | bg `#fffdf2`, border `2px solid #e5d49e`, text `#7a5a1e` |
+| Item card | bg `linear-gradient(180deg,#fdf7e0,#f6edcf)`, border `2px solid #ecdba6`, radius 18px, shadow `0 6px 14px rgba(120,80,20,.12)` |
+| Item card (equipped) | border `2px solid #b9a6ff`, bg `linear-gradient(180deg,#fff8e6,#f3ead0)`, shadow `0 8px 18px rgba(90,57,199,.18)` |
+| Item card (legendary) | border `2px solid #e0a02a`, shadow `0 8px 20px rgba(224,160,42,.28), inset 0 0 16px rgba(255,210,90,.2)` |
+| Item card (epic) | border `2px solid #cf9ae8`, shadow `0 8px 18px rgba(177,79,216,.2)` |
+| Rarity badge colours | legendary `#e0a02a` · epic `#b14fd8` · rare `#2f8fd8` · common `#8a8aa0` |
+| Card button | bg `#fff`, color `#5a39c7`, border `2px solid #b9a6ff`, shadow `0 3px 0 #d9ccff` |
+| Card button (equipped) | bg `#e7e0fb`, color `#5a39c7`, border `2px solid #cabdf5` |
+| Price / FREE text | price `#6e4f1e`; FREE `#3f8a4a` |
+| Modal card | `linear-gradient(180deg,#fffdf4,#f7eecf)`, border `3px solid #e5d49e`, radius 24px |
+| Modal "Buy & Equip" | `linear-gradient(135deg,#7b6bff,#5a39c7)`, shadow `0 5px 0 #4226a8` |
+| Not-enough modal | border `3px solid #f0b8a0`, title `#c0392b` |
+| Equipped ✓ chip | `linear-gradient(135deg,#7b6bff,#5a39c7)`, white ✓, shadow `0 3px 8px rgba(90,57,199,.5)` |
+| Podium glow (lab) | `rgba(240,200,90,.7)` |
+
+### 12.3 Layout metrics
+- Top bar: `height 58px` fixed; padding `0 20px`; gap 14px.
+- Main: `display:flex`. Left pane `flex:1 1 50%; min-width:380px`. Shop pane `flex:1 1 50%; min-width:420px`.
+- Stage: `flex:1; perspective:1300px`; floor plane `transform:rotateX(73deg)` with mask fade.
+- Character wrap: `transform:scale(0.96); transform-origin:center bottom`.
+- Stats card: padding `13px 16px 15px`; stat grid `repeat(4,1fr); gap 8px`; LVL badge 42px radius 13px.
+- Shop header: padding `16px 24px 11px`; title 25px Fredoka.
+- Pill rail: padding `13px 22px 8px`; `flex-wrap:wrap; gap 8px`; pill padding `8px 14px`, radius 999px, font 13.5px.
+- Item grid: `repeat(auto-fill, minmax(156px, 1fr)); gap 14px`; container padding `8px 22px 26px`; `perspective:1100px`.
+- Item card: padding `12px 12px 14px`; preview row height 70px; button padding `8px 0`, radius 11px.
+- Modal: width 340px; padding `26px 24px 22px`; overlay `rgba(20,16,34,.55)` + `backdrop-filter:blur(3px)`.
+
+### 12.4 Keyframes used in Phase 1 (copy verbatim)
+```css
+@keyframes floatY    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-9px)} }
+@keyframes idleBob   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+@keyframes ringPulse { 0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.55} 50%{transform:translate(-50%,-50%) scale(1.12);opacity:.9} }
+@keyframes speechPop { 0%{transform:translate(-50%,8px) scale(.6);opacity:0} 60%{transform:translate(-50%,-4px) scale(1.06);opacity:1} 100%{transform:translate(-50%,0) scale(1);opacity:1} }
+@keyframes modalPop  { 0%{transform:scale(.82) translateY(14px);opacity:0} 100%{transform:scale(1) translateY(0);opacity:1} }
+@keyframes overlayFade { from{opacity:0} to{opacity:1} }
+```
+*(Card float duration in mockup: `floatY (3 + (id.length % 4) * 0.4)s` with `(id.length % 5) * 0.2s` delay — keeps cards out of sync. Honour `prefers-reduced-motion` and low-stim by disabling these.)*
+
+### 12.5 Reaction behaviour (from mockup JS — reimplement in vanilla)
+- **triggerReaction()** on equip/buy: set happy mood + a random speech phrase; run `spin()` + `burst()`; clear happy after 1000ms, clear speech after 2000ms.
+- **spin():** `element.animate(...)` — 40% chance a translate-Y + rotateY(360deg) over 820ms `cubic-bezier(.34,1.56,.64,1)`; otherwise a double-hop over 660ms.
+- **burst():** spawn 18 spans; glyphs `['✦','✧','★','✦','●']`; colours `['#f7d24a','#ff8fc4','#7df0ff','#b18bff','#7ed321','#ff9a4a']`; each flies out at a random angle, distance 50–145px, scaling 0.2→1.15 over 700–1050ms, then removed.
+- **popQuark():** scale 1 → 1.16 → 1 over 420ms on successful buy.
+- **shakeBalance():** translateX 0/-6/6/0 over 300ms on insufficient funds.
+- **Speech phrases:** `['Looking sharp! ✨','Ooh, love it! 💜','Lab-tastic! 🧪','So cool! 😎','New look unlocked!','Spelling AND style!','Wowza! 🌟','Fresh fit! ⚡','Science of style!','Quark well spent!']`.
+- **Surprise me:** randomise the equipped item in each category **from owned items only**; speech `'Surprise! 🎲'`; spin + burst.
+- **All of the above is suppressed in low-stim and under `prefers-reduced-motion`** — equip happens instantly with no spin/burst/speech.
+
+### 12.6 Pattern swatch CSS (matches existing — verify against `wordlab-scientist.js`)
+The mockup's `PATTERN_CSS` (stripes/molecules/stars/dots/chevrons/hearts/lightning/dna/plaid)
+must visually match the patterns the real SVG coat uses. Implementation should reuse the
+existing pattern definitions where they already exist rather than the mockup's, to keep the
+swatch preview consistent with the worn result.
+
+### 12.7 Open implementation question (decide during planning)
+**Typography:** the mockup uses Fredoka + Nunito; the live app standard is **Lexend**.
+Default decision: **keep Lexend** for site-wide consistency and treat Fredoka as an optional
+accent for the big stat numbers / shop title only. Flag for the user if they want full
+Fredoka/Nunito instead.
