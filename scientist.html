@@ -208,6 +208,7 @@
       background:radial-gradient(ellipse at center, rgba(240,200,90,.7) 0%, transparent 68%);
       animation:ringPulse 3s ease-in-out infinite;
       pointer-events:none;
+      z-index:1;
     }
     @media(prefers-reduced-motion:reduce){ .lab-podium{ animation:none; } }
     body.low-stim .lab-podium{ animation:none; }
@@ -219,7 +220,7 @@
      * or oversized when zoomed in. clamp() floors/caps it to sensible bounds. */
     .lab-charwrap{
       position:relative;
-      z-index:1;
+      z-index:2;
       width:clamp(170px, 34vh, 300px);
       flex-shrink:0;
     }
@@ -345,6 +346,11 @@
     /* Low-stim: hide Effects and Dances category pills (spec §6) */
     body.low-stim [data-cat="effects"],
     body.low-stim [data-cat="dances"]{ display:none !important; }
+
+    /* Stage stacking context — world panel (z0) behind podium (z1) and character (z2) */
+    #stage{ position:relative; }
+    /* World drift suppressed in low-stim; gradient panel remains visible */
+    body.low-stim .wlworld *{ animation:none !important; }
 
     /* Low-stim: disable ALL decorative animations on this page */
     body.low-stim .lab-card,
@@ -1045,6 +1051,7 @@
 <script defer src="wordlab-scientist.js"></script>
 <script defer src="wordlab-audio.js"></script>
 <script defer src="wordlab-effects.js"></script>
+<script defer src="wordlab-worlds.js"></script>
 <!-- wordlab-shop-data.js created in Task 3 — 404 is harmless until then -->
 <script defer src="wordlab-shop-data.js"></script>
 
@@ -1075,6 +1082,15 @@ WL.renderStage = function(mood) {
   if (!stage) return;
   if (!WL.scientist || typeof WLScientist === 'undefined') return;
   stage.innerHTML = '';
+
+  // World backdrop (Phase 2) — rendered behind podium + character.
+  // WLWorlds manages its own panel node + drift interval keyed to `stage`.
+  if (typeof WLWorlds !== 'undefined') {
+    try { WLWorlds.stop(stage); } catch(e) {}
+    if (WL.scientist && WL.scientist.world) {
+      try { WLWorlds.start(WL.scientist.world, stage); } catch(e) {}
+    }
+  }
 
   // Glowing podium ellipse (decorative — hidden from AT)
   const podium = document.createElement('div');
@@ -1286,6 +1302,7 @@ WL.CATS = [
   {id:'heads',   label:'Head',    icon:'🎩', field:'head',         src:function(){ return WLShopData.heads;    }},
   {id:'faces',   label:'Face',    icon:'👓', field:'face',         src:function(){ return WLShopData.faces;    }},
   {id:'wings',   label:'Wings',   icon:'🪽', field:'wings',        src:function(){ return WLShopData.wings;    }},
+  {id:'worlds',  label:'Worlds',  icon:'🌍', field:'world',        src:function(){ return (typeof WLShopData !== 'undefined' && WLShopData.worlds) ? WLShopData.worlds : []; }},
   {id:'effects', label:'Effects', icon:'✨', field:'effect',       src:function(){ return WL.effectList ? WL.effectList() : []; }},
   {id:'dances',  label:'Dances',  icon:'💃', src:function(){ return (typeof WLShopData !== 'undefined') ? WLShopData.dances : []; }},  // Task 6
   {id:'badges',  label:'Badges',  icon:'🏅'},   // Task 7
@@ -1320,6 +1337,7 @@ WL.ownKey = function(cat, item) {
   if (cat.id === 'dances')  return 'dance_'  + item.id;
   if (cat.id === 'effects') return 'effect_' + item.id;
   if (cat.id === 'custom')  return 'custom_' + item.id;
+  if (cat.id === 'worlds')  return 'world_'  + item.id;
   return item.id;   // colours, patterns, heads, faces, wings: bare id
 };
 
@@ -1510,6 +1528,12 @@ WL.cardEl = function(item, cat) {
     swatch.className = 'lab-swatch';
     swatch.style.background = WL._colourBg(item);
     preview.appendChild(swatch);
+
+  } else if (cat.id === 'worlds') {
+    var ws = document.createElement('div');
+    ws.className = 'lab-swatch';
+    ws.style.background = (typeof WLWorlds !== 'undefined') ? WLWorlds.wallOf(item.id) : '#1e293b';
+    preview.appendChild(ws);
 
   } else if (cat.id === 'patterns') {
     var ps = document.createElement('div');
@@ -2312,6 +2336,20 @@ WL.equipEffect = async function(id) {
   WL.react();
 };
 
+/* ── WL.equipWorld — sets scientist.world, persists, re-renders stage ──
+ * Mirrors WL.equipEffect. The world panel is (re)built by renderStage, so we
+ * simply re-render the stage after persisting. Static gradient shows even in
+ * calm mode; renderStage suppresses drift via WLWorlds' own low-stim check. */
+WL.equipWorld = async function(id) {
+  WL.scientist.world = (id === 'none' ? null : id);
+  try {
+    await WordLabData.saveScientist({ world: WL.scientist.world });
+  } catch(e) { console.error('[WL.equipWorld] saveScientist failed:', e); }
+  WL.renderGrid();
+  WL.renderStage();   // rebuilds podium + char + world panel from scientist.world
+  WL.react();
+};
+
 /* ── WL.equipDance — Task 6 ──────────────────────────────────────────
  * Exact persistence shape from scientist.html shopEquipDance (line 1328):
  *   dances = Object.assign({}, sci.dances || {});
@@ -2386,6 +2424,9 @@ WL.equipFor = function(cat, item) {
   if (cat.id === 'effects') {
     var alreadyOn = WL.scientist && WL.scientist.effect === item.id;
     WL.equipEffect(alreadyOn ? 'none' : item.id);
+  } else if (cat.id === 'worlds') {
+    var worldOn = WL.scientist && WL.scientist.world === item.id;
+    WL.equipWorld(worldOn ? 'none' : item.id);
   } else if (cat.id === 'dances') {
     WL.equipDance(item.tier, item.id);
   } else if (cat.id === 'custom') {
