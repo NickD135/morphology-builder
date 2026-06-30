@@ -143,6 +143,15 @@
     {id:'supernova',name:'Supernova',  cost:900,  legendary:true, icon:'🌟',  desc:'Explode and reform',          tier:'streak30'},
   ];
 
+  function buildWorlds() {
+    if (typeof WLWorlds === 'undefined' || !WLWorlds.WORLDS) return [];
+    return Object.entries(WLWorlds.WORLDS).map(function (e) {
+      var id = e[0], w = e[1];
+      return { id:id, name:w.name, cost:w.cost||0, free:(w.cost||0)===0,
+               rarity:w.rarity||'common', wall:w.wall };
+    });
+  }
+
   window.WLShopData = {
     colours:  SHOP.coatColors,
     patterns: SHOP.coatPatterns,
@@ -166,5 +175,6 @@
       // legendary:true (legendary) or nothing (common).
       return item.rarity || (item.legendary ? 'legendary' : 'common');
     },
+    get worlds(){ return buildWorlds(); }
   };
 })();
