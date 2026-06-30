@@ -29,6 +29,7 @@ const WLEffects = (() => {
     snow:        { name:'Snowfall',      cost:400,  rarity:'common', icon:'❄️', desc:'Snowflakes drift gently down',            color:'#dff4ff', requiresBadge:null },
     petals:      { name:'Cherry Petals', cost:700,  rarity:'rare',   icon:'🌸', desc:'Cherry blossom petals tumble down',       color:'#ffb7d5', requiresBadge:null },
     smoke:       { name:'Lab Smoke',     cost:700,  rarity:'rare',   icon:'💨', desc:'Soft lab smoke curls up around you',      color:'#cbd5e1', requiresBadge:null },
+    lasers:      { name:'Laser Grid',    cost:1200, rarity:'epic',   icon:'🔺', desc:'A synthwave laser grid sweeps over you',  color:'#ff3cc8', requiresBadge:null },
   };
 
   // ── State tracking ────────────────────────────────────────────
@@ -1010,6 +1011,58 @@ const WLEffects = (() => {
     _addInterval(el, spawn, intense ? 260 : 440);
   }
 
+  // lasers — synthwave targeting scene: scrolling perspective grid + vertical
+  // scan-line + firing diagonal beams + impact sparks + magenta/cyan rim glow.
+  function fxLasers(el, intense) {
+    _ensureRelative(el);
+    _injectStyle('wlfx-lasers', `
+      @keyframes wlfxGridScroll { 0%{background-position:0 0} 100%{background-position:0 26px} }
+      @keyframes wlfxScan { 0%{top:-8%;opacity:0} 8%{opacity:1} 92%{opacity:1} 100%{top:104%;opacity:0} }
+      @keyframes wlfxBeam { 0%{opacity:0;transform:scaleX(0)} 12%{opacity:1;transform:scaleX(1)} 70%{opacity:.5} 100%{opacity:0} }
+      @keyframes wlfxSpark { 0%{opacity:1;transform:scale(.3)} 100%{opacity:0;transform:scale(1.6)} }
+    `);
+    el.style.filter = 'drop-shadow(2px 0 4px rgba(255,60,200,.55)) drop-shadow(-2px 0 4px rgba(60,220,255,.55))';
+
+    // Perspective grid panel behind the character
+    const grid = _makeParticle(`
+      inset:0;z-index:6;border-radius:inherit;opacity:.55;
+      background-image:
+        linear-gradient(rgba(255,60,200,.35) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(60,220,255,.30) 1px,transparent 1px);
+      background-size:26px 26px;
+      animation:wlfxGridScroll ${intense?'0.7s':'1.3s'} linear infinite;`);
+    _addNode(el, grid);
+
+    // Vertical scan-line that sweeps over the character
+    const scan = _makeParticle(`
+      left:0;width:100%;height:7px;z-index:12;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.9),transparent);
+      box-shadow:0 0 12px 3px rgba(255,60,200,.7);
+      animation:wlfxScan ${intense?'1.6s':'2.6s'} linear infinite;`);
+    _addNode(el, scan);
+
+    // Periodic firing diagonal beams + impact spark
+    function fireBeam() {
+      if (!_active.has(el)) return;
+      const y = rnd(15, 80), len = rnd(40, 90), ang = rnd(-35, 35);
+      const beam = _makeParticle(`
+        left:5%;top:${y}%;width:${len}%;height:2px;z-index:11;transform-origin:left center;
+        transform:rotate(${ang}deg);
+        background:linear-gradient(90deg,rgba(255,255,255,.95),${rndInt(0,2)?'#ff3cc8':'#3cdcff'});
+        box-shadow:0 0 8px 1px rgba(255,60,200,.8);
+        animation:wlfxBeam ${rnd(0.4,0.7).toFixed(2)}s ease-out forwards;`);
+      _addNode(el, beam);
+      const spark = _makeParticle(`
+        left:${5+len*Math.cos(ang*Math.PI/180)}%;top:${y+len*Math.sin(ang*Math.PI/180)*0.6}%;
+        width:10px;height:10px;border-radius:50%;z-index:12;
+        background:radial-gradient(circle,#fff,rgba(255,60,200,0) 70%);
+        animation:wlfxSpark .4s ease-out forwards;`);
+      _addNode(el, spark);
+      setTimeout(() => { [beam,spark].forEach(n=>{ try{ n.parentNode&&n.parentNode.removeChild(n);}catch{} }); }, 750);
+    }
+    _addInterval(el, fireBeam, intense ? 320 : 620);
+  }
+
   // ── Effect map ────────────────────────────────────────────────
   const _fns = {
     sparkle: fxSparkle, shimmer: fxShimmer, bubbles: fxBubbles,
@@ -1019,6 +1072,7 @@ const WLEffects = (() => {
     confetti: fxConfetti, divine: fxDivine, quantum: fxQuantum,
     aurora: fxAurora, vortex: fxVortex,
     'hearts-fx': fxHearts, snow: fxSnow, petals: fxPetals, smoke: fxSmoke,
+    lasers: fxLasers,
   };
 
   // ── Public API ────────────────────────────────────────────────
