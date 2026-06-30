@@ -64,7 +64,6 @@ const WLWorlds = (() => {
     const panel = document.createElement('div'); panel.className='wlworld'; panel.setAttribute('aria-hidden','true');
     panel.style.background = w.wall;
     const floor = document.createElement('div'); floor.className='wlworld-floor';
-    floor.style.background = `linear-gradient(180deg, ${w.floor} 0%, rgba(0,0,0,.25) 100%)`;
     floor.style.backgroundImage =
       `repeating-linear-gradient(90deg, ${w.grid} 0 1px, transparent 1px 24px),`+
       `linear-gradient(180deg, ${w.floor}, rgba(0,0,0,.25))`;
