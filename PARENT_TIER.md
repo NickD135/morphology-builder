@@ -4,10 +4,10 @@
 > touching anything.** This is the canonical spec for the parent-owned account tier.
 > It overrides assumptions; if reality and this doc disagree, fix the doc as part of the work.
 
-Status: **P1 schema DRAFTED (not applied); P2 parent auth DRAFTED.** Migration written to
-`supabase/migrations/parent_tier_schema.sql` (awaiting approval to apply to dev). P2 auth
-shipped on the branch but dark-launched/unlinked and inert until the migration is applied.
-Branch `feature/parent-tier`. Created 2026-06-30.
+Status: **P1 schema APPLIED to dev; P2 auth + P3 create-a-child/dashboard DRAFTED.**
+Migration `supabase/migrations/parent_tier_schema.sql` applied to dev by owner. P2/P3 shipped
+on the branch but dark-launched/unlinked from the public site. Needs in-browser E2E
+(real guardian signup → add child → play). Branch `feature/parent-tier`. Created 2026-06-30.
 
 ---
 
@@ -183,7 +183,14 @@ Each phase stops for review. Nothing below §7.1 has been started.
   `parent-login.html` (sign-up / login / forgot-password), and a minimal authed
   `parent-home.html` placeholder. All `noindex` and unlinked from the public site (§3a).
   Inert until `parent_tier_schema.sql` is applied to dev.
-- **P3 — Create-a-child + parent dashboard:** no-school learner creation, progress view.
+- **P3 — Create-a-child + parent dashboard:** ✅ drafted. `parent-home.html` rebuilt as the
+  parent dashboard (child cards with level/quarks/accuracy/badges, add-a-child modal honouring
+  `child_limit`, Play button). New `wordlab-data.js` helpers `getMyChildren` / `createChild`
+  (via the `create_child` RPC) / `getChildSummary` / `enterChildPlay` / `exitChildPlay` /
+  `isGuardianPlay`. `landing.html` renders the student layout under a guardian-play session
+  (new teal banner, `exitChildPlay()` → back to parent-home) — mirrors the teacher-preview
+  mechanism. Children play classless inside the parent's authenticated session; progress
+  records via `increment_progress` (granted to `authenticated`). Needs in-browser E2E.
 - **P4 — Billing:** separate Stripe product, checkout, webhook, plan state.
 - **P5 — Privacy/consent:** consumer privacy policy + consent capture.
 - **P6 — QA:** Playwright self-QA on dev; accessibility pass.

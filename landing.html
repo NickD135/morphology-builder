@@ -1469,6 +1469,10 @@
       <span style="font-size:13px;font-weight:800;color:#fff;">👀 You're previewing as a student</span>
       <button onclick="exitStudentPreview()" style="background:#fff;color:#6d28d9;border:none;border-radius:10px;padding:8px 16px;font-weight:900;font-size:12px;cursor:pointer;font-family:'Lexend',sans-serif;">← Back to Teacher Mode</button>
     </div>
+    <div id="guardianPlayBanner" style="display:none;background:linear-gradient(135deg,#0d9488,#0f766e);border-radius:12px;padding:10px 20px;margin-bottom:12px;align-items:center;justify-content:space-between;gap:12px;">
+      <span style="font-size:13px;font-weight:800;color:#fff;"><span id="guardianPlayName">Your child</span> is playing 🔬</span>
+      <button onclick="exitChildPlay()" style="background:#fff;color:#0f766e;border:none;border-radius:10px;padding:8px 16px;font-weight:900;font-size:12px;cursor:pointer;font-family:'Lexend',sans-serif;">← Done / Switch child</button>
+    </div>
   </div>
 </div>
 
@@ -2006,9 +2010,11 @@ async function routeLayout() {
 
   var studentSession = WordLabData.getSession();
   var isPreview = typeof WordLabData !== 'undefined' && WordLabData.isTeacherPreview();
+  var isGuardianPlay = typeof WordLabData !== 'undefined' && WordLabData.isGuardianPlay && WordLabData.isGuardianPlay();
 
-  // If teacher is previewing as student, show student layout
-  if (isPreview && studentSession) {
+  // If a teacher is previewing OR a parent has handed the device to a child,
+  // show the student layout even though an auth session is active.
+  if ((isPreview || isGuardianPlay) && studentSession) {
     document.getElementById('layoutLoggedOut').style.display = 'none';
     document.getElementById('layoutStudent').style.display   = 'block';
     document.getElementById('layoutTeacher').style.display   = 'none';
@@ -2068,12 +2074,28 @@ async function exitStudentPreview() {
   window.location.reload();
 }
 
+function exitChildPlay() {
+  if (typeof WordLabData !== 'undefined' && WordLabData.exitChildPlay) {
+    WordLabData.exitChildPlay();
+  }
+  window.location.href = 'parent-home.html';
+}
+
 /* ═══════════ STUDENT LAYOUT INIT ═══════════ */
 async function initStudentLayout(session) {
   // Show teacher preview banner if applicable
   if (typeof WordLabData !== 'undefined' && WordLabData.isTeacherPreview()) {
     var previewBanner = document.getElementById('teacherPreviewBanner');
     if (previewBanner) previewBanner.style.display = 'flex';
+  }
+  // Show guardian-play banner when a parent has handed the device to a child
+  if (typeof WordLabData !== 'undefined' && WordLabData.isGuardianPlay && WordLabData.isGuardianPlay()) {
+    var gpBanner = document.getElementById('guardianPlayBanner');
+    if (gpBanner) {
+      var nm = document.getElementById('guardianPlayName');
+      if (nm && session && session.studentName) nm.textContent = session.studentName;
+      gpBanner.style.display = 'flex';
+    }
   }
 
   // Word of the Week card

@@ -6,6 +6,45 @@
 
 ---
 
+## 2026-06-30 — P3 create-a-child + parent dashboard drafted
+
+Owner confirmed `parent_tier_schema.sql` was applied to the dev DB. Built the create-a-child
+flow and the real parent dashboard. Still dark-launched/unlinked per §3a.
+
+- **`wordlab-data.js`** — new "Guardian children" block: `getMyChildren()` (queries
+  `guardian_links` → `students` by id, NOT `students` directly, because the combined SELECT
+  policy also returns school learners), `createChild(name)` (wraps the `create_child` RPC;
+  maps the `child_limit` error to `reason:'limit'`), `getChildSummary(studentId)` (quarks /
+  xp / level / badges / overall accuracy from `student_progress`), and the play handoff
+  trio `enterChildPlay` / `exitChildPlay` / `isGuardianPlay` (sets `wl_guardian_play` in
+  sessionStorage + a classless `startSession(null, id, name)`). All exported.
+- **`parent-home.html`** — rebuilt from placeholder into the dashboard: child cards (level,
+  quarks, accuracy, badges loaded async), add-a-child modal that respects `child_limit`
+  (free = 1, shows an upgrade note at the cap), empty state, Play button → `enterChildPlay`
+  → `landing.html`. DOM-built (no innerHTML with user input).
+- **`landing.html`** — `routeLayout()` now renders the student layout when
+  `isGuardianPlay()` is set (not just teacher preview), so a child plays even though the
+  parent's auth session is live. Added a teal guardian-play banner with the child's name and
+  a "Done / Switch child" button (`exitChildPlay()` → `parent-home.html`). The existing
+  teacher-preview banner is unaffected (separate flag, separate copy).
+
+How play works: parent is `authenticated`; child plays classless inside that session.
+Progress writes via `increment_progress` (granted to `authenticated` in P1); scientist
+purchase/save via `atomic_purchase`/`save_scientist_field` (explicit `authenticated` grants
+added in P1). `isStudentTeacher(null, …)` short-circuits to false, so a null class is safe.
+
+Static verification: `node --check` clean on `wordlab-data.js`; inline scripts in
+`parent-home.html` + `landing.html` parse; both pages serve 200. **Not done:** in-browser
+E2E (Playwright Chrome not installed here; deferred to P6). Real flow to verify manually:
+guardian signup (mind email-confirmation setting on dev) → add child → Play → answer a few
+questions → confirm a `student_progress` row appears and quarks/XP rise → "Done" returns to
+the dashboard with updated stats.
+
+**Next (P4):** parent-tier billing — separate Stripe product, checkout, webhook, raise
+`child_limit` / set `plan='active'` on the guardians row.
+
+---
+
 ## 2026-06-30 — P2 parent auth drafted (dark-launched)
 
 Built the parent-tier auth layer, mirroring the existing teacher auth. All unlinked from the

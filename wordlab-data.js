@@ -401,6 +401,90 @@ const WordLabData = (() => {
     return _guardianRecord;
   }
 
+  // ── Guardian children (parent tier) ───────────────────────────
+  // A guardian's children are `students` rows (account_type='parent') reached
+  // through guardian_links. We query via the link table (not students directly)
+  // because the students SELECT policy also returns all school learners.
+  let _childrenCache = null;
+  async function getMyChildren() {
+    const g = await getGuardianRecord();
+    if (!g) return [];
+    try {
+      const { data: links, error } = await sb()
+        .from('guardian_links').select('learner_id').eq('guardian_id', g.id);
+      if (error || !links || !links.length) { _childrenCache = []; return []; }
+      const ids = links.map(function(l){ return l.learner_id; });
+      const { data: kids } = await sb()
+        .from('students').select('id, name, account_type, stage').in('id', ids).order('name');
+      _childrenCache = kids || [];
+      return _childrenCache;
+    } catch (e) {
+      console.warn('getMyChildren failed', e);
+      return [];
+    }
+  }
+
+  // Atomic insert-child + link via the create_child RPC (enforces child_limit).
+  // Returns { ok:true, id } or { ok:false, reason:'limit'|'not_guardian'|<msg> }.
+  async function createChild(name) {
+    const clean = (name || '').trim();
+    if (!clean) return { ok: false, reason: 'Please enter a name.' };
+    try {
+      const { data, error } = await sb().rpc('create_child', { p_name: clean });
+      if (error) {
+        const msg = error.message || 'Could not add child.';
+        if (/limit/i.test(msg)) return { ok: false, reason: 'limit' };
+        if (/guardian/i.test(msg)) return { ok: false, reason: 'not_guardian' };
+        return { ok: false, reason: msg };
+      }
+      _childrenCache = null;
+      return { ok: true, id: data };
+    } catch (e) {
+      return { ok: false, reason: (e && e.message) || 'Could not add child.' };
+    }
+  }
+
+  // Lightweight per-child summary for the parent dashboard (does NOT touch the
+  // play session). Aggregates progress to an overall accuracy.
+  async function getChildSummary(studentId) {
+    try {
+      const [charRes, progRes] = await Promise.all([
+        sb().from('student_character').select('quarks, xp, badges').eq('student_id', studentId).maybeSingle(),
+        sb().from('student_progress').select('correct, total').eq('student_id', studentId)
+      ]);
+      const char = charRes.data || {};
+      let correct = 0, total = 0;
+      (progRes.data || []).forEach(function(p){ correct += p.correct || 0; total += p.total || 0; });
+      return {
+        quarks: char.quarks || 0,
+        xp: char.xp || 0,
+        level: getLevel(char.xp || 0),
+        badges: (char.badges || []).length,
+        accuracy: total ? Math.round(100 * correct / total) : null,
+        answered: total
+      };
+    } catch (e) {
+      return { quarks: 0, xp: 0, level: getLevel(0), badges: 0, accuracy: null, answered: 0 };
+    }
+  }
+
+  // Hand the device to a child: start a classless play session and flag it as
+  // guardian play so landing.html renders the student layout while the parent's
+  // auth session is still active (mirrors the teacher-preview mechanism).
+  async function enterChildPlay(studentId, studentName) {
+    await startSession(null, studentId, studentName);
+    try { sessionStorage.setItem('wl_guardian_play', 'true'); } catch (e) {}
+  }
+
+  function exitChildPlay() {
+    endSession();
+    try { sessionStorage.removeItem('wl_guardian_play'); } catch (e) {}
+  }
+
+  function isGuardianPlay() {
+    return sessionStorage.getItem('wl_guardian_play') === 'true';
+  }
+
   // ── Classes ───────────────────────────────────────────────────
   function _generateClassCode() {
     var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 to avoid confusion
@@ -2940,6 +3024,7 @@ const WordLabData = (() => {
   return {
     getTeacherSession, getTeacherRecord, requireTeacherAuth, teacherSignOut, _sb: sb,
     getGuardianSession, getGuardianRecord, requireGuardianAuth, guardianSignOut,
+    getMyChildren, createChild, getChildSummary, enterChildPlay, exitChildPlay, isGuardianPlay,
     sbFetchAllRows,
     createClass, getClasses, getClass, verifyPassword,
     addStudent, addStudentsBulk, removeStudent, deleteClass, regenerateStudentCode,
