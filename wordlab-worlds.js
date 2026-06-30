@@ -112,6 +112,130 @@ const WLWorlds = (() => {
         { svg:'<svg viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="rgba(200,245,255,.7)"/></svg>',
           n:5, anim:'rise', dur:[5,9], size:[2,4], left:[10,90] }
       ]
+    },
+    forest: {
+      props:
+        '<svg viewBox="0 0 100 100" preserveAspectRatio="none">'+
+          '<g>'+
+            '<rect x="20" y="46" width="5" height="40" fill="#3a2a18"/>'+
+            '<path d="M22 20 L10 52 L34 52Z M22 34 L13 60 L31 60Z" fill="#2f7a3a"/>'+
+            '<rect x="70" y="40" width="6" height="46" fill="#3a2a18"/>'+
+            '<path d="M73 14 L58 54 L88 54Z M73 30 L62 64 L84 64Z" fill="#357f3e"/>'+
+            '<ellipse cx="46" cy="86" rx="20" ry="6" fill="#2d6a35"/>'+
+          '</g>'+
+        '</svg>',
+      sprites: [
+        { svg:'<svg viewBox="0 0 12 10"><path d="M6 0 C10 3 10 7 6 10 C2 7 2 3 6 0Z" fill="#e8b04a"/><path d="M6 1 V9" stroke="#a87a2a" stroke-width=".6"/></svg>',
+          n:7, anim:'fall', dur:[5,9], size:[3,6], left:[6,92] },
+        { svg:'<svg viewBox="0 0 12 10"><path d="M6 0 C10 3 10 7 6 10 C2 7 2 3 6 0Z" fill="#c75b39"/></svg>',
+          n:4, anim:'fall', dur:[6,10], size:[3,5], left:[10,88] },
+        { svg:'<svg viewBox="0 0 16 8"><path d="M1 6 Q4 2 7 5 Q10 1 15 5" stroke="#2a2a2a" stroke-width="1.4" fill="none"/></svg>',
+          n:1, anim:'swim', dur:[14,18], size:[7,9], top:[12,24] }
+      ]
+    },
+    galaxy: {
+      props:
+        '<svg viewBox="0 0 100 100" preserveAspectRatio="none">'+
+          '<circle cx="78" cy="26" r="11" fill="#6a5acd"/>'+
+          '<ellipse cx="78" cy="26" rx="18" ry="4" fill="none" stroke="rgba(180,160,255,.6)" stroke-width="1.5"/>'+
+          '<circle cx="20" cy="60" r="6" fill="#8a6df0"/>'+
+          '<circle cx="40" cy="18" r="3" fill="#b9a6ff"/>'+
+        '</svg>',
+      sprites: [
+        { svg:'<svg viewBox="0 0 6 6"><circle cx="3" cy="3" r="1.4" fill="#fff"/></svg>',
+          n:8, anim:'twinkle', dur:[2,4], size:[1.5,3], top:[5,90], left:[4,94] },
+        { svg:'<svg viewBox="0 0 30 6"><path d="M0 3 H22" stroke="rgba(255,255,255,.85)" stroke-width="2" stroke-linecap="round"/><circle cx="25" cy="3" r="3" fill="#fff"/></svg>',
+          n:1, anim:'swim', dur:[7,9], size:[14,18], top:[14,30] },
+        { svg:'<svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="#4db8ff"/></svg>',
+          n:1, anim:'bob', dur:[5,7], size:[7,9], top:[64,72], left:[55,62] }
+      ]
+    },
+    volcano: {
+      props:
+        '<svg viewBox="0 0 100 100" preserveAspectRatio="none">'+
+          '<path d="M28 100 L46 40 L54 40 L72 100Z" fill="#3a1a10"/>'+
+          '<path d="M46 40 L54 40 L58 50 Q50 46 42 50Z" fill="#ff6a2a"/>'+
+          '<path d="M0 100 L14 74 L30 100Z" fill="#2a120a"/>'+
+          '<path d="M74 100 L88 70 L100 100Z" fill="#2a120a"/>'+
+        '</svg>',
+      sprites: [
+        { svg:'<svg viewBox="0 0 6 6"><circle cx="3" cy="3" r="2" fill="#ff8a3c"/></svg>',
+          n:7, anim:'rise', dur:[4,8], size:[1.5,3.5], left:[40,60] },
+        { svg:'<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="rgba(255,120,40,.5)"/></svg>',
+          n:1, anim:'pulse', dur:[2,3], size:[24,30], top:[30,36], left:[40,48] },
+        { svg:'<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="rgba(120,120,120,.4)"/></svg>',
+          n:3, anim:'rise', dur:[6,10], size:[8,14], left:[42,56] }
+      ]
+    },
+    candy: {
+      props:
+        '<svg viewBox="0 0 100 100" preserveAspectRatio="none">'+
+          '<g>'+
+            '<rect x="14" y="40" width="7" height="50" rx="3" fill="#ff7fc0"/>'+
+            '<rect x="14" y="40" width="7" height="50" rx="3" fill="url(#cstripe)" opacity=".5"/>'+
+            '<rect x="80" y="48" width="7" height="42" rx="3" fill="#ff7fc0"/>'+
+            '<circle cx="40" cy="86" r="8" fill="#ffd1ec"/><circle cx="58" cy="88" r="6" fill="#c8f0d8"/>'+
+          '</g>'+
+          '<defs><pattern id="cstripe" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="3" height="6" fill="#fff"/></pattern></defs>'+
+        '</svg>',
+      sprites: [
+        { svg:'<svg viewBox="0 0 6 6"><rect width="6" height="6" rx="1.5" fill="#ff5aa0"/></svg>',
+          n:5, anim:'fall', dur:[5,9], size:[2,4], left:[8,90] },
+        { svg:'<svg viewBox="0 0 6 6"><rect width="6" height="6" rx="1.5" fill="#6ee7b7"/></svg>',
+          n:4, anim:'fall', dur:[6,10], size:[2,4], left:[8,90] },
+        { svg:'<svg viewBox="0 0 14 18"><circle cx="7" cy="6" r="6" fill="#ffb4dc"/><rect x="6.2" y="11" width="1.6" height="7" fill="#fff"/></svg>',
+          n:2, anim:'bob', dur:[4,6], size:[8,11], top:[20,46], left:[30,66] }
+      ]
+    },
+    sunset: {
+      props:
+        '<svg viewBox="0 0 100 100" preserveAspectRatio="none">'+
+          '<circle cx="50" cy="58" r="16" fill="#ffd27a"/>'+
+          '<path d="M0 78 Q30 66 56 78 Q80 88 100 76 L100 100 L0 100Z" fill="#c4546b"/>'+
+          '<path d="M0 88 Q40 80 70 90 Q88 94 100 88 L100 100 L0 100Z" fill="#9c3f5a"/>'+
+        '</svg>',
+      sprites: [
+        { svg:'<svg viewBox="0 0 30 12"><ellipse cx="10" cy="7" rx="9" ry="4" fill="rgba(255,255,255,.55)"/><ellipse cx="20" cy="6" rx="8" ry="4" fill="rgba(255,255,255,.5)"/></svg>',
+          n:3, anim:'swim', dur:[16,26], size:[16,26], top:[14,40] },
+        { svg:'<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="rgba(255,210,130,.5)"/></svg>',
+          n:1, anim:'pulse', dur:[3,5], size:[30,36], top:[48,52], left:[42,46] }
+      ]
+    },
+    neon: {
+      props:
+        '<svg viewBox="0 0 100 100" preserveAspectRatio="none">'+
+          '<path d="M50 52 L4 100 M50 52 L96 100 M50 52 L24 100 M50 52 L76 100" stroke="rgba(255,60,200,.5)" stroke-width="1"/>'+
+          '<line x1="0" y1="52" x2="100" y2="52" stroke="rgba(255,80,210,.8)" stroke-width="1.5"/>'+
+          '<path d="M30 30 h40 v14 h-40Z" fill="none" stroke="#3cdcff" stroke-width="1.5" opacity=".7"/>'+
+        '</svg>',
+      sprites: [
+        { svg:'<svg viewBox="0 0 10 10"><path d="M5 0 L10 5 L5 10 L0 5Z" fill="none" stroke="#ff3cc8" stroke-width="1.4"/></svg>',
+          n:4, anim:'swim', dur:[8,14], size:[5,9], top:[10,44], flip:false },
+        { svg:'<svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" fill="none" stroke="#3cdcff" stroke-width="1.4"/></svg>',
+          n:3, anim:'bob', dur:[3,5], size:[5,8], top:[14,42], left:[12,84] },
+        { svg:'<svg viewBox="0 0 100 4"><rect width="100" height="4" fill="rgba(255,60,200,.5)"/></svg>',
+          n:1, anim:'pulse', dur:[2,3], size:[100,100], top:[51,53], left:[0,0] }
+      ]
+    },
+    lab: {
+      props:
+        '<svg viewBox="0 0 100 100" preserveAspectRatio="none">'+
+          '<rect x="0" y="40" width="100" height="3" fill="#cba23f" opacity=".5"/>'+
+          '<g>'+
+            '<path d="M18 60 l-3 22 q0 5 5 5 h8 q5 0 5-5 l-3-22Z" fill="rgba(120,220,255,.35)" stroke="#9ec9e0" stroke-width="1"/>'+
+            '<rect x="20" y="56" width="8" height="5" fill="#9ec9e0"/>'+
+            '<path d="M76 58 l-4 24 q0 5 5 5 h10 q5 0 5-5 l-4-24Z" fill="rgba(190,240,120,.35)" stroke="#bfe08a" stroke-width="1"/>'+
+            '<rect x="78" y="54" width="9" height="5" fill="#bfe08a"/>'+
+          '</g>'+
+        '</svg>',
+      sprites: [
+        { svg:'<svg viewBox="0 0 5 5"><circle cx="2.5" cy="2.5" r="2" fill="rgba(120,220,255,.8)"/></svg>',
+          n:4, anim:'rise', dur:[4,7], size:[1.5,3], left:[20,28] },
+        { svg:'<svg viewBox="0 0 18 8"><circle cx="3" cy="4" r="3" fill="#7b6bff"/><circle cx="15" cy="4" r="3" fill="#3cdcff"/><line x1="6" y1="4" x2="12" y2="4" stroke="#9aa" stroke-width="1.2"/></svg>',
+          n:3, anim:'swim', dur:[12,20], size:[8,12], top:[14,38] },
+        { svg:'<svg viewBox="0 0 5 5"><circle cx="2.5" cy="2.5" r="2" fill="rgba(190,240,120,.8)"/></svg>',
+          n:4, anim:'rise', dur:[4,7], size:[1.5,3], left:[78,87] }
+      ]
     }
   };
 
