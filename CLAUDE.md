@@ -1593,10 +1593,35 @@ dressing-room + shop — built subagent-driven from a spec + plan (`docs/superpo
 - [x] Shared catalogue extracted to `wordlab-shop-data.js` (single source of truth)
 - [x] Verified live as test student incl. orphan check: a pre-existing outfit (coat/head/face/effect/dance) resolves as owned+equipped — no orphaned purchases
 - [x] Merged to `main` **locally** (fast-forward) — NOT pushed; nothing deployed yet (push auto-deploys to production)
-- [ ] **NEXT: spacing/visual polish** — layout looks rough; tighten padding/gaps on shop grid, pills, cards, top bar, stage/stats proportions vs mockup (`docs/superpowers/specs/2026-06-29-lab-shop-mockup.html`, spec §12.3)
+- [x] Spacing/visual polish — fixed earlier (commits `83cdd16` char-zoom-scaling + shop-card row overlap, `eca808a`); verified clean 2026-06-30
 - [ ] Post-merge: smoke-test custom-item equip with real teacher-made `shop_items` (test class had none)
 - [ ] Deferred cosmetic (final review, non-blocking): inline-Fredoka on `.lab-stat-num`, dances `src` used for header count, "Already owned"→not-enough edge case, ARIA list-nesting nit
-- [ ] Phase 2 (later): animated worlds backdrop + ~7 new effects; Phase 3: SVG hair, pet expansion, port mockup art into the SVG renderer
+- [x] Phase 2 (animated worlds backdrop + ~7 new effects) — **DONE, see PHASE 7.27 below**
+
+---
+
+### PHASE 7.27 — Session 2026-06-30 (Lab Shop Phase 2 + world scenery)
+
+All merged to `main` **locally — NOT pushed; nothing deployed** (push auto-deploys to production).
+Built subagent-driven (per-task review + opus whole-branch review). Specs/plans under
+`docs/superpowers/{specs,plans}/2026-06-30-*`.
+
+#### Lab Shop Phase 2 — animated worlds + 7 new effects (`docs/.../2026-06-30-lab-shop-phase2-*`)
+- [x] 7 new effects in `wordlab-effects.js` (catalogue + `fx*` + `_fns`): 4 simple (hearts, snow, petals, smoke) + 3 premium multi-layer (Laser Grid, Quark Rain, Black Hole — matched the Divine/Quantum bar)
+- [x] 8 animated worlds — NEW module `wordlab-worlds.js` (`WLWorlds`, lifecycle mirrors `WLEffects`): lab(free), galaxy, underwater(Aquatic), sunset, forest, neon, candy, volcano. Contained scene-panel behind the character + themed drift
+- [x] Persisted as `scientist.world` — generic `save_scientist_field` RPC accepts it, **no DB migration**. `buildSVG` untouched (panel is a stage sibling)
+- [x] Exposed via `WLShopData.worlds`; 10th "Worlds" pill in `scientist.html` (`WL.equipWorld`, gradient swatch, `renderStage` layer). Low-stim keeps the Worlds pill + static gradient, suppresses drift
+- [x] Rendered everywhere via `_startEquippedWorld`/`_worldTargets` in `wordlab-scientist.js` (game-page `.scientist-stage`). 44px landing `#hubSciAvatar` **intentionally excluded** (too small — Nick's call)
+
+#### World scenery — bespoke SVG scenes for all 8 worlds (`docs/.../2026-06-30-world-scenery.md`)
+- [x] `SCENES` map in `wordlab-worlds.js`: per-world static SVG props + animated sprites (Aquatic swimming fish, Forest trees/leaves/bird, Galaxy planets/comet, Volcano embers/lava, Candy sprinkles/lollipops, Sunset clouds, Neon shapes, Lab flasks/molecules)
+- [x] Sprites = infinite-CSS placed-once (no intervals → teardown is just panel removal). Low-stim renders static props, skips sprites. Swim sprites travel both directions + flip art to face travel (`faces` convention)
+- [x] Verified: all 8 render, teardown leak-free, low-stim, mobile, game-page; integrity tests pass
+- [ ] Deferred cosmetic cleanup in `wordlab-worlds.js` (non-blocking): dead `drift`/`flip` fields, unused `wlw-sway` CSS, dead `intense` param, candy `cstripe` id
+
+#### NEXT (continuing later)
+- [ ] **Plan 2 — Effect depth / 3D wrap** (spec `2026-06-30-worlds-scenery-effect-depth-design.md` §5): engine-wide behind/front layer split in `wordlab-effects.js` so effects wrap the character (some particles behind, some front) and border-glow effects (aura/divine/shimmer/quantum/vortex) become halos not box-shadow borders. Riskier — shared engine, 25 effects, 18 pages
+- [ ] **Then: Phase 3 art port** — re-render the character + items in the mockup's dimensional style, SVG hair, pet expansion
 
 ---
 
