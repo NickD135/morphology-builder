@@ -54,7 +54,9 @@ const WLWorlds = (() => {
       .wlworld-scene svg{ width:100%; height:100%; display:block; }
       .wlw-sprite{ position:absolute; z-index:3; will-change:transform; }
       .wlw-sprite svg{ width:100%; height:auto; display:block; overflow:visible; }
-      .wlw-swim   { left:0; animation:wlwSwim linear infinite; }
+      .wlw-swim, .wlw-swim-rev { left:0; animation-timing-function:linear; animation-iteration-count:infinite; }
+      .wlw-swim     { animation-name:wlwSwim; }
+      .wlw-swim-rev { animation-name:wlwSwimRev; }
       .wlw-fall   { animation:wlwFall linear infinite; }
       .wlw-rise   { animation:wlwRise linear infinite; }
       .wlw-bob    { animation:wlwBob ease-in-out infinite; }
@@ -62,6 +64,7 @@ const WLWorlds = (() => {
       .wlw-pulse  { animation:wlwPulse ease-in-out infinite; }
       .wlw-twinkle{ animation:wlwTwinkle ease-in-out infinite; }
       @keyframes wlwSwim { from{transform:translateX(-30%)} to{transform:translateX(130%)} }
+      @keyframes wlwSwimRev { from{transform:translateX(130%)} to{transform:translateX(-30%)} }
       @keyframes wlwFall { from{transform:translateY(-15%) rotate(0deg)} to{transform:translateY(115%) rotate(var(--r,360deg))} }
       @keyframes wlwRise { 0%{transform:translateY(115%);opacity:0} 12%{opacity:1} 88%{opacity:1} 100%{transform:translateY(-15%);opacity:0} }
       @keyframes wlwBob  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7%)} }
@@ -106,9 +109,9 @@ const WLWorlds = (() => {
         '</svg>',
       sprites: [
         { svg:'<svg viewBox="0 0 24 14"><path d="M2 7 Q9 1 16 7 Q9 13 2 7Z" fill="#ffb454"/><path d="M16 7 l6-4 0 8Z" fill="#ff9a3c"/><circle cx="6" cy="6" r="1" fill="#3a2a10"/></svg>',
-          n:4, anim:'swim', dur:[7,12], size:[9,15], top:[18,68], flip:true },
+          n:4, anim:'swim', dur:[7,12], size:[9,15], top:[18,68], flip:true, faces:'left' },
         { svg:'<svg viewBox="0 0 20 12"><path d="M2 6 Q8 1 14 6 Q8 11 2 6Z" fill="#7fd6ff"/><path d="M14 6 l5-3 0 6Z" fill="#5bbfe8"/></svg>',
-          n:3, anim:'swim', dur:[9,15], size:[6,10], top:[30,80], flip:true },
+          n:3, anim:'swim', dur:[9,15], size:[6,10], top:[30,80], flip:true, faces:'left' },
         { svg:'<svg viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="rgba(200,245,255,.7)"/></svg>',
           n:5, anim:'rise', dur:[5,9], size:[2,4], left:[10,90] }
       ]
@@ -243,7 +246,6 @@ const WLWorlds = (() => {
   function _placeSprites(panel, sp){
     for(let i=0;i<sp.n;i++){
       const wrap = document.createElement('div');
-      wrap.className = 'wlw-sprite wlw-'+sp.anim;
       const dur = rnd(sp.dur[0], sp.dur[1]);
       let css = `width:${rnd(sp.size[0],sp.size[1]).toFixed(1)}%;`+
                 `animation-duration:${dur.toFixed(2)}s;animation-delay:${(-rnd(0,dur)).toFixed(2)}s;`;
@@ -253,7 +255,17 @@ const WLWorlds = (() => {
       wrap.style.cssText = css;
       // Inner holder carries any static flip so it never fights the animation transform.
       const inner = document.createElement('div');
-      if (sp.flip && rndInt(0,2)) inner.style.transform = 'scaleX(-1)';
+      if (sp.anim === 'swim') {
+        // Travel a random direction; flip the art so its head faces the way it travels.
+        // SVG art is authored facing RIGHT by default; faces:'left' marks left-drawn art (e.g. fish).
+        const reverse = !!rndInt(0,2);                  // true => travels right->left
+        wrap.className = 'wlw-sprite ' + (reverse ? 'wlw-swim-rev' : 'wlw-swim');
+        const facesLeft = (sp.faces === 'left');
+        const flip = reverse ? !facesLeft : facesLeft;  // orient head toward travel direction
+        if (flip) inner.style.transform = 'scaleX(-1)';
+      } else {
+        wrap.className = 'wlw-sprite wlw-' + sp.anim;
+      }
       inner.innerHTML = sp.svg;
       wrap.appendChild(inner);
       panel.appendChild(wrap);

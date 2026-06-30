@@ -14,6 +14,10 @@ for (const api of ['start','stop','preview','WORLDS','wallOf']) {
 if (!/\bSCENES\s*=/.test(src)) { console.error('MISSING SCENES map'); fail++; }
 if (!src.includes('_buildScene')) { console.error('MISSING _buildScene'); fail++; }
 if (!src.includes('_placeSprites')) { console.error('MISSING _placeSprites'); fail++; }
-if (!/underwater\s*:\s*\{\s*props/.test(src.replace(/\s+/g,' '))) { console.error('MISSING underwater scene'); fail++; }
+for (const id of IDS) {                       // IDS already lists all 8 world ids
+  if (!new RegExp(id + '\\s*:\\s*\\{\\s*props').test(src.replace(/\s+/g,' '))) {
+    console.error('MISSING scene: ' + id); fail++;
+  }
+}
 if (fail) { console.error(`\n${fail} failure(s)`); process.exit(1); }
 console.log(`OK — 8 worlds + full WLWorlds API present`);
