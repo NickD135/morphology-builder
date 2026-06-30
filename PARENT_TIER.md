@@ -4,10 +4,11 @@
 > touching anything.** This is the canonical spec for the parent-owned account tier.
 > It overrides assumptions; if reality and this doc disagree, fix the doc as part of the work.
 
-Status: **P1 schema APPLIED to dev; P2 auth + P3 create-a-child/dashboard DRAFTED.**
-Migration `supabase/migrations/parent_tier_schema.sql` applied to dev by owner. P2/P3 shipped
-on the branch but dark-launched/unlinked from the public site. Needs in-browser E2E
-(real guardian signup → add child → play). Branch `feature/parent-tier`. Created 2026-06-30.
+Status: **P1 schema APPLIED to dev; P2 auth + P3 create-a-child/dashboard + P3.5 adaptive
+levelling DRAFTED.** Migration `supabase/migrations/parent_tier_schema.sql` applied to dev by
+owner. P2/P3/P3.5 shipped on the branch but dark-launched/unlinked from the public site.
+Needs in-browser E2E (real guardian signup → add child → placement → play → auto-promote).
+Branch `feature/parent-tier`. Created 2026-06-30.
 
 ---
 
@@ -191,6 +192,30 @@ Each phase stops for review. Nothing below §7.1 has been started.
   (new teal banner, `exitChildPlay()` → back to parent-home) — mirrors the teacher-preview
   mechanism. Children play classless inside the parent's authenticated session; progress
   records via `increment_progress` (granted to `authenticated`). Needs in-browser E2E.
+- **P3.5 — Adaptive levelling (NEW):** ✅ drafted. School learners are levelled by a
+  teacher; parent-owned children have no teacher, so they are **placed and re-levelled
+  automatically** from how much they get correct. Reuses the existing `wordlab-stage.js`
+  engine (stage order `s2e…s4`, friendly names Explorer→Pioneer, `nextStage`, `weightPool`).
+  - **Placement:** a child with `stage = NULL` does a quick 12-question check
+    (`placement-check.html`, 3 questions per probed stage `s2e/s2l/s3e/s3l`, "what does this
+    morpheme mean?" built from `window.MORPHEMES`) before first play. Placed at the first
+    stage they fail (conservative — auto-promotion corrects under-placement, and there is no
+    demotion to correct over-placement). A "skip → start at the beginning" option sets `s2e`.
+  - **Auto-promotion:** `WordLabData.maybeAdvanceChild()` runs on every return to
+    `landing.html` during guardian play. It snapshots the child's core-game totals when they
+    enter a stage (baseline in `student_character.stats.autoLevel`) and promotes when, *since
+    that baseline*, they have answered ≥50 new questions across ≥2 core games at ≥80%
+    accuracy. The baseline re-anchors on promotion, so a child can't cascade up several
+    stages on banked easy answers. Capped at `s3l` (Trailblazer) — `s4`/Pioneer stays an
+    opt-in extension. **No demotion** (the 80/20 review weighting already cushions
+    over-placement; a level drop is demoralising). A 🚀 "Level up!" celebration shows on
+    promotion.
+  - Writes use existing RLS/grants: `students.stage` via the guardian UPDATE policy,
+    `student_character.stats` via the open `USING(true)` update policy. No schema change.
+  - **Files:** `placement-check.html` (new); `wordlab-data.js` (`setChildStage`,
+    `maybeAdvanceChild` + exports); `landing.html` (post-round check + celebration);
+    `parent-home.html` (level pill shows the stage name; Play routes unplaced children to the
+    check). Needs in-browser E2E.
 - **P4 — Billing:** separate Stripe product, checkout, webhook, plan state.
 - **P5 — Privacy/consent:** consumer privacy policy + consent capture.
 - **P6 — QA:** Playwright self-QA on dev; accessibility pass.
@@ -237,6 +262,13 @@ These were the open questions; the owner accepted the recommended answers in ful
    controller). Author a new consumer-tier privacy policy where the **parent** is the data
    controller and consent flows directly from them, with explicit parent-consent capture at
    child creation. Scheduled for P5.
+
+6. **Initial placement for parent-owned children — DECIDED: quick placement check.**
+   Owner chose a short adaptive-feel check on first play (over an age/year dropdown or
+   start-at-lowest) so the child begins at an accurate level without a teacher. Implemented in
+   P3.5. Ongoing levelling is automatic (`maybeAdvanceChild`), promotion-only, capped at
+   `s3l`. Thresholds (12 placement questions, promote at ≥50 attempts / ≥80% / ≥2 games since
+   the per-stage baseline) are tunable in `wordlab-data.js`; revisit after E2E/pilot data.
 
 ---
 

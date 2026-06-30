@@ -6,6 +6,60 @@
 
 ---
 
+## 2026-06-30 — P3.5 adaptive levelling drafted
+
+> **Cross-codespace sync:** all on branch `feature/parent-tier`. New file
+> `placement-check.html` + edits to `wordlab-data.js`, `landing.html`, `parent-home.html`,
+> plus these docs. If you are reading this in the *other* codespace, `git pull` the branch
+> before continuing — the code below won't exist locally until you do. No DB migration was
+> added, so nothing to apply on the dev project.
+
+Parent-owned children have no teacher to set their curriculum stage, so they are now placed
+and re-levelled automatically from how much they get correct. Owner picked the **quick
+placement check** for initial placement (recorded as `PARENT_TIER.md` §8.6). All built on the
+existing `wordlab-stage.js` engine — no schema change, no new RPC.
+
+- **`placement-check.html`** (new) — first-play check for a child whose `stage` is `NULL`.
+  12 questions, 3 per probed stage (`s2e/s2l/s3e/s3l`), "what does <morpheme> mean?" MCQ built
+  from `window.MORPHEMES` (prefixes + suffixes that have a meaning + stage), 2 distractor
+  meanings from the pool. Placement = **first stage failed** (`<2/3`), walking easiest→hardest;
+  pass all → `s3l`. Conservative on purpose: auto-promotion fixes under-placement, and there
+  is no demotion to fix over-placement. "Skip — start at the beginning" sets `s2e`. Runs only
+  inside a guardian-play session (else bounces to `parent-home.html`); writes via
+  `setChildStage`, then → `landing.html`.
+- **`wordlab-data.js`** — new "Adaptive levelling (parent tier)" block:
+  - `setChildStage(studentId, stage)` — direct `students.stage` UPDATE (allowed by the
+    guardian UPDATE policy in `parent_tier_schema.sql`); refreshes `_childrenCache` + `wl_stage`.
+  - `maybeAdvanceChild(studentId, currentStage)` — recomputes a promotion signal and moves the
+    child up if warranted. Uses a per-stage **baseline** snapshot of core-game totals stored in
+    `student_character.stats.autoLevel` (re-anchored on entry to a stage and on each promotion),
+    so promotion is judged on attempts made *since entering the current stage* — no cascade up
+    several stages on banked easy answers. Promotes when, since baseline, `≥50` new attempts
+    across `≥2` of the 6 `WLStage.CORE_GAMES` at `≥80%` accuracy. Capped at `s3l` (never
+    auto-into `s4`). **No demotion.** Returns `{promoted, from, to, fromName, toName}` or null.
+    Both exported.
+  - Why accuracy-as-proxy: once a stage is set, `weightPool()` already serves ~80% current-stage
+    content, so core-game accuracy ≈ current-stage mastery. Simpler and self-contained vs.
+    rebuilding the dashboard's `getCategoryStage`/`calcMastery` map (which needs a breakdown-words
+    fetch). Noted as tunable; revisit with pilot data.
+- **`landing.html`** — after `getStudentData()` caches `wl_stage`, if `isGuardianPlay()` it
+  calls `maybeAdvanceChild` and, on promotion, shows a 🚀 "Level up!" celebration overlay
+  (`showLevelUpCelebration`, DOM-built). Runs once per return to landing (i.e. after each round).
+- **`parent-home.html`** — loads `wordlab-stage.js`; the child card "Level" pill now shows the
+  friendly stage name (Explorer/Voyager/…) instead of the XP number, or "Finding level" when
+  unplaced; Play button reads "Find level & play" and routes unplaced children to the check.
+
+Write paths verified against migrations: `student_character` UPDATE is `USING(true)` (covers
+the authenticated guardian); `students` UPDATE for parent-owned rows is the guardian policy.
+
+Static verification: `node --check` clean on `wordlab-data.js`; inline scripts in
+`placement-check.html`, `parent-home.html`, `landing.html` parse. **Not done:** in-browser E2E
+(deferred to P6). Manual flow to verify: add child → Play → 12-question check sets a stage →
+play a few rounds at high accuracy → on return to landing, confirm `students.stage` advanced
+and the Level-up overlay shows; confirm it does NOT advance again immediately (baseline reset).
+
+---
+
 ## 2026-06-30 — P3 create-a-child + parent dashboard drafted
 
 Owner confirmed `parent_tier_schema.sql` was applied to the dev DB. Built the create-a-child

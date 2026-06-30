@@ -100,6 +100,7 @@
   </div>
 </div>
 
+<script src="wordlab-stage.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="wordlab-data.js"></script>
 <script>
@@ -137,9 +138,17 @@
     return s;
   }
 
-  function playChild(id, name) {
-    WordLabData.enterChildPlay(id, name).then(function() {
-      window.location.href = 'landing.html';
+  function stageLabel(stage) {
+    if (!stage) return 'Finding level';
+    if (window.WLStage && WLStage.STAGE_NAMES && WLStage.STAGE_NAMES[stage]) return WLStage.STAGE_NAMES[stage];
+    return stage;
+  }
+
+  function playChild(child) {
+    WordLabData.enterChildPlay(child.id, child.name).then(function() {
+      // A child with no stage yet does the quick placement check first; once
+      // placed (and on every later play) they go straight to the games.
+      window.location.href = child.stage ? 'landing.html' : 'placement-check.html';
     });
   }
 
@@ -167,8 +176,8 @@
       card.appendChild(stats);
 
       const actions = el('div', 'child-actions');
-      const play = el('button', 'play-btn', '▶ Play');
-      play.addEventListener('click', function(){ playChild(c.id, c.name); });
+      const play = el('button', 'play-btn', c.stage ? '▶ Play' : '▶ Find level & play');
+      play.addEventListener('click', function(){ playChild(c); });
       actions.appendChild(play);
       card.appendChild(actions);
 
@@ -177,7 +186,9 @@
       // Fill stats asynchronously
       WordLabData.getChildSummary(c.id).then(function(s) {
         while (stats.firstChild) stats.removeChild(stats.firstChild);
-        stats.appendChild(statPill('Level', String(s.level)));
+        // Show the curriculum level (auto-placed/auto-levelled) rather than the XP number.
+        if (c.stage) stats.appendChild(statPill('level', stageLabel(c.stage)));
+        else stats.appendChild(el('span', 'stat', 'Finding level'));
         stats.appendChild(statPill('quarks', String(s.quarks)));
         stats.appendChild(statPill(s.accuracy != null ? '% accuracy' : 'not played',
           s.accuracy != null ? String(s.accuracy) : '—'));

@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Dark launch: parent tier is not yet linked from the public site (PARENT_TIER.md §3a). -->
+  <meta name="robots" content="noindex, nofollow">
+  <title>Word Labs – Find Your Level</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="wordlab-common.css">
+  <style>
+    body{ font-family:'Lexend',sans-serif; background:linear-gradient(180deg,#0d0b1a 0%,#110f1e 50%,#0d0b1a 100%); color:#e0e7ff; min-height:100vh; margin:0; }
+    .wrap{ max-width:560px; margin:0 auto; padding:40px 20px 60px; }
+
+    .intro{ text-align:center; }
+    .intro .emoji{ font-size:52px; line-height:1; margin-bottom:10px; }
+    .intro h1{ font-size:26px; font-weight:900; margin:0 0 10px; }
+    .intro p{ font-size:15px; color:#cbd5e1; font-weight:600; margin:0 0 26px; line-height:1.5; }
+
+    .progress-row{ display:flex; align-items:center; gap:10px; margin-bottom:22px; }
+    .progress-track{ flex:1; height:8px; background:rgba(255,255,255,.08); border-radius:999px; overflow:hidden; }
+    .progress-fill{ height:100%; width:0; background:linear-gradient(90deg,#6366f1,#0d9488); border-radius:999px; transition:width .3s ease; }
+    .progress-count{ font-size:12px; font-weight:800; color:#94a3b8; white-space:nowrap; }
+
+    .q-card{ background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:22px; padding:28px 24px; }
+    .q-kicker{ font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#a5b4fc; margin-bottom:10px; }
+    .q-text{ font-size:21px; font-weight:900; margin:0 0 22px; line-height:1.35; }
+    .q-text .morph{ color:#5eead4; }
+
+    .options{ display:flex; flex-direction:column; gap:12px; }
+    .opt{ text-align:left; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); color:#e0e7ff; font-family:'Lexend',sans-serif; font-size:16px; font-weight:700; padding:16px 18px; border-radius:14px; cursor:pointer; transition:background .12s,border-color .12s,transform .08s; }
+    .opt:hover{ background:rgba(99,102,241,.12); border-color:#6366f1; }
+    .opt:active{ transform:scale(.99); }
+    .opt:disabled{ cursor:default; }
+    .opt.correct{ background:rgba(22,163,74,.18); border-color:#16a34a; color:#bbf7d0; }
+    .opt.wrong{ background:rgba(220,38,38,.16); border-color:#dc2626; color:#fecaca; }
+
+    .done{ text-align:center; }
+    .done .emoji{ font-size:56px; line-height:1; margin-bottom:12px; }
+    .done h2{ font-size:24px; font-weight:900; margin:0 0 8px; }
+    .done .level-name{ display:inline-block; margin:6px 0 12px; padding:8px 18px; border-radius:999px; background:rgba(13,148,136,.18); border:1px solid rgba(13,148,136,.4); color:#5eead4; font-size:16px; font-weight:900; }
+    .done p{ font-size:15px; color:#cbd5e1; font-weight:600; margin:0 0 24px; line-height:1.5; }
+
+    .primary-btn{ border:none; background:#0d9488; color:#fff; font-weight:900; font-size:16px; padding:15px 28px; border-radius:14px; cursor:pointer; font-family:'Lexend',sans-serif; transition:background .15s; }
+    .primary-btn:hover{ background:#0f766e; }
+    .skip-btn{ display:inline-block; margin-top:16px; background:none; border:none; color:#94a3b8; font-size:13px; font-weight:700; cursor:pointer; font-family:'Lexend',sans-serif; text-decoration:underline; }
+    .skip-btn:hover{ color:#cbd5e1; }
+  </style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<div class="wrap" id="main-content" role="main">
+  <!-- Intro -->
+  <div id="introView" class="intro">
+    <div class="emoji">🔬</div>
+    <h1>Let's find <span id="introName">your child's</span> level!</h1>
+    <p>A few quick word questions, from easy to tricky. There's no timer and nothing to lose —
+       it just helps us start the games at the right level. Word Labs keeps adjusting as they play.</p>
+    <button class="primary-btn" id="startBtn">Start</button>
+    <div><button class="skip-btn" id="skipIntro">Skip — just start at the beginning</button></div>
+  </div>
+
+  <!-- Quiz -->
+  <div id="quizView" style="display:none;">
+    <div class="progress-row">
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <span class="progress-count" id="progressCount">1 / 12</span>
+    </div>
+    <div class="q-card">
+      <div class="q-kicker" id="qKicker">Question</div>
+      <h2 class="q-text" id="qText"></h2>
+      <div class="options" id="options" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <!-- Done -->
+  <div id="doneView" class="done" style="display:none;">
+    <div class="emoji">🎉</div>
+    <h2>All done!</h2>
+    <div class="level-name" id="doneLevel">Explorer</div>
+    <p id="doneBlurb"></p>
+    <button class="primary-btn" id="playBtn">Start playing ▶</button>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="wordlab-stage.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="wordlab-data.js"></script>
+<script>
+(function(){
+  'use strict';
+
+  // Stages probed, easiest first. s4 (Pioneer) is excluded — it's an opt-in
+  // extension level, not somewhere placement should land a child.
+  var PROBE_STAGES = ['s2e','s2l','s3e','s3l'];
+  var PER_STAGE = 3;          // questions per stage
+  var PASS = 2;               // correct-out-of-3 needed to "pass" a stage
+  var DEFAULT_STAGE = 's2e';
+
+  var session = WordLabData.getSession ? WordLabData.getSession() : null;
+  var studentId = session && session.studentId;
+  var studentName = (session && session.studentName) || '';
+
+  // Friendly intro name
+  document.getElementById('introName').textContent = studentName ? (studentName + "'s") : "your child's";
+
+  // ── Build the question set from stage-tagged morphemes ──────────
+  function shuffle(a){ for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;} return a; }
+
+  function morphemePool(){
+    var M = window.MORPHEMES || {};
+    var all = [];
+    ['prefixes','suffixes'].forEach(function(k){
+      (M[k] || []).forEach(function(m){
+        if (m && m.meaning && m.stage && m.display) {
+          all.push({ display: m.display, meaning: m.meaning, stage: m.stage });
+        }
+      });
+    });
+    return all;
+  }
+
+  function buildQuestions(){
+    var pool = morphemePool();
+    var allMeanings = [];
+    pool.forEach(function(m){ if (allMeanings.indexOf(m.meaning) === -1) allMeanings.push(m.meaning); });
+
+    var questions = [];
+    PROBE_STAGES.forEach(function(stage){
+      var atStage = shuffle(pool.filter(function(m){ return m.stage === stage; }));
+      var picked = atStage.slice(0, PER_STAGE);
+      // If a stage is thin, top up from the next stage so we always ask PER_STAGE.
+      var si = PROBE_STAGES.indexOf(stage);
+      while (picked.length < PER_STAGE && si + 1 < PROBE_STAGES.length) {
+        si++;
+        var more = shuffle(pool.filter(function(m){ return m.stage === PROBE_STAGES[si]; }));
+        more.forEach(function(m){ if (picked.length < PER_STAGE && picked.indexOf(m) === -1) picked.push(m); });
+        if (more.length === 0 && si + 1 >= PROBE_STAGES.length) break;
+      }
+      picked.forEach(function(m){
+        var distractors = shuffle(allMeanings.filter(function(x){ return x !== m.meaning; })).slice(0, 2);
+        var opts = shuffle([m.meaning].concat(distractors));
+        questions.push({ stage: stage, display: m.display, answer: m.meaning, options: opts });
+      });
+    });
+    return questions;
+  }
+
+  var questions = buildQuestions();
+  var idx = 0;
+  var scoreByStage = {}; PROBE_STAGES.forEach(function(s){ scoreByStage[s] = 0; });
+
+  // ── Placement rule: walk easiest→hardest, place at the FIRST stage the child
+  // fails (scores < PASS). That's where they start making mistakes, so it's the
+  // level to practise. Pass everything → top probed stage. The auto-leveller
+  // promotes from here as they improve, so we err on the side of NOT over-placing.
+  function computeStage(){
+    for (var i = 0; i < PROBE_STAGES.length; i++){
+      var s = PROBE_STAGES[i];
+      if (scoreByStage[s] < PASS) return s;
+    }
+    return PROBE_STAGES[PROBE_STAGES.length - 1];
+  }
+
+  // ── Views ───────────────────────────────────────────────────────
+  var introView = document.getElementById('introView');
+  var quizView = document.getElementById('quizView');
+  var doneView = document.getElementById('doneView');
+  var optionsEl = document.getElementById('options');
+
+  function renderQuestion(){
+    var q = questions[idx];
+    document.getElementById('qKicker').textContent = 'Question ' + (idx + 1);
+    document.getElementById('progressCount').textContent = (idx + 1) + ' / ' + questions.length;
+    document.getElementById('progressFill').style.width = Math.round(100 * idx / questions.length) + '%';
+
+    var qt = document.getElementById('qText');
+    while (qt.firstChild) qt.removeChild(qt.firstChild);
+    qt.appendChild(document.createTextNode('What does '));
+    var m = document.createElement('span'); m.className = 'morph'; m.textContent = q.display;
+    qt.appendChild(m);
+    qt.appendChild(document.createTextNode(' mean?'));
+
+    while (optionsEl.firstChild) optionsEl.removeChild(optionsEl.firstChild);
+    q.options.forEach(function(opt){
+      var b = document.createElement('button');
+      b.className = 'opt';
+      b.type = 'button';
+      b.textContent = opt;
+      b.addEventListener('click', function(){ choose(b, opt, q); });
+      optionsEl.appendChild(b);
+    });
+  }
+
+  function choose(btn, opt, q){
+    var buttons = optionsEl.querySelectorAll('.opt');
+    buttons.forEach(function(b){ b.disabled = true; });
+    var right = (opt === q.answer);
+    if (right) {
+      btn.classList.add('correct');
+      scoreByStage[q.stage]++;
+    } else {
+      btn.classList.add('wrong');
+      buttons.forEach(function(b){ if (b.textContent === q.answer) b.classList.add('correct'); });
+    }
+    setTimeout(next, right ? 550 : 1100);
+  }
+
+  function next(){
+    idx++;
+    if (idx < questions.length) { renderQuestion(); }
+    else { finish(); }
+  }
+
+  async function finish(){
+    var stage = questions.length ? computeStage() : DEFAULT_STAGE;
+    await place(stage);
+  }
+
+  async function place(stage){
+    document.getElementById('progressFill').style.width = '100%';
+    if (studentId && WordLabData.setChildStage) {
+      try { await WordLabData.setChildStage(studentId, stage); } catch (e) {}
+    }
+    var names = (window.WLStage && WLStage.STAGE_NAMES) || {};
+    var labels = (window.WLStage && WLStage.STAGE_LABELS) || {};
+    document.getElementById('doneLevel').textContent = names[stage] || 'Explorer';
+    document.getElementById('doneBlurb').textContent =
+      (studentName ? studentName : 'Your child') + ' will start at the ' + (names[stage] || 'Explorer') +
+      ' level (' + (labels[stage] || '') + '). The games adjust automatically as they improve.';
+    quizView.style.display = 'none';
+    introView.style.display = 'none';
+    doneView.style.display = 'block';
+  }
+
+  function startQuiz(){
+    introView.style.display = 'none';
+    doneView.style.display = 'none';
+    quizView.style.display = 'block';
+    renderQuestion();
+  }
+
+  // ── Wiring ──────────────────────────────────────────────────────
+  (async function(){
+    // Must be a child play session; otherwise send the parent to their dashboard.
+    if (!studentId || !(WordLabData.isGuardianPlay && WordLabData.isGuardianPlay())) {
+      window.location.href = 'parent-home.html';
+      return;
+    }
+    document.getElementById('startBtn').addEventListener('click', startQuiz);
+    document.getElementById('skipIntro').addEventListener('click', function(){ place(DEFAULT_STAGE); });
+    document.getElementById('playBtn').addEventListener('click', function(){ window.location.href = 'landing.html'; });
+  })();
+})();
+</script>
+</body>
+</html>

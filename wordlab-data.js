@@ -485,6 +485,108 @@ const WordLabData = (() => {
     return sessionStorage.getItem('wl_guardian_play') === 'true';
   }
 
+  // ── Adaptive levelling (parent tier) ──────────────────────────
+  // In the school product a teacher sets each learner's curriculum stage by
+  // hand. Parent-owned children have no teacher, so we place and re-level them
+  // automatically from how much they get correct, keeping them practising at
+  // the right level. The maths reuses WLStage (stage order, names, nextStage).
+  //
+  // Promotion signal: once a child is at a stage, weightPool() already serves
+  // them ~80% current-stage content, so their accuracy on the core games is a
+  // fair proxy for current-stage mastery. We snapshot their core-game totals
+  // when they enter a stage (the "baseline") and only look at attempts made
+  // SINCE then — that stops a child rocketing up several stages on the back of
+  // easy answers banked at lower stages. Promote when, since the baseline, they
+  // have answered enough new questions at a high enough accuracy.
+  var AUTO_LEVEL_MIN_DELTA = 50;     // new core attempts at current stage before we evaluate
+  var AUTO_LEVEL_PROMOTE_ACC = 0.80; // accuracy on those attempts needed to move up
+  var AUTO_LEVEL_MIN_GAMES = 2;      // breadth guard — don't promote off a single game
+  var AUTO_LEVEL_CEILING = 's3l';    // never auto-promote into s4 (Pioneer = opt-in extension)
+
+  function _coreGameKeys() {
+    return (typeof window !== 'undefined' && window.WLStage && WLStage.CORE_GAMES)
+      ? WLStage.CORE_GAMES
+      : ['sound-sorter','phoneme-splitter','syllable-splitter','breakdown-blitz','meaning-mode','mission-mode'];
+  }
+
+  function _coreTotals(rows) {
+    var core = _coreGameKeys();
+    var correct = 0, total = 0, games = {};
+    (rows || []).forEach(function(r){
+      if (core.indexOf(r.activity) === -1) return;
+      correct += r.correct || 0;
+      total += r.total || 0;
+      if ((r.total || 0) > 0) games[r.activity] = true;
+    });
+    return { correct: correct, total: total, games: Object.keys(games).length };
+  }
+
+  // Write a child's stage directly. A guardian's authenticated session has an
+  // UPDATE policy on its own parent-owned children (parent_tier_schema.sql), so
+  // no RPC is needed. Refreshes the children cache and the cached play stage.
+  async function setChildStage(studentId, stage) {
+    if (!studentId || !stage) return false;
+    try {
+      var { error } = await sb().from('students').update({ stage: stage }).eq('id', studentId);
+      if (error) { console.warn('setChildStage failed', error); return false; }
+      _childrenCache = null;
+      try { sessionStorage.setItem('wl_stage', stage); } catch (e) {}
+      return true;
+    } catch (e) { console.warn('setChildStage failed', e); return false; }
+  }
+
+  // Re-level a child if their recent performance warrants it. Safe to call on
+  // every return to the landing page during guardian play. Returns
+  // { promoted:true, from, to, fromName, toName } when a promotion happened,
+  // otherwise null. Never demotes (the 80/20 review weighting cushions an
+  // over-placement and a drop in level is demoralising for a child).
+  async function maybeAdvanceChild(studentId, currentStage) {
+    if (!studentId || !currentStage) return null;
+    if (typeof window === 'undefined' || !window.WLStage) return null;
+    if (WLStage.stageIndex(currentStage) < 0) return null;
+    // At or above the auto-promotion ceiling: nothing further to do automatically.
+    if (WLStage.stageIndex(currentStage) >= WLStage.stageIndex(AUTO_LEVEL_CEILING)) return null;
+    try {
+      var results = await Promise.all([
+        sb().from('student_progress').select('activity, correct, total').eq('student_id', studentId),
+        sb().from('student_character').select('stats').eq('student_id', studentId).maybeSingle()
+      ]);
+      var totals = _coreTotals(results[0] && results[0].data);
+      var stats = (results[1] && results[1].data && results[1].data.stats) || {};
+      var base = stats.autoLevel;
+
+      // (Re)anchor the baseline whenever it's missing or the child has just
+      // changed stage. We can't evaluate yet — they need fresh attempts first.
+      if (!base || base.stage !== currentStage) {
+        stats.autoLevel = { stage: currentStage, correct: totals.correct, total: totals.total };
+        await sb().from('student_character').update({ stats: stats }).eq('student_id', studentId);
+        return null;
+      }
+
+      var dCorrect = totals.correct - (base.correct || 0);
+      var dTotal = totals.total - (base.total || 0);
+      if (dTotal < AUTO_LEVEL_MIN_DELTA) return null;
+      if (totals.games < AUTO_LEVEL_MIN_GAMES) return null;
+      if ((dCorrect / dTotal) < AUTO_LEVEL_PROMOTE_ACC) return null;
+
+      var next = WLStage.nextStage(currentStage);
+      if (!next) return null;
+      var ok = await setChildStage(studentId, next);
+      if (!ok) return null;
+
+      // Re-anchor at the new stage so the next promotion needs fresh evidence.
+      stats.autoLevel = { stage: next, correct: totals.correct, total: totals.total };
+      await sb().from('student_character').update({ stats: stats }).eq('student_id', studentId);
+
+      return {
+        promoted: true,
+        from: currentStage, to: next,
+        fromName: (WLStage.STAGE_NAMES[currentStage] || currentStage),
+        toName: (WLStage.STAGE_NAMES[next] || next)
+      };
+    } catch (e) { console.warn('maybeAdvanceChild failed', e); return null; }
+  }
+
   // ── Classes ───────────────────────────────────────────────────
   function _generateClassCode() {
     var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 to avoid confusion
@@ -3025,6 +3127,7 @@ const WordLabData = (() => {
     getTeacherSession, getTeacherRecord, requireTeacherAuth, teacherSignOut, _sb: sb,
     getGuardianSession, getGuardianRecord, requireGuardianAuth, guardianSignOut,
     getMyChildren, createChild, getChildSummary, enterChildPlay, exitChildPlay, isGuardianPlay,
+    setChildStage, maybeAdvanceChild,
     sbFetchAllRows,
     createClass, getClasses, getClass, verifyPassword,
     addStudent, addStudentsBulk, removeStudent, deleteClass, regenerateStudentCode,

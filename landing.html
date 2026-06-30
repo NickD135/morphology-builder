@@ -2081,6 +2081,35 @@ function exitChildPlay() {
   window.location.href = 'parent-home.html';
 }
 
+// Celebrate when a parent-owned child is auto-promoted to a higher level.
+function showLevelUpCelebration(res){
+  if (document.getElementById('levelUpOverlay')) return;
+  var ov = document.createElement('div');
+  ov.id = 'levelUpOverlay';
+  ov.setAttribute('role', 'dialog');
+  ov.setAttribute('aria-live', 'assertive');
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(8,6,18,.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:24px;';
+  var card = document.createElement('div');
+  card.style.cssText = 'background:#161427;border:1px solid rgba(94,234,212,.3);border-radius:24px;padding:34px 28px;max-width:380px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);';
+  var emoji = document.createElement('div'); emoji.textContent = '🚀'; emoji.style.cssText = 'font-size:56px;line-height:1;margin-bottom:10px;';
+  var h = document.createElement('h2'); h.textContent = 'Level up!'; h.style.cssText = 'margin:0 0 6px;font-size:26px;font-weight:900;color:#e0e7ff;font-family:Lexend,sans-serif;';
+  var pill = document.createElement('div');
+  pill.textContent = res.toName;
+  pill.style.cssText = 'display:inline-block;margin:8px 0 14px;padding:8px 18px;border-radius:999px;background:rgba(13,148,136,.18);border:1px solid rgba(13,148,136,.4);color:#5eead4;font-size:17px;font-weight:900;font-family:Lexend,sans-serif;';
+  var p = document.createElement('p');
+  p.textContent = "You're now learning at the " + res.toName + ' level. The words just got a little trickier — nice work!';
+  p.style.cssText = 'margin:0 0 22px;font-size:15px;color:#cbd5e1;font-weight:600;line-height:1.5;font-family:Lexend,sans-serif;';
+  var btn = document.createElement('button');
+  btn.textContent = 'Keep playing ▶';
+  btn.style.cssText = 'border:none;background:#0d9488;color:#fff;font-weight:900;font-size:16px;padding:14px 26px;border-radius:14px;cursor:pointer;font-family:Lexend,sans-serif;';
+  btn.addEventListener('click', function(){ ov.remove(); });
+  card.appendChild(emoji); card.appendChild(h); card.appendChild(pill); card.appendChild(p); card.appendChild(btn);
+  ov.appendChild(card);
+  ov.addEventListener('click', function(e){ if (e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+  try { if (window.WLAudio && WLAudio.confetti) WLAudio.confetti('perfect'); } catch(e){}
+}
+
 /* ═══════════ STUDENT LAYOUT INIT ═══════════ */
 async function initStudentLayout(session) {
   // Show teacher preview banner if applicable
@@ -2139,6 +2168,22 @@ async function initStudentLayout(session) {
   // Process extension mode result
   try {
     if (_extRes && _extRes.data && _extRes.data.extension_mode) showExtToggle();
+  } catch(e){}
+
+  // Auto-levelling for parent-owned children: getStudentData() has just cached
+  // the child's stage in wl_stage. If their recent accuracy warrants it, move
+  // them up a level and celebrate. (School learners are levelled by a teacher,
+  // so this only runs during guardian play.)
+  try {
+    if (typeof WordLabData !== 'undefined' && WordLabData.isGuardianPlay && WordLabData.isGuardianPlay()
+        && WordLabData.maybeAdvanceChild) {
+      var _curStage = sessionStorage.getItem('wl_stage');
+      if (_curStage) {
+        WordLabData.maybeAdvanceChild(session.studentId, _curStage).then(function(res){
+          if (res && res.promoted) showLevelUpCelebration(res);
+        }).catch(function(){});
+      }
+    }
   } catch(e){}
 
   // DOM element references (no DB needed)
