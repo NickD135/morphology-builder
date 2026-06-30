@@ -25,6 +25,10 @@ const WLEffects = (() => {
     quantum:     { name:'Quantum',      cost:0,    rarity:'legendary', icon:'🌀', desc:'You phase between dimensions',            color:'#a78bfa', requiresBadge:'legend_sessions' },
     aurora:      { name:'Aurora',       cost:0,    rarity:'epic',      icon:'🌌', desc:'Northern lights shimmer around you',      color:'#34d399', requiresBadge:'all_activities' },
     vortex:      { name:'Vortex',       cost:0,    rarity:'legendary', icon:'🌪️', desc:'A spinning vortex of energy surrounds you', color:'#818cf8', requiresBadge:'legend_streak' },
+    'hearts-fx': { name:'Hearts',        cost:450,  rarity:'common', icon:'💖', desc:'Hearts float up and fade around you',     color:'#f9417f', requiresBadge:null },
+    snow:        { name:'Snowfall',      cost:400,  rarity:'common', icon:'❄️', desc:'Snowflakes drift gently down',            color:'#dff4ff', requiresBadge:null },
+    petals:      { name:'Cherry Petals', cost:700,  rarity:'rare',   icon:'🌸', desc:'Cherry blossom petals tumble down',       color:'#ffb7d5', requiresBadge:null },
+    smoke:       { name:'Lab Smoke',     cost:700,  rarity:'rare',   icon:'💨', desc:'Soft lab smoke curls up around you',      color:'#cbd5e1', requiresBadge:null },
   };
 
   // ── State tracking ────────────────────────────────────────────
@@ -926,6 +930,86 @@ const WLEffects = (() => {
     _addInterval(el, spawnPull, intense ? 180 : 350);
   }
 
+  // hearts-fx — pink hearts rise from the feet and fade
+  function fxHearts(el, intense) {
+    _ensureRelative(el);
+    _injectStyle('wlfx-hearts', `
+      @keyframes wlfxHeartRise { 0%{opacity:0;transform:translateY(0) scale(.5)} 15%{opacity:1} 100%{opacity:0;transform:translateY(-90px) scale(1.1)} }
+    `);
+    function spawn() {
+      if (!_active.has(el)) return;
+      const p = _makeParticle(`
+        left:${rnd(15,80)}%;bottom:${rnd(0,18)}%;font-size:${rndInt(12,22)}px;
+        animation:wlfxHeartRise ${rnd(1.8,3.0).toFixed(2)}s ease forwards;z-index:11;`);
+      p.textContent = ['💖','💗','💕','❤️'][rndInt(0,4)];
+      _addNode(el, p);
+      setTimeout(() => { try { p.parentNode && p.parentNode.removeChild(p); } catch {} }, 3100);
+    }
+    spawn();
+    _addInterval(el, spawn, intense ? 240 : 460);
+  }
+
+  // snow — white flakes fall with a horizontal sway
+  function fxSnow(el, intense) {
+    _ensureRelative(el);
+    _injectStyle('wlfx-snow', `
+      @keyframes wlfxSnowFall { 0%{opacity:0;transform:translate(0,-10px)} 12%{opacity:1} 100%{opacity:.2;transform:translate(var(--sx,10px),130px)} }
+    `);
+    function spawn() {
+      if (!_active.has(el)) return;
+      const p = _makeParticle(`
+        left:${rnd(2,95)}%;top:0;font-size:${rndInt(8,16)}px;color:#eaf6ff;
+        text-shadow:0 0 5px rgba(190,235,255,.8);
+        --sx:${rnd(-22,22).toFixed(0)}px;
+        animation:wlfxSnowFall ${rnd(2.6,4.4).toFixed(2)}s linear forwards;z-index:10;`);
+      p.textContent = ['❄','❅','❆','•'][rndInt(0,4)];
+      _addNode(el, p);
+      setTimeout(() => { try { p.parentNode && p.parentNode.removeChild(p); } catch {} }, 4600);
+    }
+    spawn();
+    _addInterval(el, spawn, intense ? 130 : 240);
+  }
+
+  // petals — cherry blossom petals tumble (rotate) as they fall
+  function fxPetals(el, intense) {
+    _ensureRelative(el);
+    _injectStyle('wlfx-petals', `
+      @keyframes wlfxPetalFall { 0%{opacity:0;transform:translate(0,-10px) rotate(0deg)} 12%{opacity:1} 100%{opacity:.25;transform:translate(var(--px,18px),130px) rotate(var(--pr,320deg))} }
+    `);
+    function spawn() {
+      if (!_active.has(el)) return;
+      const p = _makeParticle(`
+        left:${rnd(2,95)}%;top:0;font-size:${rndInt(11,18)}px;
+        --px:${rnd(-30,30).toFixed(0)}px;--pr:${rndInt(200,520)}deg;
+        animation:wlfxPetalFall ${rnd(2.8,4.6).toFixed(2)}s linear forwards;z-index:10;`);
+      p.textContent = ['🌸','🌸','🌺','🏵️'][rndInt(0,4)];
+      _addNode(el, p);
+      setTimeout(() => { try { p.parentNode && p.parentNode.removeChild(p); } catch {} }, 4800);
+    }
+    spawn();
+    _addInterval(el, spawn, intense ? 200 : 360);
+  }
+
+  // smoke — soft grey plumes rise, expand, and dissipate
+  function fxSmoke(el, intense) {
+    _ensureRelative(el);
+    _injectStyle('wlfx-smoke', `
+      @keyframes wlfxSmokeRise { 0%{opacity:0;transform:translateY(0) scale(.4)} 25%{opacity:.5} 100%{opacity:0;transform:translateY(-80px) scale(1.8)} }
+    `);
+    function spawn() {
+      if (!_active.has(el)) return;
+      const size = rndInt(14, 30);
+      const p = _makeParticle(`
+        left:${rnd(25,70)}%;bottom:${rnd(0,15)}%;width:${size}px;height:${size}px;
+        border-radius:50%;background:radial-gradient(circle,rgba(203,213,225,.55),rgba(148,163,184,0) 70%);
+        animation:wlfxSmokeRise ${rnd(2.4,3.8).toFixed(2)}s ease-out forwards;z-index:9;`);
+      _addNode(el, p);
+      setTimeout(() => { try { p.parentNode && p.parentNode.removeChild(p); } catch {} }, 4000);
+    }
+    spawn();
+    _addInterval(el, spawn, intense ? 260 : 440);
+  }
+
   // ── Effect map ────────────────────────────────────────────────
   const _fns = {
     sparkle: fxSparkle, shimmer: fxShimmer, bubbles: fxBubbles,
@@ -934,6 +1018,7 @@ const WLEffects = (() => {
     galaxy: fxGalaxy, pixel: fxPixel, radioactive: fxRadioactive,
     confetti: fxConfetti, divine: fxDivine, quantum: fxQuantum,
     aurora: fxAurora, vortex: fxVortex,
+    'hearts-fx': fxHearts, snow: fxSnow, petals: fxPetals, smoke: fxSmoke,
   };
 
   // ── Public API ────────────────────────────────────────────────
