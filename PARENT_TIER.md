@@ -4,8 +4,9 @@
 > touching anything.** This is the canonical spec for the parent-owned account tier.
 > It overrides assumptions; if reality and this doc disagree, fix the doc as part of the work.
 
-Status: **SCAFFOLD complete; §8 decisions locked.** No schema, auth, or UI work has begun.
-P1 (schema plan) is unblocked. Branch `feature/parent-tier`. Created 2026-06-30.
+Status: **P1 schema plan DRAFTED — awaiting approval to apply to dev.** Migration written
+to `supabase/migrations/parent_tier_schema.sql`; nothing applied to any DB. Branch
+`feature/parent-tier`. Created 2026-06-30.
 
 ---
 

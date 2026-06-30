@@ -6,6 +6,53 @@
 
 ---
 
+## 2026-06-30 — P1 schema plan drafted (awaiting approval to apply)
+
+Wrote the full P1 migration as a single versioned file:
+**`supabase/migrations/parent_tier_schema.sql`**. Nothing applied to any DB — this is the
+proposal at the approval gate. (No Supabase MCP connection was available this session, so
+the committed migrations were used as the source of truth; the three "confirm against live
+dev schema" items below must be checked before applying.)
+
+What the migration does (per locked §8 decisions):
+- **§8.1** `account_type text NOT NULL DEFAULT 'school'` on `students` + CHECK
+  (`'school'|'parent'`). No-op backfill — existing learners default to `'school'`.
+- **Tables** `guardians` (one per parent auth user; `plan` default `'free'`, `child_limit`
+  default 1, `stripe_customer_id`, `trial_ends_at`) and `guardian_links`
+  (guardian↔learner M:N, cascade both ways, indexed).
+- **Helper** `get_my_guardian_id()` — SECURITY DEFINER, mirrors `get_my_school_id()`.
+- **§8.2 combined SELECT** on `students`: replaced the open `USING (true)` with
+  `account_type='school' OR (account_type='parent' AND id IN (guardian's links))`. School
+  rows stay open (anon login depends on it); parent rows are guardian-scoped.
+- **Guardian INSERT/UPDATE/DELETE** policies on `students` (additive alongside the teacher
+  policies — they OR together; neither role can reach the other's learners).
+- **`create_child(name)` RPC** — atomic insert-student + insert-link, enforces
+  `child_limit` (freemium cap). Granted to `authenticated`.
+- **RLS** on `guardians` (self-scoped by `auth.uid()`) and `guardian_links`
+  (scoped by `get_my_guardian_id()`).
+- **§8.3 write-grant confirmation:** `increment_progress` and `verify_student_login`
+  already grant `authenticated`. `atomic_purchase` / `save_scientist_field` /
+  `gift_owned_item` relied on the implicit PUBLIC default — made explicit in the migration.
+
+Flagged for owner review before applying:
+1. **Confirm against live dev schema** (no MCP this session): `students.class_id` and
+   `students.student_code` are NULLable (migration drops NOT NULL defensively — no-op if
+   already null); no trigger/constraint forces account_type-incompatible state.
+2. **Child-data privacy (§5 flag):** `student_progress` / `student_character` SELECT stay
+   open (`USING true`). Those rows hold no name/PII and aren't enumerable without the
+   child's uuid, so decision §8.2 (which scopes the *name* row) is satisfied. Tightening
+   them to guardian scope is an optional follow-up — **owner decision needed** on whether
+   to do it now.
+
+**NOT done / deliberately stopped:** migration not applied; no auth pages, no dashboard, no
+billing. Stops at the approval gate.
+
+**Next (after approval):** apply `parent_tier_schema.sql` to the dev/branch DB, smoke-test
+`get_my_guardian_id()` + `create_child()` + the combined SELECT with two guardian sessions,
+then proceed to P2 (parent sign-up / login).
+
+---
+
 ## 2026-06-30 — Dark-launch directive + branch pushed
 
 - Owner directive: **build the whole parent tier in the background, but expose NO public
