@@ -196,12 +196,14 @@
       overflow:hidden;
     }
 
-    /* Radial glow podium behind character */
+    /* Radial glow podium behind character — scales with the character (vh-based)
+     * so the backlight stays in proportion at every zoom level. */
     .lab-podium{
       position:absolute;
-      left:50%; top:58%;
+      left:50%; top:60%;
       transform:translate(-50%,-50%);
-      width:240px; height:160px;
+      width:clamp(230px, 46vh, 400px);
+      height:clamp(150px, 30vh, 260px);
       border-radius:50%;
       background:radial-gradient(ellipse at center, rgba(240,200,90,.7) 0%, transparent 68%);
       animation:ringPulse 3s ease-in-out infinite;
@@ -210,11 +212,15 @@
     @media(prefers-reduced-motion:reduce){ .lab-podium{ animation:none; } }
     body.low-stim .lab-podium{ animation:none; }
 
-    /* Character wrapper — SVG is 0 0 80 120; width 180px gives good stage size */
+    /* Character wrapper — SVG is 0 0 80 120 (2:3 aspect).
+     * Width scales with viewport HEIGHT (the real constraint in this fixed-height
+     * layout) so the character stays proportional to the stage at any browser zoom
+     * level, instead of sitting at a fixed 180px and looking marooned when zoomed out
+     * or oversized when zoomed in. clamp() floors/caps it to sensible bounds. */
     .lab-charwrap{
       position:relative;
       z-index:1;
-      width:180px;
+      width:clamp(170px, 34vh, 300px);
       flex-shrink:0;
     }
     .lab-charwrap svg{
@@ -358,6 +364,10 @@
       .lab-main{ flex-direction:column; overflow-y:auto; }
       .lab-left{ min-width:0; flex:none; }
       .lab-stage{ min-height:230px; }
+      /* Stacked layout: size the character to the (now narrow) pane width, not vh —
+       * the vh clamp would otherwise make it tower over the short mobile stage. */
+      .lab-charwrap{ width:clamp(150px, 42vw, 220px); }
+      .lab-podium{ width:clamp(200px, 56vw, 300px); height:clamp(130px, 36vw, 200px); }
       .lab-shop-panel{ min-width:0; flex:none; border-left:none; border-top:3px solid var(--panel-edge); box-shadow:none; }
       #itemGrid{ grid-template-columns:repeat(auto-fill,minmax(128px,1fr)); }
     }
@@ -461,6 +471,14 @@
       grid-template-columns:repeat(auto-fill,minmax(156px,1fr));
       gap:14px;
       align-content:start;
+      /* Card sizing fix. The cards are flex columns with a min-height:44px and
+       * shrinkable text children, so the grid's auto row track collapsed to ~44px
+       * (min-content) and consecutive rows overlapped — the next card's swatch painted
+       * over the previous card's name + Buy/Equip button. grid-auto-rows:max-content
+       * sizes each row to its tallest card's full content, and align-items:start keeps
+       * the card at that natural height instead of stretching. */
+      grid-auto-rows:max-content;
+      align-items:start;
       perspective:1100px;
     }
 
