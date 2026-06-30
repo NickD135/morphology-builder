@@ -4,9 +4,10 @@
 > touching anything.** This is the canonical spec for the parent-owned account tier.
 > It overrides assumptions; if reality and this doc disagree, fix the doc as part of the work.
 
-Status: **P1 schema plan DRAFTED — awaiting approval to apply to dev.** Migration written
-to `supabase/migrations/parent_tier_schema.sql`; nothing applied to any DB. Branch
-`feature/parent-tier`. Created 2026-06-30.
+Status: **P1 schema DRAFTED (not applied); P2 parent auth DRAFTED.** Migration written to
+`supabase/migrations/parent_tier_schema.sql` (awaiting approval to apply to dev). P2 auth
+shipped on the branch but dark-launched/unlinked and inert until the migration is applied.
+Branch `feature/parent-tier`. Created 2026-06-30.
 
 ---
 
@@ -177,7 +178,11 @@ Each phase stops for review. Nothing below §7.1 has been started.
   per the §8 decisions, add a `get_my_guardian_id()` helper, implement the combined
   teacher-OR-guardian SELECT policy, and confirm student-write RPC grants cover the
   `authenticated` role (§8.3). **Approval gate before applying to dev.**
-- **P2 — Auth:** parent sign-up / login pages + session handling.
+- **P2 — Auth:** ✅ drafted. Guardian session handling in `wordlab-data.js`
+  (`getGuardianSession` / `requireGuardianAuth` / `guardianSignOut` / `getGuardianRecord`),
+  `parent-login.html` (sign-up / login / forgot-password), and a minimal authed
+  `parent-home.html` placeholder. All `noindex` and unlinked from the public site (§3a).
+  Inert until `parent_tier_schema.sql` is applied to dev.
 - **P3 — Create-a-child + parent dashboard:** no-school learner creation, progress view.
 - **P4 — Billing:** separate Stripe product, checkout, webhook, plan state.
 - **P5 — Privacy/consent:** consumer privacy policy + consent capture.

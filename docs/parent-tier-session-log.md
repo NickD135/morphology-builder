@@ -6,6 +6,35 @@
 
 ---
 
+## 2026-06-30 — P2 parent auth drafted (dark-launched)
+
+Built the parent-tier auth layer, mirroring the existing teacher auth. All unlinked from the
+public site and `noindex` per §3a — reachable only by direct URL for testing.
+
+- **`wordlab-data.js`** — new "Guardian (parent tier) Auth" block parallel to the teacher
+  block: `getGuardianSession()`, `requireGuardianAuth(fallbackUrl='parent-login.html')`,
+  `guardianSignOut()`, and `getGuardianRecord()` (cached; auto-creates the `guardians` row
+  with freemium defaults `plan:'free'`/`child_limit:1` on first call; try/catch so it
+  degrades gracefully when the schema isn't applied). All four exported.
+- **`parent-login.html`** (new) — Log In / Create Account tabs, forgot-password, email-
+  confirmed banner, open-redirect-safe `getReturnUrl()` (default `parent-home`). Register
+  collects name + email + password only (no school-search machinery). `ensureGuardian()`
+  creates the row on first login.
+- **`parent-home.html`** (new) — minimal authed placeholder: `requireGuardianAuth()`, shows
+  guardian email + plan pill + sign-out. Loads `wordlab-data.js` synchronously (not `defer`)
+  so `WordLabData` is defined for the inline script. P3 replaces this with the real
+  dashboard.
+
+`node --check` clean on `wordlab-data.js`; inline scripts in both pages parse.
+
+**Depends on P1:** the pages are inert until `parent_tier_schema.sql` is applied to the dev
+DB (guardians table must exist). No public links added. No Stripe/billing yet.
+
+**Next (P3):** create-a-child flow (uses the `create_child` RPC) + real parent dashboard
+with per-child progress, replacing the `parent-home.html` placeholder.
+
+---
+
 ## 2026-06-30 — P1 schema plan drafted (awaiting approval to apply)
 
 Wrote the full P1 migration as a single versioned file:

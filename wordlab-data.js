@@ -337,6 +337,70 @@ const WordLabData = (() => {
     window.location.href = 'teacher-login.html';
   }
 
+  // ── Guardian (parent tier) Auth ───────────────────────────────
+  // Parallel to the teacher auth block above. Guardians are Supabase Auth
+  // users with a row in the `guardians` table (see migration
+  // parent_tier_schema.sql). Dark-launch: these pages are not linked from the
+  // public site yet (PARENT_TIER.md §3a).
+  async function getGuardianSession() {
+    const { data: { session } } = await sb().auth.getSession();
+    return session ? session.user : null;
+  }
+
+  async function requireGuardianAuth(fallbackUrl) {
+    const { data: { session } } = await sb().auth.getSession();
+    if (!session) {
+      const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = (fallbackUrl || 'parent-login.html') + '?returnTo=' + returnTo;
+      return null;
+    }
+    return session.user;
+  }
+
+  async function guardianSignOut() {
+    await sb().auth.signOut();
+    window.location.href = 'parent-login.html';
+  }
+
+  // Cache the guardian record to avoid repeated DB calls. Auto-creates the
+  // guardians row on first call if the auth user has none yet (mirrors
+  // getTeacherRecord). Returns null if there is no session or the guardians
+  // table is not available (e.g. migration not yet applied on this DB).
+  let _guardianRecord = null;
+  async function getGuardianRecord() {
+    if (_guardianRecord) return _guardianRecord;
+    const { data: { session } } = await sb().auth.getSession();
+    if (!session) return null;
+    try {
+      var { data } = await sb()
+        .from('guardians')
+        .select('id, email, plan, child_limit, stripe_customer_id, trial_ends_at')
+        .eq('auth_user_id', session.user.id)
+        .maybeSingle();
+
+      if (!data) {
+        // First login for this guardian — create the freemium record.
+        await sb().from('guardians').insert({
+          auth_user_id: session.user.id,
+          email: session.user.email,
+          plan: 'free',
+          child_limit: 1
+        });
+        var { data: created } = await sb()
+          .from('guardians')
+          .select('id, email, plan, child_limit, stripe_customer_id, trial_ends_at')
+          .eq('auth_user_id', session.user.id)
+          .maybeSingle();
+        data = created;
+      }
+      _guardianRecord = data || null;
+    } catch (e) {
+      console.warn('getGuardianRecord failed (is parent_tier_schema applied?):', e);
+      _guardianRecord = null;
+    }
+    return _guardianRecord;
+  }
+
   // ── Classes ───────────────────────────────────────────────────
   function _generateClassCode() {
     var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 to avoid confusion
@@ -2875,6 +2939,7 @@ const WordLabData = (() => {
 
   return {
     getTeacherSession, getTeacherRecord, requireTeacherAuth, teacherSignOut, _sb: sb,
+    getGuardianSession, getGuardianRecord, requireGuardianAuth, guardianSignOut,
     sbFetchAllRows,
     createClass, getClasses, getClass, verifyPassword,
     addStudent, addStudentsBulk, removeStudent, deleteClass, regenerateStudentCode,
