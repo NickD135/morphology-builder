@@ -31,6 +31,7 @@ const WLEffects = (() => {
     smoke:       { name:'Lab Smoke',     cost:700,  rarity:'rare',   icon:'💨', desc:'Soft lab smoke curls up around you',      color:'#cbd5e1', requiresBadge:null },
     lasers:      { name:'Laser Grid',    cost:1200, rarity:'epic',   icon:'🔺', desc:'A synthwave laser grid sweeps over you',  color:'#ff3cc8', requiresBadge:null },
     'quark-rain':{ name:'Quark Rain',    cost:1300, rarity:'epic',   icon:'⚛️', desc:'Colour-charged quarks rain past you',     color:'#b9a6ff', requiresBadge:null },
+    blackhole:   { name:'Black Hole',    cost:2500, rarity:'legendary', icon:'🕳️', desc:'A black hole bends space around you', color:'#9b7bff', requiresBadge:null },
   };
 
   // ── State tracking ────────────────────────────────────────────
@@ -1131,6 +1132,82 @@ const WLEffects = (() => {
     _addInterval(el, flash, intense ? 1300 : 2200);
   }
 
+  // blackhole — central dark sphere, rotating accretion disk, lensing halo,
+  // starfield + particles spiralling inward and vanishing, polar jet flares,
+  // and a subtle space-warp pulse on the character.
+  function fxBlackhole(el, intense) {
+    _ensureRelative(el);
+    _injectStyle('wlfx-blackhole', `
+      @keyframes wlfxDiskSpin { 0%{transform:translate(-50%,-50%) rotate(0deg)} 100%{transform:translate(-50%,-50%) rotate(360deg)} }
+      @keyframes wlfxHalo { 0%,100%{opacity:.5;transform:translate(-50%,-50%) scale(1)} 50%{opacity:.9;transform:translate(-50%,-50%) scale(1.12)} }
+      @keyframes wlfxWarp { 0%,100%{transform:scale(1)} 50%{transform:scale(.97)} }
+      @keyframes wlfxJet { 0%{opacity:0;transform:translate(-50%,0) scaleY(.4)} 30%{opacity:.85} 100%{opacity:0;transform:translate(-50%,0) scaleY(1.4)} }
+    `);
+    el.style.animation = `wlfxWarp ${intense?'2s':'3.4s'} ease-in-out infinite`;
+
+    // Lensing halo
+    _addNode(el, _makeParticle(`
+      left:50%;top:50%;width:130px;height:130px;border-radius:50%;z-index:6;
+      background:radial-gradient(circle,rgba(155,123,255,.35),rgba(0,0,0,0) 65%);
+      animation:wlfxHalo ${intense?'1.8s':'3s'} ease-in-out infinite;`));
+
+    // Rotating accretion disk
+    _addNode(el, _makeParticle(`
+      left:50%;top:50%;width:120px;height:120px;border-radius:50%;z-index:7;
+      background:conic-gradient(from 0deg,#ff8a3c,#9b7bff,#3cdcff,#9b7bff,#ff8a3c);
+      mask:radial-gradient(circle,transparent 30%,#000 34%,#000 48%,transparent 52%);
+      -webkit-mask:radial-gradient(circle,transparent 30%,#000 34%,#000 48%,transparent 52%);
+      animation:wlfxDiskSpin ${intense?'2.2s':'4s'} linear infinite;`));
+
+    // Central dark sphere
+    _addNode(el, _makeParticle(`
+      left:50%;top:50%;width:42px;height:42px;border-radius:50%;z-index:9;
+      transform:translate(-50%,-50%);
+      background:radial-gradient(circle at 40% 38%,#2a2440,#000 70%);
+      box-shadow:0 0 16px 4px rgba(0,0,0,.7),inset 0 0 10px rgba(155,123,255,.5);`));
+
+    // Polar jets
+    function jet(topPct) {
+      if (!_active.has(el)) return;
+      const j = _makeParticle(`
+        left:50%;top:${topPct}%;width:6px;height:34px;z-index:8;
+        background:linear-gradient(${topPct<50?'0deg':'180deg'},rgba(60,220,255,.9),rgba(60,220,255,0));
+        animation:wlfxJet .9s ease-out forwards;`);
+      _addNode(el, j);
+      setTimeout(() => { try { j.parentNode && j.parentNode.removeChild(j); } catch {} }, 950);
+    }
+    _addInterval(el, () => { jet(30); jet(70); }, intense ? 1400 : 2400);
+
+    // Inward-spiralling particles via one RAF loop
+    const rect = () => el.getBoundingClientRect();
+    const parts = [];
+    function seed() {
+      const r0 = rnd(55, 80), a0 = rnd(0, Math.PI * 2);
+      const node = _makeParticle(`
+        left:50%;top:50%;width:${rndInt(2,4)}px;height:${rndInt(2,4)}px;border-radius:50%;z-index:10;
+        background:${['#fff','#b9a6ff','#3cdcff'][rndInt(0,3)]};box-shadow:0 0 6px currentColor;`);
+      _addNode(el, node);
+      parts.push({ node, r:r0, a:a0, v:rnd(0.35,0.7) });
+    }
+    for (let i = 0; i < (intense ? 26 : 16); i++) seed();
+    let raf = 0;
+    function tick() {
+      if (!_active.has(el)) return;
+      const { width:W, height:H } = rect();
+      for (const p of parts) {
+        p.r -= p.v; p.a += 0.06 + (60 - p.r) * 0.001;
+        if (p.r < 6) { p.r = rnd(55, 82); p.a = rnd(0, Math.PI * 2); }
+        const x = 50 + (p.r / W * 100) * Math.cos(p.a);
+        const y = 50 + (p.r / H * 100) * Math.sin(p.a);
+        p.node.style.left = x + '%'; p.node.style.top = y + '%';
+        p.node.style.opacity = Math.max(0.1, p.r / 80);
+      }
+      const next = requestAnimationFrame(tick);
+      _updateRAF(el, raf, next); raf = next;
+    }
+    raf = requestAnimationFrame(tick); _addRAF(el, raf);
+  }
+
   // ── Effect map ────────────────────────────────────────────────
   const _fns = {
     sparkle: fxSparkle, shimmer: fxShimmer, bubbles: fxBubbles,
@@ -1140,7 +1217,7 @@ const WLEffects = (() => {
     confetti: fxConfetti, divine: fxDivine, quantum: fxQuantum,
     aurora: fxAurora, vortex: fxVortex,
     'hearts-fx': fxHearts, snow: fxSnow, petals: fxPetals, smoke: fxSmoke,
-    lasers: fxLasers, 'quark-rain': fxQuarkRain,
+    lasers: fxLasers, 'quark-rain': fxQuarkRain, blackhole: fxBlackhole,
   };
 
   // ── Public API ────────────────────────────────────────────────
