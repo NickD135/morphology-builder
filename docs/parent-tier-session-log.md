@@ -6,6 +6,17 @@
 
 ---
 
+## 2026-06-30 — Dark-launch directive + branch pushed
+
+- Owner directive: **build the whole parent tier in the background, but expose NO public
+  entry point** (no parent purchase/upgrade/signup links, pricing, etc.) until it is all set
+  up and the owner gives explicit launch sign-off. Recorded as `PARENT_TIER.md` §3a and a
+  new P7 launch phase. Pages may be built/committed but stay unlinked from the public site
+  (direct-URL / flag-gated for testing); Stripe parent product stays test-mode until launch.
+- Pushed `feature/parent-tier` to origin (upstream tracking set). No PR opened.
+
+---
+
 ## 2026-06-30 — §8 decisions locked
 
 Owner reviewed the five open questions and accepted the recommended answers in full

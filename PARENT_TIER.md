@@ -89,6 +89,23 @@ anon student-login flow. **Flag for owner review.**
 
 ---
 
+## 3a. Dark launch — NO public entry point until fully ready (owner directive 2026-06-30)
+
+**Build everything in the background; expose nothing to the public until the whole tier is
+set up and approved.** Specifically:
+
+- **No parent purchase/upgrade button, pricing, or "create a parent account" link anywhere
+  in the live public UI** (landing page, footers, pricing, for-schools, etc.) until the
+  owner says it is ready to launch.
+- Pages and flows can be built and committed, but must be **unlinked/unreferenced** from the
+  public site — reachable only by direct URL for testing, ideally auth- or flag-gated.
+- Stripe parent product/checkout can exist in **test mode**, but no live purchase path is
+  surfaced to real users until launch sign-off.
+- The work proceeds normally on `feature/parent-tier`; this is about **what the public can
+  see/reach**, not about slowing the build.
+- Launch (adding the public entry points) is a **separate, explicit owner go-ahead** — treat
+  it as its own final phase, after P1–P6.
+
 ## 4. Scope
 
 ### In scope (this feature)
@@ -164,6 +181,9 @@ Each phase stops for review. Nothing below §7.1 has been started.
 - **P4 — Billing:** separate Stripe product, checkout, webhook, plan state.
 - **P5 — Privacy/consent:** consumer privacy policy + consent capture.
 - **P6 — QA:** Playwright self-QA on dev; accessibility pass.
+- **P7 — Launch (separate owner go-ahead):** add the public entry points (parent
+  signup/pricing/purchase links) only after explicit launch sign-off. See §3a — nothing
+  public-facing is surfaced before this.
 
 ---
 
