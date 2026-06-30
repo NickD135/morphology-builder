@@ -718,9 +718,11 @@ const WLScientist = (() => {
     });
   }
 
-  // World backdrop targets = effect targets MINUS the tiny header widget.
+  // World backdrop targets = effect targets MINUS the tiny surfaces (the header
+  // widget and the 44px landing hub avatar) where a backdrop is invisible.
   function _worldTargets() {
-    return _effectTargets().filter(el => el !== _widgetEl);
+    var hub = document.getElementById('hubSciAvatar');
+    return _effectTargets().filter(el => el !== _widgetEl && el !== hub);
   }
 
   function _startEquippedWorld(sd) {
