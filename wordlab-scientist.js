@@ -718,6 +718,20 @@ const WLScientist = (() => {
     });
   }
 
+  // World backdrop targets = effect targets MINUS the tiny header widget.
+  function _worldTargets() {
+    return _effectTargets().filter(el => el !== _widgetEl);
+  }
+
+  function _startEquippedWorld(sd) {
+    if (typeof WLWorlds === 'undefined') return;
+    const worldId = sd && sd.scientist && sd.scientist.world;
+    _worldTargets().forEach(el => {
+      if (worldId) WLWorlds.start(worldId, el);
+      else WLWorlds.stop(el);
+    });
+  }
+
   async function inject() {
     if (_widgetEl) return;
     if (typeof WordLabData === 'undefined') return;
@@ -746,6 +760,7 @@ const WLScientist = (() => {
     // Cache dance moves for react()
     _cachedDances = (sd.scientist && sd.scientist.dances) || {};
     _startEquippedEffect(sd);
+    _startEquippedWorld(sd);
     _injectPetStage(sd);
 
     // Restart effect when student logs in during this session
@@ -757,6 +772,7 @@ const WLScientist = (() => {
         setTimeout(async () => {
           const newSd = await WordLabData.getStudentData();
           _startEquippedEffect(newSd);
+          _startEquippedWorld(newSd);
         }, 500);
       };
     }
