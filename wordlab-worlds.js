@@ -48,10 +48,25 @@ const WLWorlds = (() => {
     const s=document.createElement('style'); s.id='wlworlds-css';
     s.textContent = `
       .wlworld{ position:absolute; inset:0; z-index:0; border-radius:inherit; overflow:hidden; pointer-events:none; }
-      .wlworld-floor{ position:absolute; left:0; right:0; bottom:0; height:34%; }
-      .wlworld-glow{ position:absolute; left:50%; bottom:18%; width:60%; height:40%; transform:translateX(-50%); border-radius:50%; filter:blur(14px); }
-      @keyframes wlwDriftUp { 0%{opacity:0;transform:translateY(0)} 12%{opacity:1} 100%{opacity:0;transform:translateY(-90px)} }
-      @keyframes wlwDriftDown { 0%{opacity:0;transform:translateY(-10px)} 12%{opacity:1} 100%{opacity:.2;transform:translateY(110px)} }
+      .wlworld-floor{ position:absolute; left:0; right:0; bottom:0; height:34%; z-index:1; }
+      .wlworld-glow{ position:absolute; left:50%; bottom:18%; width:60%; height:40%; transform:translateX(-50%); border-radius:50%; filter:blur(14px); z-index:1; }
+      .wlworld-scene{ position:absolute; inset:0; z-index:2; }
+      .wlworld-scene svg{ width:100%; height:100%; display:block; }
+      .wlw-sprite{ position:absolute; z-index:3; will-change:transform; }
+      .wlw-sprite svg{ width:100%; height:auto; display:block; overflow:visible; }
+      .wlw-swim   { left:0; animation:wlwSwim linear infinite; }
+      .wlw-fall   { animation:wlwFall linear infinite; }
+      .wlw-rise   { animation:wlwRise linear infinite; }
+      .wlw-bob    { animation:wlwBob ease-in-out infinite; }
+      .wlw-sway   { transform-origin:50% 100%; animation:wlwSway ease-in-out infinite; }
+      .wlw-pulse  { animation:wlwPulse ease-in-out infinite; }
+      .wlw-twinkle{ animation:wlwTwinkle ease-in-out infinite; }
+      @keyframes wlwSwim { from{transform:translateX(-30%)} to{transform:translateX(130%)} }
+      @keyframes wlwFall { from{transform:translateY(-15%) rotate(0deg)} to{transform:translateY(115%) rotate(var(--r,360deg))} }
+      @keyframes wlwRise { 0%{transform:translateY(115%);opacity:0} 12%{opacity:1} 88%{opacity:1} 100%{transform:translateY(-15%);opacity:0} }
+      @keyframes wlwBob  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7%)} }
+      @keyframes wlwSway { 0%,100%{transform:rotate(-3deg)} 50%{transform:rotate(3deg)} }
+      @keyframes wlwPulse{ 0%,100%{opacity:.45} 50%{opacity:1} }
       @keyframes wlwTwinkle { 0%,100%{opacity:.25} 50%{opacity:1} }
       @media(prefers-reduced-motion:reduce){ .wlworld *{ animation:none !important; } }
       body.low-stim .wlworld *{ animation:none !important; }
@@ -73,24 +88,65 @@ const WLWorlds = (() => {
     return panel;
   }
 
-  // drift particle spawner per theme; returns an interval-fn or null
-  function _driftSpawner(panel, theme){
-    const glyphMap = { stars:['✦','·','✧'], bubbles:['○','◦','°'], leaves:['🍂','🍃'],
-      sprinkles:['▪','●'], embers:['•','✦'], haze:['░'], dust:['·','•'], shimmer:['▪'] };
-    const up = (theme==='bubbles'||theme==='embers'||theme==='dust'||theme==='haze');
-    const colorMap = { stars:'#fff', bubbles:'rgba(200,245,255,.85)', leaves:'', sprinkles:'#fff',
-      embers:'#ff8a3c', haze:'rgba(255,220,180,.5)', dust:'rgba(255,255,255,.6)', shimmer:'rgba(255,120,220,.8)' };
-    if (theme==='none') return null;
-    return function(){
-      const p = document.createElement('div');
-      const glyphs = glyphMap[theme]||['·'];
-      p.textContent = glyphs[rndInt(0,glyphs.length)];
-      p.style.cssText = `position:absolute;left:${rnd(3,95)}%;${up?'bottom:0':'top:0'};`+
-        `font-size:${rndInt(7,15)}px;color:${colorMap[theme]||'inherit'};pointer-events:none;`+
-        `animation:${theme==='stars'?'wlwTwinkle':(up?'wlwDriftUp':'wlwDriftDown')} ${rnd(2.2,4).toFixed(2)}s linear forwards;`;
-      panel.appendChild(p);
-      setTimeout(()=>{ try{ p.parentNode && p.parentNode.removeChild(p); }catch{} }, 4200);
-    };
+  // ── Scenes: static SVG props + animated sprites, per world ─────
+  // anim ∈ swim|fall|rise|bob|sway|pulse|twinkle. dur/size/top/left are [min,max].
+  // swim ignores left (the keyframe traverses); fall/rise/bob use left for x.
+  const SCENES = {
+    underwater: {
+      props:
+        '<svg viewBox="0 0 100 100" preserveAspectRatio="none">'+
+          '<g fill="#0a3d63">'+
+            '<path d="M6 100 q3-22 1-34 q5 12 7 0 q1 18-2 34Z"/>'+
+            '<path d="M16 100 q2-16 0-26 q4 9 6-1 q1 16-2 27Z"/>'+
+            '<path d="M88 100 q-3-26 0-40 q5 14 8 1 q1 22-3 39Z"/>'+
+          '</g>'+
+          '<g stroke="rgba(190,245,255,.18)" stroke-width="2" fill="none">'+
+            '<line x1="30" y1="0" x2="38" y2="60"/><line x1="62" y1="0" x2="56" y2="55"/>'+
+          '</g>'+
+        '</svg>',
+      sprites: [
+        { svg:'<svg viewBox="0 0 24 14"><path d="M2 7 Q9 1 16 7 Q9 13 2 7Z" fill="#ffb454"/><path d="M16 7 l6-4 0 8Z" fill="#ff9a3c"/><circle cx="6" cy="6" r="1" fill="#3a2a10"/></svg>',
+          n:4, anim:'swim', dur:[7,12], size:[9,15], top:[18,68], flip:true },
+        { svg:'<svg viewBox="0 0 20 12"><path d="M2 6 Q8 1 14 6 Q8 11 2 6Z" fill="#7fd6ff"/><path d="M14 6 l5-3 0 6Z" fill="#5bbfe8"/></svg>',
+          n:3, anim:'swim', dur:[9,15], size:[6,10], top:[30,80], flip:true },
+        { svg:'<svg viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="rgba(200,245,255,.7)"/></svg>',
+          n:5, anim:'rise', dur:[5,9], size:[2,4], left:[10,90] }
+      ]
+    }
+  };
+
+  // Place a sprite group ONCE; infinite CSS loop + negative delay spreads them out.
+  function _placeSprites(panel, sp){
+    for(let i=0;i<sp.n;i++){
+      const wrap = document.createElement('div');
+      wrap.className = 'wlw-sprite wlw-'+sp.anim;
+      const dur = rnd(sp.dur[0], sp.dur[1]);
+      let css = `width:${rnd(sp.size[0],sp.size[1]).toFixed(1)}%;`+
+                `animation-duration:${dur.toFixed(2)}s;animation-delay:${(-rnd(0,dur)).toFixed(2)}s;`;
+      if (sp.top)  css += `top:${rnd(sp.top[0],sp.top[1]).toFixed(1)}%;`;
+      if (sp.left) css += `left:${rnd(sp.left[0],sp.left[1]).toFixed(1)}%;`;
+      if (sp.anim==='fall') css += `--r:${rndInt(180,540)}deg;`;
+      wrap.style.cssText = css;
+      // Inner holder carries any static flip so it never fights the animation transform.
+      const inner = document.createElement('div');
+      if (sp.flip && rndInt(0,2)) inner.style.transform = 'scaleX(-1)';
+      inner.innerHTML = sp.svg;
+      wrap.appendChild(inner);
+      panel.appendChild(wrap);
+    }
+  }
+
+  // Build a world's scene into the panel. Static props always; sprites only when not calm.
+  function _buildScene(panel, id, calm){
+    const sc = SCENES[id];
+    if(!sc) return;                       // worlds without a scene yet: gradient+floor only
+    if(sc.props){
+      const layer = document.createElement('div');
+      layer.className = 'wlworld-scene';
+      layer.innerHTML = sc.props;         // trusted, hand-authored SVG
+      panel.appendChild(layer);
+    }
+    if(!calm && sc.sprites){ sc.sprites.forEach(sp => _placeSprites(panel, sp)); }
   }
 
   function _render(id, el, intense){
@@ -100,10 +156,7 @@ const WLWorlds = (() => {
     const panel = _buildPanel(w);
     el.insertBefore(panel, el.firstChild);    // behind everything else in el
     const s = _state(el); s.panel = panel;
-    if (!_calmMotion()) {
-      const fn = _driftSpawner(panel, w.drift);
-      if (fn) { fn(); s.intervals.push(setInterval(fn, intense?260:460)); }
-    }
+    _buildScene(panel, id, _calmMotion());
   }
   function _ensurePositioned(el){ if(getComputedStyle(el).position==='static') el.style.position='relative'; }
 
