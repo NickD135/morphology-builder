@@ -30,6 +30,7 @@ const WLEffects = (() => {
     petals:      { name:'Cherry Petals', cost:700,  rarity:'rare',   icon:'🌸', desc:'Cherry blossom petals tumble down',       color:'#ffb7d5', requiresBadge:null },
     smoke:       { name:'Lab Smoke',     cost:700,  rarity:'rare',   icon:'💨', desc:'Soft lab smoke curls up around you',      color:'#cbd5e1', requiresBadge:null },
     lasers:      { name:'Laser Grid',    cost:1200, rarity:'epic',   icon:'🔺', desc:'A synthwave laser grid sweeps over you',  color:'#ff3cc8', requiresBadge:null },
+    'quark-rain':{ name:'Quark Rain',    cost:1300, rarity:'epic',   icon:'⚛️', desc:'Colour-charged quarks rain past you',     color:'#b9a6ff', requiresBadge:null },
   };
 
   // ── State tracking ────────────────────────────────────────────
@@ -1063,6 +1064,73 @@ const WLEffects = (() => {
     _addInterval(el, fireBeam, intense ? 320 : 620);
   }
 
+  // quark-rain — depth-layered particle shower in the 3 colour-charge hues,
+  // with motion-blur streaks, occasional heavy particles that splash, and a
+  // faint collision flash.
+  function fxQuarkRain(el, intense) {
+    _ensureRelative(el);
+    _injectStyle('wlfx-quarkrain', `
+      @keyframes wlfxQFall { 0%{opacity:0;transform:translateY(-12px)} 10%{opacity:1} 100%{opacity:.15;transform:translateY(132px)} }
+      @keyframes wlfxQSplash { 0%{opacity:1;transform:translate(-50%,0) scale(.4)} 100%{opacity:0;transform:translate(-50%,-8px) scale(1.5)} }
+      @keyframes wlfxQFlash { 0%,100%{opacity:0} 50%{opacity:.7} }
+    `);
+    const HUES = ['#ff4d6d', '#4dff88', '#4db8ff'];
+
+    function spawn() {
+      if (!_active.has(el)) return;
+      const fg = rndInt(0, 3) === 0;              // ~1/3 foreground
+      const hue = HUES[rndInt(0, 3)];
+      const size = fg ? rndInt(13, 20) : rndInt(7, 11);
+      const dur = fg ? rnd(1.0, 1.5) : rnd(1.6, 2.4);
+      const p = _makeParticle(`
+        left:${rnd(3,95)}%;top:0;font-size:${size}px;color:${hue};
+        opacity:${fg?1:0.6};
+        text-shadow:0 -6px 6px ${hue},0 0 8px ${hue};
+        animation:wlfxQFall ${dur.toFixed(2)}s linear forwards;z-index:${fg?12:8};`);
+      p.textContent = rndInt(0,2) ? '⚛' : '•';
+      _addNode(el, p);
+      setTimeout(() => { try { p.parentNode && p.parentNode.removeChild(p); } catch {} }, dur*1000+200);
+    }
+
+    // Heavy particle: falls slower, trailing tail, splashes at the floor line
+    function spawnHeavy() {
+      if (!_active.has(el)) return;
+      const hue = HUES[rndInt(0, 3)], x = rnd(15, 85);
+      const p = _makeParticle(`
+        left:${x}%;top:0;font-size:22px;color:${hue};z-index:13;
+        text-shadow:0 -10px 10px ${hue},0 0 14px ${hue};
+        animation:wlfxQFall 2.2s ease-in forwards;`);
+      p.textContent = '⚛';
+      _addNode(el, p);
+      setTimeout(() => {
+        if (!_active.has(el)) return;
+        const splash = _makeParticle(`
+          left:${x}%;bottom:2%;width:18px;height:8px;z-index:13;
+          background:radial-gradient(circle,${hue},rgba(0,0,0,0) 70%);
+          animation:wlfxQSplash .5s ease-out forwards;`);
+        _addNode(el, splash);
+        setTimeout(() => { try { splash.parentNode && splash.parentNode.removeChild(splash); } catch {} }, 520);
+      }, 2000);
+      setTimeout(() => { try { p.parentNode && p.parentNode.removeChild(p); } catch {} }, 2300);
+    }
+
+    // Faint full-stage collision flash
+    function flash() {
+      if (!_active.has(el)) return;
+      const f = _makeParticle(`
+        inset:0;z-index:7;border-radius:inherit;
+        background:radial-gradient(circle at ${rndInt(20,80)}% ${rndInt(20,80)}%,rgba(185,166,255,.5),rgba(0,0,0,0) 55%);
+        animation:wlfxQFlash .5s ease forwards;`);
+      _addNode(el, f);
+      setTimeout(() => { try { f.parentNode && f.parentNode.removeChild(f); } catch {} }, 520);
+    }
+
+    spawn();
+    _addInterval(el, spawn, intense ? 90 : 150);
+    _addInterval(el, spawnHeavy, intense ? 900 : 1500);
+    _addInterval(el, flash, intense ? 1300 : 2200);
+  }
+
   // ── Effect map ────────────────────────────────────────────────
   const _fns = {
     sparkle: fxSparkle, shimmer: fxShimmer, bubbles: fxBubbles,
@@ -1072,7 +1140,7 @@ const WLEffects = (() => {
     confetti: fxConfetti, divine: fxDivine, quantum: fxQuantum,
     aurora: fxAurora, vortex: fxVortex,
     'hearts-fx': fxHearts, snow: fxSnow, petals: fxPetals, smoke: fxSmoke,
-    lasers: fxLasers,
+    lasers: fxLasers, 'quark-rain': fxQuarkRain,
   };
 
   // ── Public API ────────────────────────────────────────────────
