@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Item Dimensional Pass — Head Accessories Harness</title>
+<style>
+  body { font-family: sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 16px; }
+  h1 { font-size: 18px; color: #a5b4fc; margin: 0 0 4px; }
+  p.meta { font-size: 12px; color: #64748b; margin: 0 0 16px; }
+  .status { background: #1e293b; border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 13px; }
+  .status .pass { color: #4ade80; } .status .fail { color: #f87171; }
+  .grid { display: flex; flex-wrap: wrap; gap: 12px; }
+  .card { background: #1e293b; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 130px; }
+  .card .label { font-size: 11px; color: #94a3b8; text-align: center; word-break: break-all; }
+  .card .pair { display: flex; gap: 8px; align-items: flex-end; }
+  .card .lg { border: 1px solid #334155; border-radius: 4px; }
+  .card .sm { border: 1px solid #334155; border-radius: 4px; }
+  .card .err { color: #f87171; font-size: 10px; }
+  h2 { font-size: 14px; color: #818cf8; margin: 20px 0 8px; }
+  .isolation-grid { display: flex; gap: 16px; flex-wrap: wrap; }
+  .iso-card { background: #1e293b; border-radius: 8px; padding: 10px; }
+  .iso-label { font-size: 11px; color: #94a3b8; margin-bottom: 4px; }
+  pre { background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 10px; font-size: 11px; overflow: auto; max-height: 200px; }
+</style>
+</head>
+<body>
+<h1>Item Dimensional Pass — Head Accessories</h1>
+<p class="meta">Tests: render all head ids at 150px + 44px · animatedIntact · isolationOK (no shared gradient ids between two instances)</p>
+
+<div class="status" id="statusBox">Loading…</div>
+
+<h2>Head Grid (large 150px + small 44px)</h2>
+<div class="grid" id="headGrid"></div>
+
+<h2>Isolation Test — two galaxy_halo instances</h2>
+<div class="isolation-grid" id="isoGrid"></div>
+
+<h2>window.__HEADS__ (written after tests)</h2>
+<pre id="resultPre"></pre>
+
+<!-- Dependencies -->
+<script src="../../wordlab-worlds.js"></script>
+<script src="../../wordlab-shop-data.js"></script>
+<script src="../../wordlab-scientist.js"></script>
+<script>
+(function() {
+  const ANIMATED_CHECK = ['flame_crown', 'ice_crown', 'galaxy_halo'];
+  const ANIMATE_TAGS = ['<animate', '<animateTransform'];
+
+  // Collect head ids from WLShopData
+  let headIds = [];
+  try {
+    // WLShopData.heads is an array of {id, ...} objects
+    headIds = (WLShopData.heads || []).map(h => h.id).filter(id => id && id !== 'none');
+  } catch(e) {
+    document.getElementById('statusBox').textContent = 'ERROR: could not read WLShopData.heads — ' + e.message;
+  }
+
+  const errors = [];
+  const grid = document.getElementById('headGrid');
+
+  function renderHead(headId, size) {
+    try {
+      const svgStr = WLScientist.buildSVG({ head: headId, skinTone: '#FDBCB4', coatColor: '#ffffff' }, 'neutral');
+      if (!svgStr || !svgStr.includes('<svg')) {
+        errors.push(headId + ': no svg output');
+        return null;
+      }
+      const container = document.createElement('div');
+      container.style.width = size + 'px';
+      container.style.height = (size * 1.5) + 'px';
+      container.style.overflow = 'hidden';
+      container.innerHTML = svgStr.replace(/viewBox="[^"]*"/, `viewBox="0 0 80 120" width="${size}" height="${size * 1.5}"`);
+      return container;
+    } catch(e) {
+      errors.push(headId + ': threw ' + e.message);
+      return null;
+    }
+  }
+
+  // Render each head item
+  headIds.forEach(id => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `<div class="label">${id}</div>`;
+
+    const pair = document.createElement('div');
+    pair.className = 'pair';
+
+    const lg = renderHead(id, 150);
+    if (lg) { lg.className = 'lg'; pair.appendChild(lg); }
+    else { const e = document.createElement('div'); e.className = 'err'; e.textContent = 'ERROR'; pair.appendChild(e); }
+
+    const sm = renderHead(id, 44);
+    if (sm) { sm.className = 'sm'; pair.appendChild(sm); }
+
+    card.appendChild(pair);
+    grid.appendChild(card);
+  });
+
+  // Check animatedIntact: flame_crown, ice_crown, galaxy_halo must contain <animate or <animateTransform
+  let animatedIntact = true;
+  ANIMATED_CHECK.forEach(id => {
+    try {
+      const svgStr = WLScientist.buildSVG({ head: id, skinTone: '#FDBCB4', coatColor: '#ffffff' }, 'neutral');
+      const hasAnim = ANIMATE_TAGS.some(tag => svgStr.includes(tag));
+      if (!hasAnim) {
+        animatedIntact = false;
+        errors.push(id + ': animation elements missing');
+      }
+    } catch(e) {
+      animatedIntact = false;
+      errors.push(id + ': threw during animated check — ' + e.message);
+    }
+  });
+
+  // Isolation test: two characters both wearing galaxy_halo must not share any [id] attribute
+  let isolationOK = true;
+  const isoGrid = document.getElementById('isoGrid');
+  try {
+    const svg1 = WLScientist.buildSVG({ head: 'galaxy_halo', skinTone: '#FDBCB4', coatColor: '#ffffff' }, 'neutral');
+    const svg2 = WLScientist.buildSVG({ head: 'galaxy_halo', skinTone: '#deb887', coatColor: '#ffd700' }, 'excited');
+
+    // Parse ids from each svg string via regex
+    const extractIds = s => { const m = []; let r; const re = /\bid="([^"]+)"/g; while ((r = re.exec(s)) !== null) m.push(r[1]); return m; };
+    const ids1 = extractIds(svg1);
+    const ids2 = extractIds(svg2);
+    const set1 = new Set(ids1);
+    const shared = ids2.filter(id => set1.has(id));
+    if (shared.length > 0) {
+      isolationOK = false;
+      errors.push('isolation FAIL — shared ids: ' + shared.join(', '));
+    }
+
+    // Render both for visual inspection
+    [svg1, svg2].forEach((svgStr, i) => {
+      const c = document.createElement('div');
+      c.className = 'iso-card';
+      const lbl = document.createElement('div');
+      lbl.className = 'iso-label';
+      lbl.textContent = 'Instance ' + (i+1) + ' — ids: [' + extractIds(svgStr).join(', ') + ']';
+      c.appendChild(lbl);
+      const wrap = document.createElement('div');
+      wrap.style.width = '150px';
+      wrap.style.height = '225px';
+      wrap.style.overflow = 'hidden';
+      wrap.innerHTML = svgStr.replace(/viewBox="[^"]*"/, 'viewBox="0 0 80 120" width="150" height="225"');
+      c.appendChild(wrap);
+      isoGrid.appendChild(c);
+    });
+  } catch(e) {
+    isolationOK = false;
+    errors.push('isolation test threw: ' + e.message);
+  }
+
+  // Final result object
+  const result = {
+    count: headIds.length,
+    ids: headIds,
+    errors: errors,
+    animatedIntact: animatedIntact,
+    isolationOK: isolationOK,
+    PASS: errors.length === 0 && animatedIntact && isolationOK
+  };
+  window.__HEADS__ = result;
+
+  // Status box
+  const statusBox = document.getElementById('statusBox');
+  if (result.PASS) {
+    statusBox.innerHTML = `<span class="pass">✓ PASS</span> — count=${result.count}, errors=0, animatedIntact=true, isolationOK=true`;
+  } else {
+    statusBox.innerHTML = `<span class="fail">✗ FAIL</span> — errors: ${JSON.stringify(errors)}`;
+  }
+
+  document.getElementById('resultPre').textContent = JSON.stringify(result, null, 2);
+})();
+</script>
+</body>
+</html>
