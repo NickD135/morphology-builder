@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Pet redesign harness</title>
+<style>body{background:#1a1930;color:#e2e8f0;font-family:sans-serif;padding:16px}
+.row{display:flex;gap:14px;flex-wrap:wrap;margin:12px 0}
+.cell{background:radial-gradient(120% 90% at 50% 30%,#2c2b45,#1a1930);border-radius:12px;padding:8px;text-align:center;font-size:11px}
+.cell svg{width:110px;height:110px;display:block}
+.cell44 svg{width:44px;height:44px;display:block}
+pre{background:#0f0e1c;padding:10px;border-radius:8px;white-space:pre-wrap}</style>
+</head><body>
+<h2>Pet redesign — soft-plush dimensional pass</h2>
+<h3>9 pets at tank size (~110px)</h3>
+<div class="row" id="tank"></div>
+<h3>9 pets at 44px (header-widget size)</h3>
+<div class="row" id="mini"></div>
+<h3>Isolation check (2 different pets rendered together)</h3>
+<div class="row" id="isolation"></div>
+<pre id="results">running…</pre>
+<script src="../../wordlab-worlds.js?v=1"></script>
+<script src="../../wordlab-shop-data.js?v=1"></script>
+<script src="../../wordlab-scientist.js?v=1"></script>
+<script>
+(function(){
+  const R = { ids: [], errors: [], isolationOK: false, noneEmpty: false };
+  const PET_IDS = ['cat','ginger_cat','puppy','bird','frog','owl','dragon','horse','hamster'];
+  R.ids = PET_IDS.slice();
+
+  // noneEmpty check
+  try {
+    R.noneEmpty = (WLScientist.buildPetSVG('none') === '') && (WLScientist.buildPetSVG(null) === '');
+  } catch(e) {
+    R.noneEmpty = false;
+    R.errors.push('none/null-check-threw: ' + e.message);
+  }
+
+  // Unknown id check (should also return '')
+  try {
+    var unk = WLScientist.buildPetSVG('not_a_real_pet');
+    if (unk !== '') R.errors.push('unknown-id-not-empty');
+  } catch(e) {
+    R.errors.push('unknown-id-threw: ' + e.message);
+  }
+
+  // Render all 9 at tank size
+  const tank = document.getElementById('tank');
+  PET_IDS.forEach(function(id) {
+    try {
+      const svg = WLScientist.buildPetSVG(id);
+      if (!svg || svg.length < 50) { R.errors.push(id); return; }
+      const c = document.createElement('div'); c.className = 'cell';
+      c.innerHTML = svg;
+      c.appendChild(document.createTextNode(id));
+      tank.appendChild(c);
+    } catch(e) {
+      R.errors.push(id + ': ' + e.message);
+    }
+  });
+
+  // Render all 9 at 44px
+  const mini = document.getElementById('mini');
+  PET_IDS.forEach(function(id) {
+    try {
+      const svg = WLScientist.buildPetSVG(id);
+      const c = document.createElement('div'); c.className = 'cell cell44';
+      c.innerHTML = svg;
+      c.appendChild(document.createTextNode(id));
+      mini.appendChild(c);
+    } catch(e) {
+      // already recorded above
+    }
+  });
+
+  // Isolation check: render two DIFFERENT pets together, collect gradient ids
+  // (all pet gradient ids are prefixed "petG" per _petGrad() calls in wordlab-scientist.js)
+  try {
+    const isoWrap = document.getElementById('isolation');
+    const a = document.createElement('div'); a.className = 'cell';
+    a.innerHTML = WLScientist.buildPetSVG('cat');
+    const b = document.createElement('div'); b.className = 'cell';
+    b.innerHTML = WLScientist.buildPetSVG('dragon');
+    isoWrap.appendChild(a); isoWrap.appendChild(b);
+
+    function gradIds(root) {
+      return Array.from(root.querySelectorAll('[id^="petG"]')).map(function(n){ return n.id; });
+    }
+    const idsA = gradIds(a);
+    const idsB = gradIds(b);
+    const setA = new Set(idsA);
+    const disjoint = idsB.every(function(id){ return !setA.has(id); }) && idsA.length > 0 && idsB.length > 0;
+    R.isolationOK = disjoint;
+    R._isolationIdsA = idsA;
+    R._isolationIdsB = idsB;
+  } catch(e) {
+    R.isolationOK = false;
+    R.errors.push('isolation-threw: ' + e.message);
+  }
+
+  window.__PETS__ = R;
+  document.getElementById('results').textContent = JSON.stringify(R, null, 2);
+})();
+</script></body></html>
