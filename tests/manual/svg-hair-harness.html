@@ -22,6 +22,12 @@ h3{color:#a5b4fc;margin:14px 0 4px}</style>
 <h3>Isolation — two characters, different styles + colours, one page</h3>
 <div id="iso" class="row"></div>
 
+<h3>Task 3 — layering sweep: 5 styles × beanie/tiara/angel_wings × neutral/excited (150px)</h3>
+<div id="sweep" class="row"></div>
+
+<h3>Task 3 — layering sweep, 44px</h3>
+<div id="sweepMini" class="row"></div>
+
 <pre id="results">running…</pre>
 
 <script src="../../wordlab-worlds.js"></script>
@@ -124,11 +130,97 @@ h3{color:#a5b4fc;margin:14px 0 4px}</style>
              hc.every(function(it){ return it.free === true && it.cost === 0; }),
   };
 
+  // ── Task 3: layering sweep — hats/wings vs hair, face still visible ──
+  // Sample of styles that exercise every draw path: short (front cap only),
+  // long + ponytail (front + behind-head layer), afro (front-only large cap),
+  // mohawk (front-only, thin/spiky — worst case for coverage).
+  var SWEEP_STYLES = ['short', 'long', 'ponytail', 'afro', 'mohawk'];
+  // { type: scientist property key, id: accessory id }
+  var SWEEP_ACCESSORIES = [
+    { type: 'head',  id: 'beanie' },      // full-cover hat — should sit over/in front of hair
+    { type: 'head',  id: 'tiara' },       // sits in front of hair, low crown
+    { type: 'wings', id: 'angel_wings' }, // behind-body — must not clash with hair-behind (long/ponytail)
+  ];
+  var SWEEP_REACTIONS = ['neutral', 'excited'];
+  var SWEEP_COLOR = '#3B2A1E';
+  // Reaction-specific eye/mouth path signatures — used to confirm the face
+  // nodes are still present (and un-mangled) in the returned SVG string.
+  var EYE_SIG = {
+    neutral: 'cx="34" cy="36" r="3.5"',
+    excited: 'cx="34" cy="36" r="4.5"',
+  };
+  var MOUTH_SIG = {
+    neutral: 'M35,44 Q40,47 45,44',
+    excited: 'M33,44 Q40,52 47,44',
+  };
+
+  var sweepCells = [];
+  var sweepErrors = [];
+  var sweepGrid = document.getElementById('sweep');
+  var sweepMini = document.getElementById('sweepMini');
+
+  SWEEP_STYLES.forEach(function (style) {
+    SWEEP_ACCESSORIES.forEach(function (acc) {
+      SWEEP_REACTIONS.forEach(function (reaction) {
+        var sci = { skinTone: '#FDBCB4', coatColor: '#6366f1', hair: style, hairColor: SWEEP_COLOR };
+        sci[acc.type] = acc.id;
+        var label = style + ' + ' + acc.id + ' @' + reaction;
+        var ok = false;
+        var svg;
+        try {
+          svg = WLScientist.buildSVG(sci, reaction);
+          if (!svg || svg.indexOf('<svg') !== 0) throw new Error('empty/invalid svg');
+
+          var hasEyes  = svg.indexOf(EYE_SIG[reaction]) !== -1;
+          var hasMouth = svg.indexOf(MOUTH_SIG[reaction]) !== -1;
+
+          // Draw-order assertion, read from the SVG source itself (the
+          // renderer emits HTML comments at every layer boundary):
+          //  - head accessories (beanie/tiara) must render AFTER the
+          //    hair-front layer (hats sit over/in front of hair)
+          //  - wings (behind-body) must render BEFORE the hair-behind
+          //    layer, so long/ponytail hair-behind is never mid-wing
+          var orderOK;
+          if (acc.type === 'head') {
+            var hairFrontIdx = svg.indexOf('Hair (front layer');
+            var headAccIdx   = svg.indexOf('Head accessory');
+            orderOK = hairFrontIdx !== -1 && headAccIdx !== -1 && hairFrontIdx < headAccIdx;
+          } else {
+            var wingsIdx    = svg.indexOf('Wings (behind body)');
+            var hairBackIdx = svg.indexOf('Hair (behind-head layer');
+            orderOK = wingsIdx !== -1 && hairBackIdx !== -1 && wingsIdx < hairBackIdx;
+          }
+
+          ok = hasEyes && hasMouth && orderOK;
+          if (!ok) {
+            sweepErrors.push({ key: label, err: 'face missing or layering order wrong (eyes:' + hasEyes + ' mouth:' + hasMouth + ' order:' + orderOK + ')' });
+          }
+        } catch (e) {
+          sweepErrors.push({ key: label, err: e.message });
+        }
+
+        sweepCells.push({ style: style, hairColor: SWEEP_COLOR, accessory: acc.id, reaction: reaction, ok: ok });
+
+        sweepGrid.appendChild(cell(sci, reaction, label, 'lg'));
+        sweepMini.appendChild(cell(sci, reaction, label, 'sm'));
+      });
+    });
+  });
+
+  window.__HAIRSWEEP__ = {
+    cells: sweepCells,
+    errors: sweepErrors,
+    allPass: sweepErrors.length === 0 && sweepCells.every(function (c) { return c.ok; }),
+  };
+
   var pre = document.getElementById('results');
-  pre.style.color = (R.allPass && window.__HAIRSHOP__.stylesExposed && window.__HAIRSHOP__.coloursExposed &&
-    window.__HAIRSHOP__.count.styles === 12 && window.__HAIRSHOP__.count.colours === 13 && window.__HAIRSHOP__.allFree)
-    ? '#4ade80' : '#f87171';
-  pre.textContent = JSON.stringify(R, null, 2) + '\n\n__HAIRSHOP__:\n' + JSON.stringify(window.__HAIRSHOP__, null, 2);
+  var allGreen = R.allPass && window.__HAIRSHOP__.stylesExposed && window.__HAIRSHOP__.coloursExposed &&
+    window.__HAIRSHOP__.count.styles === 12 && window.__HAIRSHOP__.count.colours === 13 && window.__HAIRSHOP__.allFree &&
+    window.__HAIRSWEEP__.allPass;
+  pre.style.color = allGreen ? '#4ade80' : '#f87171';
+  pre.textContent = JSON.stringify(R, null, 2) +
+    '\n\n__HAIRSHOP__:\n' + JSON.stringify(window.__HAIRSHOP__, null, 2) +
+    '\n\n__HAIRSWEEP__:\n' + JSON.stringify(window.__HAIRSWEEP__, null, 2);
 })();
 </script>
 </body></html>
