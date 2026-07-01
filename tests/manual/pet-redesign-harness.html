@@ -14,6 +14,16 @@ pre{background:#0f0e1c;padding:10px;border-radius:8px;white-space:pre-wrap}</sty
 <div class="row" id="mini"></div>
 <h3>Isolation check (2 different pets rendered together)</h3>
 <div class="row" id="isolation"></div>
+<h3>Task 4: reaction sweep (9 pets × 4 reaction classes) at ~110px</h3>
+<div class="row" id="sweepTank"></div>
+<h3>Task 4: reaction sweep at 44px</h3>
+<div class="row" id="sweepMini"></div>
+<h3>Task 4: reaction row (all 9 pets, pet-correct applied)</h3>
+<div class="row" id="sweepReaction"></div>
+<h3>Task 4: low-stim pass (body.low-stim, pet-idle applied — animation should be none)</h3>
+<div class="row" id="sweepLowStim"></div>
+<h3>Task 4: full 9-pet same-page isolation grid (dup-gradient-id check)</h3>
+<div class="row" id="sweepFull9"></div>
 <pre id="results">running…</pre>
 <script src="../../wordlab-worlds.js?v=1"></script>
 <script src="../../wordlab-shop-data.js?v=1"></script>
@@ -160,5 +170,136 @@ pre{background:#0f0e1c;padding:10px;border-radius:8px;white-space:pre-wrap}</sty
   }
   window.__PETSTAGE__ = P;
   document.getElementById('results').textContent += '\n\n__PETSTAGE__:\n' + JSON.stringify(P, null, 2);
+
+  // ── Task 4: final sweep ────────────────────────────────────────
+  const SWEEP = { cells: [], errors: [] };
+  const REACTIONS = ['pet-idle', 'pet-correct', 'pet-wrong', 'pet-streak'];
+
+  // 1) All 9 pets × 4 reaction classes, at tank size (~110px) and 44px.
+  //    Assert: class applies to the wrapper, and the pet SVG still renders (no error).
+  function sweepCell(container, id, reactionClass, sizeClass) {
+    const rec = { id: id, reaction: reactionClass, size: sizeClass, classApplied: false, rendered: false, error: null };
+    try {
+      const svg = WLScientist.buildPetSVG(id);
+      const wrap = document.createElement('div');
+      wrap.className = 'cell' + (sizeClass === '44' ? ' cell44' : '');
+      const inner = document.createElement('div');
+      inner.id = 'petCharWrap';
+      inner.className = reactionClass;
+      inner.innerHTML = svg;
+      wrap.appendChild(inner);
+      wrap.appendChild(document.createTextNode(id + ' / ' + reactionClass));
+      container.appendChild(wrap);
+
+      rec.classApplied = inner.classList.contains(reactionClass);
+      rec.rendered = !!(svg && svg.length > 50 && inner.querySelector('svg'));
+      if (!rec.classApplied) SWEEP.errors.push(id + '/' + reactionClass + '/' + sizeClass + ': class-not-applied');
+      if (!rec.rendered) SWEEP.errors.push(id + '/' + reactionClass + '/' + sizeClass + ': render-failed');
+    } catch (e) {
+      rec.error = e.message;
+      SWEEP.errors.push(id + '/' + reactionClass + '/' + sizeClass + ': threw ' + e.message);
+    }
+    SWEEP.cells.push(rec);
+  }
+
+  const sweepTank = document.getElementById('sweepTank');
+  const sweepMini = document.getElementById('sweepMini');
+  PET_IDS.forEach(function (id) {
+    REACTIONS.forEach(function (rc) {
+      sweepCell(sweepTank, id, rc, '110');
+      sweepCell(sweepMini, id, rc, '44');
+    });
+  });
+
+  // 2) Reaction row — all 9 pets with pet-correct applied, visual spot-check.
+  const sweepReaction = document.getElementById('sweepReaction');
+  PET_IDS.forEach(function (id) {
+    try {
+      const svg = WLScientist.buildPetSVG(id);
+      const wrap = document.createElement('div');
+      wrap.className = 'cell';
+      const inner = document.createElement('div');
+      inner.id = 'petCharWrap';
+      inner.className = 'pet-correct';
+      inner.innerHTML = svg;
+      wrap.appendChild(inner);
+      wrap.appendChild(document.createTextNode(id));
+      sweepReaction.appendChild(wrap);
+    } catch (e) {
+      SWEEP.errors.push('reaction-row/' + id + ': threw ' + e.message);
+    }
+  });
+
+  // 3) Low-stim pass: body.low-stim + pet-idle class → animation should compute to 'none'.
+  const lowStimResult = { applied: false, animationNone: false, error: null };
+  try {
+    document.body.classList.add('low-stim');
+    const sweepLowStim = document.getElementById('sweepLowStim');
+    PET_IDS.forEach(function (id) {
+      const svg = WLScientist.buildPetSVG(id);
+      const wrap = document.createElement('div');
+      wrap.className = 'cell';
+      const inner = document.createElement('div');
+      inner.id = 'petCharWrap';
+      inner.className = 'pet-idle';
+      inner.innerHTML = svg;
+      wrap.appendChild(inner);
+      wrap.appendChild(document.createTextNode(id));
+      sweepLowStim.appendChild(wrap);
+    });
+    lowStimResult.applied = document.body.classList.contains('low-stim');
+    // Check computed animation on the LAST inner wrap created (all should be identical).
+    const lastWrap = sweepLowStim.querySelector('#petCharWrap');
+    const anim = lastWrap ? getComputedStyle(lastWrap).animationName : null;
+    lowStimResult.animationNone = (anim === 'none');
+    lowStimResult._computedAnim = anim;
+    if (!lowStimResult.animationNone) SWEEP.errors.push('low-stim: animation not suppressed (' + anim + ')');
+    document.body.classList.remove('low-stim');
+  } catch (e) {
+    lowStimResult.error = e.message;
+    SWEEP.errors.push('low-stim-pass: threw ' + e.message);
+  }
+  SWEEP.lowStim = lowStimResult;
+
+  // 4) Full 9-pet same-page isolation: render all 9 together, collect every
+  //    gradient id (id^="petG"), assert zero duplicates across the whole page.
+  const iso9 = { totalGradIds: 0, uniqueGradIds: 0, duplicates: [], ok: false };
+  try {
+    const sweepFull9 = document.getElementById('sweepFull9');
+    const allIds = [];
+    PET_IDS.forEach(function (id) {
+      const wrap = document.createElement('div');
+      wrap.className = 'cell';
+      wrap.innerHTML = WLScientist.buildPetSVG(id);
+      wrap.appendChild(document.createTextNode(id));
+      sweepFull9.appendChild(wrap);
+    });
+    const gradNodes = sweepFull9.querySelectorAll('[id^="petG"]');
+    gradNodes.forEach(function (n) { allIds.push(n.id); });
+    iso9.totalGradIds = allIds.length;
+    const seen = {};
+    const dups = [];
+    allIds.forEach(function (id) {
+      if (seen[id]) dups.push(id);
+      seen[id] = true;
+    });
+    iso9.uniqueGradIds = Object.keys(seen).length;
+    iso9.duplicates = dups;
+    iso9.ok = (dups.length === 0) && allIds.length > 0;
+    if (!iso9.ok) SWEEP.errors.push('full9-isolation: duplicate gradient ids found: ' + dups.join(','));
+  } catch (e) {
+    iso9.error = e.message;
+    SWEEP.errors.push('full9-isolation: threw ' + e.message);
+  }
+  SWEEP.fullPageIsolation = iso9;
+
+  window.__PETSWEEP__ = SWEEP;
+  document.getElementById('results').textContent += '\n\n__PETSWEEP__ summary:\n' + JSON.stringify({
+    cellCount: SWEEP.cells.length,
+    errorCount: SWEEP.errors.length,
+    errors: SWEEP.errors,
+    lowStim: SWEEP.lowStim,
+    fullPageIsolation: SWEEP.fullPageIsolation
+  }, null, 2);
 })();
 </script></body></html>
