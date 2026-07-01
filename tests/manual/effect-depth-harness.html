@@ -275,6 +275,116 @@
       }
     })();
 
+    // ── TASK 4: premium effects gain true depth ───────────────────
+    // Uses preview() (intense=true) so spawners fire densely.
+    // Assertions: behind≥1 AND front≥1 after wait; stop() leaves zero nodes,
+    // el.style.animation==='' and el.style.boxShadow===''.
+    await (async function testT4() {
+      const container = document.querySelector('.lab-charwrap');
+
+      // ── lasers ────────────────────────────────────────────────────
+      // grid → behind (static, created synchronously);
+      // scan → front (created synchronously); beams/sparks → front (interval 320ms intense)
+      WLEffects.preview('lasers', container);
+      await new Promise(r => setTimeout(r, 600));
+
+      {
+        const behind = container.querySelector('.wlfx-behind');
+        const front  = container.querySelector('.wlfx-front');
+        const behindCount = behind ? behind.childElementCount : 0;
+        const frontCount  = front  ? front.childElementCount  : 0;
+        assert('t4_lasers_behindPopulated', behindCount >= 1, { behindCount });
+        assert('t4_lasers_frontPopulated',  frontCount  >= 1, { frontCount });
+      }
+
+      WLEffects.stop(container);
+      await new Promise(r => setTimeout(r, 120));
+
+      {
+        const behindAfter = container.querySelectorAll('.wlfx-behind').length;
+        const frontAfter  = container.querySelectorAll('.wlfx-front').length;
+        assert('t4_lasers_stop_noBehind',    behindAfter === 0,                { behindAfter });
+        assert('t4_lasers_stop_noFront',     frontAfter  === 0,                { frontAfter });
+        assert('t4_lasers_stop_noAnimation', container.style.animation === '', { an: container.style.animation });
+        assert('t4_lasers_stop_noBoxShadow', container.style.boxShadow === '', { bs: container.style.boxShadow });
+      }
+
+      // ── quark-rain ────────────────────────────────────────────────
+      // spawn → _addNodeWrap (alternates behind/front, so after enough spawns both layers have content)
+      // flash → _addNodeBehind (interval 1300ms intense — may or may not fire in 900ms window)
+      // splash → _addNodeFront (fires 2000ms after spawnHeavy, well past 900ms)
+      // Strategy: wait 900ms — quarks via _addNodeWrap fill both layers fast (interval 90ms intense).
+      // If front still empty (very unlikely), extend to 2300ms to catch splash.
+      WLEffects.preview('quark-rain', container);
+      await new Promise(r => setTimeout(r, 900));
+
+      {
+        const behind = container.querySelector('.wlfx-behind');
+        const front  = container.querySelector('.wlfx-front');
+        const behindCount0 = behind ? behind.childElementCount : 0;
+        const frontCount0  = front  ? front.childElementCount  : 0;
+        if (frontCount0 === 0) {
+          // Splash not yet landed — wait for it
+          await new Promise(r => setTimeout(r, 1400));
+        }
+        const behindCount = behind ? behind.childElementCount : 0;
+        const frontCount  = front  ? front.childElementCount  : 0;
+        assert('t4_quarkrain_behindPopulated', behindCount >= 1, { behindCount });
+        assert('t4_quarkrain_frontPopulated',  frontCount  >= 1, { frontCount });
+      }
+
+      WLEffects.stop(container);
+      await new Promise(r => setTimeout(r, 120));
+
+      {
+        const behindAfter = container.querySelectorAll('.wlfx-behind').length;
+        const frontAfter  = container.querySelectorAll('.wlfx-front').length;
+        assert('t4_quarkrain_stop_noBehind',    behindAfter === 0,                { behindAfter });
+        assert('t4_quarkrain_stop_noFront',     frontAfter  === 0,                { frontAfter });
+        assert('t4_quarkrain_stop_noAnimation', container.style.animation === '', { an: container.style.animation });
+        assert('t4_quarkrain_stop_noBoxShadow', container.style.boxShadow === '', { bs: container.style.boxShadow });
+      }
+
+      // ── blackhole ────────────────────────────────────────────────
+      // halo, disk, sphere, spiral parts → _addNodeBehind (all synchronous seeding)
+      // jets → _addNodeFront (interval 1400ms intense)
+      // el.style.animation = wlfxWarp — kept; stop() clears it
+      WLEffects.preview('blackhole', container);
+      await new Promise(r => setTimeout(r, 1700)); // past first jet fire at ~1400ms
+
+      {
+        const behind = container.querySelector('.wlfx-behind');
+        const front  = container.querySelector('.wlfx-front');
+        const behindCount = behind ? behind.childElementCount : 0;
+        const frontCount  = front  ? front.childElementCount  : 0;
+        assert('t4_blackhole_behindPopulated', behindCount >= 1, { behindCount });
+        assert('t4_blackhole_frontPopulated',  frontCount  >= 1, { frontCount });
+        // warp animation should still be active before stop()
+        assert('t4_blackhole_warpActive',
+          container.style.animation.includes('wlfxWarp'),
+          { an: container.style.animation });
+      }
+
+      WLEffects.stop(container);
+      await new Promise(r => setTimeout(r, 120));
+
+      {
+        const behindAfter = container.querySelectorAll('.wlfx-behind').length;
+        const frontAfter  = container.querySelectorAll('.wlfx-front').length;
+        assert('t4_blackhole_stop_noBehind',    behindAfter === 0,                { behindAfter });
+        assert('t4_blackhole_stop_noFront',     frontAfter  === 0,                { frontAfter });
+        assert('t4_blackhole_stop_noAnimation', container.style.animation === '', { an: container.style.animation });
+        assert('t4_blackhole_stop_noBoxShadow', container.style.boxShadow === '', { bs: container.style.boxShadow });
+      }
+    })();
+
+    // Collect Task-4-specific results
+    window.__RESULTS_T4__ = Object.fromEntries(
+      Object.entries(results)
+        .filter(([k]) => k.startsWith('t4_'))
+        .map(([k, v]) => [k, v.pass ? 'PASS' : ('FAIL' + (v.extra ? ' ' + JSON.stringify(v.extra) : ''))])
+    );
+
     // ── Collect & display ─────────────────────────────────────────
     // Collect Task-2-specific results
     window.__RESULTS_T2__ = Object.fromEntries(

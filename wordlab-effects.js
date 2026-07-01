@@ -1126,7 +1126,7 @@ const WLEffects = (() => {
         linear-gradient(90deg,rgba(60,220,255,.30) 1px,transparent 1px);
       background-size:26px 26px;
       animation:wlfxGridScroll ${intense?'0.7s':'1.3s'} linear infinite;`);
-    _addNode(el, grid);
+    _addNodeBehind(el, grid);
 
     // Vertical scan-line that sweeps over the character
     const scan = _makeParticle(`
@@ -1134,7 +1134,7 @@ const WLEffects = (() => {
       background:linear-gradient(90deg,transparent,rgba(255,255,255,.9),transparent);
       box-shadow:0 0 12px 3px rgba(255,60,200,.7);
       animation:wlfxScan ${intense?'1.6s':'2.6s'} linear infinite;`);
-    _addNode(el, scan);
+    _addNodeFront(el, scan);
 
     // Periodic firing diagonal beams + impact spark
     function fireBeam() {
@@ -1146,13 +1146,13 @@ const WLEffects = (() => {
         background:linear-gradient(90deg,rgba(255,255,255,.95),${rndInt(0,2)?'#ff3cc8':'#3cdcff'});
         box-shadow:0 0 8px 1px rgba(255,60,200,.8);
         animation:wlfxBeam ${rnd(0.4,0.7).toFixed(2)}s ease-out forwards;`);
-      _addNode(el, beam);
+      _addNodeFront(el, beam);
       const spark = _makeParticle(`
         left:${5+len*Math.cos(ang*Math.PI/180)}%;top:${y+len*Math.sin(ang*Math.PI/180)*0.6}%;
         width:10px;height:10px;border-radius:50%;z-index:12;
         background:radial-gradient(circle,#fff,rgba(255,60,200,0) 70%);
         animation:wlfxSpark .4s ease-out forwards;`);
-      _addNode(el, spark);
+      _addNodeFront(el, spark);
       setTimeout(() => { [beam,spark].forEach(n=>{ try{ n.parentNode&&n.parentNode.removeChild(n);}catch{} }); }, 750);
     }
     _addInterval(el, fireBeam, intense ? 320 : 620);
@@ -1182,7 +1182,7 @@ const WLEffects = (() => {
         text-shadow:0 -6px 6px ${hue},0 0 8px ${hue};
         animation:wlfxQFall ${dur.toFixed(2)}s linear forwards;z-index:${fg?12:8};`);
       p.textContent = rndInt(0,2) ? '⚛' : '•';
-      _addNode(el, p);
+      _addNodeWrap(el, p);
       setTimeout(() => { try { p.parentNode && p.parentNode.removeChild(p); } catch {} }, dur*1000+200);
     }
 
@@ -1195,14 +1195,14 @@ const WLEffects = (() => {
         text-shadow:0 -10px 10px ${hue},0 0 14px ${hue};
         animation:wlfxQFall 2.2s ease-in forwards;`);
       p.textContent = '⚛';
-      _addNode(el, p);
+      _addNodeWrap(el, p);
       setTimeout(() => {
         if (!_active.has(el)) return;
         const splash = _makeParticle(`
           left:${x}%;bottom:2%;width:18px;height:8px;z-index:13;
           background:radial-gradient(circle,${hue},rgba(0,0,0,0) 70%);
           animation:wlfxQSplash .5s ease-out forwards;`);
-        _addNode(el, splash);
+        _addNodeFront(el, splash);
         setTimeout(() => { try { splash.parentNode && splash.parentNode.removeChild(splash); } catch {} }, 520);
       }, 2000);
       setTimeout(() => { try { p.parentNode && p.parentNode.removeChild(p); } catch {} }, 2300);
@@ -1215,7 +1215,7 @@ const WLEffects = (() => {
         inset:0;z-index:7;border-radius:inherit;
         background:radial-gradient(circle at ${rndInt(20,80)}% ${rndInt(20,80)}%,rgba(185,166,255,.5),rgba(0,0,0,0) 55%);
         animation:wlfxQFlash .5s ease forwards;`);
-      _addNode(el, f);
+      _addNodeBehind(el, f);
       setTimeout(() => { try { f.parentNode && f.parentNode.removeChild(f); } catch {} }, 520);
     }
 
@@ -1239,13 +1239,13 @@ const WLEffects = (() => {
     el.style.animation = `wlfxWarp ${intense?'2s':'3.4s'} ease-in-out infinite`;
 
     // Lensing halo
-    _addNode(el, _makeParticle(`
+    _addNodeBehind(el, _makeParticle(`
       left:50%;top:50%;width:130px;height:130px;border-radius:50%;z-index:6;
       background:radial-gradient(circle,rgba(155,123,255,.35),rgba(0,0,0,0) 65%);
       animation:wlfxHalo ${intense?'1.8s':'3s'} ease-in-out infinite;`));
 
     // Rotating accretion disk
-    _addNode(el, _makeParticle(`
+    _addNodeBehind(el, _makeParticle(`
       left:50%;top:50%;width:120px;height:120px;border-radius:50%;z-index:7;
       background:conic-gradient(from 0deg,#ff8a3c,#9b7bff,#3cdcff,#9b7bff,#ff8a3c);
       mask:radial-gradient(circle,transparent 30%,#000 34%,#000 48%,transparent 52%);
@@ -1253,20 +1253,20 @@ const WLEffects = (() => {
       animation:wlfxDiskSpin ${intense?'2.2s':'4s'} linear infinite;`));
 
     // Central dark sphere
-    _addNode(el, _makeParticle(`
+    _addNodeBehind(el, _makeParticle(`
       left:50%;top:50%;width:42px;height:42px;border-radius:50%;z-index:9;
       transform:translate(-50%,-50%);
       background:radial-gradient(circle at 40% 38%,#2a2440,#000 70%);
       box-shadow:0 0 16px 4px rgba(0,0,0,.7),inset 0 0 10px rgba(155,123,255,.5);`));
 
-    // Polar jets
+    // Polar jets (erupt from poles outward, in front of the character)
     function jet(topPct) {
       if (!_active.has(el)) return;
       const j = _makeParticle(`
         left:50%;top:${topPct}%;width:6px;height:34px;z-index:8;
         background:linear-gradient(${topPct<50?'0deg':'180deg'},rgba(60,220,255,.9),rgba(60,220,255,0));
         animation:wlfxJet .9s ease-out forwards;`);
-      _addNode(el, j);
+      _addNodeFront(el, j);
       setTimeout(() => { try { j.parentNode && j.parentNode.removeChild(j); } catch {} }, 950);
     }
     _addInterval(el, () => { jet(30); jet(70); }, intense ? 1400 : 2400);
@@ -1279,7 +1279,7 @@ const WLEffects = (() => {
       const node = _makeParticle(`
         left:50%;top:50%;width:${rndInt(2,4)}px;height:${rndInt(2,4)}px;border-radius:50%;z-index:10;
         background:${['#fff','#b9a6ff','#3cdcff'][rndInt(0,3)]};box-shadow:0 0 6px currentColor;`);
-      _addNode(el, node);
+      _addNodeBehind(el, node);
       parts.push({ node, r:r0, a:a0, v:rnd(0.35,0.7) });
     }
     for (let i = 0; i < (intense ? 26 : 16); i++) seed();
