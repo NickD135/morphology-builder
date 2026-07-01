@@ -159,6 +159,20 @@ const WLScientist = (() => {
     const wingsAcc   = scientist.wings       || null;
     const customSlots = scientist.customSlots || {};
 
+    // Hair — style id + colour (both optional; hair=null keeps today's bare head)
+    const hair       = scientist.hair        || null;
+    const hairColor  = scientist.hairColor   || '#3B2A1E';
+    const hairHi     = _mix(hairColor, '#FFFFFF', 0.30);
+    const hairLo     = _mix(hairColor, '#000000', 0.30);
+    const hairActive = !!(hair && hair !== 'none');
+    const hairGradDef = hairActive
+      ? `<linearGradient id="hairG${uid}" x1="0" y1="0" x2="0" y2="1">` +
+        `<stop offset="0%" stop-color="${hairHi}" stop-opacity="1"/>` +
+        `<stop offset="55%" stop-color="${hairColor}" stop-opacity="1"/>` +
+        `<stop offset="100%" stop-color="${hairLo}" stop-opacity="1"/>` +
+        `</linearGradient>`
+      : '';
+
     // Coat fill — plain, rainbow gradient, or patterned
     // 'rainbow' is not a valid SVG colour so we build a linearGradient instead
     const isRainbow = coat === 'rainbow';
@@ -222,7 +236,7 @@ const WLScientist = (() => {
       `<linearGradient id="hs${uid}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#462D26" stop-opacity="0"/><stop offset="62%" stop-color="#462D26" stop-opacity="0"/><stop offset="100%" stop-color="#462D26" stop-opacity="0.22"/></linearGradient>` +
       `<radialGradient id="hh${uid}" cx="32%" cy="26%" r="55%"><stop offset="0%" stop-color="#ffffff" stop-opacity="0.42"/><stop offset="60%" stop-color="#ffffff" stop-opacity="0"/></radialGradient>` +
       `<linearGradient id="cs${uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#322A5C" stop-opacity="0"/><stop offset="55%" stop-color="#322A5C" stop-opacity="0"/><stop offset="100%" stop-color="#322A5C" stop-opacity="0.13"/></linearGradient>`;
-    const allDefs = defsContent + galaxyDef + shadeDefs;
+    const allDefs = defsContent + galaxyDef + shadeDefs + hairGradDef;
     const coatFillDef = allDefs ? `<defs>${allDefs}</defs>` : '';
     const coatFillRef = ['stripes','molecules','stars','dots','chevrons','hearts','lightning','dna','plaid'].includes(pattern) ? `url(#cp${uid})` : coatBase;
 
@@ -238,6 +252,32 @@ const WLScientist = (() => {
       shadow_wings: `<g opacity="0.7"><defs><linearGradient id="shadowWG${uid}" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#312e81"/><stop offset="60%" stop-color="#1e1b4b"/><stop offset="100%" stop-color="#0c0826"/></linearGradient></defs><path d="M14,72 Q-8,48 -2,28 Q2,18 12,26 Q18,34 14,54 Z" fill="url(#shadowWG${uid})" stroke="#312e81" stroke-width="1"><animate attributeName="opacity" values="0.7;0.4;0.7" dur="2s" repeatCount="indefinite"/></path><path d="M66,72 Q88,48 82,28 Q78,18 68,26 Q62,34 66,54 Z" fill="url(#shadowWG${uid})" stroke="#312e81" stroke-width="1"><animate attributeName="opacity" values="0.7;0.4;0.7" dur="2s" repeatCount="indefinite"/></path><path d="M14,66 Q0,50 6,38" fill="none" stroke="#4338ca" stroke-width="1" opacity="0.4"><animate attributeName="stroke-opacity" values="0.4;0.1;0.4" dur="1.5s" repeatCount="indefinite"/></path><path d="M66,66 Q80,50 74,38" fill="none" stroke="#4338ca" stroke-width="1" opacity="0.4"><animate attributeName="stroke-opacity" values="0.4;0.1;0.4" dur="1.5s" repeatCount="indefinite"/></path><ellipse cx="0" cy="30" rx="4" ry="2" fill="rgba(255,255,255,0.1)" transform="rotate(25 0 30)"/><ellipse cx="80" cy="30" rx="4" ry="2" fill="rgba(255,255,255,0.1)" transform="rotate(-25 80 30)"/></g>`,
     };
     const wingsRendered = wingsAcc && wingsSVG[wingsAcc] ? wingsSVG[wingsAcc] : '';
+
+    // Hair — front layer (over shaded scalp, under face) + back layer (behind head, over coat)
+    // Reusable snug "cap" silhouette shared by several styles — hairline stays well above cy32
+    // at the eye x-centres (34/46) so the face always reads clearly.
+    const HAIR_CAP = `<path d="M15,38 Q10,10 40,8 Q70,10 65,38 Q62,22 55,24 Q47,19 40,20 Q33,19 25,24 Q18,22 15,38 Z" fill="url(#hairG${uid})"/>`;
+    const hairSVG = {
+      none: '',
+      short: `${HAIR_CAP}`,
+      tousled: `${HAIR_CAP}<circle cx="30" cy="14" r="4" fill="url(#hairG${uid})"/><circle cx="40" cy="9" r="4.5" fill="url(#hairG${uid})"/><circle cx="50" cy="14" r="4" fill="url(#hairG${uid})"/>`,
+      side_part: `${HAIR_CAP}<path d="M46,11 Q53,8 57,14 Q51,13 46,15 Z" fill="url(#hairG${uid})"/><path d="M29,13 L35,20" stroke="${hairLo}" stroke-width="1.1" fill="none" opacity="0.55"/>`,
+      bob: `${HAIR_CAP}<path d="M17,22 Q12,22 12,36 Q12,48 17,52 Q20,48 19,36 Q19,26 17,22 Z" fill="url(#hairG${uid})"/><path d="M63,22 Q68,22 68,36 Q68,48 63,52 Q60,48 61,36 Q61,26 63,22 Z" fill="url(#hairG${uid})"/>`,
+      curly: `<circle cx="20" cy="30" r="5" fill="url(#hairG${uid})"/><circle cx="18" cy="20" r="5" fill="url(#hairG${uid})"/><circle cx="25" cy="13" r="5.5" fill="url(#hairG${uid})"/><circle cx="34" cy="9" r="5.5" fill="url(#hairG${uid})"/><circle cx="46" cy="9" r="5.5" fill="url(#hairG${uid})"/><circle cx="55" cy="13" r="5.5" fill="url(#hairG${uid})"/><circle cx="62" cy="20" r="5" fill="url(#hairG${uid})"/><circle cx="60" cy="30" r="5" fill="url(#hairG${uid})"/>`,
+      afro: `<path d="M8,42 Q2,8 40,4 Q78,8 72,42 Q65,20 55,24 Q47,18 40,19 Q33,18 25,24 Q15,20 8,42 Z" fill="url(#hairG${uid})"/>`,
+      spiky: `${HAIR_CAP}<polygon points="24,16 26,4 29,17" fill="url(#hairG${uid})"/><polygon points="33,13 36,2 38,14" fill="url(#hairG${uid})"/><polygon points="42,13 45,2 47,14" fill="url(#hairG${uid})"/><polygon points="51,16 54,4 56,17" fill="url(#hairG${uid})"/>`,
+      mohawk: `<polygon points="34,18 37,2 40,18" fill="url(#hairG${uid})"/><polygon points="38,17 41,0 43,17" fill="url(#hairG${uid})"/><polygon points="41,18 44,2 47,18" fill="url(#hairG${uid})"/><rect x="16" y="30" width="3" height="8" rx="1.5" fill="url(#hairG${uid})"/><rect x="61" y="30" width="3" height="8" rx="1.5" fill="url(#hairG${uid})"/>`,
+      ponytail: `${HAIR_CAP}`,
+      bun: `${HAIR_CAP}`,
+      long: `${HAIR_CAP}`,
+    };
+    const hairBackSVG = {
+      ponytail: `<path d="M58,22 Q70,26 68,44 Q66,60 60,70 Q64,55 62,40 Q60,28 55,20 Z" fill="url(#hairG${uid})"/><ellipse cx="58" cy="23" rx="4" ry="3" fill="url(#hairG${uid})"/>`,
+      bun: `<circle cx="46" cy="10" r="6" fill="url(#hairG${uid})"/><circle cx="46" cy="10" r="6" fill="none" stroke="${hairLo}" stroke-width="0.8" opacity="0.5"/>`,
+      long: `<path d="M17,20 Q10,40 12,60 Q13,72 18,78 Q14,60 16,40 Q17,28 20,20 Z" fill="url(#hairG${uid})"/><path d="M63,20 Q70,40 68,60 Q67,72 62,78 Q66,60 64,40 Q63,28 60,20 Z" fill="url(#hairG${uid})"/>`,
+    };
+    const hairFront = hair && hairSVG[hair] ? hairSVG[hair] : '';
+    const hairBack  = hair && hairBackSVG[hair] ? hairBackSVG[hair] : '';
 
     // Emotion layers
     const eyes = {
@@ -393,6 +433,8 @@ const WLScientist = (() => {
   ${_buildBadgePins(scientist)}
   <!-- Neck -->
   <rect x="33" y="54" width="14" height="10" rx="3" fill="${FLAT}"/>
+  <!-- Hair (behind-head layer — over coat/neck, behind ears+head) -->
+  ${hairBack}
   <!-- Ears (flat, behind head) -->
   <ellipse cx="18" cy="40" rx="4.5" ry="5.5" fill="${FLAT}"/>
   <ellipse cx="62" cy="40" rx="4.5" ry="5.5" fill="${FLAT}"/>
@@ -400,6 +442,8 @@ const WLScientist = (() => {
   <ellipse cx="40" cy="38" rx="22" ry="22" fill="url(#sk${uid})"/>
   <ellipse cx="40" cy="38" rx="22" ry="22" fill="url(#hs${uid})"/>
   <ellipse cx="40" cy="38" rx="22" ry="22" fill="url(#hh${uid})"/>
+  <!-- Hair (front layer — over shaded scalp, under face) -->
+  ${hairFront}
   <!-- Face -->
   ${(brows[reaction]||brows.neutral)}
   ${(eyes[reaction]||eyes.neutral)}
