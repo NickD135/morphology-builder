@@ -125,6 +125,21 @@ const WLScientist = (() => {
     return svgParts.join('');
   }
 
+  // ── Skin-tone colour mixer ───────────────────────────────────
+  function _mix(hex, hex2, t) {
+    const parse = h => {
+      h = (h || '').replace('#', '');
+      if (h.length === 3) h = h.split('').map(c => c + c).join('');
+      if (h.length !== 6 || /[^0-9a-f]/i.test(h)) return null;
+      const n = parseInt(h, 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    };
+    const a = parse(hex) || [253, 188, 180];   // fallback = default skin
+    const b = parse(hex2) || [0, 0, 0];
+    const m = i => Math.round(a[i] + (b[i] - a[i]) * t);
+    return '#' + [m(0), m(1), m(2)].map(v => v.toString(16).padStart(2, '0')).join('');
+  }
+
   // ── Per-instance unique id counter ──────────────────────────
   let _sciSeq = 0;
 
@@ -134,6 +149,9 @@ const WLScientist = (() => {
     reaction  = reaction  || 'neutral';
     const uid = '_s' + (++_sciSeq);
     const skin       = scientist.skinTone    || '#FDBCB4';
+    const HI   = _mix(skin, '#FFFFFF', 0.32);
+    const LO   = _mix(skin, '#2E1D14', 0.24);
+    const FLAT = _mix(skin, '#2E1D14', 0.10);
     const coat       = scientist.coatColor   || '#ffffff';
     const pattern    = scientist.coatPattern || 'plain';
     const headAcc    = scientist.head        || null;
@@ -199,7 +217,11 @@ const WLScientist = (() => {
     // Galaxy halo gradient + any extra defs
     const galaxyDef = headAcc === 'galaxy_halo'
       ? `<linearGradient id="galaxyGrad${uid}" x1="0%" y1="0%" x2="100%"><stop offset="0%" stop-color="#a78bfa"/><stop offset="33%" stop-color="#f472b6"/><stop offset="66%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#60a5fa"/></linearGradient>` : '';
-    const allDefs = defsContent + galaxyDef;
+    const shadeDefs =
+      `<radialGradient id="sk${uid}" cx="38%" cy="30%" r="78%"><stop offset="0%" stop-color="${HI}"/><stop offset="58%" stop-color="${skin}"/><stop offset="100%" stop-color="${LO}"/></radialGradient>` +
+      `<linearGradient id="hs${uid}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#462D26" stop-opacity="0"/><stop offset="62%" stop-color="#462D26" stop-opacity="0"/><stop offset="100%" stop-color="#462D26" stop-opacity="0.22"/></linearGradient>` +
+      `<radialGradient id="hh${uid}" cx="32%" cy="26%" r="55%"><stop offset="0%" stop-color="#ffffff" stop-opacity="0.42"/><stop offset="60%" stop-color="#ffffff" stop-opacity="0"/></radialGradient>`;
+    const allDefs = defsContent + galaxyDef + shadeDefs;
     const coatFillDef = allDefs ? `<defs>${allDefs}</defs>` : '';
     const coatFillRef = ['stripes','molecules','stars','dots','chevrons','hearts','lightning','dna','plaid'].includes(pattern) ? `url(#cp${uid})` : coatBase;
 
@@ -315,12 +337,14 @@ const WLScientist = (() => {
   <!-- Badge pins -->
   ${_buildBadgePins(scientist)}
   <!-- Neck -->
-  <rect x="33" y="54" width="14" height="10" rx="3" fill="${skin}"/>
+  <rect x="33" y="54" width="14" height="10" rx="3" fill="${FLAT}"/>
+  <!-- Ears (flat, behind head) -->
+  <ellipse cx="18" cy="40" rx="4.5" ry="5.5" fill="${FLAT}"/>
+  <ellipse cx="62" cy="40" rx="4.5" ry="5.5" fill="${FLAT}"/>
   <!-- Head -->
-  <ellipse cx="40" cy="38" rx="22" ry="22" fill="${skin}"/>
-  <!-- Ears -->
-  <ellipse cx="18" cy="40" rx="4.5" ry="5.5" fill="${skin}"/>
-  <ellipse cx="62" cy="40" rx="4.5" ry="5.5" fill="${skin}"/>
+  <ellipse cx="40" cy="38" rx="22" ry="22" fill="url(#sk${uid})"/>
+  <ellipse cx="40" cy="38" rx="22" ry="22" fill="url(#hs${uid})"/>
+  <ellipse cx="40" cy="38" rx="22" ry="22" fill="url(#hh${uid})"/>
   <!-- Face -->
   ${(brows[reaction]||brows.neutral)}
   ${(eyes[reaction]||eyes.neutral)}

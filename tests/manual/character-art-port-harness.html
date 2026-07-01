@@ -10,7 +10,7 @@ pre{background:#0f0e1c;padding:10px;border-radius:8px;white-space:pre-wrap}</sty
 <h2>Character Art Port — Task 1 (unique ids)</h2>
 <div id="stage"></div>
 <pre id="results">running…</pre>
-<script src="../../wordlab-scientist.js"></script>
+<script src="../../wordlab-scientist.js?v=t2"></script>
 <script>
 (function(){
   const R = {};
@@ -37,5 +37,44 @@ pre{background:#0f0e1c;padding:10px;border-radius:8px;white-space:pre-wrap}</sty
   R.allPass = R.rainbowRenders&&R.holoRenders&&R.patternRenders&&R.uidDiffers&&R.aRefsResolve&&R.bRefsResolve;
   window.__T1__ = R;
   document.getElementById('results').textContent = JSON.stringify(R,null,2);
+})();
+</script>
+<h2>Task 2 (head shading + flat ears/neck)</h2>
+<div id="stage2"></div>
+<pre id="results2">running…</pre>
+<script>
+(function(){
+  const R={};
+  function svgOf(sci,rx){const d=document.createElement('div');d.innerHTML=WLScientist.buildSVG(sci,rx||'neutral');return d.firstElementChild;}
+  function hex(h){h=h.replace('#','');const n=parseInt(h,16);return [(n>>16)&255,(n>>8)&255,n&255];}
+  // HI lighter, LO darker than base — for light, medium, dark tones
+  const tones=['#FDBCB4','#C68642','#5C3A29'];
+  R.tonesOK = tones.every(t=>{
+    const svg=svgOf({skinTone:t});
+    const stops=[...svg.querySelectorAll(`radialGradient[id^=sk] stop`)].map(s=>s.getAttribute('stop-color'));
+    if(stops.length<3) return false;
+    const [hi,base,lo]=stops.map(hex), lum=c=>c[0]+c[1]+c[2];
+    return lum(hi)>lum(base) && lum(lo)<lum(base);
+  });
+  // Ears are flat (no gradient fill), head uses the radial
+  const s=svgOf({skinTone:'#FDBCB4'});
+  const ears=[...s.querySelectorAll('ellipse')].filter(e=>e.getAttribute('cx')==='18'||e.getAttribute('cx')==='62');
+  R.earsFlat = ears.length===2 && ears.every(e=>/^#/.test(e.getAttribute('fill')));
+  R.headRadial = [...s.querySelectorAll('ellipse')].some(e=>e.getAttribute('cx')==='40'&&e.getAttribute('cy')==='38'&&/^url\(#sk/.test(e.getAttribute('fill')||''));
+  // Reactions still render a mouth path (face intact over shading)
+  R.reactionsOK = ['neutral','happy','excited','wrong'].every(rx=>svgOf({},rx).querySelector('path[stroke="#b83232"]'));
+  R.allPass = R.tonesOK&&R.earsFlat&&R.headRadial&&R.reactionsOK;
+  window.__T2__=R;
+  // Render light + dark tone for visual inspection
+  const stage2 = document.getElementById('stage2');
+  [['#FDBCB4','Light tone'],['#5C3A29','Dark tone']].forEach(([tone,label])=>{
+    const c=document.createElement('div'); c.className='cell';
+    c.innerHTML = WLScientist.buildSVG({skinTone:tone},'happy');
+    const lbl=document.createElement('div'); lbl.textContent=label; lbl.style.fontSize='12px'; lbl.style.marginTop='4px';
+    c.appendChild(lbl);
+    stage2.appendChild(c);
+  });
+  stage2.className='row';
+  const pre=document.createElement('pre');pre.id='results2';pre.textContent='T2 '+JSON.stringify(R,null,2);document.getElementById('results2').replaceWith(pre);
 })();
 </script></body></html>
