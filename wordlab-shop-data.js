@@ -68,6 +68,39 @@
       {id:'#7FBF7F', name:'Alien Green',   cost:0, free:true},
       {id:'#B39DDB', name:'Cosmic Violet', cost:0, free:true},
     ],
+    // Hairstyles — free cosmetic choices (12, 'none' first). Rendered by
+    // wordlab-scientist.js's buildSVG when scientist.hair is set.
+    hairStyles: [
+      {id:'none',      name:'None',       cost:0, free:true, icon:'❌'},
+      {id:'short',     name:'Short',      cost:0, free:true, icon:'💇'},
+      {id:'tousled',   name:'Tousled',    cost:0, free:true, icon:'💇'},
+      {id:'side_part', name:'Side Part',  cost:0, free:true, icon:'💇'},
+      {id:'bob',       name:'Bob',        cost:0, free:true, icon:'💇‍♀️'},
+      {id:'curly',     name:'Curly',      cost:0, free:true, icon:'🦱'},
+      {id:'afro',      name:'Afro',       cost:0, free:true, icon:'🧑‍🦱'},
+      {id:'spiky',     name:'Spiky',      cost:0, free:true, icon:'⚡'},
+      {id:'mohawk',    name:'Mohawk',     cost:0, free:true, icon:'🎸'},
+      {id:'ponytail',  name:'Ponytail',   cost:0, free:true, icon:'💁'},
+      {id:'bun',       name:'Bun',        cost:0, free:true, icon:'🍙'},
+      {id:'long',      name:'Long',       cost:0, free:true, icon:'💇‍♀️'},
+    ],
+    // Hair colour swatches — always FREE (identity, like skin tones). id IS the
+    // hex, matching the skinTones pattern.
+    hairColors: [
+      {id:'#1A1A1A', name:'Black',       cost:0, free:true},
+      {id:'#3B2A1E', name:'Dark Brown',  cost:0, free:true},
+      {id:'#6F4E37', name:'Brown',       cost:0, free:true},
+      {id:'#8D5A3C', name:'Chestnut',    cost:0, free:true},
+      {id:'#8C3B2B', name:'Auburn',      cost:0, free:true},
+      {id:'#C1502E', name:'Ginger',      cost:0, free:true},
+      {id:'#D9B36A', name:'Blonde',      cost:0, free:true},
+      {id:'#E8DCC0', name:'Platinum',    cost:0, free:true},
+      {id:'#9A9A9A', name:'Grey',        cost:0, free:true},
+      {id:'#3B82F6', name:'Blue',        cost:0, free:true},
+      {id:'#F472B6', name:'Pink',        cost:0, free:true},
+      {id:'#A855F7', name:'Violet',      cost:0, free:true},
+      {id:'#5FC9A6', name:'Mint',        cost:0, free:true},
+    ],
     headAccessories: [
       {id:'none',        name:'None',           cost:0,  free:true,  icon:'❌'},
       {id:'goggles_head',name:'Goggles',        cost:80,             icon:'🥽'},
@@ -173,6 +206,8 @@
   window.WLShopData = {
     colours:  SHOP.coatColors,
     skinTones: SHOP.skinTones,
+    hairStyles: SHOP.hairStyles,
+    hairColors: SHOP.hairColors,
     patterns: SHOP.coatPatterns,
     heads:    SHOP.headAccessories,
     faces:    SHOP.faceAccessories,
