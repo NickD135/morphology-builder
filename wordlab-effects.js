@@ -91,6 +91,13 @@ const WLEffects = (() => {
     _state(el).nodes.push(node);
     return node;
   }
+  // Alternates particles between behind and front so orbiting effects wrap the character.
+  // Deterministic: counter per el resets naturally when stop() deletes state.
+  function _addNodeWrap(el, node) {
+    const st = _state(el);
+    st._wrapN = (st._wrapN || 0) + 1;
+    return (st._wrapN % 2 === 0 ? _addNodeBehind : _addNodeFront)(el, node);
+  }
 
   function _addInterval(el, fn, ms) {
     const id = setInterval(fn, ms);
@@ -381,7 +388,7 @@ const WLEffects = (() => {
       svg.innerHTML =
         `<polyline points="14,0 4,${size*0.52} 12,${size*0.52} 2,${size*1.55}" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>` +
         `<polyline points="14,0 4,${size*0.52} 12,${size*0.52} 2,${size*1.55}" fill="none" stroke="#93c5fd" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>`;
-      _addNode(el, svg);
+      _addNodeWrap(el, svg);
       setTimeout(() => { try { svg.parentNode && svg.parentNode.removeChild(svg); } catch {} }, 520);
     }
 
@@ -399,14 +406,18 @@ const WLEffects = (() => {
           background:#e0f2fe;box-shadow:0 0 5px 1px #93c5fd;
           animation:wlfxElecSpark ${rnd(0.2,0.45).toFixed(2)}s ease forwards;z-index:12;
         `);
-        _addNode(el, sp);
+        _addNodeWrap(el, sp);
         setTimeout(() => { try { sp.parentNode && sp.parentNode.removeChild(sp); } catch {} }, 500);
       }
 
-      // Flash glow
-      const prev = el.style.boxShadow;
-      el.style.boxShadow = '0 0 32px 8px rgba(147,197,253,0.85), 0 0 64px rgba(147,197,253,0.4)';
-      setTimeout(() => { if (_active.has(el)) el.style.boxShadow = prev || ''; }, 480);
+      // Flash glow — behind the character so it reads as an aura, not a box border
+      const flash = _makeParticle(`
+        left:50%;top:50%;width:180px;height:220px;transform:translate(-50%,-50%);
+        border-radius:50%;filter:blur(6px);
+        background:radial-gradient(circle,rgba(147,197,253,0.7),rgba(147,197,253,0) 65%);
+        transition:opacity .48s ease;`);
+      _addNodeBehind(el, flash);
+      setTimeout(() => { try { flash.parentNode && flash.parentNode.removeChild(flash); } catch {} }, 500);
     }
 
     flashLightning();
@@ -441,13 +452,10 @@ const WLEffects = (() => {
         50%      { opacity:1; }
       }
     `);
-    var container = _makeParticle(`
-      left:50%; top:0;
-      width:160px; height:100%;
-      transform:translateX(-50%);
-      z-index:8;
-      overflow:hidden;
-    `);
+    // Split rays across behind/front so they wrap around the character
+    var containerCSS = 'left:50%;top:0;width:160px;height:100%;transform:translateX(-50%);overflow:hidden;';
+    var containerBehind = _makeParticle(containerCSS);
+    var containerFront  = _makeParticle(containerCSS);
     for (var i = 0; i < rayCount; i++) {
       var ray = document.createElement('div');
       var xPos = 10 + (i / (rayCount - 1)) * 80;
@@ -461,9 +469,10 @@ const WLEffects = (() => {
         'border-radius:2px;' +
         'animation:wlfxRayFall ' + dur + 's ease-in-out ' + delay + 's infinite, wlfxRayShimmer ' + (intense ? '1.5' : '2.5') + 's ease-in-out ' + delay + 's infinite;' +
         'filter:blur(1px);';
-      container.appendChild(ray);
+      (i % 2 === 0 ? containerBehind : containerFront).appendChild(ray);
     }
-    _addNode(el, container);
+    _addNodeBehind(el, containerBehind);
+    _addNodeFront(el, containerFront);
   }
 
   // ── EPIC EFFECTS ──────────────────────────────────────────────
@@ -529,7 +538,7 @@ const WLEffects = (() => {
       animation:wlfxNebula 3s ease infinite;
       z-index:8;
     `);
-    _addNode(el, nebula);
+    _addNodeBehind(el, nebula);
 
     // More stars, brighter
     for (let i = 0; i < 28; i++) {
@@ -542,7 +551,7 @@ const WLEffects = (() => {
         animation:wlfxStarTwinkle ${rnd(1,3).toFixed(1)}s ease ${rnd(0,2.5).toFixed(1)}s infinite;
         z-index:8;
       `);
-      _addNode(el, star);
+      _addNodeFront(el, star);
     }
 
     // Planets use PIXEL radii — % on a zero-size element resolves to 0px
@@ -567,7 +576,7 @@ const WLEffects = (() => {
         transform:translate(-50%,-50%);
       `);
       orbit.appendChild(dot);
-      _addNode(el, orbit);
+      _addNodeWrap(el, orbit);
     });
   }
 
@@ -646,7 +655,7 @@ const WLEffects = (() => {
         'opacity:0;z-index:10;' +
         'animation:wlfxPixelPop ' + rnd(0.6,1.2).toFixed(2) + 's ease forwards;'
       );
-      _addNode(el, p);
+      _addNodeWrap(el, p);
       setTimeout(function() { try { p.parentNode && p.parentNode.removeChild(p); } catch(e) {} }, 1300);
     }
 
@@ -666,9 +675,9 @@ const WLEffects = (() => {
   function fxRadioactive(el, intense) {
     _ensureRelative(el);
     _injectStyle('wlfx-radioactive', `
-      @keyframes wlfxGreenPulse {
-        0%,100% { box-shadow:0 0 16px 4px rgba(74,222,128,0.6),0 0 32px rgba(74,222,128,0.25); }
-        50%     { box-shadow:0 0 28px 8px rgba(74,222,128,0.85),0 0 56px rgba(74,222,128,0.4); }
+      @keyframes wlfxGreenHalo {
+        0%,100% { opacity:0.6; }
+        50%     { opacity:1; }
       }
       @keyframes wlfxParticleFly {
         0%   { transform:translate(0,0); opacity:0.9; }
@@ -676,7 +685,14 @@ const WLEffects = (() => {
       }
       @keyframes wlfxRadSymbol { 0%{opacity:0;transform:translate(-50%,-50%) scale(0.5)} 20%{opacity:1;transform:translate(-50%,-50%) scale(1.2)} 80%{opacity:0.7} 100%{opacity:0;transform:translate(-50%,-50%) scale(1.5)} }
     `);
-    el.style.animation = `wlfxGreenPulse ${intense?'1s':'2s'} ease infinite`;
+    // Green pulsing halo — behind the character (replaces box-shadow keyframes on el)
+    const radHalo = _makeParticle(`
+      left:50%;top:50%;width:200px;height:240px;
+      transform:translate(-50%,-50%);border-radius:50%;filter:blur(12px);
+      background:radial-gradient(circle,rgba(74,222,128,0.7) 0%,rgba(74,222,128,0) 65%);
+      animation:wlfxGreenHalo ${intense?'1s':'2s'} ease infinite;
+    `);
+    _addNodeBehind(el, radHalo);
 
     function spawnParticle() {
       if (!_active.has(el)) return;
@@ -691,7 +707,7 @@ const WLEffects = (() => {
         animation:wlfxParticleFly ${rnd(1.2,2.2).toFixed(2)}s ease forwards;
         z-index:10;
       `);
-      _addNode(el, p);
+      _addNodeWrap(el, p);
       setTimeout(() => { try { p.parentNode && p.parentNode.removeChild(p); } catch {} }, 2300);
     }
 
@@ -706,7 +722,7 @@ const WLEffects = (() => {
         animation:wlfxRadSymbol 1.5s ease forwards;z-index:12;
       `);
       sym.textContent = '☢';
-      _addNode(el, sym);
+      _addNodeWrap(el, sym);
       setTimeout(() => { try { sym.parentNode && sym.parentNode.removeChild(sym); } catch {} }, 1600);
     }, intense ? 1500 : 3000);
   }

@@ -233,11 +233,60 @@
       );
     })();
 
+    // ── TASK 3: orbit effects wrap the character ─────────────────
+    // Uses preview() (intense=true) so interval-based spawners fire densely
+    // enough that both layers are populated within the 700 ms wait window.
+    await (async function testT3() {
+      const container = document.querySelector('.lab-charwrap');
+      const EFFECTS_T3 = ['galaxy', 'electric', 'rainbow', 'radioactive', 'pixel'];
+      // These two must never leave a boxShadow on el
+      const BOX_SHADOW_CHECKED = new Set(['electric', 'radioactive']);
+
+      for (const effectId of EFFECTS_T3) {
+        WLEffects.preview(effectId, container); // intense=true → dense spawning
+
+        // Wait for interval-based spawners (pixel: 120ms, electric: 550ms, radioactive: 200ms)
+        await new Promise(r => setTimeout(r, 700));
+
+        const behind = container.querySelector('.wlfx-behind');
+        const front  = container.querySelector('.wlfx-front');
+        const behindCount = behind ? behind.childElementCount : 0;
+        const frontCount  = front  ? front.childElementCount  : 0;
+
+        // Core wrap assertion: genuine content in BOTH layers
+        assert(`t3_${effectId}_behindPopulated`, behindCount >= 1, { behindCount });
+        assert(`t3_${effectId}_frontPopulated`,  frontCount  >= 1, { frontCount  });
+
+        // No inline box-shadow on bounding box for migrated effects
+        if (BOX_SHADOW_CHECKED.has(effectId)) {
+          assert(`t3_${effectId}_noBoxShadow`, container.style.boxShadow === '',
+                 { bs: container.style.boxShadow });
+        }
+
+        WLEffects.stop(container);
+        await new Promise(r => setTimeout(r, 120)); // let transient remove() callbacks settle
+
+        const behindAfter = container.querySelectorAll('.wlfx-behind').length;
+        const frontAfter  = container.querySelectorAll('.wlfx-front').length;
+        assert(`t3_${effectId}_stop_noBehind`,    behindAfter === 0,               { behindAfter });
+        assert(`t3_${effectId}_stop_noFront`,     frontAfter  === 0,               { frontAfter  });
+        assert(`t3_${effectId}_stop_noBoxShadow`, container.style.boxShadow === '',
+               { bs: container.style.boxShadow });
+      }
+    })();
+
     // ── Collect & display ─────────────────────────────────────────
     // Collect Task-2-specific results
     window.__RESULTS_T2__ = Object.fromEntries(
       Object.entries(results)
         .filter(([k]) => k.startsWith('t2_'))
+        .map(([k, v]) => [k, v.pass ? 'PASS' : ('FAIL' + (v.extra ? ' ' + JSON.stringify(v.extra) : ''))])
+    );
+
+    // Collect Task-3-specific results
+    window.__RESULTS_T3__ = Object.fromEntries(
+      Object.entries(results)
+        .filter(([k]) => k.startsWith('t3_'))
         .map(([k, v]) => [k, v.pass ? 'PASS' : ('FAIL' + (v.extra ? ' ' + JSON.stringify(v.extra) : ''))])
     );
 
