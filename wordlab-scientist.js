@@ -125,10 +125,14 @@ const WLScientist = (() => {
     return svgParts.join('');
   }
 
+  // ── Per-instance unique id counter ──────────────────────────
+  let _sciSeq = 0;
+
   // ── SVG builder ──────────────────────────────────────────────
   function buildSVG(scientist, reaction) {
     scientist = scientist || {};
     reaction  = reaction  || 'neutral';
+    const uid = '_s' + (++_sciSeq);
     const skin       = scientist.skinTone    || '#FDBCB4';
     const coat       = scientist.coatColor   || '#ffffff';
     const pattern    = scientist.coatPattern || 'plain';
@@ -141,11 +145,11 @@ const WLScientist = (() => {
     // 'rainbow' is not a valid SVG colour so we build a linearGradient instead
     const isRainbow = coat === 'rainbow';
     const isHolo    = coat === 'holographic';
-    const coatBase  = isRainbow ? 'url(#coatRainbow)' : isHolo ? 'url(#coatHolo)' : coat;
+    const coatBase  = isRainbow ? `url(#coatRainbow${uid})` : isHolo ? `url(#coatHolo${uid})` : coat;
 
     const defsContent = [
       isRainbow
-        ? `<linearGradient id="coatRainbow" x1="0%" y1="0%" x2="100%" y2="100%">` +
+        ? `<linearGradient id="coatRainbow${uid}" x1="0%" y1="0%" x2="100%" y2="100%">` +
           `<stop offset="0%"   stop-color="#f87171"/>` +
           `<stop offset="20%"  stop-color="#fb923c"/>` +
           `<stop offset="40%"  stop-color="#facc15"/>` +
@@ -155,7 +159,7 @@ const WLScientist = (() => {
           `</linearGradient>`
         : '',
       isHolo
-        ? `<linearGradient id="coatHolo" x1="0%" y1="0%" x2="100%" y2="100%">` +
+        ? `<linearGradient id="coatHolo${uid}" x1="0%" y1="0%" x2="100%" y2="100%">` +
           `<stop offset="0%"   stop-color="#c4b5fd"/>` +
           `<stop offset="25%"  stop-color="#93c5fd"/>` +
           `<stop offset="50%"  stop-color="#86efac"/>` +
@@ -164,40 +168,40 @@ const WLScientist = (() => {
           `</linearGradient>`
         : '',
       pattern === 'stripes'
-        ? `<pattern id="cp" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="${coatBase}"/><line x1="0" y1="0" x2="8" y2="8" stroke="rgba(0,0,0,0.12)" stroke-width="2"/></pattern>`
+        ? `<pattern id="cp${uid}" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="${coatBase}"/><line x1="0" y1="0" x2="8" y2="8" stroke="rgba(0,0,0,0.12)" stroke-width="2"/></pattern>`
         : '',
       pattern === 'molecules'
-        ? `<pattern id="cp" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="${coatBase}"/><circle cx="7" cy="7" r="2" fill="rgba(0,0,0,0.1)"/><circle cx="2" cy="2" r="1.2" fill="rgba(0,0,0,0.08)"/><circle cx="12" cy="12" r="1.2" fill="rgba(0,0,0,0.08)"/></pattern>`
+        ? `<pattern id="cp${uid}" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="${coatBase}"/><circle cx="7" cy="7" r="2" fill="rgba(0,0,0,0.1)"/><circle cx="2" cy="2" r="1.2" fill="rgba(0,0,0,0.08)"/><circle cx="12" cy="12" r="1.2" fill="rgba(0,0,0,0.08)"/></pattern>`
         : '',
       pattern === 'stars'
-        ? `<pattern id="cp" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="${coatBase}"/><text x="2" y="10" font-size="8" opacity="0.18">★</text></pattern>`
+        ? `<pattern id="cp${uid}" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="${coatBase}"/><text x="2" y="10" font-size="8" opacity="0.18">★</text></pattern>`
         : '',
       pattern === 'dots'
-        ? `<pattern id="cp" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="${coatBase}"/><circle cx="5" cy="5" r="2.5" fill="rgba(0,0,0,0.1)"/></pattern>`
+        ? `<pattern id="cp${uid}" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="${coatBase}"/><circle cx="5" cy="5" r="2.5" fill="rgba(0,0,0,0.1)"/></pattern>`
         : '',
       pattern === 'chevrons'
-        ? `<pattern id="cp" x="0" y="0" width="12" height="8" patternUnits="userSpaceOnUse"><rect width="12" height="8" fill="${coatBase}"/><path d="M0,4 L6,0 L12,4" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1.5"/></pattern>`
+        ? `<pattern id="cp${uid}" x="0" y="0" width="12" height="8" patternUnits="userSpaceOnUse"><rect width="12" height="8" fill="${coatBase}"/><path d="M0,4 L6,0 L12,4" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1.5"/></pattern>`
         : '',
       pattern === 'hearts'
-        ? `<pattern id="cp" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="${coatBase}"/><path d="M6,10 C2,7 0,4 3,2 C5,1 6,3 6,3 C6,3 7,1 9,2 C12,4 10,7 6,10Z" fill="rgba(0,0,0,0.08)"/></pattern>`
+        ? `<pattern id="cp${uid}" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="${coatBase}"/><path d="M6,10 C2,7 0,4 3,2 C5,1 6,3 6,3 C6,3 7,1 9,2 C12,4 10,7 6,10Z" fill="rgba(0,0,0,0.08)"/></pattern>`
         : '',
       pattern === 'lightning'
-        ? `<pattern id="cp" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="${coatBase}"/><path d="M8,1 L5,6 L8,6 L4,13" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="1.2"/></pattern>`
+        ? `<pattern id="cp${uid}" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="${coatBase}"/><path d="M8,1 L5,6 L8,6 L4,13" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="1.2"/></pattern>`
         : '',
       pattern === 'dna'
-        ? `<pattern id="cp" x="0" y="0" width="10" height="20" patternUnits="userSpaceOnUse"><rect width="10" height="20" fill="${coatBase}"/><path d="M2,0 Q5,5 8,10 Q5,15 2,20" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1"/><path d="M8,0 Q5,5 2,10 Q5,15 8,20" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1"/><line x1="3" y1="5" x2="7" y2="5" stroke="rgba(0,0,0,0.06)" stroke-width="0.8"/><line x1="3" y1="15" x2="7" y2="15" stroke="rgba(0,0,0,0.06)" stroke-width="0.8"/></pattern>`
+        ? `<pattern id="cp${uid}" x="0" y="0" width="10" height="20" patternUnits="userSpaceOnUse"><rect width="10" height="20" fill="${coatBase}"/><path d="M2,0 Q5,5 8,10 Q5,15 2,20" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1"/><path d="M8,0 Q5,5 2,10 Q5,15 8,20" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1"/><line x1="3" y1="5" x2="7" y2="5" stroke="rgba(0,0,0,0.06)" stroke-width="0.8"/><line x1="3" y1="15" x2="7" y2="15" stroke="rgba(0,0,0,0.06)" stroke-width="0.8"/></pattern>`
         : '',
       pattern === 'plaid'
-        ? `<pattern id="cp" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="${coatBase}"/><line x1="0" y1="4" x2="12" y2="4" stroke="rgba(0,0,0,0.08)" stroke-width="2"/><line x1="0" y1="10" x2="12" y2="10" stroke="rgba(0,0,0,0.06)" stroke-width="1"/><line x1="4" y1="0" x2="4" y2="12" stroke="rgba(0,0,0,0.08)" stroke-width="2"/><line x1="10" y1="0" x2="10" y2="12" stroke="rgba(0,0,0,0.06)" stroke-width="1"/></pattern>`
+        ? `<pattern id="cp${uid}" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="${coatBase}"/><line x1="0" y1="4" x2="12" y2="4" stroke="rgba(0,0,0,0.08)" stroke-width="2"/><line x1="0" y1="10" x2="12" y2="10" stroke="rgba(0,0,0,0.06)" stroke-width="1"/><line x1="4" y1="0" x2="4" y2="12" stroke="rgba(0,0,0,0.08)" stroke-width="2"/><line x1="10" y1="0" x2="10" y2="12" stroke="rgba(0,0,0,0.06)" stroke-width="1"/></pattern>`
         : '',
     ].filter(Boolean).join('');
 
     // Galaxy halo gradient + any extra defs
     const galaxyDef = headAcc === 'galaxy_halo'
-      ? `<linearGradient id="galaxyGrad" x1="0%" y1="0%" x2="100%"><stop offset="0%" stop-color="#a78bfa"/><stop offset="33%" stop-color="#f472b6"/><stop offset="66%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#60a5fa"/></linearGradient>` : '';
+      ? `<linearGradient id="galaxyGrad${uid}" x1="0%" y1="0%" x2="100%"><stop offset="0%" stop-color="#a78bfa"/><stop offset="33%" stop-color="#f472b6"/><stop offset="66%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#60a5fa"/></linearGradient>` : '';
     const allDefs = defsContent + galaxyDef;
     const coatFillDef = allDefs ? `<defs>${allDefs}</defs>` : '';
-    const coatFillRef = ['stripes','molecules','stars','dots','chevrons','hearts','lightning','dna','plaid'].includes(pattern) ? 'url(#cp)' : coatBase;
+    const coatFillRef = ['stripes','molecules','stars','dots','chevrons','hearts','lightning','dna','plaid'].includes(pattern) ? `url(#cp${uid})` : coatBase;
 
     // Wings (render behind body)
     const wingsSVG = {
@@ -265,7 +269,7 @@ const WLScientist = (() => {
       // ── ANIMATED LEGENDARY HEAD ITEMS ──
       flame_crown:  `<polygon points="40,4 28,18 32,13 36,18 40,8 44,18 48,13 52,18" fill="#f59e0b"><animate attributeName="d" values="M40,4 L28,18 L32,13 L36,18 L40,8 L44,18 L48,13 L52,18;M40,2 L28,18 L33,11 L37,18 L40,6 L43,18 L47,11 L52,18;M40,4 L28,18 L32,13 L36,18 L40,8 L44,18 L48,13 L52,18" dur="0.4s" repeatCount="indefinite" attributeType="XML"/></polygon><polygon points="40,7 31,18 35,14 40,18 45,14 49,18" fill="#ef4444" opacity="0.8"><animate attributeName="opacity" values="0.8;0.5;0.8" dur="0.3s" repeatCount="indefinite"/></polygon><polygon points="40,10 35,18 40,15 45,18" fill="#fef08a" opacity="0.9"><animate attributeName="opacity" values="0.9;0.6;0.9" dur="0.5s" repeatCount="indefinite"/></polygon>`,
       ice_crown:    `<polygon points="40,6 26,20 33,16 40,20 47,16 54,20" fill="#93c5fd" opacity="0.8"/><polygon points="40,6 26,20 33,16 40,20 47,16 54,20" fill="none" stroke="#bfdbfe" stroke-width="1.5"><animate attributeName="stroke-opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/></polygon><circle cx="30" cy="16" r="1.5" fill="#e0f2fe"><animate attributeName="r" values="1.5;2;1.5" dur="1.5s" repeatCount="indefinite"/></circle><circle cx="40" cy="8" r="2" fill="#dbeafe"><animate attributeName="r" values="2;2.8;2" dur="2s" repeatCount="indefinite"/></circle><circle cx="50" cy="16" r="1.5" fill="#e0f2fe"><animate attributeName="r" values="1.5;2;1.5" dur="1.8s" repeatCount="indefinite"/></circle><rect x="24" y="19" width="32" height="3" rx="1.5" fill="#60a5fa"/>`,
-      galaxy_halo:  `<ellipse cx="40" cy="14" rx="18" ry="5" fill="none" stroke="url(#galaxyGrad)" stroke-width="2.5"><animateTransform attributeName="transform" type="rotate" values="0 40 14;360 40 14" dur="8s" repeatCount="indefinite"/></ellipse><circle cx="26" cy="14" r="1.5" fill="#fbbf24"><animate attributeName="opacity" values="1;0.2;1" dur="1.2s" repeatCount="indefinite"/></circle><circle cx="54" cy="14" r="1" fill="#a78bfa"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" repeatCount="indefinite"/></circle><circle cx="40" cy="9" r="1.2" fill="#f472b6"><animate attributeName="opacity" values="1;0.4;1" dur="0.9s" repeatCount="indefinite"/></circle>`,
+      galaxy_halo:  `<ellipse cx="40" cy="14" rx="18" ry="5" fill="none" stroke="url(#galaxyGrad${uid})" stroke-width="2.5"><animateTransform attributeName="transform" type="rotate" values="0 40 14;360 40 14" dur="8s" repeatCount="indefinite"/></ellipse><circle cx="26" cy="14" r="1.5" fill="#fbbf24"><animate attributeName="opacity" values="1;0.2;1" dur="1.2s" repeatCount="indefinite"/></circle><circle cx="54" cy="14" r="1" fill="#a78bfa"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" repeatCount="indefinite"/></circle><circle cx="40" cy="9" r="1.2" fill="#f472b6"><animate attributeName="opacity" values="1;0.4;1" dur="0.9s" repeatCount="indefinite"/></circle>`,
     };
     // Face accessories
     const faceAccSVG = {

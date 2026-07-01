@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Character art port harness</title>
+<style>body{background:#1a1930;color:#e2e8f0;font-family:sans-serif;padding:16px}
+.row{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end;margin:10px 0}
+.cell{background:radial-gradient(120% 90% at 50% 30%,#2c2b45,#1a1930);border-radius:12px;padding:10px;text-align:center}
+.cell svg{width:150px;height:225px;display:block}
+.sm svg{width:44px;height:66px}
+pre{background:#0f0e1c;padding:10px;border-radius:8px;white-space:pre-wrap}</style>
+</head><body>
+<h2>Character Art Port — Task 1 (unique ids)</h2>
+<div id="stage"></div>
+<pre id="results">running…</pre>
+<script src="../../wordlab-scientist.js"></script>
+<script>
+(function(){
+  const R = {};
+  function svgOf(sci, rx){ const d=document.createElement('div'); d.innerHTML = WLScientist.buildSVG(sci, rx||'neutral'); return d.firstElementChild; }
+  // Render a couple for eyeballing
+  const stage = document.getElementById('stage');
+  [['#FDBCB4','rainbow'],['#5C3A29','holographic'],['#C68642','dots']].forEach(([tone,coat])=>{
+    const c=document.createElement('div'); c.className='cell';
+    c.innerHTML = WLScientist.buildSVG({skinTone:tone, coatColor:coat, coatPattern:(coat==='dots'?'dots':'plain')},'happy');
+    stage.appendChild(c);
+  });
+  // Isolation test: two instances, different pattern + tone, on the same page
+  const a = svgOf({skinTone:'#FDBCB4', coatColor:'#ff0000', coatPattern:'dots'});
+  const b = svgOf({skinTone:'#5C3A29', coatColor:'#00ff00', coatPattern:'stripes'});
+  function ids(svg){ return [...svg.querySelectorAll('[id]')].map(n=>n.id); }
+  function refs(svg){ return [...svg.querySelectorAll('*')].flatMap(n=>['fill','stroke'].map(a=>n.getAttribute(a)).filter(v=>v&&v.indexOf('url(#')===0).map(v=>v.slice(5,-1))); }
+  const aIds=ids(a), bIds=ids(b);
+  R.rainbowRenders = !!svgOf({coatColor:'rainbow'}).querySelector('linearGradient[id^=coatRainbow]');
+  R.holoRenders    = !!svgOf({coatColor:'holographic'}).querySelector('linearGradient[id^=coatHolo]');
+  R.patternRenders = !!svgOf({coatColor:'#f00',coatPattern:'dots'}).querySelector('pattern[id^=cp]');
+  R.uidDiffers     = aIds.length>0 && bIds.length>0 && aIds.every(id=>!bIds.includes(id)); // no shared ids across instances
+  R.aRefsResolve   = refs(a).every(r=>aIds.includes(r)); // every url(#..) points inside its own svg
+  R.bRefsResolve   = refs(b).every(r=>bIds.includes(r));
+  R.allPass = R.rainbowRenders&&R.holoRenders&&R.patternRenders&&R.uidDiffers&&R.aRefsResolve&&R.bRefsResolve;
+  window.__T1__ = R;
+  document.getElementById('results').textContent = JSON.stringify(R,null,2);
+})();
+</script></body></html>
