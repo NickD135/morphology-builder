@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Effect Depth — Synthetic Harness</title>
+  <style>
+    body { font-family: monospace; background: #111; color: #eee; padding: 20px; }
+    .pass { color: #4ade80; font-weight: bold; }
+    .fail { color: #f87171; font-weight: bold; }
+    pre { background: #1e1e1e; padding: 12px; border-radius: 6px; white-space: pre-wrap; }
+    .stub { margin: 20px 0; border: 1px solid #444; padding: 10px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h2>Effect Depth — Synthetic Harness</h2>
+  <p>No login, no Supabase — standalone DOM assertions.</p>
+
+  <!-- Shop stub: mirrors scientist.html .lab-charwrap -->
+  <div id="shopStub" class="stub">
+    <div class="lab-charwrap" style="position:relative;width:200px;height:260px">
+      <svg style="position:relative;z-index:6;width:100%;height:100%">
+        <rect width="100%" height="100%" fill="#334" rx="8"/>
+        <text x="50%" y="50%" fill="#aef" font-size="12" text-anchor="middle" dominant-baseline="middle">SVG Character</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Game stub: mirrors .scientist-stage on game pages -->
+  <div id="gameStub" class="stub">
+    <div class="scientist-stage" style="position:relative;width:200px;height:260px">
+      <!-- fake world panel z:0 (below scientist) -->
+      <div class="wlworld" style="position:absolute;inset:0;z-index:0;background:rgba(0,100,200,.1);"></div>
+      <!-- character wrap z:20 -->
+      <div id="sciCharWrap" style="position:relative;z-index:20;width:100%;height:100%">
+        <svg style="width:100%;height:100%">
+          <rect width="100%" height="100%" fill="#243" rx="8"/>
+          <text x="50%" y="50%" fill="#afa" font-size="12" text-anchor="middle" dominant-baseline="middle">Game Scientist</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div id="output"><em>Running assertions...</em></div>
+
+  <!-- Load the effects module (relative to repo root, served from root) -->
+  <script src="../../wordlab-effects.js"></script>
+  <script>
+  (function() {
+    const results = {};
+    const errors = [];
+
+    function assert(name, condition, extra) {
+      results[name] = { pass: !!condition, extra };
+      if (!condition) errors.push(name + (extra ? ' — ' + JSON.stringify(extra) : ''));
+    }
+
+    // ── Helper ────────────────────────────────────────────────────
+    function getZ(el) {
+      return parseInt(getComputedStyle(el).zIndex, 10);
+    }
+
+    // ── SHOP STUB TESTS ───────────────────────────────────────────
+    (function testShopStub() {
+      const container = document.querySelector('.lab-charwrap');
+      const svgEl = container.querySelector('svg');
+      const charZ = getZ(svgEl); // 6 from inline style
+
+      // A) start('aura') — layers must exist and be ordered
+      WLEffects.start('aura', container);
+      const behind = container.querySelector('.wlfx-behind');
+      const front  = container.querySelector('.wlfx-front');
+      assert('shop_hasBehind', !!behind);
+      assert('shop_hasFront', !!front);
+      const behindZ = behind ? getZ(behind) : NaN;
+      const frontZ  = front  ? getZ(front)  : NaN;
+      assert('shop_behindLtChar', behindZ < charZ, { behindZ, charZ });
+      assert('shop_charLtFront',  charZ < frontZ,  { charZ, frontZ });
+      assert('shop_ordered', behindZ < charZ && charZ < frontZ, { behindZ, charZ, frontZ });
+
+      // B) stop() — zero layers remain
+      WLEffects.stop(container);
+      const behindAfter = container.querySelectorAll('.wlfx-behind').length;
+      const frontAfter  = container.querySelectorAll('.wlfx-front').length;
+      assert('shop_stop_noBehind', behindAfter === 0, { behindAfter });
+      assert('shop_stop_noFront',  frontAfter  === 0, { frontAfter });
+
+      // C) Restore: svg z-index should be back to 6 (we never set it — it was already 6)
+      assert('shop_svgZRestored', getZ(svgEl) === 6, { z: getZ(svgEl) });
+
+      // D) Idempotency: start twice → exactly one pair
+      WLEffects.start('aura', container);
+      WLEffects.start('sparkle', container);  // second start triggers stop+rebuild
+      const bCount = container.querySelectorAll('.wlfx-behind').length;
+      const fCount = container.querySelectorAll('.wlfx-front').length;
+      assert('shop_idempotent_one_behind', bCount === 1, { bCount });
+      assert('shop_idempotent_one_front',  fCount === 1, { fCount });
+
+      // Clean up
+      WLEffects.stop(container);
+    })();
+
+    // ── GAME STUB TESTS ───────────────────────────────────────────
+    (function testGameStub() {
+      const container = document.querySelector('.scientist-stage');
+      const charWrap  = container.querySelector('#sciCharWrap');
+      const charZ     = getZ(charWrap); // 20 from inline style
+
+      assert('game_charZ_is20', charZ === 20, { charZ });
+
+      // A) start('aura') — layers with correct z values
+      WLEffects.start('aura', container);
+      const behind = container.querySelector('.wlfx-behind');
+      const front  = container.querySelector('.wlfx-front');
+      assert('game_hasBehind', !!behind);
+      assert('game_hasFront',  !!front);
+
+      const behindZ = behind ? getZ(behind) : NaN;
+      const frontZ  = front  ? getZ(front)  : NaN;
+
+      // Per spec: charZ=20, behindZ=19, frontZ=21
+      assert('game_behindZ_is19', behindZ === 19, { behindZ });
+      assert('game_frontZ_is21',  frontZ  === 21, { frontZ });
+
+      // behindZ must clear the world panel (z:0) — > 3
+      assert('game_behindAboveWorld', behindZ > 3, { behindZ });
+
+      // charZ unchanged at 20
+      assert('game_charZ_unchanged', getZ(charWrap) === 20, { z: getZ(charWrap) });
+
+      assert('game_ordered', behindZ < charZ && charZ < frontZ, { behindZ, charZ, frontZ });
+
+      // B) stop() — zero layers remain; charWrap z-index NOT changed (we didn't set it)
+      WLEffects.stop(container);
+      const behindAfter = container.querySelectorAll('.wlfx-behind').length;
+      const frontAfter  = container.querySelectorAll('.wlfx-front').length;
+      assert('game_stop_noBehind', behindAfter === 0, { behindAfter });
+      assert('game_stop_noFront',  frontAfter  === 0, { frontAfter });
+      assert('game_charZ_after_stop', getZ(charWrap) === 20, { z: getZ(charWrap) });
+
+      // C) Idempotency: start twice → exactly one pair
+      WLEffects.start('aura', container);
+      WLEffects.start('sparkle', container);
+      const bCount = container.querySelectorAll('.wlfx-behind').length;
+      const fCount = container.querySelectorAll('.wlfx-front').length;
+      assert('game_idempotent_one_behind', bCount === 1, { bCount });
+      assert('game_idempotent_one_front',  fCount === 1, { fCount });
+
+      // Clean up
+      WLEffects.stop(container);
+    })();
+
+    // ── Z-INDEX RESTORE TEST (no pre-set z-index) ─────────────────
+    // Create a fresh container with an SVG that has no z-index
+    // _ensureLayers should set z=5 and then restore to '' on stop
+    (function testZRestore() {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:relative;width:100px;height:100px;';
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.style.cssText = 'width:100%;height:100%;';  // no z-index
+      wrap.appendChild(svg);
+      document.body.appendChild(wrap);
+
+      const initialZ = svg.style.zIndex; // ''
+
+      WLEffects.start('aura', wrap);
+      // _ensureLayers should have set z=5 on svg
+      assert('restore_svgZ_set5', parseInt(getComputedStyle(svg).zIndex, 10) === 5,
+             { z: getComputedStyle(svg).zIndex });
+
+      WLEffects.stop(wrap);
+      // After stop, the inline z-index should be cleared back to ''
+      assert('restore_svgZ_cleared', svg.style.zIndex === '', { z: svg.style.zIndex });
+
+      document.body.removeChild(wrap);
+    })();
+
+    // ── Collect & display ─────────────────────────────────────────
+    window.__RESULTS__ = results;
+
+    const allPass = errors.length === 0;
+    const passCount = Object.values(results).filter(r => r.pass).length;
+    const totalCount = Object.keys(results).length;
+
+    const out = document.getElementById('output');
+    out.innerHTML = '';
+
+    const summary = document.createElement('h3');
+    summary.className = allPass ? 'pass' : 'fail';
+    summary.textContent = allPass
+      ? `ALL ${totalCount} ASSERTIONS PASS`
+      : `FAILED: ${errors.length} of ${totalCount} assertions failed`;
+    out.appendChild(summary);
+
+    if (!allPass) {
+      const failList = document.createElement('pre');
+      failList.style.color = '#f87171';
+      failList.textContent = 'Failures:\n' + errors.map(e => '  ✗ ' + e).join('\n');
+      out.appendChild(failList);
+    }
+
+    const detailPre = document.createElement('pre');
+    detailPre.textContent = JSON.stringify(
+      Object.fromEntries(Object.entries(results).map(([k,v]) => [k, v.pass ? 'PASS' : ('FAIL' + (v.extra ? ' ' + JSON.stringify(v.extra) : ''))])),
+      null, 2
+    );
+    out.appendChild(detailPre);
+  })();
+  </script>
+</body>
+</html>

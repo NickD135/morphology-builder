@@ -43,7 +43,51 @@ const WLEffects = (() => {
   }
 
   function _addNode(el, node) {
-    el.appendChild(node);
+    return _addNodeFront(el, node);   // back-compat: un-migrated effects render in front
+  }
+
+  // ── Depth layers (behind / front of the character) ────────────
+  // el is a container; the character (SVG or #sciCharWrap) is a descendant.
+  // Layer z-index is computed RELATIVE to the character's z so it works on
+  // both scientist.html (svg auto-z) and game pages (#sciCharWrap z-index:20).
+  function _ensureLayers(el) {
+    const st = _state(el);
+    if (st._layers && st._layers.behind.isConnected && st._layers.front.isConnected) {
+      return st._layers;
+    }
+    _ensureRelative(el);
+    const charEl = el.querySelector('#sciCharWrap')
+                || el.querySelector(':scope > svg')
+                || el.querySelector('svg');
+    let cz = charEl ? parseInt(getComputedStyle(charEl).zIndex, 10) : NaN;
+    if (charEl && (isNaN(cz))) {
+      if (getComputedStyle(charEl).position === 'static') charEl.style.position = 'relative';
+      charEl.style.zIndex = '5';
+      cz = 5;
+      st._charZFixed = charEl;      // remember so stop() can restore
+    }
+    if (isNaN(cz)) cz = 5;
+    const mk = (cls, z) => {
+      const d = document.createElement('div');
+      d.className = cls;
+      d.style.cssText = `position:absolute;inset:0;pointer-events:none;border-radius:inherit;z-index:${z};`;
+      el.appendChild(d);
+      st.nodes.push(d);
+      return d;
+    };
+    const behind = mk('wlfx-behind', Math.max(cz - 1, 4));
+    const front  = mk('wlfx-front',  cz + 1);
+    st._layers = { behind, front };
+    return st._layers;
+  }
+
+  function _addNodeFront(el, node) {
+    _ensureLayers(el).front.appendChild(node);
+    _state(el).nodes.push(node);
+    return node;
+  }
+  function _addNodeBehind(el, node) {
+    _ensureLayers(el).behind.appendChild(node);
     _state(el).nodes.push(node);
     return node;
   }
@@ -89,6 +133,11 @@ const WLEffects = (() => {
     if (wrap) { wrap.style.boxShadow = ''; wrap.style.animation = ''; }
     // Clean up pixel effect class
     el.classList.remove('wlfx-pixelated');
+    // Restore a character z-index we set in _ensureLayers
+    if (state._charZFixed) { try { state._charZFixed.style.zIndex = ''; } catch {} }
+    // Layer containers are tracked in state.nodes and already removed above;
+    // clear the cached handle so a fresh start rebuilds them.
+    state._layers = null;
     _active.delete(el);
   }
 
@@ -1226,6 +1275,7 @@ const WLEffects = (() => {
     if (typeof WordLabData !== 'undefined' && WordLabData.isLowStimMode()) return;
     stop(el);
     _state(el); // initialise state
+    _ensureLayers(el);
     _fns[effectId](el, false);
 
     // Pause on hidden page
@@ -1239,6 +1289,7 @@ const WLEffects = (() => {
     if (!el || !_fns[effectId]) return;
     stop(el);
     _state(el);
+    _ensureLayers(el);
     _fns[effectId](el, true);
   }
 
