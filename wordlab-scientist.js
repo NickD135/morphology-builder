@@ -220,7 +220,8 @@ const WLScientist = (() => {
     const shadeDefs =
       `<radialGradient id="sk${uid}" cx="38%" cy="30%" r="78%"><stop offset="0%" stop-color="${HI}"/><stop offset="58%" stop-color="${skin}"/><stop offset="100%" stop-color="${LO}"/></radialGradient>` +
       `<linearGradient id="hs${uid}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#462D26" stop-opacity="0"/><stop offset="62%" stop-color="#462D26" stop-opacity="0"/><stop offset="100%" stop-color="#462D26" stop-opacity="0.22"/></linearGradient>` +
-      `<radialGradient id="hh${uid}" cx="32%" cy="26%" r="55%"><stop offset="0%" stop-color="#ffffff" stop-opacity="0.42"/><stop offset="60%" stop-color="#ffffff" stop-opacity="0"/></radialGradient>`;
+      `<radialGradient id="hh${uid}" cx="32%" cy="26%" r="55%"><stop offset="0%" stop-color="#ffffff" stop-opacity="0.42"/><stop offset="60%" stop-color="#ffffff" stop-opacity="0"/></radialGradient>` +
+      `<linearGradient id="cs${uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#322A5C" stop-opacity="0"/><stop offset="55%" stop-color="#322A5C" stop-opacity="0"/><stop offset="100%" stop-color="#322A5C" stop-opacity="0.13"/></linearGradient>`;
     const allDefs = defsContent + galaxyDef + shadeDefs;
     const coatFillDef = allDefs ? `<defs>${allDefs}</defs>` : '';
     const coatFillRef = ['stripes','molecules','stars','dots','chevrons','hearts','lightning','dna','plaid'].includes(pattern) ? `url(#cp${uid})` : coatBase;
@@ -322,12 +323,17 @@ const WLScientist = (() => {
 
     return `<svg viewBox="0 0 80 120" xmlns="http://www.w3.org/2000/svg" style="overflow:visible">
   ${coatFillDef}
+  <!-- Ground contact shadow -->
+  <ellipse cx="40" cy="119" rx="22" ry="3.2" fill="rgba(0,0,0,0.24)"/>
   <!-- Wings (behind body) -->
   ${wingsRendered}
   <!-- Body / Lab coat -->
   <rect x="14" y="60" width="52" height="58" rx="10" fill="${coatFillRef}" stroke="#e2e8f0" stroke-width="1"/>
   <!-- Custom coat overlay: on top of coat colour, under collar/pocket/face details -->
   ${customImg('coat')}
+  <!-- Coat form-shade + sheen (over coat fill, under collar/pocket/badges) -->
+  <rect x="14" y="60" width="52" height="58" rx="10" fill="url(#cs${uid})"/>
+  <path d="M19,66 Q21,90 22,112" stroke="rgba(255,255,255,0.5)" stroke-width="3" fill="none" opacity="0.5" stroke-linecap="round"/>
   <!-- Coat collar -->
   <polygon points="40,62 30,78 40,84" fill="white" opacity="0.35"/>
   <polygon points="40,62 50,78 40,84" fill="white" opacity="0.35"/>
@@ -350,6 +356,9 @@ const WLScientist = (() => {
   ${(eyes[reaction]||eyes.neutral)}
   <ellipse cx="40" cy="41" rx="2" ry="1.5" fill="rgba(0,0,0,0.12)"/>
   ${(mouths[reaction]||mouths.neutral)}
+  <!-- Blush -->
+  <ellipse cx="28" cy="43.5" rx="4.2" ry="2.6" fill="#fca5a5" opacity="0.32"/>
+  <ellipse cx="52" cy="43.5" rx="4.2" ry="2.6" fill="#fca5a5" opacity="0.32"/>
   <!-- Head accessory -->
   ${headAcc && headAccSVG[headAcc] ? headAccSVG[headAcc] : ''}
   <!-- Face accessory -->

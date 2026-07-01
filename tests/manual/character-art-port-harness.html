@@ -77,4 +77,39 @@ pre{background:#0f0e1c;padding:10px;border-radius:8px;white-space:pre-wrap}</sty
   stage2.className='row';
   const pre=document.createElement('pre');pre.id='results2';pre.textContent='T2 '+JSON.stringify(R,null,2);document.getElementById('results2').replaceWith(pre);
 })();
+</script>
+<h2>Task 3 (coat shade + sheen, ground shadow, blush)</h2>
+<div id="stage3" class="row"></div>
+<pre id="results3">running…</pre>
+<script>
+(function(){
+  const R={};
+  function svgOf(sci,rx){const d=document.createElement('div');d.innerHTML=WLScientist.buildSVG(sci,rx||'neutral');return d.firstElementChild;}
+  // Coat overlays present AND coat fill still the pattern/rainbow/holo (overlay didn't replace fill)
+  function coatRect(svg){return [...svg.querySelectorAll('rect')].find(r=>r.getAttribute('x')==='14'&&r.getAttribute('y')==='60'&&/(#|url\()/.test(r.getAttribute('fill')||'')&&r.getAttribute('stroke'));}
+  const rainbow=svgOf({coatColor:'rainbow'});
+  R.rainbowFillIntact = /url\(#coatRainbow/.test(coatRect(rainbow).getAttribute('fill'));
+  const dots=svgOf({coatColor:'#f00',coatPattern:'dots'});
+  R.patternFillIntact = /url\(#cp/.test(coatRect(dots).getAttribute('fill'));
+  const s=svgOf({coatColor:'rainbow'});
+  R.coatShadeOverlay = [...s.querySelectorAll('rect')].some(r=>/url\(#cs/.test(r.getAttribute('fill')||''));
+  R.groundShadow = [...s.querySelectorAll('ellipse')].some(e=>e.getAttribute('cy')==='119');
+  R.blush = [...s.querySelectorAll('ellipse')].filter(e=>e.getAttribute('cy')==='43.5').length===2;
+  R.allPass=R.rainbowFillIntact&&R.patternFillIntact&&R.coatShadeOverlay&&R.groundShadow&&R.blush;
+  window.__T3__=R;
+  const pre=document.createElement('pre');pre.textContent='T3 '+JSON.stringify(R,null,2);document.body.appendChild(pre);
+  // Render plain, rainbow, and patterned coat for visual inspection
+  const stage3 = document.getElementById('stage3');
+  [
+    [{coatColor:'#4338ca'},'Plain (indigo)'],
+    [{coatColor:'rainbow'},'Rainbow'],
+    [{coatColor:'#f00',coatPattern:'dots'},'Dots pattern'],
+  ].forEach(([sci,label])=>{
+    const c=document.createElement('div'); c.className='cell';
+    c.innerHTML = WLScientist.buildSVG(sci,'happy');
+    const lbl=document.createElement('div'); lbl.textContent=label; lbl.style.fontSize='12px'; lbl.style.marginTop='4px';
+    c.appendChild(lbl);
+    stage3.appendChild(c);
+  });
+})();
 </script></body></html>
