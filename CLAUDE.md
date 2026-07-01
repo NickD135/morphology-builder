@@ -1681,9 +1681,37 @@ merged `ef61e89`.
 - [ ] Cosmetic: collapse `hs` gradient to 2 stops; `_charZFixed`-style nits are N/A here
 
 #### NEXT (Phase 3 continued)
-- [ ] Built-in **item dimensional pass** (restyle the ~40 overlays in batches — safe now that geometry is frozen)
-- [ ] **SVG hair** (new cosmetic category; also edits `buildSVG` → sequential with character work)
+- [x] Built-in **item dimensional pass** (Phase 3 sub-project 2) — merged local `71fdfc8`
+- [x] **SVG hair** (Phase 3 sub-project 3) — see PHASE 7.30 below
 - [ ] **Pet redesign** + re-enable (separate `buildPetSVG`, fully independent — could run in parallel)
+
+---
+
+### PHASE 7.30 — Session 2026-07-01 (Phase 3 sub-project 3 — SVG hair)
+
+Merged to `main` **locally — NOT pushed; nothing deployed** (push auto-deploys to production).
+Built subagent-driven (fresh implementer per task on Sonnet 5 + Fable per-task reviews + Fable
+whole-branch review = Ready to merge). Spec: `docs/superpowers/specs/2026-07-01-svg-hair-design.md`;
+plan: `docs/superpowers/plans/2026-07-01-svg-hair.md`. Branch `feat/svg-hair`, merged `1ebe159`.
+
+#### Hair renderer — `wordlab-scientist.js`
+- [x] `buildSVG` reads two new `scientist` fields: **`hair`** (1 of 12 style ids) + **`hairColor`** (hex). Default `hair=null` = today's bare head (existing characters unchanged); default `hairColor='#3B2A1E'` only applies when hair is set.
+- [x] 12 styles (`none, short, tousled, side_part, bob, curly, afro, spiky, mohawk, ponytail, bun, long`); behind-head sub-layer (`hairBackSVG`) for `ponytail/bun/long`. Draw order: hair-behind → head fill → shade/highlight → main hair → face → head accessory (hats render OVER hair; hair never over eyes/mouth)
+- [x] Soft-shaded via existing `_mix` + a per-instance `hairG${uid}` gradient (no cross-character bleed); no `<filter>`, no motion (static, low-stim safe); legible at 44px
+- [x] **Frozen anchors** — purely additive (two `${hairBack}`/`${hairFront}` insertions + one defs concat); no head/accessory coordinate change. **No DB migration** (`hair`/`hairColor` persist via the generic `save_scientist_field` RPC like `world`)
+
+#### Shop categories — `wordlab-shop-data.js` + `scientist.html`
+- [x] `WLShopData.hairStyles` (12, free, icons) + `hairColors` (13-swatch palette, free) — all free (identity/low-friction, same rationale as skin tones)
+- [x] Two `WL.CATS` entries after `skin`: **Hair** (mini-SVG preview like heads) + **Hair Colour** (swatch like skin); default `hairColor` at load; both in Surprise-me
+- [x] Data path verified end-to-end: shop `field:'hair'`/`'hairColor'` → `saveScientist` → `renderStage` passes whole scientist to `buildSVG`
+
+#### Verification + review
+- [x] Synthetic Playwright harness (`tests/manual/svg-hair-harness.html`): every style × 3 colours at 150px+44px (`__HAIR__`), catalogue counts (`__HAIRSHOP__`), 30-cell layering sweep with beanie/tiara/angel_wings × reactions (`__HAIRSWEEP__`) — all green, hats over hair, eyes/mouth visible, id-isolation OK
+- [x] Owner morning checklist: `tests/manual/svg-hair-checklist.md` (12 styles, 13 colours, flagged decisions, 6 Minor review findings)
+- [ ] **Pending (whole Phase 3 stack): logged-in visual spot-check before any push** — specifically ponytail/long + streak-flame pin overlap, hair-colour-while-bald no-op, hair-card head zoom, long hair over a teacher custom coat (all Minor, non-blocking, in the checklist)
+
+#### NEXT
+- [ ] Phase 3 **sub-project 4: Pet redesign** + re-enable (separate `buildPetSVG`, fully independent)
 
 ---
 
