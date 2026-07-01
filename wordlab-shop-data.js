@@ -50,6 +50,24 @@
       {id:'dna',       name:'DNA Helix',   cost:200},
       {id:'plaid',     name:'Plaid',       cost:120},
     ],
+    // Skin tones — always FREE (identity, not a purchasable cosmetic). An
+    // inclusive light→deep range plus two playful fantasy tones. Every value is
+    // a plain hex the dimensional shading derives from at render time, so all
+    // tones shade correctly. Default is Peaches (#FDBCB4 — buildSVG's fallback).
+    skinTones: [
+      {id:'#FBE3D6', name:'Porcelain',     cost:0, free:true},
+      {id:'#FDBCB4', name:'Peaches',       cost:0, free:true},
+      {id:'#F5CBA7', name:'Fair',          cost:0, free:true},
+      {id:'#E8B78D', name:'Warm Beige',    cost:0, free:true},
+      {id:'#D6A06A', name:'Honey',         cost:0, free:true},
+      {id:'#C68642', name:'Golden',        cost:0, free:true},
+      {id:'#A9744F', name:'Chestnut',      cost:0, free:true},
+      {id:'#8D5524', name:'Caramel',       cost:0, free:true},
+      {id:'#6F4530', name:'Cocoa',         cost:0, free:true},
+      {id:'#4E3324', name:'Espresso',      cost:0, free:true},
+      {id:'#7FBF7F', name:'Alien Green',   cost:0, free:true},
+      {id:'#B39DDB', name:'Cosmic Violet', cost:0, free:true},
+    ],
     headAccessories: [
       {id:'none',        name:'None',           cost:0,  free:true,  icon:'❌'},
       {id:'goggles_head',name:'Goggles',        cost:80,             icon:'🥽'},
@@ -154,6 +172,7 @@
 
   window.WLShopData = {
     colours:  SHOP.coatColors,
+    skinTones: SHOP.skinTones,
     patterns: SHOP.coatPatterns,
     heads:    SHOP.headAccessories,
     faces:    SHOP.faceAccessories,
