@@ -859,11 +859,19 @@ const WLScientist = (() => {
 
   // ── Pet stage injection ─────────────────────────────────────
   function _injectPetStage(sd) {
-    // Pets hidden for now — keeping code for future use
+    const petId = sd && sd.scientist && sd.scientist.pet;
     document.querySelectorAll('#petCharWrap').forEach(el => {
-      el.style.display = 'none';
       const tank = el.closest('.pet-tank');
-      if (tank) tank.style.display = 'none';
+      if (petId && petId !== 'none') {
+        el.innerHTML = buildPetSVG(petId);
+        el.classList.add('pet-idle');
+        el.style.display = '';
+        if (tank) tank.style.display = '';
+      } else {
+        el.innerHTML = '';
+        el.style.display = 'none';
+        if (tank) tank.style.display = 'none';
+      }
     });
   }
 

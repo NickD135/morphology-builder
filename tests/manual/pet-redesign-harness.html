@@ -114,5 +114,51 @@ pre{background:#0f0e1c;padding:10px;border-radius:8px;white-space:pre-wrap}</sty
   }
   window.__PETSHOP__ = S;
   document.getElementById('results').textContent += '\n\n__PETSHOP__:\n' + JSON.stringify(S, null, 2);
+
+  // Task 3: game-stage render + low-stim idle gate.
+  // wordlab-data.js is not loaded in this harness (it needs a live Supabase
+  // client + page chrome it can't find here), so we inline ONLY the two
+  // low-stim CSS rules it injects (#sciCharWrap + #petCharWrap idle-suppress)
+  // so the computed-style assertion below is meaningful.
+  const P = { rendered: false, lowStimStopsIdle: false, errors: [] };
+  try {
+    const style = document.createElement('style');
+    style.textContent =
+      '.low-stim #sciCharWrap { animation:none !important; }' +
+      '.low-stim #petCharWrap { animation:none !important; }';
+    document.head.appendChild(style);
+
+    const stage = document.createElement('div');
+    stage.className = 'scientist-stage';
+    stage.style.position = 'relative';
+    const petWrap = document.createElement('div');
+    petWrap.id = 'petCharWrap';
+    petWrap.className = 'pet-idle';
+    const sciWrap = document.createElement('div');
+    sciWrap.id = 'sciCharWrap';
+    stage.appendChild(petWrap);
+    stage.appendChild(sciWrap);
+    document.body.appendChild(stage);
+
+    // Simulate _injectPetStage(sd) render path for an equipped pet (module-private).
+    const svg = WLScientist.buildPetSVG('frog');
+    petWrap.innerHTML = svg;
+    petWrap.style.display = '';
+    P.rendered = !!(svg && svg.length > 50 && petWrap.querySelector('svg'));
+
+    // Idle animation runs before low-stim.
+    const beforeAnim = getComputedStyle(petWrap).animationName;
+
+    // Toggle low-stim and assert idle bob stops.
+    document.body.classList.add('low-stim');
+    const afterAnim = getComputedStyle(petWrap).animationName;
+    P.lowStimStopsIdle = (afterAnim === 'none');
+    P._beforeAnim = beforeAnim;
+    P._afterAnim = afterAnim;
+  } catch(e) {
+    P.errors.push('petstage-threw: ' + e.message);
+  }
+  window.__PETSTAGE__ = P;
+  document.getElementById('results').textContent += '\n\n__PETSTAGE__:\n' + JSON.stringify(P, null, 2);
 })();
 </script></body></html>
