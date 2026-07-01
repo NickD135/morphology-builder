@@ -256,15 +256,15 @@ const WLScientist = (() => {
     // Hair — front layer (over shaded scalp, under face) + back layer (behind head, over coat)
     // Reusable snug "cap" silhouette shared by several styles — hairline stays well above cy32
     // at the eye x-centres (34/46) so the face always reads clearly.
-    const HAIR_CAP = `<path d="M15,38 Q10,10 40,8 Q70,10 65,38 Q62,22 55,24 Q47,19 40,20 Q33,19 25,24 Q18,22 15,38 Z" fill="url(#hairG${uid})"/>`;
+    const HAIR_CAP = `<path d="M18,40 Q17,25 25,18 Q32,13 40,13 Q48,13 55,18 Q63,25 62,40 Q59,27 52,28 Q46,23 40,23 Q34,23 28,28 Q21,27 18,40 Z" fill="url(#hairG${uid})"/>`;
     const hairSVG = {
       none: '',
       short: `${HAIR_CAP}`,
       tousled: `${HAIR_CAP}<circle cx="30" cy="14" r="4" fill="url(#hairG${uid})"/><circle cx="40" cy="9" r="4.5" fill="url(#hairG${uid})"/><circle cx="50" cy="14" r="4" fill="url(#hairG${uid})"/>`,
       side_part: `${HAIR_CAP}<path d="M46,11 Q53,8 57,14 Q51,13 46,15 Z" fill="url(#hairG${uid})"/><path d="M29,13 L35,20" stroke="${hairLo}" stroke-width="1.1" fill="none" opacity="0.55"/>`,
-      bob: `${HAIR_CAP}<path d="M17,22 Q12,22 12,36 Q12,48 17,52 Q20,48 19,36 Q19,26 17,22 Z" fill="url(#hairG${uid})"/><path d="M63,22 Q68,22 68,36 Q68,48 63,52 Q60,48 61,36 Q61,26 63,22 Z" fill="url(#hairG${uid})"/>`,
-      curly: `<circle cx="20" cy="30" r="5" fill="url(#hairG${uid})"/><circle cx="18" cy="20" r="5" fill="url(#hairG${uid})"/><circle cx="25" cy="13" r="5.5" fill="url(#hairG${uid})"/><circle cx="34" cy="9" r="5.5" fill="url(#hairG${uid})"/><circle cx="46" cy="9" r="5.5" fill="url(#hairG${uid})"/><circle cx="55" cy="13" r="5.5" fill="url(#hairG${uid})"/><circle cx="62" cy="20" r="5" fill="url(#hairG${uid})"/><circle cx="60" cy="30" r="5" fill="url(#hairG${uid})"/>`,
-      afro: `<path d="M8,42 Q2,8 40,4 Q78,8 72,42 Q65,20 55,24 Q47,18 40,19 Q33,18 25,24 Q15,20 8,42 Z" fill="url(#hairG${uid})"/>`,
+      bob: `${HAIR_CAP}<path d="M19,24 Q15,26 15,37 Q15,49 20,53 Q23,49 22,37 Q22,28 19,24 Z" fill="url(#hairG${uid})"/><path d="M61,24 Q65,26 65,37 Q65,49 60,53 Q57,49 58,37 Q58,28 61,24 Z" fill="url(#hairG${uid})"/>`,
+      curly: `<circle cx="24" cy="29" r="4.8" fill="url(#hairG${uid})"/><circle cx="22" cy="20" r="4.8" fill="url(#hairG${uid})"/><circle cx="28" cy="13" r="5.2" fill="url(#hairG${uid})"/><circle cx="35" cy="10" r="5.2" fill="url(#hairG${uid})"/><circle cx="45" cy="10" r="5.2" fill="url(#hairG${uid})"/><circle cx="52" cy="13" r="5.2" fill="url(#hairG${uid})"/><circle cx="58" cy="20" r="4.8" fill="url(#hairG${uid})"/><circle cx="56" cy="29" r="4.8" fill="url(#hairG${uid})"/>`,
+      afro: `<path d="M13,44 Q5,10 40,6 Q75,10 67,44 Q61,23 53,26 Q47,19 40,20 Q33,19 27,26 Q19,23 13,44 Z" fill="url(#hairG${uid})"/>`,
       spiky: `${HAIR_CAP}<polygon points="24,16 26,4 29,17" fill="url(#hairG${uid})"/><polygon points="33,13 36,2 38,14" fill="url(#hairG${uid})"/><polygon points="42,13 45,2 47,14" fill="url(#hairG${uid})"/><polygon points="51,16 54,4 56,17" fill="url(#hairG${uid})"/>`,
       mohawk: `<polygon points="34,18 37,2 40,18" fill="url(#hairG${uid})"/><polygon points="38,17 41,0 43,17" fill="url(#hairG${uid})"/><polygon points="41,18 44,2 47,18" fill="url(#hairG${uid})"/><rect x="16" y="30" width="3" height="8" rx="1.5" fill="url(#hairG${uid})"/><rect x="61" y="30" width="3" height="8" rx="1.5" fill="url(#hairG${uid})"/>`,
       ponytail: `${HAIR_CAP}`,
