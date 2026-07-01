@@ -485,7 +485,7 @@ const WLEffects = (() => {
     const h = el.offsetHeight || 200;
     canvas.width = w; canvas.height = h;
     canvas.style.cssText = `position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;opacity:${intense?0.85:0.7};z-index:11;border-radius:inherit;`;
-    _addNode(el, canvas);
+    _addNodeBehind(el, canvas);
 
     const ctx = canvas.getContext('2d');
     const charSize = 10;
@@ -922,8 +922,8 @@ const WLEffects = (() => {
       animation:wlfxAuroraWave2 ${intense?'2.5s':'5s'} ease infinite;
       z-index:7;
     `);
-    _addNode(el, blob1);
-    _addNode(el, blob2);
+    _addNodeBehind(el, blob1);
+    _addNodeBehind(el, blob2);
     // Drifting light ribbons
     _injectStyle('wlfx-aurora-ribbon', `
       @keyframes wlfxRibbon { 0%{opacity:0;transform:translateY(0) scaleX(1)} 30%{opacity:0.7} 70%{opacity:0.5} 100%{opacity:0;transform:translateY(-80px) scaleX(1.4)} }

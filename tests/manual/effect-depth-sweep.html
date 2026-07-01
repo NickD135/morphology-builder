@@ -313,7 +313,57 @@ let rapidSwitchResult = null;
 
   await wait(1800);  // let blackhole jets fire too
 
-  // ── 6. ASSEMBLE __SWEEP__ ──────────────────────────────────────
+  // ── 6. DEPTH ASSERTIONS: matrix canvas behind, aurora glows behind ─
+  document.getElementById('status').textContent = 'Testing matrix/aurora depth assertions...';
+
+  // matrix: canvas must be in .wlfx-behind, NOT in .wlfx-front
+  const depthEl = document.createElement('div');
+  depthEl.style.cssText = 'position:relative;width:160px;height:200px;';
+  document.body.appendChild(depthEl);
+
+  WLEffects.start('matrix', depthEl);
+  await wait(200);
+  const matrixBehindCanvas = depthEl.querySelector('.wlfx-behind canvas');
+  const matrixFrontCanvas  = depthEl.querySelector('.wlfx-front canvas');
+  const matrixStopEl = depthEl.cloneNode(false);
+  WLEffects.stop(depthEl);
+  await wait(150);
+  const matrixStopBehind = depthEl.querySelectorAll('.wlfx-behind').length;
+  const matrixStopFront  = depthEl.querySelectorAll('.wlfx-front').length;
+  document.body.removeChild(depthEl);
+
+  const matrixDepth = {
+    canvasInBehind:  matrixBehindCanvas !== null,
+    noCanvasInFront: matrixFrontCanvas === null,
+    stopOK: (matrixStopBehind === 0) && (matrixStopFront === 0),
+    pass: (matrixBehindCanvas !== null) && (matrixFrontCanvas === null) &&
+          (matrixStopBehind === 0) && (matrixStopFront === 0)
+  };
+
+  // aurora: glow blobs must be in .wlfx-behind (>= 1 child)
+  const auroraDepthEl = document.createElement('div');
+  auroraDepthEl.style.cssText = 'position:relative;width:160px;height:200px;';
+  document.body.appendChild(auroraDepthEl);
+
+  WLEffects.start('aurora', auroraDepthEl);
+  await wait(200);
+  const auroraBehind = auroraDepthEl.querySelector('.wlfx-behind');
+  const auroraBehindCount = auroraBehind ? auroraBehind.childElementCount : 0;
+  WLEffects.stop(auroraDepthEl);
+  await wait(150);
+  const auroraStopBehind = auroraDepthEl.querySelectorAll('.wlfx-behind').length;
+  const auroraStopFront  = auroraDepthEl.querySelectorAll('.wlfx-front').length;
+  document.body.removeChild(auroraDepthEl);
+
+  const auroraDepth = {
+    glowInBehind: auroraBehindCount >= 1,
+    behindChildCount: auroraBehindCount,
+    stopOK: (auroraStopBehind === 0) && (auroraStopFront === 0),
+    pass: (auroraBehindCount >= 1) &&
+          (auroraStopBehind === 0) && (auroraStopFront === 0)
+  };
+
+  // ── 7. ASSEMBLE __SWEEP__ ──────────────────────────────────────
   const sweepPassed = effectRows.every(r =>
     r.total >= 1 && r.boxShadowOK && r.stopOK && r.boxShadowAfterOK && r.animAfterOK
   );
@@ -335,14 +385,19 @@ let rapidSwitchResult = null;
     zCoherence,
     lowStim: lowStimResult,
     rapidSwitch: rapidSwitchResult,
+    matrixDepth,
+    auroraDepth,
     summary: {
       effectsPass: sweepPassed,
       zCoherence: zCohPassed,
       lowStimPass: lowStimResult ? lowStimResult.pass : false,
       rapidSwitchPass: rapidSwitchResult ? rapidSwitchResult.pass : false,
+      matrixDepthPass: matrixDepth.pass,
+      auroraDepthPass: auroraDepth.pass,
       allPass: sweepPassed && zCohPassed &&
                (lowStimResult ? lowStimResult.pass : false) &&
-               (rapidSwitchResult ? rapidSwitchResult.pass : false)
+               (rapidSwitchResult ? rapidSwitchResult.pass : false) &&
+               matrixDepth.pass && auroraDepth.pass
     }
   };
 
@@ -459,6 +514,44 @@ function renderResults() {
        : `FAIL — found ${rs.behind} behind, ${rs.front} front (expected 1 each)`)
     : 'Not run';
   out.appendChild(rp);
+
+  // ── Matrix/Aurora Depth Assertions ───────────────────────
+  const dh = document.createElement('h3');
+  dh.textContent = 'Matrix/Aurora Depth Assertions (Task 5 fix)';
+  out.appendChild(dh);
+
+  const dtbl = document.createElement('table');
+  const dth = dtbl.createTHead().insertRow();
+  ['Effect','canvas/glow in .wlfx-behind','NOT in .wlfx-front','stop OK','PASS'].forEach(t => {
+    const th = document.createElement('th'); th.textContent = t; dth.appendChild(th);
+  });
+  const dtb = dtbl.createTBody();
+
+  // matrix row
+  const mtr = dtb.insertRow();
+  const md = s.matrixDepth;
+  ['matrix', md ? (md.canvasInBehind ? '✓ canvas found' : '✗ missing') : '?',
+   md ? (md.noCanvasInFront ? '✓' : '✗ canvas found in front') : '?',
+   md ? (md.stopOK ? '✓' : '✗') : '?',
+   md ? (md.pass ? '✅ PASS' : '❌ FAIL') : '?'
+  ].forEach((c, i) => {
+    const td = mtr.insertCell(); td.textContent = c;
+    if (i === 4) td.className = md && md.pass ? 'pass' : 'fail';
+  });
+
+  // aurora row
+  const atr = dtb.insertRow();
+  const ad = s.auroraDepth;
+  ['aurora', ad ? (ad.glowInBehind ? `✓ ${ad.behindChildCount} child(ren)` : '✗ 0 children') : '?',
+   '(n/a — no full-area canvas)',
+   ad ? (ad.stopOK ? '✓' : '✗') : '?',
+   ad ? (ad.pass ? '✅ PASS' : '❌ FAIL') : '?'
+  ].forEach((c, i) => {
+    const td = atr.insertCell(); td.textContent = c;
+    if (i === 4) td.className = ad && ad.pass ? 'pass' : 'fail';
+  });
+
+  out.appendChild(dtbl);
 
   // ── Failures summary ──────────────────────────────────────
   const fails = s.effects.filter(r => !r.PASS);
