@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Item Dimensional Pass — Head Accessories Harness</title>
+<title>Item Dimensional Pass — Head + Face Accessories Harness</title>
 <style>
   body { font-family: sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 16px; }
   h1 { font-size: 18px; color: #a5b4fc; margin: 0 0 4px; }
@@ -21,12 +21,15 @@
   .iso-card { background: #1e293b; border-radius: 8px; padding: 10px; }
   .iso-label { font-size: 11px; color: #94a3b8; margin-bottom: 4px; }
   pre { background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 10px; font-size: 11px; overflow: auto; max-height: 200px; }
+  hr { border: none; border-top: 1px solid #1e293b; margin: 24px 0; }
 </style>
 </head>
 <body>
-<h1>Item Dimensional Pass — Head Accessories</h1>
-<p class="meta">Tests: render all head ids at 150px + 44px · animatedIntact · isolationOK (no shared gradient ids between two instances)</p>
+<h1>Item Dimensional Pass — Head + Face Accessories Harness</h1>
+<p class="meta">Tests: render all head + face ids at 150px + 44px · animatedIntact · isolationOK (no shared gradient ids between two instances)</p>
 
+<!-- ── HEADS ── -->
+<h2>Head Tests</h2>
 <div class="status" id="statusBox">Loading…</div>
 
 <h2>Head Grid (large 150px + small 44px)</h2>
@@ -38,11 +41,29 @@
 <h2>window.__HEADS__ (written after tests)</h2>
 <pre id="resultPre"></pre>
 
+<hr>
+
+<!-- ── FACES ── -->
+<h2>Face Tests</h2>
+<div class="status" id="faceStatusBox">Loading…</div>
+
+<h2>Face Grid (large 150px + small 44px)</h2>
+<div class="grid" id="faceGrid"></div>
+
+<h2>Face Isolation Test — two glowing_mask instances</h2>
+<div class="isolation-grid" id="faceIsoGrid"></div>
+
+<h2>window.__FACES__ (written after tests)</h2>
+<pre id="faceResultPre"></pre>
+
 <!-- Dependencies -->
 <script src="../../wordlab-worlds.js"></script>
 <script src="../../wordlab-shop-data.js"></script>
 <script src="../../wordlab-scientist.js"></script>
 <script>
+// ─────────────────────────────────────────────────────────────────────────────
+// HEAD TESTS
+// ─────────────────────────────────────────────────────────────────────────────
 (function() {
   const ANIMATED_CHECK = ['flame_crown', 'ice_crown', 'galaxy_halo'];
   const ANIMATE_TAGS = ['<animate', '<animateTransform'];
@@ -173,6 +194,139 @@
   }
 
   document.getElementById('resultPre').textContent = JSON.stringify(result, null, 2);
+})();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FACE TESTS
+// ─────────────────────────────────────────────────────────────────────────────
+(function() {
+  const FACE_ANIMATED_CHECK = ['laser_eyes', 'glowing_mask', 'diamond_monocle'];
+  const ANIMATE_TAGS = ['<animate', '<animateTransform'];
+
+  // Collect face ids from WLShopData (skip 'none')
+  let faceIds = [];
+  try {
+    faceIds = (WLShopData.faces || []).map(f => f.id).filter(id => id && id !== 'none');
+  } catch(e) {
+    document.getElementById('faceStatusBox').textContent = 'ERROR: could not read WLShopData.faces — ' + e.message;
+  }
+
+  const errors = [];
+  const faceGrid = document.getElementById('faceGrid');
+
+  function renderFace(faceId, size) {
+    try {
+      const svgStr = WLScientist.buildSVG({ face: faceId, skinTone: '#FDBCB4', coatColor: '#ffffff' }, 'neutral');
+      if (!svgStr || !svgStr.includes('<svg')) {
+        errors.push(faceId + ': no svg output');
+        return null;
+      }
+      const container = document.createElement('div');
+      container.style.width = size + 'px';
+      container.style.height = (size * 1.5) + 'px';
+      container.style.overflow = 'hidden';
+      container.innerHTML = svgStr.replace(/viewBox="[^"]*"/, `viewBox="0 0 80 120" width="${size}" height="${size * 1.5}"`);
+      return container;
+    } catch(e) {
+      errors.push(faceId + ': threw ' + e.message);
+      return null;
+    }
+  }
+
+  // Render each face item
+  faceIds.forEach(id => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `<div class="label">${id}</div>`;
+
+    const pair = document.createElement('div');
+    pair.className = 'pair';
+
+    const lg = renderFace(id, 150);
+    if (lg) { lg.className = 'lg'; pair.appendChild(lg); }
+    else { const e = document.createElement('div'); e.className = 'err'; e.textContent = 'ERROR'; pair.appendChild(e); }
+
+    const sm = renderFace(id, 44);
+    if (sm) { sm.className = 'sm'; pair.appendChild(sm); }
+
+    card.appendChild(pair);
+    faceGrid.appendChild(card);
+  });
+
+  // Check animatedIntact: laser_eyes, glowing_mask, diamond_monocle must contain <animate
+  let animatedIntact = true;
+  FACE_ANIMATED_CHECK.forEach(id => {
+    try {
+      const svgStr = WLScientist.buildSVG({ face: id, skinTone: '#FDBCB4', coatColor: '#ffffff' }, 'neutral');
+      const hasAnim = ANIMATE_TAGS.some(tag => svgStr.includes(tag));
+      if (!hasAnim) {
+        animatedIntact = false;
+        errors.push(id + ': animation elements missing');
+      }
+    } catch(e) {
+      animatedIntact = false;
+      errors.push(id + ': threw during animated check — ' + e.message);
+    }
+  });
+
+  // Isolation test: two characters both wearing glowing_mask must not share any [id] attribute
+  let isolationOK = true;
+  const faceIsoGrid = document.getElementById('faceIsoGrid');
+  try {
+    const svg1 = WLScientist.buildSVG({ face: 'glowing_mask', skinTone: '#FDBCB4', coatColor: '#ffffff' }, 'neutral');
+    const svg2 = WLScientist.buildSVG({ face: 'glowing_mask', skinTone: '#deb887', coatColor: '#ffd700' }, 'excited');
+
+    const extractIds = s => { const m = []; let r; const re = /\bid="([^"]+)"/g; while ((r = re.exec(s)) !== null) m.push(r[1]); return m; };
+    const ids1 = extractIds(svg1);
+    const ids2 = extractIds(svg2);
+    const set1 = new Set(ids1);
+    const shared = ids2.filter(id => set1.has(id));
+    if (shared.length > 0) {
+      isolationOK = false;
+      errors.push('face isolation FAIL — shared ids: ' + shared.join(', '));
+    }
+
+    // Render both for visual inspection
+    [svg1, svg2].forEach((svgStr, i) => {
+      const c = document.createElement('div');
+      c.className = 'iso-card';
+      const lbl = document.createElement('div');
+      lbl.className = 'iso-label';
+      lbl.textContent = 'glowing_mask instance ' + (i+1) + ' — ids: [' + extractIds(svgStr).join(', ') + ']';
+      c.appendChild(lbl);
+      const wrap = document.createElement('div');
+      wrap.style.width = '150px';
+      wrap.style.height = '225px';
+      wrap.style.overflow = 'hidden';
+      wrap.innerHTML = svgStr.replace(/viewBox="[^"]*"/, 'viewBox="0 0 80 120" width="150" height="225"');
+      c.appendChild(wrap);
+      faceIsoGrid.appendChild(c);
+    });
+  } catch(e) {
+    isolationOK = false;
+    errors.push('face isolation test threw: ' + e.message);
+  }
+
+  // Final result object
+  const result = {
+    count: faceIds.length,
+    ids: faceIds,
+    errors: errors,
+    animatedIntact: animatedIntact,
+    isolationOK: isolationOK,
+    PASS: errors.length === 0 && animatedIntact && isolationOK
+  };
+  window.__FACES__ = result;
+
+  // Status box
+  const faceStatusBox = document.getElementById('faceStatusBox');
+  if (result.PASS) {
+    faceStatusBox.innerHTML = `<span class="pass">✓ PASS</span> — count=${result.count}, errors=0, animatedIntact=true, isolationOK=true`;
+  } else {
+    faceStatusBox.innerHTML = `<span class="fail">✗ FAIL</span> — errors: ${JSON.stringify(errors)}`;
+  }
+
+  document.getElementById('faceResultPre').textContent = JSON.stringify(result, null, 2);
 })();
 </script>
 </body>
