@@ -97,7 +97,7 @@ pre{background:#0f0e1c;padding:10px;border-radius:8px;white-space:pre-wrap}</sty
   R.blush = [...s.querySelectorAll('ellipse')].filter(e=>e.getAttribute('cy')==='43.5').length===2;
   R.allPass=R.rainbowFillIntact&&R.patternFillIntact&&R.coatShadeOverlay&&R.groundShadow&&R.blush;
   window.__T3__=R;
-  const pre=document.createElement('pre');pre.textContent='T3 '+JSON.stringify(R,null,2);document.body.appendChild(pre);
+  const pre=document.createElement('pre');pre.textContent='T3 '+JSON.stringify(R,null,2);document.getElementById('results3').replaceWith(pre);
   // Render plain, rainbow, and patterned coat for visual inspection
   const stage3 = document.getElementById('stage3');
   [
@@ -111,5 +111,141 @@ pre{background:#0f0e1c;padding:10px;border-radius:8px;white-space:pre-wrap}</sty
     c.appendChild(lbl);
     stage3.appendChild(c);
   });
+})();
+</script>
+
+<!-- ═══ TASK 4 — Full matrix sweep ════════════════════════════ -->
+<h2>Task 4 — Full matrix sweep (reactions × tones × coats × accessories)</h2>
+<div id="sweep-status" style="color:#94a3b8;font-size:13px;margin-bottom:8px">Building…</div>
+
+<h3 style="color:#a5b4fc;margin:12px 0 4px">Row A — Skin tones (light / medium / dark) × happy</h3>
+<div id="rowA" class="row"></div>
+
+<h3 style="color:#a5b4fc;margin:12px 0 4px">Row B — Reactions (neutral / happy / excited / wrong) × medium tone</h3>
+<div id="rowB" class="row"></div>
+
+<h3 style="color:#a5b4fc;margin:12px 0 4px">Row C — Coat types (plain / rainbow / holographic / dots / dna / stripes) × medium tone</h3>
+<div id="rowC" class="row"></div>
+
+<h3 style="color:#a5b4fc;margin:12px 0 4px">Row D — Accessories (goggles / wizard_hat / space_helmet / angel_wings / glasses / galaxy_halo)</h3>
+<div id="rowD" class="row"></div>
+
+<h3 style="color:#a5b4fc;margin:12px 0 4px">Row E — 44px mini row (all of the above, compact)</h3>
+<div id="rowE" class="row"></div>
+
+<pre id="sweep-results">running…</pre>
+<script>
+(function(){
+  var SWEEP = { cells: 0, errors: [] };
+
+  function render(sci, rx, size) {
+    // size: 'lg' = 150px, 'sm' = 44px
+    var div = document.createElement('div');
+    div.className = 'cell' + (size === 'sm' ? ' sm' : '');
+    try {
+      div.innerHTML = WLScientist.buildSVG(sci, rx || 'neutral');
+      SWEEP.cells++;
+    } catch(e) {
+      SWEEP.errors.push({ sci: JSON.stringify(sci), rx: rx, err: e.message });
+      div.innerHTML = '<svg viewBox="0 0 80 120" xmlns="http://www.w3.org/2000/svg"><text x="4" y="60" font-size="8" fill="#ef4444">ERR</text></svg>';
+    }
+    return div;
+  }
+
+  function cell(sci, rx, label, size) {
+    var wrapper = document.createElement('div');
+    wrapper.style.cssText = 'display:inline-flex;flex-direction:column;align-items:center;gap:4px';
+    wrapper.appendChild(render(sci, rx, size));
+    var lbl = document.createElement('div');
+    lbl.textContent = label;
+    lbl.style.cssText = 'font-size:10px;color:#94a3b8;max-width:' + (size==='sm'?'50':'160') + 'px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    wrapper.appendChild(lbl);
+    return wrapper;
+  }
+
+  // ── Row A: Skin tones × happy ──────────────────────────────────
+  var rowA = document.getElementById('rowA');
+  [
+    ['#FDBCB4', 'Light (#FDBCB4)'],
+    ['#C68642', 'Medium (#C68642)'],
+    ['#5C3A29', 'Dark (#5C3A29)'],
+  ].forEach(function(t) {
+    rowA.appendChild(cell({skinTone:t[0], coatColor:'#6366f1'}, 'happy', t[1], 'lg'));
+  });
+
+  // ── Row B: Reactions × medium tone ────────────────────────────
+  var rowB = document.getElementById('rowB');
+  ['neutral','happy','excited','wrong'].forEach(function(rx) {
+    rowB.appendChild(cell({skinTone:'#C68642', coatColor:'#6366f1'}, rx, rx, 'lg'));
+  });
+
+  // ── Row C: Coat types ──────────────────────────────────────────
+  var rowC = document.getElementById('rowC');
+  [
+    [{coatColor:'#6366f1'},                   'plain #6366f1'],
+    [{coatColor:'rainbow'},                    'rainbow'],
+    [{coatColor:'holographic'},                'holographic'],
+    [{coatColor:'#6366f1', coatPattern:'dots'},'dots pattern'],
+    [{coatColor:'#6366f1', coatPattern:'dna'}, 'dna pattern'],
+    [{coatColor:'#6366f1', coatPattern:'stripes'},'stripes pattern'],
+  ].forEach(function(c) {
+    rowC.appendChild(cell(Object.assign({skinTone:'#C68642'}, c[0]), 'happy', c[1], 'lg'));
+  });
+
+  // ── Row D: Accessories (head, face, wings) ────────────────────
+  var rowD = document.getElementById('rowD');
+  [
+    [{head:'goggles_head'},  'goggles_head'],
+    [{head:'wizard_hat'},    'wizard_hat'],
+    [{head:'space_helmet'},  'space_helmet'],
+    [{wings:'angel_wings'},  'angel_wings'],
+    [{face:'glasses'},       'glasses'],
+    [{head:'galaxy_halo'},   'galaxy_halo ★uid'],
+  ].forEach(function(a) {
+    rowD.appendChild(cell(Object.assign({skinTone:'#FDBCB4', coatColor:'#6366f1'}, a[0]), 'neutral', a[1], 'lg'));
+  });
+
+  // ── Row E: 44px mini row (one per configuration above) ────────
+  var rowE = document.getElementById('rowE');
+  // Tones
+  [['#FDBCB4','lt'],['#C68642','md'],['#5C3A29','dk']].forEach(function(t){
+    rowE.appendChild(cell({skinTone:t[0],coatColor:'#6366f1'},'happy',t[1],'sm'));
+  });
+  // Reactions
+  ['neutral','happy','excited','wrong'].forEach(function(rx){
+    rowE.appendChild(cell({skinTone:'#C68642',coatColor:'#6366f1'},rx,rx,'sm'));
+  });
+  // Coats
+  [
+    [{coatColor:'rainbow'}],
+    [{coatColor:'holographic'}],
+    [{coatColor:'#6366f1',coatPattern:'dots'}],
+    [{coatColor:'#6366f1',coatPattern:'dna'}],
+  ].forEach(function(c){
+    rowE.appendChild(cell(Object.assign({skinTone:'#C68642'},c[0]),'happy',Object.keys(c[0]).join('/'),'sm'));
+  });
+  // Accessories
+  [
+    [{head:'space_helmet'},'helm'],
+    [{wings:'angel_wings'},'wings'],
+    [{face:'glasses'},'glasses'],
+    [{head:'galaxy_halo'},'halo'],
+  ].forEach(function(a){
+    rowE.appendChild(cell(Object.assign({skinTone:'#FDBCB4',coatColor:'#6366f1'},a[0]),'neutral',a[1],'sm'));
+  });
+
+  window.__SWEEP__ = SWEEP;
+
+  var pre = document.getElementById('sweep-results');
+  var ok = SWEEP.errors.length === 0;
+  pre.style.color = ok ? '#4ade80' : '#f87171';
+  pre.textContent = 'SWEEP ' + JSON.stringify({
+    cells: SWEEP.cells,
+    errors: SWEEP.errors,
+    allPass: ok
+  }, null, 2);
+  document.getElementById('sweep-status').textContent =
+    'Rendered ' + SWEEP.cells + ' cells — ' + (ok ? '✓ no errors' : '✗ ' + SWEEP.errors.length + ' error(s)');
+  document.getElementById('sweep-status').style.color = ok ? '#4ade80' : '#f87171';
 })();
 </script></body></html>
