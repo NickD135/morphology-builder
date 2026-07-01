@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Skin tones harness</title>
+<style>body{background:#1a1930;color:#e2e8f0;font-family:sans-serif;padding:16px}
+.row{display:flex;gap:14px;flex-wrap:wrap;margin:12px 0}
+.cell{background:radial-gradient(120% 90% at 50% 30%,#2c2b45,#1a1930);border-radius:12px;padding:8px;text-align:center;font-size:11px}
+.cell svg{width:110px;height:165px;display:block}
+.sw{width:110px;height:44px;border-radius:8px}
+pre{background:#0f0e1c;padding:10px;border-radius:8px;white-space:pre-wrap}</style>
+</head><body>
+<h2>Skin tones — data + render check</h2>
+<h3>Swatches (as the Skin category renders them)</h3>
+<div class="row" id="swatches"></div>
+<h3>Character shaded across the palette</h3>
+<div class="row" id="chars"></div>
+<pre id="results">running…</pre>
+<script src="../../wordlab-worlds.js"></script>
+<script src="../../wordlab-shop-data.js"></script>
+<script src="../../wordlab-scientist.js"></script>
+<script>
+(function(){
+  const R={};
+  const tones = (window.WLShopData && WLShopData.skinTones) || [];
+  R.skinTonesExposed = Array.isArray(tones) && tones.length>0;
+  R.count = tones.length;
+  R.allFree = tones.every(t=>t.free===true && (t.cost||0)===0);
+  R.allHex  = tones.every(t=>/^#([0-9a-f]{6})$/i.test(t.id));
+  R.hasDefault = tones.some(t=>t.id.toLowerCase()==='#fdbcb4');
+  R.allNamed = tones.every(t=>t.name && t.name.length);
+  // Render swatches (mirrors WL._colourBg → hex background)
+  const sw=document.getElementById('swatches');
+  tones.forEach(t=>{const c=document.createElement('div');c.className='cell';
+    const s=document.createElement('div');s.className='sw';s.style.background=t.id;c.appendChild(s);
+    c.appendChild(document.createTextNode(t.name));sw.appendChild(c);});
+  // Render the character across all tones (confirms shading derives per tone)
+  const cs=document.getElementById('chars');
+  let renderOK=true;
+  tones.forEach(t=>{try{const c=document.createElement('div');c.className='cell';
+    c.innerHTML=WLScientist.buildSVG({skinTone:t.id, coatColor:'#6366f1'},'happy');
+    c.appendChild(document.createTextNode(t.name));cs.appendChild(c);
+    // each SVG must use a skin radial referencing its own uid
+    if(!c.querySelector('radialGradient[id^=sk]')) renderOK=false;
+  }catch(e){renderOK=false;}});
+  R.charsRender = renderOK;
+  R.allPass = R.skinTonesExposed&&R.allFree&&R.allHex&&R.hasDefault&&R.allNamed&&R.charsRender;
+  window.__SKIN__=R;
+  document.getElementById('results').textContent=JSON.stringify(R,null,2);
+})();
+</script></body></html>

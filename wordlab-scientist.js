@@ -125,11 +125,33 @@ const WLScientist = (() => {
     return svgParts.join('');
   }
 
+  // ── Skin-tone colour mixer ───────────────────────────────────
+  function _mix(hex, hex2, t) {
+    const parse = h => {
+      h = (h || '').replace('#', '');
+      if (h.length === 3) h = h.split('').map(c => c + c).join('');
+      if (h.length !== 6 || /[^0-9a-f]/i.test(h)) return null;
+      const n = parseInt(h, 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    };
+    const a = parse(hex) || [253, 188, 180];   // fallback = default skin
+    const b = parse(hex2) || [0, 0, 0];
+    const m = i => Math.round(a[i] + (b[i] - a[i]) * t);
+    return '#' + [m(0), m(1), m(2)].map(v => v.toString(16).padStart(2, '0')).join('');
+  }
+
+  // ── Per-instance unique id counter ──────────────────────────
+  let _sciSeq = 0;
+
   // ── SVG builder ──────────────────────────────────────────────
   function buildSVG(scientist, reaction) {
     scientist = scientist || {};
     reaction  = reaction  || 'neutral';
+    const uid = '_s' + (++_sciSeq);
     const skin       = scientist.skinTone    || '#FDBCB4';
+    const HI   = _mix(skin, '#FFFFFF', 0.32);
+    const LO   = _mix(skin, '#2E1D14', 0.24);
+    const FLAT = _mix(skin, '#2E1D14', 0.10);
     const coat       = scientist.coatColor   || '#ffffff';
     const pattern    = scientist.coatPattern || 'plain';
     const headAcc    = scientist.head        || null;
@@ -141,11 +163,11 @@ const WLScientist = (() => {
     // 'rainbow' is not a valid SVG colour so we build a linearGradient instead
     const isRainbow = coat === 'rainbow';
     const isHolo    = coat === 'holographic';
-    const coatBase  = isRainbow ? 'url(#coatRainbow)' : isHolo ? 'url(#coatHolo)' : coat;
+    const coatBase  = isRainbow ? `url(#coatRainbow${uid})` : isHolo ? `url(#coatHolo${uid})` : coat;
 
     const defsContent = [
       isRainbow
-        ? `<linearGradient id="coatRainbow" x1="0%" y1="0%" x2="100%" y2="100%">` +
+        ? `<linearGradient id="coatRainbow${uid}" x1="0%" y1="0%" x2="100%" y2="100%">` +
           `<stop offset="0%"   stop-color="#f87171"/>` +
           `<stop offset="20%"  stop-color="#fb923c"/>` +
           `<stop offset="40%"  stop-color="#facc15"/>` +
@@ -155,7 +177,7 @@ const WLScientist = (() => {
           `</linearGradient>`
         : '',
       isHolo
-        ? `<linearGradient id="coatHolo" x1="0%" y1="0%" x2="100%" y2="100%">` +
+        ? `<linearGradient id="coatHolo${uid}" x1="0%" y1="0%" x2="100%" y2="100%">` +
           `<stop offset="0%"   stop-color="#c4b5fd"/>` +
           `<stop offset="25%"  stop-color="#93c5fd"/>` +
           `<stop offset="50%"  stop-color="#86efac"/>` +
@@ -164,40 +186,45 @@ const WLScientist = (() => {
           `</linearGradient>`
         : '',
       pattern === 'stripes'
-        ? `<pattern id="cp" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="${coatBase}"/><line x1="0" y1="0" x2="8" y2="8" stroke="rgba(0,0,0,0.12)" stroke-width="2"/></pattern>`
+        ? `<pattern id="cp${uid}" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="${coatBase}"/><line x1="0" y1="0" x2="8" y2="8" stroke="rgba(0,0,0,0.12)" stroke-width="2"/></pattern>`
         : '',
       pattern === 'molecules'
-        ? `<pattern id="cp" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="${coatBase}"/><circle cx="7" cy="7" r="2" fill="rgba(0,0,0,0.1)"/><circle cx="2" cy="2" r="1.2" fill="rgba(0,0,0,0.08)"/><circle cx="12" cy="12" r="1.2" fill="rgba(0,0,0,0.08)"/></pattern>`
+        ? `<pattern id="cp${uid}" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="${coatBase}"/><circle cx="7" cy="7" r="2" fill="rgba(0,0,0,0.1)"/><circle cx="2" cy="2" r="1.2" fill="rgba(0,0,0,0.08)"/><circle cx="12" cy="12" r="1.2" fill="rgba(0,0,0,0.08)"/></pattern>`
         : '',
       pattern === 'stars'
-        ? `<pattern id="cp" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="${coatBase}"/><text x="2" y="10" font-size="8" opacity="0.18">★</text></pattern>`
+        ? `<pattern id="cp${uid}" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="${coatBase}"/><text x="2" y="10" font-size="8" opacity="0.18">★</text></pattern>`
         : '',
       pattern === 'dots'
-        ? `<pattern id="cp" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="${coatBase}"/><circle cx="5" cy="5" r="2.5" fill="rgba(0,0,0,0.1)"/></pattern>`
+        ? `<pattern id="cp${uid}" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="${coatBase}"/><circle cx="5" cy="5" r="2.5" fill="rgba(0,0,0,0.1)"/></pattern>`
         : '',
       pattern === 'chevrons'
-        ? `<pattern id="cp" x="0" y="0" width="12" height="8" patternUnits="userSpaceOnUse"><rect width="12" height="8" fill="${coatBase}"/><path d="M0,4 L6,0 L12,4" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1.5"/></pattern>`
+        ? `<pattern id="cp${uid}" x="0" y="0" width="12" height="8" patternUnits="userSpaceOnUse"><rect width="12" height="8" fill="${coatBase}"/><path d="M0,4 L6,0 L12,4" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1.5"/></pattern>`
         : '',
       pattern === 'hearts'
-        ? `<pattern id="cp" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="${coatBase}"/><path d="M6,10 C2,7 0,4 3,2 C5,1 6,3 6,3 C6,3 7,1 9,2 C12,4 10,7 6,10Z" fill="rgba(0,0,0,0.08)"/></pattern>`
+        ? `<pattern id="cp${uid}" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="${coatBase}"/><path d="M6,10 C2,7 0,4 3,2 C5,1 6,3 6,3 C6,3 7,1 9,2 C12,4 10,7 6,10Z" fill="rgba(0,0,0,0.08)"/></pattern>`
         : '',
       pattern === 'lightning'
-        ? `<pattern id="cp" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="${coatBase}"/><path d="M8,1 L5,6 L8,6 L4,13" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="1.2"/></pattern>`
+        ? `<pattern id="cp${uid}" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="${coatBase}"/><path d="M8,1 L5,6 L8,6 L4,13" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="1.2"/></pattern>`
         : '',
       pattern === 'dna'
-        ? `<pattern id="cp" x="0" y="0" width="10" height="20" patternUnits="userSpaceOnUse"><rect width="10" height="20" fill="${coatBase}"/><path d="M2,0 Q5,5 8,10 Q5,15 2,20" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1"/><path d="M8,0 Q5,5 2,10 Q5,15 8,20" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1"/><line x1="3" y1="5" x2="7" y2="5" stroke="rgba(0,0,0,0.06)" stroke-width="0.8"/><line x1="3" y1="15" x2="7" y2="15" stroke="rgba(0,0,0,0.06)" stroke-width="0.8"/></pattern>`
+        ? `<pattern id="cp${uid}" x="0" y="0" width="10" height="20" patternUnits="userSpaceOnUse"><rect width="10" height="20" fill="${coatBase}"/><path d="M2,0 Q5,5 8,10 Q5,15 2,20" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1"/><path d="M8,0 Q5,5 2,10 Q5,15 8,20" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1"/><line x1="3" y1="5" x2="7" y2="5" stroke="rgba(0,0,0,0.06)" stroke-width="0.8"/><line x1="3" y1="15" x2="7" y2="15" stroke="rgba(0,0,0,0.06)" stroke-width="0.8"/></pattern>`
         : '',
       pattern === 'plaid'
-        ? `<pattern id="cp" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="${coatBase}"/><line x1="0" y1="4" x2="12" y2="4" stroke="rgba(0,0,0,0.08)" stroke-width="2"/><line x1="0" y1="10" x2="12" y2="10" stroke="rgba(0,0,0,0.06)" stroke-width="1"/><line x1="4" y1="0" x2="4" y2="12" stroke="rgba(0,0,0,0.08)" stroke-width="2"/><line x1="10" y1="0" x2="10" y2="12" stroke="rgba(0,0,0,0.06)" stroke-width="1"/></pattern>`
+        ? `<pattern id="cp${uid}" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="${coatBase}"/><line x1="0" y1="4" x2="12" y2="4" stroke="rgba(0,0,0,0.08)" stroke-width="2"/><line x1="0" y1="10" x2="12" y2="10" stroke="rgba(0,0,0,0.06)" stroke-width="1"/><line x1="4" y1="0" x2="4" y2="12" stroke="rgba(0,0,0,0.08)" stroke-width="2"/><line x1="10" y1="0" x2="10" y2="12" stroke="rgba(0,0,0,0.06)" stroke-width="1"/></pattern>`
         : '',
     ].filter(Boolean).join('');
 
     // Galaxy halo gradient + any extra defs
     const galaxyDef = headAcc === 'galaxy_halo'
-      ? `<linearGradient id="galaxyGrad" x1="0%" y1="0%" x2="100%"><stop offset="0%" stop-color="#a78bfa"/><stop offset="33%" stop-color="#f472b6"/><stop offset="66%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#60a5fa"/></linearGradient>` : '';
-    const allDefs = defsContent + galaxyDef;
+      ? `<linearGradient id="galaxyGrad${uid}" x1="0%" y1="0%" x2="100%"><stop offset="0%" stop-color="#a78bfa"/><stop offset="33%" stop-color="#f472b6"/><stop offset="66%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#60a5fa"/></linearGradient>` : '';
+    const shadeDefs =
+      `<radialGradient id="sk${uid}" cx="38%" cy="30%" r="78%"><stop offset="0%" stop-color="${HI}"/><stop offset="58%" stop-color="${skin}"/><stop offset="100%" stop-color="${LO}"/></radialGradient>` +
+      `<linearGradient id="hs${uid}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#462D26" stop-opacity="0"/><stop offset="62%" stop-color="#462D26" stop-opacity="0"/><stop offset="100%" stop-color="#462D26" stop-opacity="0.22"/></linearGradient>` +
+      `<radialGradient id="hh${uid}" cx="32%" cy="26%" r="55%"><stop offset="0%" stop-color="#ffffff" stop-opacity="0.42"/><stop offset="60%" stop-color="#ffffff" stop-opacity="0"/></radialGradient>` +
+      `<linearGradient id="cs${uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#322A5C" stop-opacity="0"/><stop offset="55%" stop-color="#322A5C" stop-opacity="0"/><stop offset="100%" stop-color="#322A5C" stop-opacity="0.13"/></linearGradient>`;
+    const allDefs = defsContent + galaxyDef + shadeDefs;
     const coatFillDef = allDefs ? `<defs>${allDefs}</defs>` : '';
-    const coatFillRef = ['stripes','molecules','stars','dots','chevrons','hearts','lightning','dna','plaid'].includes(pattern) ? 'url(#cp)' : coatBase;
+    const coatFillRef = ['stripes','molecules','stars','dots','chevrons','hearts','lightning','dna','plaid'].includes(pattern) ? `url(#cp${uid})` : coatBase;
 
     // Wings (render behind body)
     const wingsSVG = {
@@ -265,7 +292,7 @@ const WLScientist = (() => {
       // ── ANIMATED LEGENDARY HEAD ITEMS ──
       flame_crown:  `<polygon points="40,4 28,18 32,13 36,18 40,8 44,18 48,13 52,18" fill="#f59e0b"><animate attributeName="d" values="M40,4 L28,18 L32,13 L36,18 L40,8 L44,18 L48,13 L52,18;M40,2 L28,18 L33,11 L37,18 L40,6 L43,18 L47,11 L52,18;M40,4 L28,18 L32,13 L36,18 L40,8 L44,18 L48,13 L52,18" dur="0.4s" repeatCount="indefinite" attributeType="XML"/></polygon><polygon points="40,7 31,18 35,14 40,18 45,14 49,18" fill="#ef4444" opacity="0.8"><animate attributeName="opacity" values="0.8;0.5;0.8" dur="0.3s" repeatCount="indefinite"/></polygon><polygon points="40,10 35,18 40,15 45,18" fill="#fef08a" opacity="0.9"><animate attributeName="opacity" values="0.9;0.6;0.9" dur="0.5s" repeatCount="indefinite"/></polygon>`,
       ice_crown:    `<polygon points="40,6 26,20 33,16 40,20 47,16 54,20" fill="#93c5fd" opacity="0.8"/><polygon points="40,6 26,20 33,16 40,20 47,16 54,20" fill="none" stroke="#bfdbfe" stroke-width="1.5"><animate attributeName="stroke-opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/></polygon><circle cx="30" cy="16" r="1.5" fill="#e0f2fe"><animate attributeName="r" values="1.5;2;1.5" dur="1.5s" repeatCount="indefinite"/></circle><circle cx="40" cy="8" r="2" fill="#dbeafe"><animate attributeName="r" values="2;2.8;2" dur="2s" repeatCount="indefinite"/></circle><circle cx="50" cy="16" r="1.5" fill="#e0f2fe"><animate attributeName="r" values="1.5;2;1.5" dur="1.8s" repeatCount="indefinite"/></circle><rect x="24" y="19" width="32" height="3" rx="1.5" fill="#60a5fa"/>`,
-      galaxy_halo:  `<ellipse cx="40" cy="14" rx="18" ry="5" fill="none" stroke="url(#galaxyGrad)" stroke-width="2.5"><animateTransform attributeName="transform" type="rotate" values="0 40 14;360 40 14" dur="8s" repeatCount="indefinite"/></ellipse><circle cx="26" cy="14" r="1.5" fill="#fbbf24"><animate attributeName="opacity" values="1;0.2;1" dur="1.2s" repeatCount="indefinite"/></circle><circle cx="54" cy="14" r="1" fill="#a78bfa"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" repeatCount="indefinite"/></circle><circle cx="40" cy="9" r="1.2" fill="#f472b6"><animate attributeName="opacity" values="1;0.4;1" dur="0.9s" repeatCount="indefinite"/></circle>`,
+      galaxy_halo:  `<ellipse cx="40" cy="14" rx="18" ry="5" fill="none" stroke="url(#galaxyGrad${uid})" stroke-width="2.5"><animateTransform attributeName="transform" type="rotate" values="0 40 14;360 40 14" dur="8s" repeatCount="indefinite"/></ellipse><circle cx="26" cy="14" r="1.5" fill="#fbbf24"><animate attributeName="opacity" values="1;0.2;1" dur="1.2s" repeatCount="indefinite"/></circle><circle cx="54" cy="14" r="1" fill="#a78bfa"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" repeatCount="indefinite"/></circle><circle cx="40" cy="9" r="1.2" fill="#f472b6"><animate attributeName="opacity" values="1;0.4;1" dur="0.9s" repeatCount="indefinite"/></circle>`,
     };
     // Face accessories
     const faceAccSVG = {
@@ -296,12 +323,17 @@ const WLScientist = (() => {
 
     return `<svg viewBox="0 0 80 120" xmlns="http://www.w3.org/2000/svg" style="overflow:visible">
   ${coatFillDef}
+  <!-- Ground contact shadow -->
+  <ellipse cx="40" cy="119" rx="22" ry="3.2" fill="rgba(0,0,0,0.24)"/>
   <!-- Wings (behind body) -->
   ${wingsRendered}
   <!-- Body / Lab coat -->
   <rect x="14" y="60" width="52" height="58" rx="10" fill="${coatFillRef}" stroke="#e2e8f0" stroke-width="1"/>
   <!-- Custom coat overlay: on top of coat colour, under collar/pocket/face details -->
   ${customImg('coat')}
+  <!-- Coat form-shade + sheen (over coat fill, under collar/pocket/badges) -->
+  <rect x="14" y="60" width="52" height="58" rx="10" fill="url(#cs${uid})"/>
+  <path d="M19,66 Q21,90 22,112" stroke="rgba(255,255,255,0.5)" stroke-width="3" fill="none" opacity="0.5" stroke-linecap="round"/>
   <!-- Coat collar -->
   <polygon points="40,62 30,78 40,84" fill="white" opacity="0.35"/>
   <polygon points="40,62 50,78 40,84" fill="white" opacity="0.35"/>
@@ -311,17 +343,22 @@ const WLScientist = (() => {
   <!-- Badge pins -->
   ${_buildBadgePins(scientist)}
   <!-- Neck -->
-  <rect x="33" y="54" width="14" height="10" rx="3" fill="${skin}"/>
+  <rect x="33" y="54" width="14" height="10" rx="3" fill="${FLAT}"/>
+  <!-- Ears (flat, behind head) -->
+  <ellipse cx="18" cy="40" rx="4.5" ry="5.5" fill="${FLAT}"/>
+  <ellipse cx="62" cy="40" rx="4.5" ry="5.5" fill="${FLAT}"/>
   <!-- Head -->
-  <ellipse cx="40" cy="38" rx="22" ry="22" fill="${skin}"/>
-  <!-- Ears -->
-  <ellipse cx="18" cy="40" rx="4.5" ry="5.5" fill="${skin}"/>
-  <ellipse cx="62" cy="40" rx="4.5" ry="5.5" fill="${skin}"/>
+  <ellipse cx="40" cy="38" rx="22" ry="22" fill="url(#sk${uid})"/>
+  <ellipse cx="40" cy="38" rx="22" ry="22" fill="url(#hs${uid})"/>
+  <ellipse cx="40" cy="38" rx="22" ry="22" fill="url(#hh${uid})"/>
   <!-- Face -->
   ${(brows[reaction]||brows.neutral)}
   ${(eyes[reaction]||eyes.neutral)}
   <ellipse cx="40" cy="41" rx="2" ry="1.5" fill="rgba(0,0,0,0.12)"/>
   ${(mouths[reaction]||mouths.neutral)}
+  <!-- Blush -->
+  <ellipse cx="28" cy="43.5" rx="4.2" ry="2.6" fill="#fca5a5" opacity="0.32"/>
+  <ellipse cx="52" cy="43.5" rx="4.2" ry="2.6" fill="#fca5a5" opacity="0.32"/>
   <!-- Head accessory -->
   ${headAcc && headAccSVG[headAcc] ? headAccSVG[headAcc] : ''}
   <!-- Face accessory -->
