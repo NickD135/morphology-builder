@@ -25,8 +25,8 @@
 </style>
 </head>
 <body>
-<h1>Item Dimensional Pass — Head + Face Accessories Harness</h1>
-<p class="meta">Tests: render all head + face ids at 150px + 44px · animatedIntact · isolationOK (no shared gradient ids between two instances)</p>
+<h1>Item Dimensional Pass — Head + Face + Wings Harness</h1>
+<p class="meta">Tests: render all head + face + wing ids at 150px + 44px · animatedIntact · isolationOK (no shared gradient ids between two instances)</p>
 
 <!-- ── HEADS ── -->
 <h2>Head Tests</h2>
@@ -55,6 +55,21 @@
 
 <h2>window.__FACES__ (written after tests)</h2>
 <pre id="faceResultPre"></pre>
+
+<hr>
+
+<!-- ── WINGS ── -->
+<h2>Wings Tests</h2>
+<div class="status" id="wingsStatusBox">Loading…</div>
+
+<h2>Wings Grid (large 150px + small 44px)</h2>
+<div class="grid" id="wingsGrid"></div>
+
+<h2>Wings Isolation Test — two crystal_wings instances</h2>
+<div class="isolation-grid" id="wingsIsoGrid"></div>
+
+<h2>window.__WINGS__ (written after tests)</h2>
+<pre id="wingsResultPre"></pre>
 
 <!-- Dependencies -->
 <script src="../../wordlab-worlds.js"></script>
@@ -327,6 +342,140 @@
   }
 
   document.getElementById('faceResultPre').textContent = JSON.stringify(result, null, 2);
+})();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WINGS TESTS
+// ─────────────────────────────────────────────────────────────────────────────
+(function() {
+  // All 4 wings are animated; animated check = all 4 must contain <animate
+  const WINGS_ANIMATED_CHECK = ['angel_wings', 'fire_wings', 'crystal_wings', 'shadow_wings'];
+  const ANIMATE_TAGS = ['<animate', '<animateTransform'];
+
+  // Collect wing ids from WLShopData
+  let wingIds = [];
+  try {
+    wingIds = (WLShopData.wings || []).map(w => w.id).filter(id => id && id !== 'none');
+  } catch(e) {
+    document.getElementById('wingsStatusBox').textContent = 'ERROR: could not read WLShopData.wings — ' + e.message;
+  }
+
+  const errors = [];
+  const wingsGrid = document.getElementById('wingsGrid');
+
+  function renderWing(wingId, size) {
+    try {
+      const svgStr = WLScientist.buildSVG({ wings: wingId, skinTone: '#FDBCB4', coatColor: '#ffffff' }, 'neutral');
+      if (!svgStr || !svgStr.includes('<svg')) {
+        errors.push(wingId + ': no svg output');
+        return null;
+      }
+      const container = document.createElement('div');
+      container.style.width = size + 'px';
+      container.style.height = (size * 1.5) + 'px';
+      container.style.overflow = 'hidden';
+      container.innerHTML = svgStr.replace(/viewBox="[^"]*"/, `viewBox="0 0 80 120" width="${size}" height="${size * 1.5}"`);
+      return container;
+    } catch(e) {
+      errors.push(wingId + ': threw ' + e.message);
+      return null;
+    }
+  }
+
+  // Render each wing item
+  wingIds.forEach(id => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `<div class="label">${id}</div>`;
+
+    const pair = document.createElement('div');
+    pair.className = 'pair';
+
+    const lg = renderWing(id, 150);
+    if (lg) { lg.className = 'lg'; pair.appendChild(lg); }
+    else { const e = document.createElement('div'); e.className = 'err'; e.textContent = 'ERROR'; pair.appendChild(e); }
+
+    const sm = renderWing(id, 44);
+    if (sm) { sm.className = 'sm'; pair.appendChild(sm); }
+
+    card.appendChild(pair);
+    wingsGrid.appendChild(card);
+  });
+
+  // Check animatedIntact: all 4 wings must contain <animate
+  let animatedIntact = true;
+  WINGS_ANIMATED_CHECK.forEach(id => {
+    try {
+      const svgStr = WLScientist.buildSVG({ wings: id, skinTone: '#FDBCB4', coatColor: '#ffffff' }, 'neutral');
+      const hasAnim = ANIMATE_TAGS.some(tag => svgStr.includes(tag));
+      if (!hasAnim) {
+        animatedIntact = false;
+        errors.push(id + ': animation elements missing');
+      }
+    } catch(e) {
+      animatedIntact = false;
+      errors.push(id + ': threw during animated check — ' + e.message);
+    }
+  });
+
+  // Isolation test: two characters both wearing crystal_wings must not share any [id] attribute
+  let isolationOK = true;
+  const wingsIsoGrid = document.getElementById('wingsIsoGrid');
+  try {
+    const svg1 = WLScientist.buildSVG({ wings: 'crystal_wings', skinTone: '#FDBCB4', coatColor: '#ffffff' }, 'neutral');
+    const svg2 = WLScientist.buildSVG({ wings: 'crystal_wings', skinTone: '#deb887', coatColor: '#ffd700' }, 'excited');
+
+    const extractIds = s => { const m = []; let r; const re = /\bid="([^"]+)"/g; while ((r = re.exec(s)) !== null) m.push(r[1]); return m; };
+    const ids1 = extractIds(svg1);
+    const ids2 = extractIds(svg2);
+    const set1 = new Set(ids1);
+    const shared = ids2.filter(id => set1.has(id));
+    if (shared.length > 0) {
+      isolationOK = false;
+      errors.push('wings isolation FAIL — shared ids: ' + shared.join(', '));
+    }
+
+    // Render both for visual inspection
+    [svg1, svg2].forEach((svgStr, i) => {
+      const c = document.createElement('div');
+      c.className = 'iso-card';
+      const lbl = document.createElement('div');
+      lbl.className = 'iso-label';
+      lbl.textContent = 'crystal_wings instance ' + (i+1) + ' — ids: [' + extractIds(svgStr).join(', ') + ']';
+      c.appendChild(lbl);
+      const wrap = document.createElement('div');
+      wrap.style.width = '150px';
+      wrap.style.height = '225px';
+      wrap.style.overflow = 'hidden';
+      wrap.innerHTML = svgStr.replace(/viewBox="[^"]*"/, 'viewBox="0 0 80 120" width="150" height="225"');
+      c.appendChild(wrap);
+      wingsIsoGrid.appendChild(c);
+    });
+  } catch(e) {
+    isolationOK = false;
+    errors.push('wings isolation test threw: ' + e.message);
+  }
+
+  // Final result object
+  const result = {
+    count: wingIds.length,
+    ids: wingIds,
+    errors: errors,
+    animatedIntact: animatedIntact,
+    isolationOK: isolationOK,
+    PASS: errors.length === 0 && animatedIntact && isolationOK
+  };
+  window.__WINGS__ = result;
+
+  // Status box
+  const wingsStatusBox = document.getElementById('wingsStatusBox');
+  if (result.PASS) {
+    wingsStatusBox.innerHTML = `<span class="pass">✓ PASS</span> — count=${result.count}, errors=0, animatedIntact=true, isolationOK=true`;
+  } else {
+    wingsStatusBox.innerHTML = `<span class="fail">✗ FAIL</span> — errors: ${JSON.stringify(errors)}`;
+  }
+
+  document.getElementById('wingsResultPre').textContent = JSON.stringify(result, null, 2);
 })();
 </script>
 </body>
