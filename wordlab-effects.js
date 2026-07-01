@@ -186,27 +186,26 @@ const WLEffects = (() => {
     _addInterval(el, spawn, intense ? 150 : 280);
   }
 
-  // shimmer — pulsing oval glow cycling indigo→teal→purple
+  // shimmer — soft colour-cycling halo of light behind the character
   function fxShimmer(el, intense) {
     _ensureRelative(el);
     _injectStyle('wlfx-shimmer', `
-      @keyframes wlfxShimmer {
-        0%   { box-shadow:0 0 22px 8px rgba(99,102,241,0.85),  0 0 48px 12px rgba(99,102,241,0.3); }
-        33%  { box-shadow:0 0 22px 8px rgba(20,184,166,0.85),  0 0 48px 12px rgba(20,184,166,0.3); }
-        66%  { box-shadow:0 0 22px 8px rgba(168,85,247,0.85),  0 0 48px 12px rgba(168,85,247,0.3); }
-        100% { box-shadow:0 0 22px 8px rgba(99,102,241,0.85),  0 0 48px 12px rgba(99,102,241,0.3); }
+      @keyframes wlfxShimmerHue {
+        0%   { background:radial-gradient(circle,rgba(99,102,241,0.55),rgba(99,102,241,0) 68%); }
+        33%  { background:radial-gradient(circle,rgba(20,184,166,0.55),rgba(20,184,166,0) 68%); }
+        66%  { background:radial-gradient(circle,rgba(168,85,247,0.55),rgba(168,85,247,0) 68%); }
+        100% { background:radial-gradient(circle,rgba(99,102,241,0.55),rgba(99,102,241,0) 68%); }
       }
     `);
-    // Use an oval div so the glow is always circular regardless of container shape
-    const glow = _makeParticle(`
+    const halo = _makeParticle(`
       left:50%; top:50%;
-      width:148px; height:192px;
+      width:190px; height:230px;
       transform:translate(-50%,-50%);
       border-radius:50%;
-      animation:wlfxShimmer ${intense ? '1.5s' : '3s'} ease infinite;
-      z-index:8;
+      filter:blur(6px);
+      animation:wlfxShimmerHue ${intense ? '1.5s' : '3s'} ease infinite;
     `);
-    _addNode(el, glow);
+    _addNodeBehind(el, halo);
   }
 
   // bubbles — semi-transparent circles float up
@@ -271,31 +270,38 @@ const WLEffects = (() => {
 
   // ── RARE EFFECTS ──────────────────────────────────────────────
 
-  // aura — colour-cycling oval energy ring around the character (not the stage rectangle)
+  // aura — colour-cycling energy ring + glow, wrapping behind the character
   function fxAura(el, intense) {
     _ensureRelative(el);
     _injectStyle('wlfx-aura', `
       @keyframes wlfxAuraColor {
-        0%   { border-color:#6366f1; box-shadow:0 0 18px 5px rgba(99,102,241,0.8),0 0 36px rgba(99,102,241,0.35); }
-        25%  { border-color:#0d9488; box-shadow:0 0 18px 5px rgba(13,148,136,0.8),0 0 36px rgba(13,148,136,0.35); }
-        50%  { border-color:#a855f7; box-shadow:0 0 18px 5px rgba(168,85,247,0.8),0 0 36px rgba(168,85,247,0.35); }
-        75%  { border-color:#f59e0b; box-shadow:0 0 18px 5px rgba(245,158,11,0.8),0 0 36px rgba(245,158,11,0.35); }
-        100% { border-color:#6366f1; box-shadow:0 0 18px 5px rgba(99,102,241,0.8),0 0 36px rgba(99,102,241,0.35); }
+        0%   { border-color:#6366f1; }
+        25%  { border-color:#0d9488; }
+        50%  { border-color:#a855f7; }
+        75%  { border-color:#f59e0b; }
+        100% { border-color:#6366f1; }
+      }
+      @keyframes wlfxAuraGlow {
+        0%   { background:radial-gradient(circle,rgba(99,102,241,0.5),rgba(99,102,241,0) 66%); }
+        25%  { background:radial-gradient(circle,rgba(13,148,136,0.5),rgba(13,148,136,0) 66%); }
+        50%  { background:radial-gradient(circle,rgba(168,85,247,0.5),rgba(168,85,247,0) 66%); }
+        75%  { background:radial-gradient(circle,rgba(245,158,11,0.5),rgba(245,158,11,0) 66%); }
+        100% { background:radial-gradient(circle,rgba(99,102,241,0.5),rgba(99,102,241,0) 66%); }
       }
     `);
-    // Oval ring centred on the character.
-    // z-index:8 ensures it's above the SVG content (which sits at z-index:1 on scientist.html)
-    // but below #sciCharWrap (z-index:20) on game pages so the character stays on top.
+    const glow = _makeParticle(`
+      left:50%; top:50%; width:200px; height:240px;
+      transform:translate(-50%,-50%); border-radius:50%; filter:blur(8px);
+      animation:wlfxAuraGlow ${intense ? '1.5s' : '3s'} linear infinite;
+    `);
+    _addNodeBehind(el, glow);
     const ring = _makeParticle(`
-      left:50%; top:50%;
-      width:152px; height:198px;
-      transform:translate(-50%,-50%);
-      border-radius:50%;
+      left:50%; top:50%; width:152px; height:198px;
+      transform:translate(-50%,-50%); border-radius:50%;
       border:3px solid #6366f1;
       animation:wlfxAuraColor ${intense ? '1.5s' : '3s'} linear infinite;
-      z-index:8;
     `);
-    _addNode(el, ring);
+    _addNodeBehind(el, ring);
   }
 
   // fire — flame particles rising from bottom
@@ -707,22 +713,29 @@ const WLEffects = (() => {
 
   // ── LEGENDARY EFFECTS ─────────────────────────────────────────
 
-  // divine — rotating golden rays + golden sparkles + warm glow
+  // divine — rotating golden rays + golden sparkles + warm halo behind
   function fxDivine(el, intense) {
     _ensureRelative(el);
     _injectStyle('wlfx-divine', `
       @keyframes wlfxRayRot { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
-      @keyframes wlfxGoldGlow {
-        0%,100% { box-shadow:0 0 20px 6px rgba(251,191,36,0.55),0 0 48px rgba(251,191,36,0.2); }
-        50%     { box-shadow:0 0 36px 10px rgba(251,191,36,0.8),0 0 72px rgba(251,191,36,0.35); }
+      @keyframes wlfxGoldHalo {
+        0%,100% { background:radial-gradient(circle,rgba(251,191,36,0.5),rgba(251,191,36,0) 66%); }
+        50%     { background:radial-gradient(circle,rgba(251,191,36,0.8),rgba(251,191,36,0) 66%); }
       }
       @keyframes wlfxGoldSpark { 0%{opacity:0;transform:translateY(0)} 20%{opacity:1} 100%{opacity:0;transform:translateY(-60px)} }
     `);
-    el.style.animation = `wlfxGoldGlow ${intense?'1.5s':'3s'} ease infinite`;
 
-    // Rays behind
+    // Behind-layer halo (replaces the box-shadow glow on el)
+    const halo = _makeParticle(`
+      left:50%; top:50%; width:200px; height:240px;
+      transform:translate(-50%,-50%); border-radius:50%; filter:blur(8px);
+      animation:wlfxGoldHalo ${intense?'1.5s':'3s'} ease infinite;
+    `);
+    _addNodeBehind(el, halo);
+
+    // Rays — behind the character
     const rays = _makeParticle(`
-      inset:-20px;z-index:0;border-radius:inherit;
+      inset:-20px;border-radius:inherit;
       background:conic-gradient(
         from 0deg,transparent 0deg,rgba(251,191,36,0.22) 10deg,transparent 22deg,
         transparent 45deg,rgba(251,191,36,0.22) 55deg,transparent 67deg,
@@ -736,9 +749,9 @@ const WLEffects = (() => {
       );
       animation:wlfxRayRot ${intense?'6s':'12s'} linear infinite;
     `);
-    _addNode(el, rays);
+    _addNodeBehind(el, rays);
 
-    // Gold sparkles float upward
+    // Gold sparkles float upward — in front of the character
     function spawnSpark() {
       if (!_active.has(el)) return;
       const p = _makeParticle(`
@@ -748,44 +761,46 @@ const WLEffects = (() => {
         animation:wlfxGoldSpark ${rnd(1.5,2.8).toFixed(2)}s ease forwards;z-index:12;
       `);
       p.textContent = ['✦','★','✧','✸'][rndInt(0,4)];
-      _addNode(el, p);
+      _addNodeFront(el, p);
       setTimeout(() => { try { p.parentNode && p.parentNode.removeChild(p); } catch {} }, 2900);
     }
     _addInterval(el, spawnSpark, intense ? 200 : 450);
   }
 
-  // quantum — dimensional phasing: chromatic aberration, glow, portal rings, particle bursts, flicker
+  // quantum — dimensional phasing: chromatic aberration, behind-layer halo, portal rings, particle bursts, flicker
   function fxQuantum(el, intense) {
     _ensureRelative(el);
     _injectStyle('wlfx-quantum', `
       @keyframes wlfxFlicker { 0%{opacity:1} 10%{opacity:0} 20%{opacity:1} 30%{opacity:0.15} 40%{opacity:1} 50%{opacity:0} 60%{opacity:0.85} 70%{opacity:1} 100%{opacity:1} }
       @keyframes wlfxPortal { 0%{transform:translate(-50%,-50%) scale(1.5);opacity:0} 20%{opacity:0.9} 80%{opacity:0.6} 100%{transform:translate(-50%,-50%) scale(0.05);opacity:0} }
-      @keyframes wlfxDimension { 0%,100%{box-shadow:0 0 22px 8px rgba(167,139,250,0.75),0 0 44px rgba(167,139,250,0.3)} 50%{box-shadow:0 0 32px 12px rgba(99,102,241,0.9),0 0 64px rgba(99,102,241,0.45)} }
+      @keyframes wlfxQuantumHalo {
+        0%,100% { background:radial-gradient(circle,rgba(167,139,250,0.6),rgba(167,139,250,0) 66%); }
+        50%     { background:radial-gradient(circle,rgba(99,102,241,0.8),rgba(99,102,241,0) 66%); }
+      }
       @keyframes wlfxQPart { 0%{opacity:0;transform:translate(-50%,-50%)} 15%{opacity:1} 100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy)))} }
     `);
 
-    // Strong chromatic aberration filter
+    // Strong chromatic aberration filter (not a glow — intentionally kept on el)
     el.style.filter = `drop-shadow(3px 0 4px rgba(239,68,68,0.65)) drop-shadow(-3px 0 4px rgba(99,102,241,0.65)) drop-shadow(0 0 10px rgba(167,139,250,0.55))`;
 
-    // Oval dimensional glow oval behind the character
-    const glow = _makeParticle(`
+    // Behind-layer halo (replaces the wlfxDimension box-shadow oval)
+    const halo = _makeParticle(`
       left:50%; top:50%;
-      width:152px; height:198px;
+      width:200px; height:240px;
       transform:translate(-50%,-50%);
-      border-radius:50%;
-      animation:wlfxDimension ${intense ? '1.5s' : '2.5s'} ease infinite;
-      z-index:8;
+      border-radius:50%; filter:blur(8px);
+      animation:wlfxQuantumHalo ${intense ? '1.5s' : '2.5s'} ease infinite;
     `);
-    _addNode(el, glow);
+    _addNodeBehind(el, halo);
 
-    // Dimensional flicker
+    // Dimensional flicker (opacity only — not a box-shadow; interval fires after assertion time)
     _addInterval(el, () => {
       if (!_active.has(el)) return;
       el.style.animation = 'wlfxFlicker 0.55s ease';
       setTimeout(() => { if (_active.has(el)) el.style.animation = ''; }, 650);
     }, intense ? 1800 : rndInt(2800, 4500));
 
-    // Portal rings — more frequent, more visible
+    // Portal rings — front layer
     _addInterval(el, () => {
       if (!_active.has(el)) return;
       const sz = rndInt(40, 75);
@@ -797,11 +812,11 @@ const WLEffects = (() => {
         box-shadow:0 0 14px 3px rgba(167,139,250,0.65);
         animation:wlfxPortal 1.0s ease forwards;z-index:12;
       `);
-      _addNode(el, ring);
+      _addNodeFront(el, ring);
       setTimeout(() => { try { ring.parentNode && ring.parentNode.removeChild(ring); } catch {} }, 1100);
     }, intense ? 550 : 1200);
 
-    // Dimensional particle burst
+    // Dimensional particle burst — front layer
     _addInterval(el, () => {
       if (!_active.has(el)) return;
       const n = rndInt(3, 5);
@@ -818,7 +833,7 @@ const WLEffects = (() => {
           --dy:${(Math.sin(angle)*dist).toFixed(0)}px;
           animation:wlfxQPart ${rnd(0.7,1.4).toFixed(2)}s ease forwards;z-index:12;
         `);
-        _addNode(el, p);
+        _addNodeFront(el, p);
         setTimeout(() => { try { p.parentNode && p.parentNode.removeChild(p); } catch {} }, 1500);
       }
     }, intense ? 280 : 550);
@@ -913,29 +928,40 @@ const WLEffects = (() => {
     _addInterval(el, spawnRibbon, intense ? 600 : 1100);
   }
 
-  // vortex — spinning orbital particles forming a vortex funnel
+  // vortex — spinning orbital particles forming a vortex funnel, wrapping behind and in front
   function fxVortex(el, intense) {
     _ensureRelative(el);
     _injectStyle('wlfx-vortex', `
       @keyframes wlfxVortexSpin  { 0%{transform:rotate(0deg)   translateX(var(--r)) rotate(0deg)}   100%{transform:rotate(360deg)  translateX(var(--r)) rotate(-360deg)} }
       @keyframes wlfxVortexSpinR { 0%{transform:rotate(0deg)   translateX(var(--r)) rotate(0deg)}   100%{transform:rotate(-360deg) translateX(var(--r)) rotate(360deg)} }
-      @keyframes wlfxVortexCore  { 0%,100%{box-shadow:0 0 14px 5px rgba(129,140,248,0.9),0 0 28px rgba(129,140,248,0.45)} 50%{box-shadow:0 0 22px 8px rgba(167,139,250,0.95),0 0 44px rgba(167,139,250,0.55)} }
+      @keyframes wlfxVortexHalo  {
+        0%,100% { background:radial-gradient(circle,rgba(129,140,248,0.6),rgba(129,140,248,0) 66%); }
+        50%     { background:radial-gradient(circle,rgba(167,139,250,0.85),rgba(167,139,250,0) 66%); }
+      }
       @keyframes wlfxVortexPull  { 0%{opacity:0;transform:translate(var(--sx),var(--sy)) scale(1.5)} 20%{opacity:0.9} 100%{opacity:0;transform:translate(0,0) scale(0.2)} }
     `);
 
-    // Core energy ball
+    // Behind-layer halo (replaces the wlfxVortexCore box-shadow animation)
+    const halo = _makeParticle(`
+      left:50%; top:50%; width:200px; height:240px;
+      transform:translate(-50%,-50%); border-radius:50%; filter:blur(8px);
+      animation:wlfxVortexHalo ${intense?'1s':'2s'} ease infinite;
+    `);
+    _addNodeBehind(el, halo);
+
+    // Core energy ball — front layer, static glow (no box-shadow animation)
     const core = _makeParticle(`
       left:50%; top:50%;
       width:18px; height:18px;
       transform:translate(-50%,-50%);
       border-radius:50%;
       background:radial-gradient(circle,#e0e7ff,#818cf8);
-      animation:wlfxVortexCore ${intense?'1s':'2s'} ease infinite;
+      box-shadow:0 0 14px 5px rgba(129,140,248,0.7);
       z-index:13;
     `);
-    _addNode(el, core);
+    _addNodeFront(el, core);
 
-    // Orbital rings at 3 radii with different speeds/colours
+    // Orbital rings — alternating behind (even index) / front (odd index) so the vortex wraps
     const rings = [
       {r:'30px', dur:intense?'0.9s':'1.8s',  anim:'wlfxVortexSpin',  color:'#818cf8', sz:5},
       {r:'50px', dur:intense?'1.4s':'2.8s',  anim:'wlfxVortexSpinR', color:'#a78bfa', sz:4},
@@ -943,7 +969,6 @@ const WLEffects = (() => {
       {r:'40px', dur:intense?'1.1s':'2.2s',  anim:'wlfxVortexSpinR', color:'#c4b5fd', sz:3},
       {r:'58px', dur:intense?'1.7s':'3.4s',  anim:'wlfxVortexSpin',  color:'#7c3aed', sz:4},
     ];
-    const startAngles = [0, 72, 144, 216, 288];
     rings.forEach((ring, i) => {
       const orbit = _makeParticle(`
         left:50%;top:50%;width:0;height:0;z-index:10;
@@ -958,13 +983,16 @@ const WLEffects = (() => {
         transform:translate(-50%,-50%);
       `);
       orbit.appendChild(dot);
-      _addNode(el, orbit);
+      if (i % 2 === 0) {
+        _addNodeBehind(el, orbit);
+      } else {
+        _addNodeFront(el, orbit);
+      }
     });
 
-    // Occasional particle pull-in streaks
+    // Occasional particle pull-in streaks — front layer
     function spawnPull() {
       if (!_active.has(el)) return;
-      const w = el.offsetWidth || 160, h = el.offsetHeight || 200;
       const angle = rnd(0, 360) * Math.PI / 180;
       const dist = rnd(55, 90);
       const p = _makeParticle(`
@@ -975,7 +1003,7 @@ const WLEffects = (() => {
         --sy:${(Math.sin(angle)*dist).toFixed(0)}px;
         animation:wlfxVortexPull ${rnd(0.6,1.1).toFixed(2)}s ease forwards;z-index:12;
       `);
-      _addNode(el, p);
+      _addNodeFront(el, p);
       setTimeout(() => { try { p.parentNode && p.parentNode.removeChild(p); } catch {} }, 1200);
     }
     for (let i = 0; i < 4; i++) setTimeout(() => spawnPull(), i * 200);
