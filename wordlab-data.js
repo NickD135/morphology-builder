@@ -2953,6 +2953,9 @@ if (sessionStorage.getItem('wl_low_stim') === 'true') {
     '.low-stim #sciCharWrap.sci-wrong,' +
     '.low-stim #sciCharWrap.sci-streak { animation:none !important; }' +
 
+    /* Suppress pet idle bob (pet reactions already gated in react()) */
+    '.low-stim #petCharWrap { animation:none !important; }' +
+
     /* Suppress focus game glow */
     '.low-stim .act-card.focus-glow { box-shadow:none !important; animation:none !important; }' +
     '.low-stim .act-card { animation:none !important; }' +

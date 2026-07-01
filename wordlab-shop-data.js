@@ -158,6 +158,21 @@
       {id:'crystal_wings', name:'Crystal Wings',  cost:700, legendary:true, requiresBadge:'legend_morpheme',  icon:'💎'},
       {id:'shadow_wings',  name:'Shadow Wings',   cost:900, legendary:true, requiresBadge:'legend_polymath',  icon:'🖤'},
     ],
+    // Pet companions — paid cosmetics, rendered on the podium beside the
+    // character via WLScientist.buildPetSVG(). Original catalogue restored
+    // from the pre-reskin pet shop (ids/names/costs/icons unchanged).
+    pets: [
+      {id:'none',       name:'None',         cost:0,   free:true, icon:'❌'},
+      {id:'cat',        name:'Grey Cat',     cost:120,            icon:'🐱'},
+      {id:'ginger_cat', name:'Ginger Cat',   cost:120,            icon:'🐈'},
+      {id:'puppy',      name:'Puppy',        cost:150,            icon:'🐶'},
+      {id:'bird',       name:'Bluebird',     cost:100,            icon:'🐦'},
+      {id:'frog',       name:'Lab Frog',     cost:80,             icon:'🐸'},
+      {id:'owl',        name:'Wise Owl',     cost:200,            icon:'🦉'},
+      {id:'dragon',     name:'Baby Dragon',  cost:500, legendary:true, icon:'🐉'},
+      {id:'horse',      name:'Mini Horse',   cost:200,            icon:'🐴'},
+      {id:'hamster',    name:'Hamster',      cost:100,            icon:'🐹'},
+    ],
   };
 
   // SHOP.dances in scientist.html is a tier-keyed object, not a flat array.
@@ -212,6 +227,7 @@
     heads:    SHOP.headAccessories,
     faces:    SHOP.faceAccessories,
     wings:    SHOP.wings,
+    pets:     SHOP.pets,
     dances:   DANCES,
     // Mirror of the tier-keyed object from scientist.html, for code that needs
     // per-tier section access (e.g. Task 6 dance section renderer).
