@@ -37,9 +37,11 @@ No pet is free to acquire; every real pet costs quarks, same as before the redes
    shapes; these are fuller "soft-plush" bodies with proper shading (highlight + shadow
    gradients), matching the character redesign. Take a look at the screenshots below and
    confirm you're happy with the style before this goes live.
-2. **Podium-companion placement** — the pet now sits beside the character on a small
-   "tank" platform (glassy terrarium-style backdrop), both on the shop page and on game
-   pages. This replaces the old hidden terrarium display that was never shown to students.
+2. **Podium-companion placement** — the pet now sits beside the character as a small
+   bare companion (no terrarium/tank chrome — that was retired per spec decision D6),
+   both on the shop page (`#stage #petCharWrap`, clamp(52px,16%,90px)) and on game pages
+   (`#petCharWrap`, ~90px, via the shared CSS injected by `wordlab-scientist.js`). This
+   replaces the old hidden terrarium display that was never shown to students.
 3. **Costs are unchanged** — same 9 price points as the original (hidden) pet system, so
    if any student previously had virtual currency history around pets, nothing breaks.
 4. **Mobile hide on Breakdown Blitz kept** — on narrow screens (≤700px) the pet is hidden
@@ -107,3 +109,8 @@ Screenshots saved in `tests/manual/screenshots/`:
   (Phase 7.28) added behind/front z-index layers around the character; worth a quick look
   that an equipped effect (aura, galaxy, etc.) doesn't visually clash with the pet podium
   when both are showing at once
+- **Equip a pet on the real `scientist.html` and eyeball the podium size/placement, plus
+  one game page** — cross-stylesheet cascade (the `#stage #petCharWrap` rule in
+  `scientist.html` vs the legacy `#petCharWrap` rule injected into `<head>` by
+  `wordlab-scientist.js`) can't be fully caught by the synthetic harness, which loads
+  both stylesheets manually rather than through the real page load order

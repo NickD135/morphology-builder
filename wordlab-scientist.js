@@ -860,10 +860,11 @@ const WLScientist = (() => {
   // ── Pet stage injection ─────────────────────────────────────
   function _injectPetStage(sd) {
     const petId = sd && sd.scientist && sd.scientist.pet;
+    const svg = (petId && petId !== 'none') ? buildPetSVG(petId) : '';
     document.querySelectorAll('#petCharWrap').forEach(el => {
       const tank = el.closest('.pet-tank');
-      if (petId && petId !== 'none') {
-        el.innerHTML = buildPetSVG(petId);
+      if (svg) {
+        el.innerHTML = svg;
         el.classList.add('pet-idle');
         el.style.display = '';
         if (tank) tank.style.display = '';
@@ -1293,8 +1294,11 @@ const WLScientist = (() => {
         font-size:7px; font-weight:900; letter-spacing:.12em; text-transform:uppercase;
         color:rgba(100,180,255,.5); z-index:1;
       }
-      #petCharWrap { width:160px; height:160px; transition:transform .2s; z-index:26; }
-      #petCharWrap svg { width:100%; height:100%; }
+      #petCharWrap { width:90px; height:auto; transition:transform .2s; }
+      #petCharWrap svg { width:100%; height:auto; }
+      @media (prefers-reduced-motion: reduce) {
+        #petCharWrap { animation:none !important; }
+      }
       #petCharWrap.pet-idle { animation:petIdle 2.5s ease-in-out infinite; }
       #petCharWrap.pet-correct { animation:petJump .6s ease-out; }
       #petCharWrap.pet-wrong { animation:petSad .5s ease-out; }

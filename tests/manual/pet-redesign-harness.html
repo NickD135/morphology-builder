@@ -301,5 +301,102 @@ pre{background:#0f0e1c;padding:10px;border-radius:8px;white-space:pre-wrap}</sty
     lowStim: SWEEP.lowStim,
     fullPageIsolation: SWEEP.fullPageIsolation
   }, null, 2);
+
+  // ── Fix-wave verification: CSS-cascade check ────────────────────
+  // wordlab-scientist.js has already auto-injected its #wlSciCSS stylesheet
+  // (containing the legacy #petCharWrap{width:90px...} rule + the
+  // prefers-reduced-motion gate) by the time this script runs, since the
+  // script tag above executes synchronously and _injectCSS() runs at module
+  // load. We now layer the scientist.html podium rule (#stage #petCharWrap)
+  // on top, exactly as document order would on the real page (page <style>
+  // first, then wordlab-scientist.js's <script> appends its <style> later —
+  // the injected rule is APPENDED AFTER, so this harness must replicate that
+  // ordering to be a meaningful cascade test).
+  const CSS = { scientistOk: false, gameOk: false, reducedMotionOk: false, errors: [] };
+  try {
+    // Copy of the #stage #petCharWrap rule from scientist.html (Issue 1 fix).
+    // Appended BEFORE wordlab-scientist.js's injected style in true document
+    // order (page <style> is in <head> before body scripts run), but since
+    // wordlab-scientist.js already injected its style during script load
+    // above, we insert this new style tag directly after it in <head> to
+    // faithfully mirror scientist.html's real order (page style first,
+    // wordlab-scientist.js's later-appended style second) is impossible after
+    // the fact — so instead we assert the fix's actual mechanism: SPECIFICITY.
+    // The #stage #petCharWrap rule (0,2,0 two ids) must win over the plain
+    // #petCharWrap rule (0,1,0 one id) regardless of which was inserted last.
+    const scientistStyle = document.createElement('style');
+    scientistStyle.textContent =
+      '#stage #petCharWrap{position:absolute;right:8%;bottom:6%;width:clamp(52px, 16%, 90px);z-index:5;pointer-events:none;}' +
+      '#stage #petCharWrap svg{width:100%;height:auto;display:block;}';
+    document.head.appendChild(scientistStyle); // inserted AFTER wlSciCSS — worst case for the old bug
+
+    const stageEl = document.createElement('div');
+    stageEl.id = 'stage';
+    stageEl.style.cssText = 'position:relative;width:400px;height:300px;';
+    const petWrapS = document.createElement('div');
+    petWrapS.id = 'petCharWrap';
+    petWrapS.className = 'pet-idle';
+    petWrapS.innerHTML = WLScientist.buildPetSVG('cat');
+    stageEl.appendChild(petWrapS);
+    document.body.appendChild(stageEl);
+
+    const wS = getComputedStyle(petWrapS).width;
+    const wSpx = parseFloat(wS);
+    // clamp(52px,16%,90px) inside a 400px-wide #stage → 16% of 400 = 64px,
+    // clamped to [52,90] → 64px. Must NOT be 160px (the old tank-era bug).
+    CSS.scientistOk = wSpx > 0 && wSpx <= 90 && wSpx !== 160;
+    CSS._scientistWidth = wS;
+
+    // gameOk: a #petCharWrap NOT under #stage (typical game-page markup —
+    // appended straight into .scientist-stage / #sciCharWrap's sibling),
+    // should fall through to the injected wordlab-scientist.js rule (90px),
+    // never the old 160px.
+    const gameHost = document.createElement('div');
+    gameHost.className = 'scientist-stage';
+    gameHost.style.cssText = 'position:relative;width:200px;height:200px;';
+    const petWrapG = document.createElement('div');
+    petWrapG.id = 'petCharWrap';
+    petWrapG.className = 'pet-idle';
+    petWrapG.innerHTML = WLScientist.buildPetSVG('frog');
+    gameHost.appendChild(petWrapG);
+    document.body.appendChild(gameHost);
+
+    const wG = getComputedStyle(petWrapG).width;
+    const wGpx = parseFloat(wG);
+    CSS.gameOk = wGpx === 90;
+    CSS._gameWidth = wG;
+
+    // reducedMotionOk: assert the reduced-motion rule text is present in the
+    // #wlSciCSS stylesheet injected by wordlab-scientist.js. jsdom-less
+    // browsers (real Chromium via Playwright) DO evaluate @media conditions
+    // against the OS/emulated prefers-reduced-motion setting, so we also try
+    // a live matchMedia-gated computed-style check when available; if the
+    // environment can't emulate the media feature we fall back to source
+    // presence (noted as a limitation).
+    const wlSciCSS = document.getElementById('wlSciCSS');
+    const cssText = wlSciCSS ? wlSciCSS.textContent : '';
+    const hasRule = /prefers-reduced-motion:\s*reduce\)\s*\{\s*#petCharWrap\s*\{\s*animation:\s*none\s*!important/.test(cssText.replace(/\s+/g, ' '));
+    CSS._ruleTextPresent = hasRule;
+    // Live check: if the test runner emulated prefers-reduced-motion, confirm
+    // the computed animation is actually suppressed on an idle pet.
+    let liveSuppressed = null;
+    try {
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        liveSuppressed = (getComputedStyle(petWrapG).animationName === 'none');
+      }
+    } catch (e) { /* matchMedia not supported in this env — ignore */ }
+    CSS._liveReducedMotionActive = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : null;
+    CSS._liveSuppressed = liveSuppressed;
+    // Pass if the rule text exists AND (either the env didn't emulate reduced
+    // motion, in which case we can only assert source presence — a documented
+    // limitation — or it did emulate it and the live check also passed).
+    CSS.reducedMotionOk = hasRule && (liveSuppressed === null || liveSuppressed === true);
+    if (!hasRule) CSS.errors.push('reduced-motion rule text not found in #wlSciCSS');
+    if (liveSuppressed === false) CSS.errors.push('reduced-motion emulated but animation not suppressed');
+  } catch (e) {
+    CSS.errors.push('petcss-threw: ' + e.message);
+  }
+  window.__PETCSS__ = CSS;
+  document.getElementById('results').textContent += '\n\n__PETCSS__:\n' + JSON.stringify(CSS, null, 2);
 })();
 </script></body></html>

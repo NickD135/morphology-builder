@@ -235,7 +235,10 @@
     /* Pet podium companion (Task 2 re-enable) — small, lower-right of the
      * stage, out of the way of the character's face. Idle-bob animation
      * (if any) and low-stim gating live on the .pet-idle class (Task 3). */
-    #petCharWrap{
+    /* #stage-scoped selector beats the legacy #petCharWrap rule injected later
+     * into <head> by wordlab-scientist.js (equal id-specificity would
+     * otherwise fall to document order and let the tank-era 160x160 rule win). */
+    #stage #petCharWrap{
       position:absolute;
       right:8%;
       bottom:6%;
@@ -243,7 +246,7 @@
       z-index:5;
       pointer-events:none;
     }
-    #petCharWrap svg{
+    #stage #petCharWrap svg{
       width:100%;
       height:auto;
       display:block;
@@ -1133,12 +1136,15 @@ WL.renderStage = function(mood) {
   // character. Rendered via WLScientist.buildPetSVG — one pet renderer only.
   // Idle bob CSS/low-stim gate lives with the .pet-idle rule (Task 3).
   if (WL.scientist && WL.scientist.pet && WL.scientist.pet !== 'none') {
-    var petWrap = document.createElement('div');
-    petWrap.id = 'petCharWrap';
-    petWrap.className = 'pet-idle';
-    petWrap.setAttribute('aria-hidden', 'true');
-    petWrap.innerHTML = WLScientist.buildPetSVG(WL.scientist.pet); // trusted SVG builder
-    stage.appendChild(petWrap);
+    var petSvg = WLScientist.buildPetSVG(WL.scientist.pet); // trusted SVG builder
+    if (petSvg) {
+      var petWrap = document.createElement('div');
+      petWrap.id = 'petCharWrap';
+      petWrap.className = 'pet-idle';
+      petWrap.setAttribute('aria-hidden', 'true');
+      petWrap.innerHTML = petSvg;
+      stage.appendChild(petWrap);
+    }
   }
 
   // Stop any effect loop on the OLD (now-detached) character node.
