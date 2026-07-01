@@ -102,3 +102,18 @@ style. A few things worth knowing before you show this to teachers:
   coats (via `item-creator.html`) haven't been checked with hair layered
   on top — low risk (hair renders on the head, coats are on the body) but
   untested combination.
+
+---
+
+## Whole-branch review findings (Fable, 2026-07-01) — all Minor, none block merge
+
+Verdict: **Ready to merge.** No Critical/Important. Eyeball these during the pending logged-in visual pass:
+
+1. **Ponytail tail vs streak-flame badge pin** — ponytail tail tip (~x60,y70) may graze a pinned streak flame (~x56,y72). Not in the sweep (no badge-pin cells). If it overlaps: shift tail outer edge to x≥64, or render hair-behind before badge pins.
+2. **Hair shop cards use the full-body mini preview** (no head zoom) — head is only ~20px in the 70px card; mohawk/curly/spiky are hard to tell apart where it matters most. Consider reusing the face-zoom (`.lab-mini--face`) for hair cards.
+3. **Latent `ownKey` namespace collision IF hair ever becomes paid** — hairColor hexes share the flat coat-colour key space. Moot while all hair is free; prefix keys (`hair_`/`hairc_`) before recording any paid-hair purchase.
+4. **Picking a Hair Colour while bald is a silent no-op** on the stage. Options for the visual pass: auto-equip `short` on first colour pick, or accept it (Hair pill already precedes Hair Colour).
+5. **Harness `hasEyes`/`hasMouth` assert node presence, not occlusion** — manual geometry confirms hair clears the eye/brow band; name oversells. Future-harness note only.
+6. **Unknown style id emits an orphan (empty) hair gradient def** — harmless; tighten to `hairActive && hairSVG[hair] !== undefined` if touched later.
+
+**Owner recommendation from the review:** consider tying brow stroke colour to `hairLo` when hair is active (platinum/blue hair over brown brows is the one visible art disagreement) — deliberately out of scope now.
