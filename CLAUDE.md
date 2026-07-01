@@ -1621,7 +1621,7 @@ Built subagent-driven (per-task review + opus whole-branch review). Specs/plans 
 
 #### NEXT (continuing later)
 - [x] **Plan 2 — Effect depth / 3D wrap** — see PHASE 7.28 below (shipped 2026-07-01, merged to `main` locally, NOT pushed)
-- [ ] **Then: Phase 3 art port** — re-render the character + items in the mockup's dimensional style, SVG hair, pet expansion
+- [~] **Phase 3 art port** — decomposed into 3 sub-projects. **Sub-project 1 (character base shading) DONE** — see PHASE 7.29. Remaining: built-in item dimensional pass (follow-up), SVG hair, pet redesign.
 
 ---
 
@@ -1649,6 +1649,41 @@ whole-branch review). Plan: `docs/superpowers/plans/2026-07-01-lab-shop-effect-d
 - [x] `tests/manual/effect-depth-harness.html` + `effect-depth-sweep.html` (real-character `WLScientist.buildSVG` + real `WLWorlds.start` on both shop-shaped and game-shaped containers)
 - [x] Final sweep: **50/50 effects × 2 containers**, z-coherence `3<19<20<21`, low-stim gated to zero layers, mobile 390px no-overflow, rapid-switch → single layer pair, all prior harnesses green
 - [x] Deferred (non-blocking, later sweep): `_makeHalo()` DRY helper for ~6 duplicated halo blocks; `_charZFixed` restores z-index but not `position` (harmless no-op); a real logged-in visual spot-check of a couple of effects before the eventual push (harness can't verify occlusion/aesthetics)
+
+---
+
+### PHASE 7.29 — Session 2026-07-01 (Phase 3 sub-project 1 — character art port + skin tones)
+
+Merged to `main` **locally — NOT pushed; nothing deployed**. Built subagent-driven
+(4 tasks + per-task review + opus whole-branch review = READY TO MERGE). Brainstormed
+via the visual companion (3 shading options rendered on the real character). Spec:
+`docs/superpowers/specs/2026-07-01-character-art-port-design.md`; plan:
+`docs/superpowers/plans/2026-07-01-character-art-port.md`. Branch `feat/character-art-port`,
+merged `ef61e89`.
+
+#### Dimensional base shading ("Option A — soft plush") — `wordlab-scientist.js`
+- [x] Skin-tone-derived radial gradient on the **head only** (via new `_mix` helper: `HI` toward white, `LO/FLAT` toward warm dark — correct for any tone incl. dark skin, safe fallback for bad hex)
+- [x] **Flat ears + neck** (slightly darker, no per-object gradient), ears moved **behind** the head — fixes the "hemisphere ears" the user rejected
+- [x] Coat form-shade + left sheen **overlays** (over the coat fill, so plain/pattern/rainbow/holo all survive), ground contact shadow, cheek blush
+- [x] **Every anchor frozen** (viewBox + all coordinates) — all ~40 item overlays + teacher custom items stay pixel-aligned; depth is additive layers only
+- [x] **Unique per-instance `<defs>` ids** (all of `coatRainbow/coatHolo/cp×9/galaxyGrad` + new `sk/hs/hh/cs` suffixed with a per-call `uid`) — fixes a latent bug where two characters on one page (leaderboard/header) cross-contaminated gradients
+- [x] No SVG filters, no motion (static → low-stim safe). Propagates to all 18+ surfaces automatically (single renderer)
+- [x] Verified via synthetic harnesses (no login): per-task `__T1/2/3__` + a 34-cell matrix sweep (reactions × 3 tones incl. dark × coat types × accessories), 0 errors, screenshots confirm flat ears + volume + intact coats + aligned accessories + clean 44px
+
+#### New Skin tone category — Lab Shop (`wordlab-shop-data.js` + `scientist.html`)
+- [x] `WLShopData.skinTones`: 12 tones (inclusive light→deep + 2 playful fantasy), **all free** (identity, not a purchasable cosmetic), **excluded from Surprise-me** (don't randomize someone's skin)
+- [x] New `skin` CAT mirrors Colours (swatch render + generic `WL.equip` writes `skinTone` + saves); default `#FDBCB4` set at load so the current tone shows equipped
+- [x] Verified: 12 tones exposed/free/hex/named, character renders shaded across the full palette
+
+#### Deferred (non-blocking) — for the eventual logged-in visual pass
+- [ ] Real teacher `shop_items` custom coat under the new sheen/shade (user chose to shade custom coats too — confirm it reads OK)
+- [ ] Ground-shadow vs shop-podium shadow doubling on the shop stage (drop character ground shadow only if it visibly doubles)
+- [ ] Cosmetic: collapse `hs` gradient to 2 stops; `_charZFixed`-style nits are N/A here
+
+#### NEXT (Phase 3 continued)
+- [ ] Built-in **item dimensional pass** (restyle the ~40 overlays in batches — safe now that geometry is frozen)
+- [ ] **SVG hair** (new cosmetic category; also edits `buildSVG` → sequential with character work)
+- [ ] **Pet redesign** + re-enable (separate `buildPetSVG`, fully independent — could run in parallel)
 
 ---
 
