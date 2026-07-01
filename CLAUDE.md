@@ -1620,8 +1620,35 @@ Built subagent-driven (per-task review + opus whole-branch review). Specs/plans 
 - [ ] Deferred cosmetic cleanup in `wordlab-worlds.js` (non-blocking): dead `drift`/`flip` fields, unused `wlw-sway` CSS, dead `intense` param, candy `cstripe` id
 
 #### NEXT (continuing later)
-- [ ] **Plan 2 — Effect depth / 3D wrap** (spec `2026-06-30-worlds-scenery-effect-depth-design.md` §5): engine-wide behind/front layer split in `wordlab-effects.js` so effects wrap the character (some particles behind, some front) and border-glow effects (aura/divine/shimmer/quantum/vortex) become halos not box-shadow borders. Riskier — shared engine, 25 effects, 18 pages
+- [x] **Plan 2 — Effect depth / 3D wrap** — see PHASE 7.28 below (shipped 2026-07-01, merged to `main` locally, NOT pushed)
 - [ ] **Then: Phase 3 art port** — re-render the character + items in the mockup's dimensional style, SVG hair, pet expansion
+
+---
+
+### PHASE 7.28 — Session 2026-07-01 (Lab Shop Plan 2 — effect depth / 3D wrap)
+
+Merged to `main` **locally — NOT pushed; nothing deployed** (push auto-deploys to production).
+Built subagent-driven per the SDD skill (fresh implementer + spec/quality review per task + opus
+whole-branch review). Plan: `docs/superpowers/plans/2026-07-01-lab-shop-effect-depth.md` (spec §5:
+`docs/superpowers/specs/2026-06-30-worlds-scenery-effect-depth-design.md`). Branch `feat/effect-depth`,
+8 commits `f69021f..0b5fffb`.
+
+#### Engine-wide behind/front depth layers (`wordlab-effects.js`)
+- [x] `_ensureLayers(el)` inserts `.wlfx-behind` + `.wlfx-front` inside each mount `el`; layer z-index computed **relative to the character's actual z per `el`** (not fixed constants) — resolves the shop (`.lab-charwrap` svg z6) vs game-page (`#sciCharWrap` z20) z-mismatch the spec left open. Verified budget: world panel z0-3 < behind (19/5/4) < character (20/6) < front (21/7)
+- [x] `_addNodeBehind` / `_addNodeFront` / `_addNodeWrap` (deterministic per-`el` parity counter) helpers; `_addNode` **aliases front** so un-migrated effects are byte-for-byte unchanged (back-compat)
+- [x] `stop()` tears down layers + restores any character z-index the engine set; teardown-to-zero verified (no node/interval/RAF leaks); low-stim hard-return unchanged
+- [x] `scientist.html`: `.lab-charwrap svg { position:relative; z-index:6 }` (2 lines) so the shop character sits between its layers
+
+#### Effect migrations (all 25 effects render; wrap where it reads)
+- [x] Border-glow → behind-layer radial halos (no more rectangular box-shadow borders): aura, shimmer, divine, quantum, vortex
+- [x] Orbit effects split behind/front (wrap the character): galaxy, electric, rainbow, radioactive, pixel — electric's box-shadow flash became a behind-layer glow node
+- [x] Premium effects gain true depth: lasers (grid behind), quark-rain (quarks wrap, flash behind), blackhole (halo/disk/sphere/spiral behind, jets front; subtle `el` warp kept + cleared on stop)
+- [x] Full-area overlays routed behind the character so they don't occlude it (final-review Important fix): matrix rain, aurora glow
+
+#### Verification (synthetic Playwright harnesses — no Supabase/login needed)
+- [x] `tests/manual/effect-depth-harness.html` + `effect-depth-sweep.html` (real-character `WLScientist.buildSVG` + real `WLWorlds.start` on both shop-shaped and game-shaped containers)
+- [x] Final sweep: **50/50 effects × 2 containers**, z-coherence `3<19<20<21`, low-stim gated to zero layers, mobile 390px no-overflow, rapid-switch → single layer pair, all prior harnesses green
+- [x] Deferred (non-blocking, later sweep): `_makeHalo()` DRY helper for ~6 duplicated halo blocks; `_charZFixed` restores z-index but not `position` (harmless no-op); a real logged-in visual spot-check of a couple of effects before the eventual push (harness can't verify occlusion/aesthetics)
 
 ---
 
