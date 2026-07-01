@@ -679,8 +679,8 @@ This replaces the hardcoded `MorphemeLab` password with real Supabase Auth accou
 - [x] 9 SVG pets (cat, ginger cat, puppy, bird, frog, owl, dragon, horse, hamster)
 - [x] Pet tank "glass terrarium" display, reactions (jump/shake/dance)
 - [x] Shop section, equip/unequip, `pet` field in scientist data
-- [x] **Currently hidden from all UI** — code preserved for future reactivation
-- [ ] TODO: Redesign pets for better visual quality before re-enabling
+- [x] ~~Currently hidden from all UI~~ — **REDESIGNED + RE-ENABLED 2026-07-01 (Phase 7.31 below)**
+- [x] TODO: ~~Redesign pets for better visual quality before re-enabling~~ — done (soft-plush dimensional pass)
 
 #### About page (`about.html`)
 - [x] Research base, three domains of spelling, NSW syllabus alignment, Australian Curriculum v9.0
@@ -1708,10 +1708,27 @@ plan: `docs/superpowers/plans/2026-07-01-svg-hair.md`. Branch `feat/svg-hair`, m
 #### Verification + review
 - [x] Synthetic Playwright harness (`tests/manual/svg-hair-harness.html`): every style × 3 colours at 150px+44px (`__HAIR__`), catalogue counts (`__HAIRSHOP__`), 30-cell layering sweep with beanie/tiara/angel_wings × reactions (`__HAIRSWEEP__`) — all green, hats over hair, eyes/mouth visible, id-isolation OK
 - [x] Owner morning checklist: `tests/manual/svg-hair-checklist.md` (12 styles, 13 colours, flagged decisions, 6 Minor review findings)
-- [ ] **Pending (whole Phase 3 stack): logged-in visual spot-check before any push** — specifically ponytail/long + streak-flame pin overlap, hair-colour-while-bald no-op, hair-card head zoom, long hair over a teacher custom coat (all Minor, non-blocking, in the checklist)
+- [x] Post-merge hair **fit fix** (owner reviewed the render): `HAIR_CAP` retraced to hug the head (was flaring past the temples to x15/x65; now follows the head arc x18/x62) — fixes short/tousled/side_part/spiky/ponytail/bun/long; `curly` tightened to a snug crown cap; `afro`/`bob` narrowed. Commits `7a6bfe0`, `4a168ea`.
 
-#### NEXT
-- [ ] Phase 3 **sub-project 4: Pet redesign** + re-enable (separate `buildPetSVG`, fully independent)
+---
+
+### PHASE 7.31 — Session 2026-07-01 (Phase 3 sub-project 4 — pet redesign + re-enable)
+
+**Merged to `main` AND PUSHED to production** (owner authorised the push this session, after reviewing the hair render — this is the first Phase 3 work to actually deploy). Built subagent-driven (implementers on Sonnet 5, per-task + whole-branch reviews on Fable). Spec/plan: `docs/superpowers/{specs,plans}/2026-07-01-pet-redesign*`. Branch `feat/pet-redesign`, merged `6c8bc3c`.
+
+#### Pet art redesign — `wordlab-scientist.js`
+- [x] Redesigned all 9 pets (`cat, ginger_cat, puppy, bird, frog, owl, dragon, horse, hamster`) from flat single-fill shapes to **soft-plush dimensional** art: per-part radial gradients (highlight→base→shade via `_mix`), ground contact shadow, friendly eyes w/ catch-light, cuter/chunkier proportions — matching the Phase-3 character shading (that flatness was why the system was hidden)
+- [x] `PET_SVGS` restructured to `(uid)=>string` template fns; `buildPetSVG(id)` injects a per-call `_petSeq` uid → no cross-pet gradient bleed (18/18 unique ids verified). viewBox `0 0 80 80` frozen; ids/names/costs unchanged (backward-compatible with saved `pet` values). No `<filter>`/`<animate>`.
+
+#### Re-enable end-to-end
+- [x] `wordlab-shop-data.js`: `SHOP.pets` catalogue restored (frog 80, bird/hamster 100, cat/ginger 120, puppy 150, owl/horse 200, dragon 500 legendary, none free)
+- [x] `scientist.html`: Pets `WL.CATS` category (card/modal preview renders the real pet); equipped pet renders as a **podium companion** (retired the old "glass terrarium" chrome)
+- [x] `wordlab-scientist.js`: un-gutted `_injectPetStage()` → game pages render the equipped pet into their existing `#petCharWrap`
+- [x] Low-stim `.low-stim #petCharWrap{animation:none}` + `prefers-reduced-motion` idle gates (recon found the low-stim gap); reactions were already gated in `react()`. No DB migration (`pet` persists via `save_scientist_field`; `atomic_purchase` generic)
+- [x] Whole-branch review caught a CSS-cascade regression (injected 160px `#petCharWrap` rule overrode both surfaces) — fixed via `#stage #petCharWrap` specificity bump + 90px game-page size + unknown-id guard on both render paths (commit `0aaf463`); re-review clean
+- [ ] **Pending post-push visual pass** (harness can't replicate real page load order): equip a pet on live scientist.html — podium size/placement + one game page; pet z5 vs shop effect behind-layer; horse reads more realistic than plush + dragon wings soft at 44px (all cosmetic, in `tests/manual/pet-redesign-checklist.md`)
+
+**Phase 3 art port COMPLETE** (base shading → item pass → SVG hair → pets). Repo hygiene: `.superpowers/` SDD scratch untracked + gitignored (`76eb087`).
 
 ---
 
@@ -1764,7 +1781,7 @@ At the start of each working session, do this:
 | Grapheme-based phonemes | Phoneme splits use actual letters from the word, not IPA sounds, to match the game |
 | Auto-generated class codes | 6-char random codes prevent collisions as platform scales; teachers don't choose codes |
 | Word list priority system | Teachers control whether custom words replace, precede, or mix with built-in words |
-| Pet system hidden | Built full pet companion system but visual quality needs work; code preserved for later |
+| Pet system hidden (until 2026-07-01) | Was hidden because pet art quality lagged the app; redesigned soft-plush + re-enabled in Phase 7.31 and pushed to production |
 | Active plan for PL demo | Temporary: new signups get `active` plan so teachers don't see trial banners during PL session |
 | Supabase Singapore → Sydney migration | NSW DoE requires Australian data centres; migrated 2026-03-25 with full data transfer |
 | Unified Featured Game system | Replaced separate GOTW (calendar) + teacher focus (+50%) with one system — auto-picks per student's weakest game, teacher can override; both give 2x |
