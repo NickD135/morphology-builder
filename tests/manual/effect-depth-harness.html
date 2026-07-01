@@ -45,7 +45,7 @@
   <!-- Load the effects module (relative to repo root, served from root) -->
   <script src="../../wordlab-effects.js"></script>
   <script>
-  (function() {
+  (async function() {
     const results = {};
     const errors = [];
 
@@ -177,10 +177,14 @@
     // ── TASK 2: border-glow effects → behind-layer halos ─────────
     // For each of the 5 migrated effects:
     //   1. el.style.boxShadow === '' (no inline box-shadow on bounding box)
-    //   2. el.style.animation === '' immediately after start (interval hasn't fired)
+    //   2. el.style.animation === '' immediately after start (for non-quantum effects only;
+    //      quantum's synchronous noAnimation check is vacuous — replaced by async residue test)
     //   3. .wlfx-behind has >= 1 child (halo present)
     //   4. after stop(): no layers, no boxShadow, no animation on el
-    (function testT2() {
+    //
+    // Additionally for quantum: async residue test — confirms the flicker interval
+    // leaves no animation or layer residue after stop(), even if it fires after stop().
+    await (async function testT2() {
       const container = document.querySelector('.lab-charwrap');
       const EFFECTS_T2 = ['shimmer', 'aura', 'divine', 'quantum', 'vortex'];
 
@@ -193,7 +197,12 @@
         const animation = container.style.animation;
 
         assert(`t2_${effectId}_noBoxShadow`,  boxShadow === '',  { boxShadow });
-        assert(`t2_${effectId}_noAnimation`,  animation === '',  { animation });
+        // t2_quantum_noAnimation is intentionally omitted — checking animation==='' synchronously
+        // before the quantum flicker interval fires is vacuous (it's always '' at that point).
+        // The meaningful residue check is the async t2_quantum_noResidueAfterStop below.
+        if (effectId !== 'quantum') {
+          assert(`t2_${effectId}_noAnimation`,  animation === '',  { animation });
+        }
         assert(`t2_${effectId}_hasBehindHalo`, behindCount >= 1, { behindCount });
 
         WLEffects.stop(container);
@@ -206,15 +215,32 @@
         assert(`t2_${effectId}_stop_noAnimation`,  container.style.animation === '', { an: container.style.animation });
       });
 
-      // Collect Task-2-specific results
-      window.__RESULTS_T2__ = Object.fromEntries(
-        Object.entries(results)
-          .filter(([k]) => k.startsWith('t2_'))
-          .map(([k, v]) => [k, v.pass ? 'PASS' : ('FAIL' + (v.extra ? ' ' + JSON.stringify(v.extra) : ''))])
+      // ── Async quantum residue test ────────────────────────────────
+      // The quantum flicker interval fires at ~1800ms. Verify that after stop(),
+      // neither the animation property nor any layer nodes survive — even if the
+      // interval callback races with teardown.
+      WLEffects.start('quantum', container);
+      await new Promise(r => setTimeout(r, 2100)); // wait for ≥1 interval fire
+      WLEffects.stop(container);
+      await new Promise(r => setTimeout(r, 750));  // past any queued callback + inner ~650ms setTimeout
+
+      const animAfter   = container.style.animation;
+      const behindResid = container.querySelectorAll('.wlfx-behind').length;
+      const frontResid  = container.querySelectorAll('.wlfx-front').length;
+      assert('t2_quantum_noResidueAfterStop',
+        animAfter === '' && behindResid === 0 && frontResid === 0,
+        { animation: animAfter, behind: behindResid, front: frontResid }
       );
     })();
 
     // ── Collect & display ─────────────────────────────────────────
+    // Collect Task-2-specific results
+    window.__RESULTS_T2__ = Object.fromEntries(
+      Object.entries(results)
+        .filter(([k]) => k.startsWith('t2_'))
+        .map(([k, v]) => [k, v.pass ? 'PASS' : ('FAIL' + (v.extra ? ' ' + JSON.stringify(v.extra) : ''))])
+    );
+
     window.__RESULTS__ = results;
 
     const allPass = errors.length === 0;
