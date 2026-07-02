@@ -91,9 +91,14 @@
     .tab:focus{ outline:3px solid var(--indigo-2); outline-offset:2px; }
     .tab-count{ font-size:10px; font-weight:700; opacity:.7; }
 
-    .filter-input{ display:block; width:calc(100% - 32px); margin:12px 16px 0; border:2px solid var(--line); border-radius:10px; padding:8px 14px; font-size:13px; font-weight:600; color:var(--text); background:#fff; transition:border-color .15s; }
+    .search-wrap{ position:relative; margin:12px 16px 0; }
+    .search-icon{ position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:13px; opacity:.6; pointer-events:none; }
+    .filter-input{ display:block; width:100%; box-sizing:border-box; border:2px solid var(--line); border-radius:10px; padding:8px 34px; font-size:13px; font-weight:600; color:var(--text); background:#fff; transition:border-color .15s; }
     .filter-input:focus{ border-color:var(--accent); outline:none; box-shadow:0 0 0 4px rgba(var(--accent-rgb),.12); }
     .filter-input::placeholder{ color:var(--muted); font-weight:600; }
+    .search-clear{ position:absolute; right:8px; top:50%; transform:translateY(-50%); border:none; background:transparent; color:var(--muted); font-size:18px; line-height:1; cursor:pointer; width:24px; height:24px; border-radius:50%; }
+    .search-clear:hover{ color:var(--bad); }
+    .search-clear:focus{ outline:3px solid var(--indigo-2); outline-offset:2px; }
 
     .tiles-container{ padding:12px 16px 16px; display:flex; flex-wrap:wrap; gap:8px; max-height:calc(100vh - 250px); overflow-y:auto; align-content:flex-start; }
     .tiles-container::-webkit-scrollbar{ width:6px; }
@@ -184,7 +189,11 @@
           <button role="tab" class="tab" data-tab="prefixes" aria-selected="false" id="tabPrefixes">Prefixes <span class="tab-count" id="prefixCount"></span></button>
           <button role="tab" class="tab" data-tab="suffixes" aria-selected="false" id="tabSuffixes">Suffixes <span class="tab-count" id="suffixCount"></span></button>
         </div>
-        <input type="text" class="filter-input" id="filterInput" placeholder="Search morphemes..." aria-label="Filter morphemes">
+        <div class="search-wrap">
+          <span class="search-icon" aria-hidden="true">&#128269;</span>
+          <input type="text" class="filter-input" id="filterInput" placeholder="Search bases..." aria-label="Search morphemes">
+          <button type="button" class="search-clear" id="searchClear" aria-label="Clear search" hidden>&times;</button>
+        </div>
         <div class="tiles-container" id="tilesContainer" role="listbox" aria-label="Available morphemes">
         </div>
       </div>
@@ -952,8 +961,9 @@ document.addEventListener('DOMContentLoaded', function() {
       tabs[i].classList.toggle('active', isActive);
       tabs[i].setAttribute('aria-selected', isActive ? 'true' : 'false');
     }
-    elFilterInput.value = '';
-    filterText = '';
+    // Query persists across tabs; only update the placeholder.
+    var label = tab === 'prefixes' ? 'prefixes' : (tab === 'suffixes' ? 'suffixes' : 'bases');
+    elFilterInput.placeholder = 'Search ' + label + '...';
     renderTiles();
     updateTabCounts();
   }
@@ -970,16 +980,20 @@ document.addEventListener('DOMContentLoaded', function() {
       })(tabs[i]);
     }
 
-    /* Filter input */
     var filterTimeout;
+    var searchClear = document.getElementById('searchClear');
     elFilterInput.addEventListener('input', function() {
       clearTimeout(filterTimeout);
       var val = this.value;
-      filterTimeout = setTimeout(function() {
-        filterText = val;
-        renderTiles();
-      }, 150);
+      if (searchClear) searchClear.hidden = !val;
+      filterTimeout = setTimeout(function() { filterText = val; renderTiles(); }, 150);
     });
+    if (searchClear) {
+      searchClear.addEventListener('click', function() {
+        elFilterInput.value = ''; filterText = ''; searchClear.hidden = true;
+        elFilterInput.focus(); renderTiles();
+      });
+    }
 
     /* Clear button */
     elClearBtn.addEventListener('click', clearAll);
