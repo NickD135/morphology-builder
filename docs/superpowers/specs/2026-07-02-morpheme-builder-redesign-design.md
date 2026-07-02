@@ -19,9 +19,9 @@ The Morpheme Builder was the game's original design and has become its weakest p
 
 ### Approved decisions (from brainstorming)
 
-1. **Morpheme set:** Full flashcard set + maximum content push. Show all prefixes/suffixes; expand content so nearly all are buildable; accept that a few pure combining-form pairs may remain thin.
+1. **Morpheme set:** Full flashcard set + content push. Show all prefixes/suffixes; expand content so nearly all are buildable; accept that a few pure combining-form pairs may remain thin.
 2. **Level filter:** Show everything to everyone; *highlight* the student's current level rather than gating.
-3. **Non-linkable tiles:** Grey and demote (not hide), and keep them **clickable** — clicking swaps that slot's selection and re-forms the board.
+3. **Non-linkable tiles:** **Hidden** while a selection is active (keeps the current mechanic — simpler than greying/demoting). To change direction, the student clears a slot (existing behaviour), which brings the full list back.
 4. **Suffix slots:** Support two suffixes; **hide the 2nd suffix slot until the first is placed**; one suffix is always sufficient.
 
 ---
@@ -37,8 +37,7 @@ The Morpheme Builder was the game's original design and has become its weakest p
 
 **Changes (Stream A — `morpheme-builder.html`):**
 - **Remove the level gate on the bank.** Build `PREFIXES/SUFFIXES/BASES` from the full `MORPHEMES.*` arrays (no `filterByStage`). Keep each morpheme's `stage` field available for the level-highlight.
-- **`renderTiles` reworked** from hide → grey-demote + reorder + FLIP animation (see §3).
-- **Tile click** always sets/replaces its slot (swap semantics), including greyed tiles (see §3).
+- **`renderTiles`:** keep the current hide-non-viable mechanic (`if (!viableSet.has(m.id)) continue;`), with a subtle fade-in for cleanliness (see §3).
 - **2nd suffix slot** rendered conditionally (see §4).
 - **Search** made prominent (icon + clear) and query persists across tab switches (see §5).
 - **Level highlight** marker on tiles above the student's stage (see §6).
@@ -48,29 +47,23 @@ The Morpheme Builder was the game's original design and has become its weakest p
 
 ---
 
-## 3. Bank behaviour: viable-first, grey-demote, clickable-swap, smooth motion
+## 3. Bank behaviour: show-all, hide-non-viable, change-by-clearing
 
-For the active tab, partition morphemes into **viable** (can extend the current selection into at least one real word) and **non-viable**, using the existing `getViableMorphemes()` result.
+For the active tab, show every morpheme that is **viable** (can extend the current selection into at least one real word), using the existing `getViableMorphemes()` result. Non-viable morphemes are **hidden** while a selection is active — this keeps the current, simple mechanic.
 
-**Rendering & order:**
-- Viable tiles: full type-colour (blue prefix / green base / orange suffix), sorted alphabetically by `form`, placed first.
-- Non-viable tiles: a `is-dulled` state — reduced opacity (~0.4), desaturated (grayscale filter) — sorted alphabetically, placed after the viable group.
-- When nothing is selected, *all* tiles are viable (full colour), alphabetical.
-- A thin divider/label may separate the two groups (e.g. a faint "— won't link to your current word —" row). Optional; keep subtle.
+**Rendering:**
+- Tiles shown in the current type-colour (blue prefix / green base / orange suffix), sorted alphabetically by `form`.
+- When **nothing** is selected, *all* morphemes show (no level gate) — this is the change that fixes "only a handful of prefixes."
+- As tiles appear on a selection change, a subtle fade-in keeps it feeling clean. Under `body.low-stim` **or** `prefers-reduced-motion: reduce`, no fade — render instantly.
+- Live viable counts continue to show on each tab via `updateTabCounts` (already present), so the student can see e.g. "Prefixes (12)" for the current base even before switching tabs.
 
-**Smooth motion (FLIP):**
-- On any selection change, record each tile's current rect (First), re-render to the new order (Last), invert with a transform, then play the transition so tiles glide to new positions.
-- Under `body.low-stim` **or** `prefers-reduced-motion: reduce`, skip the animation — reorder instantly.
-
-**Clickable-swap semantics:**
-- Clicking **any** base tile (viable or dulled) sets `current.base` to it (replacing whatever was there) and re-renders. The board re-forms around the new base.
-- Clicking **any** prefix tile sets/replaces `current.prefix`.
-- Clicking **any** suffix tile fills the next open suffix slot (`suffix1` then `suffix2`); if both are full it replaces `suffix1` and clears `suffix2` (preserves current behaviour at `morpheme-builder.html:606-611`). Dulled suffixes are allowed — the resulting word simply shows as "not a real word yet" via the existing valid/invalid word display.
-- Net effect: a student can always click anything; the builder never dead-ends.
+**Changing direction (no clickable-greyed needed):**
+- Placing a tile of a type that's already filled replaces that slot (existing `placeTile` behaviour), as long as the new tile is visible (i.e. viable).
+- To pick something that *isn't* currently viable, the student **clears a slot** — click the filled slot to remove it (existing `removeSlot` behaviour) — which brings the full list back. Simple and already implemented.
 
 **Accessibility:**
-- Every tile stays a `<button>`. Dulled tiles are **not** `disabled` (they're clickable). Their `aria-label` gains a suffix like " — no words with your current pick; click to build from this instead."
-- After a re-render, announce the viable counts via the existing `aria-live` tab-count region (already present: `updateTabCounts`).
+- Every visible tile stays a `<button>` with its `form` + `meaning` label (unchanged).
+- Viable counts announced via the existing `aria-live` tab-count region (`updateTabCounts`).
 
 ---
 
@@ -89,7 +82,7 @@ For the active tab, partition morphemes into **viable** (can extend the current 
 - Placeholder reflects the active tab ("Search prefixes…", etc.).
 - **Query persists across tab switches** (remove the `elFilterInput.value = ''` reset in `switchTab`, lines 925-926). Searching "port" then switching Bases→Suffixes keeps filtering.
 - Filter matches `form`, `display`, and `meaning` (as today, line 857).
-- Search interacts cleanly with grey-demote: matched tiles still partition viable-first / dulled-after.
+- Search interacts cleanly with hide-non-viable: it filters within the currently-viable set.
 - Optional nicety (include if cheap): when the active tab has 0 matches but another tab has some, show a one-line hint ("3 matches in Suffixes"). Not required for approval.
 
 ---
@@ -100,7 +93,7 @@ For the active tab, partition morphemes into **viable** (can extend the current 
 - Tiles whose `stage` is **above** the student's stage get a small ✦ corner marker meaning "stretch / above your level." Tiles at or below the student's level render normally (no marker).
 - Logged-out / no stage set → no markers at all.
 - The marker is static (no animation), fully compatible with low-stim, and never changes whether a tile is usable — everything remains clickable.
-- Orthogonal to the viable/dulled state: a tile can be dulled *and* carry the ✦ marker; keep the marker visually lightweight so the two states don't clash.
+- Independent of viability: a visible tile carries the ✦ marker based only on its `stage` vs the student's; keep the marker visually lightweight.
 
 ---
 
@@ -114,9 +107,9 @@ For the active tab, partition morphemes into **viable** (can extend the current 
 3. Add/enrich bases in `data.js` (readable ids where practical, correct `stage`, `meaning`, `pos`, `examples`).
 4. Rebuild `valid-combos.json` with `node scripts/build-valid-combos.js`.
 
-**Target:** every prefix and suffix for which a real, age-appropriate word exists reaches **≥3 buildable words**.
+**Target:** **prefixes are the priority** — every prefix for which a real, age-appropriate word exists reaches **at least a couple (≥2) of buildable words**. Suffixes get the same ≥2 treatment where a real word exists, after prefixes.
 
-**Honest ceiling:** some pure combining-form pairs and clinical/technical morphemes (`-emia`, `-uria`, `cyte`, `narco-`, `-cide`, …) may remain thin or dead because no age-appropriate everyday word exists, or because the word is two bound roots that don't fit prefix+base+suffix. These will be **listed explicitly** in the delivery notes and will simply render as the always-dulled tiles (the grey-demote UI handles them gracefully).
+**Honest ceiling:** some pure combining-form pairs and clinical/technical morphemes (`-emia`, `-uria`, `cyte`, `narco-`, `-cide`, …) may remain thin or dead because no age-appropriate everyday word exists, or because the word is two bound roots that don't fit prefix+base+suffix. These will be **listed explicitly** in the delivery notes. With the hide-non-viable model they simply won't surface as options once a selection narrows the list (and a dead affix picked on its own yields an empty bank until the student clears it) — no broken or misleading UI.
 
 **Success metric / verification:**
 - A **before/after coverage report**: count of prefixes and suffixes with 0 / 1–2 / 3+ buildable combos, and total combo count.
@@ -127,11 +120,11 @@ For the active tab, partition morphemes into **viable** (can extend the current 
 
 ## 8. Non-functional requirements
 
-- **Accessibility (WCAG 2.1 AA):** dulled tiles remain focusable buttons with descriptive labels; reorder announced via existing aria-live counts; search field labelled; keyboard operable throughout; ✦ marker has an accessible-name equivalent (e.g. in the aria-label), not colour-only.
-- **Low-stim / reduced-motion:** no FLIP animation, no idle scientist bob (already handled), instant reorder; ✦ marker and dulling are static and allowed.
+- **Accessibility (WCAG 2.1 AA):** visible tiles are focusable buttons with descriptive labels; viable counts announced via existing aria-live counts; search field labelled; keyboard operable throughout; ✦ marker has an accessible-name equivalent (e.g. in the aria-label), not colour-only.
+- **Low-stim / reduced-motion:** no fade animation, no idle scientist bob (already handled), instant render; ✦ marker is static and allowed.
 - **Mobile (320–480px):** tiles wrap, tabs and search usable, 44px minimum touch targets (preserve current responsive rules).
 - **No scoring / progress changes:** the builder records nothing today (pure exploration) — keep it that way; this is what makes it equally suitable for teacher-led board use and independent student exploration. No `recordAttempt`, no dashboard surface.
-- **Performance:** FLIP measurement must not thrash layout on large banks (400+ bases); batch reads then writes. Combo index build is one-time on load (unchanged).
+- **Performance:** rendering the full bank (400+ bases) with no level gate must stay smooth; the fade-in is CSS-only. Combo index build is one-time on load (unchanged).
 - **XSS/safety:** continue building tiles and rule steps via DOM methods / escaped morpheme data (unchanged from current implementation).
 
 ---
