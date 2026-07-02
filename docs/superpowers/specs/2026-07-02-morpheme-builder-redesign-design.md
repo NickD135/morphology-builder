@@ -107,12 +107,12 @@ For the active tab, show every morpheme that is **viable** (can extend the curre
 3. Add/enrich bases in `data.js` (readable ids where practical, correct `stage`, `meaning`, `pos`, `examples`).
 4. Rebuild `valid-combos.json` with `node scripts/build-valid-combos.js`.
 
-**Target:** **prefixes are the priority** — every prefix for which a real, age-appropriate word exists reaches **at least a couple (≥2) of buildable words**. Suffixes get the same ≥2 treatment where a real word exists, after prefixes.
+**Target:** **prefixes are the priority** — aim for **4–5 buildable words per prefix**, drawing on real, age-appropriate words. Where a prefix genuinely can't reach 4–5 with age-appropriate vocabulary (e.g. rare combining forms), get it as high as real words allow and note it. Suffixes get the same 4–5 aim where real words exist, after prefixes.
 
 **Honest ceiling:** some pure combining-form pairs and clinical/technical morphemes (`-emia`, `-uria`, `cyte`, `narco-`, `-cide`, …) may remain thin or dead because no age-appropriate everyday word exists, or because the word is two bound roots that don't fit prefix+base+suffix. These will be **listed explicitly** in the delivery notes. With the hide-non-viable model they simply won't surface as options once a selection narrows the list (and a dead affix picked on its own yields an empty bank until the student clears it) — no broken or misleading UI.
 
 **Success metric / verification:**
-- A **before/after coverage report**: count of prefixes and suffixes with 0 / 1–2 / 3+ buildable combos, and total combo count.
+- A **before/after coverage report**: count of prefixes and suffixes with 0 / 1–3 / 4+ buildable combos, and total combo count.
 - A **dictionary-diff review**: every word added to `dictionary.txt` is a real, age-appropriate, correctly-(Australian)-spelled word.
 - Spot-check a sample of newly-revived morphemes in the running builder.
 
