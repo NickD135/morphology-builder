@@ -1103,20 +1103,24 @@ const WLEffects = (() => {
   function fxSmoke(el, intense) {
     _ensureRelative(el);
     _injectStyle('wlfx-smoke', `
-      @keyframes wlfxSmokeRise { 0%{opacity:0;transform:translateY(0) scale(.4)} 25%{opacity:.5} 100%{opacity:0;transform:translateY(-80px) scale(1.8)} }
+      @keyframes wlfxSmokeRise { 0%{opacity:0;transform:translateY(0) scale(.5)} 20%{opacity:.85} 60%{opacity:.6} 100%{opacity:0;transform:translateY(-105px) scale(2.1) rotate(${rndInt(-20,20)}deg)} }
     `);
     function spawn() {
       if (!_active.has(el)) return;
-      const size = rndInt(14, 30);
-      const p = _makeParticle(`
-        left:${rnd(25,70)}%;bottom:${rnd(0,15)}%;width:${size}px;height:${size}px;
-        border-radius:50%;background:radial-gradient(circle,rgba(203,213,225,.55),rgba(148,163,184,0) 70%);
-        animation:wlfxSmokeRise ${rnd(2.4,3.8).toFixed(2)}s ease-out forwards;z-index:9;`);
-      _addNode(el, p);
-      setTimeout(() => { try { p.parentNode && p.parentNode.removeChild(p); } catch {} }, 4000);
+      // Two overlapping puffs per tick → a denser, clearly-visible billowing plume.
+      for (let k = 0; k < 2; k++) {
+        const size = rndInt(26, 50);
+        const p = _makeParticle(`
+          left:${rnd(28,66)}%;bottom:${rnd(0,18)}%;width:${size}px;height:${size}px;
+          border-radius:50%;background:radial-gradient(circle,rgba(148,163,184,.85),rgba(100,116,139,.35) 55%,rgba(100,116,139,0) 72%);
+          animation:wlfxSmokeRise ${rnd(2.2,3.6).toFixed(2)}s ease-out forwards;z-index:9;`);
+        _addNodeFront(el, p);
+        setTimeout(() => { try { p.parentNode && p.parentNode.removeChild(p); } catch {} }, 3800);
+      }
     }
-    spawn();
-    _addInterval(el, spawn, intense ? 260 : 440);
+    // Prime with a short staggered burst so the plume is visible immediately.
+    for (let i = 0; i < 3; i++) setTimeout(spawn, i * 160);
+    _addInterval(el, spawn, intense ? 220 : 340);
   }
 
   // lasers — synthwave targeting scene: scrolling perspective grid + vertical
@@ -1254,47 +1258,48 @@ const WLEffects = (() => {
     // Lensing halo — enlarged to spill past the character + translucent front veil
     // so the purple lensing visibly wraps over it (was 130px, fully occluded).
     _addGlowHalo(el, `
-      left:50%;top:50%;width:210px;height:210px;border-radius:50%;z-index:6;
-      background:radial-gradient(circle,rgba(155,123,255,.35),rgba(0,0,0,0) 65%);
-      animation:wlfxHalo ${intense?'1.8s':'3s'} ease-in-out infinite;`, 0.3);
+      left:50%;top:50%;width:280px;height:280px;border-radius:50%;z-index:6;
+      background:radial-gradient(circle,rgba(155,123,255,.4),rgba(0,0,0,0) 65%);
+      animation:wlfxHalo ${intense?'1.8s':'3s'} ease-in-out infinite;`, 0.32);
 
-    // Rotating accretion disk
+    // Rotating accretion disk — character-sized so the glowing ring encircles the
+    // scientist and reads clearly past the silhouette (was 120px, hidden behind).
     _addNodeBehind(el, _makeParticle(`
-      left:50%;top:50%;width:120px;height:120px;border-radius:50%;z-index:7;
+      left:50%;top:50%;width:230px;height:230px;border-radius:50%;z-index:7;
       background:conic-gradient(from 0deg,#ff8a3c,#9b7bff,#3cdcff,#9b7bff,#ff8a3c);
       mask:radial-gradient(circle,transparent 30%,#000 34%,#000 48%,transparent 52%);
       -webkit-mask:radial-gradient(circle,transparent 30%,#000 34%,#000 48%,transparent 52%);
       animation:wlfxDiskSpin ${intense?'2.2s':'4s'} linear infinite;`));
 
-    // Central dark sphere
+    // Central dark sphere — larger event horizon
     _addNodeBehind(el, _makeParticle(`
-      left:50%;top:50%;width:42px;height:42px;border-radius:50%;z-index:9;
+      left:50%;top:50%;width:74px;height:74px;border-radius:50%;z-index:9;
       transform:translate(-50%,-50%);
       background:radial-gradient(circle at 40% 38%,#2a2440,#000 70%);
-      box-shadow:0 0 16px 4px rgba(0,0,0,.7),inset 0 0 10px rgba(155,123,255,.5);`));
+      box-shadow:0 0 24px 6px rgba(0,0,0,.7),inset 0 0 14px rgba(155,123,255,.5);`));
 
     // Polar jets (erupt from poles outward, in front of the character)
     function jet(topPct) {
       if (!_active.has(el)) return;
       const j = _makeParticle(`
-        left:50%;top:${topPct}%;width:6px;height:34px;z-index:8;
+        left:50%;top:${topPct}%;width:7px;height:52px;z-index:8;
         background:linear-gradient(${topPct<50?'0deg':'180deg'},rgba(60,220,255,.9),rgba(60,220,255,0));
         animation:wlfxJet .9s ease-out forwards;`);
       _addNodeFront(el, j);
       setTimeout(() => { try { j.parentNode && j.parentNode.removeChild(j); } catch {} }, 950);
     }
-    _addInterval(el, () => { jet(30); jet(70); }, intense ? 1400 : 2400);
+    _addInterval(el, () => { jet(22); jet(78); }, intense ? 1400 : 2400);
 
-    // Inward-spiralling particles via one RAF loop
+    // Inward-spiralling particles via one RAF loop — wider orbit to match the disk
     const rect = () => el.getBoundingClientRect();
     const parts = [];
     function seed() {
-      const r0 = rnd(55, 80), a0 = rnd(0, Math.PI * 2);
+      const r0 = rnd(95, 135), a0 = rnd(0, Math.PI * 2);
       const node = _makeParticle(`
-        left:50%;top:50%;width:${rndInt(2,4)}px;height:${rndInt(2,4)}px;border-radius:50%;z-index:10;
+        left:50%;top:50%;width:${rndInt(3,5)}px;height:${rndInt(3,5)}px;border-radius:50%;z-index:10;
         background:${['#fff','#b9a6ff','#3cdcff'][rndInt(0,3)]};box-shadow:0 0 6px currentColor;`);
       _addNodeBehind(el, node);
-      parts.push({ node, r:r0, a:a0, v:rnd(0.35,0.7) });
+      parts.push({ node, r:r0, a:a0, v:rnd(0.4,0.8) });
     }
     for (let i = 0; i < (intense ? 26 : 16); i++) seed();
     let raf = 0;
@@ -1303,11 +1308,11 @@ const WLEffects = (() => {
       const { width:W, height:H } = rect();
       for (const p of parts) {
         p.r -= p.v; p.a += 0.06 + (60 - p.r) * 0.001;
-        if (p.r < 6) { p.r = rnd(55, 82); p.a = rnd(0, Math.PI * 2); }
+        if (p.r < 10) { p.r = rnd(95, 135); p.a = rnd(0, Math.PI * 2); }
         const x = 50 + (p.r / W * 100) * Math.cos(p.a);
         const y = 50 + (p.r / H * 100) * Math.sin(p.a);
         p.node.style.left = x + '%'; p.node.style.top = y + '%';
-        p.node.style.opacity = Math.max(0.1, p.r / 80);
+        p.node.style.opacity = Math.max(0.1, p.r / 135);
       }
       const next = requestAnimationFrame(tick);
       _updateRAF(el, raf, next); raf = next;
