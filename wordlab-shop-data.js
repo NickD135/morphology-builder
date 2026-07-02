@@ -172,6 +172,12 @@
       {id:'dragon',     name:'Baby Dragon',  cost:500, legendary:true, icon:'🐉'},
       {id:'horse',      name:'Mini Horse',   cost:200,            icon:'🐴'},
       {id:'hamster',    name:'Hamster',      cost:100,            icon:'🐹'},
+      {id:'goldfish',   name:'Goldfish',     cost:80,             icon:'🐠'},
+      {id:'duck',       name:'Duck',         cost:100,            icon:'🦆'},
+      {id:'bunny',      name:'Spotted Bunny',cost:120,            icon:'🐰'},
+      {id:'goose',      name:'Goose',        cost:150,            icon:'🪿'},
+      {id:'sealion',    name:'Sea Lion',     cost:200,            icon:'🦭'},
+      {id:'giraffe',    name:'Giraffe',      cost:200,            icon:'🦒'},
     ],
   };
 

@@ -2170,6 +2170,31 @@ WL.loadCustom = async function() {
     milestoneUnlocked.forEach(function(id) { WL.owned.push('custom_' + id); });
   }
 
+  // Always include custom items the student already owns, even if the teacher has
+  // since deactivated them — so a student wearing one can still see and toggle it.
+  var ownedCustomIds = (WL.owned || [])
+    .filter(function(o){ return typeof o === 'string' && o.indexOf('custom_') === 0; })
+    .map(function(o){ return o.slice('custom_'.length); });
+  var presentIds = {};
+  visible.forEach(function(it){ presentIds[it.id] = true; });
+  var missingOwned = ownedCustomIds.filter(function(id){ return !presentIds[id]; });
+  if (missingOwned.length) {
+    try {
+      var owRes = await WordLabData._sb
+        .from('shop_items')
+        .select('id,name,item_type,rarity,quark_cost,image_url,image_data')
+        .in('id', missingOwned);
+      if (!owRes.error && owRes.data) {
+        owRes.data.forEach(function(item) {
+          var url = item.image_url && item.image_url.trim() !== 'null' && item.image_url.startsWith('http')
+            ? item.image_url.trim() : null;
+          WL._customItemsData[item.id] = { item_type: item.item_type, image_data: url || item.image_data };
+          visible.push(item);
+        });
+      }
+    } catch(e) { /* non-fatal — owned pieces can still be removed via regular items */ }
+  }
+
   WL.customItems = visible;
 };
 
@@ -2329,6 +2354,14 @@ WL.equipCustom = async function(item) {
     customSlots[itemType] = item.id;
     // Store image so buildSVG can render the overlay without a DB call
     customSlots['_img_' + itemType] = imageData;
+    // Custom overrides the regular item in the same slot (head/face/background→world;
+    // a custom coat is a full overlay, so the coat colour stays as its base).
+    var REG_FIELD_FOR = { head:'head', face:'face', background:'world' };
+    var regField = REG_FIELD_FOR[itemType];
+    if (regField && WL.scientist[regField]) {
+      updates[regField] = null;
+      WL.scientist[regField] = null;
+    }
   }
   updates.customSlots = customSlots;
 
@@ -2357,12 +2390,31 @@ WL.setCategory = function(id) {
 };
 
 /* ── WL.equip — writes field, saves to Supabase, re-renders ─────── */
+/* Maps a shop category to the custom-overlay slot it occupies, so equipping a
+ * regular item clears any stuck teacher-made custom piece in the same slot (and
+ * WL.equipCustom does the reverse). Regular and custom are mutually exclusive. */
+WL.CUSTOM_SLOT_FOR = { colours:'coat', patterns:'coat', heads:'head', faces:'face', worlds:'background' };
+
 WL.equip = async function(cat, item) {
   if (!cat.field) return;   // dances / badges handled in Tasks 6–7
   var normId = (item.id === 'none') ? null : item.id;  // normalise None → null (matches original)
   WL.scientist[cat.field] = normId;
+  var updates = {};
+  updates[cat.field] = normId;
+
+  // Override any custom piece occupying this slot (equipping "None" clears it too).
+  var slot = WL.CUSTOM_SLOT_FOR[cat.id];
+  var cs   = WL.scientist.customSlots;
+  if (slot && cs && (cs[slot] || cs['_img_' + slot])) {
+    cs = Object.assign({}, cs);
+    cs[slot] = null;
+    delete cs['_img_' + slot];
+    WL.scientist.customSlots = cs;
+    updates.customSlots = cs;
+  }
+
   try {
-    await WordLabData.saveScientist({ [cat.field]: normId });
+    await WordLabData.saveScientist(updates);
   } catch (e) {
     console.error('[WL.equip] saveScientist failed:', e);
   }

@@ -99,6 +99,20 @@ const WLEffects = (() => {
     return (st._wrapN % 2 === 0 ? _addNodeBehind : _addNodeFront)(el, node);
   }
 
+  // Soft radial glow that radiates BEHIND the character (saturated, sized to spill
+  // past the silhouette) AND drifts a translucent twin in FRONT so the colour also
+  // veils the character ("wrap translucent" visibility — a behind-only glow is
+  // occluded by the opaque character). Same style string → both stay in sync;
+  // both are tracked layer nodes so stop() removes them. veilOpacity keeps the
+  // character legible under the veil (default 0.3). Returns {behind, front}.
+  function _addGlowHalo(el, styleCss, veilOpacity) {
+    const behind = _makeParticle(styleCss);
+    _addNodeBehind(el, behind);
+    const front = _makeParticle(styleCss + `opacity:${veilOpacity == null ? 0.3 : veilOpacity};`);
+    _addNodeFront(el, front);
+    return { behind, front };
+  }
+
   function _addInterval(el, fn, ms) {
     const id = setInterval(fn, ms);
     _state(el).intervals.push(id);
@@ -204,15 +218,15 @@ const WLEffects = (() => {
         100% { background:radial-gradient(circle,rgba(99,102,241,0.55),rgba(99,102,241,0) 68%); }
       }
     `);
-    const halo = _makeParticle(`
+    // Behind halo enlarged to spill past the character + translucent front veil.
+    _addGlowHalo(el, `
       left:50%; top:50%;
-      width:190px; height:230px;
+      width:240px; height:290px;
       transform:translate(-50%,-50%);
       border-radius:50%;
       filter:blur(6px);
       animation:wlfxShimmerHue ${intense ? '1.5s' : '3s'} ease infinite;
-    `);
-    _addNodeBehind(el, halo);
+    `, 0.32);
   }
 
   // bubbles — semi-transparent circles float up
@@ -296,14 +310,16 @@ const WLEffects = (() => {
         100% { background:radial-gradient(circle,rgba(99,102,241,0.5),rgba(99,102,241,0) 66%); }
       }
     `);
-    const glow = _makeParticle(`
-      left:50%; top:50%; width:200px; height:240px;
+    // Enlarged behind glow + translucent front veil so the aura reads over the character.
+    _addGlowHalo(el, `
+      left:50%; top:50%; width:250px; height:300px;
       transform:translate(-50%,-50%); border-radius:50%; filter:blur(8px);
       animation:wlfxAuraGlow ${intense ? '1.5s' : '3s'} linear infinite;
-    `);
-    _addNodeBehind(el, glow);
+    `, 0.32);
+    // Colour-cycling ring, enlarged to encircle the character (behind only —
+    // a bordered ring veiled over the face would read as a line across it).
     const ring = _makeParticle(`
-      left:50%; top:50%; width:152px; height:198px;
+      left:50%; top:50%; width:196px; height:246px;
       transform:translate(-50%,-50%); border-radius:50%;
       border:3px solid #6366f1;
       animation:wlfxAuraColor ${intense ? '1.5s' : '3s'} linear infinite;
@@ -741,13 +757,12 @@ const WLEffects = (() => {
       @keyframes wlfxGoldSpark { 0%{opacity:0;transform:translateY(0)} 20%{opacity:1} 100%{opacity:0;transform:translateY(-60px)} }
     `);
 
-    // Behind-layer halo (replaces the box-shadow glow on el)
-    const halo = _makeParticle(`
-      left:50%; top:50%; width:200px; height:240px;
+    // Enlarged behind halo + translucent gold front veil so the halo reads over the character.
+    _addGlowHalo(el, `
+      left:50%; top:50%; width:250px; height:300px;
       transform:translate(-50%,-50%); border-radius:50%; filter:blur(8px);
       animation:wlfxGoldHalo ${intense?'1.5s':'3s'} ease infinite;
-    `);
-    _addNodeBehind(el, halo);
+    `, 0.3);
 
     // Rays — behind the character
     const rays = _makeParticle(`
@@ -799,15 +814,14 @@ const WLEffects = (() => {
     // Strong chromatic aberration filter (not a glow — intentionally kept on el)
     el.style.filter = `drop-shadow(3px 0 4px rgba(239,68,68,0.65)) drop-shadow(-3px 0 4px rgba(99,102,241,0.65)) drop-shadow(0 0 10px rgba(167,139,250,0.55))`;
 
-    // Behind-layer halo (replaces the wlfxDimension box-shadow oval)
-    const halo = _makeParticle(`
+    // Enlarged behind halo + translucent front veil so the halo reads over the character.
+    _addGlowHalo(el, `
       left:50%; top:50%;
-      width:200px; height:240px;
+      width:250px; height:300px;
       transform:translate(-50%,-50%);
       border-radius:50%; filter:blur(8px);
       animation:wlfxQuantumHalo ${intense ? '1.5s' : '2.5s'} ease infinite;
-    `);
-    _addNodeBehind(el, halo);
+    `, 0.3);
 
     // Dimensional flicker (opacity only — not a box-shadow; interval fires after assertion time)
     _addInterval(el, () => {
@@ -957,13 +971,12 @@ const WLEffects = (() => {
       @keyframes wlfxVortexPull  { 0%{opacity:0;transform:translate(var(--sx),var(--sy)) scale(1.5)} 20%{opacity:0.9} 100%{opacity:0;transform:translate(0,0) scale(0.2)} }
     `);
 
-    // Behind-layer halo (replaces the wlfxVortexCore box-shadow animation)
-    const halo = _makeParticle(`
-      left:50%; top:50%; width:200px; height:240px;
+    // Enlarged behind halo + translucent front veil so the halo reads over the character.
+    _addGlowHalo(el, `
+      left:50%; top:50%; width:250px; height:300px;
       transform:translate(-50%,-50%); border-radius:50%; filter:blur(8px);
       animation:wlfxVortexHalo ${intense?'1s':'2s'} ease infinite;
-    `);
-    _addNodeBehind(el, halo);
+    `, 0.3);
 
     // Core energy ball — front layer, static glow (no box-shadow animation)
     const core = _makeParticle(`
@@ -1238,11 +1251,12 @@ const WLEffects = (() => {
     `);
     el.style.animation = `wlfxWarp ${intense?'2s':'3.4s'} ease-in-out infinite`;
 
-    // Lensing halo
-    _addNodeBehind(el, _makeParticle(`
-      left:50%;top:50%;width:130px;height:130px;border-radius:50%;z-index:6;
+    // Lensing halo — enlarged to spill past the character + translucent front veil
+    // so the purple lensing visibly wraps over it (was 130px, fully occluded).
+    _addGlowHalo(el, `
+      left:50%;top:50%;width:210px;height:210px;border-radius:50%;z-index:6;
       background:radial-gradient(circle,rgba(155,123,255,.35),rgba(0,0,0,0) 65%);
-      animation:wlfxHalo ${intense?'1.8s':'3s'} ease-in-out infinite;`));
+      animation:wlfxHalo ${intense?'1.8s':'3s'} ease-in-out infinite;`, 0.3);
 
     // Rotating accretion disk
     _addNodeBehind(el, _makeParticle(`
