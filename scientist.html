@@ -1310,6 +1310,14 @@ WL.boot = async function() {
   WL.badges    = data.badges   || [];   // array of earned badge IDs — scientist.html: sd.badges.length
   WL.owned     = WL.scientist.owned || [];
 
+  /* Teacher access: a logged-in teacher previewing as a student gets EVERY item
+   * unlocked for free — all categories, including badge-gated cosmetics — so they
+   * can demo and dress the character fully without earning badges or spending
+   * quarks. Detected via an authenticated teacher auth session. */
+  try {
+    WL.isTeacher = !!(await WordLabData.getTeacherSession());
+  } catch(e) { WL.isTeacher = false; }
+
   /* XSS-safe: textContent only */
   document.getElementById('studentName').textContent =
     data.name || session.studentName || 'Scientist';
@@ -1512,6 +1520,10 @@ WL.cardEl = function(item, cat) {
   var reqBadge = (cat.id === 'effects') ? item.requires : item.requiresBadge;
   var hasReqBadge = !reqBadge || (WL.badges && WL.badges.includes(reqBadge));
   var isLocked = !hasReqBadge;   // true = badge gate is blocking
+
+  // Teacher preview: every item is owned & unlocked (incl. badge-gated) — shows
+  // "Equip" and clicks equip directly (WL.select bypasses cost for teachers).
+  if (WL.isTeacher) { isOwned = true; isLocked = false; }
 
   // Dances: equipped state is keyed per-tier, not a single scientist field.
   // Task 6: (WL.scientist.dances||{})[item.tier] === item.id
@@ -2782,6 +2794,8 @@ WL.surprise = async function() {
     if (!cat || !cat.src) return;
 
     var available = cat.src().filter(function(it) {
+      if (WL.isTeacher) return true;                  // teacher: every item available
+
       /* Badge-gate — same rule as WL.select and WL.cardEl.
        * Effects use item.requires; visual outfit categories use item.requiresBadge. */
       var reqBadge    = it.requiresBadge;
@@ -2808,6 +2822,10 @@ WL.surprise = async function() {
 
 /* ── WL.select — FULL version (Task 9) ──────────────────────────── */
 WL.select = function(cat, item, triggerEl) {
+  /* Teacher preview: everything is unlocked & free — equip directly, no badge
+   * gate, no cost. */
+  if (WL.isTeacher) { WL.equipFor(cat, item); return; }
+
   /* Badge-gating check — FIRST, before owned/afford (scientist.html line 1106, 1180).
    * Effects use item.requires; all other categories use item.requiresBadge. */
   var reqBadge    = (cat.id === 'effects') ? item.requires : item.requiresBadge;
