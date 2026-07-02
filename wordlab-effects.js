@@ -1248,7 +1248,7 @@ const WLEffects = (() => {
   function fxBlackhole(el, intense) {
     _ensureRelative(el);
     _injectStyle('wlfx-blackhole', `
-      @keyframes wlfxDiskSpin { 0%{transform:translate(-50%,-50%) rotate(0deg)} 100%{transform:translate(-50%,-50%) rotate(360deg)} }
+      @keyframes wlfxDiskSpin { 0%{transform:translate(-50%,-50%) scaleY(1.5) rotate(0deg)} 100%{transform:translate(-50%,-50%) scaleY(1.5) rotate(360deg)} }
       @keyframes wlfxHalo { 0%,100%{opacity:.5;transform:translate(-50%,-50%) scale(1)} 50%{opacity:.9;transform:translate(-50%,-50%) scale(1.12)} }
       @keyframes wlfxWarp { 0%,100%{transform:scale(1)} 50%{transform:scale(.97)} }
       @keyframes wlfxJet { 0%{opacity:0;transform:translate(-50%,0) scaleY(.4)} 30%{opacity:.85} 100%{opacity:0;transform:translate(-50%,0) scaleY(1.4)} }
@@ -1260,28 +1260,32 @@ const WLEffects = (() => {
     // it's always visible, and particles stream in from the character's direction
     // so it reads as actively absorbing them. All layers are FRONT so nothing is
     // hidden. hx/hy are the hole centre in stage %.
-    const HX = '76%', HY = '32%', hx = 76, hy = 32;
+    const HX = '75%', HY = '50%', hx = 75, hy = 50;
 
-    // Lensing halo
+    // Lensing halo — a tall (vertical) ellipse so the whole thing reads as a
+    // circle tilted on an angle, sized just under the scientist's height.
     _addNodeFront(el, _makeParticle(`
-      left:${HX};top:${HY};width:250px;height:250px;border-radius:50%;
+      left:${HX};top:${HY};width:170px;height:270px;border-radius:50%;
       transform:translate(-50%,-50%);
-      background:radial-gradient(circle,rgba(155,123,255,.42),rgba(0,0,0,0) 62%);
+      background:radial-gradient(ellipse,rgba(155,123,255,.42),rgba(0,0,0,0) 64%);
       animation:wlfxHalo ${intense?'1.8s':'3s'} ease-in-out infinite;`));
 
-    // Rotating accretion disk (glowing ring)
+    // Rotating accretion disk (glowing ring). Kept a circle here so the conic
+    // colours spin; the wlfxDiskSpin keyframe applies scaleY AFTER the rotation,
+    // stretching the ring into a fixed vertical ellipse (~150w × 225h) while the
+    // colours still sweep around it — a disk seen on an angle.
     _addNodeFront(el, _makeParticle(`
-      left:${HX};top:${HY};width:180px;height:180px;border-radius:50%;
+      left:${HX};top:${HY};width:150px;height:150px;border-radius:50%;
       background:conic-gradient(from 0deg,#ff8a3c,#9b7bff,#3cdcff,#9b7bff,#ff8a3c);
       mask:radial-gradient(circle,transparent 28%,#000 33%,#000 49%,transparent 53%);
       -webkit-mask:radial-gradient(circle,transparent 28%,#000 33%,#000 49%,transparent 53%);
       animation:wlfxDiskSpin ${intense?'2.2s':'4s'} linear infinite;`));
 
-    // Event horizon (dark sphere)
+    // Event horizon (dark ellipse, matching the tilt)
     _addNodeFront(el, _makeParticle(`
-      left:${HX};top:${HY};width:62px;height:62px;border-radius:50%;
+      left:${HX};top:${HY};width:46px;height:70px;border-radius:50%;
       transform:translate(-50%,-50%);
-      background:radial-gradient(circle at 40% 38%,#2a2440,#000 70%);
+      background:radial-gradient(ellipse at 42% 40%,#2a2440,#000 72%);
       box-shadow:0 0 26px 7px rgba(0,0,0,.78),inset 0 0 14px rgba(155,123,255,.55);`));
 
     // Absorbed particles: spawn spread across the character side, then get pulled
