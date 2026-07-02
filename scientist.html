@@ -1313,10 +1313,22 @@ WL.boot = async function() {
   /* Teacher access: a teacher previewing as a student gets EVERY item unlocked
    * for free — all categories, including badge-gated cosmetics — so they can demo
    * and dress the character fully without earning badges or spending quarks.
-   * Detected via the wl_teacher_preview flag (set by enterStudentMode) — the same
-   * synchronous signal landing.html uses; reliable across navigation to this page. */
-  WL.isTeacher = (typeof WordLabData.isTeacherPreview === 'function') &&
-                 WordLabData.isTeacherPreview();
+   *
+   * Two gates, both required:
+   *   1. wl_teacher_preview flag (set by enterStudentMode) — the UX trigger.
+   *   2. an authenticated teacher auth session (getTeacherSession → Supabase-signed
+   *      JWT) — the SECURITY gate. The flag alone is client-writable sessionStorage,
+   *      so a student could set it in DevTools; the JWT cannot be forged, so a
+   *      student without a real teacher login stays gated. (Equip is a client write
+   *      either way — this only unlocks the shop UI, grants no quarks/XP, and writes
+   *      only to the student's own RLS-scoped record; purchases still go through the
+   *      atomic server RPC, never this path.) */
+  WL.isTeacher = false;
+  if (typeof WordLabData.isTeacherPreview === 'function' && WordLabData.isTeacherPreview()) {
+    try {
+      WL.isTeacher = !!(await WordLabData.getTeacherSession());
+    } catch(e) { WL.isTeacher = false; }
+  }
 
   /* XSS-safe: textContent only */
   document.getElementById('studentName').textContent =
