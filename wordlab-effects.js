@@ -1253,66 +1253,69 @@ const WLEffects = (() => {
       @keyframes wlfxWarp { 0%,100%{transform:scale(1)} 50%{transform:scale(.97)} }
       @keyframes wlfxJet { 0%{opacity:0;transform:translate(-50%,0) scaleY(.4)} 30%{opacity:.85} 100%{opacity:0;transform:translate(-50%,0) scaleY(1.4)} }
     `);
-    el.style.animation = `wlfxWarp ${intense?'2s':'3.4s'} ease-in-out infinite`;
+    el.style.animation = `wlfxWarp ${intense?'2.4s':'3.8s'} ease-in-out infinite`;
 
-    // Lensing halo — enlarged to spill past the character + translucent front veil
-    // so the purple lensing visibly wraps over it (was 130px, fully occluded).
-    _addGlowHalo(el, `
-      left:50%;top:50%;width:280px;height:280px;border-radius:50%;z-index:6;
-      background:radial-gradient(circle,rgba(155,123,255,.4),rgba(0,0,0,0) 65%);
-      animation:wlfxHalo ${intense?'1.8s':'3s'} ease-in-out infinite;`, 0.32);
+    // The black hole sits OFF TO ONE SIDE (upper-right) rather than centred behind
+    // the character — centred, it's fully occluded by the opaque body. To the side
+    // it's always visible, and particles stream in from the character's direction
+    // so it reads as actively absorbing them. All layers are FRONT so nothing is
+    // hidden. hx/hy are the hole centre in stage %.
+    const HX = '76%', HY = '32%', hx = 76, hy = 32;
 
-    // Rotating accretion disk — character-sized so the glowing ring encircles the
-    // scientist and reads clearly past the silhouette (was 120px, hidden behind).
-    _addNodeBehind(el, _makeParticle(`
-      left:50%;top:50%;width:230px;height:230px;border-radius:50%;z-index:7;
+    // Lensing halo
+    _addNodeFront(el, _makeParticle(`
+      left:${HX};top:${HY};width:250px;height:250px;border-radius:50%;
+      transform:translate(-50%,-50%);
+      background:radial-gradient(circle,rgba(155,123,255,.42),rgba(0,0,0,0) 62%);
+      animation:wlfxHalo ${intense?'1.8s':'3s'} ease-in-out infinite;`));
+
+    // Rotating accretion disk (glowing ring)
+    _addNodeFront(el, _makeParticle(`
+      left:${HX};top:${HY};width:180px;height:180px;border-radius:50%;
       background:conic-gradient(from 0deg,#ff8a3c,#9b7bff,#3cdcff,#9b7bff,#ff8a3c);
-      mask:radial-gradient(circle,transparent 30%,#000 34%,#000 48%,transparent 52%);
-      -webkit-mask:radial-gradient(circle,transparent 30%,#000 34%,#000 48%,transparent 52%);
+      mask:radial-gradient(circle,transparent 28%,#000 33%,#000 49%,transparent 53%);
+      -webkit-mask:radial-gradient(circle,transparent 28%,#000 33%,#000 49%,transparent 53%);
       animation:wlfxDiskSpin ${intense?'2.2s':'4s'} linear infinite;`));
 
-    // Central dark sphere — larger event horizon
-    _addNodeBehind(el, _makeParticle(`
-      left:50%;top:50%;width:74px;height:74px;border-radius:50%;z-index:9;
+    // Event horizon (dark sphere)
+    _addNodeFront(el, _makeParticle(`
+      left:${HX};top:${HY};width:62px;height:62px;border-radius:50%;
       transform:translate(-50%,-50%);
       background:radial-gradient(circle at 40% 38%,#2a2440,#000 70%);
-      box-shadow:0 0 24px 6px rgba(0,0,0,.7),inset 0 0 14px rgba(155,123,255,.5);`));
+      box-shadow:0 0 26px 7px rgba(0,0,0,.78),inset 0 0 14px rgba(155,123,255,.55);`));
 
-    // Polar jets (erupt from poles outward, in front of the character)
-    function jet(topPct) {
-      if (!_active.has(el)) return;
-      const j = _makeParticle(`
-        left:50%;top:${topPct}%;width:7px;height:52px;z-index:8;
-        background:linear-gradient(${topPct<50?'0deg':'180deg'},rgba(60,220,255,.9),rgba(60,220,255,0));
-        animation:wlfxJet .9s ease-out forwards;`);
-      _addNodeFront(el, j);
-      setTimeout(() => { try { j.parentNode && j.parentNode.removeChild(j); } catch {} }, 950);
-    }
-    _addInterval(el, () => { jet(22); jet(78); }, intense ? 1400 : 2400);
-
-    // Inward-spiralling particles via one RAF loop — wider orbit to match the disk
-    const rect = () => el.getBoundingClientRect();
+    // Absorbed particles: spawn spread across the character side, then get pulled
+    // into the hole — accelerating and shrinking as they're consumed, curving in
+    // (tangential swirl) so it looks like an accretion stream. One RAF loop.
+    const SPAWN = () => ({ x: rnd(4, 66), y: rnd(12, 94) });
     const parts = [];
     function seed() {
-      const r0 = rnd(95, 135), a0 = rnd(0, Math.PI * 2);
+      const s = SPAWN();
       const node = _makeParticle(`
-        left:50%;top:50%;width:${rndInt(3,5)}px;height:${rndInt(3,5)}px;border-radius:50%;z-index:10;
-        background:${['#fff','#b9a6ff','#3cdcff'][rndInt(0,3)]};box-shadow:0 0 6px currentColor;`);
-      _addNodeBehind(el, node);
-      parts.push({ node, r:r0, a:a0, v:rnd(0.4,0.8) });
+        left:${s.x}%;top:${s.y}%;width:${rndInt(3,6)}px;height:${rndInt(3,6)}px;border-radius:50%;
+        transform:translate(-50%,-50%);
+        background:${['#fff','#b9a6ff','#3cdcff','#ff8a3c'][rndInt(0,4)]};box-shadow:0 0 6px currentColor;`);
+      _addNodeFront(el, node);
+      parts.push({ node, x:s.x, y:s.y, v:rnd(0.16,0.34) });
     }
-    for (let i = 0; i < (intense ? 26 : 16); i++) seed();
+    for (let i = 0; i < (intense ? 30 : 20); i++) seed();
     let raf = 0;
     function tick() {
       if (!_active.has(el)) return;
-      const { width:W, height:H } = rect();
       for (const p of parts) {
-        p.r -= p.v; p.a += 0.06 + (60 - p.r) * 0.001;
-        if (p.r < 10) { p.r = rnd(95, 135); p.a = rnd(0, Math.PI * 2); }
-        const x = 50 + (p.r / W * 100) * Math.cos(p.a);
-        const y = 50 + (p.r / H * 100) * Math.sin(p.a);
-        p.node.style.left = x + '%'; p.node.style.top = y + '%';
-        p.node.style.opacity = Math.max(0.1, p.r / 135);
+        const dx = hx - p.x, dy = hy - p.y;
+        const dist = Math.hypot(dx, dy) || 0.001;
+        const ux = dx / dist, uy = dy / dist;
+        const pull  = p.v * (1 + 55 / dist);   // gravity: faster as it nears
+        const swirl = pull * 0.6;               // tangential curl → spiral in
+        p.x += ux * pull - uy * swirl;
+        p.y += uy * pull + ux * swirl;
+        const scale = Math.max(0.15, Math.min(1, dist / 34));
+        p.node.style.left = p.x + '%';
+        p.node.style.top  = p.y + '%';
+        p.node.style.opacity   = Math.min(1, dist / 16);
+        p.node.style.transform = `translate(-50%,-50%) scale(${scale.toFixed(2)})`;
+        if (dist < 2.5) { const s = SPAWN(); p.x = s.x; p.y = s.y; }   // absorbed → respawn
       }
       const next = requestAnimationFrame(tick);
       _updateRAF(el, raf, next); raf = next;
