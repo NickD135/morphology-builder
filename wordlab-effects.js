@@ -1260,34 +1260,44 @@ const WLEffects = (() => {
     // it's always visible, and particles stream in from the character's direction
     // so it reads as actively absorbing them. All layers are FRONT so nothing is
     // hidden. hx/hy are the hole centre in stage %.
-    const HX = '108%', HY = '50%', hx = 108, hy = 50;
+    // Black-hole centre (stage %) — over the scientist's right side so the ring
+    // overlaps the character and the 3D depth split is visible on them.
+    const hx = 88, hy = 50;
 
-    // Lensing halo — a tall (vertical) ellipse so the whole thing reads as a
-    // circle tilted on an angle. Doubled in size and sat just BESIDE the
-    // character (centre pushed past its right edge).
-    _addNodeFront(el, _makeParticle(`
-      left:${HX};top:${HY};width:340px;height:540px;border-radius:50%;
-      transform:translate(-50%,-50%);
-      background:radial-gradient(ellipse,rgba(155,123,255,.42),rgba(0,0,0,0) 64%);
-      animation:wlfxHalo ${intense?'1.8s':'3s'} ease-in-out infinite;`));
+    // The three visuals (lensing halo, spinning accretion disk tilted via the
+    // wlfxDiskSpin scaleY, dark event horizon) centred in a host box. We stamp the
+    // SAME group TWICE and clip each to one vertical half: the LEFT half renders
+    // BEHIND the character and the RIGHT half IN FRONT — so the ring appears to
+    // pass behind the scientist on the left and over them on the right (3D wrap).
+    // Soft lensing halo — a SINGLE full node (behind the character). Not split:
+    // a soft glow has no hard edge, so splitting it would only add a faint seam.
+    _addNodeBehind(el, _makeParticle(
+      `left:${hx}%;top:${hy}%;width:340px;height:540px;border-radius:50%;transform:translate(-50%,-50%);` +
+      `background:radial-gradient(ellipse,rgba(155,123,255,.42),rgba(0,0,0,0) 64%);` +
+      `animation:wlfxHalo ${intense?'1.8s':'3s'} ease-in-out infinite;`));
 
-    // Rotating accretion disk (glowing ring). Kept a circle here so the conic
-    // colours spin; the wlfxDiskSpin keyframe applies scaleY AFTER the rotation,
-    // stretching the ring into a fixed vertical ellipse (~300w × 450h) while the
-    // colours still sweep around it — a disk seen on an angle.
-    _addNodeFront(el, _makeParticle(`
-      left:${HX};top:${HY};width:300px;height:300px;border-radius:50%;
-      background:conic-gradient(from 0deg,#ff8a3c,#9b7bff,#3cdcff,#9b7bff,#ff8a3c);
-      mask:radial-gradient(circle,transparent 28%,#000 33%,#000 49%,transparent 53%);
-      -webkit-mask:radial-gradient(circle,transparent 28%,#000 33%,#000 49%,transparent 53%);
-      animation:wlfxDiskSpin ${intense?'2.2s':'4s'} linear infinite;`));
-
-    // Event horizon (dark ellipse, matching the tilt)
-    _addNodeFront(el, _makeParticle(`
-      left:${HX};top:${HY};width:92px;height:140px;border-radius:50%;
-      transform:translate(-50%,-50%);
-      background:radial-gradient(ellipse at 42% 40%,#2a2440,#000 72%);
-      box-shadow:0 0 30px 9px rgba(0,0,0,.78),inset 0 0 18px rgba(155,123,255,.55);`));
+    // Accretion disk (tilted ring) + event horizon: stamped TWICE and clipped to
+    // one vertical half each. The LEFT half renders BEHIND the character, the
+    // RIGHT half IN FRONT — so the ring passes behind the scientist on the left
+    // and over them on the right (3D wrap). Only the hard-edged ring is split.
+    // Static developer CSS only (no user input) — built via DOM/cssText, never innerHTML.
+    const bhChildCss = [
+      `position:absolute;left:50%;top:50%;width:300px;height:300px;border-radius:50%;background:conic-gradient(from 0deg,#ff8a3c,#9b7bff,#3cdcff,#9b7bff,#ff8a3c);-webkit-mask:radial-gradient(circle,transparent 28%,#000 33%,#000 49%,transparent 53%);mask:radial-gradient(circle,transparent 28%,#000 33%,#000 49%,transparent 53%);animation:wlfxDiskSpin ${intense?'2.2s':'4s'} linear infinite;`,
+      `position:absolute;left:50%;top:50%;width:92px;height:140px;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(ellipse at 42% 40%,#2a2440,#000 72%);box-shadow:0 0 30px 9px rgba(0,0,0,.78),inset 0 0 18px rgba(155,123,255,.55);`
+    ];
+    function bhHalf(clip) {
+      const c = document.createElement('div');
+      c.style.cssText = `position:absolute;left:${hx}%;top:${hy}%;width:360px;height:560px;transform:translate(-50%,-50%);pointer-events:none;clip-path:${clip};-webkit-clip-path:${clip};`;
+      bhChildCss.forEach(function(css){ const d = document.createElement('div'); d.style.cssText = css; c.appendChild(d); });
+      return c;
+    }
+    // Full disk BEHIND (no clip → no seam), then the RIGHT half re-drawn IN FRONT
+    // on top of the identical pixels. Left side: only the behind disk shows, so the
+    // character occludes it (ring passes behind). Right side: the front half sits
+    // over the character (ring in front). Seamless because the behind disk is
+    // continuous under everything.
+    _addNodeBehind(el, bhHalf('none'));                // full — behind the scientist
+    _addNodeFront(el,  bhHalf('inset(0 0 0 50%)'));    // right half — in front (above)
 
     // Absorbed particles: spawn spread across the character side, then get pulled
     // into the hole — accelerating and shrinking as they're consumed, curving in
