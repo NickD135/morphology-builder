@@ -1732,6 +1732,16 @@ plan: `docs/superpowers/plans/2026-07-01-svg-hair.md`. Branch `feat/svg-hair`, m
 
 ---
 
+### PHASE 7.32 — Session 2026-07-02 (Lab Shop play-test fixes)
+
+**Merged to `main` AND PUSHED to production** (`e906a60`, owner authorised). Three fixes from classroom play-testing Phase 3. Spec `docs/superpowers/specs/2026-07-02-effects-custom-pets-design.md`; harness `tests/manual/effects-custom-pets-harness.html` (no login; PASS).
+
+- [x] **Effect visibility ("wrap translucent"):** glow/aura family (aura, shimmer, divine, quantum, vortex, blackhole) was behind-only after Phase 7.28 and occluded by the opaque character. New `_addGlowHalo(el, styleCss, veilOpacity)` in `wordlab-effects.js`: enlarged saturated halo BEHIND + low-opacity (~0.3) twin in the FRONT layer so the colour veils the character. Halos enlarged. Low-stim still hard-returns; teardown leak-free. Playwright-verified incl. live veil screenshot (black hole now clearly coats the character).
+- [x] **Custom pieces overridable:** `buildSVG` rendered custom overlays unconditionally → students were stuck. Now mutually exclusive per slot: `WL.equip` clears the matching custom slot (`WL.CUSTOM_SLOT_FOR`; even "None" clears it); `WL.equipCustom` clears the matching regular field (`REG_FIELD_FOR`; custom coat stays as overlay base). `loadCustom` also lists owned-but-deactivated pieces. **Still not runtime-verified** with a real logged-in student + real teacher `shop_items` (test class has none).
+- [x] **6 new pets:** goldfish 80, duck 100, spotted bunny 120, goose 150, sea lion 200, giraffe 200 — soft-plush `(uid)=>string` entries in `PET_SVGS` + `SHOP.pets`. No DB migration.
+
+---
+
 ### PHASE 8 — Growth & Integrations (Later)
 
 - [ ] Google Classroom integration (roster import via Google API)
