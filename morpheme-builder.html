@@ -105,6 +105,8 @@
     .tile:focus{ outline:3px solid var(--indigo-2); outline-offset:2px; }
     .tile-form{ font-size:13px; font-weight:700; }
     .tile-meaning{ font-size:10px; font-weight:600; color:var(--muted); }
+    .tile-stretch{ position:relative; }
+    .tile-stretch .tile-stretch-star{ position:absolute; top:3px; right:5px; font-size:10px; color:var(--accent); line-height:1; }
 
     .tile-prefix{ border-color:var(--blue-line); background:var(--blue-soft); }
     .tile-prefix .tile-form{ color:var(--blue-text); }
@@ -421,6 +423,15 @@ document.addEventListener('DOMContentLoaded', function() {
     var d = document.createElement('div');
     d.textContent = str;
     return d.innerHTML;
+  }
+
+  /* ── Above-level marker (Task A2) ──────────────────────────────────── */
+  /* A morpheme is "above the student's level" when a stage is set on both and
+     WLStage says it is not yet visible at the student's stage (no extension). */
+  function isAboveLevel(m) {
+    if (!STUDENT_STAGE || !m || !m.stage) return false;
+    if (typeof WLStage === 'undefined' || !WLStage.isItemVisible) return false;
+    return !WLStage.isItemVisible(m.stage, STUDENT_STAGE, false);
   }
 
   /* ══════════════════════════════════════════════════════════════════════
@@ -884,7 +895,16 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.dataset.id = fm.id;
         btn.dataset.type = type;
         btn.setAttribute('role', 'option');
-        btn.setAttribute('aria-label', (fm.display || fm.form) + ', meaning: ' + (fm.meaning || ''));
+        btn.setAttribute('aria-label', (fm.display || fm.form) + ', meaning: ' + (fm.meaning || '') + (isAboveLevel(fm) ? ' (above your level)' : ''));
+
+        if (isAboveLevel(fm)) {
+          btn.classList.add('tile-stretch');
+          var star = document.createElement('span');
+          star.className = 'tile-stretch-star';
+          star.setAttribute('aria-hidden','true');
+          star.textContent = '✦';
+          btn.appendChild(star);
+        }
 
         var formSpan = document.createElement('span');
         formSpan.className = 'tile-form';
