@@ -1260,22 +1260,23 @@ const WLEffects = (() => {
     // it's always visible, and particles stream in from the character's direction
     // so it reads as actively absorbing them. All layers are FRONT so nothing is
     // hidden. hx/hy are the hole centre in stage %.
-    const HX = '75%', HY = '50%', hx = 75, hy = 50;
+    const HX = '108%', HY = '50%', hx = 108, hy = 50;
 
     // Lensing halo — a tall (vertical) ellipse so the whole thing reads as a
-    // circle tilted on an angle, sized just under the scientist's height.
+    // circle tilted on an angle. Doubled in size and sat just BESIDE the
+    // character (centre pushed past its right edge).
     _addNodeFront(el, _makeParticle(`
-      left:${HX};top:${HY};width:170px;height:270px;border-radius:50%;
+      left:${HX};top:${HY};width:340px;height:540px;border-radius:50%;
       transform:translate(-50%,-50%);
       background:radial-gradient(ellipse,rgba(155,123,255,.42),rgba(0,0,0,0) 64%);
       animation:wlfxHalo ${intense?'1.8s':'3s'} ease-in-out infinite;`));
 
     // Rotating accretion disk (glowing ring). Kept a circle here so the conic
     // colours spin; the wlfxDiskSpin keyframe applies scaleY AFTER the rotation,
-    // stretching the ring into a fixed vertical ellipse (~150w × 225h) while the
+    // stretching the ring into a fixed vertical ellipse (~300w × 450h) while the
     // colours still sweep around it — a disk seen on an angle.
     _addNodeFront(el, _makeParticle(`
-      left:${HX};top:${HY};width:150px;height:150px;border-radius:50%;
+      left:${HX};top:${HY};width:300px;height:300px;border-radius:50%;
       background:conic-gradient(from 0deg,#ff8a3c,#9b7bff,#3cdcff,#9b7bff,#ff8a3c);
       mask:radial-gradient(circle,transparent 28%,#000 33%,#000 49%,transparent 53%);
       -webkit-mask:radial-gradient(circle,transparent 28%,#000 33%,#000 49%,transparent 53%);
@@ -1283,10 +1284,10 @@ const WLEffects = (() => {
 
     // Event horizon (dark ellipse, matching the tilt)
     _addNodeFront(el, _makeParticle(`
-      left:${HX};top:${HY};width:46px;height:70px;border-radius:50%;
+      left:${HX};top:${HY};width:92px;height:140px;border-radius:50%;
       transform:translate(-50%,-50%);
       background:radial-gradient(ellipse at 42% 40%,#2a2440,#000 72%);
-      box-shadow:0 0 26px 7px rgba(0,0,0,.78),inset 0 0 14px rgba(155,123,255,.55);`));
+      box-shadow:0 0 30px 9px rgba(0,0,0,.78),inset 0 0 18px rgba(155,123,255,.55);`));
 
     // Absorbed particles: spawn spread across the character side, then get pulled
     // into the hole — accelerating and shrinking as they're consumed, curving in
