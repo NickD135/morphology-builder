@@ -50,6 +50,18 @@ We ship the whole pool. Bad data is kept out by:
 phoneme-mode / syllable-mode / breakdown pools, its `syllables`/`phonemes` are taken from there
 as-is (zero new risk). Only genuinely-new words get generated splits (still invariant-checked).
 
+**Syllable authority — howmanysyllables.com (per the v1 2026-07-03 method):** for a word NOT
+covered by the verified syllable pool, the generating agent WebFetches
+`howmanysyllables.com/syllables/<word>` and takes the **division it returns directly** (e.g.
+`un-hap-pi-ness`) as the `syllables` split — this is the authoritative count *and* boundary, which
+the rejoin invariant alone cannot verify. **Best-effort with graceful degradation:** if the fetch
+fails or the site rate-limits (a real risk across thousands of requests), the agent falls back to
+its own syllabification and flags the word `syllables:unverified` in the review report, so those
+are spot-checked later rather than silently trusted. To stay polite to a small third-party site,
+the syllable-fetch stage runs at **reduced concurrency** and reuse-first keeps the fetch count to
+the genuinely-new remainder only. (Confirmed live: the site is WebFetch-able and returns count +
+division; `unhappiness` → `un-hap-pi-ness`, matching v1 data.)
+
 ## Data architecture — one static file
 
 - `word-study-data.js` grows 40 → 3,687 entries, **same entry shape** as v1
@@ -89,6 +101,9 @@ Multi-agent orchestration via the Workflow tool (explicit opt-in this session), 
   magic-e / digraph / doubling / multi-part words; right answer passes, wrong fails, 0 console
   errors, all six stages.
 - Any invariant failure at assembly is a hard stop for that word (reject-listed), not a silent ship.
+- Words flagged `syllables:unverified` (howmanysyllables.com unreachable at generation time) are
+  listed for a later throttled re-check / spot-check — they may ship (rejoin still passed) but are
+  tracked, not silently trusted.
 
 ## Unchanged from v1 (still in force)
 
