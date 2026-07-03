@@ -7,10 +7,13 @@ const R = f => path.join(ROOT, f);
 global.window = {};
 require(R('data.js'));
 const M = global.window.MORPHEMES; // { prefixes:[], suffixes:[], bases:[] }
-const MEANING = {};
-const STAGE = {};
+// valid-combos.json stores morpheme IDs (e.g. base "anglo_73"); word-study.html renders/grades
+// the surface FORM ("dark"), so resolve id -> form and key part-meanings by form (matches v1 data).
+const FORM = {};
+const MEANING = {};   // keyed by surface form
+const STAGE = {};     // keyed by id
 ['prefixes','suffixes','bases'].forEach(group => (M[group]||[]).forEach(m => {
-  MEANING[m.id] = m.meaning; STAGE[m.id] = m.stage;
+  FORM[m.id] = m.form; MEANING[m.form] = m.meaning; STAGE[m.id] = m.stage;
 }));
 
 // 2. extract inline WORDS arrays from the game pages (trusted local code)
@@ -45,16 +48,22 @@ function wordStage(morphemes){
 }
 
 const manifest = Object.keys(byWord).sort().map(word => {
-  const morphemes = byWord[word];
+  const ids = byWord[word]; // {prefix,base,suffix1,suffix2} as morpheme IDs
+  const morphemes = {
+    prefix:  ids.prefix  ? FORM[ids.prefix]  : '',
+    base:    ids.base    ? FORM[ids.base]    : '',
+    suffix1: ids.suffix1 ? FORM[ids.suffix1] : '',
+    suffix2: ids.suffix2 ? FORM[ids.suffix2] : '',
+  };
   const partMeanings = {};
   ['prefix','base','suffix1','suffix2'].forEach(k=>{
-    const id = morphemes[k];
-    if(id) partMeanings[id] = MEANING[id] || ('('+id+')'); // fallback marker, flagged below
+    const form = morphemes[k];
+    if(form) partMeanings[form] = MEANING[form] || ('('+form+')'); // fallback marker, flagged below
   });
   const reuse = {};
   if(sylPool[word]) reuse.syllables = sylPool[word];
   if(phoPool[word]) reuse.phonemes = phoPool[word];
-  return { word, stage: wordStage(morphemes), morphemes, partMeanings, reuse };
+  return { word, stage: wordStage(ids), morphemes, partMeanings, reuse };
 });
 
 fs.writeFileSync(R('scripts/word-study/manifest.json'), JSON.stringify(manifest));
