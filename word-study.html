@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Labs – Word Study</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="wordlab-common.css">
+  <style>
+    :root{ --accent:#7c3aed; --accent-rgb:124,58,237; --bg:#faf5ff; --text:#312e81; --muted:#6b7280;
+           --soft:#f3e8ff; --line:#e9d5ff; --good:#16a34a; --bad:#dc2626; }
+    body{ margin:0; padding-top:56px; font-family:'Lexend',sans-serif; background:var(--bg); color:var(--text); line-height:1.5; }
+    .wrap{ max-width:820px; margin:0 auto; padding:18px 16px 60px; }
+    .card{ background:#fff; border:1px solid var(--line); border-radius:18px; padding:22px; box-shadow:0 8px 24px rgba(124,58,237,.06); }
+    h1{ font-size:22px; margin:0 0 4px; letter-spacing:-.02em; }
+    .sub{ color:var(--muted); font-size:14px; margin:0 0 18px; }
+    .btn{ font-family:'Lexend',sans-serif; font-weight:800; border-radius:12px; cursor:pointer; border:none; }
+    .btnPrimary{ background:var(--accent); color:#fff; padding:12px 20px; font-size:15px; box-shadow:0 8px 18px rgba(124,58,237,.22); }
+    .btnPrimary:hover{ filter:brightness(1.05); }
+    .btnGhost{ background:var(--soft); color:var(--accent); border:1px solid var(--line); padding:10px 16px; font-size:14px; }
+    /* morpheme picker */
+    .pickTabs{ display:flex; gap:8px; margin:6px 0 14px; }
+    .pickTab{ flex:1; padding:9px; border-radius:10px; border:2px solid var(--line); background:#fff; color:var(--muted); font-weight:800; cursor:pointer; font-family:'Lexend',sans-serif; font-size:13px; }
+    .pickTab.on{ background:var(--accent); color:#fff; border-color:var(--accent); }
+    .chips{ display:flex; flex-wrap:wrap; gap:8px; max-height:230px; overflow:auto; padding:4px; }
+    .chip{ padding:8px 13px; border-radius:999px; border:2px solid var(--line); background:var(--soft); color:var(--accent); font-weight:800; font-size:14px; cursor:pointer; font-family:'Lexend',sans-serif; }
+    .chip:hover{ background:var(--accent); color:#fff; border-color:var(--accent); }
+    .surprise{ margin-top:16px; text-align:center; }
+    /* study screen */
+    .wordHead{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
+    .theWord{ font-size:38px; font-weight:900; letter-spacing:-.02em; }
+    .steps{ display:flex; gap:6px; margin:8px 0 18px; flex-wrap:wrap; }
+    .step{ flex:1; min-width:90px; text-align:center; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); padding:8px 4px; border-radius:10px; background:#fff; border:1px solid var(--line); }
+    .step.on{ background:var(--accent); color:#fff; border-color:var(--accent); }
+    .step.done{ background:var(--soft); color:var(--good); border-color:var(--good); }
+    .stageBox{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:20px; min-height:150px; }
+    .stageTitle{ font-size:13px; font-weight:900; text-transform:uppercase; letter-spacing:.14em; color:var(--accent); margin:0 0 4px; }
+    .stagePrompt{ font-size:15px; color:var(--text); margin:0 0 16px; }
+    /* tiles / letters */
+    .tileRow,.letterRow{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:center; margin:10px 0; }
+    .tile{ padding:12px 16px; border-radius:12px; border:2px solid var(--line); background:var(--soft); color:var(--accent); font-weight:900; font-size:20px; cursor:pointer; font-family:'Lexend',sans-serif; }
+    .tile.placed{ opacity:.35; pointer-events:none; }
+    .slotRow{ display:flex; gap:8px; justify-content:center; min-height:54px; margin:10px 0; }
+    .slot{ min-width:56px; padding:12px 10px; border-radius:12px; border:2px dashed var(--line); background:#fff; text-align:center; font-weight:900; font-size:20px; color:var(--accent); }
+    .lchar{ font-size:34px; font-weight:900; color:var(--text); padding:0 1px; }
+    .gap{ width:26px; height:52px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; background:none; border:0; position:relative; }
+    .gap .gl{ width:5px; height:34px; border-radius:99px; background:#d6bcfa; }
+    .gap.on .gl{ background:var(--accent); box-shadow:0 0 0 4px rgba(124,58,237,.15); }
+    .magicBtn{ position:absolute; top:-4px; right:0; width:24px; height:24px; border-radius:50%; border:1.5px dashed var(--line); background:var(--soft); font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; opacity:.6; }
+    .magicBtn.on{ background:var(--accent); border-style:solid; opacity:1; }
+    .silentE{ color:#a78bda; opacity:.7; }
+    /* MC options */
+    .opts{ display:flex; flex-direction:column; gap:10px; }
+    .opt{ text-align:left; padding:13px 15px; border-radius:12px; border:2px solid var(--line); background:#fff; color:var(--text); font-weight:600; font-size:15px; cursor:pointer; font-family:'Lexend',sans-serif; }
+    .opt:hover{ border-color:var(--accent); }
+    .opt.correct{ background:#dcfce7; border-color:var(--good); color:#166534; }
+    .opt.wrong{ background:#fee2e2; border-color:var(--bad); color:#991b1b; }
+    .actions{ display:flex; gap:10px; justify-content:center; margin-top:16px; }
+    .feedback{ margin-top:14px; padding:12px 14px; border-radius:12px; font-weight:700; font-size:14px; display:none; }
+    .feedback.good{ background:#dcfce7; color:#166534; display:block; }
+    .feedback.bad{ background:#fee2e2; color:#991b1b; display:block; }
+    .partMeaning{ font-size:13px; color:var(--muted); margin-top:8px; }
+    .hidden{ display:none !important; }
+    #sciWrap{ text-align:center; margin-top:18px; }
+    #sciWrap svg{ width:96px; height:auto; }
+    @media(max-width:480px){ .theWord{font-size:30px;} .step{min-width:70px;} .lchar{font-size:28px;} }
+  </style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+<header class="wl-header" role="banner">
+  <div class="wl-brand"><span class="wl-brand-icon">🧪</span> Word Labs</div>
+  <nav class="wl-nav" aria-label="Primary">
+    <a href="landing.html" class="wl-nav-link">Home</a>
+    <button id="wlLoginBtn" class="btn btnGhost" style="padding:7px 13px;font-size:11px;">👤 Log in</button>
+  </nav>
+</header>
+
+<main id="main-content" class="wrap">
+  <!-- START SCREEN -->
+  <section id="startScreen" class="card">
+    <h1>🔬 Word Study</h1>
+    <p class="sub">Study one word deeply — its parts, sounds, meaning and use. Pick a morpheme to get a word built from it, or get a surprise word.</p>
+    <div class="pickTabs">
+      <button class="pickTab on" data-kind="prefix">Prefixes</button>
+      <button class="pickTab" data-kind="base">Bases</button>
+      <button class="pickTab" data-kind="suffix">Suffixes</button>
+    </div>
+    <div id="chips" class="chips" aria-label="Choose a morpheme"></div>
+    <div class="surprise"><button id="surpriseBtn" class="btn btnPrimary">🎲 Surprise me — any word</button></div>
+  </section>
+
+  <!-- STUDY SCREEN -->
+  <section id="studyScreen" class="card hidden">
+    <div class="wordHead">
+      <div><div class="stageTitle">Studying the word</div><div id="theWord" class="theWord"></div></div>
+      <button id="newWordBtn" class="btn btnGhost">↻ New word</button>
+    </div>
+    <div id="steps" class="steps"></div>
+    <div id="stageBox" class="stageBox"></div>
+    <div id="feedback" class="feedback" role="status" aria-live="polite"></div>
+    <div id="sciWrap"></div>
+  </section>
+</main>
+
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="wordlab-data.js"></script>
+<script defer src="data.js"></script>
+<script defer src="word-study-data.js"></script>
+<script defer src="wordlab-scientist.js"></script>
+<script defer src="wordlab-audio.js"></script>
+<script defer src="wordlab-help.js"></script>
+<script defer src="wordlab-hints.js"></script>
+<script>
+// ══════════════ WORD STUDY ══════════════
+var POOL = [];
+var currentWord = null;
+var stageIdx = 0;
+var STAGE_DEFS = [
+  { key:'morphemes', label:'Morphemes' },
+  { key:'syllables', label:'Syllables' },
+  { key:'phonemes',  label:'Sounds' },
+  { key:'meaning',   label:'Meaning' },
+  { key:'sentence',  label:'Correct use' },
+  { key:'synonym',   label:'Synonym' },
+];
+var wordFirstTryOk = true; // for recordAttempt per stage
+function $(id){ return document.getElementById(id); }
+function shuffle(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor((i+1)*( (Date.now()%1000)/1000 + Math.random())%1 ); j=Math.min(j,i); var t=a[i];a[i]=a[j];a[j]=t; } return a; }
+function esc(s){ return (window.WordLabData&&WordLabData.escapeHtml)?WordLabData.escapeHtml(s):String(s); }
+
+// ---- load pool ----
+function loadPool(){
+  POOL = (window.WORD_STUDY_WORDS||[]).slice();
+  try{
+    if(window.WordLabData && WordLabData.filterByStage){
+      var f = WordLabData.filterByStage(POOL, 'word-study');
+      if(f && f.length>=5) POOL = f;
+    }
+  }catch(e){}
+}
+
+// ---- morpheme picker ----
+function buildPicker(kind){
+  var set = {};
+  POOL.forEach(function(w){
+    var id = kind==='prefix'?w.morphemes.prefix : kind==='suffix'?(w.morphemes.suffix1||w.morphemes.suffix2) : w.morphemes.base;
+    if(id) set[id]=(set[id]||0)+1;
+  });
+  var chips = Object.keys(set).sort();
+  var el = $('chips'); el.innerHTML='';
+  chips.forEach(function(id){
+    var b=document.createElement('button'); b.className='chip';
+    b.textContent = kind==='prefix'? id+'-' : kind==='suffix'? '-'+id : id;
+    b.setAttribute('aria-label','Study a word with '+id);
+    b.onclick=function(){ pickByMorpheme(kind,id); };
+    el.appendChild(b);
+  });
+  if(!chips.length){ el.innerHTML='<span style="color:var(--muted)">No words for this yet.</span>'; }
+}
+function pickByMorpheme(kind,id){
+  var matches = POOL.filter(function(w){
+    return kind==='prefix'? w.morphemes.prefix===id : kind==='suffix'? (w.morphemes.suffix1===id||w.morphemes.suffix2===id) : w.morphemes.base===id;
+  });
+  if(!matches.length) return;
+  startWord(matches[Math.floor(Math.random()*matches.length)]);
+}
+function surprise(){ if(POOL.length) startWord(POOL[Math.floor(Math.random()*POOL.length)]); }
+
+// ---- start a word ----
+function startWord(w){
+  currentWord = w; stageIdx = 0; wordFirstTryOk = true;
+  $('startScreen').classList.add('hidden');
+  $('studyScreen').classList.remove('hidden');
+  $('theWord').textContent = w.word;
+  renderSteps(); renderStage();
+  if($('main-content')) window.scrollTo(0,0);
+}
+function renderSteps(){
+  $('steps').innerHTML = STAGE_DEFS.map(function(s,i){
+    var cls = i<stageIdx?'step done' : i===stageIdx?'step on' : 'step';
+    return '<div class="'+cls+'">'+(i+1)+'. '+s.label+'</div>';
+  }).join('');
+}
+function feedback(ok,msg){
+  var f=$('feedback'); f.className='feedback '+(ok?'good':'bad'); f.innerHTML=msg;
+  if(typeof WLAudio!=='undefined'){ ok?WLAudio.correct&&WLAudio.correct():WLAudio.wrong&&WLAudio.wrong(); }
+  if(typeof WLScientist!=='undefined'){ try{ WLScientist.react(ok?'correct':'wrong'); }catch(e){} }
+}
+function clearFeedback(){ var f=$('feedback'); f.className='feedback'; f.innerHTML=''; }
+
+// advance after a correct stage
+function stageCorrect(){
+  // record per stage; category = the word (matches Breakdown Blitz)
+  try{
+    if(window.WordLabData && WordLabData.getSession && WordLabData.getSession()){
+      var r = WordLabData.recordAttempt('word-study', currentWord.word, true, 0);
+      if(typeof WLScientist!=='undefined' && r) WLScientist.react('correct', r);
+    }
+  }catch(e){}
+  stageIdx++;
+  if(stageIdx>=STAGE_DEFS.length){ finishWord(); return; }
+  setTimeout(function(){ clearFeedback(); renderSteps(); renderStage(); }, 750);
+}
+function stageWrong(){
+  wordFirstTryOk = false;
+  try{ if(window.WordLabData && WordLabData.getSession && WordLabData.getSession()) WordLabData.recordAttempt('word-study', currentWord.word, false, 0); }catch(e){}
+}
+function finishWord(){
+  $('stageBox').innerHTML = '<div style="text-align:center"><div style="font-size:40px">🏆</div>'
+    +'<h2 style="margin:6px 0">Word mastered!</h2>'
+    +'<p class="sub">You studied <b>'+esc(currentWord.word)+'</b> from every angle — parts, sounds, meaning and use.</p>'
+    +'<div class="actions"><button class="btn btnPrimary" onclick="backToStart()">Study another word</button></div></div>';
+  $('steps').innerHTML = STAGE_DEFS.map(function(s){ return '<div class="step done">'+s.label+'</div>'; }).join('');
+  clearFeedback();
+  if(typeof WLScientist!=='undefined'){ try{ WLScientist.react('streak',{streak:6}); }catch(e){} }
+}
+function backToStart(){ $('studyScreen').classList.add('hidden'); $('startScreen').classList.remove('hidden'); clearFeedback(); }
+
+// ---- STAGE ROUTER (stage mechanics implemented in phase 3 block below) ----
+function renderStage(){
+  clearFeedback();
+  var key = STAGE_DEFS[stageIdx].key;
+  if(window.WS_STAGES && WS_STAGES[key]){ WS_STAGES[key](); }
+  else { $('stageBox').innerHTML = '<div class="stagePrompt">Stage: '+key+' (coming next)</div>'; }
+}
+
+// ---- init ----
+window.addEventListener('DOMContentLoaded', function(){
+  loadPool();
+  buildPicker('prefix');
+  document.querySelectorAll('.pickTab').forEach(function(t){
+    t.onclick=function(){ document.querySelectorAll('.pickTab').forEach(function(x){x.classList.remove('on');}); t.classList.add('on'); buildPicker(t.dataset.kind); };
+  });
+  $('surpriseBtn').onclick = surprise;
+  $('newWordBtn').onclick = backToStart;
+  // login button (shared helper if present)
+  try{ if(window.WordLabData && WordLabData.wireLoginButton) WordLabData.wireLoginButton($('wlLoginBtn')); }catch(e){}
+});
+</script>
+</body>
+</html>
