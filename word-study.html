@@ -96,10 +96,11 @@
       <div><div class="stageTitle">Studying the word</div><div id="theWord" class="theWord"></div></div>
       <button id="newWordBtn" class="btn btnGhost">↻ New word</button>
     </div>
+    <div id="ealdWrap" style="margin:-2px 0 12px;"></div>
     <div id="steps" class="steps"></div>
     <div id="stageBox" class="stageBox"></div>
     <div id="feedback" class="feedback" role="status" aria-live="polite"></div>
-    <div id="sciWrap"></div>
+    <div id="sciWrap" class="scientist-stage"></div>
   </section>
 </main>
 
@@ -111,11 +112,13 @@
 <script defer src="wordlab-audio.js"></script>
 <script defer src="wordlab-help.js"></script>
 <script defer src="wordlab-hints.js"></script>
+<script defer src="wordlab-teacher.js"></script>
 <script>
 // ══════════════ WORD STUDY ══════════════
 var POOL = [];
 var currentWord = null;
 var stageIdx = 0;
+var _wltActive = false; // Teacher Mode — set in DOMContentLoaded once WLTeacher has loaded
 var STAGE_DEFS = [
   { key:'morphemes', label:'Morphemes' },
   { key:'syllables', label:'Syllables' },
@@ -173,8 +176,58 @@ function startWord(w){
   $('startScreen').classList.add('hidden');
   $('studyScreen').classList.remove('hidden');
   $('theWord').textContent = w.word;
+  renderEALD();
   renderSteps(); renderStage();
   if($('main-content')) window.scrollTo(0,0);
+}
+
+// EALD: hear the word (English + home language) and reveal its meaning in the home language
+function renderEALD(){
+  var wrap=$('ealdWrap'); if(!wrap) return; wrap.innerHTML='';
+  try{
+    if(typeof WordLabData==='undefined' || !WordLabData.getEALDLanguage() || !currentWord) return;
+    WordLabData.injectEALDStyles();
+    var langName=(WordLabData.EALD_LANGUAGES[WordLabData.getEALDLanguage()]||'').split(' (')[0];
+    var word=currentWord.word, meaning=currentWord.meaning||'';
+    wrap.innerHTML =
+      '<div id="ealdTranslation" style="display:none"></div>' +
+      WordLabData.buildEALDSpeakButtons() +
+      ' <button class="eald-def-btn" id="wsEaldBtn" type="button" onclick="this.classList.toggle(\'flipped\')">' +
+        '<span class="eald-def-front">🌐 Meaning in '+esc(langName)+'</span>' +
+        '<span class="eald-def-back" id="wsEaldText">Loading…</span></button>';
+    var tEl=$('ealdTranslation'); if(tEl){ tEl.dataset.englishWord=word; tEl.dataset.translatedWord=''; }
+    WordLabData.getTranslations([word, meaning],['word','definition']).then(function(t){
+      if(!t) return;
+      if(tEl && t[word]) tEl.dataset.translatedWord=t[word];
+      var mEl=$('wsEaldText'); if(mEl && t[meaning]) mEl.textContent='🌐 '+t[meaning];
+    });
+  }catch(e){}
+}
+
+// Stage-aware "Need Advice" hints (read live stageIdx / currentWord)
+function wsStrategyHint(){
+  var k = STAGE_DEFS[stageIdx] ? STAGE_DEFS[stageIdx].key : '';
+  if(k==='morphemes') return 'Break the word into its parts — the prefix comes first, then the base, then any suffix.';
+  if(k==='syllables') return 'Clap the word out loud. Each beat with a vowel sound is one syllable.';
+  if(k==='phonemes')  return 'Say the word slowly. Letters that make one sound (like sh, ai, or magic-e) stay in one box.';
+  if(k==='meaning')   return 'Think about the base word and what the prefix or suffix does to it.';
+  if(k==='sentence')  return 'Read each sentence carefully — only one uses the word in a way that makes sense.';
+  if(k==='synonym')   return 'A synonym means almost the same thing. Try swapping each option into a sentence.';
+  return 'Take your time and look at the whole word.';
+}
+function wsSpecificHint(){
+  if(!currentWord) return 'Look closely at the word.';
+  var k = STAGE_DEFS[stageIdx] ? STAGE_DEFS[stageIdx].key : '';
+  if(k==='morphemes'){
+    var parts=[currentWord.morphemes.prefix,currentWord.morphemes.base,currentWord.morphemes.suffix1,currentWord.morphemes.suffix2].filter(Boolean);
+    return 'This word has ' + parts.length + ' parts. It starts with "' + parts[0] + '".';
+  }
+  if(k==='syllables') return 'This word has ' + currentWord.syllables.length + ' syllables.';
+  if(k==='phonemes')  return 'This word has ' + currentWord.phonemes.length + ' sounds.';
+  if(k==='meaning')   return 'It is built from the base "' + currentWord.morphemes.base + '" — think about what that means.';
+  if(k==='sentence')  return 'The right sentence uses "' + currentWord.word + '" to mean "' + currentWord.meaning + '".';
+  if(k==='synonym')   return 'The best synonym means the same as "' + currentWord.meaning + '".';
+  return 'Look closely at the word.';
 }
 function renderSteps(){
   $('steps').innerHTML = STAGE_DEFS.map(function(s,i){
@@ -191,9 +244,9 @@ function clearFeedback(){ var f=$('feedback'); f.className='feedback'; f.innerHT
 
 // advance after a correct stage
 function stageCorrect(){
-  // record per stage; category = the word (matches Breakdown Blitz)
+  // record per stage; category = the word (matches Breakdown Blitz). No XP in Teacher Mode.
   try{
-    if(window.WordLabData && WordLabData.getSession && WordLabData.getSession()){
+    if(!_wltActive && window.WordLabData && WordLabData.getSession && WordLabData.getSession()){
       var r = WordLabData.recordAttempt('word-study', currentWord.word, true, 0);
       if(typeof WLScientist!=='undefined' && r) WLScientist.react('correct', r);
     }
@@ -204,7 +257,7 @@ function stageCorrect(){
 }
 function stageWrong(){
   wordFirstTryOk = false;
-  try{ if(window.WordLabData && WordLabData.getSession && WordLabData.getSession()) WordLabData.recordAttempt('word-study', currentWord.word, false, 0); }catch(e){}
+  try{ if(!_wltActive && window.WordLabData && WordLabData.getSession && WordLabData.getSession()) WordLabData.recordAttempt('word-study', currentWord.word, false, 0); }catch(e){}
 }
 function finishWord(){
   $('stageBox').innerHTML = '<div style="text-align:center"><div style="font-size:40px">🏆</div>'
@@ -220,6 +273,7 @@ function backToStart(){ $('studyScreen').classList.add('hidden'); $('startScreen
 // ---- STAGE ROUTER (stage mechanics implemented in phase 3 block below) ----
 function renderStage(){
   clearFeedback();
+  if(typeof WLHints!=='undefined' && WLHints.resetHints) WLHints.resetHints();
   var key = STAGE_DEFS[stageIdx].key;
   if(window.WS_STAGES && WS_STAGES[key]){ WS_STAGES[key](); }
   else { $('stageBox').innerHTML = '<div class="stagePrompt">Stage: '+key+' (coming next)</div>'; }
@@ -241,6 +295,35 @@ window.addEventListener('DOMContentLoaded', function(){
   $('newWordBtn').onclick = backToStart;
   // login button (shared helper if present)
   try{ if(window.WordLabData && WordLabData.wireLoginButton) WordLabData.wireLoginButton($('wlLoginBtn')); }catch(e){}
+
+  // Teacher Mode (opened from teacher landing) — no XP recorded; explanatory feedback is native here.
+  _wltActive = (typeof WLTeacher!=='undefined' && WLTeacher.active);
+
+  // Render the student's scientist into the stage: gives reactions a visible home and
+  // anchors the "Need Advice" button below the character.
+  (function(){
+    var w=$('sciWrap'); if(!w||typeof WLScientist==='undefined') return;
+    function _p(svg){ while(w.firstChild)w.removeChild(w.firstChild); w.appendChild(document.createRange().createContextualFragment(svg)); }
+    _p(WLScientist.buildSVG({},'neutral'));
+    try{ if(typeof WordLabData!=='undefined' && WordLabData.getStudentData){
+      WordLabData.getStudentData().then(function(sd){ if(sd&&sd.scientist) _p(WLScientist.buildSVG(sd.scientist,'neutral')); }).catch(function(){});
+    } }catch(e){}
+  })();
+
+  // First-visit instructions popup + floating ? help button
+  if(typeof WLHelp!=='undefined') WLHelp.init({
+    game:'word-study', title:'Word Study', emoji:'🔬',
+    steps:[
+      {icon:'🧩',title:'Pick a word',desc:'Choose a prefix, base or suffix to get a word built from it — or press "Surprise me" for any word.'},
+      {icon:'🔤',title:'Split the parts',desc:'Tap the word parts in order (prefix · base · suffix). Each part shows what it means.'},
+      {icon:'👏',title:'Beats & sounds',desc:'Chop the word into syllables (beats), then group the letters into their sounds.'},
+      {icon:'💡',title:'Meaning & use',desc:'Pick what the whole word means, choose the sentence that uses it correctly, and find the best synonym.'},
+      {icon:'🏆',title:'Master the word',desc:'Finish all six stages to master the word — then study another one.'}
+    ],
+    audioText:'In Word Study you take one word and study it from every angle. First pick a prefix, base or suffix to get a word, or press Surprise me. Then build the word from its parts, chop it into syllables, group the letters into their sounds, choose its meaning, pick the sentence that uses it correctly, and find the best synonym. Finish all six stages to master the word.'
+  });
+  // "Need Advice" scientist hints (stage-aware) + support-mode toggle
+  if(typeof WLHints!=='undefined') WLHints.register({ getStrategyHint: wsStrategyHint, getSpecificHint: wsSpecificHint });
 });
 </script>
 

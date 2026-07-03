@@ -291,12 +291,14 @@ document.addEventListener('DOMContentLoaded', function() {
         ALL_COMBOS = data;
         buildIndices();
         render();
+        applyFocusFromURL();
       })
       .catch(function(e) {
         console.error('Failed to load combos:', e);
         ALL_COMBOS = [];
         buildIndices();
         render();
+        applyFocusFromURL();
       });
   }
 
@@ -981,6 +983,26 @@ document.addEventListener('DOMContentLoaded', function() {
     elFilterInput.placeholder = 'Search ' + label + '...';
     renderTiles();
     updateTabCounts();
+  }
+
+  /* Handoff ← Flashcards: ?morpheme=<id>&type=<prefix|suffix|base> pre-selects that morpheme. */
+  function applyFocusFromURL() {
+    try {
+      var qp = new URLSearchParams(location.search);
+      var id = qp.get('morpheme'); if (!id) return;
+      var type = qp.get('type');
+      function find(arr){ for (var i=0;i<arr.length;i++){ if (arr[i].id===id) return arr[i]; } return null; }
+      var m=null, t=null;
+      if (type==='prefix') { m=find(PREFIXES); t='prefix'; }
+      else if (type==='suffix') { m=find(SUFFIXES); t='suffix'; }
+      else if (type==='base') { m=find(BASES); t='base'; }
+      if (!m) { m=find(BASES); if (m) t='base'; }
+      if (!m) { m=find(PREFIXES); if (m) t='prefix'; }
+      if (!m) { m=find(SUFFIXES); if (m) t='suffix'; }
+      if (!m) return;
+      switchTab(t==='prefix'?'prefixes':t==='suffix'?'suffixes':'bases');
+      placeTile(m, t);
+    } catch(e) {}
   }
 
   /* ── Init ──────────────────────────────────────────────────────────── */
