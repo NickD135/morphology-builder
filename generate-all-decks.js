@@ -500,6 +500,7 @@ PHONEMES — NEW FORMAT (CRITICAL):
 - WHEN TO ADD "s" (sound annotation): only when the letters don't obviously make the sound they look like. E.g. "s" making /sh/, "c" making /s/ or /sh/, "g" making /j/, "ti" making /sh/, "ph" making /f/, silent letters, etc.
 - DO NOT add "s" for straightforward sounds like "t" making /t/, "m" making /m/, etc.
 - VALIDATION: join all "g" values together — the result MUST exactly equal the original word. Double-check this before returning.
+- SYLLABLE DIVISION (vowel-SOUND based, Australian English): every syllable has ONE vowel sound; keep roots, prefixes, suffixes and digraphs whole (con/form/i/ty, e/lec/tric/i/ty); two consonants between vowels split between them (but/ter); ONE consonant between vowels splits by the FIRST vowel s sound — long/open joins the NEXT syllable (o/pen, ti/ger, vi/tal), short STAYS (lem/on, grav/i/ty); a consonant before -le takes it (ta/ble); the suffix -ed is its own syllable ONLY when it sounds like /id/ (want/ed) — after other sounds it adds NO syllable (re/struc/tured, not re/struc/tur/ed); NEVER split letter-by-letter.
 - SYLLABLE VALIDATION: join all syllable parts (removing /) — the result MUST exactly equal the original word. E.g. "re/con/struc/tion" joined = "reconstruction". Double-check this before returning.
 - Use Australian/British English spelling (e.g. "organise" not "organize")
 
@@ -631,6 +632,7 @@ PHONEMES — CRITICAL RULES:
 - WHEN TO ADD "s": only when letters don't obviously make the sound they look like (s→/sh/, c→/s/, g→/j/, ti→/sh/, ph→/f/, etc.)
 - DO NOT add "s" for straightforward sounds
 - VALIDATION: join all "g" values — must exactly equal the original word. Double-check this before returning.
+- SYLLABLE DIVISION (vowel-SOUND based, Australian English): every syllable has ONE vowel sound; keep roots, prefixes, suffixes and digraphs whole (con/form/i/ty, e/lec/tric/i/ty); two consonants between vowels split between them (but/ter); ONE consonant between vowels splits by the FIRST vowel s sound — long/open joins the NEXT syllable (o/pen, ti/ger, vi/tal), short STAYS (lem/on, grav/i/ty); a consonant before -le takes it (ta/ble); the suffix -ed is its own syllable ONLY when it sounds like /id/ (want/ed) — after other sounds it adds NO syllable (re/struc/tured, not re/struc/tur/ed); NEVER split letter-by-letter.
 - SYLLABLE VALIDATION: join all syllable parts (removing /) — the result MUST exactly equal the original word. Double-check this before returning.
 - Use Australian/British English spelling
 
@@ -761,6 +763,7 @@ PHONEMES — CRITICAL RULES:
 - WHEN TO ADD "s": only when letters don't obviously make the sound they look like (s→/sh/, c→/s/, g→/j/, ti→/sh/, ph→/f/, etc.)
 - DO NOT add "s" for straightforward sounds
 - VALIDATION: join all "g" values — must exactly equal the original word. Double-check this before returning.
+- SYLLABLE DIVISION (vowel-SOUND based, Australian English): every syllable has ONE vowel sound; keep roots, prefixes, suffixes and digraphs whole (con/form/i/ty, e/lec/tric/i/ty); two consonants between vowels split between them (but/ter); ONE consonant between vowels splits by the FIRST vowel s sound — long/open joins the NEXT syllable (o/pen, ti/ger, vi/tal), short STAYS (lem/on, grav/i/ty); a consonant before -le takes it (ta/ble); the suffix -ed is its own syllable ONLY when it sounds like /id/ (want/ed) — after other sounds it adds NO syllable (re/struc/tured, not re/struc/tur/ed); NEVER split letter-by-letter.
 - SYLLABLE VALIDATION: join all syllable parts (removing /) — the result MUST exactly equal the original word. Double-check this before returning.
 - Use Australian/British English spelling
 
