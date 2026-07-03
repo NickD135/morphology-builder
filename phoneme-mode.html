@@ -75,7 +75,7 @@
     .speakBtn:hover{ background:rgba(var(--accent-rgb),.15); border-color:var(--accent); }
 
     /* ── Core interaction area ── */
-    .chopContainer{ display:flex; align-items:center; justify-content:center; flex-wrap:wrap; user-select:none; min-height:110px; gap:0; }
+    .chopContainer{ display:flex; align-items:center; justify-content:center; flex-wrap:wrap; user-select:none; min-height:110px; gap:0; row-gap:12px; padding-top:8px; }
 
     /* Each "unit" = one or more letters currently grouped */
     .unit{ display:inline-flex; align-items:center; position:relative; }
@@ -126,18 +126,26 @@
     .unitGap:hover .gHint{ opacity:1; }
     @media(pointer:coarse){ .unitGap .gHint{ opacity:1; } }
 
-    /* The small merge button that sits below an unsplit gap */
-    .mergeBtn{
-      display:none;
-      position:absolute; bottom:-30px; left:50%; transform:translateX(-50%);
-      font-size:10px; font-weight:900; color:var(--orange-text);
-      background:var(--orange-soft); border:1px solid var(--orange-line);
-      border-radius:7px; padding:3px 7px; cursor:pointer; white-space:nowrap;
-      z-index:5;
+    /* .unitGap is a <button> — strip native chrome (it keeps its own layout above) */
+    .unitGap{ background:none; border:0; font:inherit; padding:0; }
+
+    /* Split digraph (magic-e): the silent e greys out, its linked vowel tints */
+    .lChar.silentE{ color:#a78bda; opacity:.72; }
+    .lChar.magicVowel{ color:var(--purple-text); }
+
+    /* Magic-e toggle — a compact ✨ badge at the top-right of an eligible silent e */
+    .magicBtn{
+      position:absolute; top:-6px; right:0;
+      width:26px; height:26px; padding:0; line-height:1; font-size:13px;
+      display:flex; align-items:center; justify-content:center;
+      background:var(--purple-soft); border:1.5px dashed var(--purple-line);
+      border-radius:50%; cursor:pointer; z-index:5;
+      touch-action:manipulation; -webkit-tap-highlight-color:transparent;
+      opacity:.5; transition:opacity .12s, transform .12s;
     }
-    .unitGap:not(.split):hover .mergeBtn{ display:block; }
-    @media(pointer:coarse){ .unitGap:not(.split) .mergeBtn{ display:block; } }
-    .mergeBtn:hover{ background:var(--orange-line); }
+    .unit:hover .magicBtn, .magicBtn.on, .magicBtn:focus-visible{ opacity:1; }
+    @media(pointer:coarse){ .magicBtn{ opacity:.9; } }
+    .magicBtn.on{ background:var(--purple); border-style:solid; border-color:var(--purple); transform:scale(1.08); }
 
     /* Preview */
     .phonemePreview{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; min-height:52px; align-items:center; }
@@ -289,8 +297,8 @@
       max-width:100%!important;
       min-width:0!important;
       box-sizing:border-box;
-      overflow:hidden;
-      padding:8px 12px;
+      overflow-x:hidden; overflow-y:visible;
+      padding:12px 14px 8px;
       min-height:auto!important;
       --wl-fit:1;
     }
@@ -417,9 +425,9 @@
               <div class="htDesc">Click between letters to add a phoneme boundary — just like the syllable game.</div>
             </div>
             <div class="howToCard orange">
-              <div class="htIcon">🔗</div>
-              <div class="htTitle">Merge digraphs</div>
-              <div class="htDesc">Hover over the gap between two letters and click <b>merge</b> to join them into one sound tile.</div>
+              <div class="htIcon">✨</div>
+              <div class="htTitle">Keep sounds together</div>
+              <div class="htDesc">Letters that make one sound (<b>sh</b>, <b>igh</b>) stay in one box — don't split between them. For magic-e words like <b>cake</b>, tap <b>✨ magic-e</b> on the silent e.</div>
             </div>
             <div class="howToCard">
               <div class="htIcon">🔊</div>
@@ -466,7 +474,7 @@
             <div style="text-align:center;width:100%;">
               <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.18em;color:var(--muted);margin-bottom:10px;">Your phonemes</div>
               <div class="phonemePreview" id="phonemePreview">
-                <span style="color:var(--muted);font-size:14px;font-weight:700;">Split or merge letters above</span>
+                <span style="color:var(--muted);font-size:14px;font-weight:700;">Tap between letters to split into sounds</span>
               </div>
             </div>
 
@@ -512,8 +520,8 @@
           <div class="panelTitle" style="margin-bottom:12px;">How to play</div>
           <div class="tipBox">
             <b>Split</b> — click between letters to draw a sound boundary (purple line).<br><br>
-            <b>Merge</b> — hover between two letters and click the orange <b>merge</b> button to join them into one <span class="oChip">digraph tile</span>.<br><br>
-            To undo a merge, click the line <em>inside</em> the orange tile.
+            <b>Keep together</b> — letters that make one sound stay in the same box, so don't split between them (<span class="oChip">sh</span>, <span class="oChip">igh</span>).<br><br>
+            <b>✨ Magic-e</b> — for split-digraph words like <b>cake</b> or <b>time</b>, tap the <b>magic-e</b> button on the silent <b>e</b> to link it to its vowel (<span class="oChip">a_e</span>).
           </div>
           <div style="font-size:13px;color:#334155;line-height:1.8;">
             <div><b>ship</b> → <span class="oChip">sh</span> · <span class="pChipInline">i</span> · <span class="pChipInline">p</span></div>
@@ -623,38 +631,38 @@ const WORDS = [
   { word:"unhappiness", stage:"s3e",   phonemes:["u","n","h","a","pp","i","n","e","ss"],   diff:"Challenge" },
   { word:"disagreement", stage:"s3e",   phonemes:["d","i","s","a","g","r","ee","m","e","n","t"],   diff:"Challenge" },
   { word:"transport", stage:"s3e",   phonemes:["t","r","a","n","s","p","or","t"],   diff:"Challenge" },
-  { word:"submarine", stage:"s3e",   phonemes:["s","u","b","m","a","r","i","n","e"],   diff:"Challenge" },
-  { word:"nonfiction", stage:"s3e",   phonemes:["n","o","n","f","i","c","t","io","n"],   diff:"Challenge" },
+  { word:"submarine", stage:"s3e",   phonemes:["s","u","b","m","a","r","i_e","n"],   diff:"Challenge" },
+  { word:"nonfiction", stage:"s3e",   phonemes:["n","o","n","f","i","c","t","i","o","n"],   diff:"Challenge" },
   { word:"multitask", stage:"s3e",   phonemes:["m","u","l","t","i","t","a","s","k"],   diff:"Challenge" },
-  { word:"semicircle", stage:"s3e",   phonemes:["s","e","m","i","c","ir","c","l","e"],   diff:"Challenge" },
-  { word:"microphone", stage:"s3e",   phonemes:["m","i","c","r","o","ph","o","n","e"],   diff:"Challenge" },
-  { word:"megaphone", stage:"s3e",   phonemes:["m","e","g","a","ph","o","n","e"],   diff:"Challenge" },
+  { word:"semicircle", stage:"s3e",   phonemes:["s","e","m","i","c","ir","c","le"],   diff:"Challenge" },
+  { word:"microphone", stage:"s3e",   phonemes:["m","i","c","r","o","ph","o_e","n"],   diff:"Challenge" },
+  { word:"megaphone", stage:"s3e",   phonemes:["m","e","g","a","ph","o_e","n"],   diff:"Challenge" },
   { word:"construct", stage:"s3e",   phonemes:["c","o","n","s","t","r","u","c","t"],   diff:"Challenge" },
   { word:"contradict", stage:"s3e",   phonemes:["c","o","n","t","r","a","d","i","c","t"],   diff:"Challenge" },
-  { word:"proactive", stage:"s3e",   phonemes:["p","r","o","a","c","t","i","v","e"],   diff:"Challenge" },
+  { word:"proactive", stage:"s3e",   phonemes:["p","r","o","a","c","t","i","ve"],   diff:"Challenge" },
   { word:"interact", stage:"s3e",   phonemes:["i","n","t","er","a","c","t"],   diff:"Challenge" },
   { word:"supermarket", stage:"s3e",   phonemes:["s","u","p","er","m","ar","k","e","t"],   diff:"Challenge" },
-  { word:"uncomfortable", stage:"s3e",   phonemes:["u","n","c","o","m","f","or","t","a","b","l","e"],   diff:"Challenge" },
-  { word:"creative", stage:"s3e",   phonemes:["c","r","e","a","t","i","v","e"],   diff:"Challenge" },
+  { word:"uncomfortable", stage:"s3e",   phonemes:["u","n","c","o","m","f","or","t","a","b","le"],   diff:"Challenge" },
+  { word:"creative", stage:"s3e",   phonemes:["c","r","e","a","t","i","ve"],   diff:"Challenge" },
   { word:"disorder", stage:"s3e",   phonemes:["d","i","s","or","d","er"],   diff:"Challenge" },
   { word:"superhero", stage:"s3e",   phonemes:["s","u","p","er","h","e","r","o"],   diff:"Challenge" },
   { word:"transplant", stage:"s3e",   phonemes:["t","r","a","n","s","p","l","a","n","t"],   diff:"Challenge" },
-  { word:"microscope", stage:"s3e",   phonemes:["m","i","c","r","o","sc","o","p","e"],   diff:"Challenge" },
+  { word:"microscope", stage:"s3e",   phonemes:["m","i","c","r","o","s","c","o_e","p"],   diff:"Challenge" },
   { word:"significant", stage:"s3l",   phonemes:["s","i","g","n","i","f","i","c","a","n","t"],   diff:"Challenge" },
-  { word:"hyperactive", stage:"s3l",   phonemes:["h","y","p","er","a","c","t","i","v","e"],   diff:"Challenge" },
+  { word:"hyperactive", stage:"s3l",   phonemes:["h","y","p","er","a","c","t","i","ve"],   diff:"Challenge" },
   { word:"extraordinary", stage:"s3l",   phonemes:["e","x","t","r","a","or","d","i","n","a","r","y"],   diff:"Challenge" },
-  { word:"intersection", stage:"s3l",   phonemes:["i","n","t","er","s","e","c","t","i","on"],   diff:"Challenge" },
-  { word:"anticlockwise", stage:"s3l",   phonemes:["a","n","t","i","c","l","ock","w","i","se"],   diff:"Challenge" },
+  { word:"intersection", stage:"s3l",   phonemes:["i","n","t","er","s","e","c","t","i","o","n"],   diff:"Challenge" },
+  { word:"anticlockwise", stage:"s3l",   phonemes:["a","n","t","i","c","l","o","ck","w","i_e","s"],   diff:"Challenge" },
   { word:"unforgettable", stage:"s3l",   phonemes:["u","n","f","or","g","e","tt","a","b","le"],   diff:"Challenge" },
   { word:"misunderstanding", stage:"s3l",   phonemes:["m","i","s","u","n","d","er","s","t","a","n","d","i","ng"],   diff:"Challenge" },
   { word:"universal", stage:"s3l",   phonemes:["u","n","i","v","er","s","a","l"],   diff:"Challenge" },
   { word:"circumspect", stage:"s3l",   phonemes:["c","ir","c","u","m","s","p","e","c","t"],   diff:"Challenge" },
   { word:"telepathy", stage:"s3l",   phonemes:["t","e","l","e","p","a","th","y"],   diff:"Challenge" },
-  { word:"magazine", stage:"s3l",   phonemes:["m","a","g","a","z","ine"],   diff:"Challenge" },
-  { word:"trampoline", stage:"s3l",   phonemes:["tr","a","m","p","o","l","ine"],   diff:"Challenge" },
+  { word:"magazine", stage:"s3l",   phonemes:["m","a","g","a","z","i_e","n"],   diff:"Challenge" },
+  { word:"trampoline", stage:"s3l",   phonemes:["t","r","a","m","p","o","l","i_e","n"],   diff:"Challenge" },
   { word:"silhouette", stage:"s3l",   phonemes:["s","i","l","h","ou","e","tt","e"],   diff:"Challenge" },
-  { word:"catastrophe", stage:"s3l",   phonemes:["c","a","t","a","s","tr","o","ph","e"],   diff:"Challenge" },
-  { word:"avalanche", stage:"s3l",   phonemes:["a","v","a","l","an","ch","e"],   diff:"Challenge" },
+  { word:"catastrophe", stage:"s3l",   phonemes:["c","a","t","a","s","t","r","o","ph","e"],   diff:"Challenge" },
+  { word:"avalanche", stage:"s3l",   phonemes:["a","v","a","l","a","n","ch","e"],   diff:"Challenge" },
   { word:"plateau", stage:"s4",   phonemes:["pl","a","t","eau"],   diff:"Challenge" },
   { word:"bureau", stage:"s4",   phonemes:["b","u","r","eau"],   diff:"Challenge" },
   { word:"aesthetic", stage:"s4",   phonemes:["ae","s","th","e","t","i","c"],   diff:"Challenge" },
@@ -666,58 +674,54 @@ const WORDS = [
   { word:"mnemonic", stage:"s4",   phonemes:["mn","e","m","o","n","i","c"],   diff:"Challenge" },
   { word:"haemorrhage", stage:"s4",   phonemes:["h","ae","m","or","rh","age"],   diff:"Challenge" },
 
-  { word:"through", stage:"s3l",      phonemes:["thr","ough"],              diff:"Starter" },
-  { word:"scheme", stage:"s3l",      phonemes:["sch","ee","m"],              diff:"Starter" },
-  { word:"phrase", stage:"s3l",      phonemes:["ph","r","ay","z"],              diff:"Starter" },
-  { word:"knight", stage:"s3l",      phonemes:["n","igh","t"],              diff:"Starter" },
-  { word:"wreck", stage:"s3l",      phonemes:["r","e","k"],              diff:"Starter" },
-  { word:"gnome", stage:"s3l",      phonemes:["n","oh","m"],              diff:"Starter" },
-  { word:"knife", stage:"s3l",      phonemes:["n","igh","f"],              diff:"Starter" },
-  { word:"whole", stage:"s3l",      phonemes:["h","oh","l"],              diff:"Starter" },
-  { word:"write", stage:"s3l",      phonemes:["r","igh","t"],              diff:"Starter" },
-  { word:"wrist", stage:"s3l",      phonemes:["r","i","s","t"],              diff:"Starter" },
-  { word:"kneel", stage:"s3l",      phonemes:["n","ee","l"],              diff:"Starter" },
-  { word:"gnarl", stage:"s3l",      phonemes:["n","ar","l"],              diff:"Starter" },
-  { word:"pneumonia", stage:"s3l",      phonemes:["n","yoo","m","oh","n","ia"],              diff:"Level up" },
+  { word:"through", stage:"s3l",      phonemes:["th","r","ough"],              diff:"Starter" },
+  { word:"scheme", stage:"s3l",      phonemes:["s","ch","e_e","m"],              diff:"Starter" },
+  { word:"phrase", stage:"s3l",      phonemes:["ph","r","a_e","s"],              diff:"Starter" },
+  { word:"knight", stage:"s3l",      phonemes:["kn","igh","t"],              diff:"Starter" },
+  { word:"wreck", stage:"s3l",      phonemes:["wr","e","ck"],              diff:"Starter" },
+  { word:"gnome", stage:"s3l",      phonemes:["gn","o_e","m"],              diff:"Starter" },
+  { word:"knife", stage:"s3l",      phonemes:["kn","i_e","f"],              diff:"Starter" },
+  { word:"whole", stage:"s3l",      phonemes:["wh","o_e","l"],              diff:"Starter" },
+  { word:"write", stage:"s3l",      phonemes:["wr","i_e","t"],              diff:"Starter" },
+  { word:"wrist", stage:"s3l",      phonemes:["wr","i","s","t"],              diff:"Starter" },
+  { word:"kneel", stage:"s3l",      phonemes:["kn","ee","l"],              diff:"Starter" },
+  { word:"gnarl", stage:"s3l",      phonemes:["gn","ar","l"],              diff:"Starter" },
+  { word:"pneumonia", stage:"s3l",      phonemes:["pn","eu","m","o","n","i","a"],              diff:"Level up" },
   { word:"psychology", stage:"s4",      phonemes:["ps","y","ch","o","l","o","gy"],              diff:"Level up" },
-  { word:"rhythmic", stage:"s3l",      phonemes:["r","i","th","m","i","k"],              diff:"Level up" },
-  { word:"sphinx", stage:"s3l",      phonemes:["s","f","i","ng","ks"],              diff:"Level up" },
-  { word:"queue", stage:"s3l",      phonemes:["k","yoo"],              diff:"Level up" },
-  { word:"choir", stage:"s3l",      phonemes:["k","w","igh","r"],              diff:"Level up" },
-  { word:"phlegm", stage:"s3l",      phonemes:["f","l","e","m"],              diff:"Level up" },
-  { word:"island", stage:"s3l",      phonemes:["igh","l","a","n","d"],              diff:"Level up" },
-  { word:"aisle", stage:"s3l",      phonemes:["igh","l"],              diff:"Level up" },
-  { word:"yacht", stage:"s3l",      phonemes:["y","o","t"],              diff:"Level up" },
-  { word:"subtle", stage:"s3l",      phonemes:["s","u","t","l"],              diff:"Level up" },
-  { word:"sword", stage:"s3l",      phonemes:["s","or","d"],              diff:"Level up" },
-  { word:"answer", stage:"s3l",      phonemes:["an","s","er"],              diff:"Level up" },
-  { word:"genre", stage:"s3l",      phonemes:["zh","on","r","uh"],              diff:"Level up" },
-  { word:"debris", stage:"s3l",      phonemes:["d","e","b","r","ee"],              diff:"Level up" },
-  { word:"bouquet", stage:"s3l",      phonemes:["b","oo","k","ay"],              diff:"Level up" },
-  { word:"baguette", stage:"s3l",      phonemes:["b","a","g","e","t"],              diff:"Level up" },
-  { word:"charade", stage:"s3l",      phonemes:["sh","a","r","ay","d"],              diff:"Level up" },
-  { word:"chef", stage:"s3l",      phonemes:["sh","e","f"],              diff:"Level up" },
-  { word:"chalet", stage:"s3l",      phonemes:["sh","a","l","ay"],              diff:"Level up" },
-  { word:"brochure", stage:"s3l",      phonemes:["b","r","oh","sh","er"],              diff:"Level up" },
-  { word:"chauffeur", stage:"s3l",      phonemes:["sh","oh","f","er"],              diff:"Level up" },
-  { word:"crochet", stage:"s3l",      phonemes:["k","r","oh","sh","ay"],              diff:"Level up" },
-  { word:"cachet", stage:"s3l",      phonemes:["k","a","sh","ay"],              diff:"Level up" },
-  { word:"chrysanthemum", stage:"s4",      phonemes:["k","r","i","s","a","n","th","e","m","u","m"],              diff:"Challenge" },
-  { word:"quiche", stage:"s3l",      phonemes:["k","ee","sh"],              diff:"Challenge" },
-  { word:"lieutenant", stage:"s3l",      phonemes:["l","e","f","t","e","n","a","n","t"],              diff:"Challenge" },
-  { word:"isthmus", stage:"s3l",      phonemes:["i","s","m","u","s"],              diff:"Challenge" },
-  { word:"colonel", stage:"s3l",      phonemes:["k","er","n","l"],              diff:"Challenge" },
-  { word:"rendezvous", stage:"s3l",      phonemes:["r","o","n","d","e","v","oo"],              diff:"Challenge" },
-  { word:"conscientious", stage:"s4",      phonemes:["k","o","n","sh","i","e","n","sh","u","s"],              diff:"Challenge" },
-  { word:"epitome", stage:"s3l",      phonemes:["e","p","i","t","o","m","ee"],              diff:"Challenge" },
-  { word:"hyperbole", stage:"s3l",      phonemes:["h","igh","p","er","b","o","l","ee"],              diff:"Challenge" },
-  { word:"paradigm", stage:"s3l",      phonemes:["p","a","r","a","d","igh","m"],              diff:"Challenge" },
-  { word:"phenomenon", stage:"s3l",      phonemes:["f","e","n","o","m","e","n","o","n"],              diff:"Challenge" },
-  { word:"archaeology", stage:"s4",      phonemes:["ar","k","ee","o","l","o","j","ee"],              diff:"Challenge" },
-  { word:"diphtheria", stage:"s3l",      phonemes:["d","i","f","th","eer","ia"],              diff:"Challenge" },
-  { word:"omniscient", stage:"s3l",      phonemes:["o","m","n","i","sh","e","n","t"],              diff:"Challenge" },
-  { word:"onomatopoeia", stage:"s3l",      phonemes:["o","n","o","m","a","t","o","p","ee","a"],              diff:"Challenge" },
-  { word:"mnemosyne", stage:"s3l",      phonemes:["n","e","m","o","z","i","n","ee"],              diff:"Challenge" },
+  { word:"rhythmic", stage:"s3l",      phonemes:["rh","y","th","m","i","c"],              diff:"Level up" },
+  { word:"sphinx", stage:"s3l",      phonemes:["s","ph","i","n","x"],              diff:"Level up" },
+  { word:"choir", stage:"s3l",      phonemes:["ch","oi","r"],              diff:"Level up" },
+  { word:"phlegm", stage:"s3l",      phonemes:["ph","l","e","gm"],              diff:"Level up" },
+  { word:"island", stage:"s3l",      phonemes:["is","l","a","n","d"],              diff:"Level up" },
+  { word:"yacht", stage:"s3l",      phonemes:["y","a","cht"],              diff:"Level up" },
+  { word:"subtle", stage:"s3l",      phonemes:["s","u","bt","le"],              diff:"Level up" },
+  { word:"sword", stage:"s3l",      phonemes:["sw","or","d"],              diff:"Level up" },
+  { word:"answer", stage:"s3l",      phonemes:["a","n","s","w","er"],              diff:"Level up" },
+  { word:"genre", stage:"s3l",      phonemes:["g","e","n","r","e"],              diff:"Level up" },
+  { word:"debris", stage:"s3l",      phonemes:["d","e","b","r","i","s"],              diff:"Level up" },
+  { word:"bouquet", stage:"s3l",      phonemes:["b","ou","qu","e","t"],              diff:"Level up" },
+  { word:"baguette", stage:"s3l",      phonemes:["b","a","gu","e","tt","e"],              diff:"Level up" },
+  { word:"charade", stage:"s3l",      phonemes:["ch","a","r","a_e","d"],              diff:"Level up" },
+  { word:"chef", stage:"s3l",      phonemes:["ch","e","f"],              diff:"Level up" },
+  { word:"chalet", stage:"s3l",      phonemes:["ch","a","l","e","t"],              diff:"Level up" },
+  { word:"brochure", stage:"s3l",      phonemes:["b","r","o","ch","ure"],              diff:"Level up" },
+  { word:"chauffeur", stage:"s3l",      phonemes:["ch","au","ff","eur"],              diff:"Level up" },
+  { word:"crochet", stage:"s3l",      phonemes:["c","r","o","ch","e","t"],              diff:"Level up" },
+  { word:"cachet", stage:"s3l",      phonemes:["c","a","ch","e","t"],              diff:"Level up" },
+  { word:"chrysanthemum", stage:"s4",      phonemes:["ch","r","y","s","a","n","th","e","m","u","m"],              diff:"Challenge" },
+  { word:"quiche", stage:"s3l",      phonemes:["qu","i","che"],              diff:"Challenge" },
+  { word:"isthmus", stage:"s3l",      phonemes:["i","s","th","m","u","s"],              diff:"Challenge" },
+  { word:"rendezvous", stage:"s3l",      phonemes:["r","e","n","d","e","z","v","ou","s"],              diff:"Challenge" },
+  { word:"conscientious", stage:"s4",      phonemes:["c","o","n","sc","i","e","n","t","i","ou","s"],              diff:"Challenge" },
+  { word:"epitome", stage:"s3l",      phonemes:["e","p","i","t","o","m","e"],              diff:"Challenge" },
+  { word:"hyperbole", stage:"s3l",      phonemes:["h","y","p","er","b","o","l","e"],              diff:"Challenge" },
+  { word:"paradigm", stage:"s3l",      phonemes:["p","a","r","a","d","i","gm"],              diff:"Challenge" },
+  { word:"phenomenon", stage:"s3l",      phonemes:["ph","e","n","o","m","e","n","o","n"],              diff:"Challenge" },
+  { word:"archaeology", stage:"s4",      phonemes:["ar","ch","ae","o","l","o","g","y"],              diff:"Challenge" },
+  { word:"diphtheria", stage:"s3l",      phonemes:["d","i","ph","th","e","r","i","a"],              diff:"Challenge" },
+  { word:"omniscient", stage:"s3l",      phonemes:["o","m","n","i","sc","i","e","n","t"],              diff:"Challenge" },
+  { word:"onomatopoeia", stage:"s3l",      phonemes:["o","n","o","m","a","t","o","p","o","e","i","a"],              diff:"Challenge" },
+  { word:"mnemosyne", stage:"s3l",      phonemes:["mn","e","m","o","s","y","n","e"],              diff:"Challenge" },
 ];
 
 // Extension content has been migrated into the WORDS array above with s3l/s4
@@ -800,9 +804,14 @@ document.addEventListener('DOMContentLoaded', function(){ _supportMode = !!(type
 let currentWord = null;
 let currentDiff = "mixed";
 let usedWords   = new Set();
-// State: units[] (strings) + splits[] (bools between consecutive units)
-let units  = [];
-let splits = [];
+// State: grapheme-grouping model.
+//   letters[]    — the word's letters, immutable for the word
+//   boundaries[] — length letters.length-1, bool: phoneme break after letter i
+//   magic        — Set of letter indices that are a silent-e linked to an earlier
+//                  vowel (a split digraph like a_e). Index-stable (letters never mutate).
+let letters    = [];
+let boundaries = [];
+let magic      = new Set();
 let score = 0, streak = 0, bestStreak = 0, correctCount = 0, wrongCount = 0;
 let checked = false;
 let autoNextTimer = null;
@@ -869,9 +878,10 @@ function loadWord(){
   checked = false;
   if(typeof WLHints!=='undefined') WLHints.resetHints();
   if(typeof WordLabData!=='undefined'&&WordLabData.preloadTTS) WordLabData.preloadTTS(currentWord.word,'en-AU');
-  // Start: every letter is its own unit, no splits
-  units  = currentWord.word.split("");
-  splits = new Array(units.length - 1).fill(false);
+  // Start: whole word is one box (no breaks), no magic-e — the child adds breaks
+  letters    = currentWord.word.split("");
+  boundaries = new Array(Math.max(0, letters.length - 1)).fill(false);
+  magic      = new Set();
   render();
   updatePreview();
   hideFeedback();
@@ -916,36 +926,56 @@ function loadWord(){
 
 // ── State operations ──────────────────────────────────────────────────────────
 
-// Toggle phoneme boundary BETWEEN units[i] and units[i+1]
-function toggleSplit(i){
+function isVowel(ch){ return 'aeiouy'.indexOf(ch) !== -1; }
+
+// Toggle a phoneme break AFTER letter i (between letters[i] and letters[i+1])
+function toggleBoundary(i){
   if(checked) return;
-  splits[i] = !splits[i];
+  boundaries[i] = !boundaries[i];
   render(); updatePreview();
 }
 
-// Merge units[i] and units[i+1] into one unit (remove gap between them)
-function mergeAt(i){
+// Toggle a silent-e (index i) as a split digraph linked to the nearest earlier vowel
+function toggleMagic(i){
   if(checked) return;
-  units[i] = units[i] + units[i+1];
-  units.splice(i+1,1);
-  splits.splice(i,1);
+  if(magic.has(i)) magic.delete(i); else magic.add(i);
   render(); updatePreview();
 }
 
-// Split unit[i] at internal position pos (after character pos)
-function splitUnit(i, pos){
-  if(checked) return;
-  const left  = units[i].slice(0, pos+1);
-  const right = units[i].slice(pos+1);
-  units.splice(i, 1, left, right);
-  splits.splice(i, 0, false);
-  render(); updatePreview();
+// A letter can be marked magic-e only if it's an 'e' with an earlier vowel letter
+function canBeMagicE(i){
+  if(letters[i] !== 'e') return false;
+  for(let k = 0; k < i; k++){ if(isVowel(letters[k]) && !magic.has(k)) return true; }
+  return false;
+}
+
+// Derive the correct {boundaries, magic} from a target phonemes[] (inverse of
+// getPhonemes). Split digraph "V_e" uses the vowel at the cursor + the last e.
+function deriveCorrectState(word, phonemes){
+  const L = word.split('');
+  const b = new Array(Math.max(0, L.length - 1)).fill(false);
+  const mg = new Set();
+  let li = 0;
+  for(let pi = 0; pi < phonemes.length; pi++){
+    const p = phonemes[pi];
+    if(p.indexOf('_') !== -1){
+      // split digraph — occupies one vowel letter here; its silent-e is the last e
+      for(let e = L.length - 1; e > li; e--){ if(L[e] === 'e' && !mg.has(e)){ mg.add(e); break; } }
+      if(li < b.length) b[li] = true;
+      li += 1;
+    } else {
+      li += p.length;
+      if(li - 1 < b.length && pi < phonemes.length - 1) b[li - 1] = true;
+    }
+  }
+  return { boundaries: b, magic: mg };
 }
 
 function resetWord(){
   checked = false;
-  units  = currentWord.word.split("");
-  splits = new Array(units.length - 1).fill(false);
+  letters    = currentWord.word.split("");
+  boundaries = new Array(Math.max(0, letters.length - 1)).fill(false);
+  magic      = new Set();
   render();
   updatePreview();
   hideFeedback();
@@ -954,78 +984,68 @@ function resetWord(){
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
+// Model: click a gap = toggle a sound break; click a silent-e's ✨ = magic-e
+// (split digraph). A magic-e letter and its linked vowel are shown connected.
 function render(){
   const c = document.getElementById('chopContainer');
   c.innerHTML = '';
 
-  units.forEach((u, ui) => {
-    // Unit block
-    const unitEl = document.createElement('div');
-    unitEl.className = 'unit' + (u.length > 1 ? ' merged' : '');
+  // Which earlier vowel each magic-e links to (for the connector highlight)
+  const linkedVowel = new Set();
+  magic.forEach(e => {
+    for(let k = e - 1; k >= 0; k--){ if(!magic.has(k) && isVowel(letters[k])){ linkedVowel.add(k); break; } }
+  });
 
+  letters.forEach((ch, i) => {
+    // Letter block
+    const unitEl = document.createElement('div');
+    unitEl.className = 'unit';
     const inner = document.createElement('div');
     inner.className = 'unitInner';
 
-    if(u.length === 1){
-      const lc = document.createElement('span');
-      lc.className = 'lChar';
-      lc.textContent = u;
-      inner.appendChild(lc);
-    } else {
-      // Multi-letter merged unit: show letters with inner split affordances
-      for(let li = 0; li < u.length; li++){
-        const lc = document.createElement('span');
-        lc.className = 'lChar';
-        lc.textContent = u[li];
-        inner.appendChild(lc);
-
-        if(li < u.length - 1){
-          const ig = document.createElement('div');
-          ig.className = 'innerGap';
-          const il = document.createElement('div');
-          il.className = 'iLine';
-          const ih = document.createElement('div');
-          ih.className = 'iHint';
-          ih.textContent = 'split';
-          ig.appendChild(il); ig.appendChild(ih);
-          const ci = ui, cl = li;
-          ig.addEventListener('click', e => { e.stopPropagation(); splitUnit(ci, cl); });
-          inner.appendChild(ig);
-        }
-      }
-    }
-
+    const lc = document.createElement('span');
+    lc.className = 'lChar';
+    if(magic.has(i)) lc.classList.add('silentE');       // greyed silent e
+    if(linkedVowel.has(i)) lc.classList.add('magicVowel');
+    lc.textContent = ch;
+    inner.appendChild(lc);
     unitEl.appendChild(inner);
+
+    // Magic-e toggle: a compact ✨ badge on an 'e' that can link to an earlier vowel.
+    // (In this word set the silent e is always word-final, so a corner badge never
+    // gets clipped by the mobile overflow-x:hidden the way a wide button would.)
+    if(canBeMagicE(i) || magic.has(i)){
+      const me = document.createElement('button');
+      me.type = 'button';
+      me.className = 'magicBtn' + (magic.has(i) ? ' on' : '');
+      me.textContent = '✨';
+      me.title = magic.has(i) ? 'Magic-e on — silent e joins its vowel. Tap to undo.' : 'Tap: this silent e is magic-e (joins its vowel)';
+      me.setAttribute('aria-pressed', magic.has(i) ? 'true' : 'false');
+      me.setAttribute('aria-label', (magic.has(i) ? 'Unlink silent e' : 'Mark silent e as magic-e') + ' for letter ' + ch);
+      me.addEventListener('click', e => { e.stopPropagation(); toggleMagic(i); });
+      unitEl.appendChild(me);
+    }
     c.appendChild(unitEl);
 
-    // Gap after this unit
-    if(ui < units.length - 1){
-      const gap = document.createElement('div');
-      gap.className = 'unitGap' + (splits[ui] ? ' split' : '');
+    // Gap after this letter (break toggle)
+    if(i < letters.length - 1){
+      const on = boundaries[i];
+      const gap = document.createElement('button');
+      gap.type = 'button';
+      gap.className = 'unitGap' + (on ? ' split' : '');
+      gap.setAttribute('aria-pressed', on ? 'true' : 'false');
+      gap.setAttribute('aria-label', (on ? 'Remove sound break after ' : 'Insert sound break after ') + ch);
 
       const line = document.createElement('div');
       line.className = 'gLine';
-
       const hint = document.createElement('div');
       hint.className = 'gHint';
-      hint.textContent = splits[ui] ? 'remove' : 'split here';
-
+      hint.textContent = on ? 'remove' : 'split here';
       gap.appendChild(line);
       gap.appendChild(hint);
 
-      const ci = ui;
-
-      // Merge button (only when not split)
-      if(!splits[ui]){
-        const mb = document.createElement('div');
-        mb.className = 'mergeBtn';
-        mb.textContent = '🔗 merge';
-        mb.addEventListener('click', e => { e.stopPropagation(); mergeAt(ci); });
-        gap.appendChild(mb);
-      }
-
-      // Single click handler on the gap element (not duplicated on line/hint)
-      gap.addEventListener('click', () => toggleSplit(ci));
+      const ci = i;
+      gap.addEventListener('click', () => toggleBoundary(ci));
       c.appendChild(gap);
     }
   });
@@ -1057,23 +1077,33 @@ function wlAutoFitChop(){
 
 // ── Phoneme preview ───────────────────────────────────────────────────────────
 function getPhonemes(){
-  // Group consecutive units that have NO split between them
-  const groups = [];
-  let cur = units[0];
-  for(let i = 0; i < splits.length; i++){
-    if(splits[i]){ groups.push(cur); cur = units[i+1]; }
-    else { cur += units[i+1]; }
+  // Groups of contiguous non-magic letters split by boundaries[]; each magic
+  // silent-e is folded into its nearest preceding vowel group as "_e".
+  const n = letters.length;
+  const groups = [];               // {str}
+  const groupOf = new Array(n).fill(-1);
+  let cur = null;
+  for(let i = 0; i < n; i++){
+    if(magic.has(i)) continue;     // silent-e handled below, never its own box
+    if(cur === null){ cur = { str: letters[i] }; groups.push(cur); }
+    else { cur.str += letters[i]; }
+    groupOf[i] = groups.length - 1;
+    if(i < n - 1 && boundaries[i]) cur = null;
   }
-  groups.push(cur);
-  return groups;
+  magic.forEach(e => {
+    let v = -1;
+    for(let k = e - 1; k >= 0; k--){ if(!magic.has(k) && isVowel(letters[k])){ v = k; break; } }
+    if(v >= 0 && groupOf[v] >= 0) groups[groupOf[v]].str += '_e';
+  });
+  return groups.map(g => g.str);
 }
 
 function updatePreview(){
   const el = document.getElementById('phonemePreview');
   const phonemes = getPhonemes();
-  const hasSomething = splits.some(Boolean) || units.some(u => u.length > 1);
+  const hasSomething = boundaries.some(Boolean) || magic.size > 0;
   if(!hasSomething){
-    el.innerHTML = '<span style="color:var(--muted);font-size:14px;font-weight:700;">Split or merge letters above</span>';
+    el.innerHTML = '<span style="color:var(--muted);font-size:14px;font-weight:700;">Tap between letters to split into sounds</span>';
     return;
   }
   el.innerHTML = phonemes.map((p,i) =>
@@ -1125,9 +1155,10 @@ function checkAnswer(){
         // Teacher mode: freeze student's attempt, overlay green/red markers on gaps
         _wltShowCorrectOverlay(user, correct);
       } else {
-        // Normal mode: rebuild with correct phonemes
-        units  = currentWord.phonemes.slice();
-        splits = new Array(units.length - 1).fill(true);
+        // Normal mode: show the correct answer on the letters
+        const cs = deriveCorrectState(currentWord.word, currentWord.phonemes);
+        boundaries = cs.boundaries;
+        magic = cs.magic;
         render();
       }
     }, 400);
@@ -1158,81 +1189,49 @@ function checkAnswer(){
 
 // ── Teacher mode: green overlay on wrong answers ──────────────────────────────
 function _wltShowCorrectOverlay(userPhonemes, correctPhonemes){
-  // Compute where the correct split boundaries should be within the full word letters
-  var word = currentWord.word;
-  // Build a flat list of letter positions where correct boundaries fall
-  var correctBoundaries = new Set();
-  var pos = 0;
-  for(var ci = 0; ci < correctPhonemes.length - 1; ci++){
-    pos += correctPhonemes[ci].length;
-    correctBoundaries.add(pos);
-  }
-  // Build the same for user boundaries from current units/splits state
-  // Each gap between units sits at a letter-offset boundary
-  // First, compute the letter offset for each unitGap
+  // Correct breaks + magic-e come straight from the target phonemes[]
+  var cs = deriveCorrectState(currentWord.word, correctPhonemes);
   var gapEls = document.getElementById('chopContainer').querySelectorAll('.unitGap');
-  var letterOffset = 0;
-  for(var gi = 0; gi < units.length - 1; gi++){
-    letterOffset += units[gi].length;
-    var gapEl = gapEls[gi];
+  // .unitGap[i] is the gap after letter i (same indexing as boundaries[])
+  for(var i = 0; i < gapEls.length; i++){
+    var gapEl = gapEls[i];
     if(!gapEl) continue;
     gapEl.style.position = 'relative';
-    var shouldSplit = correctBoundaries.has(letterOffset);
-    var isSplit = splits[gi];
+    var shouldSplit = !!cs.boundaries[i];
+    var isSplit = !!boundaries[i];
     var gLine = gapEl.querySelector('.gLine');
     if(shouldSplit && isSplit){
-      // Correct split — color line green to confirm
       if(gLine){ gLine.style.background = '#16a34a'; gLine.style.boxShadow = '0 0 0 4px rgba(22,163,74,.18)'; }
     } else if(shouldSplit && !isSplit){
-      // Missed split — add green "split here" marker + color line green
       if(gLine){ gLine.style.background = '#16a34a'; gLine.style.boxShadow = '0 0 0 4px rgba(22,163,74,.18)'; }
-      var label = document.createElement('div');
-      label.className = 'wlt-correct-label';
-      label.textContent = 'split here';
-      gapEl.appendChild(label);
-      var arrow = document.createElement('div');
-      arrow.className = 'wlt-correct-bracket';
-      gapEl.appendChild(arrow);
+      _wltMarker(gapEl, 'split here', '#16a34a');
     } else if(!shouldSplit && isSplit){
-      // Wrong split — add red marker + color line red
       if(gLine){ gLine.style.background = '#dc2626'; gLine.style.boxShadow = '0 0 0 4px rgba(220,38,38,.18)'; }
-      var label = document.createElement('div');
-      label.className = 'wlt-correct-label';
-      label.style.background = '#dc2626';
-      label.textContent = 'no split';
-      gapEl.appendChild(label);
-      var arrow = document.createElement('div');
-      arrow.className = 'wlt-correct-bracket';
-      arrow.style.borderTopColor = '#dc2626';
-      gapEl.appendChild(arrow);
+      _wltMarker(gapEl, 'no split', '#dc2626');
     }
   }
-  // Also check innerGaps inside merged units — if a boundary should be there
-  var innerGaps = document.getElementById('chopContainer').querySelectorAll('.innerGap');
-  var innerOffset = 0;
-  var innerIdx = 0;
-  for(var ui = 0; ui < units.length; ui++){
-    if(units[ui].length > 1){
-      for(var li = 0; li < units[ui].length - 1; li++){
-        var charOffset = innerOffset + li + 1;
-        var ig = innerGaps[innerIdx];
-        if(ig && correctBoundaries.has(charOffset)){
-          ig.style.position = 'relative';
-          var iLine = ig.querySelector('.iLine');
-          if(iLine){ iLine.style.background = '#16a34a'; iLine.style.boxShadow = '0 0 0 3px rgba(22,163,74,.18)'; }
-          var label = document.createElement('div');
-          label.className = 'wlt-correct-label';
-          label.textContent = 'split here';
-          ig.appendChild(label);
-          var arrow = document.createElement('div');
-          arrow.className = 'wlt-correct-bracket';
-          ig.appendChild(arrow);
-        }
-        innerIdx++;
-      }
-    }
-    innerOffset += units[ui].length;
-  }
+  // Magic-e the student missed: highlight the silent-e letter
+  var unitEls = document.getElementById('chopContainer').querySelectorAll('.unit');
+  cs.magic.forEach(function(j){
+    if(magic.has(j)) return;                       // student already had it
+    var u = unitEls[j];
+    if(!u) return;
+    u.style.position = 'relative';
+    var lc = u.querySelector('.lChar');
+    if(lc){ lc.style.color = '#16a34a'; }
+    _wltMarker(u, 'magic-e', '#16a34a');
+  });
+}
+function _wltMarker(el, text, color){
+  var label = document.createElement('div');
+  label.className = 'wlt-correct-label';
+  if(color !== '#16a34a') label.style.background = color;
+  label.textContent = text;
+  el.appendChild(label);
+  var arrow = document.createElement('div');
+  arrow.className = 'wlt-correct-bracket';
+  if(color !== '#16a34a') arrow.style.borderTopColor = color;
+  el.appendChild(arrow);
 }
 
 function hideFeedback(){
@@ -1320,10 +1319,10 @@ if(typeof WLHelp!=='undefined') WLHelp.init({
     {icon:'🎯',title:'Choose your round',desc:'Pick how many words you want to practise — 10, 15, 20, 25 or 30. You\'ll see your results at the end.'},
     {icon:'👀',title:'Read the word',desc:'Look at the word and listen to how it sounds.'},
     {icon:'✂️',title:'Split the sounds',desc:'Click between letters to split the word into its individual sounds (phonemes).'},
-    {icon:'🔗',title:'Merge digraphs',desc:'Some sounds use two letters (like "sh" or "th"). Click the orange line to merge them into one sound.'},
+    {icon:'✨',title:'Keep sounds together',desc:'Letters that make one sound (like "sh", "th" or "igh") stay in one box — just don\'t split between them. For magic-e words like "cake", tap the ✨ magic-e button on the silent e.'},
     {icon:'✅',title:'Check your answer',desc:'Press Check to see if you split the sounds correctly. The correct answer will show if you get it wrong.'}
   ],
-  audioText:'Choose how many words you want to practise before you start — 10, 15, 20, 25 or 30. In Phoneme Splitter, you split words into their individual sounds called phonemes. Click between letters to add a split. Some sounds use two letters, like sh or th. Click the orange line to merge them back together into one sound. Press Check when you are ready to see if you got it right.'
+  audioText:'Choose how many words you want to practise before you start — 10, 15, 20, 25 or 30. In Phoneme Splitter, you split words into their individual sounds called phonemes. Click between letters to add a split. Letters that make one sound, like sh or th or igh, stay together in one box, so do not split between them. For magic-e words like cake or time, tap the magic-e button on the silent e to join it to its vowel. Press Check when you are ready to see if you got it right.'
 });
 if(typeof WLHints!=='undefined') WLHints.register({
   getStrategyHint: function(){ return 'Say the word slowly \u2014 each mouth movement is a different sound.'; },
