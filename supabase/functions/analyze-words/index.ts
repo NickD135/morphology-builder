@@ -78,6 +78,32 @@ CRITICAL RULES:
 - If there is no prefix, use empty string ""
 - If there is no suffix, use empty string ""
 
+SYLLABLE RULES (VERY IMPORTANT):
+- A SYLLABLE is a beat with exactly ONE vowel SOUND. This is NOT the same as the
+  phoneme/grapheme split — do not split letter-by-letter, and every syllable must
+  contain a vowel sound.
+- When you join all syllables together, they MUST exactly spell the original word.
+- Use these division rules (structured-literacy, vowel-SOUND based — Australian English):
+  1. Never split a consonant digraph that spells one sound (sh, ch, th, ck, ng, ph) or a
+     vowel team (ai, ee, oa, ou, ...). Keep them inside one syllable.
+  2. Keep common prefixes, suffixes and ROOTS whole where possible: re·play, help·ful,
+     jump·ing, teach·er, con·form·i·ty (root "form"), e·lec·tric·i·ty (root "electric").
+  3. Two consonants between vowels → split between them: but·ter, gar·den, hap·py.
+  4. One consonant between vowels: if the first vowel is LONG/open it joins the NEXT
+     syllable (o·pen, ti·ger, mi·nor, vi·tal); if the first vowel is SHORT it STAYS with
+     the first syllable (lem·on, cab·in, grav·i·ty, form·i·ty).
+  5. A consonant before "-le" takes it: ta·ble, ap·ple, lit·tle.
+  6. The suffix "-ed" is its OWN syllable ONLY when it sounds like /id/ (want·ed, need·ed).
+     After other sounds it adds NO syllable (restructured → re·struc·tured, played → played).
+- Examples (each joins back to the word exactly):
+  - "gravity" → ["grav","i","ty"]        (NOT ["gra","vi","ty"])
+  - "conformity" → ["con","form","i","ty"] (NOT ["con","for","mi","ty"])
+  - "creativity" → ["cre","a","tiv","i","ty"]
+  - "accountability" → ["ac","count","a","bil","i","ty"]  (NEVER letter-by-letter)
+  - "unhappiness" → ["un","hap","pi","ness"]
+  - "restructured" → ["re","struc","tured"]
+  - "minority" → ["mi","nor","i","ty"]
+
 PHONEME RULES (VERY IMPORTANT):
 - The phonemes array must use the ACTUAL LETTERS from the word, grouped by sound
 - When you join all phonemes together, they MUST exactly spell the original word
