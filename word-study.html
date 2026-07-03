@@ -238,5 +238,118 @@ window.addEventListener('DOMContentLoaded', function(){
   try{ if(window.WordLabData && WordLabData.wireLoginButton) WordLabData.wireLoginButton($('wlLoginBtn')); }catch(e){}
 });
 </script>
+
+<script>
+// ══════════════ WORD STUDY — stage mechanics ══════════════
+window.WS_STAGES = (function(){
+  function box(){ return document.getElementById('stageBox'); }
+  function shuf(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i];a[i]=a[j];a[j]=t; } return a; }
+  function esc(s){ return (window.WordLabData&&WordLabData.escapeHtml)?WordLabData.escapeHtml(s):String(s); }
+  function isVowel(c){ return 'aeiouy'.indexOf(c)!==-1; }
+
+  // shared multiple-choice
+  function mc(title, prompt, correct, opts, fmt){
+    var options = shuf(opts);
+    var html='<div class="stageTitle">'+title+'</div><div class="stagePrompt">'+prompt+'</div><div class="opts">';
+    options.forEach(function(o,i){ html+='<button class="opt" data-i="'+i+'">'+(fmt?fmt(o):esc(o))+'</button>'; });
+    html+='</div>'; box().innerHTML=html;
+    var done=false;
+    box().querySelectorAll('.opt').forEach(function(btn){
+      btn.onclick=function(){
+        if(done) return;
+        if(options[+btn.dataset.i]===correct){ done=true; btn.classList.add('correct'); feedback(true,'✓ Correct!'); stageCorrect(); }
+        else { btn.classList.add('wrong'); btn.disabled=true; stageWrong(); feedback(false,'Not quite — try another.'); }
+      };
+    });
+  }
+
+  // 1. Morphemes — tap the parts in order to build the word
+  function morphemes(){
+    var m=currentWord.morphemes;
+    var parts=[m.prefix,m.base,m.suffix1,m.suffix2].filter(Boolean);
+    var tiles=shuf(parts.slice());   // display order
+    var placed=[];                   // indices into tiles, in tap order
+    function assembled(){ return placed.map(function(i){return tiles[i];}).join(''); }
+    function render(){
+      var asm = placed.length ? placed.map(function(i){return '<span class="slot">'+esc(tiles[i])+'</span>';}).join('')
+                              : '<span class="slot" style="border-style:dashed;color:var(--muted)">tap parts…</span>';
+      var html='<div class="stageTitle">Morphemes</div><div class="stagePrompt">Tap the word parts <b>in order</b> to build <b>'+esc(currentWord.word)+'</b>.</div>';
+      html+='<div class="slotRow">'+asm+'</div><div class="tileRow">';
+      tiles.forEach(function(t,i){ html+='<button class="tile'+(placed.indexOf(i)>-1?' placed':'')+'" data-i="'+i+'">'+esc(t)+'</button>'; });
+      html+='</div><div class="actions"><button class="btn btnGhost" id="wsReset">Reset</button></div>';
+      box().innerHTML=html;
+      box().querySelectorAll('.tile').forEach(function(b){ b.onclick=function(){ var i=+b.dataset.i; if(placed.indexOf(i)>-1)return; placed.push(i); check(); }; });
+      document.getElementById('wsReset').onclick=function(){ placed=[]; clearFeedback(); render(); };
+    }
+    function check(){
+      render();
+      if(placed.length===parts.length){
+        if(assembled()===currentWord.word){
+          var pm=currentWord.partMeanings||{};
+          feedback(true,'✓ '+parts.map(function(p){return '<b>'+esc(p)+'</b> = '+esc(pm[p]||'');}).join(' · '));
+          stageCorrect();
+        } else { stageWrong(); feedback(false,'Not the right order — tap Reset and try again.'); }
+      }
+    }
+    render();
+  }
+
+  // 2. Syllables — tap between letters to chop into beats
+  function syllables(){
+    var L=currentWord.word.split(''); var breaks=new Array(Math.max(0,L.length-1)).fill(false);
+    function split(){ var out=[],cur=L[0]; for(var i=0;i<breaks.length;i++){ if(breaks[i]){out.push(cur);cur=L[i+1];} else cur+=L[i+1]; } out.push(cur); return out; }
+    function render(){
+      var html='<div class="stageTitle">Syllables</div><div class="stagePrompt">Tap between letters to chop <b>'+esc(currentWord.word)+'</b> into syllables (beats).</div><div class="letterRow">';
+      L.forEach(function(ch,i){ html+='<span class="lchar">'+esc(ch)+'</span>'; if(i<L.length-1) html+='<button class="gap'+(breaks[i]?' on':'')+'" data-i="'+i+'" aria-label="split after '+esc(ch)+'"><span class="gl"></span></button>'; });
+      html+='</div><div class="stagePrompt" style="text-align:center;font-weight:800">'+split().map(esc).join(' · ')+'</div>';
+      html+='<div class="actions"><button class="btn btnPrimary" id="wsCheck">Check</button></div>'; box().innerHTML=html;
+      box().querySelectorAll('.gap').forEach(function(g){ g.onclick=function(){ breaks[+g.dataset.i]=!breaks[+g.dataset.i]; render(); }; });
+      document.getElementById('wsCheck').onclick=function(){
+        if(JSON.stringify(split())===JSON.stringify(currentWord.syllables)){ feedback(true,'✓ '+currentWord.syllables.join(' · ')); stageCorrect(); }
+        else { stageWrong(); feedback(false,'Not quite — every syllable has one vowel sound. Try again.'); }
+      };
+    }
+    render();
+  }
+
+  // 3. Phonemes — grapheme-grouping model (ported from Phoneme Splitter, split digraphs supported)
+  function phonemes(){
+    var L=currentWord.word.split(''); var boundaries=new Array(Math.max(0,L.length-1)).fill(false); var magic=new Set();
+    function canMagic(i){ if(L[i]!=='e')return false; for(var k=0;k<i;k++){ if(isVowel(L[k])&&!magic.has(k))return true; } return false; }
+    function getPhon(){
+      var n=L.length,g=[],go=new Array(n).fill(-1),cur=null;
+      for(var i=0;i<n;i++){ if(magic.has(i))continue; if(cur===null){cur={s:L[i]};g.push(cur);} else cur.s+=L[i]; go[i]=g.length-1; if(i<n-1&&boundaries[i])cur=null; }
+      magic.forEach(function(e){ var v=-1; for(var k=e-1;k>=0;k--){ if(!magic.has(k)&&isVowel(L[k])){v=k;break;} } if(v>=0&&go[v]>=0)g[go[v]].s+='_e'; });
+      return g.map(function(x){return x.s;});
+    }
+    function render(){
+      var linked=new Set(); magic.forEach(function(e){ for(var k=e-1;k>=0;k--){ if(!magic.has(k)&&isVowel(L[k])){linked.add(k);break;} } });
+      var html='<div class="stageTitle">Sounds (phonemes)</div><div class="stagePrompt">Group letters that make <b>one sound</b> together; tap between letters to split. For magic-e words tap ✨ on the silent e.</div><div class="letterRow">';
+      L.forEach(function(ch,i){
+        html+='<span style="position:relative;display:inline-flex;align-items:center"><span class="lchar'+(magic.has(i)?' silentE':'')+'">'+esc(ch)+'</span>';
+        if(canMagic(i)||magic.has(i)) html+='<button class="magicBtn'+(magic.has(i)?' on':'')+'" data-m="'+i+'" aria-label="mark silent e as magic-e">✨</button>';
+        html+='</span>';
+        if(i<L.length-1) html+='<button class="gap'+(boundaries[i]?' on':'')+'" data-i="'+i+'" aria-label="split after '+esc(ch)+'"><span class="gl"></span></button>';
+      });
+      html+='</div><div class="stagePrompt" style="text-align:center;font-weight:800">'+getPhon().map(esc).join(' · ')+'</div>';
+      html+='<div class="actions"><button class="btn btnPrimary" id="wsCheck">Check</button></div>'; box().innerHTML=html;
+      box().querySelectorAll('.gap').forEach(function(g){ g.onclick=function(){ boundaries[+g.dataset.i]=!boundaries[+g.dataset.i]; render(); }; });
+      box().querySelectorAll('.magicBtn').forEach(function(b){ b.onclick=function(){ var i=+b.dataset.m; if(magic.has(i))magic.delete(i);else magic.add(i); render(); }; });
+      document.getElementById('wsCheck').onclick=function(){
+        if(JSON.stringify(getPhon())===JSON.stringify(currentWord.phonemes)){ feedback(true,'✓ '+currentWord.phonemes.join(' · ')); stageCorrect(); }
+        else { stageWrong(); feedback(false,'Not quite — check which letters spell one sound.'); }
+      };
+    }
+    render();
+  }
+
+  // 4-6. Multiple choice
+  function meaning(){ mc('Meaning','What does <b>'+esc(currentWord.word)+'</b> mean?', currentWord.meaning, [currentWord.meaning].concat(currentWord.meaningDistractors)); }
+  function sentence(){ mc('Correct use','Which sentence uses <b>'+esc(currentWord.word)+'</b> correctly?', currentWord.sentences.correct, [currentWord.sentences.correct].concat(currentWord.sentences.wrong)); }
+  function synonym(){ mc('Synonym','Pick the best word to swap in for <b>'+esc(currentWord.word)+'</b>:', currentWord.synonym, [currentWord.synonym].concat(currentWord.synonymDistractors), function(o){ return esc(String(o).replace(/-/g,' ')); }); }
+
+  return { morphemes:morphemes, syllables:syllables, phonemes:phonemes, meaning:meaning, sentence:sentence, synonym:synonym };
+})();
+</script>
 </body>
 </html>
