@@ -50,17 +50,20 @@ We ship the whole pool. Bad data is kept out by:
 phoneme-mode / syllable-mode / breakdown pools, its `syllables`/`phonemes` are taken from there
 as-is (zero new risk). Only genuinely-new words get generated splits (still invariant-checked).
 
-**Syllable authority — howmanysyllables.com (per the v1 2026-07-03 method):** for a word NOT
-covered by the verified syllable pool, the generating agent WebFetches
-`howmanysyllables.com/syllables/<word>` and takes the **division it returns directly** (e.g.
-`un-hap-pi-ness`) as the `syllables` split — this is the authoritative count *and* boundary, which
-the rejoin invariant alone cannot verify. **Best-effort with graceful degradation:** if the fetch
-fails or the site rate-limits (a real risk across thousands of requests), the agent falls back to
-its own syllabification and flags the word `syllables:unverified` in the review report, so those
-are spot-checked later rather than silently trusted. To stay polite to a small third-party site,
-the syllable-fetch stage runs at **reduced concurrency** and reuse-first keeps the fetch count to
-the genuinely-new remainder only. (Confirmed live: the site is WebFetch-able and returns count +
-division; `unhappiness` → `un-hap-pi-ness`, matching v1 data.)
+**Syllable authority — howmanysyllables.com (fetch every multi-syllable word; per the v1
+2026-07-03 method):** reuse-first only covers ~34 words (the existing syllable pool is ~170 words
+and barely overlaps the 3,687 make-able set), so this is the real syllable strategy for essentially
+all of them. For every word **with 2+ syllables** (1-syllable words are skipped — nothing to
+divide), the generating agent WebFetches `howmanysyllables.com/syllables/<word>` and takes the
+**division it returns directly** (e.g. `un-hap-pi-ness`) as the `syllables` split — the
+authoritative count *and* boundary, which the rejoin invariant alone cannot verify.
+**Resilient / graceful degradation (required — ~3,650 fetches will likely rate-limit partway):**
+if the fetch fails, 404s, or the site throttles, the agent falls back to its own syllabification,
+still passes the rejoin invariant, and flags the word `syllables:unverified` in the review report
+so those are re-checked/spot-checked later rather than silently trusted. Each shipped entry also
+records `syllablesSource: "hms" | "pool" | "agent"` so the flagged surface is queryable.
+(Confirmed live: the site is WebFetch-able and returns count + division; `unhappiness` →
+`un-hap-pi-ness`, matching v1 data.)
 
 ## Data architecture — one static file
 
