@@ -22,7 +22,9 @@
     if(!hasMagic && w.phonemes.join('') !== w.word) return {ok:false,msg:'join="'+w.phonemes.join('')+'" ≠ word'};
     var flat = w.phonemes.join('').replace(/_/g,'');
     if(multiset(flat) !== multiset(w.word)) return {ok:false,msg:'letter multiset ≠ word'};
-    var badMagic = w.phonemes.filter(function(p){ return /_e$/.test(p) && VOWELS.indexOf(p[0])===-1; });
+    // magic-e must sit on a vowel; 'y' counts (byte -> "y_e"), consonants (v_e, s_e) do not
+    var MAGIC_VOWELS = VOWELS.concat('y');
+    var badMagic = w.phonemes.filter(function(p){ return /_e$/.test(p) && MAGIC_VOWELS.indexOf(p[0])===-1; });
     if(badMagic.length) return {ok:false,msg:'magic-e not on vowel: '+badMagic.join(',')};
     return {ok:true, msg:w.phonemes.join('·')};
   }

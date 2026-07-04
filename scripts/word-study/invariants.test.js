@@ -42,6 +42,20 @@ assert.strictEqual(V.validateEntry(badSyn).ok, false);
 const badSent = Object.assign({}, good, {sentences:{correct:"The unhelpful map got us lost.", wrong:["No target word here.","Also missing it."]}});
 assert.strictEqual(V.validateEntry(badSent).ok, false);
 
+// good: magic-e on 'y' (byte -> b y_e t) is legitimate — y acts as a vowel
+const yMagic = Object.assign({}, good, {
+  word:"byte", morphemes:{prefix:"",base:"byte",suffix1:"",suffix2:""},
+  syllables:["byte"], phonemes:["b","y_e","t"],
+  meaning:"a unit of computer memory", meaningDistractors:["a small insect","a loud noise"],
+  sentences:{correct:"A byte holds eight bits of data.", wrong:["I byte the apple loudly.","The byte barked at the postman."]},
+  synonym:"unit", synonymDistractors:["insect","noise"], partMeanings:{byte:"a unit of data"}
+});
+assert.deepStrictEqual(V.validateEntry(yMagic), {ok:true, fails:[]});
+
+// bad: magic-e on a consonant (v_e) stays rejected
+const vMagic = Object.assign({}, yMagic, {word:"preserve", phonemes:["p","r","e","s","e","r","v_e"], partMeanings:{preserve:"keep"}, morphemes:{prefix:"",base:"preserve",suffix1:"",suffix2:""}, syllables:["pre","serve"], sentences:{correct:"We preserve the fruit.",wrong:["I preserve loudly.","The preserve ran fast."]}, meaning:"to keep something safe", synonym:"keep"});
+assert.strictEqual(V.validateEntry(vMagic).ok, false);
+
 // bad: placeholder junk in synonym distractors (the 'unhelpful' smoke-test failure)
 const junkPh = Object.assign({}, good, {synonym:"useless", synonymDistractors:["placeholder1","placeholder2"]});
 assert.strictEqual(V.validateEntry(junkPh).ok, false);
