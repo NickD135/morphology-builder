@@ -131,3 +131,21 @@ Multi-agent orchestration via the Workflow tool (explicit opt-in this session), 
   shipped-count may be <3,687 while rejects are worked off.
 - Load stays acceptable (only `word-study.html` pays the cost; gzipped, cached).
 - Fixes to soft data flow through the existing content-editor with no new plumbing.
+
+## Result (built 2026-07-04)
+
+- **3,546 words shipped**, 0 invariant failures (Node self-check + in-browser harness both green;
+  `word-study.html?word=telescope` live-renders through the stages).
+- Generation ran as 148 + 39 (backfill) batches of 25 via the workflow; the account **session
+  limit** interrupted 38 batches mid-run — backfilled after the limit reset. ~16.9M subagent tokens.
+- **137 non-words dropped** (heuristic + a words-only vet pass): proper nouns (`aviv`, `microsoft`),
+  bound-root fragments (`cept`, `struct`, `logy`), misspellings (`definately`), and — flagged for
+  Nick — **inappropriate builder combos (`condom`, `beastiality`) that should also be scrubbed from
+  `valid-combos.json` / Morpheme Builder.** Drop list in `scripts/word-study/fakes.json`; reports in
+  `word-study-dropped.json` + `word-study-review.json`.
+- **Syllable authority:** 2,313 words `hms` (from howmanysyllables.com), 35 `pool`, **1,198 `agent`
+  (fallback)** — of which 834 are multi-syllable and flagged for a later throttled re-check (the
+  site wasn't reached for them under load / the interruption). All still pass the rejoin invariant.
+- **3 words left unshipped** (fragile tail): `taker`/`takers` (bad magic-e), `watcher` (wrong-tense
+  sentence) — fixable later via content-editor or a targeted regen.
+- Committed to `feat/word-study` **local-only — NOT pushed** (main auto-deploys).

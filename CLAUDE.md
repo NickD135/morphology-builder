@@ -1743,6 +1743,30 @@ plan: `docs/superpowers/plans/2026-07-01-svg-hair.md`. Branch `feat/svg-hair`, m
 
 ---
 
+### PHASE 7.33 — Session 2026-07-04 (Word Study full-pool generation)
+
+Scaled Word Study from a curated ~40-word pool to **every make-able word** so the
+Flashcards→Morpheme Builder→Word Study arc never dead-ends. On `feat/word-study`, **local-only —
+NOT pushed**. Spec/plan: `docs/superpowers/{specs,plans}/2026-07-03-word-study-full-pool*`.
+
+- [x] Pipeline in `scripts/word-study/`: manifest builder (valid-combos + data.js, resolves
+  morpheme IDs→surface forms), shared `invariants.js` (rejoin/junk/magic-e gate, TDD, also used by
+  the harness), generation Workflow (agents author meaning/sentences/synonym/phonemes + fetch
+  syllable divisions from **howmanysyllables.com**), journal merge, invariant-gated assembler,
+  words-only vet pass.
+- [x] **3,546 words shipped**, 0 invariant failures (Node + in-browser harness green;
+  `word-study.html` live-renders a generated word through the stages). `word-study-data.js` ≈ 2.5MB
+  (≈500KB gzipped; only `word-study.html` loads it).
+- [x] **137 non-words dropped** (proper nouns, bound-root fragments, misspellings) incl.
+  inappropriate builder combos (`condom`, `beastiality`) — see follow-up.
+- [x] `morpheme-builder.html` drops its `word-study-data.js` dep; 🔬 Study shows for any built word.
+- [ ] **Follow-ups:** re-check 834 `syllablesSource:"agent"` multi-syllable words against
+  howmanysyllables.com (throttled); reship 3 tail words (`taker`/`takers`/`watcher`); **scrub
+  inappropriate/junk words from `valid-combos.json` + Morpheme Builder at source**; push when Nick
+  authorises.
+
+---
+
 ### PHASE 8 — Growth & Integrations (Later)
 
 - [ ] Google Classroom integration (roster import via Google API)

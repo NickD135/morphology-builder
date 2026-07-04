@@ -1,5 +1,9 @@
 # Word Study — capstone word-breakdown activity
 
+> **SUPERSEDED (pool size only) by `2026-07-03-word-study-full-pool-design.md`.** The deep six-stage
+> dive now spans every make-able word (3,546 shipped), not the ~40–60 curated pool described below.
+> All other design here (the six stages, mechanics, handoffs, integration) still holds.
+
 **Date:** 2026-07-03
 **Status:** Approved design (brainstormed with Nick)
 **File(s):** new `word-study.html` + `word-study-data.js`; landing/dashboard integration.
