@@ -4,12 +4,11 @@ export const meta = {
   phases: [{ title: 'Vet' }],
 }
 
-// args = array of words (or its JSON string).
-const words = typeof args === 'string' ? JSON.parse(args) : args;
-const BATCH = 150;
-const batches = [];
-for (let i = 0; i < words.length; i += BATCH) batches.push(words.slice(i, i + BATCH));
-log(`Vetting ${words.length} words in ${batches.length} batches`);
+// args = { dir, count } — a directory of batch-<i>.json files, each a JSON array of words.
+const cfg = typeof args === 'string' ? JSON.parse(args) : args;
+const DIR = cfg.dir;
+const COUNT = cfg.count;
+log(`Vetting from ${COUNT} batch files in ${DIR}`);
 
 const SCHEMA = {
   type: 'object',
@@ -18,17 +17,22 @@ const SCHEMA = {
 };
 
 const PROMPT = [
-  'Below is a list of candidate spelling words for a UK/Australian PRIMARY school program (ages 9-12).',
-  'Some are not genuine standalone English words — e.g. two words mashed together ("abit" = a bit),',
-  'bare fragments, or strings that are not real dictionary words on their own.',
-  'Return ONLY the entries that are NOT genuine, real, standalone English words suitable to teach.',
-  'Be conservative: do NOT flag real but uncommon/technical words (e.g. "periscope", "malfunction",',
-  'inflected forms like "abuses", "rebuilt"). Only flag things that are genuinely not real words.',
-  'Return {"fakes": [...]} — the exact strings to drop (possibly an empty array).',
+  'The file below contains candidate spelling words for a UK/Australian PRIMARY school program (ages 9-12).',
+  'Some are NOT genuine standalone English words — e.g. two words mashed together ("abit" = a bit),',
+  'bare fragments, proper nouns/place names/brand names ("aviv", "philly"), or informal abbreviations',
+  '("secs", "regs", "dems"). Return ONLY the entries that are NOT genuine, real, standalone common',
+  'English words suitable to teach primary children.',
+  'Be conservative: do NOT flag real but uncommon/technical words (e.g. "periscope", "malfunction")',
+  'or normal inflections ("rebuilt", "teachers"). Only flag things that are genuinely not real,',
+  'teachable words. Return {"fakes": [...]} with the exact strings to drop (may be empty).',
 ].join('\n');
 
-const results = await parallel(batches.map((b, idx) => () =>
-  agent(PROMPT + '\n\nWords: ' + JSON.stringify(b), { label: 'vet:' + idx, phase: 'Vet', schema: SCHEMA, model: 'sonnet', effort: 'low' })
+const idx = Array.from({ length: COUNT }, (_, i) => i);
+const results = await parallel(idx.map((i) => () =>
+  agent(
+    PROMPT + '\n\nRead this JSON file (an array of words) and vet them:\n' + DIR + '/batch-' + i + '.json',
+    { label: 'vet:' + i, phase: 'Vet', schema: SCHEMA, model: 'sonnet', effort: 'low' }
+  )
 ));
 
 const fakes = results.filter(Boolean).flatMap(r => (r && r.fakes) || []);
