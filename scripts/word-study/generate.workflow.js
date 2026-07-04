@@ -4,12 +4,11 @@ export const meta = {
   phases: [{ title: 'Generate' }],
 }
 
-const BATCH = 30;
-// args may arrive as a JSON string depending on how it was passed — normalise to an array.
-const items = typeof args === 'string' ? JSON.parse(args) : args;
-const batches = [];
-for (let i = 0; i < items.length; i += BATCH) batches.push(items.slice(i, i + BATCH));
-log(`Generating ${items.length} words in ${batches.length} batches of ${BATCH}`);
+// args = { dir, count } — the batch directory (absolute) and number of batch files.
+const cfg = typeof args === 'string' ? JSON.parse(args) : args;
+const DIR = cfg.dir;
+const COUNT = cfg.count;
+log(`Generating from ${COUNT} batch files in ${DIR}`);
 
 const ENTRY = {
   type: 'object',
@@ -45,7 +44,7 @@ const RULES = [
   'For EACH word in the list, produce one entry with these fields:',
   '',
   'meaning: a short, plain definition of the whole word (one clause).',
-  'meaningDistractors: EXACTLY 2 plausible-but-WRONG meanings (a child might pick them; they must be clearly wrong).',
+  'meaningDistractors: EXACTLY 2 plausible-but-WRONG meanings (a child might pick them; they must be clearly wrong). Never placeholders.',
   '',
   'sentences.correct: one natural sentence that uses the word CORRECTLY and contains the exact word.',
   'sentences.wrong: EXACTLY 2 sentences that each CONTAIN the exact word but use it INCORRECTLY',
@@ -76,13 +75,14 @@ const RULES = [
   'Return ONLY the schema object {entries:[...]} with one entry per input word, in the same order.',
 ].join('\n');
 
-const results = await parallel(batches.map((b, idx) => () =>
+const idx = Array.from({ length: COUNT }, (_, i) => i);
+await parallel(idx.map((i) => () =>
   agent(
-    RULES + '\n\nWords (JSON): ' + JSON.stringify(b.map(w => ({ word: w.word, stage: w.stage, reuse: w.reuse }))),
-    { label: 'gen:' + idx, phase: 'Generate', schema: SCHEMA, model: 'sonnet', effort: 'medium' }
+    RULES + '\n\nRead this JSON file (an array of {word, stage, reuse}) and author an entry for every word in it:\n' +
+      DIR + '/batch-' + i + '.json',
+    { label: 'gen:' + i, phase: 'Generate', schema: SCHEMA, model: 'sonnet', effort: 'medium' }
   )
 ));
 
-const entries = results.filter(Boolean).flatMap(r => (r && r.entries) || []);
-log(`Returned ${entries.length} entries from ${results.filter(Boolean).length}/${batches.length} batches`);
-return entries;
+// Entries are recorded per-agent in journal.jsonl; assemble from there (avoids a multi-MB return).
+return { batches: COUNT, note: 'entries in journal.jsonl' };
