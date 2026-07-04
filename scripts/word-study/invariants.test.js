@@ -42,4 +42,21 @@ assert.strictEqual(V.validateEntry(badSyn).ok, false);
 const badSent = Object.assign({}, good, {sentences:{correct:"The unhelpful map got us lost.", wrong:["No target word here.","Also missing it."]}});
 assert.strictEqual(V.validateEntry(badSent).ok, false);
 
+// bad: placeholder junk in synonym distractors (the 'unhelpful' smoke-test failure)
+const junkPh = Object.assign({}, good, {synonym:"useless", synonymDistractors:["placeholder1","placeholder2"]});
+assert.strictEqual(V.validateEntry(junkPh).ok, false);
+assert.ok(V.validateEntry(junkPh).fails.some(f=>/synonym/i.test(f)));
+
+// bad: synonym is the word itself with -ish appended
+const junkIsh = Object.assign({}, good, {synonym:"unhelpful-ish"});
+assert.strictEqual(V.validateEntry(junkIsh).ok, false);
+
+// bad: synonym equals the word
+const junkSelf = Object.assign({}, good, {synonym:"unhelpful"});
+assert.strictEqual(V.validateEntry(junkSelf).ok, false);
+
+// bad: placeholder junk in meaning distractors
+const junkMean = Object.assign({}, good, {meaningDistractors:["placeholder","real-ish wrong meaning"]});
+assert.strictEqual(V.validateEntry(junkMean).ok, false);
+
 console.log("invariants.test OK");

@@ -26,9 +26,24 @@
     if(badMagic.length) return {ok:false,msg:'magic-e not on vowel: '+badMagic.join(',')};
     return {ok:true, msg:w.phonemes.join('·')};
   }
+  // catches generator punts: "placeholder1", "lorem", empty, or "<word>-ish" self-reference
+  function isJunk(text, word){
+    if(text==null) return true;
+    var t = String(text).trim();
+    if(!t) return true;
+    if(/placeholder|lorem|^n\/?a$|^tbd$|^todo$/i.test(t)) return true;
+    if(word){
+      var w = word.toLowerCase(), s = t.toLowerCase();
+      if(s === w) return true;                          // synonym == the word
+      if(s === w+'ish' || s === w+'-ish') return true;  // "<word>-ish" punt
+    }
+    return false;
+  }
   function checkMeaning(w){
     if(!w.meaning || !Array.isArray(w.meaningDistractors) || w.meaningDistractors.length!==2) return {ok:false,msg:'meaning/distractors shape'};
     if(w.meaningDistractors.indexOf(w.meaning)!==-1) return {ok:false,msg:'meaning == a distractor'};
+    if(isJunk(w.meaning)) return {ok:false,msg:'junk meaning'};
+    if(w.meaningDistractors.some(function(d){ return isJunk(d); })) return {ok:false,msg:'junk meaning distractor'};
     return {ok:true,msg:'ok'};
   }
   function checkSentences(w){
@@ -43,6 +58,8 @@
   function checkSynonym(w){
     if(!w.synonym || !Array.isArray(w.synonymDistractors) || w.synonymDistractors.length!==2) return {ok:false,msg:'synonym shape'};
     if(w.synonymDistractors.indexOf(w.synonym)!==-1) return {ok:false,msg:'synonym == a distractor'};
+    if(isJunk(w.synonym, w.word)) return {ok:false,msg:'junk synonym'};
+    if(w.synonymDistractors.some(function(d){ return isJunk(d, w.word); })) return {ok:false,msg:'junk synonym distractor'};
     return {ok:true,msg:'ok'};
   }
   function validateEntry(w){
