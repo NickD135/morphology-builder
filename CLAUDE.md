@@ -1746,8 +1746,10 @@ plan: `docs/superpowers/plans/2026-07-01-svg-hair.md`. Branch `feat/svg-hair`, m
 ### PHASE 7.33 — Session 2026-07-04 (Word Study full-pool generation)
 
 Scaled Word Study from a curated ~40-word pool to **every make-able word** so the
-Flashcards→Morpheme Builder→Word Study arc never dead-ends. On `feat/word-study`, **local-only —
-NOT pushed**. Spec/plan: `docs/superpowers/{specs,plans}/2026-07-03-word-study-full-pool*`.
+Flashcards→Morpheme Builder→Word Study arc never dead-ends. **MERGED TO `main` AND PUSHED to
+production 2026-07-04** (`55887d8`, owner authorised) — this deployed the whole Word Study feature
+(phases 1–6 game + landing/dashboard/handoffs, previously local-only) live for the first time.
+Spec/plan: `docs/superpowers/{specs,plans}/2026-07-03-word-study-full-pool*`.
 
 - [x] Pipeline in `scripts/word-study/`: manifest builder (valid-combos + data.js, resolves
   morpheme IDs→surface forms), shared `invariants.js` (rejoin/junk/magic-e gate, TDD, also used by
@@ -1760,10 +1762,10 @@ NOT pushed**. Spec/plan: `docs/superpowers/{specs,plans}/2026-07-03-word-study-f
 - [x] **137 non-words dropped** (proper nouns, bound-root fragments, misspellings) incl.
   inappropriate builder combos (`condom`, `beastiality`) — see follow-up.
 - [x] `morpheme-builder.html` drops its `word-study-data.js` dep; 🔬 Study shows for any built word.
-- [ ] **Follow-ups:** re-check 834 `syllablesSource:"agent"` multi-syllable words against
-  howmanysyllables.com (throttled); reship 3 tail words (`taker`/`takers`/`watcher`); **scrub
-  inappropriate/junk words from `valid-combos.json` + Morpheme Builder at source**; push when Nick
-  authorises.
+- [ ] **Follow-ups (post-deploy):** re-check 834 `syllablesSource:"agent"` multi-syllable words
+  against howmanysyllables.com (throttled); reship 3 tail words (`taker`/`takers`/`watcher`);
+  **scrub inappropriate/junk words from `valid-combos.json` + Morpheme Builder at source** (Word
+  Study already drops them but they're still buildable in the Builder game).
 
 ---
 

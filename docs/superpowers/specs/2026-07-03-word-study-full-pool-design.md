@@ -148,4 +148,5 @@ Multi-agent orchestration via the Workflow tool (explicit opt-in this session), 
   site wasn't reached for them under load / the interruption). All still pass the rejoin invariant.
 - **3 words left unshipped** (fragile tail): `taker`/`takers` (bad magic-e), `watcher` (wrong-tense
   sentence) — fixable later via content-editor or a targeted regen.
-- Committed to `feat/word-study` **local-only — NOT pushed** (main auto-deploys).
+- Merged to `main` and **pushed to production** 2026-07-04 (`55887d8`, owner authorised) — deployed
+  the whole Word Study feature live for the first time.
