@@ -6,11 +6,22 @@ const ROOT = path.resolve(__dirname, '../../');
 const R = f => path.join(ROOT, f);
 const V = require('./invariants');
 
-// Deterministic phonics corrections applied to every phoneme list at assembly time.
-// - "ing" is not one grapheme: the short 'i' is its own sound and 'ng' is the digraph → ["i","ng"].
+// Deterministic phonics corrections applied to every phoneme list at assembly time — a bundled
+// grapheme is expanded into its taught constituent graphemes (all still real graphemes: ng, le,
+// ew, y). Keeps letters/order identical, so the rejoin invariant is unaffected.
+const GRAPHEME_SPLITS = {
+  ing: ['i', 'ng'],   // short i + ng digraph
+  ble: ['b', 'le'],   // consonant-le
+  bly: ['b', 'l', 'y'],
+  ly:  ['l', 'y'],
+  iew: ['i', 'ew'],   // ew is the taught grapheme
+};
 function normalizePhonemes(phonemes){
   const out = [];
-  phonemes.forEach(p => { if (p === 'ing') { out.push('i', 'ng'); } else { out.push(p); } });
+  phonemes.forEach(p => {
+    const split = GRAPHEME_SPLITS[p];
+    if (split) out.push(...split); else out.push(p);
+  });
   return out;
 }
 
