@@ -11,21 +11,24 @@ const raw = JSON.parse(fs.readFileSync(R('scripts/word-study/raw-generated.json'
 const genByWord = {};
 raw.forEach(e => { genByWord[e.word] = e; });
 
-// heuristic "eyeball this" flags — do NOT block shipping, just report for the content-editor
-const RED_MEANING = /informal|short form|not a (real|standard|proper|word)|abbreviation|misspell|mashed|slang|typo/i;
+// Fake / non-word DROP list from the vetting pass (word-vet.workflow.js). If absent, only the
+// self-description heuristic below drops words. Fakes are removed entirely — Nick's call: a fake
+// word never reaches a student, and the pool already spans every real make-able word so nothing
+// needs swapping in.
+let FAKES = new Set();
+try { FAKES = new Set(JSON.parse(fs.readFileSync(R('scripts/word-study/fakes.json'), 'utf8'))); } catch (e) {}
+// the agent sometimes betrays a non-word in its own definition:
+const RED_MEANING = /informal|short form|not a (real|standard|proper|word)|abbreviation|misspell|mashed|slang|typo|\bnon-?word\b/i;
+// sensitive words: NOT dropped, just flagged for Nick to eyeball in review.
 const SENSITIVE = /\b(abus|drug|kill|hate|sex|death|dead|violen|weapon|gun|suicide)/i;
-function reviewFlags(entry){
-  const f = [];
-  if (entry.word.length <= 3) f.push('very-short');
-  if (RED_MEANING.test(entry.meaning)) f.push('meaning-red-phrase');
-  if (SENSITIVE.test(entry.word)) f.push('sensitive-word');
-  return f;
-}
 
-const shipped = [], rejects = [], review = [];
+const shipped = [], rejects = [], review = [], dropped = [];
 manifest.forEach(m => {
   const g = genByWord[m.word];
   if (!g) { rejects.push({ word: m.word, reason: 'no generated entry' }); return; }
+  // scrap fakes/non-words before they can ship
+  if (FAKES.has(m.word)) { dropped.push({ word: m.word, reason: 'vetted non-word' }); return; }
+  if (g.meaning && RED_MEANING.test(g.meaning)) { dropped.push({ word: m.word, reason: 'self-described non-word: ' + g.meaning }); return; }
   const entry = {
     word: m.word, stage: m.stage, morphemes: m.morphemes,
     syllables: (m.reuse && m.reuse.syllables) || g.syllables,
@@ -38,7 +41,9 @@ manifest.forEach(m => {
   const v = V.validateEntry(entry);
   if (!v.ok) { rejects.push({ word: m.word, reason: v.fails.join(' | ') }); return; }
   shipped.push(entry);
-  const flags = reviewFlags(entry);
+  const flags = [];
+  if (entry.word.length <= 3) flags.push('very-short');
+  if (SENSITIVE.test(entry.word)) flags.push('sensitive-word');
   if (flags.length) review.push({ word: m.word, flags, meaning: entry.meaning });
 });
 
@@ -51,8 +56,9 @@ const body = shipped.map(e => '  ' + JSON.stringify(e)).join(',\n');
 fs.writeFileSync(R('word-study-data.js'), header + body + '\n];\n');
 fs.writeFileSync(R('word-study-rejects.json'), JSON.stringify(rejects, null, 2));
 fs.writeFileSync(R('word-study-review.json'), JSON.stringify(review, null, 2));
+fs.writeFileSync(R('word-study-dropped.json'), JSON.stringify(dropped, null, 2));
 
 const src = {}; shipped.forEach(e => src[e.syllablesSource] = (src[e.syllablesSource] || 0) + 1);
 const unverified = shipped.filter(e => e.syllablesSource === 'agent' && e.syllables.length > 1).length;
-console.log('shipped:', shipped.length, '| rejects:', rejects.length, '| review-flags:', review.length);
+console.log('shipped:', shipped.length, '| rejects:', rejects.length, '| dropped(fake):', dropped.length, '| review-flags:', review.length);
 console.log('syllablesSource:', JSON.stringify(src), '| multi-syllable unverified:', unverified);
