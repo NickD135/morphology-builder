@@ -26,74 +26,16 @@
 </tr></thead><tbody></tbody></table>
 
 <script src="../../data.js"></script>
+<script src="../../scripts/word-study/invariants.js"></script>
 <script src="../../word-study-data.js"></script>
 <script>
 (function(){
   var POOL = window.WORD_STUDY_WORDS || [];
-  var VOWELS = 'aeiouy';
-  function letters(s){ return s.toLowerCase().split('').sort().join(''); }
-
-  // Checks return {ok:bool, msg:string}
-  function checkMorphemes(w){
-    var m = w.morphemes||{};
-    var parts = [m.prefix,m.base,m.suffix1,m.suffix2].filter(Boolean);
-    if(!parts.length) return {ok:false,msg:'no parts'};
-    var pm = w.partMeanings||{};
-    var missing = parts.filter(function(p){ return !pm[p]; });
-    if(missing.length) return {ok:false,msg:'partMeanings missing: '+missing.join(',')};
-    return {ok:true,msg:parts.join('·')};
-  }
-  function checkSyllables(w){
-    if(!Array.isArray(w.syllables)||!w.syllables.length) return {ok:false,msg:'empty'};
-    var join = w.syllables.join('');
-    if(join !== w.word) return {ok:false,msg:'join="'+join+'" ≠ word'};
-    // each syllable should carry a vowel sound (allow silent-e-only tail leniency)
-    var noVowel = w.syllables.filter(function(s){ return !/[aeiouy]/.test(s); });
-    if(noVowel.length) return {ok:false,msg:'syllable without vowel: '+noVowel.join(',')};
-    return {ok:true,msg:w.syllables.join('·')};
-  }
-  function checkPhonemes(w){
-    if(!Array.isArray(w.phonemes)||!w.phonemes.length) return {ok:false,msg:'empty'};
-    var hasMagic = w.phonemes.some(function(p){ return /_e$/.test(p); });
-    if(!hasMagic){
-      var join = w.phonemes.join('');
-      if(join !== w.word) return {ok:false,msg:'join="'+join+'" ≠ word'};
-    }
-    // letter multiset must match the word (split digraph "i_e" contributes i + e)
-    var flat = w.phonemes.join('').replace(/_/g,'');
-    if(letters(flat) !== letters(w.word)) return {ok:false,msg:'letter multiset ≠ word ('+flat+')'};
-    // every magic-e grapheme must start with a vowel letter
-    var badMagic = w.phonemes.filter(function(p){ return /_e$/.test(p) && VOWELS.indexOf(p[0])===-1; });
-    if(badMagic.length) return {ok:false,msg:'magic-e not on vowel: '+badMagic.join(',')};
-    return {ok:true,msg:w.phonemes.join('·')};
-  }
-  function checkMeaning(w){
-    if(!w.meaning) return {ok:false,msg:'no meaning'};
-    var d = w.meaningDistractors||[];
-    if(d.length<1) return {ok:false,msg:'need ≥1 distractor'};
-    if(d.indexOf(w.meaning)!==-1) return {ok:false,msg:'correct also in distractors'};
-    return {ok:true,msg:(d.length+1)+' options'};
-  }
-  function checkSentences(w){
-    var s = w.sentences||{};
-    if(!s.correct) return {ok:false,msg:'no correct sentence'};
-    var wrong = s.wrong||[];
-    if(wrong.length<1) return {ok:false,msg:'need ≥1 wrong'};
-    if(wrong.indexOf(s.correct)!==-1) return {ok:false,msg:'correct also in wrong'};
-    // the correct sentence should actually contain the word
-    if(s.correct.toLowerCase().indexOf(w.word.toLowerCase())===-1) return {ok:false,msg:'correct sentence lacks the word'};
-    return {ok:true,msg:(wrong.length+1)+' options'};
-  }
-  function checkSynonym(w){
-    if(!w.synonym) return {ok:false,msg:'no synonym'};
-    var d = w.synonymDistractors||[];
-    if(d.length<1) return {ok:false,msg:'need ≥1 distractor'};
-    if(d.indexOf(w.synonym)!==-1) return {ok:false,msg:'correct also in distractors'};
-    return {ok:true,msg:(d.length+1)+' options'};
-  }
+  // Single source of truth — same invariants the assembler gates on (DRY, junk-guards included).
+  var I = window.WSInvariants;
 
   var tbody = document.querySelector('#tbl tbody');
-  var checks = [checkMorphemes,checkSyllables,checkPhonemes,checkMeaning,checkSentences,checkSynonym];
+  var checks = [I.checkMorphemes,I.checkSyllables,I.checkPhonemes,I.checkMeaning,I.checkSentences,I.checkSynonym];
   var totalFail = 0, wordFails = [];
   POOL.forEach(function(w){
     var results = checks.map(function(fn){ return fn(w); });

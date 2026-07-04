@@ -1,0 +1,58 @@
+// Merges generated entries with the manifest, runs invariants, writes the shipped data file
+// plus rejects (hard-invariant failures) and review-flags (content to eyeball, still shipped).
+const fs = require('fs');
+const path = require('path');
+const ROOT = path.resolve(__dirname, '../../');
+const R = f => path.join(ROOT, f);
+const V = require('./invariants');
+
+const manifest = JSON.parse(fs.readFileSync(R('scripts/word-study/manifest.json'), 'utf8'));
+const raw = JSON.parse(fs.readFileSync(R('scripts/word-study/raw-generated.json'), 'utf8'));
+const genByWord = {};
+raw.forEach(e => { genByWord[e.word] = e; });
+
+// heuristic "eyeball this" flags — do NOT block shipping, just report for the content-editor
+const RED_MEANING = /informal|short form|not a (real|standard|proper|word)|abbreviation|misspell|mashed|slang|typo/i;
+const SENSITIVE = /\b(abus|drug|kill|hate|sex|death|dead|violen|weapon|gun|suicide)/i;
+function reviewFlags(entry){
+  const f = [];
+  if (entry.word.length <= 3) f.push('very-short');
+  if (RED_MEANING.test(entry.meaning)) f.push('meaning-red-phrase');
+  if (SENSITIVE.test(entry.word)) f.push('sensitive-word');
+  return f;
+}
+
+const shipped = [], rejects = [], review = [];
+manifest.forEach(m => {
+  const g = genByWord[m.word];
+  if (!g) { rejects.push({ word: m.word, reason: 'no generated entry' }); return; }
+  const entry = {
+    word: m.word, stage: m.stage, morphemes: m.morphemes,
+    syllables: (m.reuse && m.reuse.syllables) || g.syllables,
+    phonemes: (m.reuse && m.reuse.phonemes) || g.phonemes,
+    meaning: g.meaning, meaningDistractors: g.meaningDistractors,
+    sentences: g.sentences, synonym: g.synonym, synonymDistractors: g.synonymDistractors,
+    partMeanings: m.partMeanings,
+    syllablesSource: (m.reuse && m.reuse.syllables) ? 'pool' : (g.syllablesSource || 'agent'),
+  };
+  const v = V.validateEntry(entry);
+  if (!v.ok) { rejects.push({ word: m.word, reason: v.fails.join(' | ') }); return; }
+  shipped.push(entry);
+  const flags = reviewFlags(entry);
+  if (flags.length) review.push({ word: m.word, flags, meaning: entry.meaning });
+});
+
+shipped.sort((a, b) => a.word < b.word ? -1 : 1);
+const header =
+  '// ═══ WORD STUDY — full make-able-word pool (v2) — see docs/superpowers/specs/2026-07-03-word-study-full-pool-design.md\n' +
+  '// Auto-generated: ' + shipped.length + ' words. Invariant-verified. Fixes flow via content-editor (word_corrections).\n' +
+  'window.WORD_STUDY_WORDS = [\n';
+const body = shipped.map(e => '  ' + JSON.stringify(e)).join(',\n');
+fs.writeFileSync(R('word-study-data.js'), header + body + '\n];\n');
+fs.writeFileSync(R('word-study-rejects.json'), JSON.stringify(rejects, null, 2));
+fs.writeFileSync(R('word-study-review.json'), JSON.stringify(review, null, 2));
+
+const src = {}; shipped.forEach(e => src[e.syllablesSource] = (src[e.syllablesSource] || 0) + 1);
+const unverified = shipped.filter(e => e.syllablesSource === 'agent' && e.syllables.length > 1).length;
+console.log('shipped:', shipped.length, '| rejects:', rejects.length, '| review-flags:', review.length);
+console.log('syllablesSource:', JSON.stringify(src), '| multi-syllable unverified:', unverified);
