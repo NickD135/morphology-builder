@@ -6,6 +6,14 @@ const ROOT = path.resolve(__dirname, '../../');
 const R = f => path.join(ROOT, f);
 const V = require('./invariants');
 
+// Deterministic phonics corrections applied to every phoneme list at assembly time.
+// - "ing" is not one grapheme: the short 'i' is its own sound and 'ng' is the digraph → ["i","ng"].
+function normalizePhonemes(phonemes){
+  const out = [];
+  phonemes.forEach(p => { if (p === 'ing') { out.push('i', 'ng'); } else { out.push(p); } });
+  return out;
+}
+
 const manifest = JSON.parse(fs.readFileSync(R('scripts/word-study/manifest.json'), 'utf8'));
 const raw = JSON.parse(fs.readFileSync(R('scripts/word-study/raw-generated.json'), 'utf8'));
 const genByWord = {};
@@ -32,7 +40,7 @@ manifest.forEach(m => {
   const entry = {
     word: m.word, stage: m.stage, morphemes: m.morphemes,
     syllables: (m.reuse && m.reuse.syllables) || g.syllables,
-    phonemes: (m.reuse && m.reuse.phonemes) || g.phonemes,
+    phonemes: normalizePhonemes((m.reuse && m.reuse.phonemes) || g.phonemes),
     meaning: g.meaning, meaningDistractors: g.meaningDistractors,
     sentences: g.sentences, synonym: g.synonym, synonymDistractors: g.synonymDistractors,
     partMeanings: m.partMeanings,

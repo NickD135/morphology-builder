@@ -60,6 +60,7 @@ const RULES = [
   'phonemes: split the word into GRAPHEMES using the grapheme model (letters grouped by the sound they spell).',
   '  Examples: "ship" -> ["sh","i","p"]; "teacher" -> ["t","ea","ch","er"]; "night" -> ["n","igh","t"].',
   '  Split-digraph magic-e is written as vowel + "_e": "rewrite" -> ["r","e","wr","i_e","t"]; "misplace" -> ["m","i","s","p","l","a_e","c"].',
+  '  The "-ing" ending is TWO graphemes, not one: the short i is its own sound and ng is a digraph -> ["i","ng"] (e.g. "running" -> [...,"i","ng"]). Never output "ing" as a single grapheme.',
   '  INVARIANT: the letters of phonemes.join("") with "_" removed must be exactly the letters of the word.',
   '  If the input provides reuse.phonemes, use it verbatim.',
   '',
