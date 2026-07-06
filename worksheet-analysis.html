@@ -348,20 +348,28 @@ function setMorphemeType(type) {
   buildMorphemeList();
 }
 
+// Stage tags are strings ("s2e","s2l","s3e","s3l","s4"); extract the numeric
+// stage so we can compare against stage numbers (2 = Stage 2, 3 = Stage 3, etc.)
+function stageNum(s) {
+  if (!s) return null;
+  const n = parseInt(String(s).replace(/[^0-9]/g, ''), 10);
+  return isNaN(n) ? null : n;
+}
+
 function getMorphemePool() {
   const ext    = document.getElementById('extToggle').checked;
   const MORPH  = window.MORPHEMES || {};
   if (morphemeType === 'base') {
     const all = (MORPH.bases || []).filter(b => ['latin','greek','anglo'].includes(b.group) || b.group);
-    return ext ? all : all.filter(b => !b.stage || b.stage <= 2);
+    return ext ? all : all.filter(b => !b.stage || stageNum(b.stage) <= 2);
   }
   if (morphemeType === 'prefix') {
     const all = MORPH.prefixes || [];
-    return ext ? all : all.filter(p => !p.stage || p.stage <= 2);
+    return ext ? all : all.filter(p => !p.stage || stageNum(p.stage) <= 2);
   }
   // suffix
   const all = MORPH.suffixes || [];
-  return ext ? all : all.filter(s => !s.stage || s.stage <= 2);
+  return ext ? all : all.filter(s => !s.stage || stageNum(s.stage) <= 2);
 }
 
 function buildMorphemeList(filter='') {
@@ -677,9 +685,9 @@ function buildWordList(source, count) {
   const MORPH = window.MORPHEMES || {};
   let allBases = [];
   if (pool === 'standard' || pool === 'mixed')
-    allBases = [...allBases, ...(MORPH.bases||[]).filter(b => !b.stage || b.stage <= 2)];
+    allBases = [...allBases, ...(MORPH.bases||[]).filter(b => !b.stage || stageNum(b.stage) <= 2)];
   if (pool === 'extension' || pool === 'mixed')
-    allBases = [...allBases, ...(MORPH.bases||[]).filter(b => b.stage >= 3)];
+    allBases = [...allBases, ...(MORPH.bases||[]).filter(b => stageNum(b.stage) >= 3)];
 
   const words = [];
   const tried = new Set();
