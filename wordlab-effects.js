@@ -166,6 +166,14 @@ const WLEffects = (() => {
   const mobile = () => window.innerWidth < 600;
   const rnd = (min, max) => Math.random() * (max - min) + min;
   const rndInt = (min, max) => Math.floor(rnd(min, max));
+  // Suppress decorative motion for low-stim mode OR users who ask the OS for
+  // reduced motion (WCAG 2.3.3). Mirrors wordlab-worlds.js / wordlab-scientist.js.
+  function _calmMotion() {
+    try {
+      return (typeof WordLabData !== 'undefined' && WordLabData.isLowStimMode && WordLabData.isLowStimMode())
+        || window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+    } catch { return false; }
+  }
 
   function _makeParticle(styles) {
     const d = document.createElement('div');
@@ -1353,21 +1361,20 @@ const WLEffects = (() => {
   // ── Public API ────────────────────────────────────────────────
   function start(effectId, el) {
     if (!el || !_fns[effectId]) return;
-    if (typeof WordLabData !== 'undefined' && WordLabData.isLowStimMode()) return;
+    if (_calmMotion()) return;
     stop(el);
     _state(el); // initialise state
     _ensureLayers(el);
     _fns[effectId](el, false);
-
-    // Pause on hidden page
-    const visHandler = () => { if (document.hidden) stop(el); };
-    document.addEventListener('visibilitychange', visHandler);
-    // Store cleanup ref
-    _state(el)._visHandler = visHandler;
+    // NOTE: no visibilitychange pause. The old handler leaked a listener per
+    // start() and permanently stopped the effect on the first tab-hide with no
+    // resume (a student's equipped effect vanished for the session). Browsers
+    // already throttle background rAF/timers, so this is left to the platform.
   }
 
   function preview(effectId, el) {
     if (!el || !_fns[effectId]) return;
+    if (_calmMotion()) return;
     stop(el);
     _state(el);
     _ensureLayers(el);
