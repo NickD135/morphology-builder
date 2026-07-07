@@ -1769,6 +1769,43 @@ Spec/plan: `docs/superpowers/{specs,plans}/2026-07-03-word-study-full-pool*`.
 
 ---
 
+### PHASE 7.34 — Session 2026-07-07 (bug sweep + teaching-deck accuracy overhaul)
+
+All work below **merged to `main` AND PUSHED to production** (owner authorised throughout).
+Deck-accuracy detail: `docs/superpowers/notes/2026-07-07-deck-accuracy-progress.md`; specs/plans
+`docs/superpowers/{specs,plans}/2026-07-07-*`; tooling in `scripts/deck-accuracy/`.
+
+#### Bug + data-quality sweep (shipped the 6 pending morning fixes + more)
+- [x] Pushed 6 held fixes: misspelled morpheme examples + `<u>` boundary alignment (`data.js`),
+  block Skip during answer-reveal (5 fuel games), effects listener leak + reduced-motion, empty-
+  worksheet stage filter, Teacher-Mode-corrupting-spelling-data + phoneme WOTW category, builder junk scrub.
+- [x] Word Study inappropriate-word scrub: removed `abused/abuses/abusive/busty` (junk `a+bus` combos, no longer buildable) — 3546→3542.
+
+#### Morpheme Builder source fix — stop bound roots + false decompositions building as words
+- [x] `bound:true` flag on 14 Latin/Greek bound-root bases (`tract, flex, pend, pens, vid, cede, spire, mot, liter, nov, reg, proto, socio, ana`); build script skips their bare-base combo only (affixed combos still build; each keeps ≥1 combo — no dead tiles; `pseudo` excluded as it would hit 0).
+- [x] Blocklisted `ego`/`ago` in the build script (real words, but only ever false `e-/a-+go` splits) — not in dictionary.txt so speed-mode word validation unaffected.
+- [x] Rebuilt `valid-combos.json` 4376→4353 (also cleared stale `-ize` American-spelling drift orphaned when 5cf0c76 removed the suffix); reconciled `word-study-data.js`.
+
+#### Teaching-deck accuracy — Phase 1 (harden the split data at source)
+- [x] Root cause: all ~360 decks were 100% AI-invented (wrong splits, random matrices, repeated words).
+- [x] Syllables authority-verified via **howmanysyllables.com + syllablecount.com** (each publishes divisions for only a subset → count-verification fallback; wordhelp.com refuses cloud IPs). 2405 hms + 473 sc division-verified, 248 count-verified.
+- [x] Phonemes reconciled to `taught-graphemes.json` by deterministic rule (-tion/-sion/-cian→`ti/si/ci`; word-final /ng/→`ng`; 389 fixed) + a small fable-5 QA pass on 89 residuals. 452→28 residual flags (all verified-correct: `y_e/gue/sci/dg`, genuine `n/g`).
+- [x] `word-study-data.js`: 0 invariant failures across 3522 words. **Also improved the live Word Study game + spelling games.**
+
+#### Teaching-deck accuracy — Phase 2 + 2b (deterministic generation)
+- [x] New builder `scripts/deck-accuracy/deck-data.js` (assembler + hard gate) + `generate-decks-v2.js` runner; renderer `wordlabs-deck-generator.js` untouched. Zero AI for facts.
+- [x] Every deck derived from hardened word-study + word-study-derived matrices (real combos only, no repeated focus words across the week); a deck failing the gate isn't emitted.
+- [x] **350/360 decks regenerated.** Revived 13 sparse morphemes with +67 fable-generated, fully-gated, authority-verified words (word-study 3522→3589); type-fixed `tele/photo/chrono/horo` (real prefixes mislisted as bases), `pod/vore`→suffix; dropped `remove`(=re+move); re-tagged `-pathy` family.
+- [x] 67 new words wired app-wide: Word Study, decks, spelling/Speed Builder (dictionary.txt), 11 buildable in Morpheme Builder (valid-combos 4353→4368, bound-root fixes preserved).
+- [ ] **Follow-up:** 56 of the 67 new words need component bases (`stat/neighbour/link/sax…`, ~40 entries) in `data.js` for full Morpheme Builder buildability; optionally seed those words into data.js `examples` for Flashcards/Meaning Mode.
+- [x] 9 morphemes genuinely un-revivable (English lacks 3+ age-appropriate words): `claus, gyro, endo, stetho, kaleido, lingual, violet, curricular, terrestrial` — keep old decks.
+
+#### Worksheet audit — verified clean (unlike the slides)
+- [x] Most generators DERIVE from shared hardened data (worksheet-breakdown/rootlab parse `data.js` `<u>` markup; 3day is blank fill-in; soundsorter loads sound-sorter-data.js; analysis is AI-on-input) → they inherited today's fixes automatically.
+- [x] Only worksheet-syllable/phoneme embed splits: phonemes 0 issues; syllables 2 debatable calls (`hamburger`, `computer`) aligned to the authoritative split the slides use. No junk/inappropriate words present.
+
+---
+
 ### PHASE 8 — Growth & Integrations (Later)
 
 - [ ] Google Classroom integration (roster import via Google API)
