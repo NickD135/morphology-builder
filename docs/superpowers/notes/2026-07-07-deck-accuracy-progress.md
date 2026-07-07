@@ -38,3 +38,16 @@ Branch feat/deck-accuracy-phase1 — NOT merged, NOT pushed. Commits 95cf6cb..07
 Next: write the Phase 2 plan (rewrite generate-all-decks.js data layer to derive DATA from the now-hardened
 word-study-data.js + valid-combos.json; matrices from real combos; no repeats; fable only for prose; hard
 validation gate per deck; regenerate ~360 decks).
+
+## Phase 2 — Deck generation — ✅ COMPLETE (branch feat/deck-accuracy-phase2)
+Deterministic generation from hardened word-study data + word-study-derived matrices. ZERO AI/tokens.
+- 333/360 decks regenerated: real matrices, verified syllable/phoneme splits, verified sentences,
+  no repeated focus words across the week. Every generated deck passes validateDeckData; 12/12
+  random re-validations green.
+- 27 morphemes NOT regenerated (FAILED:insufficient-words, <3 verified words) — keep their existing
+  decks (documented exceptions): bases remove, claus, thermo, phon, chrono, photo, aero, tele, gyro,
+  endo, horo, stetho, kaleido, lingual, pod, violet, curricular, terrestrial, vore; prefixes em,
+  hyper, hypo; suffixes hood, ious, eous, sion, pathy.
+- No 404s: all 360 morphemes have a deck file on disk (333 new + 27 old).
+- Tooling: scripts/deck-accuracy/deck-data.js (builder+gate), generate-decks-v2.js (runner), state-decks.json.
+Branch feat/deck-accuracy-phase2 — NOT merged, NOT pushed.
