@@ -18,3 +18,17 @@ const mx = matrixFor('x','base',words);
 assert.ok(mx.prefixes.includes('re') && mx.prefixes.includes('un'));
 assert.ok(mx.suffixes.includes('ion') && mx.suffixes.includes('ed'));
 console.log('deck-data.test OK');
+
+// ---- assembler + validation gate ----
+const { buildDeckData, validateDeckData } = require('./deck-data');
+global.window = {}; require('../../data.js');
+const wsAll = (()=>{ global.window={}; require('../../word-study-data.js'); return window.WORD_STUDY_WORDS; })();
+const ctx = { words: wsAll, morphemeMeaning: 'build' };
+const data = buildDeckData({morpheme:'struct', type:'base'}, ctx);
+const dayWords = new Set([...data.day2.words, ...data.day3.words].map(w=>w.word));
+assert.strictEqual(dayWords.size, data.day2.words.length + data.day3.words.length); // no repeats across days
+assert.ok(data.prefixes.length && data.suffixes.length);
+assert.strictEqual(validateDeckData(data).ok, true);
+const broken = JSON.parse(JSON.stringify(data)); broken.day2.words[0].syllables = 'zzz/zzz';
+assert.strictEqual(validateDeckData(broken).ok, false);
+console.log('assembler.test OK');
