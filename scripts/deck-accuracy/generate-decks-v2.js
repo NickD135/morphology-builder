@@ -17,6 +17,11 @@ function loadMorphemes(){
   return [...body.matchAll(/morpheme:\s*"([^"]+)"(?:\s*,\s*type:\s*"([^"]+)")?/g)]
     .map(m=>({morpheme:m[1], type:m[2]||'base'}));
 }
+// Some combining forms are real PREFIXES in data.js but the old deck list types them "base",
+// so a base lookup finds nothing. Build them as prefixes (content) while keeping the listed
+// filename so teacher-resources links still resolve. `remove` is re+move — not a morpheme; skip.
+const OVERRIDE_TYPE = { tele:'prefix', photo:'prefix', chrono:'prefix', horo:'prefix', thermo:'prefix' };
+const SKIP = new Set(['remove']);
 function deckFile(morpheme, type){
   const tag = type==='prefix' ? '-prefix' : type==='suffix' ? '-suffix' : '';
   return path.join(ROOT,'output',`wordlabs-${morpheme}${tag}-3day.pptx`);
@@ -36,8 +41,10 @@ function meaningOf(MORPH, m, type){
   const pending = morphemes.filter(s => state[key(s)] !== 'generated').slice(0, BATCH);
   let generated=0, failed=0;
   for (const spec of pending){
+    if (SKIP.has(spec.morpheme)){ state[key(spec)]='SKIPPED:not-a-morpheme'; continue; }
+    const buildType = OVERRIDE_TYPE[spec.morpheme] || spec.type;   // content type (may differ from filename type)
     let data=null;
-    try { data = buildDeckData({morpheme:spec.morpheme, type:spec.type}, {words, morphemeMeaning: meaningOf(MORPH, spec.morpheme, spec.type)}); }
+    try { data = buildDeckData({morpheme:spec.morpheme, type:buildType}, {words, morphemeMeaning: meaningOf(MORPH, spec.morpheme, buildType)}); }
     catch(e){ state[key(spec)]='FAILED:build-error:'+e.message.slice(0,40); failed++; continue; }
     if (!data){ state[key(spec)]='FAILED:insufficient-words'; failed++; continue; }
     const v = validateDeckData(data);
