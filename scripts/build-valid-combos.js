@@ -41,6 +41,14 @@ for (const line of dictText.split(/\r?\n/)) {
 }
 console.log(`Dictionary: ${DICT.size} words`);
 
+// ── Word blocklist ───────────────────────────────────────────────────────────
+// Words that are real dictionary entries but only ever arise here as FALSE
+// morpheme decompositions (e.g. ego = e- + go, ago = a- + go). They are
+// monomorphemic in modern English, so showing them as buildable combos in the
+// Morpheme Builder is miseducative. Blocked here rather than in dictionary.txt,
+// which is also used at runtime by speed-mode.html to validate typed words.
+const EXCLUDE_WORDS = new Set(['ego', 'ago']);
+
 // ── Spelling rule helpers ────────────────────────────────────────────────────
 function isVowel(ch) { return 'aeiou'.includes(String(ch || '').toLowerCase()); }
 function isConsonant(ch) {
@@ -172,11 +180,17 @@ function generateCombos(prefixes, bases, suffixes) {
           if (!s1 && s2) continue;
 
           checked++;
+
+          // Bound roots (mot, nov, pend, vid…) are not standalone English words.
+          // Skip the bare-base combo only; prefix/suffix combos still build.
+          if (base.bound && !prefix && !s1 && !s2) continue;
+
           const candidates = computeWordCandidates(prefix, base, s1, s2);
 
           for (const word of candidates) {
             if (!word || word.length < 2) continue;
             if (!DICT.has(word)) continue;
+            if (EXCLUDE_WORDS.has(word)) continue;
 
             const key = `${prefix?.id || ''}|${base.id}|${s1?.id || ''}|${s2?.id || ''}`;
             if (seen.has(key)) continue;
