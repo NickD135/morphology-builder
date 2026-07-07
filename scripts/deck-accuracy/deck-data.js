@@ -229,8 +229,10 @@ function validateDeckData(data) {
   day3Set.forEach(function (w) { if (exampleSet.has(w) || day2Set.has(w)) overlap.add(w); });
   if (overlap.size) errors.push('word repeated across example/day2/day3: ' + Array.from(overlap).join(', '));
 
-  if (!Array.isArray(data.prefixes) || !data.prefixes.length) errors.push('prefixes matrix is empty');
-  if (!Array.isArray(data.suffixes) || !data.suffixes.length) errors.push('suffixes matrix is empty');
+  // The matrix must not be ENTIRELY empty, but one column may legitimately be empty:
+  // many bases only take suffixes (jump/jumping, no un-jump), and some affixes pair only one side.
+  if (!Array.isArray(data.prefixes) || !Array.isArray(data.suffixes)) errors.push('matrix columns must be arrays');
+  else if (!data.prefixes.length && !data.suffixes.length) errors.push('matrix is entirely empty');
 
   return { ok: errors.length === 0, errors: errors };
 }
