@@ -21,9 +21,20 @@ Final `syllablesSource` breakdown (3522 words):
 0 syllable-invariant failures across all 3522 words.
 State files: scripts/deck-accuracy/state-syllables.json (hms), state-sc.json (syllablecount).
 
-## Phase 1b — Phonemes (fable QA) + 7 syllable residuals — NOT STARTED
-- [ ] Task 4: phoneme linter → flagged-phonemes.json
-- [ ] Task 5: fable QA on flagged phonemes + the 7 syllable-residual words; apply under invariants gate
-- Next: run Task 4 (linter) to produce the flagged phoneme list, then size the fable batch.
+## Phase 1b — Phonemes + 7 syllable residuals — ✅ COMPLETE
+- Linter flagged 452 → found they were SYSTEMATIC (word-study used untaught `io` for -tion, split `n/g`).
+- Deterministic rule-fix (fix-phonemes-rules.js) aligned to taught-graphemes.json: -tion/-sion/-cian → ti/si/ci+o/a+n
+  (incl. inflections); word-final /ng/ → `ng`. 389 fixed, gated, 0 failures. Flagged 452 → 89.
+- Fable QA (fable 5, 1 agent) on the 89 phonemes + 7 syllable residuals: 89 phoneme + 7 syllable applied,
+  0 gate rejects. Flagged 89 → 28.
+- The 28 residual flags are VERIFIED-CORRECT (linter false positives): valid graphemes absent from the
+  taught-141 list (y_e, gue, sci, dg) or genuine separate n/g (angle, danger, congress). No action needed.
 
-## Phase 2 — Deck generation — NOT STARTED (separate plan)
+## Phase 1 — ✅ COMPLETE. Final: 0 invariant failures across 3522 words.
+syllablesSource: hms 2405 + sc 473 (division-verified) · hms-count 248 (count-verified) · fable 7 · pool 35 · agent 354 (all 1-syllable, trivially correct).
+Branch feat/deck-accuracy-phase1 — NOT merged, NOT pushed. Commits 95cf6cb..079f637.
+
+## Phase 2 — Deck generation — NOT STARTED
+Next: write the Phase 2 plan (rewrite generate-all-decks.js data layer to derive DATA from the now-hardened
+word-study-data.js + valid-combos.json; matrices from real combos; no repeats; fable only for prose; hard
+validation gate per deck; regenerate ~360 decks).
