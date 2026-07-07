@@ -20,7 +20,7 @@ function loadMorphemes(){
 // Some combining forms are real PREFIXES in data.js but the old deck list types them "base",
 // so a base lookup finds nothing. Build them as prefixes (content) while keeping the listed
 // filename so teacher-resources links still resolve. `remove` is re+move — not a morpheme; skip.
-const OVERRIDE_TYPE = { tele:'prefix', photo:'prefix', chrono:'prefix', horo:'prefix', thermo:'prefix' };
+const OVERRIDE_TYPE = { tele:'prefix', photo:'prefix', chrono:'prefix', horo:'prefix', thermo:'prefix', pod:'suffix', vore:'suffix' };
 const SKIP = new Set(['remove']);
 function deckFile(morpheme, type){
   const tag = type==='prefix' ? '-prefix' : type==='suffix' ? '-suffix' : '';
