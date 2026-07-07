@@ -51,3 +51,16 @@ Deterministic generation from hardened word-study data + word-study-derived matr
 - No 404s: all 360 morphemes have a deck file on disk (333 new + 27 old).
 - Tooling: scripts/deck-accuracy/deck-data.js (builder+gate), generate-decks-v2.js (runner), state-decks.json.
 Branch feat/deck-accuracy-phase2 — NOT merged, NOT pushed.
+
+## Phase 2b — Revive the 27 sparse morphemes (owner-requested)
+- Type-fix (free): tele(22)/photo(8)/chrono(6)/horo(3) were real prefixes mislisted as bases → built as prefix content. pod/vore → suffix. remove(=re+move) skipped.
+- +67 verified words generated (fable) for 13 feasible morphemes, authority-verified syllables + gated. word-study 3522→3589.
+- -pathy family re-tagged X+pathy for consistency.
+- **Result: 350/360 decks regenerated from verified data** (was 333). 9 genuinely infeasible keep old decks:
+  claus, gyro, endo, stetho, kaleido, lingual, violet, curricular, terrestrial (English lacks 3+ real words). remove dropped.
+- App-wide integration of the 67 new words:
+  - ✅ Word Study game, teaching decks, spelling/Speed Builder (dictionary.txt)
+  - ✅ Morpheme Builder: 11/67 buildable (valid-combos rebuilt 4353→4368; bound-root fixes preserved)
+  - ⏳ FOLLOW-UP: remaining 56 need component bases (stat/neighbour/link…) added to data.js to build
+  - ⏳ FOLLOW-UP (optional): seed the 13 morphemes' `examples` in data.js so new words surface in Flashcards/Meaning/Mission (morphemes already have 6+ examples, so already practisable)
+Branch feat/deck-accuracy-phase2 — NOT merged/pushed.
