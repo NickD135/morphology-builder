@@ -454,6 +454,7 @@ game page; Sound Sorter's is in `sound-sorter-data.js`.
 - **Low-stim + `prefers-reduced-motion`:** any new animation, sound or particle effect must be gated on both
 - **Scientist SVG anchors are frozen** — add depth/art as additive layers; give every `<defs>` id a per-instance suffix
 - New `scientist` fields persist through the generic `save_scientist_field` RPC — no DB migration needed
+- **Mock mode** (`tests/mock/`, see its README): `node tests/mock/server.js` runs the whole site and SOLO with fake data in place of Supabase; `tests/mock/browse.js` drives pages as pretend students for screenshots. Use it for testing instead of real accounts
 - Specs, plans and session notes live in `docs/superpowers/{specs,plans,notes}/`
 - Edge functions live in `supabase/functions/` and are deployed with `supabase functions deploy <name>`
 

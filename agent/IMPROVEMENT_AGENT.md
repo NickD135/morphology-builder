@@ -34,7 +34,7 @@ Build on the scaffolds that already exist rather than inventing parallel ones: S
 
 GitHub's GraphQL API is not available in these sessions, so `gh pr create` and `gh pr list` fail. Use the REST API through `gh api` instead, for example `gh api repos/NickD135/morphology-builder/pulls -f title=... -f head=agent/... -f base=main -f body=...` to open a PR, `gh api 'repos/NickD135/morphology-builder/pulls?state=all&per_page=30'` to list them, and `.../pulls/N/reviews` and `.../issues/N/comments` to read feedback.
 
-Run the site locally with `python3 -m http.server 8080 --bind 0.0.0.0`; Playwright is already in `package.json` for headless checks and screenshots.
+Test everything in mock mode (`tests/mock/README.md`): `node tests/mock/server.js` serves the whole site with fake data in place of Supabase, and `tests/mock/browse.js` logs in as one of four pretend students in a headless browser, plays through pages and takes screenshots. The students map onto the student lens: Ava (typical), Ben (reads below level, Support Mode), Chloe (early finisher, extension) and Dev (EAL/D). Use them for every walkthrough. If a page needs a query the fake client does not support yet, extend `tests/mock/mock-supabase.js` rather than reaching for real data, and never put real data in `tests/mock/fixtures.js`.
 
 ## Hard rules (never relaxed, including by the agent itself)
 
@@ -62,8 +62,8 @@ Resources follow the existing JSON schema: `unit_id`, `outcome_id`, `type` (vide
 2. Pick the work for this run. Rotate through the four tracks below so no track is neglected for more than four runs, but prefer whatever the lessons say he values most.
 3. Research before building. For pedagogy and resources, prefer primary and reputable sources: NESA, NSW DoE curriculum resources, AERO, Evidence for Learning, peer reviewed literacy and numeracy research, Five from Five, and Australian teacher practice. Note every source in the PR.
 4. Make the change, keeping it small enough to review in ten minutes.
-5. Check the work: run any tests or build, open changed pages in a headless browser, confirm no console errors, check Chromebook (1366px) and tablet widths and keyboard access, and screenshot before and after. Then do a student walkthrough: go through the changed task step by step as a Year 5 student who reads slightly below level, and as one who finishes early, and note in the PR where each would get stuck or bored.
-6. Open the PR with: what changed, why (with sources), how it was checked, screenshots where relevant, and anything Nicholas should look at closely.
+5. Check the work in mock mode: run any tests, open changed pages with `tests/mock/browse.js`, confirm `s.errors` is empty, check Chromebook (1366x768) and tablet (1024x768) sizes, low stim (`--low-stim`) and reduced motion, and keyboard access, and screenshot before (on main) and after (on your branch). Then do a student walkthrough: play the changed task step by step as Ben (reads below level) and as Chloe (finishes early), plus Dev if language matters, and note in the PR where each would get stuck or bored.
+6. Open the PR with: what changed, why (with sources), how it was checked, before and after screenshots, and anything Nicholas should look at closely. Do not commit screenshots to your work branch. Push them to the `agent-screenshots` branch (an orphan branch that is never merged; create it with `git switch --orphan agent-screenshots` if it does not exist) under `YYYY-MM-DD-slug/`, and embed them in the PR body as `https://github.com/NickD135/morphology-builder/blob/agent-screenshots/<path>?raw=true`.
 7. Update `agent/LOG.md` (one dated entry, a few lines), `agent/BACKLOG.md` (reprioritise, add ideas found while working) and commit them in the same PR.
 
 ## Tracks
