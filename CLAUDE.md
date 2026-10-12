@@ -20,15 +20,19 @@ privacy-law-compliant, multi-tenant, with proper teacher auth and a payment laye
   similar principles apply — worth being GDPR-compatible for future UK/EU expansion)
 **Key compliance:** Australian Privacy Principles (APPs), notifiable data breaches scheme
 **Pricing model:** Teacher subscription (individual) + custom school quotes (no fixed price)
-**Supabase region:** Should be `ap-southeast-2` (Sydney) for data sovereignty —
-  current project may be in US; check and migrate if needed
+**Supabase region:** `ap-southeast-2` (Sydney) — required for data sovereignty
 
 **GitHub repo:** `NickD135/morphology-builder`
 **Supabase project ref:** `kdpavfrzmmzknqfpodrl` (Sydney, ap-southeast-2)
 **Supabase URL:** `https://kdpavfrzmmzknqfpodrl.supabase.co`
 **Old Supabase (deprecated):** `qutsbcfkgiihcwaktsaz` (Singapore — do not use, migration completed 2026-03-25)
 **Local dev:** `python3 -m http.server 8080 --bind 0.0.0.0`
-**Live URL:** https://wordlabs.app (also https://morphology-builder.vercel.app)
+**Live URL:** https://wordlabs.app (also https://morphology-builder.vercel.app, and a GitHub Pages
+  mirror at `nickd135.github.io/morphology-builder/` for school networks that block Vercel)
+**Deploys:** pushing to `main` auto-deploys to production — confirm with Nick before pushing
+
+**Two products live in this repo:** Word Labs (the literacy app described below) and the
+**SOLO Tracker** at `/solo` — a maths SOLO-taxonomy tracker for Stage 3 (Section 3a).
 
 ---
 
@@ -37,45 +41,128 @@ privacy-law-compliant, multi-tenant, with proper teacher auth and a payment laye
 | Layer | Technology | Notes |
 |---|---|---|
 | Pages | Static HTML files | No build system — served directly |
-| Styling | Inline CSS per page | Lexend font from Google Fonts |
-| Data layer | `wordlab-data.js` (IIFE module) | Shared across all pages |
-| Database | Supabase (PostgreSQL) | Anon key used client-side |
-| Auth | ❌ None yet | Hardcoded password `MorphemeLab` in HTML |
-| Hosting | Currently Codespaces only | Needs Vercel deployment |
-| Edge functions | Supabase Edge (Deno) | `polish-item`, `create-checkout`, `stripe-webhook`, `send-feedback`, `create-portal-session`, `get-subscription`, `analyze-words` |
+| Styling | `wordlab-common.css` + inline CSS per page | Lexend font from Google Fonts |
+| Data layer | `wordlab-data.js` (IIFE module) | Shared across all Word Labs pages |
+| Database | Supabase (PostgreSQL, Sydney) | Anon key used client-side; security comes from RLS + RPCs |
+| Auth | Supabase Auth (teachers) | Email/password. Students log in with class code + name + 3-char code, verified server-side |
+| Hosting | Vercel | Auto-deploys on push to `main` → https://wordlabs.app. GitHub Pages mirror for school networks that block Vercel |
+| Edge functions | Supabase Edge (Deno) | 13 functions — see table below |
 | Canvas | Fabric.js 5.3.1 | Used in `item-creator.html` only |
-| Build scripts | Node.js (local) | `scripts/build-valid-combos.js` generates morpheme combo JSON |
+| SOLO Tracker | React 18 + Babel standalone (CDN, in-browser) | `solo/index.html` only — a separate single-file app, see Section 3a |
+| Build scripts | Node.js (local) | `scripts/` — combos, decks, word-study pool, SOLO docx, resource health |
+| CI | GitHub Actions | `resource-health.yml` (fortnightly cron), `claude-improve.yml` (Claude Code Action on issues/comments) |
 | Payments | Stripe (live) | ABN + "Word Labs Education" sole trader |
 | Transactional email | Resend | Free tier, domain verified, sends from notifications@wordlabs.app |
+| TTS | Google Cloud TTS via `speak-word` | English voice `en-AU-Chirp3-HD-Leda`; browser TTS fallback |
+
+### Edge functions (`supabase/functions/`)
+
+| Function | Purpose |
+|---|---|
+| `analyze-words` | AI analysis of teacher-typed words (clues, morphemes, syllables, phonemes) |
+| `analyze-morphemes` | AI analysis for custom class morpheme sets |
+| `spelling-feedback` | AI-written per-student spelling feedback for the dashboard Spelling Feedback tab |
+| `polish-item` | AI polish of teacher-drawn shop items |
+| `translate-words` | EALD translations (cached in `translations` table) |
+| `generate-translated-deck` | Content for translated teaching decks |
+| `speak-word` | Google Cloud TTS proxy |
+| `send-feedback` | Feedback/quote/signup notification email via Resend |
+| `create-checkout`, `create-portal-session`, `get-subscription`, `stripe-webhook` | Stripe |
+| `get-analytics` | Owner-only (checks `OWNER_EMAIL` secret) cross-school analytics for `analytics.html` |
+
+All Claude-calling functions use model `claude-sonnet-4-6`. All client-facing functions share an
+`ALLOWED_ORIGINS` CORS list (wordlabs.app, www.wordlabs.app, vercel.app, github.io, localhost).
 
 ---
 
 ## 3. All Pages & Their Purpose
 
-| File | Who uses it | What it does |
+52 HTML pages at the repo root, plus the SOLO Tracker at `solo/index.html`.
+
+### Student activities (14)
+
+| File | Activity | What it does |
 |---|---|---|
-| `landing.html` | Everyone | Home page — activity cards, scientist character display, login UI |
-| `morpheme-builder.html` | Students | Morpheme Builder — click morpheme tiles to explore building words; pre-computed viability, no drag-and-drop |
-| `index.html` | — | Redirects to `landing.html` |
-| `mission-mode.html` | Students | Prefix/suffix drag game with fuel bar, start screen login |
-| `meaning-mode.html` | Students | Match morphemes to their meanings, fuel bar |
-| `breakdown-mode.html` | Students | Type prefix/base/suffix of a given word under time pressure |
-| `phoneme-mode.html` | Students | Split words into phonemes (Starter/Level Up/Challenge) |
-| `syllable-mode.html` | Students | Chop words into syllables |
-| `sound-sorter.html` | Students | Choose correct grapheme for a sound |
-| `speed-mode.html` | Students | Build words against the clock |
-| `flashcard-mode.html` | Students | Flip through morpheme meaning flashcards |
-| `root-lab.html` | Students | Explore word roots and etymology |
-| `word-refinery.html` | Students | Arrange words along a cline from Tier 1 everyday to Tier 3 specialist |
-| `scientist.html` | Students | Dress their scientist character, view badges, spend quarks in shop |
-| `dashboard.html` | Teachers | Heatmaps per student/activity, intervention flags, reward system |
-| `class-setup.html` | Teachers | Create classes, add/remove students, manage codes |
-| `item-creator.html` | Teachers | Draw or AI-generate custom shop items (lab coats, hats, etc.) |
-| `account.html` | Teachers | Account settings — plan status, change password, school name, subscription management, delete account |
-| `content-editor.html` | Owner only | Hidden page — edit all game word data (syllable splits, phonemes, stages, clues) with Supabase overrides |
-| `teacher-login.html` | Teachers | Email/password login + create account (with school name), forgot-password flow |
-| `teacher-signup.html` | Teachers | Email/password signup, creates school + teacher records |
-| `about.html` | Everyone | Research base, syllabus alignment, activities overview, references |
+| `morpheme-builder.html` | Morpheme Builder | Click morpheme tiles to build words; full morpheme set shown, pre-computed viability from `valid-combos.json`; 🔬 Study hand-off to Word Study |
+| `flashcard-mode.html` | Flashcards | Flip through morpheme meaning flashcards |
+| `word-study.html` | Word Study | Capstone deep-dive on one word through 6 stages (meaning, morphemes, syllables, phonemes…); 3,589-word pool |
+| `mission-mode.html` | Mission Mode | Match prefixes/suffixes to the rest of the word, fuel bar |
+| `meaning-mode.html` | Meaning Match-Up | Match morphemes to their meanings, fuel bar |
+| `breakdown-mode.html` | Breakdown Blitz | Type prefix/base/suffix of a given word |
+| `phoneme-mode.html` | Phoneme Splitter | Split words into phonemes (Starter/Level Up/Challenge/Mixed) |
+| `syllable-mode.html` | Syllable Splitter | Chop words into syllables |
+| `sound-sorter.html` | Sound Sorter | Choose the correct grapheme for a sound |
+| `speed-mode.html` | Speed Builder | Build words against the clock |
+| `root-lab.html` | Root Lab | Identify morphemes, then unlock the meaning |
+| `homophone-mode.html` | Homophone Hunter | Three modes: identify / match sentences / fix paragraphs |
+| `word-spectrum.html` | Word Spectrum | Synonyms, antonyms, shades of meaning |
+| `word-refinery.html` | The Refinery | Arrange words along a cline, Tier 1 → Tier 3 |
+
+### Other student pages
+
+| File | What it does |
+|---|---|
+| `landing.html` | Home — activity cards, status strip, challenges, leaderboard, login UI (also the logged-out marketing page and teacher landing) |
+| `index.html` | Redirects to `landing.html` |
+| `scientist.html` | Lab Shop — single-screen dressing room + shop (colours, patterns, skin, hair, head, face, wings, effects, dances, worlds, pets, badges, custom) |
+| `spelling-test.html` | Spelling Check-In — audio dictation assessment (only surfaced when a teacher starts a check-in) |
+| `qr-login.html` | QR code login landing (not linked from other pages; reached via printed QR codes) |
+
+### Teacher pages (all behind `requireTeacherAuth()`)
+
+| File | What it does |
+|---|---|
+| `teacher-login.html` / `teacher-signup.html` | Email/password login, signup (school search-as-you-type + postcode), forgot password |
+| `onboarding.html` | 5-step first-run flow (school → class → students → login cards → try an activity) |
+| `dashboard.html` | Three-tier stage-aware heatmaps, student profiles, rewards, levels modal, spelling sets + check-ins, Spelling Feedback tab, custom word lists / morpheme sets, suggested sets |
+| `class-setup.html` | Create classes, add/remove/import students, print login cards |
+| `account.html` | Plan status, password, school name/postcode, school invite code, subscription, delete account |
+| `item-creator.html` | Draw or AI-polish custom shop items |
+| `teacher-resources.html` | Teaching slide decks (with in-browser PPTX viewer) + worksheet generators |
+| `worksheet-{3day,analysis,breakdown,homophones,phoneme,refinery,rootlab,soundsorter,spectrum,syllable}.html` | 10 printable worksheet generators |
+
+### Owner-only pages
+
+| File | What it does |
+|---|---|
+| `content-editor.html` | Hidden — edit all game word data with `word_corrections` overrides (owner email check, fake 404 otherwise) |
+| `analytics.html` | Cross-school usage analytics via the `get-analytics` edge function (server-side `OWNER_EMAIL` check) |
+
+### Marketing, info & legal
+
+`about.html`, `faq.html`, `pricing.html`, `for-schools.html`, `teacher-guide.html`, `feedback.html`,
+`privacy.html`, `parent-privacy.html`, `terms.html`, `data-agreement.html`,
+`security-architecture.html`, `incident-response.html`, `upgrade.html` (redirects to pricing).
+
+### 3a. SOLO Tracker (`/solo`) — a second product in this repo
+
+`solo/index.html` is a **separate single-file app** (~19,700 lines, React 18 via in-browser Babel,
+no build step) — a **maths** SOLO-taxonomy tracker for NSW Stage 3 Year B, Units 21–40. It shares
+the Word Labs Supabase project, classes, students and teacher auth, but none of the `wordlab-*.js`
+modules. Students work through each outcome as **Grow** (guided lesson + resources) → **Know**
+(practice) → **Show** (assessment), with pre/post tests, unit reviews, reflections and a teacher
+heatmap/results view.
+
+- **Read before touching it:** `docs/SOLO_PIPELINE_SPEC.md` (unit build pipeline, matches the code),
+  `solo/UNIT_REVIEW_PLAYBOOK.md`, `units/SOLO_PROGRESS.md` (per-unit status), `docs/PROMPTS.md`,
+  `docs/SOLO_Tracker_Rubric_Specification.md`.
+- **Two deliverables per unit:** A = in-app content in `solo/index.html` (+ `resources` table);
+  B = teacher program docx in `units/u{NN}/` built by `scripts/build_program_template.js` from
+  `unit_data.js`. `units/u{NN}/` also holds the printable Student Rubric and pre/post-test docx.
+- **Resources:** DB-canonical in the Supabase `resources` table for most units; some early units
+  (u24–u28) still have hardcoded `RESOURCES`/`BEYOND` blocks — see the DB-vs-code conflicts list in
+  `SUGGESTIONS.md`. Admin-only resource editing is gated on `ADMIN_EMAIL` in the file.
+- **CSP:** `/solo` has its own header block in `vercel.json` (needs `'unsafe-eval'` for Babel plus
+  React/Babel CDN paths) and `must-revalidate` caching.
+- **Source material** (`SOLO Units/`, DoE zips, rubric drafts) is gitignored by design.
+
+### 3b. Suggestions / resource health
+
+`scripts/check-resources.js` runs on the 1st and 15th of each month via
+`.github/workflows/resource-health.yml`, checks every live SOLO resource URL, and commits a
+regenerated **`SUGGESTIONS.md`** at the repo root (`chore(suggestions): fortnightly resource health
+check`). It is read-only — it never edits content or the DB. Design: `docs/SUGGESTION_ENGINE.md`
+(only the resource-health part is built so far). Check `SUGGESTIONS.md` at session start for dead links.
 
 ---
 
@@ -83,197 +170,273 @@ privacy-law-compliant, multi-tenant, with proper teacher auth and a payment laye
 
 | File | Purpose |
 |---|---|
-| `wordlab-data.js` | IIFE — Supabase client, session login/logout, `recordAttempt`, class CRUD, character/badge logic, CSV export |
-| `wordlab-scientist.js` | SVG scientist character builder (`WLScientist.buildSVG(options, mood)`) |
-| `wordlab-effects.js` | Visual particle effects for the scientist (aura, galaxy, electric, etc.) |
+| `wordlab-data.js` | IIFE (~3,000 lines) — Supabase client, session login/logout, `recordAttempt`, class CRUD, teacher auth, character/badge/shop logic, challenges, featured game, word lists, spelling sets, focus words, EALD, word corrections, CSV export |
+| `wordlab-stage.js` | `WLStage` — curriculum stage definitions (`s2e, s2l, s3e, s3l, s4`), `filterByStage`/`weightByStage`, mastery calculation. Loaded before game scripts |
+| `wordlab-scientist.js` | SVG scientist builder (`WLScientist.buildSVG(options, mood)`), hair, pets (`buildPetSVG`), reactions, header widget |
+| `wordlab-shop-data.js` | `WLShopData` — single source of truth for the Lab Shop catalogue (colours, patterns, skin tones, hair, heads, faces, wings, worlds, pets…) |
+| `wordlab-effects.js` | `WLEffects` — 25 particle effects with behind/front depth layers |
+| `wordlab-worlds.js` | `WLWorlds` — 8 animated world backdrops with SVG scenery |
 | `wordlab-audio.js` | Sound effects |
-| `wordlab-extension-data.js` | Extended content for extension mode students |
 | `wordlab-teacher.js` | Teacher Mode for game pages — no XP, no timer, word count picker, rich feedback, Next button |
-| `wordlab-help.js` | First-visit instruction popup + floating ? help button on all game pages |
+| `wordlab-help.js` | First-visit instruction popup + floating ? help button on game pages |
 | `wordlab-hints.js` | "Need Advice" scientist hints + support mode toggle + speech bubble UI |
-| `wordlab-tour.js` | Guided spotlight walkthrough tours — overlay + tooltip + step sequencing for teacher/student onboarding |
-| `data.js` | Static morpheme/word content data |
+| `wordlab-tour.js` | Guided spotlight walkthrough tours (landing + dashboard) |
+| `wordlab-suggested-sets.js` | `WLSuggested` — pure logic that builds stage-graded suggested spelling sets per morpheme (dashboard only) |
+| `wordlabs-deck-translated.js` | `WLDeckBuilder` — client-side translated PPTX builder (pptxgenjs in browser) |
+| `data.js` | Morpheme content, IIFE-wrapped; exposes `window.MORPHEMES` (`prefixes`/`suffixes`/`bases`), `window.PREFIXES`, `window.SUFFIXES` |
+| `sound-sorter-data.js` | Shared Sound Sorter word data (game + worksheet) |
+| `word-study-data.js` | `window.WORD_STUDY_WORDS` — generated, invariant-verified pool (~2.4MB; only `word-study.html` loads it) |
+
+**Data files:** `valid-combos.json` (generated by `scripts/build-valid-combos.js` — never hand-edit),
+`dictionary.txt`, `word-phoneme-data.json` (pre-computed syllable/phoneme data for suggested sets),
+`word-study-dropped.json` (words the vet pass rejected).
+
+**Node-only (repo root):** `wordlabs-deck-generator.js` (PPTX renderer), `generate-all-decks.js`
+(old AI batch generator — superseded by `scripts/deck-accuracy/generate-decks-v2.js`, which is
+deterministic), `wordlabs-worksheet-generator.py`.
+
+`wordlab-extension-data.js` no longer exists (retired in Phase 7.23).
 
 ---
 
 ## 5. Database Schema (Supabase)
 
+Migrations live in `supabase/migrations/` and are **run by hand in the Supabase SQL editor** — there
+is no migration runner, and a few early tables (`classes`, `students`, `student_progress`,
+`student_character`, `shop_items`, `class_morphemes`, `daily_usage`, `feedback`, `teacher_accounts`,
+`resources`, `solo_reflections`) have no `CREATE TABLE` in that folder. Treat the live DB as the
+source of truth and check it before assuming a column exists.
+
 ```sql
+-- ── Core ─────────────────────────────────────────────────────
+schools (
+  id uuid PK, name text, postcode text,
+  plan text,                   -- 'trial' | 'active' | 'expired' | 'payment_failed' | 'teacher'
+  trial_ends_at timestamptz, stripe_customer_id text, student_limit integer,
+  invite_code text UNIQUE, created_at timestamptz
+)
+
+teachers (
+  id uuid PK, auth_user_id uuid,  -- → auth.users
+  school_id uuid FK→schools, email text, plan text,
+  scientist jsonb,             -- teacher's own scientist (dashboard loading screen)
+  created_at timestamptz
+)
+
+teacher_accounts ( email, tier, student_cap, … )   -- tier tracking; treated as optional in code
+
 classes (
-  id uuid PK,
-  name text,
-  class_code text UNIQUE,
-  teacher_password text,       -- ⚠️ plain text, no real auth yet
-  settings jsonb,
+  id uuid PK, name text, class_code text UNIQUE,   -- auto-generated 6-char
+  auth_user_id uuid, school_id uuid FK→schools,
+  teacher_password text,       -- ⚠️ legacy plain-text column, still written by createClass(), not used for auth
+  settings jsonb,              -- focusGame, lowStimMode, …
   created_at timestamptz
 )
 
 students (
-  id uuid PK,
-  class_id uuid FK→classes,
-  name text,
-  student_code text UNIQUE,   -- 4-char code students use to log in
-  extension_mode boolean
+  id uuid PK, class_id uuid FK→classes, name text,   -- first name only
+  student_code text,           -- 3-char login code, verified via verify_student_login RPC
+  extension_mode boolean, extension_activities jsonb,
+  support_mode boolean, eald_language text,
+  stage text,                  -- 's2e' | 's2l' | 's3e' | 's3l' | 's4'
+  stage_overrides jsonb,       -- per-activity stage overrides
+  focus_words jsonb            -- wrong check-in words carried into practice games
 )
 
 student_progress (
-  id uuid PK,
-  student_id uuid FK→students,
-  activity text,               -- see activity keys below
-  category text,               -- see category formats below
-  correct integer,
-  total integer,
-  total_time bigint,
-  is_extension boolean,
-  updated_at timestamptz,
+  id uuid PK, student_id uuid FK→students,
+  activity text, category text,        -- see Section 6
+  correct integer, total integer, total_time bigint,
+  is_extension boolean, updated_at timestamptz,
   UNIQUE(student_id, activity, category)
 )
 
 student_character (
   student_id uuid PK FK→students,
-  quarks integer,              -- in-game currency
-  xp integer,
-  badges jsonb,                -- array of badge IDs earned
-  scientist jsonb,             -- outfit/accessory choices
-  stats jsonb                  -- sessions, totalAnswered, bestStreak etc.
+  quarks integer, xp integer, badges jsonb,
+  scientist jsonb,             -- outfit incl. skinTone, hair, hairColor, world, pet, owned items
+  stats jsonb
 )
+
+daily_usage ( student_id FK→students ON DELETE CASCADE, usage_date, question_count, … )
 
 shop_items (
-  id uuid PK,
-  name text,
-  item_type text,              -- coat | head | face | background
-  image_data text,             -- ⚠️ base64 PNG stored in DB (should move to Storage)
-  rarity text,                 -- common | rare | epic | legendary
-  unlock_method text,
-  quark_cost integer,
-  is_active boolean,
-  available_from date,
-  available_until date,
-  milestone_type text,
-  milestone_threshold integer,
-  secret_code text,
-  limited_days integer,
-  release_date timestamptz,
-  created_at timestamptz
+  id uuid PK, school_id uuid, name text, item_type text,  -- coat | head | face | background
+  image_data text,             -- base64 (legacy / fallback, still NOT NULL)
+  image_url text,              -- Supabase Storage (`shop-items` bucket)
+  rarity text, unlock_method text, quark_cost integer, is_active boolean,
+  available_from date, available_until date, milestone_type text, milestone_threshold integer,
+  secret_code text, limited_days integer, release_date timestamptz, created_at timestamptz
 )
+
+-- ── Teacher content ──────────────────────────────────────────
+class_word_lists (
+  id uuid PK, class_id FK→classes, name text, words jsonb,
+  games jsonb DEFAULT '["breakdown"]', priority text,   -- mixed | first | only
+  stage_group text, created_at, updated_at
+)
+word_list_assignments ( id, word_list_id FK ON DELETE CASCADE, student_id FK ON DELETE CASCADE, assigned_at, UNIQUE(word_list_id, student_id) )
+
+class_morphemes (
+  id uuid PK, class_id FK→classes ON DELETE CASCADE, name text, morphemes jsonb,
+  games jsonb DEFAULT '["meaning","mission"]', priority text DEFAULT 'mixed', created_at, updated_at
+)
+morpheme_set_assignments ( id, morpheme_set_id FK→class_morphemes, student_id FK→students, assigned_at )
+
+class_spelling_sets (
+  id uuid PK, class_id FK→classes ON DELETE CASCADE, name text, set_number integer, words jsonb,
+  stage_group text, assessment_mode text DEFAULT 'student', assessment_started_at timestamptz,
+  created_at, updated_at
+)
+spelling_set_assignments ( id, spelling_set_id FK, student_id FK, active boolean, assigned_at, completed_at )
+spelling_check_in_results (
+  id, spelling_set_id FK, student_id FK, results jsonb,  -- [{word, typed, correct}]
+  score integer, total integer, session_started_at timestamptz, created_at
+)
+
+-- ── Content & misc ───────────────────────────────────────────
+word_corrections (
+  id uuid PK, game text, word_key text, corrections jsonb,  -- patched over static defaults at game load
+  updated_at, UNIQUE(game, word_key)
+)
+translations ( id, source_text, target_language, translation, context, created_at )   -- EALD cache
+feedback ( … )                                                                       -- feedback + quote form submissions
+
+-- ── SOLO Tracker (see Section 3a) ────────────────────────────
+resources              ( unit/outcome key, label, url, type )          -- student-facing Grow resources (DB-canonical)
+solo_resources         ( id, unit_id, outcome_id, type, label, url, question jsonb, scope 'global'|'class', class_id, created_by, sort_order )
+solo_progress          ( student, outcome_key, completed, updated_at )
+solo_show_completions  ( id, student_id, class_id, unit_id, outcome_id, ticked_at )
+solo_show_attempts     ( id, student_id, class_id, unit_id, outcome_id, correct, total, answers jsonb, created_at )  -- answers: [{text,type,given,correct,ms}]
+solo_test_snapshots    ( id, student_id, unit_id, by_outcome jsonb, passed_count, total_count, taken_at )        -- immutable pre/post sittings
+solo_review_results    ( id, student_id, class_id, unit_id, review_key, by_outcome jsonb, passed_count, total_count, completed_at )
+solo_reflections       ( student, unit_id, outcome_id, reflection text, teacher_reaction text )
+solo_assessment_reflections ( id, student_id, class_id, unit_id, outcome_id, score_correct, score_total, answers jsonb, teacher_reaction text, updated_at )
+solo_hidden_students   ( class_id, student_id )
 ```
 
-schools (
-  id uuid PK,
-  name text,
-  plan text,                   -- 'trial' | 'active' | 'expired' | 'payment_failed' | 'teacher'
-  trial_ends_at timestamptz,
-  stripe_customer_id text,
-  student_limit integer,
-  created_at timestamptz
-)
+### RPCs (Postgres functions called from the client)
 
-teachers (
-  id uuid PK,
-  auth_user_id uuid,           -- FK to Supabase auth.users
-  school_id uuid FK→schools,
-  email text,
-  plan text,
-  created_at timestamptz
-)
-
-class_word_lists (
-  id uuid PK,
-  class_id uuid FK→classes,
-  name text,
-  words jsonb,                 -- array of word objects with breakdown data
-  games jsonb DEFAULT '["breakdown"]',  -- which games: breakdown, syllable, phoneme
-  created_at timestamptz,
-  updated_at timestamptz
-)
-
-word_list_assignments (
-  id uuid PK,
-  word_list_id uuid FK→class_word_lists ON DELETE CASCADE,
-  student_id uuid FK→students ON DELETE CASCADE,
-  assigned_at timestamptz,
-  UNIQUE(word_list_id, student_id)
-)
-
--- Note: school_id has been added to classes and shop_items tables
-
-word_corrections (
-  id uuid PK,
-  game text,                   -- 'phoneme' | 'syllable' | 'breakdown' | 'sound-sorter' | 'root-lab' | 'refinery' | 'spectrum' | 'homophone' | 'morpheme'
-  word_key text,               -- word or item identifier
-  corrections jsonb,           -- only the changed fields (patched over defaults at game load)
-  updated_at timestamptz,
-  UNIQUE(game, word_key)
-)
+| RPC | Purpose |
+|---|---|
+| `verify_student_login` | Server-side student code check — codes are never sent to the client |
+| `increment_progress` | Atomic progress upsert (`recordAttempt`) |
+| `atomic_purchase` | Row-locked shop purchase |
+| `save_scientist_field` | Targeted `jsonb_set` on one scientist field (generic — new fields need no migration) |
+| `gift_owned_item` | Teacher reward: add an item to a student's owned list |
+| `delete_class` | Atomic cascade delete of a class |
+| `search_schools` | Search-as-you-type school picker on signup |
+| `get_my_school_id` | Used inside RLS policies for school scoping |
 
 ---
 
 ## 6. Activity Keys & Category Formats
 
-These must match exactly between `recordAttempt()` calls and dashboard COLUMNS:
+These must match exactly between `recordAttempt()` calls and the dashboard. Games that record
+`"group:detail"` are aggregated back to the group by prefix matching on the dashboard
+(`_aggregateDifficultyResult()`), so older rows without the detail part still count.
 
 | Activity key | Category format | Example |
 |---|---|---|
-| `phoneme-splitter` | Level name | `"Starter"` / `"Level up"` / `"Challenge"` |
-| `syllable-splitter` | Syllable count | `"2 syllables"` / `"3 syllables"` / `"4+ syllables"` |
+| `phoneme-splitter` | `Level:word` | `"Starter:bridge"` |
+| `syllable-splitter` | `Count:word` | `"2 syllables:tiger"` |
+| `root-lab` | `Level:word` | `"Starter:telescope"` |
+| `sound-sorter` | `SoundLabel:grapheme` | `"Long A:ai"` |
 | `breakdown-blitz` | The word itself | `"unhappiness"` |
 | `mission-mode` | `type:id` | `"prefix:re"` / `"suffix:ing"` |
 | `meaning-mode` | `type:id` | `"prefix:re"` / `"suffix:ing"` |
-| `sound-sorter` | Sound/grapheme | varies |
+| `homophone-hunter` | `mode:group` | `"mode1:there/their/they're"` |
+| `word-spectrum` | `mode:word` | `synonym` / `antonym` / `spectrum` modes |
+| `word-refinery` | `cline:category` | `"cline:Talking"` |
+| `speed-mode` | Base form | `"play"` |
+| `word-study` | The word itself | `"telescope"` |
+
+Stage handling on the dashboard: Breakdown / Meaning / Mission categories are stage-tagged content
+(`CATEGORY_STAGE_GAMES`); Phoneme / Syllable / Root Lab group **students** by stage
+(`STAGE_GROUPED_GAMES`); the rest are flat heatmaps with drill-down.
 
 ---
 
-## 7. Current Auth Situation (Important)
+## 7. Auth
 
-**Students:** Log in by selecting their class code then their name. Session stored in
-`sessionStorage` as `wordlab_session_v1`. No password.
+**Teachers:** Supabase Auth, email + password (`teacher-login.html` / `teacher-signup.html`).
+Every teacher page calls `WordLabData.requireTeacherAuth()`, which redirects to login with a
+`returnTo` param. Signup creates a `schools` row + `teachers` row (auto-created by
+`getTeacherRecord()` if missing). New signups currently get `plan: 'active'` with a 12-month window
+(free early access) — marketing copy on `for-schools.html` says 3 months.
 
-**Teachers:** Two separate hardcoded password gates:
-- `class-setup.html` — checks `val === 'MorphemeLab'` in JS
-- `item-creator.html` — same check
-- `dashboard.html` — uses `verifyPassword(classId, pw)` which reads `teacher_password` from the
-  `classes` table (plain text comparison)
+**Students:** Pick class code → name → enter their 3-character student code. The code is checked
+server-side by the `verify_student_login` RPC. Session lives in `sessionStorage` as
+`wordlab_session_v1` (plus `wl_*` keys for stage, extension, support, low-stim, EALD). No passwords,
+no email, first names only.
 
-**This is the #1 thing to fix before selling to schools.**
+**Teacher preview:** "View as Student" sets a `wl_teacher_preview` flag. Anything that grants extra
+access on that basis (e.g. free Lab Shop items) must also require a real `getTeacherSession()` JWT —
+the flag alone is client-writable and spoofable.
+
+**Owner-only:** `content-editor.html` (client email check + fake 404), `analytics.html` (edge
+function checks `OWNER_EMAIL`), SOLO resource admin (`ADMIN_EMAIL` in `solo/index.html`).
+
+**Data isolation:** RLS scopes all writes to the teacher's school via `get_my_school_id()`.
+SELECT on student-facing tables is intentionally open to the anon key so students can log in and play.
 
 ---
 
 ## 8. Known Technical Debt
 
-1. **Anon key is public** in HTML source — students with DevTools can read/write any row
-2. **No school isolation** — all classes/students visible to anyone with the anon key
-3. **`image_data` stored as base64 in DB** — will bloat the database and slow shop loads as more items are created; needs to move to Supabase Storage
-4. **`recordAttempt` has a race condition** — does SELECT then UPSERT; two fast answers can lose one quark/XP increment
-5. **Hardcoded passwords in HTML source** — `MorphemeLab` visible to anyone
-6. **No deployment pipeline** — no Vercel/Netlify, no custom domain, runs in Codespaces
-7. **No error boundary** — if Supabase is down, pages fail silently
-8. **`teacher_password` stored plain text** in `classes` table
+1. **`classes.teacher_password`** — legacy plain-text column. No longer used for auth, but
+   `createClass()` still writes it and `verifyPassword()` is still exported from `wordlab-data.js`.
+   Remove the column, the write and the dead function.
+2. **Open SELECT for the anon key** on student tables (names, progress, character) — by design for
+   passwordless student login, but it means anyone with the anon key can read them. Revisit if a
+   thin server layer is added.
+3. **Data dumps tracked in git** at the repo root — `Supabase Snippet *.csv`,
+   `*_import.sql`, `class_morphemes_migration.sql`. Review for student data and move out of the repo.
+4. **`wordlab-data.js` is a ~3,000-line monolith** (data, UI, auth, challenges, EALD, shop).
+5. **`solo/index.html` is a ~19,700-line single file** compiled by Babel in the browser (slow first
+   paint, needs `'unsafe-eval'` in its CSP).
+6. **Morpheme data still partly duplicated** outside `data.js` (e.g. Mission Mode `meaningPattern`
+   lookup tables, inline game pools in each game page).
+7. **No migration runner / incomplete migration history** — see Section 5.
+8. **`shop_items.image_data`** base64 still required (NOT NULL) alongside `image_url`.
+9. **Error handling** — offline banner exists, but Supabase calls are not consistently wrapped and
+   there is no retry logic.
+10. **`output/` is ~325MB of committed PPTX** (360 decks) — slows clones.
+11. **No automated test suite** — `tests/` holds a few Node scripts and manual Playwright harnesses
+    (`tests/manual/`); `npm test` is a stub.
+12. **Teacher-led spelling check-in has no real-time sync** (would need Supabase Realtime).
 
 ---
 
 ## 9. Content Reference
 
-### Prefixes (35)
-`ad, anti, con, contra, de, dis, en, em, ex, e, extra, fore, hyper, in, inter, mal, mega, micro,
-mid, mis, multi, non, ob, over, post, pre, pro, re, semi, sub, super, trans, un, under, a`
+Counts as of 2026-10-12 — the lists are too long to keep here; read them from the source files.
 
-### Suffixes (22)
-`er, or, ing, ed, ly, ful, less, ness, ment, ion, able, ish, ist, ive, ous, al, hood, ship, ity,
-ance, ent, ic`
+| Content | Count | Source |
+|---|---|---|
+| Prefixes | 108 | `data.js` → `window.MORPHEMES.prefixes` |
+| Suffixes | 96 | `data.js` → `window.MORPHEMES.suffixes` |
+| Bases | 450 | `data.js` → `window.MORPHEMES.bases` |
+| Valid Morpheme Builder combos | 4,368 | `valid-combos.json` (rebuild with `node scripts/build-valid-combos.js`) |
+| Dictionary | 20,998 words | `dictionary.txt` |
+| Word Study pool | 3,589 words | `word-study-data.js` (pipeline in `scripts/word-study/`) |
+| Teaching slide decks | 360 `.pptx` in `output/` | Site copy says 355 |
+| Worksheet generators | 10 | `worksheet-*.html` |
+| SOLO units | 20 (u21–u40) | `solo/index.html`, `units/` |
 
-### Breakdown Blitz words (42)
-`unhappiness, careless, replaying, disagreement, teacher, preview, rebuild, movement, helpful,
-powerless, return, transport, submarine, nonfiction, running, significant, happiness, unhelpful,
-rewrite, preheat, forecast, foresee, multitask, hyperactive, malfunction, semicircle, semifinal,
-microphone, megaphone, midpoint, midnight, extraordinary, enable, encourage, empower, construct,
-atypical, progress, export, observe, contradict, proactive`
+Every morpheme carries a curriculum `stage` (`s2e`, `s2l`, `s3e`, `s3l`, `s4`); bound Latin/Greek
+roots carry `bound:true` so the bare root is not buildable as a word. Game word pools
+(Breakdown Blitz, Phoneme, Syllable, Root Lab, Homophones, Spectrum, Refinery) live inline in each
+game page; Sound Sorter's is in `sound-sorter-data.js`.
 
 ---
 
 ## 10. Coding Conventions
 
-- **No build system** — pure HTML/CSS/JS, no npm, no bundler, no TypeScript on the frontend
-- **No frameworks** — vanilla JS only
+- **No build system** — pure HTML/CSS/JS, no bundler, no TypeScript on the frontend. `package.json`
+  exists only for local Node scripts (`docx`, `pptxgenjs`, `playwright`)
+- **No frameworks** — vanilla JS only. The one exception is `solo/index.html` (React via CDN + Babel)
+- **Shared chrome CSS** lives in `wordlab-common.css` (reset, variables, header, footer, focus rings)
 - **Supabase CDN** loaded via `<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">`
 - **`wordlab-data.js` loaded BEFORE inline game scripts** on every page
 - **Font:** Lexend from Google Fonts, weights 300–900
@@ -285,6 +448,13 @@ atypical, progress, export, observe, contradict, proactive`
   - Bad/error: `#dc2626`
 - **SVG scientist** uses `viewBox="0 0 80 120"` — all item overlays must use this viewBox
 - When modifying `wordlab-data.js`, always check that `recordAttempt` category strings still match dashboard COLUMNS keys
+- **Never hand-edit generated files:** `valid-combos.json` (`scripts/build-valid-combos.js`),
+  `word-study-data.js` (`scripts/word-study/`), `SUGGESTIONS.md` (`scripts/check-resources.js`),
+  decks in `output/` (`scripts/deck-accuracy/generate-decks-v2.js`)
+- **Low-stim + `prefers-reduced-motion`:** any new animation, sound or particle effect must be gated on both
+- **Scientist SVG anchors are frozen** — add depth/art as additive layers; give every `<defs>` id a per-instance suffix
+- New `scientist` fields persist through the generic `save_scientist_field` RPC — no DB migration needed
+- Specs, plans and session notes live in `docs/superpowers/{specs,plans,notes}/`
 - Edge functions live in `supabase/functions/` and are deployed with `supabase functions deploy <name>`
 
 ---
@@ -316,8 +486,8 @@ Check items off as they are completed.
 - [x] Supabase project transferred to personal account (away from school Google account)
 
 #### 0.3 Environment variable strategy
-- [ ] NOTE: Supabase ANON key is intentionally public (it's designed for client-side use)
-      Security comes from RLS policies, not hiding the key. This is fine for now.
+- [x] NOTE: Supabase ANON key is intentionally public (it's designed for client-side use)
+      Security comes from RLS policies + RPCs, not hiding the key.
 - [ ] Revisit this once Phase 1 (teacher auth) is complete — at that point we may want
       a thin server layer to keep teacher-specific operations off the client
 
@@ -1465,7 +1635,7 @@ Full checklist document: `docs/nsw-doe-approval-checklist.md`
 - [x] Dashboard loading screen shows teacher's customised scientist (falls back to default goggles scientist)
 - [x] `_syncTeacherScientist()` mirrors scientist changes to teacher record when customising in View as Student mode
 - [x] UPDATE RLS policy added for teachers table (`auth.uid() = auth_user_id`)
-- [ ] Pending: verify sync works after RLS policy is applied in Supabase
+- [ ] Pending: verify sync works after RLS policy is applied in Supabase (still unconfirmed as of 2026-10-12)
 
 ---
 
@@ -1592,7 +1762,7 @@ dressing-room + shop — built subagent-driven from a spec + plan (`docs/superpo
 - [x] Built in parallel `scientist-new.html`, swapped in at the end; exact mockup values pinned in spec §12 + verbatim mockup file
 - [x] Shared catalogue extracted to `wordlab-shop-data.js` (single source of truth)
 - [x] Verified live as test student incl. orphan check: a pre-existing outfit (coat/head/face/effect/dance) resolves as owned+equipped — no orphaned purchases
-- [x] Merged to `main` **locally** (fast-forward) — NOT pushed; nothing deployed yet (push auto-deploys to production)
+- [x] Merged to `main` and since pushed to production (went out with the Phase 7.31 push, 2026-07-01)
 - [x] Spacing/visual polish — fixed earlier (commits `83cdd16` char-zoom-scaling + shop-card row overlap, `eca808a`); verified clean 2026-06-30
 - [ ] Post-merge: smoke-test custom-item equip with real teacher-made `shop_items` (test class had none)
 - [ ] Deferred cosmetic (final review, non-blocking): inline-Fredoka on `.lab-stat-num`, dances `src` used for header count, "Already owned"→not-enough edge case, ARIA list-nesting nit
@@ -1602,7 +1772,7 @@ dressing-room + shop — built subagent-driven from a spec + plan (`docs/superpo
 
 ### PHASE 7.27 — Session 2026-06-30 (Lab Shop Phase 2 + world scenery)
 
-All merged to `main` **locally — NOT pushed; nothing deployed** (push auto-deploys to production).
+Merged to `main`; **pushed to production with the Phase 7.31 push (2026-07-01)**.
 Built subagent-driven (per-task review + opus whole-branch review). Specs/plans under
 `docs/superpowers/{specs,plans}/2026-06-30-*`.
 
@@ -1620,14 +1790,14 @@ Built subagent-driven (per-task review + opus whole-branch review). Specs/plans 
 - [ ] Deferred cosmetic cleanup in `wordlab-worlds.js` (non-blocking): dead `drift`/`flip` fields, unused `wlw-sway` CSS, dead `intense` param, candy `cstripe` id
 
 #### NEXT (continuing later)
-- [x] **Plan 2 — Effect depth / 3D wrap** — see PHASE 7.28 below (shipped 2026-07-01, merged to `main` locally, NOT pushed)
-- [~] **Phase 3 art port** — decomposed into 3 sub-projects. **Sub-project 1 (character base shading) DONE** — see PHASE 7.29. Remaining: built-in item dimensional pass (follow-up), SVG hair, pet redesign.
+- [x] **Plan 2 — Effect depth / 3D wrap** — see PHASE 7.28 below (shipped 2026-07-01)
+- [x] **Phase 3 art port** — all four sub-projects done (base shading 7.29, item dimensional pass, SVG hair 7.30, pets 7.31)
 
 ---
 
 ### PHASE 7.28 — Session 2026-07-01 (Lab Shop Plan 2 — effect depth / 3D wrap)
 
-Merged to `main` **locally — NOT pushed; nothing deployed** (push auto-deploys to production).
+Merged to `main`; **pushed to production with the Phase 7.31 push (2026-07-01)**.
 Built subagent-driven per the SDD skill (fresh implementer + spec/quality review per task + opus
 whole-branch review). Plan: `docs/superpowers/plans/2026-07-01-lab-shop-effect-depth.md` (spec §5:
 `docs/superpowers/specs/2026-06-30-worlds-scenery-effect-depth-design.md`). Branch `feat/effect-depth`,
@@ -1654,7 +1824,7 @@ whole-branch review). Plan: `docs/superpowers/plans/2026-07-01-lab-shop-effect-d
 
 ### PHASE 7.29 — Session 2026-07-01 (Phase 3 sub-project 1 — character art port + skin tones)
 
-Merged to `main` **locally — NOT pushed; nothing deployed**. Built subagent-driven
+Merged to `main`; **pushed to production with the Phase 7.31 push (2026-07-01)**. Built subagent-driven
 (4 tasks + per-task review + opus whole-branch review = READY TO MERGE). Brainstormed
 via the visual companion (3 shading options rendered on the real character). Spec:
 `docs/superpowers/specs/2026-07-01-character-art-port-design.md`; plan:
@@ -1683,13 +1853,13 @@ merged `ef61e89`.
 #### NEXT (Phase 3 continued)
 - [x] Built-in **item dimensional pass** (Phase 3 sub-project 2) — merged local `71fdfc8`
 - [x] **SVG hair** (Phase 3 sub-project 3) — see PHASE 7.30 below
-- [ ] **Pet redesign** + re-enable (separate `buildPetSVG`, fully independent — could run in parallel)
+- [x] **Pet redesign** + re-enable — see PHASE 7.31
 
 ---
 
 ### PHASE 7.30 — Session 2026-07-01 (Phase 3 sub-project 3 — SVG hair)
 
-Merged to `main` **locally — NOT pushed; nothing deployed** (push auto-deploys to production).
+Merged to `main`; **pushed to production with the Phase 7.31 push (2026-07-01)**.
 Built subagent-driven (fresh implementer per task on Sonnet 5 + Fable per-task reviews + Fable
 whole-branch review = Ready to merge). Spec: `docs/superpowers/specs/2026-07-01-svg-hair-design.md`;
 plan: `docs/superpowers/plans/2026-07-01-svg-hair.md`. Branch `feat/svg-hair`, merged `1ebe159`.
@@ -1762,10 +1932,11 @@ Spec/plan: `docs/superpowers/{specs,plans}/2026-07-03-word-study-full-pool*`.
 - [x] **137 non-words dropped** (proper nouns, bound-root fragments, misspellings) incl.
   inappropriate builder combos (`condom`, `beastiality`) — see follow-up.
 - [x] `morpheme-builder.html` drops its `word-study-data.js` dep; 🔬 Study shows for any built word.
-- [ ] **Follow-ups (post-deploy):** re-check 834 `syllablesSource:"agent"` multi-syllable words
-  against howmanysyllables.com (throttled); reship 3 tail words (`taker`/`takers`/`watcher`);
-  **scrub inappropriate/junk words from `valid-combos.json` + Morpheme Builder at source** (Word
-  Study already drops them but they're still buildable in the Builder game).
+- [x] Follow-up: syllable re-check against authoritative sources — done in Phase 7.34 (355 words
+  still carry `syllablesSource:"agent"` as of 2026-10-12; not confirmed whether all are single-syllable)
+- [x] Follow-up: inappropriate/junk words scrubbed from `valid-combos.json` + Morpheme Builder at
+  source (Phase 7.34)
+- [ ] Follow-up: reship 3 tail words (`taker`/`takers`/`watcher`) — still absent from the pool
 
 ---
 
@@ -1806,6 +1977,120 @@ Deck-accuracy detail: `docs/superpowers/notes/2026-07-07-deck-accuracy-progress.
 
 ---
 
+### PHASES BACKFILLED 2026-10-12 (work shipped but never logged here)
+
+The entries below were reconstructed from git history during a CLAUDE.md audit. They are shorter
+than session-written phases; `git log` and `docs/superpowers/` have the detail. Numbered 7.35+ in
+the order they were backfilled, not chronologically. Phases 7.18 and 7.19 (early April 2026; 7.19
+was a dashboard redesign) were never logged and are not reconstructed here.
+
+---
+
+### PHASE 7.35 — Sessions 2026-04-10/11 (Year-level progression / stage system)
+
+Spec + plan: `docs/superpowers/{specs,plans}/` (year-level progression system).
+
+- [x] `stage` + `stage_overrides` columns on `students` (`add_student_stage.sql`); loaded into session on login
+- [x] New `wordlab-stage.js` (`WLStage`): stage order `s2e → s2l → s3e → s3l → s4`, `filterByStage`, `weightByStage` (cumulative content, 80/20 weighting), mastery calc
+- [x] Stage field added to every content pool; all 349 morphemes, 1,656 Sound Sorter words and 390 game words tagged; stage filtering applied in all games
+- [x] Landing page level badge + mastery panel; promotion / sub-level celebrations
+- [x] Dashboard: stage pill, filter pills, bulk assignment, one-click promote, sortable Stage header
+- [x] Extension mode redefined as "+1 stage"; tier locks to Challenge when extension is on
+- [x] Stage-group targeting for word lists and spelling sets (`stage_group` columns)
+- [x] Content Levels tagging UI + `scripts/apply-stage-csv.js` / `sync-inline-stages.js` / `expand-game-pools.js`
+
+### PHASE 7.36 — Session 2026-04-17 (Suggested spelling sets + school search)
+
+- [x] New `wordlab-suggested-sets.js` (`WLSuggested`): scores combos by difficulty and builds a word list per morpheme for each of the 5 stages
+- [x] Dashboard modal: searchable morpheme browser → 5 level columns → save a level as a spelling set and assign it to that stage's students; add-word input + editable set name
+- [x] `word-phoneme-data.json` — pre-computed syllable + phoneme data for all combo words (`scripts/generate-word-phoneme-data.js`)
+- [x] Schools: `postcode` column + `search_schools` RPC; search-as-you-type school picker on signup and login-register; postcode shown/editable on account page
+
+### PHASE 7.37 — Session 2026-05-07/08 (Spelling Feedback tab + fixes)
+
+- [x] New edge function `spelling-feedback` (Claude) + dashboard **Spelling Feedback** tab: student list → word history panel → generated feedback card
+- [x] Scientist: fixed costume items being wiped on login/reward; `save_scientist_field` null-safety; new `gift_owned_item` RPC; coat colour/pattern greyed out when a coat design is equipped
+- [x] Word Spectrum reward scale nerfed to 0.5
+- [x] `www.wordlabs.app` added to `ALLOWED_ORIGINS` on all edge functions
+- [x] Item creator: inject SVG width/height from viewBox before Fabric.js load
+- [x] `.nojekyll` added so GitHub Pages serves `output/` PPTX files
+
+### PHASE 11 — SOLO Tracker (2026-05-05 → 2026-08-26)
+
+A second product at `/solo`. Orientation in Section 3a; pipeline in `docs/SOLO_PIPELINE_SPEC.md`;
+per-unit status in `units/SOLO_PROGRESS.md`.
+
+#### 11.1 App foundation (May)
+- [x] `solo/index.html` wired to Supabase; two-step student login (class code → student code); login persists across refresh
+- [x] CSP override for `/solo` in `vercel.json`; CDNs switched to jsDelivr
+- [x] Per-outcome save + localStorage checkpoint/resume; visual design system (AppNav, cards, full-screen question views)
+- [x] Grow / Know / Show per outcome; multi-unit pretests; practice mode; touch support for number-line questions
+- [x] Resources: `solo_resources` table + teacher Resources tab, then student-facing `resources` table fetch with hardcoded fallback
+- [x] Teacher views: heatmap with band colour tiles, sort by name/progress, hide students/units, completion timestamps, Assessment Results tab, post-test regression flagging, unit review assessment
+- [x] Pre/post tests: section announcements, question sidebar, back button, flag-and-skip, 3-option exit dialog, free navigation without losing answers
+
+#### 11.2 Guided lessons (June 1)
+- [x] Grow as a full-screen guided lesson (hook → learn → try → reflect), `LEARN` schema, "I'm stuck" hint ladders
+- [x] Guided lessons for Units 24–27; Beyond (Stage 4) content for Units 24–25
+- [x] The Coach (guiding teacher voice), read-aloud via `speak-word`, live progress moments
+- [x] Reflections: per-lesson and end-of-assessment, teacher-visible across the class, teacher reactions (two-sided)
+- [x] Show attempt history with per-question timing + likely-guessing flag (`solo_show_attempts`)
+- [x] Teacher dashboard reads paginated past the 1,000-row PostgREST cap
+
+#### 11.3 Units 21–40 built (June 19–23)
+- [x] Pipeline spec rewritten to match the code; prompt templates (`docs/PROMPTS.md`); unit review playbook
+- [x] All 20 units have both deliverables: in-app content (A) and teacher program docx + resource appendix (B)
+- [x] Banding rule set; Year A/B labelled on every content point
+- [x] Visual engine: inline SVG visuals across Grow/Know/Show for every unit, plus interactive types (plot points, number line, area model, spinner, clock, angle, percent grid, volume builder)
+- [x] Teacher "Student View" preview + per-unit Highlight; responsive equal-height unit-card grid
+- [x] Printable pre/post-test docx for units 21–40 (`docs/superpowers/plans/build_solo_assessment.js`)
+- [x] Multiple-choice options shuffled (assessment was gameable); custom favicon
+
+#### 11.4 Printables (August 25–26)
+- [x] Printable one-page Student Rubric docx for all 20 units (`units/u{NN}/… Student Rubric.docx`), Edu NSW ACT Foundation font
+
+#### 11.5 Open
+- [ ] Resolve DB-vs-code resource conflicts for early units (listed in `SUGGESTIONS.md`)
+- [ ] Fix dead resource link(s) flagged in `SUGGESTIONS.md` (as of 2026-10-01: `u23_beyond` Maths is Fun triangle-area page, 404)
+- [ ] `units/SOLO_PROGRESS.md` status header still reads "as of 2026-06-20" — refresh
+
+### PHASE 7.38 — June 2026 (suggestions engine + platform fixes)
+
+- [x] `scripts/check-resources.js` + `.github/workflows/resource-health.yml` — fortnightly SOLO resource health check that regenerates `SUGGESTIONS.md` (design: `docs/SUGGESTION_ENGINE.md`)
+- [ ] Remaining suggestion-engine reports from the design doc (Show fail-rate calibration, pre→post movement, Word Labs engagement) — not built
+- [x] TTS: English voice upgraded to Chirp 3 HD (`en-AU-Chirp3-HD-Leda`); fixed 401 on `speak-word` for students
+- [x] Dashboard: page past the 1,000-row PostgREST cap so no student is dropped
+- [x] Scientist header widget refreshes after customise/purchase; clearer purchase errors
+
+### PHASE 7.39 — Session 2026-07-02/03 (Morpheme Builder redesign, phonics split accuracy, Word Study v1)
+
+Specs: `docs/superpowers/specs/2026-07-02-morpheme-builder-redesign-design.md`,
+`2026-07-03-phonics-split-accuracy-design.md`, `2026-07-03-word-study-design.md`.
+
+#### Morpheme Builder redesign
+- [x] Full morpheme set shown (level gate on the bank removed); above-level morphemes marked with a stretch star
+- [x] Second suffix slot revealed only after the first suffix; search icon + clear button, query persists across tabs
+- [x] Subtle tile fade-in (off under low-stim / reduced-motion)
+- [x] +38 everyday-prefix bases and the `mini-` prefix; `scripts/combo-coverage.js` coverage report
+
+#### Phonics split accuracy
+- [x] Phoneme Splitter: split-digraph support + re-encode (fixed 50 unwinnable words)
+- [x] Syllable Splitter: corrected the taught rule; splits cross-checked against howmanysyllables.com
+- [x] Sound Sorter: removed the correct grapheme from its own distractor list (10 words)
+- [x] Explicit syllable rules added to the `analyze-words` and deck-generator AI prompts
+- [x] Word-of-the-Week phonemes re-encoded to the grapheme model
+
+#### Word Study v1 (superseded by the full pool in Phase 7.33)
+- [x] `word-study.html` — capstone activity, 6 stage mechanics, morpheme/surprise selection, deep-link
+- [x] Landing card (Explore section), Morpheme Builder → Study hand-off, teacher-facing surface, help/hints, EALD
+- [x] Library study-room scene to match the other activity rooms
+- [x] Activity key `word-study` (category = the word)
+
+#### Teaching decks
+- [x] 34 new-base + `mini-` prefix decks; phoneme/syllable breakdowns corrected in 44 decks (later fully regenerated in Phase 7.34)
+
+---
+
 ### PHASE 8 — Growth & Integrations (Later)
 
 - [ ] Google Classroom integration (roster import via Google API)
@@ -1825,11 +2110,14 @@ Deck-accuracy detail: `docs/superpowers/notes/2026-07-07-deck-accuracy-progress.
 At the start of each working session, do this:
 
 1. Read this file
-2. Check recent git log: `git log --oneline -10`
+2. Check recent git log: `git log --oneline -10` (expect fortnightly `chore(suggestions)` bot commits)
 3. Confirm current branch is `main` and up to date: `git status`
 4. Identify which roadmap item we're working on
 5. If it's a big change, write the plan in plain language before touching code
-6. After completing work: commit, push, update the checklist above (tick completed items)
+6. Skim `SUGGESTIONS.md` for dead resource links
+7. If the work is on `/solo`, read `docs/SOLO_PIPELINE_SPEC.md` and `units/SOLO_PROGRESS.md` first
+8. After completing work: commit, update the checklist above (tick completed items), and add a
+   phase entry for the session. **Pushing to `main` deploys to production — ask Nick first**
 
 ---
 
@@ -1841,8 +2129,8 @@ At the start of each working session, do this:
 | Supabase over Firebase | Better SQL, better RLS, built-in edge functions, generous free tier |
 | Stripe for payments | Industry standard, handles VAT/invoicing, works with purchase orders |
 | Per-school annual pricing | Simplest for school procurement — one invoice per year |
-| Trial = 30 days, 1 class | Low friction to start, enough to run a real pilot, easy upsell |
-| Store teacher password per class (currently) | Legacy — being replaced by Supabase Auth in Phase 1 |
+| Trial = 30 days, 1 class | Original plan — superseded: new signups currently get `active` for 12 months (free early access) |
+| Store teacher password per class | Legacy — replaced by Supabase Auth in Phase 1; the `teacher_password` column is dead weight (Section 8) |
 | Fabric.js for item creator | Best canvas library for this use case, good SVG support |
 | AUD pricing | Owner is Australian, primary market is Australian schools |
 | Supabase Sydney region | Australian schools (especially government) require data stored in Australia |
@@ -1927,3 +2215,14 @@ At the start of each working session, do this:
 | Content editor owner-only access | Hardcoded email check + fake 404 page. No links anywhere. CSP with unsafe-eval only on this page (needed to parse inline game data via Function constructor). |
 | Focus words carry full word data | Focus words were just {word, base, clue} but games need syllables, phonemes, graphemes. Now merged with full data from source spelling set at load time. |
 | Spotlight walkthrough tours | One linear tour per page (not mini-tours by topic). Simpler code, clearer experience. Auto-starts once, replay button for later. Low-stim mode filters out gamification steps. |
+| Stage system (`s2e`→`s4`) over extension-only | One extension flag couldn't express a class spread across Years 3–7 content; stages filter every pool, and extension became "+1 stage" |
+| Suggested sets as pure logic module | `wordlab-suggested-sets.js` has no DOM or Supabase calls, so it can be unit-tested in Node (`tests/test-suggested-sets.js`) |
+| SOLO Tracker in the same repo and Supabase project | Reuses classes, students and teacher auth; one deploy. Kept as a self-contained file so it can't break Word Labs pages |
+| SOLO as a single React-via-Babel file | Keeps the no-build-system rule; cost is file size and an `unsafe-eval` CSP scoped to `/solo` only |
+| SOLO resources DB-canonical | Dead links can be fixed in the `resources` table without a deploy; hardcoded blocks in early units are legacy |
+| Suggestions are read-only | The fortnightly job only writes `SUGGESTIONS.md`; it uses the anon key and never edits content, the DB or rubrics — Nick decides what to action |
+| Chirp 3 HD voice (`en-AU-Chirp3-HD-Leda`) | Clearer, more natural Australian dictation than Neural2 for spelling check-ins and SOLO read-aloud |
+| Deterministic deck generation | AI-invented decks had wrong splits and repeated words; decks are now assembled from verified word-study data behind a hard gate (Phase 7.34) |
+| Bound roots flagged `bound:true` | Stops bare Latin/Greek roots (tract, flex, spire…) building as "words" while keeping their affixed combos |
+| Word Study pool generated, not curated | A 40-word pool dead-ended the Flashcards → Builder → Word Study arc; every make-able word is now studyable |
+| Teacher shop access needs flag + JWT | `wl_teacher_preview` alone is client-writable; a signed Supabase session is the actual gate |
