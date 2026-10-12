@@ -20,17 +20,17 @@ module.exports = {
   resource_appendix_attached: true,
 
   // Every URL verified live in Stage 3 (oEmbed + curl); see units/u31/03_resources_staged.csv.
+  // Updated 2026-10-12 to match solo/u31_resources_fix.sql (resource audit).
   resources: {
     r1: [
       { type: "video", label: "Whole Number Expanded Form, Word Form and Standard Form | Math with Mr. J", url: "https://www.youtube.com/watch?v=NOx6jlVSSpU" },
-      { type: "video", label: "How to Write Whole Numbers in Standard Form | Math with Mr. J", url: "https://www.youtube.com/watch?v=H6ndRKigay8" },
+      { type: "video", label: "Partitioning Numbers in Standard and Non-Standard Forms | Learn and Play Online!", url: "https://www.youtube.com/watch?v=vZcR6VY9pDg" },
       { type: "worksheet", label: "Corbettmaths — Place Value (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/place-value-pdf.pdf" },
     ],
     r2: [
       { type: "video", label: "Place Value to the Thousandths | Miacademy", url: "https://www.youtube.com/watch?v=BsZJGMRWEK0" },
       { type: "video", label: "Finding the Value of the Underlined Digit (Decimal Place Value) | Math with Mr. J", url: "https://www.youtube.com/watch?v=2xGzQXn3WUQ" },
       { type: "video", label: "Expanded Form with Decimals | Math with Mr. J", url: "https://www.youtube.com/watch?v=GX8o-S6Vxig" },
-      { type: "worksheet", label: "Corbettmaths — Place Value (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/place-value-pdf.pdf" },
     ],
     r3: [
       { type: "video", label: "2-Digit by 2-Digit Multiplication | Math with Mr. J", url: "https://www.youtube.com/watch?v=PZjIT9CH6bM" },
@@ -40,25 +40,23 @@ module.exports = {
     ],
     r4: [
       { type: "video", label: "How to do Long Division (1-Digit Divisors) | Math with Mr. J", url: "https://www.youtube.com/watch?v=up_xKZ6GeUg" },
-      { type: "video", label: "Long Division: A Step-By-Step Review | Math with Mr. J", url: "https://www.youtube.com/watch?v=HJYHNxS64f0" },
       { type: "video", label: "Box Method for Long Division (1-Digit Divisors) | Math with Mr. J", url: "https://www.youtube.com/watch?v=8JYfVv94hww" },
+      { type: "video", label: "Interpreting Remainders in Division Word Problems | LaFountaine of Knowledge", url: "https://www.youtube.com/watch?v=0dPQEKjTFjg" },
       { type: "worksheet", label: "Corbettmaths — Division (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2018/01/division-pdf.pdf" },
     ],
     y1: [
       { type: "video", label: "Converting Between Fractions, Decimals and Percents (Mini Course) | Math with Mr. J", url: "https://www.youtube.com/watch?v=2vjbNZaFz3c" },
       { type: "video", label: "Fractions to Percents | Math with Mr. J", url: "https://www.youtube.com/watch?v=XXf4wHb2lYc" },
       { type: "video", label: "How to Convert Decimals to Percents | Math with Mr. J", url: "https://www.youtube.com/watch?v=84WDtZwrGhA" },
+      { type: "website", label: "Maths is Fun — Percentages (out of 100, as fractions and decimals)", url: "https://www.mathsisfun.com/percentage.html" },
       { type: "worksheet", label: "Corbettmaths — Fractions, Decimals & Percentages (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/fractions-decimals-percentages-pdf.pdf" },
     ],
     y2: [
-      { type: "video", label: "How to Find a Percent of a Number | Math with Mr. J", url: "https://www.youtube.com/watch?v=5CAncQ4TZD4" },
-      { type: "worksheet", label: "Corbettmaths — Percentage of an Amount (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2018/11/Percentages-of-amounts-234-pdf.pdf" },
-      { type: "website", label: "Maths is Fun — Percentages (interactive)", url: "https://www.mathsisfun.com/percentage.html" },
+      { type: "video", label: "Using 10% to Work Out Percentages | Maths with Mrs B", url: "https://www.youtube.com/watch?v=EM8X3SzReTs" },
+      { type: "worksheet", label: "Corbettmaths — Percentage of an Amount (PDF; start with the 10% questions)", url: "https://corbettmaths.com/wp-content/uploads/2018/11/Percentages-of-amounts-234-pdf.pdf" },
     ],
     y3: [
       { type: "video", label: "Input Output Tables: Find Patterns or Rules | Easy Math with Mrs. Easley", url: "https://www.youtube.com/watch?v=q0n7FMe1CQk" },
-      { type: "video", label: "Input Output Tables Song: Finding the Rule of a Function | NUMBEROCK", url: "https://www.youtube.com/watch?v=d1COIcRoSgo" },
-      { type: "video", label: "Input & Output Tables: Rules & Missing Values | STEAMspirations", url: "https://www.youtube.com/watch?v=Z7UPvsKz4Kw" },
     ],
     y4: [
       { type: "video", label: "Input Output Tables: Find Patterns or Rules | Easy Math with Mrs. Easley", url: "https://www.youtube.com/watch?v=q0n7FMe1CQk" },
@@ -67,42 +65,41 @@ module.exports = {
     ],
     y5: [
       { type: "video", label: "Multiplying and Dividing by Powers of 10 | Math with Mr. J", url: "https://www.youtube.com/watch?v=HH-yrNS80Cg" },
-      { type: "worksheet", label: "Corbettmaths — Place Value (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/place-value-pdf.pdf" },
-      { type: "website", label: "Maths is Fun — Decimals & Place Value (interactive)", url: "https://www.mathsisfun.com/decimals.html" },
+      { type: "video", label: "Multiplying and Dividing Decimals by 10, 100 and 1000 | Twinkl", url: "https://www.youtube.com/watch?v=TIlAg3Aa5rA" },
     ],
     y6: [
       { type: "video", label: "How Do You Solve Inverse Operations? (KS2) | Twinkl", url: "https://www.youtube.com/watch?v=enw_kJRSt4A" },
-      { type: "video", label: "Input & Output Tables: Rules & Missing Values | STEAMspirations", url: "https://www.youtube.com/watch?v=Z7UPvsKz4Kw" },
+      { type: "video", label: "Solving Find the Missing Number Problems | Maths Junction", url: "https://www.youtube.com/watch?v=rdzDsbKXA3Q" },
       { type: "website", label: "Maths is Fun — Introduction to Algebra (interactive)", url: "https://www.mathsisfun.com/algebra/introduction.html" },
     ],
     g1: [
       { type: "video", label: "How to Find a Percent of a Number | Math with Mr. J", url: "https://www.youtube.com/watch?v=5CAncQ4TZD4" },
       { type: "video", label: "Calculating Percent Increase | Math with Mr. J", url: "https://www.youtube.com/watch?v=t4mWCKu44lU" },
       { type: "video", label: "Calculating Percent Decrease | Math with Mr. J", url: "https://www.youtube.com/watch?v=kS_YxXf6gNA" },
+      { type: "video", label: "Finding What Percent One Number Is of Another | Math with Mr. J", url: "https://www.youtube.com/watch?v=Y3g3mourmwQ" },
       { type: "worksheet", label: "Corbettmaths — Percentage of an Amount (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2018/11/Percentages-of-amounts-234-pdf.pdf" },
     ],
     g2: [
-      { type: "video", label: "Order of Operations: A Step-By-Step Guide (PEMDAS) | Math with Mr. J", url: "https://www.youtube.com/watch?v=x41BCrYh8Kc" },
-      { type: "video", label: "Order of Operations with Parentheses and Exponents (PEMDAS) | Math with Mr. J", url: "https://www.youtube.com/watch?v=dzwDTEej8MU" },
       { type: "video", label: "Order of Operations (No Parentheses or Exponents) | Math with Mr. J", url: "https://www.youtube.com/watch?v=BCg1nz5k0HY" },
-      { type: "worksheet", label: "Corbettmaths — Order of Operations (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/order-of-operations-pdf.pdf" },
+      { type: "video", label: "Order of Operations (Primary) | Corbettmaths", url: "https://www.youtube.com/watch?v=IKQgvJda7TE" },
+      { type: "worksheet", label: "Corbettmaths — Order of Operations (PDF; skip questions with powers like 3²)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/order-of-operations-pdf.pdf" },
     ],
     g3: [
       { type: "video", label: "An Intro to Solving Two-Step Equations | Math with Mr. J", url: "https://www.youtube.com/watch?v=0ackz7dJSYY" },
       { type: "video", label: "How to Solve Two-Step Equations | Math with Mr. J", url: "https://www.youtube.com/watch?v=7hiNNvqJNos" },
       { type: "video", label: "How to Solve Equations (One-Step & Two-Step) | Math with Mr. J", url: "https://www.youtube.com/watch?v=9eRF7pJCOUQ" },
-      { type: "worksheet", label: "Corbettmaths — Equations (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/equations-pdf.pdf" },
+      { type: "worksheet", label: "Corbettmaths — Equations (PDF; questions 1–14 are one- and two-step)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/equations-pdf.pdf" },
     ],
   },
   beyond_resources: [
     { type: "video", label: "How to Find a Percent of a Number | Math with Mr. J", url: "https://www.youtube.com/watch?v=5CAncQ4TZD4" },
     { type: "video", label: "Calculating Percent Increase | Math with Mr. J", url: "https://www.youtube.com/watch?v=t4mWCKu44lU" },
-    { type: "video", label: "Order of Operations: A Step-By-Step Guide (PEMDAS) | Math with Mr. J", url: "https://www.youtube.com/watch?v=x41BCrYh8Kc" },
+    { type: "video", label: "Order of Operations (Primary) | Corbettmaths", url: "https://www.youtube.com/watch?v=IKQgvJda7TE" },
     { type: "video", label: "An Intro to Solving Two-Step Equations | Math with Mr. J", url: "https://www.youtube.com/watch?v=0ackz7dJSYY" },
     { type: "worksheet", label: "Corbettmaths — Order of Operations (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/order-of-operations-pdf.pdf" },
     { type: "worksheet", label: "Corbettmaths — Equations (PDF)", url: "https://corbettmaths.com/wp-content/uploads/2013/02/equations-pdf.pdf" },
     { type: "website", label: "Maths is Fun — Percentage Change (interactive)", url: "https://www.mathsisfun.com/numbers/percentage-change.html" },
-    { type: "website", label: "Maths is Fun — Order of Operations (PEMDAS)", url: "https://www.mathsisfun.com/operation-order-pemdas.html" },
+    { type: "website", label: "Maths is Fun — Order of Operations (BODMAS)", url: "https://www.mathsisfun.com/operation-order-bodmas.html" },
     { type: "website", label: "Maths is Fun — Solving Equations (interactive)", url: "https://www.mathsisfun.com/algebra/equations-solving.html" },
     { type: "website", label: "Maths is Fun — Percentages (interactive)", url: "https://www.mathsisfun.com/percentage.html" },
   ],

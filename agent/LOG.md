@@ -2,6 +2,15 @@
 
 One dated entry per run, newest first. A few lines each: what was worked on, the PR, and anything the next run should know.
 
+## 2026-10-12 — run 4, continued (whole of SOLO Unit 31, on Nicholas's request)
+Nicholas asked for the whole unit to be audited and fixed at once, and gave permission for the SOLO `resources` table (hard rule 3a; SQL file only, he runs it). Added to PR #23:
+- Know rewritten for all 13 outcomes: 130 questions, no overlap with Show, a hint and why line on each.
+- Grow numbers moved off Show, with tighter hint ladders and new visuals.
+- Six Show fixes, two of them real bugs: r3 Q6 wording was wrong, and y4 Q9 had two correct answers.
+- Resources: an audit, `solo/u31_resources_fix.sql`, and a rebuilt program docx and appendix.
+
+Supabase could not be read: the egress proxy blocks it. The resource SQL is therefore targeted, deleting only named rows by URL.
+
 ## 2026-10-12 — run 4 (on-demand: SOLO Unit 31)
 Nicholas asked for Unit 31 this run (track rotation skipped). Walked Grow, Know and Show in mock mode as Ben and Chloe. Picked Y5 (× and ÷ decimals by powers of 10): it had no visual at all for a spatial idea, and Know reused 7 of 9 Show calculations. Added a place value chart visual (`pvShift`) and an interactive (`placeShift`) with a Mystery move challenge for early finishers, fresh Know and try-it numbers, a hint and why line on every Know question. Show untouched. Added `__WL_MOCK__.add()` to mock mode so the Grow button can be shown with fake resource rows. Branch is stacked on PR #22 so the agent/ files do not conflict; the PR targets that branch and retargets to main when #22 merges.
 

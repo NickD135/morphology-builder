@@ -9,7 +9,7 @@ Updated every run from merged, closed and commented agent PRs. Record what he va
 - Run 4 was requested on demand for SOLO Unit 31. Signal: he wants SOLO units reviewed one at a time against the playbook framing, not only Word Labs games.
 
 - **Standing preference (stated 2026-10-12): fix a SOLO problem across the whole unit at once, for consistency,** not one outcome per run. For example: give every u31 outcome fresh Know numbers in one PR.
-- **Permission (stated 2026-10-12): the agent may check and change the SOLO `resources` table in Supabase.** It is written into hard rule 3a, and is limited to that table.
+- **Permission (stated 2026-10-12): the agent may check and change the SOLO `resources` table in Supabase.** It is written into hard rule 3a, and is limited to that table. Changes are always delivered as a SQL file for him to run, never written directly (his choice).
 
 ## Working notes (operational, not taste)
 
@@ -20,3 +20,5 @@ Updated every run from merged, closed and commented agent PRs. Record what he va
 - SOLO Know skips its worked example when the outcome has a Grow lesson, so Know `example`/`exampleVisual` are rarely seen. Put scaffolds on the questions (`visual`, `hint`, `why`).
 - When two agent PRs are open, stack the second branch on the first and target the PR at the first branch, so the agent/ files do not conflict.
 - `solo/UNIT_REVIEW_PLAYBOOK.md` tells you to curl Supabase for resource rows. Since 2026-10-12 this is allowed for the `resources` table only (hard rule 3a).
+- Supabase REST and most outbound HTTPS are blocked by the sandbox egress proxy. WebFetch works for YouTube oEmbed and for most worksheet sites, so verify resources with WebFetch, not curl.
+- Offline docx: only docx 9.7.1 is available (`NODE_PATH=/opt/npm-tools/node_modules`). The u31 program built with it to the same 20 pages.

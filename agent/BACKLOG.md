@@ -23,18 +23,19 @@ Score each surface 1 (poor) to 4 (strong) on each lens from IMPROVEMENT_AGENT.md
 | word-refinery.html | | | | | | | | |
 | spelling-test.html | | | | | | | | |
 | SOLO: login and unit picker | | | | | | | | |
-| SOLO: Grow (guided lesson), u31 | 3 | 4 | 3 | 3 | 3 | 2 | 18 | 2026-10-12 (u31 y5 now has chart + interactive; r4, y6, g2, g3 still text only) |
-| SOLO: Know (practice), u31 | 3 | 3 | 2 | 2 | 3 | 2 | 15 | 2026-10-12 (most outcomes: one generic retry line, no hints; y5 fixed) |
-| SOLO: Show (assessment), u31 | 3 | 3 | n/a | 2 | 3 | n/a | | 2026-10-12 (fairness risk: Know repeats Show questions) |
+| SOLO: Grow (guided lesson), u31 | 4 | 4 | 4 | 3 | 3 | 3 | 21 | 2026-10-12 (whole unit reworked; g2 still has no visual) |
+| SOLO: Know (practice), u31 | 4 | 3 | 4 | 3 | 3 | 3 | 20 | 2026-10-12 (whole unit: fresh numbers, hint + why on all 130, a challenge item per outcome) |
+| SOLO: Show (assessment), u31 | 4 | 3 | n/a | 2 | 3 | n/a | | 2026-10-12 (Know overlap removed; 6 Show fixes) |
 | SOLO: pre/post tests and reviews | | | | | | | | |
 
 ## Ideas queue
 
 Add ideas found while working. Keep each to one line with the surface and the lens it serves.
 
-- **SOLO u31 (and probably every unit): Know practice repeats Show questions word for word.** Exact text matches in u31: r1 4/9, r3 6/9, r4 6/9, y2 6/9, g1 6/9, g2 7/9 (y5 fixed in run 4). Students can memorise Show answers in Know. Give every outcome fresh Know numbers in ONE PR per unit (Nicholas's standing preference); start with u31, then check other units the same way (fair assessment)
-- SOLO u31 r4 (divide with remainders): no visual; add a sharing or grouping visual for the remainder, and a word-problem decision step (round up, round down, or keep the remainder) (Scaffolded)
-- SOLO u31 g3 (solve equations): a balance-scale visual or interactive for "do the same to both sides" (Scaffolded, Stretch)
+- **Other SOLO units: check for Know practice repeating Show questions.** It did in u31 (fixed 2026-10-12), so other units probably have it too. Run `validate.js`-style checks unit by unit, one whole unit per PR (fair assessment)
+- SOLO u31 g3: an interactive balance scale for "do the same to both sides" (bar models were added as a static scaffold) (Scaffolded, Stretch)
+- SOLO u31 resource gaps with no verified exact match yet: r2 end zeros, r3 factorising, y3 building a table of multiples (Resources)
+- Commit a shared u31 validator under tests/ (MC answer in options, arithmetic, no Know/Show overlap) and generalise it to all units (code health)
 - SOLO Know: add `hint` and `why` to every question in u31, in the same whole-unit PR as the fresh numbers (most show only "Check your working and have another go") (Scaffolded)
 - SOLO: reuse the new `pvShift` / `placeShift` visuals in u21 (powers of 10, one-tenth of) and u40 where decimals × ÷ powers of 10 appear (Scaffolded)
 

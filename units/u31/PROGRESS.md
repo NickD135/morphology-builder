@@ -93,3 +93,32 @@ practice also reused 7 of the 9 Show/post-test calculations (3.5 × 10, 4.2 ÷ 1
   item (5.2 × 10 = 5.20?) and a challenge item (0.072 × ? = 72)
 - Show and PRETESTS unchanged (outcome id unchanged; no new DB rows needed)
 - Checked in mock mode (tests/mock) as Ben and Chloe, 1366 and 1024 px, low stim and reduced motion
+
+---
+
+## Session 2026-10-12 (later) — whole-unit audit (improvement agent, same PR)
+
+Nicholas asked for all of Unit 31 to be audited with the same eye as Y5, and for SOLO fixes to be
+made across a whole unit at once.
+
+- **Know (all 13 outcomes):** 130 questions with fresh numbers. None repeats a Show or pre/post-test
+  question (before: up to 7 of 9 per outcome did). Every question has a hint (shown after a wrong
+  try) and a why line. Visual scaffolds on early questions (place value chart, area model, column
+  layout, number line for remainders, bar models for missing numbers and equations). Each outcome
+  ends with a Challenge item.
+- **Grow (all 13):** worked examples, try-its and hooks moved off Show numbers. Hint ladders hold the
+  answer back until step 3. y6 now models a two-operation sentence (the outcome says "more than
+  one operation"). r4 hook has a number line for the remainder. g3 and y6 worked examples have bar
+  models. r3 now explains what factorising means.
+- **Show fixes:** r3 Q6 wording was wrong ("multiply by 25 twice"). y4 Q9 had two correct options.
+  r1 had no partitioning question (added two). r4 only assessed rounding remainders up (added a
+  round-down problem and a 3-digit sharing problem). y6 had no two-operation sentences (added two).
+  g3 never assessed writing an equation (added one). y3 Q5 reworded. Pre/post tests unchanged.
+- **Beyond:** projects no longer reuse Show values; US PEMDAS video replaced.
+- **Resources:** `solo/u31_resources_fix.sql` (targeted delete/update/insert, for Nicholas to run).
+  `unit_data_31.js` updated to match. Full program docx/pdf and Resource Appendix rebuilt
+  (note: built with docx 9.7.1, the only version available offline; same 20 pages).
+- Verified: a Node validator over the u31 data (MC answers are among their options, no duplicate
+  options, arithmetic, missing-number and equation solutions, % of, remainders, 3 hints per
+  try-it, no Show overlap); every Know question answered correctly in the browser in mock mode
+  (130/130); every Grow lesson stepped through; no page errors.
