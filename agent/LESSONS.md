@@ -6,6 +6,7 @@ Updated every run from merged, closed and commented agent PRs. Record what he va
 - PR #18 (Breakdown Blitz "why" panel, energy pause, data fixes) was closed unmerged, no comment, about 6 minutes after #20 merged, with a merge conflict in the shared agent/ files. Most likely closed because of the conflict, not the content, but not certain. Do not resubmit it as is; if revisited, keep it small (why panel and no auto-advance only, no game balance change like the energy pause) and base it on current main.
 - Run 5 (2026-10-12): still no human comments on #22 or #23. Redid Breakdown Blitz as the small version the #18 lesson suggested, to test whether the content itself is welcome.
 - Run 6 (2026-10-12): #22, #23 and #24 still had no human review, so the run held (hard rule 2). Four runs in one day outpaced review; a held run is the expected outcome when the stack is three deep.
+- **Standing instruction (stated 2026-10-12): hold only once 10 agent PRs are open and unreviewed** (hard rule 2 raised from 3 to 10 by Nicholas). He reviews in batches: after run 6 he merged #22, #23 and #24 together.
 - Two agent PRs that both edit agent/LOG.md, BACKLOG.md and LESSONS.md will conflict. One open agent PR at a time is safer.
 
 - Run 4 was requested on demand for SOLO Unit 31. Signal: he wants SOLO units reviewed one at a time against the playbook framing, not only Word Labs games.
