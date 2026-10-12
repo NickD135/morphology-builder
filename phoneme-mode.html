@@ -161,6 +161,7 @@
     .checkBtn:disabled{ background:#cbd5e1; box-shadow:none; cursor:not-allowed; transform:none; }
     .clearBtn{ border:2px solid var(--line); background:#fff; color:#334155; font-weight:800; font-size:13px; padding:14px 22px; border-radius:16px; cursor:pointer; transition:all .15s; }
     .clearBtn:hover{ background:#f8fafc; }
+    .clearBtn:disabled{ opacity:.45; cursor:not-allowed; }
 
     /* Feedback */
     .feedbackBanner{ width:100%; border-radius:20px; padding:18px 24px; font-weight:800; font-size:14px; display:none; animation:slideIn .25s ease-out; line-height:1.7; }
@@ -170,6 +171,11 @@
     .nextBtn{ border:none; background:#0f172a; color:#fff; font-weight:900; font-size:14px; letter-spacing:.08em; padding:14px 32px; border-radius:16px; cursor:pointer; text-transform:uppercase; display:none; margin-top:8px; transition:background .15s; }
     .nextBtn:hover{ background:#000; }
     .nextBtn.visible{ display:inline-flex; }
+    .whySounds{ margin-top:10px; text-align:left; color:#1f2937; font-size:15px; font-weight:600; line-height:1.55; }
+    .whySounds .whyTitle{ font-weight:900; color:#5b21b6; margin-bottom:4px; }
+    .whySounds ul{ margin:0; padding-left:20px; }
+    .whySounds li{ margin:3px 0; }
+    .whySounds .gChip{ display:inline-block; font-weight:900; color:#4c1d95; background:#ede9fe; border-radius:8px; padding:0 7px; }
 
     /* Right col */
     .bigNum{ font-size:64px; font-weight:900; letter-spacing:-.04em; color:#4c1d95; line-height:1; }
@@ -482,7 +488,7 @@
             <div id="ealdTranslation" aria-live="polite"></div>
 
             <div class="actionRow">
-              <button class="clearBtn" onclick="resetWord()">Reset</button>
+              <button class="clearBtn" id="resetBtn" onclick="resetWord()">Reset</button>
               <button class="checkBtn" id="checkBtn">Check ✓</button>
             </div>
             <button class="nextBtn" id="nextBtn">Next word →</button>
@@ -663,7 +669,7 @@ const WORDS = [
   { word:"silhouette", stage:"s3l",   phonemes:["s","i","l","h","ou","e","tt","e"],   diff:"Challenge" },
   { word:"catastrophe", stage:"s3l",   phonemes:["c","a","t","a","s","t","r","o","ph","e"],   diff:"Challenge" },
   { word:"avalanche", stage:"s3l",   phonemes:["a","v","a","l","a","n","ch","e"],   diff:"Challenge" },
-  { word:"plateau", stage:"s4",   phonemes:["pl","a","t","eau"],   diff:"Challenge" },
+  { word:"plateau", stage:"s4",   phonemes:["p","l","a","t","eau"],   diff:"Challenge" },
   { word:"bureau", stage:"s4",   phonemes:["b","u","r","eau"],   diff:"Challenge" },
   { word:"aesthetic", stage:"s4",   phonemes:["ae","s","th","e","t","i","c"],   diff:"Challenge" },
   { word:"sovereign", stage:"s4",   phonemes:["s","o","v","er","eign"],   diff:"Challenge" },
@@ -887,6 +893,7 @@ function loadWord(){
   hideFeedback();
   document.getElementById('nextBtn').classList.remove('visible');
   document.getElementById('checkBtn').disabled = false;
+  document.getElementById('resetBtn').disabled = false;
   // Support mode: show expected phoneme count badge
   var _smBadge = document.getElementById('supportPhonemeCount');
   if(_supportMode && currentWord){
@@ -972,6 +979,7 @@ function deriveCorrectState(word, phonemes){
 }
 
 function resetWord(){
+  if(checked) return; // already marked: press Next word instead (resetting here allowed a second scored check)
   checked = false;
   letters    = currentWord.word.split("");
   boundaries = new Array(Math.max(0, letters.length - 1)).fill(false);
@@ -1111,6 +1119,106 @@ function updatePreview(){
   ).join('');
 }
 
+// ── Why feedback ──────────────────────────────────────────────────────────────
+// Explains a wrong split in student language. Works from letter spans, so it
+// suits any word list (built-in, custom lists, spelling sets, focus words).
+// Correct spans: [{start,end,magic,str}] where end is exclusive and magic is
+// the index of a silent-e linked to this vowel (or -1).
+function _correctSpans(word, phonemes){
+  var L = word.split(''), used = new Set(), spans = [], li = 0;
+  phonemes.forEach(function(p){
+    if(p.indexOf('_') !== -1){
+      var m = -1;
+      for(var e = L.length - 1; e > li; e--){ if(L[e] === 'e' && !used.has(e)){ m = e; used.add(e); break; } }
+      spans.push({ start: li, end: li + 1, magic: m, str: p });
+      li += 1;
+    } else {
+      spans.push({ start: li, end: li + p.length, magic: -1, str: p });
+      li += p.length;
+    }
+  });
+  return spans;
+}
+// The student's spans, from the current boundaries[] and magic set
+function _userSpans(){
+  var n = letters.length, spans = [], cur = null;
+  for(var i = 0; i < n; i++){
+    if(magic.has(i)) continue;
+    if(cur === null){ cur = { start: i, end: i + 1, magic: -1, str: letters[i] }; spans.push(cur); }
+    else { cur.end = i + 1; cur.str += letters[i]; }
+    if(i < n - 1 && boundaries[i]) cur = null;
+  }
+  magic.forEach(function(e){
+    for(var k = e - 1; k >= 0; k--){
+      if(!magic.has(k) && isVowel(letters[k])){
+        spans.forEach(function(sp){ if(k >= sp.start && k < sp.end && sp.magic === -1){ sp.magic = e; sp.str += '_e'; } });
+        break;
+      }
+    }
+  });
+  return spans;
+}
+var _PH_SILENT = { kn:'k', wr:'w', gn:'g', mb:'b', rh:'h', mn:'n', gm:'g', bt:'b', ps:'p', pn:'p', sw:'w', gu:'u', is:'s', sc:'c' };
+var _PH_VOWEL_TEAMS = ['ai','ay','ee','ea','ey','oa','oo','ou','ow','oi','oy','ie','ue','ui','ew','au','aw','ae','eu','ei','eau','igh','ough','augh','eigh'];
+var _PH_BOSSY_R = ['ar','or','er','ir','ur','ear','air','oor','our','oir','ure','eur','ore','are'];
+var _PH_DIGRAPHS = ['sh','ch','th','ph','wh','ng','ck','gh'];
+function _graphemeReason(g){
+  var _e = WordLabData.escapeHtml;
+  var chip = '<span class="gChip">' + _e(g) + '</span>';
+  if(g.indexOf('_') !== -1){
+    var v = g.charAt(0);
+    return chip + ': the <b>e</b> at the end is silent. It jumps back to help <b>' + _e(v) + '</b> say its name. Tap ✨ on the e to join them.';
+  }
+  if(g === 'ti' || g === 'si' || g === 'ci') return chip + ' says /sh/ here (like in sta<b>ti</b>on), so keep the two letters together.';
+  if(g === 'qu') return chip + ': <b>q</b> and <b>u</b> always stay together.';
+  if(g === 'tch' || g === 'dge') return chip + ': three letters, one sound. Keep them together.';
+  if(_PH_SILENT[g]) return chip + ': the <b>' + _e(_PH_SILENT[g]) + '</b> is silent, so these letters make one sound together.';
+  if(_PH_BOSSY_R.indexOf(g) !== -1) return chip + ': the <b>r</b> changes the vowel sound (bossy r), so they stay together as one sound.';
+  if(_PH_VOWEL_TEAMS.indexOf(g) !== -1) return chip + ': these letters are a vowel team. They work together to make one vowel sound.';
+  if(g.length === 2 && g.charAt(0) === g.charAt(1)) return chip + ': double letters make just one sound, so keep them together.';
+  if(_PH_DIGRAPHS.indexOf(g) !== -1) return chip + ': two letters, one sound. Keep them together.';
+  if(g === 'le') return chip + ' at the end of a word makes one sound, so keep it together.';
+  if(g === 've') return chip + ': English words do not end in v, so a silent <b>e</b> comes after it. Keep them together.';
+  if(/^[a-z]e$/.test(g) && 'aeiou'.indexOf(g.charAt(0)) === -1) return chip + ': the <b>e</b> is silent here, so it stays with the ' + _e(g.charAt(0)) + '.';
+  return chip + ': in this word these letters make one sound together.';
+}
+// Only explain what the student got wrong.
+function _buildWhySounds(){
+  if(!currentWord) return '';
+  var _e = WordLabData.escapeHtml;
+  var want = _correctSpans(currentWord.word, currentWord.phonemes), got = _userSpans();
+  var key = function(sp){ return sp.start + ':' + sp.end + ':' + sp.magic; };
+  var gotKeys = {}; got.forEach(function(sp){ gotKeys[key(sp)] = true; });
+  var wantKeys = {}; want.forEach(function(sp){ wantKeys[key(sp)] = true; });
+  var items = [], seen = {};
+  // 1. Sounds the student broke apart, or a magic-e they missed
+  want.forEach(function(c){
+    if(gotKeys[key(c)]) return;
+    var brokeInside = false;
+    for(var i = c.start; i < c.end - 1; i++){ if(boundaries[i]) brokeInside = true; }
+    var missedMagic = c.magic !== -1 && !magic.has(c.magic);
+    if((c.end - c.start > 1 && brokeInside) || missedMagic){
+      if(!seen[c.str]){ seen[c.str] = 1; items.push('<li>' + _graphemeReason(c.str) + '</li>'); }
+    }
+  });
+  // 2. Boxes the student made that hold more than one sound
+  got.forEach(function(u){
+    if(wantKeys[key(u)]) return;
+    var inside = want.filter(function(c){ return c.start >= u.start && c.start < u.end; });
+    if(inside.length > 1){
+      var parts = inside.map(function(c){ return '<span class="gChip">' + _e(c.str) + '</span>'; }).join(' · ');
+      items.push('<li><b>' + _e(u.str.replace('_e','')) + '</b> is more than one sound. Say it slowly: ' + parts + '. Split between them.</li>');
+    }
+  });
+  // 3. A silent e marked as magic-e when it is not one
+  magic.forEach(function(e){
+    var ok = want.some(function(c){ return c.magic === e; });
+    if(!ok) items.push('<li>The <b>e</b> at the end is not a magic-e in this word, so it does not join a vowel.</li>');
+  });
+  if(!items.length) return '';
+  return '<div class="whySounds"><div class="whyTitle">Why the sounds split this way</div><ul>' + items.join('') + '</ul></div>';
+}
+
 // ── Check ─────────────────────────────────────────────────────────────────────
 function checkAnswer(){
   if(!currentWord || checked) return;
@@ -1140,14 +1248,15 @@ function checkAnswer(){
     banner.innerHTML = `✅ Perfect! <b>${WordLabData.escapeHtml(currentWord.word)}</b> → ${WordLabData.escapeHtml(correctStr)} (${correct.length} phonemes)${!_wltActive && streak>=3?` <span style="color:var(--orange-text)">🔥 +5 streak bonus!</span>`:''}`;
   } else {
     if(!_wltActive){ score = Math.max(0, score-2); streak = 0; } wrongCount++;
+    const _why = _buildWhySounds(); // read the student's split before the answer is shown
     if(!_wltActive && typeof WordLabData!=='undefined'&&WordLabData.getSession()){WordLabData.recordAttempt('phoneme-splitter',currentWord.diff+':'+currentWord.word,false,0);_ssTrack(currentWord, false);}
     if(!_wltActive && typeof WLScientist!=='undefined') WLScientist.react('wrong');
     if(!_wltActive && typeof WLAudio!=='undefined') WLAudio.wrong();
     if(_wltActive){
-      WLTeacher.onAnswer(false,'The correct phoneme split is: <b>'+WordLabData.escapeHtml(correctStr)+'</b> ('+correct.length+' phonemes). Green lines show where you should have split.');
+      WLTeacher.onAnswer(false,'The correct phoneme split is: <b>'+WordLabData.escapeHtml(correctStr)+'</b> ('+correct.length+' phonemes). Green lines show where you should have split.'+_why);
     }
     banner.className = 'feedbackBanner wrong';
-    banner.innerHTML = `❌ Not quite. Answer: <b>${WordLabData.escapeHtml(correctStr)}</b> (${correct.length} phonemes)<br><span style="font-size:13px;font-weight:700;color:#64748b;">You had: ${WordLabData.escapeHtml(userStr)}</span>`;
+    banner.innerHTML = `❌ Not quite. Answer: <b>${WordLabData.escapeHtml(correctStr)}</b> (${correct.length} phonemes)<br><span style="font-size:13px;font-weight:700;color:#64748b;">You had: ${WordLabData.escapeHtml(userStr)}</span>${_why}`;
     document.getElementById('chopContainer').classList.add('shake');
     setTimeout(() => {
       document.getElementById('chopContainer').classList.remove('shake');
@@ -1167,7 +1276,8 @@ function checkAnswer(){
   banner.style.display = 'block';
   if(!_wltActive) updateStats();
   addHistory(currentWord.word, correctStr, ok);
-  if(!_wltActive){ _roundAnswered++; wlUpdateRoundProgress(); if(_roundAnswered >= _roundTotal){ clearTimeout(autoNextTimer); autoNextTimer = null; setTimeout(showRoundComplete, 800); return; } }
+  var _roundDone = false;
+  if(!_wltActive){ _roundAnswered++; wlUpdateRoundProgress(); if(_roundAnswered >= _roundTotal){ clearTimeout(autoNextTimer); autoNextTimer = null; _roundDone = true; if(ok){ setTimeout(showRoundComplete, 800); return; } } }
   // EALD reveal button
   var ealdEl=document.getElementById('ealdTranslation');if(ealdEl)ealdEl.innerHTML='';
   if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&currentWord){
@@ -1180,11 +1290,16 @@ function checkAnswer(){
       ealdEl.dataset.translatedWord=t[currentWord.word]||'';
     });
   }
-  document.getElementById('nextBtn').classList.add('visible');
+  var _nextBtnEl = document.getElementById('nextBtn');
+  _nextBtnEl.textContent = _roundDone ? 'See my results →' : 'Next word →';
+  _nextBtnEl.classList.add('visible');
   document.getElementById('checkBtn').disabled = true;
+  document.getElementById('resetBtn').disabled = true;
   if(_wltActive) return; // Teacher mode: wait for Next click
+  // Wrong answer: wait for the student to read why, then press Next word.
+  if(!ok){ try{ _nextBtnEl.scrollIntoView({block:'nearest'}); _nextBtnEl.focus({preventScroll:true}); }catch(e){} return; }
   var _ealdExtra=(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage())?1500:0;
-  autoNextTimer = setTimeout(nextWord, (ok ? 1400 : 3000)+_ealdExtra);
+  autoNextTimer = setTimeout(nextWord, 1400+_ealdExtra);
 }
 
 // ── Teacher mode: green overlay on wrong answers ──────────────────────────────
@@ -1310,6 +1425,7 @@ if(_wltActive){
 document.getElementById('checkBtn').addEventListener('click', checkAnswer);
 document.getElementById('nextBtn').addEventListener('click', function(){
   if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
+  if(!_wltActive && _roundTotal && _roundAnswered >= _roundTotal && checked){ showRoundComplete(); return; }
   nextWord();
 });
 
@@ -1320,9 +1436,9 @@ if(typeof WLHelp!=='undefined') WLHelp.init({
     {icon:'👀',title:'Read the word',desc:'Look at the word and listen to how it sounds.'},
     {icon:'✂️',title:'Split the sounds',desc:'Click between letters to split the word into its individual sounds (phonemes).'},
     {icon:'✨',title:'Keep sounds together',desc:'Letters that make one sound (like "sh", "th" or "igh") stay in one box — just don\'t split between them. For magic-e words like "cake", tap the ✨ magic-e button on the silent e.'},
-    {icon:'✅',title:'Check your answer',desc:'Press Check to see if you split the sounds correctly. The correct answer will show if you get it wrong.'}
+    {icon:'✅',title:'Check your answer',desc:'Press Check to see if you split the sounds correctly. If you got it wrong, the answer shows on the letters and you can read why. Press Next word when you are ready.'}
   ],
-  audioText:'Choose how many words you want to practise before you start — 10, 15, 20, 25 or 30. In Phoneme Splitter, you split words into their individual sounds called phonemes. Click between letters to add a split. Letters that make one sound, like sh or th or igh, stay together in one box, so do not split between them. For magic-e words like cake or time, tap the magic-e button on the silent e to join it to its vowel. Press Check when you are ready to see if you got it right.'
+  audioText:'Choose how many words you want to practise before you start — 10, 15, 20, 25 or 30. In Phoneme Splitter, you split words into their individual sounds called phonemes. Click between letters to add a split. Letters that make one sound, like sh or th or igh, stay together in one box, so do not split between them. For magic-e words like cake or time, tap the magic-e button on the silent e to join it to its vowel. Press Check when you are ready to see if you got it right. If you got it wrong, read why the sounds split that way, then press Next word when you are ready.'
 });
 if(typeof WLHints!=='undefined') WLHints.register({
   getStrategyHint: function(){ return 'Say the word slowly \u2014 each mouth movement is a different sound.'; },

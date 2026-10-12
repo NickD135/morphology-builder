@@ -2,9 +2,12 @@
 
 Updated every run from merged, closed and commented agent PRs. Record what he valued, what he rejected and why, and any standing preferences he states in comments. Future runs weigh their choice of work by this file.
 
-(No reviews yet. As of run 2, PR #18 is open with no comments.)
+- PR #20 (Syllable Splitter: explain why each chop goes there, fix the marks, keyboard chops, no auto-advance on wrong) was merged within minutes, no comments. Signal: explanatory "why" feedback plus small bug fixes in a game is the kind of change he takes.
+- PR #18 (Breakdown Blitz "why" panel, energy pause, data fixes) was closed unmerged, no comment, about 6 minutes after #20 merged, with a merge conflict in the shared agent/ files. Most likely closed because of the conflict, not the content, but not certain. Do not resubmit it as is; if revisited, keep it small (why panel and no auto-advance only, no game balance change like the energy pause) and base it on current main.
+- Two agent PRs that both edit agent/LOG.md, BACKLOG.md and LESSONS.md will conflict. One open agent PR at a time is safer.
 
 ## Working notes (operational, not taste)
 
 - GitHub: `gh api repos/NickD135/...` is refused in this sandbox; use the GitHub MCP tools with owner `nicholasd-art`.
-- `*.png` is gitignored; screenshots under `agent/screenshots/` are force-added until Nicholas says otherwise.
+- Screenshots: the brief now says push them to the orphan `agent-screenshots` branch, never to the work branch. Old ones remain under `agent/screenshots/` from run 2.
+- Mock mode works: drive game globals with `page.evaluate` (e.g. set `currentWord`, `boundaries`, then call `checkAnswer()`) to get deterministic wrong answers for screenshots.
