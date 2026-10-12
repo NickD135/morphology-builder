@@ -12,7 +12,7 @@ Score each surface 1 (poor) to 4 (strong) on each lens from IMPROVEMENT_AGENT.md
 | word-study.html | | | | | | | | |
 | mission-mode.html | | | | | | | | |
 | meaning-mode.html | | | | | | | | |
-| breakdown-mode.html | | | | | | | | |
+| breakdown-mode.html | 3 | 3 | 3 (was 2) | 3 | 3 (was 2) | 2 | 17 (was 15) | 2026-10-12 |
 | phoneme-mode.html | 3 | 3 | 3 (was 2) | 3 | 3 (was 2) | 2 | 17 (was 15) | 2026-10-12 |
 | syllable-mode.html | 3 | 3 | 3 (was 2) | 3 | 3 (was 2) | 2 | 17 (was 15) | 2026-10-12 |
 | sound-sorter.html | | | | | | | | |
@@ -45,7 +45,9 @@ Add ideas found while working. Keep each to one line with the surface and the le
 - At 1024px wide, game page headers wrap and the HUD pills overlap the brand row (seen on phoneme-mode); check all game headers at tablet width (polish)
 - Syllable Splitter: the Need Advice ladder is clap, then count; add a third step that names the rule for the first break, using `_syllableBreakReason` (Scaffolded)
 - Syllable Splitter: at 768px the game column is very narrow and long words wrap across three lines; check the tablet layout (Inclusive, polish)
-- All fuel/round games: check whether wrong answers auto-advance before students can read the explanation (fixed in Syllable Splitter run 2 and Phoneme Splitter run 3; Breakdown Blitz still auto-advances since PR #18 was closed)
+- All fuel/round games: check whether wrong answers auto-advance before students can read the explanation (fixed in Syllable Splitter run 2, Phoneme Splitter run 3, Breakdown Blitz run 5). Still to check: Mission Mode, Meaning Match-Up, Root Lab, Sound Sorter, Homophone Hunter
+- Breakdown Blitz data errors found in run 5 (parts do not rebuild the word): `emotional` = mot+ion+al (no e-), `demonstration` = de+monster+ation, `determination` = de+termine+ation, `telecommunications` drops the final -s. Fix in a data-only PR, checked against `data.js` and word-study splits (Teaching practice)
+- Breakdown Blitz: the Why list can reach 5 lines when every box is wrong; consider showing the first two and a "Show more" for Ben (Clear)
 - Help popups describe controls but give no worked example ("I do"); add one modelled example per game (Scaffolded, Clear)
 - SOLO: `units/SOLO_PROGRESS.md` status header is out of date (resources track)
 - SOLO: dead or conflicting resource links listed in `SUGGESTIONS.md` (resources track). Now fixable directly under hard rule 3a: check the live `resources` rows, fix them, and remove the conflicting hardcoded blocks

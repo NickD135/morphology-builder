@@ -2,6 +2,9 @@
 
 One dated entry per run, newest first. A few lines each: what was worked on, the PR, and anything the next run should know.
 
+## 2026-10-12 — run 5 (student experience: Breakdown Blitz "why" feedback, small redo of #18)
+Breakdown Blitz wrong answers now show a short Why list under the correct breakdown, one line per wrong box only: what the prefix, base or suffix is and what it means (meanings from `data.js`), a part typed in the wrong box ("You wrote ness in the prefix box…"), and the spelling change when the base looks different inside the word (y to i, dropped e, doubled consonant; checked against all 303 words, 18 trigger). A build line (un + happy + ness → unhappiness) closes it. Wrong answers no longer auto-advance after 3.5s; Next word gets focus so Enter continues. Fuel holds while the explanation is on screen (flagged in the PR; one line to revert). Kept small on purpose, per the #18 lesson: no data changes, no other balance changes. Stacked on PR #23 (which is stacked on #22) so the agent/ files do not conflict.
+
 ## 2026-10-12 — run 4, continued (whole of SOLO Unit 31, on Nicholas's request)
 Nicholas asked for the whole unit to be audited and fixed at once, and gave permission for the SOLO `resources` table (hard rule 3a; SQL file only, he runs it). Added to PR #23:
 - Know rewritten for all 13 outcomes: 130 questions, no overlap with Show, a hint and why line on each.
