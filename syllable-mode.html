@@ -145,6 +145,16 @@
       pointer-events:none;
     }
     .chopGap:hover .chopHint{ opacity:1; }
+    .chopGap:focus-visible{ outline:3px solid #b45309; outline-offset:2px; border-radius:6px; }
+    .chopGap.chopped.wrong-break .chopLine{ background:var(--bad) !important; box-shadow:0 0 0 4px rgba(220,38,38,.15) !important; }
+    .chopGap.marked .chopHint{ opacity:1; font-size:14px; top:-24px; }
+    .chopGap.correct-break.marked .chopHint{ color:#15803d; }
+    .chopGap.wrong-break.marked .chopHint{ color:#b91c1c; }
+    .whyChops{ margin-top:10px; text-align:left; color:#1f2937; font-size:15px; font-weight:600; line-height:1.55; }
+    .whyChops .whyTitle{ font-weight:900; color:#92400e; margin-bottom:4px; }
+    .whyChops ul{ margin:0; padding-left:20px; }
+    .whyChops li{ margin:3px 0; }
+    .whyChops .ruleTag{ display:inline-block; font-size:11px; font-weight:900; color:#92400e; background:#fef3c7; border-radius:999px; padding:1px 8px; margin-left:4px; }
 
     /* syllable preview */
     .syllablePreview{
@@ -1028,7 +1038,12 @@ function renderWord(){
 
       gap.appendChild(line);
       gap.appendChild(hint);
+      gap.tabIndex = 0;
+      gap.setAttribute('role', 'button');
+      gap.setAttribute('aria-pressed', 'false');
+      gap.setAttribute('aria-label', 'Chop between ' + ch + ' and ' + letters[i+1]);
       gap.addEventListener('click', () => toggleChop(i, gap));
+      gap.addEventListener('keydown', (e) => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggleChop(i, gap); } });
       block.appendChild(gap);
     }
 
@@ -1085,10 +1100,12 @@ function toggleChop(pos, gapEl){
     choppedGaps.add(pos);
     gapEl.classList.add('chopped');
   }
+  gapEl.setAttribute('aria-pressed', choppedGaps.has(pos) ? 'true' : 'false');
   updateSyllablePreview();
 }
 
 function clearChops(){
+  if(checked) return; // already marked: press Next word instead
   // Reset state
   choppedGaps.clear();
   checked = false;
@@ -1129,6 +1146,59 @@ function updateSyllablePreview(){
 }
 
 // ── Check ─────────────────────────────────────────────────────────────────────
+// Explain a syllable break in student language, linked to the numbered rules in the side panel.
+// Works from the letters either side of the break, so it suits any word list (built-in, custom, spelling sets).
+var _SYL_SUFFIXES = ['ful','less','ness','ment','ing','ly','able','ible'];
+var _SYL_DIGRAPHS = ['ck','sh','th','ch','ph','ng','wh','gh','tch','dge'];
+function _sylIsVowel(word, idx){
+  var ch = word.charAt(idx);
+  if('aeiouáéíóú'.indexOf(ch) !== -1) return true;
+  if(ch === 'y'){ var nx = word.charAt(idx+1); return idx > 0 && (nx === '' || 'aeiou'.indexOf(nx) === -1); } // y is a vowel unless it starts the word or comes before a vowel
+  return false;
+}
+function _syllableBreakReason(syls, i){
+  var _e = WordLabData.escapeHtml;
+  var word = syls.join('').toLowerCase();
+  var L = syls[i].toLowerCase(), R = syls[i+1].toLowerCase();
+  var cut = syls.slice(0, i+1).join('').length; // index of first letter after the break
+  var show = '<b>' + _e(syls[i]) + ' · ' + _e(syls[i+1]) + '</b>: ';
+  var tag = function(n){ return ' <span class="ruleTag">Rule ' + n + '</span>'; };
+  // consonant runs either side of the break
+  var a = cut; while(a > 0 && !_sylIsVowel(word, a-1)) a--;
+  var b = cut; while(b < word.length && !_sylIsVowel(word, b)) b++;
+  var leftC = word.slice(a, cut), rightC = word.slice(cut, b);
+  var lastVowelLeft = leftC === '', firstVowelRight = rightC === '';
+  if(i + 1 === syls.length - 1 && /^[^aeiou]le$/.test(R)){
+    return show + 'the consonant before <b>-le</b> (' + _e(R.charAt(0)) + ') goes with it.' + tag(6);
+  }
+  if(i + 1 === syls.length - 1 && _SYL_SUFFIXES.indexOf(R) !== -1){
+    return show + '<b>-' + _e(R) + '</b> is a suffix, so it makes its own syllable.' + tag(4);
+  }
+  if(!lastVowelLeft && !firstVowelRight){
+    return show + 'the consonants <b>' + _e(leftC) + '</b> and <b>' + _e(rightC) + '</b> sit together, so the chop goes between them.' + tag(2);
+  }
+  if(lastVowelLeft && !firstVowelRight){
+    var oneSound = rightC.length === 1 || _SYL_DIGRAPHS.indexOf(rightC) !== -1;
+    return show + 'the first syllable ends with a vowel, so <b>' + _e(rightC) + '</b>' + (rightC.length > 1 && oneSound ? ' (one sound)' : '') + ' starts the next syllable.' + (oneSound ? tag(3) : '');
+  }
+  if(!lastVowelLeft && firstVowelRight){
+    if(leftC.length === 1) return show + 'one consonant (<b>' + _e(leftC) + '</b>) sits between two vowels. Here it stays with the first syllable.' + tag(3);
+    if(_SYL_DIGRAPHS.indexOf(leftC) !== -1) return show + '<b>' + _e(leftC) + '</b> makes one sound, so it stays together with the first syllable.' + tag(3);
+    return show + 'the consonants <b>' + _e(leftC) + '</b> stay with the first syllable, and the next syllable starts with a vowel.';
+  }
+  return show + 'the vowels <b>' + _e(L.slice(-1)) + '</b> and <b>' + _e(R.charAt(0)) + '</b> are next to each other but make two different sounds, so each gets its own syllable.' + tag(1);
+}
+// Only explain what the student got wrong: missed chops get a reason, extra chops are named.
+function _buildWhyChops(correctBreaks, userBreaks){
+  var _e = WordLabData.escapeHtml;
+  var syls = currentWord.syllables, letters = currentWord.word.split('');
+  var items = [];
+  correctBreaks.forEach(function(pos, i){ if(userBreaks.indexOf(pos) === -1) items.push('<li>' + _syllableBreakReason(syls, i) + '</li>'); });
+  userBreaks.forEach(function(pos){ if(correctBreaks.indexOf(pos) === -1) items.push('<li>No chop between <b>' + _e(letters[pos]) + '</b> and <b>' + _e(letters[pos+1]) + '</b>. That would split up a syllable.</li>'); });
+  if(!items.length) return '';
+  return '<div class="whyChops"><div class="whyTitle">Why the chops go there</div><ul>' + items.join('') + '</ul></div>';
+}
+
 function checkAnswer(){
   if(!currentWord || checked) return;
   checked = true;
@@ -1175,11 +1245,11 @@ function checkAnswer(){
     if(_wltActive){
       // Enhanced green overlay: show syllable labels above word
       _wltShowSyllableLabels();
-      WLTeacher.onAnswer(false,"The correct syllable split is: <b>"+WordLabData.escapeHtml(correctSylls)+"</b>. Green lines show correct breaks, red lines show incorrect breaks.");
+      WLTeacher.onAnswer(false,"The correct syllable split is: <b>"+WordLabData.escapeHtml(correctSylls)+"</b>. Green lines (✓) show where the chops go, red lines (✗) show chops that were not needed."+_buildWhyChops(correct_breaks, user_breaks));
     }
 
     banner.className = 'feedbackBanner wrong';
-    banner.innerHTML = `❌ Not quite. <b>${WordLabData.escapeHtml(currentWord.word)}</b> = ${WordLabData.escapeHtml(correctSylls)}<br><span style="font-size:12px;font-weight:700;opacity:.8;">Green lines show the correct splits. Click Reset to try again.</span>`;
+    banner.innerHTML = `❌ Not quite. <b>${WordLabData.escapeHtml(currentWord.word)}</b> = ${WordLabData.escapeHtml(correctSylls)}<br><span style="font-size:12px;font-weight:700;opacity:.8;">Green lines (✓) show where the chops go. Red lines (✗) were not needed.</span>${_buildWhyChops(correct_breaks, user_breaks)}`;
 
     document.getElementById('chopContainer').classList.add('shake');
     setTimeout(() => document.getElementById('chopContainer').classList.remove('shake'), 400);
@@ -1188,7 +1258,8 @@ function checkAnswer(){
   banner.style.display = 'block';
   if(!_wltActive) updateStats();
   addHistory(currentWord.word, correctSylls, isCorrect);
-  if(!_wltActive){ _roundAnswered++; wlUpdateRoundProgress(); if(_roundAnswered >= _roundTotal){ clearTimeout(autoNextTimer); autoNextTimer = null; setTimeout(showRoundComplete, 800); return; } }
+  var _roundDone = false;
+  if(!_wltActive){ _roundAnswered++; wlUpdateRoundProgress(); if(_roundAnswered >= _roundTotal){ clearTimeout(autoNextTimer); autoNextTimer = null; _roundDone = true; if(isCorrect){ setTimeout(showRoundComplete, 800); return; } } }
 
   // EALD reveal button
   var ealdEl=document.getElementById('ealdTranslation');if(ealdEl){
@@ -1203,11 +1274,15 @@ function checkAnswer(){
     } else { ealdEl.innerHTML=''; }
   }
 
-  document.getElementById('nextBtn').classList.add('visible');
+  var _nextBtnEl = document.getElementById('nextBtn');
+  _nextBtnEl.textContent = _roundDone ? 'See my results →' : 'Next word →';
+  _nextBtnEl.classList.add('visible');
   document.getElementById('checkBtn').disabled = true;
   if(_wltActive) return; // Teacher mode: wait for Next click
+  // Wrong answer: wait for the student to read the reasons and press Next word.
+  if(!isCorrect){ try{ _nextBtnEl.focus({preventScroll:true}); }catch(e){} return; }
   var _ealdExtra=(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage())?1500:0;
-  autoNextTimer = setTimeout(nextWord, (isCorrect ? 1400 : 3000)+_ealdExtra);
+  autoNextTimer = setTimeout(nextWord, 1400+_ealdExtra);
 }
 
 function getCorrectBreaks(){
@@ -1226,12 +1301,14 @@ function markCorrectBreaks(breaks){
   document.querySelectorAll('.chopGap').forEach(g => {
     const p = parseInt(g.dataset.pos);
     const line = g.querySelector('.chopLine');
+    const hint = g.querySelector('.chopHint');
     if(breaks.includes(p)){
-      g.classList.add('chopped');
-      if(line) line.style.background = 'var(--green)';
+      g.classList.add('correct-break', 'marked');
+      if(hint) hint.textContent = '✓';
     } else if(g.classList.contains('chopped')){
-      // Wrong chop — show in red
-      if(line) line.style.background = 'var(--bad)';
+      // Wrong chop: red line + ✗
+      g.classList.add('wrong-break', 'marked');
+      if(hint) hint.textContent = '✗';
     }
   });
 }
@@ -1325,6 +1402,7 @@ if(_wltActive){ var _rpw = document.getElementById('roundPickerWrap'); if(_rpw) 
 document.getElementById('checkBtn').addEventListener('click', checkAnswer);
 document.getElementById('nextBtn').addEventListener('click', function(){
   if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
+  if(!_wltActive && _roundTotal && _roundAnswered >= _roundTotal && checked){ showRoundComplete(); return; }
   nextWord();
 });
 
@@ -1333,11 +1411,11 @@ if(typeof WLHelp!=='undefined') WLHelp.init({
   steps:[
     {icon:'🎯',title:'Choose your round',desc:'Pick how many words you want to practise — 10, 15, 20, 25 or 30. You\'ll see your results at the end.'},
     {icon:'👀',title:'Read the word',desc:'Look at the word and say it slowly to hear the beats.'},
-    {icon:'✂️',title:'Chop the syllables',desc:'Click between letters to chop the word into syllables. Each syllable has one vowel sound.'},
+    {icon:'✂️',title:'Chop the syllables',desc:'Click between letters to chop the word into syllables. Each syllable has one vowel sound. On a keyboard, press Tab to move between gaps and Enter to chop.'},
     {icon:'🔄',title:'Undo a chop',desc:'Click a line again to remove a chop if you change your mind.'},
-    {icon:'✅',title:'Check your answer',desc:'Press Check. Green lines show correct chops, red lines show mistakes.'}
+    {icon:'✅',title:'Check your answer',desc:'Press Check. Green lines with a tick show where the chops go. Red lines with a cross were not needed. If you got it wrong, read why, then press Next word.'}
   ],
-  audioText:'Choose how many words you want to practise before you start — 10, 15, 20, 25 or 30. In Syllable Splitter, you chop words into syllables. Each syllable has one vowel sound. Click between letters to add a chop. Click a line again to undo it. Press Check to see your result. Green lines mean correct, red lines mean that chop was wrong.'
+  audioText:'Choose how many words you want to practise before you start — 10, 15, 20, 25 or 30. In Syllable Splitter, you chop words into syllables. Each syllable has one vowel sound. Click between letters to add a chop. Click a line again to undo it. Press Check to see your result. Green lines with a tick show where the chops go. Red lines with a cross were not needed. If you got it wrong, read why the chops go there, then press Next word when you are ready.'
 });
 if(typeof WLHints!=='undefined') WLHints.register({
   getStrategyHint: function(){ return 'Clap the word out \u2014 each clap is a syllable. Every syllable needs a vowel sound.'; },
