@@ -2,6 +2,9 @@
 
 One dated entry per run, newest first. A few lines each: what was worked on, the PR, and anything the next run should know.
 
+## 2026-10-12 — run 4 (on-demand: SOLO Unit 31)
+Nicholas asked for Unit 31 this run (track rotation skipped). Walked Grow, Know and Show in mock mode as Ben and Chloe. Picked Y5 (× and ÷ decimals by powers of 10): it had no visual at all for a spatial idea, and Know reused 7 of 9 Show calculations. Added a place value chart visual (`pvShift`) and an interactive (`placeShift`) with a Mystery move challenge for early finishers, fresh Know and try-it numbers, a hint and why line on every Know question. Show untouched. Added `__WL_MOCK__.add()` to mock mode so the Grow button can be shown with fake resource rows. Branch is stacked on PR #22 so the agent/ files do not conflict; the PR targets that branch and retargets to main when #22 merges.
+
 ## 2026-10-12 — run 3 (student experience: Phoneme Splitter feedback)
 Phoneme Splitter wrong answers now explain why, in student words, only for what the student got wrong: sounds they broke apart (digraph, vowel team, bossy r, double letters, silent letter, -tion ti), a magic-e they missed or marked wrongly, and boxes holding more than one sound. Wrong answers no longer auto-advance after 3s; Next word gets focus and scrolls into view, and the last word says See my results. Reset is disabled after Check (it reopened a marked word and allowed a second scored check). Fixed `plateau` data (pl was one phoneme). Gaps were already keyboard buttons, so the backlog item about that was closed. PR #18 (Breakdown Blitz) was closed unmerged after #20 merged, probably due to the agent/ file conflict; not redone this run.
 

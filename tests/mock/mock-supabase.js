@@ -427,6 +427,13 @@
       });
       saveDb();
       return n;
+    },
+    // add('resources', [{ unit_id: 'u31', outcome_id: 'y5', type: 'website', label: 'Fake link', url: 'https://example.org/' }])
+    // Adds fake rows for one test run (e.g. so the SOLO Grow button appears). Never add real data.
+    add: function (t, rows) {
+      (Array.isArray(rows) ? rows : [rows]).forEach(function (r) { tbl(t).push(clone(r)); });
+      saveDb();
+      return tbl(t).length;
     }
   };
 

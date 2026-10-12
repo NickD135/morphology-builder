@@ -55,6 +55,7 @@ await s.page.getByRole('button', { name: '15' }).click();
 await s.shot('out/syllable-round.png');
 console.log(s.errors);          // page errors and console errors
 await s.page.evaluate(() => __WL_MOCK__.dump('student_progress'));  // what got saved
+await s.page.evaluate(() => __WL_MOCK__.add('resources', [{ unit_id: 'u31', outcome_id: 'y5', type: 'website', label: 'Fake link', url: 'https://example.org/', scope: 'global' }]));  // fake rows, e.g. so a SOLO Grow button shows
 await s.close();
 ```
 
@@ -66,6 +67,7 @@ fallback font in screenshots.
 
 Edge functions (text to speech, translations, AI analysis, Stripe) are offline, so pages use their
 fallbacks. Resources stored in the `resources` table are not available; SOLO uses its built in
-fallback resources. Row level security is not simulated. The fake client covers the queries the
+fallback resources. For units whose resources live only in the database, the Grow button stays hidden
+until you add a fake row with `__WL_MOCK__.add('resources', …)` (see above). Row level security is not simulated. The fake client covers the queries the
 site uses today; if a page uses a new query feature, `mock-supabase.js` logs `[mock] unsupported`
 in the console.

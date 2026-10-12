@@ -75,3 +75,21 @@ Verification: Node-eval all blocks (MC answer ∈ options, no dups, full arithme
 re-check of ×÷/percentages/place-value/equations, 3-hint ladders); Playwright 0
 console errors; window.UNITS live with u31; 3 new Maths-is-Fun BEYOND links HTTP 200.
 Committed + pushed to main.
+
+---
+
+## Session 2026-10-12 — Y5 (× and ÷ decimals by powers of 10) visual upgrade (improvement agent, PR)
+
+Y5 had no visual anywhere, although digits moving between places is a spatial idea. Its Know
+practice also reused 7 of the 9 Show/post-test calculations (3.5 × 10, 4.2 ÷ 10, 25 ÷ 100…).
+
+- New static visual `pvShift` (place value chart, before/after rows, fixed red decimal point,
+  orange placeholder zeros) and new interactive `placeShift` (× / ÷ 10, 100, 1000 buttons plus a
+  "Mystery move" challenge: work out which operation turned one number into another)
+- Grow: hook reveal, worked example (now 4.7 × 100) and two try-its use the chart; try-its use
+  fresh numbers (2.7 × 10, 6.3 ÷ 10, 0.8 × 1000) with hints that do not give the answer until step 3
+- Know: 10 new questions with fresh numbers, a hint on every question, a `why` line, a chart on the
+  first three (scaffold fades), a placeholder-zero item (6 ÷ 100), an "add a zero" misconception
+  item (5.2 × 10 = 5.20?) and a challenge item (0.072 × ? = 72)
+- Show and PRETESTS unchanged (outcome id unchanged; no new DB rows needed)
+- Checked in mock mode (tests/mock) as Ben and Chloe, 1366 and 1024 px, low stim and reduced motion
