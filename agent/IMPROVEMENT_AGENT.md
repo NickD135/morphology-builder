@@ -42,6 +42,7 @@ Run the site locally with `python3 -m http.server 8080 --bind 0.0.0.0`; Playwrig
 2. One pull request per run. If three or more agent PRs are already open and unreviewed, do not open another: use the run to read his comments, revise open PRs, and update the backlog.
 3. Never run database migrations, never execute SQL against any Supabase instance, and never touch the shared Supabase project. SQL inserts are written to files only.
 4. Never add, change or loosen Row Level Security policies, authentication, guardian or student data handling, or anything that reads or stores children's data. If an improvement needs that, write it up in `agent/PROPOSALS.md` instead.
+4a. Never see student or teacher data. Do not open, read, search or copy any database export or data dump if one ever appears in the repo (stop and flag it in `agent/PROPOSALS.md` instead). Never use the Supabase URL or keys to fetch anything, never log in to the live site as a student or teacher, and never call edge functions. For checks, use the synthetic harnesses in `tests/manual/` or fake local data only.
 5. Never add analytics, trackers, ads, third party scripts that collect data, or external services that need keys.
 6. Never commit secrets, and never change environment variables, deployment config, DNS or billing.
 7. The NSW Mathematics K-10 Syllabus (2022) and the NSW English K-10 Syllabus are ground truth for curriculum alignment. Research can refine how something is taught, never what the syllabus requires.
