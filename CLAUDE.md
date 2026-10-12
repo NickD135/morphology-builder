@@ -390,8 +390,10 @@ SELECT on student-facing tables is intentionally open to the anon key so student
 2. **Open SELECT for the anon key** on student tables (names, progress, character) — by design for
    passwordless student login, but it means anyone with the anon key can read them. Revisit if a
    thin server layer is added.
-3. **Data dumps tracked in git** at the repo root — `Supabase Snippet *.csv`,
-   `*_import.sql`, `class_morphemes_migration.sql`. Review for student data and move out of the repo.
+3. **Data dumps** — the `Supabase Snippet *.csv` and `*_import.sql` exports (real student
+   progress/character records and a teacher's feedback submission) were removed from the repo on
+   2026-10-12 and are now gitignored and excluded from deploys via `.vercelignore`. They remain in
+   git history. `class_morphemes_migration.sql` is schema only and stays.
 4. **`wordlab-data.js` is a ~3,000-line monolith** (data, UI, auth, challenges, EALD, shop).
 5. **`solo/index.html` is a ~19,700-line single file** compiled by Babel in the browser (slow first
    paint, needs `'unsafe-eval'` in its CSP).
