@@ -249,6 +249,7 @@ Existing spec types & key params:
 - `barModel` `{totalLabel, parts:[{label,value}], caption}`
 - `fraction` `{n, d}` (proper only) · `sharing` `{items, groups}` (handles improper)
 - `ioTable` `{cols:[[input,output],…], inLabel?, outLabel?, caption}` — a real Input | Output table, one pair per row; `null` renders a `?` gap
+  - add `headers:[…]` for any other table (frequency table, timetable): each row then has one value per header; a cell of `{tally:n}` draws tally marks
 
 **Adding a NEW visual type:** add a branch inside `Visual` and document its spec in the memory file.
 
@@ -260,7 +261,9 @@ branch, an answer-capture path in the pretest/Know/Show answer state (`pretestAn
 the draft/restore plumbing — heavier than a static spec, so scope it deliberately.
 The `table` type (`{type:"table", text, cols:[[input,output],…], blanks:[[pair,0|1],…]}`, 0 = input,
 1 = output) is a second wired example: students type the missing cells into the table itself, and every
-blank must be right. The Grow-only `interactive:{type:"ruleTable"}` widget is a mystery-rule table.
+blank must be right. It takes the same `headers` / `inLabel` / `outLabel` options as `ioTable`. Grow-only
+widgets: `interactive:{type:"ruleTable"}` (mystery rule; `rules:["× 4","+ 3"]`, `algebra:true` for x | y)
+and `interactive:{type:"tallyTable", categories:[…]}` (tap to build a tally / frequency table).
 Two flavours:
 - **Interactive teaching visual** (new concept) — put it in the **Grow hook/worked example or Know
   example**, with full feedback, so the student discovers the idea by doing.
