@@ -248,6 +248,7 @@ Existing spec types & key params:
 - `machine` `{op, inLabel, outLabel, rows:[[in,out]…], caption}`
 - `barModel` `{totalLabel, parts:[{label,value}], caption}`
 - `fraction` `{n, d}` (proper only) · `sharing` `{items, groups}` (handles improper)
+- `ioTable` `{cols:[[input,output],…], inLabel?, outLabel?, caption}` — a real Input | Output table, one pair per row; `null` renders a `?` gap
 
 **Adding a NEW visual type:** add a branch inside `Visual` and document its spec in the memory file.
 
@@ -256,7 +257,11 @@ Existing spec types & key params:
 captures their answer (the `plot` type is the worked example: students place points on a grid, the
 answer is the placement). To add a new interactive type you wire it end-to-end like `plot`: a render
 branch, an answer-capture path in the pretest/Know/Show answer state (`pretestAns`, etc.), grading, and
-the draft/restore plumbing — heavier than a static spec, so scope it deliberately. Two flavours:
+the draft/restore plumbing — heavier than a static spec, so scope it deliberately.
+The `table` type (`{type:"table", text, cols:[[input,output],…], blanks:[[pair,0|1],…]}`, 0 = input,
+1 = output) is a second wired example: students type the missing cells into the table itself, and every
+blank must be right. The Grow-only `interactive:{type:"ruleTable"}` widget is a mystery-rule table.
+Two flavours:
 - **Interactive teaching visual** (new concept) — put it in the **Grow hook/worked example or Know
   example**, with full feedback, so the student discovers the idea by doing.
 - **Interactive scaffold** (support) — a guided, hands-on version of the task with guard-rails
