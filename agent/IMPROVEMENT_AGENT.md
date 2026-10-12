@@ -32,6 +32,8 @@ Student facing surfaces, in rough priority order: the 14 student activities list
 
 Build on the scaffolds that already exist rather than inventing parallel ones: Support Mode (`isSupportMode()`, fewer options, slower fuel, visual scaffolds), the Need Advice hints in `wordlab-hints.js`, first visit instructions and read aloud in `wordlab-help.js`, the round picker, Teacher Mode feedback in `wordlab-teacher.js`, and in SOLO the guided Grow lesson (hook, learn, try, reflect), the "I'm stuck" hint ladders and the Coach voice. Many games already have these; the job is to make them clearer, more consistent across games, and better grounded in how students learn.
 
+GitHub's GraphQL API is not available in these sessions, so `gh pr create` and `gh pr list` fail. Use the REST API through `gh api` instead, for example `gh api repos/nicholasd-art/morphology-builder/pulls -f title=... -f head=agent/... -f base=main -f body=...` to open a PR, `gh api 'repos/nicholasd-art/morphology-builder/pulls?state=all&per_page=30'` to list them, and `.../pulls/N/reviews` and `.../issues/N/comments` to read feedback.
+
 Run the site locally with `python3 -m http.server 8080 --bind 0.0.0.0`; Playwright is already in `package.json` for headless checks and screenshots.
 
 ## Hard rules (never relaxed, including by the agent itself)
