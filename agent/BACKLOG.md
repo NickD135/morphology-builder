@@ -12,7 +12,7 @@ Score each surface 1 (poor) to 4 (strong) on each lens from IMPROVEMENT_AGENT.md
 | word-study.html | | | | | | | | |
 | mission-mode.html | | | | | | | | |
 | meaning-mode.html | | | | | | | | |
-| breakdown-mode.html | 3 | 3 | 3 (was 2) | 3 | 3 (was 2) | 2 | 17 (was 15) | 2026-10-12 |
+| breakdown-mode.html | 3 | 3 | 3 (was 2) | 3 | 3 (was 2) | 2 | 17 (was 15) | 2026-10-13 (7 wrong answer splits fixed; splits now tested) |
 | phoneme-mode.html | 3 | 3 | 3 (was 2) | 3 | 3 (was 2) | 2 | 17 (was 15) | 2026-10-12 |
 | syllable-mode.html | 3 | 3 | 3 (was 2) | 3 | 3 (was 2) | 2 | 17 (was 15) | 2026-10-12 |
 | sound-sorter.html | 3 | 3 | 3 (was 2) | 3 | 3 (was 1: no keyboard play) | 2 | 17 (was 14) | 2026-10-13 |
@@ -48,7 +48,6 @@ Add ideas found while working. Keep each to one line with the surface and the le
 - Speed Builder at 768px: with the extra Base and Time pills the title truncates to "S…"; consider hiding the Base pill in the header on narrow screens (polish)
 - Syllable Splitter: at 768px the game column is very narrow and long words wrap across three lines; check the tablet layout (Inclusive, polish)
 - All fuel/round games: check whether wrong answers auto-advance before students can read the explanation (fixed in Syllable Splitter run 2, Phoneme Splitter run 3, Breakdown Blitz run 5). Sound Sorter fixed run 8. Still to check: Mission Mode, Meaning Match-Up, Root Lab, Homophone Hunter
-- Breakdown Blitz data errors found in run 5 (parts do not rebuild the word): `emotional` = mot+ion+al (no e-), `demonstration` = de+monster+ation, `determination` = de+termine+ation, `telecommunications` drops the final -s. Fix in a data-only PR, checked against `data.js` and word-study splits (Teaching practice)
 - Breakdown Blitz: the Why list can reach 5 lines when every box is wrong; consider showing the first two and a "Show more" for Ben (Clear)
 - Help popups describe controls but give no worked example ("I do"); add one modelled example per game (Scaffolded, Clear)
 - SOLO: `units/SOLO_PROGRESS.md` status header is out of date (resources track)
@@ -59,3 +58,8 @@ Add ideas found while working. Keep each to one line with the surface and the le
 - Sound Sorter: some sound labels read awkwardly in feedback ("EAU = OH sound", "Diminutive -ette ending sound"); tidy `soundLabel` in `sound-sorter-data.js` (Clear)
 - Sound Sorter data, Aus English check of the rest of the pool: oo-short "ou" words (gourmet, bouquet, tour, detour) and other trap-bath or au words outside the 13 fixed in run 9; consider whether "damn" belongs in the game at all (Teaching practice)
 - Sound Sorter Teacher Mode feedback still says "/OR sound/ sound"; reuse `_ssSoundName` there (Clear, polish)
+- SOLO resources: the dead u23 Beyond link (mathsisfun.com/geometry/triangle-area.html, 404) still needs a verified replacement. Candidates from search, not yet opened: mathsisfun.com/area.html (shapes incl. triangle) or the existing Mr J triangle video only. Needs a run where WebFetch can open pages (Resources)
+- Breakdown Blitz: one fixed answer per word means "emotion + al" for emotional is marked 0 of 4, though it is a sensible split. Consider accepting a second valid analysis per word (an `alt` answers field), so students are not marked wrong for real morphology (Teaching practice, Scaffolded)
+- Breakdown Blitz: 39 more words where the answer is a defensible split but differs from word-study (e.g. hyperactive hyper+active vs hyper+act+ive, psychology psych+ology vs psycho+logy). Pick one convention per pattern with Nicholas before changing (Teaching practice)
+- data.js: the `a-` prefix examples include "asexual"; swap it for a more suitable Year 5/6 example (Clear)
+- Run tests/test-breakdown-splits.js in any PR that touches Breakdown Blitz words; consider a similar rebuild check for Mission Mode and Root Lab pools (code health)

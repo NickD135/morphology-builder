@@ -11,6 +11,7 @@ Updated every run from merged, closed and commented agent PRs. Record what he va
 - Run 8 (2026-10-13): #25 (game headers, polish track) merged about 2.5 hours after opening, no comments. Signal: polish fixes that are checked at several screen sizes are welcome too.
 - Run 9 (2026-10-13): #26 (Sound Sorter) got a structured "Reviewer verdict: NEEDS CHANGES" comment posted from Nicholas's account (a reviewer agent: Must fix / Checks / Worth a look). Treat its Must fix items as his review and fix them on the same branch before opening anything new. It checks the work independently (it recounted the line totals and reproduced a crash with a 150 ms second tap), so test fast repeated input and report counts that add up.
 - **Australian English pronunciation is checked.** Any feedback that names a sound in a model word must hold for Australian speakers: bath, fast, calf and aunt have the AR sound; haunt, launch, author, dinosaur have the OR sound; tour varies. When a game shows example words, sweep every example it can show, not just the rules.
+- Run 10 (2026-10-13): #26 got "Reviewer verdict: MERGE" after the run 9 fixes, still waiting on Nicholas to merge. Signal: the reviewer agent re-reviews revised PRs; fixing its Must fix items on the same branch works.
 - Two agent PRs that both edit agent/LOG.md, BACKLOG.md and LESSONS.md will conflict. One open agent PR at a time is safer.
 
 - Run 4 was requested on demand for SOLO Unit 31. Signal: he wants SOLO units reviewed one at a time against the playbook framing, not only Word Labs games.
@@ -32,3 +33,5 @@ Updated every run from merged, closed and commented agent PRs. Record what he va
 - Offline docx: only docx 9.7.1 is available (`NODE_PATH=/opt/npm-tools/node_modules`). The u31 program built with it to the same 20 pages.
 - `checkAnswer()` style functions in games can be driven through real clicks and `keyboard.press('Enter')` in mock mode; doing so caught that Sound Sorter tiles were not focusable at all. Try a keyboard pass on every game touched.
 - Fast double taps: drive `checkAnswer()` twice 150 ms apart (and with real `page.click`) in mock mode; delayed `setTimeout` resets are where these games break.
+- Scheduled runs cannot use WebFetch: it asks for a permission nobody answers, then fails. Resource checks need a different route (or an attended run). WebSearch works and is fine for citing sources.
+- Breakdown Blitz `MISSIONS` is stage filtered in the page: a word above a student's stage is not in `MISSIONS` for them (Ben, s2l, has 150 words). Pick the mock student by the word's stage when screenshotting.
