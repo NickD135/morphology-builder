@@ -7,6 +7,7 @@ Updated every run from merged, closed and commented agent PRs. Record what he va
 - Run 5 (2026-10-12): still no human comments on #22 or #23. Redid Breakdown Blitz as the small version the #18 lesson suggested, to test whether the content itself is welcome.
 - Run 6 (2026-10-12): #22, #23 and #24 still had no human review, so the run held (hard rule 2). Four runs in one day outpaced review; a held run is the expected outcome when the stack is three deep.
 - **Standing instruction (stated 2026-10-12): hold only once 10 agent PRs are open and unreviewed** (hard rule 2 raised from 3 to 10 by Nicholas). He reviews in batches: after run 6 he merged #22, #23 and #24 together.
+- Run 7 (2026-10-13): #22, #23 and #24 were all merged together without comments. Signal: "why" feedback in games (now in Syllable, Phoneme and Breakdown) and whole-unit SOLO fixes are both welcome. No rejections so far apart from #18, which was most likely a conflict.
 - Two agent PRs that both edit agent/LOG.md, BACKLOG.md and LESSONS.md will conflict. One open agent PR at a time is safer.
 
 - Run 4 was requested on demand for SOLO Unit 31. Signal: he wants SOLO units reviewed one at a time against the playbook framing, not only Word Labs games.
@@ -24,4 +25,5 @@ Updated every run from merged, closed and commented agent PRs. Record what he va
 - When two agent PRs are open, stack the second branch on the first and target the PR at the first branch, so the agent/ files do not conflict.
 - `solo/UNIT_REVIEW_PLAYBOOK.md` tells you to curl Supabase for resource rows. Since 2026-10-12 this is allowed for the `resources` table only (hard rule 3a).
 - Supabase REST and most outbound HTTPS are blocked by the sandbox egress proxy. WebFetch works for YouTube oEmbed and for most worksheet sites, so verify resources with WebFetch, not curl.
+- Mock mode sweeps: a 13 page sweep at one size takes about 2 minutes, so run one viewport per command (the shell times out at 5 minutes).
 - Offline docx: only docx 9.7.1 is available (`NODE_PATH=/opt/npm-tools/node_modules`). The u31 program built with it to the same 20 pages.

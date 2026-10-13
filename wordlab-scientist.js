@@ -1230,14 +1230,14 @@ const WLScientist = (() => {
 
     _widgetEl.innerHTML = `
       <div id="wlSciAvatar" style="width:44px;height:44px;flex-shrink:0;overflow:visible;">${buildSVG(sd.scientist, reaction)}</div>
-      <div style="display:flex;flex-direction:column;gap:2px;min-width:0;">
-        <div style="font-size:11px;font-weight:900;color:#312e81;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px;">${lvl.title}</div>
+      <div class="wlw-info" style="display:flex;flex-direction:column;gap:2px;min-width:0;">
+        <div class="wlw-title" style="font-size:11px;font-weight:900;color:#312e81;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px;">${lvl.title}</div>
         <div style="display:flex;align-items:center;gap:4px;">
           <span style="font-size:11px;font-weight:800;color:#4338ca;">⚛️ ${sd.quarks}</span>
-          <div style="width:50px;height:5px;background:#e2e8f0;border-radius:999px;overflow:hidden;">
+          <div class="wlw-bar" style="width:50px;height:5px;background:#e2e8f0;border-radius:999px;overflow:hidden;">
             <div style="height:100%;width:${lvl.progress}%;background:linear-gradient(90deg,#4338ca,#6366f1);border-radius:999px;transition:width .3s;"></div>
           </div>
-          <span style="font-size:9px;color:#94a3b8;font-weight:700;">Lv${lvl.level}</span>
+          <span class="wlw-lv" style="font-size:9px;color:#94a3b8;font-weight:700;">Lv${lvl.level}</span>
         </div>
       </div>`;
   }

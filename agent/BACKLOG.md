@@ -42,8 +42,10 @@ Add ideas found while working. Keep each to one line with the surface and the le
 - Phoneme Splitter: data errors found in run 3: `conscientious` and `omniscient` list `t·i` / `sc·i` where `ti`/`sci` say /sh/; `baguette` and `guerrilla` treat the final e and `gu` inconsistently; review all Challenge words against `taught-graphemes.json` (Teaching practice)
 - Phoneme Splitter: Need Advice ladder is strategy then phoneme count; add a third step that names the first multi-letter sound to keep together, reusing `_graphemeReason` (Scaffolded)
 - Phoneme and Syllable Splitter: a read-aloud button on the "why" panel for students who read below level (Inclusive)
-- At 1024px wide, game page headers wrap and the HUD pills overlap the brand row (seen on phoneme-mode); check all game headers at tablet width (polish)
 - Syllable Splitter: the Need Advice ladder is clap, then count; add a third step that names the rule for the first break, using `_syllableBreakReason` (Scaffolded)
+- Game headers (done run 7): the widget's dance reactions can be clipped now the header controls are a scroll box (phoneme, flashcards and others already were); check a 10-streak dance on a Chromebook (polish)
+- Homophone Hunter: no mute button or student name pill in the header at any width (its `wlPillSlot` sits before the widget but stays empty); check why (polish, Inclusive)
+- Speed Builder at 768px: with the extra Base and Time pills the title truncates to "S…"; consider hiding the Base pill in the header on narrow screens (polish)
 - Syllable Splitter: at 768px the game column is very narrow and long words wrap across three lines; check the tablet layout (Inclusive, polish)
 - All fuel/round games: check whether wrong answers auto-advance before students can read the explanation (fixed in Syllable Splitter run 2, Phoneme Splitter run 3, Breakdown Blitz run 5). Still to check: Mission Mode, Meaning Match-Up, Root Lab, Sound Sorter, Homophone Hunter
 - Breakdown Blitz data errors found in run 5 (parts do not rebuild the word): `emotional` = mot+ion+al (no e-), `demonstration` = de+monster+ation, `determination` = de+termine+ation, `telecommunications` drops the final -s. Fix in a data-only PR, checked against `data.js` and word-study splits (Teaching practice)
