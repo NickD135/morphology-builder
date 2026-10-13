@@ -532,9 +532,21 @@
     if(!a||!b) return false;
     if((a.form||'').toLowerCase()===(b.form||'').toLowerCase()) return true;
     var pb=_mmMeaningParts(b);
-    return _mmMeaningParts(a).some(function(x){ return pb.indexOf(x)!==-1; });
+    // Same part, or one part is the other plus more words ("result of action" and
+    // "result of"), so -ment, -ure, -age and -ion are never offered together.
+    return _mmMeaningParts(a).some(function(x){
+      return pb.some(function(y){ return x===y||x.indexOf(y+' ')===0||y.indexOf(x+' ')===0; });
+    });
   }
+  // Type comes from the list the object is in, not its id: en, pod, phone and vore are
+  // ids in more than one list in data.js (the suffix -en is not the prefix en-).
+  // generateQuestion tags every option with its pool's type as _mmT.
   function _mmType(m){
+    if(!m) return 'suffix';
+    if(m._mmT) return m._mmT;
+    if(BASES.indexOf(m)!==-1) return 'base';
+    if(PREFIXES.indexOf(m)!==-1) return 'prefix';
+    if(SUFFIXES.indexOf(m)!==-1) return 'suffix';
     if(BASES.some(function(x){ return x.id===m.id; })) return 'base';
     if(PREFIXES.some(function(x){ return x.id===m.id; })) return 'prefix';
     return 'suffix';
@@ -548,7 +560,7 @@
   // are not suitable to show a Year 5/6 student as a model word. Skipped here only.
   var _MM_SKIP_EXAMPLES=['homicide','suicide','necromancy','pyromancy','geomancy','pyromania','sociopath','sociopathy',
     'narcolepsy','narcosis','narcotic','monogamy','polygamy','bigamy','asexual','badger','irrepairable','overask',
-    'overwatch','history-maker','herolatry','bibliolatry'];
+    'overwatch','history-maker','herolatry','bibliolatry','fasten','remeet','vicepresident'];
   // One example word from data.js with the morpheme in bold, e.g. <b>un</b>happy.
   // Only uses examples where the marked part is exactly this morpheme and the word is
   // longer than the morpheme (so a base is never shown "like in act").
@@ -563,6 +575,7 @@
       var plain=ex.replace(/<\/?u>/g,'');
       if(marks.length!==1||marks[0].replace(/<\/?u>/g,'').toLowerCase()!==form||plain.length<=form.length) continue;
       if(_MM_SKIP_EXAMPLES.indexOf(plain.toLowerCase())!==-1) continue;
+      if(/[\s-]/.test(plain.trim())) continue; // "too bad", "tall-order": not one model word
       var parts=ex.split(/<u>|<\/u>/), esc=WordLabData.escapeHtml;
       return esc(parts[0])+'<b>'+esc(parts[1])+'</b>'+esc(parts[2]||'');
     }
@@ -594,9 +607,10 @@
     });
   }
   function getPrefixLabel(p){
-    if(BASES.some(x=>x.id===p.id)) return (p.form||"").toUpperCase();
-    var pfxData = PREFIXES.find(x=>x.id===p.id);
-    if (!pfxData) return "-"+(p.form||"").toUpperCase();
+    var _t=_mmType(p);
+    if(_t==='base') return (p.form||"").toUpperCase();
+    if(_t==='suffix') return "-"+(p.form||"").toUpperCase();
+    var pfxData = PREFIXES.find(x=>x.id===p.id) || {};
     var label = (p.form||"").toUpperCase()+"-";
     if (pfxData.altForms && pfxData.altForms.length) {
       label += ' <span style="font-size:9px;opacity:0.55;font-weight:600;">(' + pfxData.altForms.join(', ') + ')</span>';
@@ -605,10 +619,13 @@
   }
   function updateHud(){scorePillEl.textContent=`${score} XP`;streakPillEl.textContent=`🔥 Streak: ${streak}`;fuelBarEl.style.width=`${Math.max(fuel,0)}%`;fuelLabelEl.textContent=`${Math.max(Math.round(fuel),0)}%`;}
   function generateQuestion(){
-    const pool=WordLabData.weightByStage(getActiveMorphemePool(), 'meaning-mode');
+    const src=getActiveMorphemePool();
+    const type=src===BASES?'base':src===PREFIXES?'prefix':'suffix';
+    const pool=WordLabData.weightByStage(src, 'meaning-mode');
     const correct=pool[Math.floor(Math.random()*pool.length)];
     const wrong=shuffleArray(pool.filter(p=>p.id!==correct.id&&!_mmSharesMeaning(p,correct))).slice(0,_supportMode?1:2);
-    return{correct,options:shuffleArray([correct,...wrong])};
+    [correct,...wrong].forEach(function(o){ o._mmT=type; });
+    return{correct,type,options:shuffleArray([correct,...wrong])};
   }
   function resetDropZone(){dropZoneEl.classList.remove("flashSuccess","flashFail");dropZoneTextEl.textContent="?";dropZoneTextEl.style.color="#a5b4fc";}
   var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
@@ -627,7 +644,7 @@
       baseMeaningEl.innerHTML=`<strong>Which base word means:</strong><br>"${WordLabData.escapeHtml(q.correct.meaning)}"`;
     } else {
       wordEl.textContent="MEANING";
-      _typeLabel=PREFIXES.some(x=>x.id===q.correct.id)?'prefix':'suffix';
+      _typeLabel=_mmType(q.correct);
       var _scaffoldLabel = _supportMode ? ' <span style="font-size:10px;font-weight:900;color:'+(_typeLabel==='prefix'?'#7c3aed':'#ea580c')+';text-transform:uppercase;letter-spacing:.08em;">'+_typeLabel+'</span>' : '';
       baseMeaningEl.innerHTML=`<strong>Which ${WordLabData.escapeHtml(_typeLabel)} means:</strong>${_scaffoldLabel}<br>"${WordLabData.escapeHtml(q.correct.meaning)}"`;
     }
@@ -674,13 +691,15 @@
     }
   }
   function lockButtons(){optionsEl.querySelectorAll("button").forEach(b=>b.disabled=true);}
+  var _mmGuardUntil=0; // option clicks before this time are ignored (just after Next)
   function checkAnswer(choice){
     if(buttonsLocked||fuel<=0)return;
+    if(!_wltActive&&Date.now()<_mmGuardUntil)return;
     buttonsLocked=true;lockButtons();
     const q=currentQuestion;
     dropZoneTextEl.innerHTML=getPrefixLabel(choice);
     const isBase=morphemeMode==='base';
-    const _cat=isBase?'base:'+q.correct.id:(PREFIXES.some(x=>x.id===q.correct.id)?'prefix:':'suffix:')+q.correct.id;
+    const _cat=isBase?'base:'+q.correct.id:_mmType(q.correct)+':'+q.correct.id;
     if(choice.id===q.correct.id){
       _roundCorrect++;
       if(!_wltActive){ score+=50+(streak*10); fuel=Math.min(fuel+(_supportMode?12:8),100); }
@@ -692,7 +711,7 @@
       feedbackEl.textContent="✅ Correct!";feedbackEl.className="feedback ok";
       subFeedbackEl.innerHTML=_mmMeansLine(choice);
       dropZoneTextEl.style.color="var(--ok)";dropZoneEl.classList.add("flashSuccess");
-      if(_wltActive){var _type=isBase?'base':PREFIXES.some(x=>x.id===q.correct.id)?'prefix':'suffix';WLTeacher.onAnswer(true,'<b>'+WordLabData.escapeHtml(getPrefixLabel(q.correct))+'</b> is a '+_type+' meaning "<b>'+WordLabData.escapeHtml(q.correct.meaning)+'</b>".');}
+      if(_wltActive){var _type=isBase?'base':_mmType(q.correct);WLTeacher.onAnswer(true,'<b>'+WordLabData.escapeHtml(getPrefixLabel(q.correct))+'</b> is a '+_type+' meaning "<b>'+WordLabData.escapeHtml(q.correct.meaning)+'</b>".');}
     } else {
       streak=0;if(!_wltActive){fuel=Math.max(fuel-(_supportMode?6:12),0);}
       if(!_wltActive && typeof WordLabData!=='undefined'&&WordLabData.getSession()){WordLabData.recordAttempt('meaning-mode',_cat,false,0);}
@@ -704,7 +723,7 @@
       if(_wltActive){ subFeedbackEl.innerHTML=`Correct answer: ${getPrefixLabel(q.correct)} — ${WordLabData.escapeHtml(q.correct.meaning)}`; }
       else { subFeedbackEl.textContent=''; var _w=document.getElementById('mmWhy'); _w.innerHTML=_mmBuildWhy(q,choice); _w.hidden=false; _mmReading=true; }
       dropZoneTextEl.style.color="var(--bad)";dropZoneEl.classList.add("flashFail");
-      if(_wltActive){var _type=isBase?'base':PREFIXES.some(x=>x.id===q.correct.id)?'prefix':'suffix';WLTeacher.onAnswer(false,'The correct answer is <b>'+WordLabData.escapeHtml(getPrefixLabel(q.correct))+'</b> ('+_type+'), which means "<b>'+WordLabData.escapeHtml(q.correct.meaning)+'</b>".<br>You selected <b>'+WordLabData.escapeHtml(getPrefixLabel(choice))+'</b>, which means "'+WordLabData.escapeHtml(choice.meaning)+'".');}
+      if(_wltActive){var _type=isBase?'base':_mmType(q.correct);WLTeacher.onAnswer(false,'The correct answer is <b>'+WordLabData.escapeHtml(getPrefixLabel(q.correct))+'</b> ('+_type+'), which means "<b>'+WordLabData.escapeHtml(q.correct.meaning)+'</b>".<br>You selected <b>'+WordLabData.escapeHtml(getPrefixLabel(choice))+'</b>, which means "'+WordLabData.escapeHtml(choice.meaning)+'".');}
     }
     if(!_wltActive) updateHud();
     // EALD reveal button
@@ -748,7 +767,10 @@
     _mmHideWhy();
     if(_roundAnswered>=_roundTotal){ showRoundWin(); return; }
     loadQuestion();
-    var _first=optionsEl.querySelector('button'); if(_first) _first.focus({preventScroll:true});
+    // Focus the question, not a bubble, so a quick second Enter cannot answer it.
+    // Bubble clicks are also ignored for a moment after Next, for fast double taps.
+    _mmGuardUntil=Date.now()+500;
+    baseMeaningEl.setAttribute('tabindex','-1'); baseMeaningEl.focus({preventScroll:true});
   });
   function startFuelDrain(){clearInterval(fuelInterval);fuelInterval=setInterval(()=>{if(_mmReading)return;fuel-=(_supportMode?.12:.25);if(fuel<=0){fuel=0;updateHud();endGame();clearInterval(fuelInterval);return;}updateHud();},220);}
   function endGame(){_mmHideWhy();buttonsLocked=true;optionsEl.innerHTML="";feedbackEl.textContent="Mission over";feedbackEl.className="feedback bad";subFeedbackEl.textContent=`Final score: ${score} XP`;}
