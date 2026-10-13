@@ -1398,7 +1398,7 @@ const WordLabData = (() => {
       '</button>';
     var studentPill = name
       ? '<span style="display:inline-flex;align-items:center;gap:0;background:#eef2ff;border:1px solid #c7d2fe;border-radius:999px;font-family:Lexend,sans-serif;">' +
-          '<span style="padding:6px 4px 6px 14px;font-size:12px;font-weight:800;color:#4338ca;cursor:pointer;" onclick="wlShowLogin()">👤 ' + escapeHtml(name) + '</span>' +
+          '<span style="padding:6px 4px 6px 14px;font-size:12px;font-weight:800;color:#4338ca;cursor:pointer;white-space:nowrap;" onclick="wlShowLogin()">👤 ' + escapeHtml(name) + '</span>' +
           '<button onclick="WordLabData._logoutStudent()" title="Log out" style="background:none;border:none;cursor:pointer;padding:6px 10px 6px 4px;font-size:13px;color:#64748b;display:inline-flex;align-items:center;transition:color .15s;" onmouseover="this.style.color=\'#dc2626\'" onmouseout="this.style.color=\'#64748b\'">✕</button>' +
         '</span>'
       : '';
