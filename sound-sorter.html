@@ -140,8 +140,12 @@
       font-size:28px; font-weight:900;
       cursor:pointer; user-select:none;
       transition:all .12s;
-      draggable:true;
+      font-family:inherit; line-height:1.2;
     }
+    .tile:disabled{ cursor:not-allowed; }
+    .tile.wrong-tile:disabled{ opacity:.55; }
+    .feedbackWhyNot{ font-size:15px; color:#7f1d1d; font-weight:700; line-height:1.6; margin-top:8px; padding:10px 14px; background:#fff; border-radius:12px; border:1px solid #fecaca; }
+    .feedbackWhyNot strong{ font-weight:900; }
     .tile:hover:not(.used){ border-color:var(--teal); transform:translateY(-3px); box-shadow:0 10px 20px rgba(13,148,136,.18); }
     .tile.used{ opacity:.3; cursor:not-allowed; transform:none; box-shadow:none; }
     .tile.correct-tile{ border-color:var(--green); background:var(--green-soft); color:var(--green-text); }
@@ -466,6 +470,7 @@
       <div class="feedbackPanel" id="feedbackPanel" aria-live="assertive">
         <div class="feedbackTitle" id="feedbackTitle"></div>
         <div id="feedbackBody"></div>
+        <div class="feedbackWhyNot" id="feedbackWhyNot" hidden></div>
         <div class="feedbackExplain" id="feedbackExplain"></div>
         <div id="ealdTranslation" aria-live="polite"></div>
       </div>
@@ -844,7 +849,7 @@ function loadWord(){
 
   // Sound hint
   document.getElementById('soundHint').innerHTML =
-    `Listen for the <span class="soundHintSound">${WordLabData.escapeHtml(currentWord.soundLabel)}</span> sound in this word`;
+    `Listen for the <span class="soundHintSound">${WordLabData.escapeHtml(_ssSoundName(currentWord))}</span> in this word`;
 
   // Build tiles
   buildTiles();
@@ -969,9 +974,11 @@ function buildTiles(){
   options = [...new Set(options)].sort(() => Math.random() - .5);
 
   options.forEach(g => {
-    const tile = document.createElement('div');
+    const tile = document.createElement('button');
+    tile.type = 'button';
     tile.className = 'tile';
     tile.textContent = g;
+    tile.setAttribute('aria-label', g.includes('_') ? g.replace('_', ' blank ') : g);
     tile.draggable = true;
     tile.dataset.grapheme = g;
 
@@ -979,7 +986,7 @@ function buildTiles(){
       e.dataTransfer.setData('text/plain', g);
     });
     tile.addEventListener('click', () => {
-      if(!checked || attempts === 0) checkAnswer(g);
+      if(!checked && !tile.disabled) checkAnswer(g);
     });
 
     container.appendChild(tile);
@@ -990,6 +997,10 @@ function checkAnswer(grapheme){
   if(checked) return;
   attempts++;
 
+  // A quick second pick can land before an earlier split digraph pick
+  // (a_e) has put the blank back, so make sure the blank is there first
+  if(!document.getElementById('dropZone')) buildWordRow();
+
   const zone = document.getElementById('dropZone');
   const zoneText = document.getElementById('dropZoneText');
 
@@ -998,23 +1009,7 @@ function checkAnswer(grapheme){
   // For split digraphs (a_e, i_e, etc.), show the grapheme label in the zone
   // but rebuild the full word display so it reads correctly
   zoneText.textContent = grapheme;
-  if(grapheme.includes('_')){
-    // Split digraph: rebuild entire word row to show the full word
-    var parts = grapheme.split('_');
-    var row = document.getElementById('wordRow');
-    row.innerHTML = '';
-    var fullWord = document.createElement('span');
-    fullWord.className = 'wordPart';
-    var beforeText = currentWord.before || '';
-    var afterText = currentWord.after || '';
-    // Construct: before + first_part + after + last_part
-    fullWord.innerHTML = beforeText +
-      '<span class="dropZoneAnswer" style="display:inline;color:var(--indigo-2);font-weight:900;">' + parts[0] + '</span>' +
-      afterText +
-      '<span class="dropZoneAnswer" style="display:inline;color:var(--indigo-2);font-weight:900;">' + parts[1] + '</span>' +
-      ' <span style="font-size:13px;color:var(--muted);font-weight:700;">(' + grapheme + ')</span>';
-    row.appendChild(fullWord);
-  }
+  if(grapheme.includes('_')) _ssShowSplitWord(grapheme);
 
   // Mark tile
   document.querySelectorAll('.tile').forEach(t => {
@@ -1056,7 +1051,7 @@ function checkAnswer(grapheme){
     }
 
     showFeedback('correct',
-      `✅ ${currentWord.word} — the ${currentWord.soundLabel} sound is spelled "${currentWord.grapheme}"`,
+      `✅ ${currentWord.word}: the ${_ssSoundName(currentWord)} is spelled "${currentWord.grapheme}"`,
       currentWord.explain
     );
 
@@ -1076,15 +1071,24 @@ function checkAnswer(grapheme){
     zone.classList.add('wrong');
     zone.classList.remove('filled');
     setTimeout(() => {
+      if(checked) return; // word finished: keep the correct answer showing
+      // A split digraph pick (a_e) rebuilt the whole word row, so put the blank back
+      if(!document.getElementById('dropZone')){ buildWordRow(); return; }
+      if(!zone.isConnected) return; // a later pick has already rebuilt the row
       zone.classList.remove('wrong');
       zoneText.className = 'dropZoneText';
       zoneText.textContent = '?';
     }, 600);
+    // Grey out the tile they tried so it is not picked twice
+    document.querySelectorAll('.tile').forEach(t => { if(t.dataset.grapheme === grapheme) t.disabled = true; });
+    var _whyNot = _ssWhyNot(grapheme);
 
     if(!_wltActive && selectedLevel === 'starter' && attempts < 3){
       // On starter, let them try again
-      showFeedback('wrong', `❌ Not quite — try again!`, '');
+      showFeedback('wrong', `❌ Not quite. Try again!`, '', _whyNot);
       document.getElementById('tryAgainBtn').classList.add('visible');
+      var _tb = document.getElementById('tryAgainBtn');
+      _tb.focus({preventScroll:true}); _tb.scrollIntoView({block:'nearest', behavior:'auto'});
     } else {
       checked = true;
       if(!_wltActive){
@@ -1101,19 +1105,28 @@ function checkAnswer(grapheme){
 
       var _wrongExplain = currentWord.explain ? ' ' + currentWord.explain : '';
       if(_wltActive){
-        var _tmWrongFeedback = 'Not \'' + WordLabData.escapeHtml(grapheme) + '\' — the correct grapheme for the /' + WordLabData.escapeHtml(currentWord.soundLabel) + '/ sound in \'' + WordLabData.escapeHtml(currentWord.word) + '\' is \'' + WordLabData.escapeHtml(currentWord.grapheme) + '\'.' + WordLabData.escapeHtml(_wrongExplain);
+        var _tmWrongFeedback = 'Not \'' + WordLabData.escapeHtml(grapheme) + '\' — the correct grapheme for the /' + WordLabData.escapeHtml(currentWord.soundLabel) + '/ sound in \'' + WordLabData.escapeHtml(currentWord.word) + '\' is \'' + WordLabData.escapeHtml(currentWord.grapheme) + '\'.' + WordLabData.escapeHtml(_wrongExplain) + ' ' + WordLabData.escapeHtml(_whyNot);
         WLTeacher.onAnswer(false, _tmWrongFeedback);
       }
 
       showFeedback('wrong',
-        `❌ The ${currentWord.soundLabel} sound in "${currentWord.word}" is spelled "${currentWord.grapheme}"`,
-        currentWord.explain
+        `❌ The ${_ssSoundName(currentWord)} in "${currentWord.word}" is spelled "${currentWord.grapheme}"`,
+        currentWord.explain,
+        _whyNot
       );
 
-      // Show correct answer in zone
-      zoneText.className = 'dropZoneAnswer';
-      zoneText.textContent = currentWord.grapheme;
-      zone.classList.add('correct');
+      // Show the correct answer. A split digraph answer (i_e) is shown in the
+      // whole word, like the correct-answer path; otherwise it goes in the blank.
+      if(currentWord.grapheme.includes('_')){
+        _ssShowSplitWord(currentWord.grapheme);
+      } else {
+        if(!zone.isConnected) buildWordRow(); // the last pick was a split digraph
+        var _z = document.getElementById('dropZone'), _zt = document.getElementById('dropZoneText');
+        _zt.className = 'dropZoneAnswer';
+        _zt.textContent = currentWord.grapheme;
+        _z.classList.remove('wrong');
+        _z.classList.add('correct');
+      }
 
       // Highlight correct tile
       document.querySelectorAll('.tile').forEach(t => {
@@ -1126,17 +1139,97 @@ function checkAnswer(grapheme){
       document.getElementById('tryAgainBtn').classList.remove('visible');
       if(!_wltActive){ _roundAnswered++; wlUpdateRoundProgress(); if(_roundAnswered >= _roundTotal){ clearTimeout(autoNextTimer); autoNextTimer = null; setTimeout(showRoundComplete, 800); return; } }
       if(_wltActive) return;
-      var _ealdExtra2=(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage())?1500:0;
-      autoNextTimer = setTimeout(nextWord, 3000+_ealdExtra2);
+      // No auto-advance after a wrong answer: give time to read why, then Next (or Enter) moves on
+      var _nb = document.getElementById('nextBtn');
+      if(_nb){ _nb.focus({preventScroll:true}); _nb.scrollIntoView({block:'nearest', behavior:'auto'}); }
     }
 
     if(!_wltActive) updateStats();
   }
 }
 
+// Rebuild the word row as the whole word with a split digraph in place:
+// before + first part + after + last part, e.g. c[a]k[e] (a_e)
+function _ssShowSplitWord(grapheme){
+  var parts = grapheme.split('_');
+  var row = document.getElementById('wordRow');
+  row.innerHTML = '';
+  var fullWord = document.createElement('span');
+  fullWord.className = 'wordPart';
+  var beforeText = currentWord.before || '';
+  var afterText = currentWord.after || '';
+  fullWord.innerHTML = beforeText +
+    '<span class="dropZoneAnswer" style="display:inline;color:var(--indigo-2);font-weight:900;">' + parts[0] + '</span>' +
+    afterText +
+    '<span class="dropZoneAnswer" style="display:inline;color:var(--indigo-2);font-weight:900;">' + parts[1] + '</span>' +
+    ' <span style="font-size:13px;color:var(--muted);font-weight:700;">(' + grapheme + ')</span>';
+  row.appendChild(fullWord);
+}
+
 function tryAgain(){
   document.getElementById('tryAgainBtn').classList.remove('visible');
   hideFeedback();
+  var first = document.querySelector('.tile:not(:disabled)');
+  if(first) first.focus({preventScroll:true});
+}
+
+// ── "Why not?" — explain the grapheme the student picked ─────────
+// Position conventions follow the SPELD NSW Spelling Conventions Guide.
+// A rule is only used when it is true for this word; otherwise we show a
+// word from the game where the picked grapheme does spell this sound.
+var _SS_VOWELS = 'aeiou';
+// "Long A" -> "Long A sound", but "OR sound" stays "OR sound" (not "OR sound sound")
+function _ssSoundName(w){ return /sound/i.test(w.soundLabel) ? w.soundLabel : w.soundLabel + ' sound'; }
+function _ssShortVowelBefore(before){
+  // true when the sound comes straight after a single vowel letter (c-a-t, d-u-ck)
+  if(!before) return false;
+  var last = before.slice(-1), prev = before.slice(-2, -1);
+  return _SS_VOWELS.indexOf(last) !== -1 && (prev === '' || _SS_VOWELS.indexOf(prev) === -1);
+}
+// Never used as model words: 'tour' and 'detour' are said with the OR sound by many
+// Australians, and 'damn' is not a word to put in front of students.
+var _SS_NOT_EXAMPLES = { tour:1, detour:1, damn:1 };
+function _ssExampleFor(sound, grapheme, notWord){
+  var pool = (typeof WORDS !== 'undefined' ? WORDS : window.SOUND_SORTER_WORDS || []);
+  var rank = { starter:0, levelup:1, challenge:2 };
+  var best = null;
+  for(var i = 0; i < pool.length; i++){
+    var w = pool[i];
+    if(w.sound !== sound || w.grapheme !== grapheme || w.word === notWord || w._spellingSetId || _SS_NOT_EXAMPLES[w.word]) continue;
+    if(!best || (rank[w.level] ?? 3) < (rank[best.level] ?? 3) || ((rank[w.level] ?? 3) === (rank[best.level] ?? 3) && w.word.length < best.word.length)) best = w;
+  }
+  return best ? best.word : null;
+}
+function _ssWhyNot(picked){
+  var w = currentWord; if(!w || picked === w.grapheme) return '';
+  var before = (w.before || '').toLowerCase(), after = (w.after || '').toLowerCase();
+  var split = w.grapheme.indexOf('_') !== -1;
+  var atStart = !before, atEnd = !after && !split;
+  var afterConsonant = after && _SS_VOWELS.indexOf(after[0]) === -1 && after[0] !== 'y';
+  var q = function(g){ return '"' + g + '"'; };
+  var snd = _ssSoundName(w);
+  var lead = 'Why not ' + q(picked) + '? ';
+  var p = picked;
+  if(((p === 'ay' && w.sound === 'long-a') || (p === 'oy' && w.sound === 'oy')) && afterConsonant)
+    return lead + q(p) + ' usually goes at the end of a word, like ' + (p === 'ay' ? 'play' : 'boy') + '. In ' + w.word + ', a consonant comes after the sound.';
+  if((p === 'ai' || p === 'oi') && atEnd)
+    return lead + 'English words almost never end in ' + q(p) + '.' + ((w.grapheme === 'ay' || w.grapheme === 'oy') ? ' At the end of a word we use ' + q(w.grapheme) + ', like ' + (w.grapheme === 'ay' ? 'play' : 'boy') + '.' : '');
+  if(p === 'ck' || p === 'tch' || p === 'dge'){
+    var eg = p === 'ck' ? 'duck' : p === 'tch' ? 'catch' : 'bridge';
+    if(atStart) return lead + 'No English word starts with ' + q(p) + '. It only comes straight after a short vowel, like ' + eg + '.';
+    if(!_ssShortVowelBefore(before)){
+      var m = before.match(/[aeiouy]+$/);
+      var what = m ? q(m[0]) + ', which is not a short vowel' : 'the consonant ' + q(before.slice(-1));
+      return lead + q(p) + ' only comes straight after a short vowel, like ' + eg + '. In ' + w.word + ', the sound comes after ' + what + '.';
+    }
+  }
+  if(atStart && p.length === 2 && p[0] === p[1] && _SS_VOWELS.indexOf(p[0]) === -1)
+    return lead + 'No English word starts with a double letter like ' + q(p) + '.';
+  if(p === 'j' && atEnd)
+    return lead + 'English words do not end in ' + q('j') + '. At the end of a word we use ' + q('ge') + ' or ' + q('dge') + ', like page or bridge.';
+  var ex = _ssExampleFor(w.sound, p, w.word);
+  if(ex) return lead + q(p) + ' can spell the ' + snd + ', like in ' + ex + '. But ' + w.word + ' is spelled with ' + q(w.grapheme) + '. Tip: picture the word, or think of a word that looks like it.';
+  return lead + q(p) + ' does not spell the ' + snd + ' in ' + w.word + '.';
 }
 
 function nextWord(){ clearTimeout(autoNextTimer); autoNextTimer = null; loadWord(); }
@@ -1165,12 +1258,14 @@ function speakWord(){
   window.speechSynthesis.speak(utt);
 }
 
-function showFeedback(type, title, explain){
+function showFeedback(type, title, explain, whyNot){
   const panel = document.getElementById('feedbackPanel');
   panel.className = 'feedbackPanel ' + type;
   panel.style.display = 'block';
   document.getElementById('feedbackTitle').textContent = title;
   document.getElementById('feedbackExplain').textContent = explain;
+  var _wn = document.getElementById('feedbackWhyNot');
+  if(_wn){ _wn.textContent = whyNot || ''; _wn.hidden = !whyNot; }
   // EALD reveal button
   var ealdEl=document.getElementById('ealdTranslation');if(ealdEl){
     if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&currentWord){
