@@ -849,7 +849,7 @@ function loadWord(){
 
   // Sound hint
   document.getElementById('soundHint').innerHTML =
-    `Listen for the <span class="soundHintSound">${WordLabData.escapeHtml(currentWord.soundLabel)}</span> sound in this word`;
+    `Listen for the <span class="soundHintSound">${WordLabData.escapeHtml(_ssSoundName(currentWord))}</span> in this word`;
 
   // Build tiles
   buildTiles();
@@ -997,6 +997,10 @@ function checkAnswer(grapheme){
   if(checked) return;
   attempts++;
 
+  // A quick second pick can land before an earlier split digraph pick
+  // (a_e) has put the blank back, so make sure the blank is there first
+  if(!document.getElementById('dropZone')) buildWordRow();
+
   const zone = document.getElementById('dropZone');
   const zoneText = document.getElementById('dropZoneText');
 
@@ -1005,23 +1009,7 @@ function checkAnswer(grapheme){
   // For split digraphs (a_e, i_e, etc.), show the grapheme label in the zone
   // but rebuild the full word display so it reads correctly
   zoneText.textContent = grapheme;
-  if(grapheme.includes('_')){
-    // Split digraph: rebuild entire word row to show the full word
-    var parts = grapheme.split('_');
-    var row = document.getElementById('wordRow');
-    row.innerHTML = '';
-    var fullWord = document.createElement('span');
-    fullWord.className = 'wordPart';
-    var beforeText = currentWord.before || '';
-    var afterText = currentWord.after || '';
-    // Construct: before + first_part + after + last_part
-    fullWord.innerHTML = beforeText +
-      '<span class="dropZoneAnswer" style="display:inline;color:var(--indigo-2);font-weight:900;">' + parts[0] + '</span>' +
-      afterText +
-      '<span class="dropZoneAnswer" style="display:inline;color:var(--indigo-2);font-weight:900;">' + parts[1] + '</span>' +
-      ' <span style="font-size:13px;color:var(--muted);font-weight:700;">(' + grapheme + ')</span>';
-    row.appendChild(fullWord);
-  }
+  if(grapheme.includes('_')) _ssShowSplitWord(grapheme);
 
   // Mark tile
   document.querySelectorAll('.tile').forEach(t => {
@@ -1063,7 +1051,7 @@ function checkAnswer(grapheme){
     }
 
     showFeedback('correct',
-      `✅ ${currentWord.word} — the ${currentWord.soundLabel} sound is spelled "${currentWord.grapheme}"`,
+      `✅ ${currentWord.word}: the ${_ssSoundName(currentWord)} is spelled "${currentWord.grapheme}"`,
       currentWord.explain
     );
 
@@ -1082,11 +1070,11 @@ function checkAnswer(grapheme){
     // WRONG
     zone.classList.add('wrong');
     zone.classList.remove('filled');
-    var _wrongPick = grapheme;
     setTimeout(() => {
       if(checked) return; // word finished: keep the correct answer showing
       // A split digraph pick (a_e) rebuilt the whole word row, so put the blank back
-      if(_wrongPick.includes('_') || !document.getElementById('dropZone')){ buildWordRow(); return; }
+      if(!document.getElementById('dropZone')){ buildWordRow(); return; }
+      if(!zone.isConnected) return; // a later pick has already rebuilt the row
       zone.classList.remove('wrong');
       zoneText.className = 'dropZoneText';
       zoneText.textContent = '?';
@@ -1122,15 +1110,23 @@ function checkAnswer(grapheme){
       }
 
       showFeedback('wrong',
-        `❌ The ${currentWord.soundLabel} sound in "${currentWord.word}" is spelled "${currentWord.grapheme}"`,
+        `❌ The ${_ssSoundName(currentWord)} in "${currentWord.word}" is spelled "${currentWord.grapheme}"`,
         currentWord.explain,
         _whyNot
       );
 
-      // Show correct answer in zone
-      zoneText.className = 'dropZoneAnswer';
-      zoneText.textContent = currentWord.grapheme;
-      zone.classList.add('correct');
+      // Show the correct answer. A split digraph answer (i_e) is shown in the
+      // whole word, like the correct-answer path; otherwise it goes in the blank.
+      if(currentWord.grapheme.includes('_')){
+        _ssShowSplitWord(currentWord.grapheme);
+      } else {
+        if(!zone.isConnected) buildWordRow(); // the last pick was a split digraph
+        var _z = document.getElementById('dropZone'), _zt = document.getElementById('dropZoneText');
+        _zt.className = 'dropZoneAnswer';
+        _zt.textContent = currentWord.grapheme;
+        _z.classList.remove('wrong');
+        _z.classList.add('correct');
+      }
 
       // Highlight correct tile
       document.querySelectorAll('.tile').forEach(t => {
@@ -1152,6 +1148,24 @@ function checkAnswer(grapheme){
   }
 }
 
+// Rebuild the word row as the whole word with a split digraph in place:
+// before + first part + after + last part, e.g. c[a]k[e] (a_e)
+function _ssShowSplitWord(grapheme){
+  var parts = grapheme.split('_');
+  var row = document.getElementById('wordRow');
+  row.innerHTML = '';
+  var fullWord = document.createElement('span');
+  fullWord.className = 'wordPart';
+  var beforeText = currentWord.before || '';
+  var afterText = currentWord.after || '';
+  fullWord.innerHTML = beforeText +
+    '<span class="dropZoneAnswer" style="display:inline;color:var(--indigo-2);font-weight:900;">' + parts[0] + '</span>' +
+    afterText +
+    '<span class="dropZoneAnswer" style="display:inline;color:var(--indigo-2);font-weight:900;">' + parts[1] + '</span>' +
+    ' <span style="font-size:13px;color:var(--muted);font-weight:700;">(' + grapheme + ')</span>';
+  row.appendChild(fullWord);
+}
+
 function tryAgain(){
   document.getElementById('tryAgainBtn').classList.remove('visible');
   hideFeedback();
@@ -1164,19 +1178,24 @@ function tryAgain(){
 // A rule is only used when it is true for this word; otherwise we show a
 // word from the game where the picked grapheme does spell this sound.
 var _SS_VOWELS = 'aeiou';
+// "Long A" -> "Long A sound", but "OR sound" stays "OR sound" (not "OR sound sound")
+function _ssSoundName(w){ return /sound/i.test(w.soundLabel) ? w.soundLabel : w.soundLabel + ' sound'; }
 function _ssShortVowelBefore(before){
   // true when the sound comes straight after a single vowel letter (c-a-t, d-u-ck)
   if(!before) return false;
   var last = before.slice(-1), prev = before.slice(-2, -1);
   return _SS_VOWELS.indexOf(last) !== -1 && (prev === '' || _SS_VOWELS.indexOf(prev) === -1);
 }
+// Never used as model words: 'tour' and 'detour' are said with the OR sound by many
+// Australians, and 'damn' is not a word to put in front of students.
+var _SS_NOT_EXAMPLES = { tour:1, detour:1, damn:1 };
 function _ssExampleFor(sound, grapheme, notWord){
   var pool = (typeof WORDS !== 'undefined' ? WORDS : window.SOUND_SORTER_WORDS || []);
   var rank = { starter:0, levelup:1, challenge:2 };
   var best = null;
   for(var i = 0; i < pool.length; i++){
     var w = pool[i];
-    if(w.sound !== sound || w.grapheme !== grapheme || w.word === notWord || w._spellingSetId) continue;
+    if(w.sound !== sound || w.grapheme !== grapheme || w.word === notWord || w._spellingSetId || _SS_NOT_EXAMPLES[w.word]) continue;
     if(!best || (rank[w.level] ?? 3) < (rank[best.level] ?? 3) || ((rank[w.level] ?? 3) === (rank[best.level] ?? 3) && w.word.length < best.word.length)) best = w;
   }
   return best ? best.word : null;
@@ -1188,7 +1207,7 @@ function _ssWhyNot(picked){
   var atStart = !before, atEnd = !after && !split;
   var afterConsonant = after && _SS_VOWELS.indexOf(after[0]) === -1 && after[0] !== 'y';
   var q = function(g){ return '"' + g + '"'; };
-  var snd = /sound/i.test(w.soundLabel) ? w.soundLabel : w.soundLabel + ' sound';
+  var snd = _ssSoundName(w);
   var lead = 'Why not ' + q(picked) + '? ';
   var p = picked;
   if(((p === 'ay' && w.sound === 'long-a') || (p === 'oy' && w.sound === 'oy')) && afterConsonant)

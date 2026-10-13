@@ -9,6 +9,8 @@ Updated every run from merged, closed and commented agent PRs. Record what he va
 - **Standing instruction (stated 2026-10-12): hold only once 10 agent PRs are open and unreviewed** (hard rule 2 raised from 3 to 10 by Nicholas). He reviews in batches: after run 6 he merged #22, #23 and #24 together.
 - Run 7 (2026-10-13): #22, #23 and #24 were all merged together without comments. Signal: "why" feedback in games (now in Syllable, Phoneme and Breakdown) and whole-unit SOLO fixes are both welcome. No rejections so far apart from #18, which was most likely a conflict.
 - Run 8 (2026-10-13): #25 (game headers, polish track) merged about 2.5 hours after opening, no comments. Signal: polish fixes that are checked at several screen sizes are welcome too.
+- Run 9 (2026-10-13): #26 (Sound Sorter) got a structured "Reviewer verdict: NEEDS CHANGES" comment posted from Nicholas's account (a reviewer agent: Must fix / Checks / Worth a look). Treat its Must fix items as his review and fix them on the same branch before opening anything new. It checks the work independently (it recounted the line totals and reproduced a crash with a 150 ms second tap), so test fast repeated input and report counts that add up.
+- **Australian English pronunciation is checked.** Any feedback that names a sound in a model word must hold for Australian speakers: bath, fast, calf and aunt have the AR sound; haunt, launch, author, dinosaur have the OR sound; tour varies. When a game shows example words, sweep every example it can show, not just the rules.
 - Two agent PRs that both edit agent/LOG.md, BACKLOG.md and LESSONS.md will conflict. One open agent PR at a time is safer.
 
 - Run 4 was requested on demand for SOLO Unit 31. Signal: he wants SOLO units reviewed one at a time against the playbook framing, not only Word Labs games.
@@ -29,3 +31,4 @@ Updated every run from merged, closed and commented agent PRs. Record what he va
 - Mock mode sweeps: a 13 page sweep at one size takes about 2 minutes, so run one viewport per command (the shell times out at 5 minutes).
 - Offline docx: only docx 9.7.1 is available (`NODE_PATH=/opt/npm-tools/node_modules`). The u31 program built with it to the same 20 pages.
 - `checkAnswer()` style functions in games can be driven through real clicks and `keyboard.press('Enter')` in mock mode; doing so caught that Sound Sorter tiles were not focusable at all. Try a keyboard pass on every game touched.
+- Fast double taps: drive `checkAnswer()` twice 150 ms apart (and with real `page.click`) in mock mode; delayed `setTimeout` resets are where these games break.

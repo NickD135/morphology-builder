@@ -57,3 +57,5 @@ Add ideas found while working. Keep each to one line with the surface and the le
 - Sound Sorter: 190 distractors are never a spelling of the target sound anywhere in the game (e.g. "au" for Short A in calf, "nk" for NG in ring); review those distractor lists so every option is a real way to spell the sound (Teaching practice)
 - Sound Sorter: check every other tile game for div "buttons" that cannot be reached by keyboard (Meaning Match-Up, Mission Mode, Root Lab) (Inclusive)
 - Sound Sorter: some sound labels read awkwardly in feedback ("EAU = OH sound", "Diminutive -ette ending sound"); tidy `soundLabel` in `sound-sorter-data.js` (Clear)
+- Sound Sorter data, Aus English check of the rest of the pool: oo-short "ou" words (gourmet, bouquet, tour, detour) and other trap-bath or au words outside the 13 fixed in run 9; consider whether "damn" belongs in the game at all (Teaching practice)
+- Sound Sorter Teacher Mode feedback still says "/OR sound/ sound"; reuse `_ssSoundName` there (Clear, polish)
