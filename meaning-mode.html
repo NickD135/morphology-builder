@@ -64,6 +64,23 @@
     .feedback.bad{ color:var(--bad); }
     .subFeedback{ min-height:24px; text-align:center; color:var(--muted); font-weight:700; margin-top:4px; line-height:1.5; font-size:14px; }
     .actionRow{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:20px; }
+    /* Why panel: shown after a wrong answer, stays until the student presses Next */
+    .mmWhy{ max-width:520px; margin:8px auto 0; text-align:left; display:grid; gap:6px; }
+    .mmWhy[hidden]{ display:none; }
+    .mmWhyLine{ background:rgba(255,255,255,.7); border:2px solid rgba(0,0,0,.08); border-radius:12px; padding:8px 12px; font-size:15px; font-weight:600; line-height:1.45; color:#3b2a14; }
+    .mmWhyLine.picked{ border-color:rgba(220,38,38,.35); }
+    .mmWhyLine.answer{ border-color:rgba(22,163,74,.45); }
+    .mmWhyLine b{ font-weight:900; }
+    .mmWhyLine .mmEx b{ text-decoration:underline; text-underline-offset:3px; }
+    .mmNextRow{ display:flex; justify-content:center; margin-top:10px; }
+    .mmNextRow[hidden]{ display:none; }
+    .bubbleBtn{ position:relative; }
+    .bubbleBtn.mmPicked:disabled, .bubbleBtn.mmAnswer:disabled{ opacity:1; }
+    .bubbleBtn.mmPicked{ outline:4px solid var(--bad); outline-offset:2px; }
+    .bubbleBtn.mmAnswer{ outline:4px solid var(--ok); outline-offset:2px; }
+    .bubbleBtn .mmMark{ position:absolute; top:-6px; right:-6px; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:900; color:#fff; }
+    .bubbleBtn.mmPicked .mmMark{ background:var(--bad); }
+    .bubbleBtn.mmAnswer .mmMark{ background:var(--ok); }
     .secondaryBtn{ border:2px solid var(--line); background:#fff; color:#334155; font-weight:800; font-size:13px; padding:12px 20px; border-radius:16px; cursor:pointer; text-transform:uppercase; letter-spacing:.08em; transition:all .15s; }
     .secondaryBtn:hover{ background:#f8fafc; }
     .primaryBtn{ border:none; background:var(--accent); color:#fff; font-weight:900; font-size:13px; padding:14px 28px; border-radius:16px; cursor:pointer; text-transform:uppercase; letter-spacing:.08em; box-shadow:0 10px 20px rgba(var(--accent-rgb),.3); transition:all .15s; }
@@ -308,6 +325,8 @@
     <div class="options" id="options"></div>
     <div class="feedback" id="feedback" aria-live="assertive"></div>
     <div class="subFeedback" id="subFeedback" aria-live="polite"></div>
+    <div class="mmWhy" id="mmWhy" hidden></div>
+    <div class="mmNextRow" id="mmNextRow" hidden><button class="primaryBtn" id="mmNextBtn" type="button">Next word →</button></div>
     <div id="ealdTranslation" aria-live="polite"></div>
     <div class="actionRow">
       <button class="secondaryBtn" id="recalibrateBtn" type="button">Restart</button>
@@ -502,6 +521,78 @@
   let score=0,streak=0,fuel=100,currentQuestion=null,buttonsLocked=false,fuelInterval=null;
   const wordEl=document.getElementById("word"),baseMeaningEl=document.getElementById("baseMeaning"),optionsEl=document.getElementById("options"),feedbackEl=document.getElementById("feedback"),subFeedbackEl=document.getElementById("subFeedback"),scorePillEl=document.getElementById("scorePill"),streakPillEl=document.getElementById("streakPill"),fuelBarEl=document.getElementById("fuelBar"),fuelLabelEl=document.getElementById("fuelLabel"),dropZoneEl=document.getElementById("prefixDropZone"),dropZoneTextEl=document.getElementById("dropZoneText");
   function shuffleArray(arr){return[...arr].sort(()=>Math.random()-.5);}
+  // ── Fair options and "why" feedback ──
+  // Split a meaning like "not; opposite; apart" into its parts so two morphemes that
+  // share any meaning (un- and non- both mean "not") are never offered together.
+  function _mmMeaningParts(m){
+    return String((m&&m.meaning)||'').toLowerCase().split(/;|,|\bor\b/)
+      .map(function(x){ return x.trim().replace(/^(to|a|an|the)\s+/,''); }).filter(Boolean);
+  }
+  function _mmSharesMeaning(a,b){
+    if(!a||!b) return false;
+    if((a.form||'').toLowerCase()===(b.form||'').toLowerCase()) return true;
+    var pb=_mmMeaningParts(b);
+    return _mmMeaningParts(a).some(function(x){ return pb.indexOf(x)!==-1; });
+  }
+  function _mmType(m){
+    if(BASES.some(function(x){ return x.id===m.id; })) return 'base';
+    if(PREFIXES.some(function(x){ return x.id===m.id; })) return 'prefix';
+    return 'suffix';
+  }
+  // Plain label for feedback text: RE- (prefix), -ING (suffix), ACT (base)
+  function _mmLabel(m){
+    var f=(m.form||'').toUpperCase(), t=_mmType(m);
+    return t==='prefix' ? f+'-' : t==='suffix' ? '-'+f : f;
+  }
+  // Examples in data.js that are not real words, are not built from this morpheme, or
+  // are not suitable to show a Year 5/6 student as a model word. Skipped here only.
+  var _MM_SKIP_EXAMPLES=['homicide','suicide','necromancy','pyromancy','geomancy','pyromania','sociopath','sociopathy',
+    'narcolepsy','narcosis','narcotic','monogamy','polygamy','bigamy','asexual','badger','irrepairable','overask',
+    'overwatch','history-maker','herolatry','bibliolatry'];
+  // One example word from data.js with the morpheme in bold, e.g. <b>un</b>happy.
+  // Only uses examples where the marked part is exactly this morpheme and the word is
+  // longer than the morpheme (so a base is never shown "like in act").
+  function _mmExample(m){
+    var M=window.MORPHEMES; if(!M) return '';
+    var t=_mmType(m), list=t==='base'?M.bases:t==='prefix'?M.prefixes:M.suffixes;
+    var src=(list||[]).find(function(x){ return x.id===m.id; });
+    if(!src||!src.examples||(src.form||'').toLowerCase()!==(m.form||'').toLowerCase()) return '';
+    var form=(m.form||'').toLowerCase();
+    for(var i=0;i<src.examples.length;i++){
+      var ex=src.examples[i], marks=ex.match(/<u>(.*?)<\/u>/g)||[];
+      var plain=ex.replace(/<\/?u>/g,'');
+      if(marks.length!==1||marks[0].replace(/<\/?u>/g,'').toLowerCase()!==form||plain.length<=form.length) continue;
+      if(_MM_SKIP_EXAMPLES.indexOf(plain.toLowerCase())!==-1) continue;
+      var parts=ex.split(/<u>|<\/u>/), esc=WordLabData.escapeHtml;
+      return esc(parts[0])+'<b>'+esc(parts[1])+'</b>'+esc(parts[2]||'');
+    }
+    return '';
+  }
+  function _mmMeansLine(m){
+    var esc=WordLabData.escapeHtml, ex=_mmExample(m);
+    return '<b>'+esc(_mmLabel(m))+'</b> means \u201C'+esc(m.meaning)+'\u201D'+(ex?', like in <span class="mmEx">'+ex+'</span>':'')+'.';
+  }
+  function _mmBuildWhy(q,choice){
+    var esc=WordLabData.escapeHtml, ex=_mmExample(q.correct);
+    return '<div class="mmWhyLine picked"><span aria-hidden="true">\u2717 </span>You picked <b>'+esc(_mmLabel(choice))+'</b>. '+_mmMeansLine(choice).replace(/^<b>[^<]*<\/b>/,'It')+'</div>'+
+      '<div class="mmWhyLine answer"><span aria-hidden="true">\u2713 </span>The '+esc(_mmType(q.correct))+' that means \u201C'+esc(q.correct.meaning)+'\u201D is <b>'+esc(_mmLabel(q.correct))+'</b>'+(ex?', like in <span class="mmEx">'+ex+'</span>':'')+'.</div>';
+  }
+  var _mmReading=false; // true while the wrong-answer explanation is on screen (energy holds)
+  function _mmHideWhy(){
+    _mmReading=false;
+    var w=document.getElementById('mmWhy'), n=document.getElementById('mmNextRow'), sk=document.getElementById('skipBtn');
+    if(w){ w.hidden=true; w.innerHTML=''; }
+    if(n) n.hidden=true;
+    if(sk) sk.style.display='';
+  }
+  function _mmMarkOptions(choice,correct){
+    optionsEl.querySelectorAll('button').forEach(function(b){
+      var id=b.dataset.mid, mark=null;
+      if(id===correct.id){ b.classList.add('mmAnswer'); mark='\u2713'; }
+      else if(id===choice.id){ b.classList.add('mmPicked'); mark='\u2717'; }
+      if(mark){ var sp=document.createElement('span'); sp.className='mmMark'; sp.setAttribute('aria-hidden','true'); sp.textContent=mark; b.appendChild(sp); }
+    });
+  }
   function getPrefixLabel(p){
     if(BASES.some(x=>x.id===p.id)) return (p.form||"").toUpperCase();
     var pfxData = PREFIXES.find(x=>x.id===p.id);
@@ -516,7 +607,7 @@
   function generateQuestion(){
     const pool=WordLabData.weightByStage(getActiveMorphemePool(), 'meaning-mode');
     const correct=pool[Math.floor(Math.random()*pool.length)];
-    const wrong=shuffleArray(pool.filter(p=>p.id!==correct.id)).slice(0,_supportMode?1:2);
+    const wrong=shuffleArray(pool.filter(p=>p.id!==correct.id&&!_mmSharesMeaning(p,correct))).slice(0,_supportMode?1:2);
     return{correct,options:shuffleArray([correct,...wrong])};
   }
   function resetDropZone(){dropZoneEl.classList.remove("flashSuccess","flashFail");dropZoneTextEl.textContent="?";dropZoneTextEl.style.color="#a5b4fc";}
@@ -548,11 +639,11 @@
         function(){ return 'It is a '+_hintType+' and starts with "'+(_hintQ.correct.form||'').charAt(0).toUpperCase()+'".'; }
       );
     }
-    feedbackEl.textContent="";feedbackEl.className="feedback";subFeedbackEl.textContent="";
+    feedbackEl.textContent="";feedbackEl.className="feedback";subFeedbackEl.textContent="";_mmHideWhy();
     resetDropZone();optionsEl.innerHTML="";
     q.options.forEach((option,index)=>{
       const btn=document.createElement("button");btn.type="button";
-      btn.className=`bubbleBtn ${["blue","green","purple","orange"][index%4]}`;
+      btn.className=`bubbleBtn ${["blue","green","purple","orange"][index%4]}`;btn.dataset.mid=option.id;
       btn.style.animationDelay=`${index*.18}s`;
       const inner=document.createElement("div");inner.className="bubbleInner";
       const main=document.createElement("span");const _lbl=getPrefixLabel(option);main.innerHTML=_lbl;var _plainLen=main.textContent.length;if(_plainLen>7)main.style.fontSize='11px';else if(_plainLen>5)main.style.fontSize='13px';else if(_plainLen>4)main.style.fontSize='15px';
@@ -599,7 +690,7 @@
       if(!_wltActive && typeof WLAudio!=='undefined'){WLAudio.correct();if(streak>=3)WLAudio.streak(streak);}
       if(!_wltActive) _ssTrackMorpheme(q.correct.form, true);
       feedbackEl.textContent="✅ Correct!";feedbackEl.className="feedback ok";
-      subFeedbackEl.innerHTML=isBase?`${getPrefixLabel(choice)} means "${WordLabData.escapeHtml(choice.meaning)}"`:`${getPrefixLabel(choice)} means "${WordLabData.escapeHtml(choice.meaning)}"`;
+      subFeedbackEl.innerHTML=_mmMeansLine(choice);
       dropZoneTextEl.style.color="var(--ok)";dropZoneEl.classList.add("flashSuccess");
       if(_wltActive){var _type=isBase?'base':PREFIXES.some(x=>x.id===q.correct.id)?'prefix':'suffix';WLTeacher.onAnswer(true,'<b>'+WordLabData.escapeHtml(getPrefixLabel(q.correct))+'</b> is a '+_type+' meaning "<b>'+WordLabData.escapeHtml(q.correct.meaning)+'</b>".');}
     } else {
@@ -609,7 +700,9 @@
       if(typeof WLScientist!=='undefined') WLScientist.react('wrong');
       if(!_wltActive && typeof WLAudio!=='undefined') WLAudio.wrong();
       feedbackEl.textContent="❌ Not quite";feedbackEl.className="feedback bad";
-      subFeedbackEl.innerHTML=`Correct answer: ${getPrefixLabel(q.correct)} — ${WordLabData.escapeHtml(q.correct.meaning)}`;
+      _mmMarkOptions(choice,q.correct);
+      if(_wltActive){ subFeedbackEl.innerHTML=`Correct answer: ${getPrefixLabel(q.correct)} — ${WordLabData.escapeHtml(q.correct.meaning)}`; }
+      else { subFeedbackEl.textContent=''; var _w=document.getElementById('mmWhy'); _w.innerHTML=_mmBuildWhy(q,choice); _w.hidden=false; _mmReading=true; }
       dropZoneTextEl.style.color="var(--bad)";dropZoneEl.classList.add("flashFail");
       if(_wltActive){var _type=isBase?'base':PREFIXES.some(x=>x.id===q.correct.id)?'prefix':'suffix';WLTeacher.onAnswer(false,'The correct answer is <b>'+WordLabData.escapeHtml(getPrefixLabel(q.correct))+'</b> ('+_type+'), which means "<b>'+WordLabData.escapeHtml(q.correct.meaning)+'</b>".<br>You selected <b>'+WordLabData.escapeHtml(getPrefixLabel(choice))+'</b>, which means "'+WordLabData.escapeHtml(choice.meaning)+'".');}
     }
@@ -635,11 +728,30 @@
     // ── Round tracking ──
     _roundAnswered++;
     wlUpdateRoundProgress();
-    if (_roundAnswered >= _roundTotal) { showRoundWin(); return; }
-    if(fuel<=0){setTimeout(endGame,800);return;}setTimeout(loadQuestion,1400);
+    var _wasRight=choice.id===q.correct.id;
+    if(_wasRight){
+      if (_roundAnswered >= _roundTotal) { showRoundWin(); return; }
+      if(fuel<=0){setTimeout(endGame,800);return;}setTimeout(loadQuestion,1400);
+      return;
+    }
+    if(fuel<=0&&_roundAnswered<_roundTotal){_mmReading=false;setTimeout(endGame,800);return;}
+    // Wrong answer: no auto-advance. The explanation stays until the student presses Next.
+    var _nb=document.getElementById('mmNextBtn'), _nr=document.getElementById('mmNextRow'), _sk=document.getElementById('skipBtn');
+    _nb.textContent=_roundAnswered>=_roundTotal?'See my results →':'Next word →';
+    _nr.hidden=false; if(_sk) _sk.style.display='none';
+    var _calm=document.body.classList.contains('low-stim')||(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+    _nr.scrollIntoView({behavior:_calm?'auto':'smooth',block:'nearest'});
+    _nb.focus({preventScroll:true});
   }
-  function startFuelDrain(){clearInterval(fuelInterval);fuelInterval=setInterval(()=>{fuel-=(_supportMode?.12:.25);if(fuel<=0){fuel=0;updateHud();endGame();clearInterval(fuelInterval);return;}updateHud();},220);}
-  function endGame(){buttonsLocked=true;optionsEl.innerHTML="";feedbackEl.textContent="Mission over";feedbackEl.className="feedback bad";subFeedbackEl.textContent=`Final score: ${score} XP`;}
+  document.getElementById('mmNextBtn').addEventListener('click',function(){
+    if(!_mmReading) return;
+    _mmHideWhy();
+    if(_roundAnswered>=_roundTotal){ showRoundWin(); return; }
+    loadQuestion();
+    var _first=optionsEl.querySelector('button'); if(_first) _first.focus({preventScroll:true});
+  });
+  function startFuelDrain(){clearInterval(fuelInterval);fuelInterval=setInterval(()=>{if(_mmReading)return;fuel-=(_supportMode?.12:.25);if(fuel<=0){fuel=0;updateHud();endGame();clearInterval(fuelInterval);return;}updateHud();},220);}
+  function endGame(){_mmHideWhy();buttonsLocked=true;optionsEl.innerHTML="";feedbackEl.textContent="Mission over";feedbackEl.className="feedback bad";subFeedbackEl.textContent=`Final score: ${score} XP`;}
   document.getElementById("recalibrateBtn").addEventListener("click",()=>{_roundAnswered=0;_roundCorrect=0;score=0;streak=0;fuel=100;buttonsLocked=false;if(!_wltActive){updateHud();startFuelDrain();}loadQuestion();});
   document.getElementById("skipBtn").addEventListener("click",()=>{if(buttonsLocked)return;if(!_wltActive&&fuel<=0)return;streak=0;if(!_wltActive){fuel=Math.max(fuel-(_supportMode?4:8),0);updateHud();if(fuel<=0){endGame();return;}}if(_wltActive){WLTeacher.clearFeedback();var nb=document.getElementById('wltNextBtn');if(nb)nb.style.display='none';}loadQuestion();});
   if(_wltActive){
@@ -670,9 +782,10 @@
       {icon:'📖',title:'Read the meaning',desc:'A meaning is shown at the top. Find the morpheme that matches it.'},
       {icon:'🎯',title:'Pick the answer',desc:'Choose the correct prefix, suffix, or base from the options below.'},
       {icon:'⚡',title:'Watch your energy',desc:'The energy bar drains over time. Correct answers refill it.'},
+      {icon:'💡',title:'Learn from mistakes',desc:'If you get one wrong, read what both morphemes mean. Your energy waits while you read. Press Next when you are ready.'},
       {icon:'🔄',title:'Switch modes',desc:'Use the tabs to practise prefixes, suffixes, bases, or mixed.'}
     ],
-    audioText:'Choose how many words you want to answer before you start. Complete them all before your fuel runs out! In Meaning Match-Up, a meaning is shown and you pick the morpheme that matches. Choose from the options below. The energy bar drains over time, so try to answer quickly. Correct answers refill your energy. Use the tabs at the top to switch between prefixes, suffixes, bases, or mixed mode.'
+    audioText:'Choose how many words you want to answer before you start. Complete them all before your fuel runs out! In Meaning Match-Up, a meaning is shown and you pick the morpheme that matches. Choose from the options below. The energy bar drains over time, so try to answer quickly. Correct answers refill your energy. If you get one wrong, read what both morphemes mean. Your energy waits while you read. Press Next when you are ready. Use the tabs at the top to switch between prefixes, suffixes, bases, or mixed mode.'
   });
   if(typeof WLHints!=='undefined') WLHints.register({
     getStrategyHint: function(){ return 'Think about what this morpheme means \u2014 does it go at the start, middle, or end of a word?'; },
