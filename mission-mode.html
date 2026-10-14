@@ -933,6 +933,48 @@
   var _mxStandalone = {};
   // Bases that take -est (weakest), so their -er is "more" (weaker), not a person
   var _mxTakesEst = {};
+  // valid-combos.json splits that are not this prefix or suffix with this base's meaning
+  // (see + ed = seed, go + al = goal, re + treat = retreat), or that use another sense of
+  // the base (sound + ly, kind + s), or are names and short forms (moby, dems). These
+  // are never right answers and never shown as "a real word" in the why panel.
+  // Read by hand from all 464 prefix and 1,381 suffix pairs. Key: side|affix|word.
+  var _MX_FALSE_SPLITS = (function(){
+    var list = {
+      p: {
+        a: 'away alike awake around apart alive avid aspect aspire',
+        ad: 'account affair', bene: 'benedict', con: 'congo contest conquer',
+        contra: 'contraband', de: 'debit delight depart deserve depot',
+        dis: 'discount display disaster', e: 'erupt eject emerge easter even ever',
+        ex: 'exact', fore: 'foreman forever', mega: 'megabit', mono: 'monopoly',
+        ob: 'occurs', pro: 'protest proven', re: 'recollect remove retreat represent recover remiss',
+        sub: 'submerge', super: 'superman', un: 'unsound', apo: 'apology', en: 'enjoy'
+      },
+      s: {
+        s: 'specs vids secs spires grams thermos autos bios dems paths corps fins mans mars pots pubs regs tens demos astros kinds fairs sweets ports',
+        es: 'planes spices verses spires graves fines mines tries misses',
+        ed: 'seed stared fasted missed cursed fined reged sacred tried arched',
+        ing: 'fasting winding harding mining missing arching',
+        er: 'former bitter flower goer seer liver sounder rounder tender archer miner primer jumper turner',
+        or: 'terror manor tenor', ion: 'portion pension', ive: 'archive respective',
+        ance: 'finance', ant: 'warrant', eer: 'career', ible: 'terrible',
+        ure: 'endure secure manure tenure', ly: 'philly likely hardly soundly roundly',
+        ness: 'likeness soundness', ory: 'inventory', al: 'sandal goal seal portal spiral trial',
+        y: 'colony busy treaty tally party ready county fairy hardy missy phony terry many moby very spicy',
+        age: 'manage', est: 'finest', ish: 'finish', ial: 'colonial special',
+        en: 'warren eaten taken seen proven', ify: 'testify specify', tion: 'demotion', ific: 'specific terrific',
+        sion: 'mansion version'
+      }
+    };
+    var set = {};
+    ['p','s'].forEach(function(side){
+      Object.keys(list[side]).forEach(function(affix){
+        list[side][affix].split(' ').forEach(function(w){ set[side+'|'+affix+'|'+w] = true; });
+      });
+    });
+    // plac (please; calm) only ever pairs as place: placed, placing, places
+    set.root_greek_79 = true;
+    return set;
+  })();
   // ── Derive BASES / SUFFIX_BASES from valid-combos.json + apply custom morphemes + stage weighting ──
   var _missionDataReady = false;
   document.addEventListener('DOMContentLoaded', function() {
@@ -944,15 +986,21 @@
         // Only a prefix + base or base + suffix that is a word on its own counts as
         // a right answer. un + help + ful (unhelpful) used to make UN- "right" for HELP,
         // and help + ful + ly made -LY "right" for HELP, but unhelp and helply are not words.
+        var _mxFormOf = {};
+        ((window.MORPHEMES && window.MORPHEMES.bases) || []).forEach(function(m) { _mxFormOf[m.id] = m.form; });
         combos.forEach(function(c) {
           if (!c.p && !c.s1 && !c.s2) _mxStandalone[c.b] = true;
           if (!c.p && c.s1 === 'est' && !c.s2) _mxTakesEst[c.b] = true;
           if (c.p && !c.s1 && !c.s2) {
+            if (_MX_FALSE_SPLITS['p|' + c.p + '|' + c.word]) return;
             if (!prefixMap[c.b]) prefixMap[c.b] = new Set();
             prefixMap[c.b].add(c.p);
             if (c.word) _mxWords['p|' + c.p + '|' + c.b] = c.word;
           }
           if (!c.p && c.s1 && !c.s2) {
+            if (_MX_FALSE_SPLITS['s|' + c.s1 + '|' + c.word] || _MX_FALSE_SPLITS['root_' + c.b]) return;
+            // make + es = makes is really make + s (the base already ends in e), so only -S counts
+            if (c.s1 === 'es' && c.word === (_mxFormOf[c.b] || c.b) + 's') return;
             if (!suffixMap[c.b]) suffixMap[c.b] = new Set();
             suffixMap[c.b].add(c.s1);
             if (c.word) _mxWords['s|' + c.b + '|' + c.s1] = c.word;
@@ -1282,12 +1330,26 @@
     }
     return w;
   }
+  // Clues written by hand where the base has several senses and the pattern reads badly
+  // even with every sense kept. Key: p|prefix|base.
+  var _MX_CLUE_FIX={
+    'p|non|stick':'not sticking (food does not stick to it)',
+    'p|dis|anglo_87':'lose colour; the opposite of colour',
+    'p|multi|anglo_87':'many colours',
+    'p|re|anglo_60':'make warm again','p|pre|anglo_60':'make warm before','p|over|anglo_60':'make too warm',
+    'p|bi|cycle':'a vehicle with two wheels','p|uni|cycle':'a vehicle with one wheel','p|tri|cycle':'a vehicle with three wheels',
+    'p|mega|star':'a very large star; a very famous person','p|super|star':'a star above the others; a very famous person'
+  };
   function buildTargetMeaning(morpheme,base,isPrefix){
     if(isPrefix){
+      var fix=_MX_CLUE_FIX['p|'+morpheme.id+'|'+base.id];
+      if(fix) return fix;
       var pp=morpheme.meaningPattern||("{base} "+morpheme.meaning);
-      // Only the first sense of the base, without "to": un + pack is "not put things
-      // together for carrying", not "not to put things together for carrying; a bundle".
-      var bm=String(base.meaning||'').split(';')[0].trim().replace(/^to\s+/,'')||base.meaning;
+      // Every sense of the base, each without a leading "to" (un + pack is "not put
+      // things together for carrying; a bundle"). Keeping every sense means the sense the
+      // word uses is always there (stick: "a thin piece of wood; attach").
+      var bm=String(base.meaning||'').split(';').map(function(x){ return x.trim().replace(/^to\s+/,''); })
+        .filter(Boolean).join('; ')||base.meaning;
       return pp.replace(/\{base\}/g,bm);
     }
     var pattern=morpheme.meaningPattern||(base.meaning+" "+morpheme.meaning);
@@ -1297,7 +1359,9 @@
     // -ER on a describing word that also takes -EST (weak, weakest) means "more"
     // (or is only ever a describing word, like happy)
     var pos=base.pos||[];
-    if(morpheme.id==='er'&&(_mxTakesEst[base.id]||(isWord&&pos.length===1&&pos[0]==='adj'))) pattern='more {base}';
+    // A root that takes -est (clos: closest) says "more" with its meaning: "more close", not "more clos".
+    if(morpheme.id==='er'&&_mxTakesEst[base.id]&&!isWord) return 'more '+String(base.meaning||'').split(';')[0].trim();
+    if(morpheme.id==='er'&&isWord&&(_mxTakesEst[base.id]||(pos.length===1&&pos[0]==='adj'))) pattern='more {base}';
     var word=base.form||'';
     return pattern.replace(/\{base\}(ing|s|d)\b/g,function(_,end){ return _mxInflect(word,end,isWord); })
                   .replace(/\{base\}/g,word);

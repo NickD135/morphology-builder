@@ -10,7 +10,7 @@ Score each surface 1 (poor) to 4 (strong) on each lens from IMPROVEMENT_AGENT.md
 | morpheme-builder.html | | | | | | | | |
 | flashcard-mode.html | | | | | | | | |
 | word-study.html | | | | | | | | |
-| mission-mode.html | 2 (clues still awkward for roots) | 3 | 3 (was 1: no why, auto-advance) | 3 | 3 (was 2: marks colour only) | 2 | 16 (was 13) | 2026-10-14 (real-word answers, fair options, why panel) |
+| mission-mode.html | 2 (clues still awkward for roots) | 3 | 3 (was 1: no why, auto-advance) | 3 | 3 (was 2: marks colour only) | 2 | 16 (was 13) | 2026-10-15 (real-word answers, false splits removed, fair options, why panel) |
 | meaning-mode.html | 3 | 3 | 3 (was 2) | 3 | 3 (was 2: reading under time pressure, marks colour only) | 2 | 17 (was 15) | 2026-10-13 (why panel, fair options) |
 | breakdown-mode.html | 3 | 3 | 3 (was 2) | 3 | 3 (was 2) | 2 | 17 (was 15) | 2026-10-13 (7 wrong answer splits fixed; splits now tested) |
 | phoneme-mode.html | 3 | 3 | 3 (was 2) | 3 | 3 (was 2) | 2 | 17 (was 15) | 2026-10-12 |
@@ -74,6 +74,9 @@ Add ideas found while working. Keep each to one line with the surface and the le
 - Other games that look morphemes up by id (Mission Mode, Flashcards, dashboard getCategoryStage): check en, pod, phone, vore are typed correctly (code health)
 - Meaning Match-Up: a read-aloud button on the why panel for students who read below level (Inclusive)
 - **Mission Mode clues (next):** the target meaning is built from pattern + base meaning, which reads badly for bound roots and multi-sense prefixes ("in + spect = not look", "a + spect = not or without look", "a person who mins", "full of phon"). Real fix: use each answer word's own meaning from word-study-data.js (3,589 words; load it lazily or extract a small meanings file with a script) and only offer pairs that have one (Teaching practice, Clear)
-- valid-combos.json false splits used as answers by Mission Mode and Morpheme Builder: min + ing (mining), min + er (miner), tri + es (tries), ver + y (very), terr + y (terry), phil + ly (philly), dem + s, corp + s, sec + ure (secure), fin + ance, man + age (manage), man + ure, ten + ure. Fix in scripts/build-valid-combos.js blocklist with Nicholas, then rebuild (Teaching practice)
+- valid-combos.json false splits: Mission Mode now skips 248 pairs in `_MX_FALSE_SPLITS` (run 16), but Morpheme Builder and Word Study still offer them. Move the list into scripts/build-valid-combos.js (blocklist) with Nicholas, rebuild, then delete the page-level list. Earlier note: min + ing (mining), min + er (miner), tri + es (tries), ver + y (very), terr + y (terry), phil + ly (philly), dem + s, corp + s, sec + ure (secure), fin + ance, man + age (manage), man + ure, ten + ure. Fix in scripts/build-valid-combos.js blocklist with Nicholas, then rebuild (Teaching practice)
 - Mission Mode: _MX_SAME_MEANING duplicates meaning-mode.html's list; move both to one shared helper (or a sameAs field in data.js) so they cannot drift (code health)
 - Mission Mode Teacher Mode still uses the old one-line feedback; reuse _mxBuildWhy there (Clear)
+- Mission Mode: allow a same-meaning distractor only when it makes no word with the base (UN-/DIS-/IN- for HAPPY), with a panel line "a good meaning, but dis + happy is not a word". Restores the hardest useful question and keeps a teacher's set of "not" prefixes playable. Ask Nicholas first: #28's reviews asked for one right answer by meaning (Teaching practice, Stretch)
+- Mission Mode: -S clue on verbs reads "more than one see / organise / believe"; use "he or she {base}s" when the base is only a verb (Clear)
+- data.js suffix meanings miss common senses: -en has no past participle sense (seen, taken), -ent/-ant are only "person or thing that" (potent, vacant, expectant are describing words). Add the senses in data.js with Nicholas, then Mission Mode can use those words again (Teaching practice)
