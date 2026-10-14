@@ -524,13 +524,29 @@
   // ── Fair options and "why" feedback ──
   // Split a meaning like "not; opposite; apart" into its parts so two morphemes that
   // share any meaning (un- and non- both mean "not") are never offered together.
+  // Each part is tidied so near-identical wordings match: a leading "having" and a
+  // trailing "of" are dropped, and plurals become singular, so -IVE "having quality of",
+  // -IOUS "having qualities of" and -ATIVE "tendency or quality" all share "quality".
+  function _mmSingular(w){
+    if(w.length>4&&/ies$/.test(w)) return w.slice(0,-3)+'y';
+    if(w.length>3&&/s$/.test(w)&&!/(ss|us|is)$/.test(w)) return w.slice(0,-1);
+    return w;
+  }
   function _mmMeaningParts(m){
     return String((m&&m.meaning)||'').toLowerCase().split(/;|,|\bor\b/)
-      .map(function(x){ return x.trim().replace(/^(to|a|an|the)\s+/,''); }).filter(Boolean);
+      .map(function(x){
+        x=x.trim().replace(/^(to|a|an|the)\s+/,'').replace(/^having\s+/,'').replace(/\s+of$/,'');
+        return x.split(/\s+/).map(_mmSingular).join(' ');
+      }).filter(Boolean);
   }
+  // Pairs whose meanings overlap in a way the wording does not show
+  // (HYPER- "over; excessive" and OVER- "too much").
+  var _MM_SAME_MEANING=[['hyper','over']];
   function _mmSharesMeaning(a,b){
     if(!a||!b) return false;
     if((a.form||'').toLowerCase()===(b.form||'').toLowerCase()) return true;
+    var ia=(a.id||'').toLowerCase(), ib=(b.id||'').toLowerCase();
+    if(_MM_SAME_MEANING.some(function(p){ return (p[0]===ia&&p[1]===ib)||(p[0]===ib&&p[1]===ia); })) return true;
     var pb=_mmMeaningParts(b);
     // Same part, or one part is the other plus more words ("result of action" and
     // "result of"), so -ment, -ure, -age and -ion are never offered together.
@@ -560,7 +576,12 @@
   // are not suitable to show a Year 5/6 student as a model word. Skipped here only.
   var _MM_SKIP_EXAMPLES=['homicide','suicide','necromancy','pyromancy','geomancy','pyromania','sociopath','sociopathy',
     'narcolepsy','narcosis','narcotic','monogamy','polygamy','bigamy','asexual','badger','irrepairable','overask',
-    'overwatch','history-maker','herolatry','bibliolatry','fasten','remeet','vicepresident'];
+    'overwatch','history-maker','herolatry','bibliolatry','fasten','remeet','vicepresident',
+    // Use a different meaning of the morpheme than the one shown (or, for vice-, are
+    // written as two words): fastness and breakfast are not "quick", contraband is a ban,
+    // submerge is to put under water, recollect is to remember, a jumper is a sweater in
+    // Australia, and miniature comes from Latin miniare (to paint red), not "small".
+    'fastness','breakfast','contraband','submerge','recollect','jumper','vicecaptain','viceprincipal','miniature'];
   // One example word from data.js with the morpheme in bold, e.g. <b>un</b>happy.
   // Only uses examples where the marked part is exactly this morpheme and the word is
   // longer than the morpheme (so a base is never shown "like in act").

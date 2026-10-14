@@ -69,6 +69,8 @@ Add ideas found while working. Keep each to one line with the surface and the le
 - Meaning Match-Up: Support Mode label repeats the type ("Which prefix means: PREFIX"); show it once (Clear, polish)
 - Meaning Match-Up: Need Advice ladder is strategy then first letter; a third step could give an example word with the morpheme hidden (un___ → "_happy") (Scaffolded)
 - data.js: American spelling `anemia` under -emia; use anaemia (Clear)
+- data.js examples that use another meaning of the morpheme (fastness, breakfast, contraband, submerge, recollect, jumper, miniature) are skipped in Meaning Match-Up only; Flashcards and worksheets still show them. Fix at source in data.js with Nicholas (Teaching practice)
+- data.js: odd extension model morphemes -URIA (glycosuria) and -ASE (amylase), and American `anemia` (Clear)
 - Meaning Match-Up: bases still have a few near-synonym pairs the starts-with rule misses (SEE/VIEW/WATCH vs SPEC/SPECT); consider a small synonym list (Teaching practice)
 - Other games that look morphemes up by id (Mission Mode, Flashcards, dashboard getCategoryStage): check en, pod, phone, vore are typed correctly (code health)
 - Meaning Match-Up: a read-aloud button on the why panel for students who read below level (Inclusive)
