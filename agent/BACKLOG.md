@@ -28,6 +28,10 @@ Score each surface 1 (poor) to 4 (strong) on each lens from IMPROVEMENT_AGENT.md
 | SOLO: Show (assessment), u31 | 4 | 3 | n/a | 2 | 3 | n/a | | 2026-10-12 (Know overlap removed; 6 Show fixes) |
 | SOLO: pre/post tests and reviews | | | | | | | | |
 
+## Requested by Nicholas (do first)
+
+- **Next run: Breakdown Blitz lag** (requested 2026-10-15). Nicholas reports the game lags. Take this before any track rotation. Reproduce in mock mode at Chromebook size (1366x768, and with CPU throttling, e.g. CDP `Emulation.setCPUThrottlingRate` 4x) as Ava, Ben (Support Mode, low stim) and Chloe: time typing in the boxes, Check, Next word, and the why panel, and record a Performance trace to find long tasks. First lead (not yet confirmed): `startFuelDrain()` calls `updateHud()` every 220 ms for the whole round, so check what `updateHud()` re-renders each tick (scientist widget, layout reads). Also check per-keystroke handlers, the stage filter and word-corrections load at start, and the run 5 why panel. Fix the cause in one small PR with before/after timings; do not change game balance.
+
 ## Ideas queue
 
 Add ideas found while working. Keep each to one line with the surface and the lens it serves.
