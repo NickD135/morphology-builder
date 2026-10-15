@@ -17,7 +17,7 @@ Score each surface 1 (poor) to 4 (strong) on each lens from IMPROVEMENT_AGENT.md
 | syllable-mode.html | 3 | 3 | 3 (was 2) | 3 | 3 (was 2) | 2 | 17 (was 15) | 2026-10-12 |
 | sound-sorter.html | 3 | 3 | 3 (was 2) | 3 | 3 (was 1: no keyboard play) | 2 | 17 (was 14) | 2026-10-13 |
 | speed-mode.html | | | | | | | | |
-| root-lab.html | | | | | | | | |
+| root-lab.html | 3 (was 2: help text wrong) | 3 | 3 (was 2: no why, empty Analyse marked wrong) | 3 | 3 (was 2: meaning marks colour only, full-screen stamp in low stim) | 3 (typed Challenge with fair alternative splits) | 18 (was 14) | 2026-10-15 (why panel, nudge, alternative splits, last word waits) |
 | homophone-mode.html | | | | | | | | |
 | word-spectrum.html | | | | | | | | |
 | word-refinery.html | | | | | | | | |
@@ -33,6 +33,13 @@ Score each surface 1 (poor) to 4 (strong) on each lens from IMPROVEMENT_AGENT.md
 - Morpheme Builder dead tiles: done in run 19 (PR stacked on #30). **Waiting on Nicholas** for the 28 tiles still left: hide, keep, or suggest words. The list with reasons is in the PR.
 
 ## Ideas queue
+
+- Root Lab: the 46 Challenge words are 2/3 of the pool and many are s4 (photosynthesis, antidisestablishment); Mixed for an s3e student is mostly typing. Check the Challenge share per stage with `weightByStage` and consider more Level Up words (Structured, Stretch)
+- Root Lab Challenge: other words where a student could defensibly split differently (demonstration de + monstr + ation vs demonstrate + ion, communication) still only accept the listed alternatives; extend `alts` with Nicholas's convention (same question as Breakdown Blitz psychology) (Teaching practice)
+- Round complete overlays in the other games (Phoneme, Syllable, Sound Sorter, Mission, Meaning, Breakdown): check whether focus moves to Play Again; in Root Lab it stayed behind the overlay until run 21 (Inclusive, keyboard)
+- Root Lab: the CASE HISTORY and INVESTIGATION PROTOCOL panels use an em dash and "Each correct zone = +10 pts"; rewrite the protocol in plain Year 5 language (Clear)
+- Root Lab: Need Advice step 2 now names the first part's meaning word, which gives the base away on bases ("think jump"); a gentler step 2 and a third step would suit the ladder used in other games (Scaffolded)
+- Root Lab Teacher Mode: `_showTeacherNext` lived inside the DOMContentLoaded handler, so checkAnswer threw in Teacher Mode (fixed run 20 by showing the button directly); check the other games for the same pattern (code health)
 - Morpheme Builder (run 19): 22 built words already on main have no Word Study page (watcher, taker, takers, constructor, misspelled, photos…) and the 115 new words from run 19 have none either. Word Study now says so; the real fix is running the scripts/word-study/ pipeline for them (Teaching practice)
 - Morpheme Builder junk that builds today on main: believeable, missy, philly, phillies, moby, dems, regs, reged, vac, vids, secs. Add them to EXCLUDE_WORDS in scripts/build-valid-combos.js with Nicholas, alongside moving Mission Mode's `_MX_FALSE_SPLITS` into the build (Teaching practice)
 - Build rule: base + es where base + s gives the same word (theatres, spheres, makes) and y + ty / y + fy (humanity, brevity) are false splits all through valid-combos.json. Run 19 blocked only the new ones; a general rule in scripts/build-valid-combos.js would remove the rest. Check every removal (Teaching practice)
@@ -57,7 +64,7 @@ Add ideas found while working. Keep each to one line with the surface and the le
 - Homophone Hunter: no mute button or student name pill in the header at any width (its `wlPillSlot` sits before the widget but stays empty); check why (polish, Inclusive)
 - Speed Builder at 768px: with the extra Base and Time pills the title truncates to "S…"; consider hiding the Base pill in the header on narrow screens (polish)
 - Syllable Splitter: at 768px the game column is very narrow and long words wrap across three lines; check the tablet layout (Inclusive, polish)
-- All fuel/round games: check whether wrong answers auto-advance before students can read the explanation (fixed in Syllable Splitter run 2, Phoneme Splitter run 3, Breakdown Blitz run 5). Sound Sorter fixed run 8, Meaning Match-Up run 11. Mission Mode fixed run 15. Still to check: Root Lab, Homophone Hunter (2.2 to 2.8 s)
+- All fuel/round games: check whether wrong answers auto-advance before students can read the explanation (fixed in Syllable Splitter run 2, Phoneme Splitter run 3, Breakdown Blitz run 5). Sound Sorter fixed run 8, Meaning Match-Up run 11. Mission Mode fixed run 15. Root Lab checked run 20 (wrong answers never auto-advanced, but the last word of a round did jump to the results). Still to check: Homophone Hunter (2.2 to 2.8 s)
 - Breakdown Blitz: the Why list can reach 5 lines when every box is wrong; consider showing the first two and a "Show more" for Ben (Clear)
 - Help popups describe controls but give no worked example ("I do"); add one modelled example per game (Scaffolded, Clear)
 - SOLO: `units/SOLO_PROGRESS.md` status header is out of date (resources track)
