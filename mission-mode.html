@@ -337,6 +337,21 @@
       font-family: 'Lexend', sans-serif;
     }
     .primaryBtn:hover { background: #3730a3; transform: translateY(-1px); }
+    /* Why panel: shown after a wrong answer, stays until the student presses Next */
+    .mxWhy { max-width: 520px; margin: 8px auto 0; text-align: left; display: grid; gap: 6px; }
+    .mxWhy[hidden], .mxNextRow[hidden] { display: none; }
+    .mxWhyLine { background: rgba(255,255,255,.85); border: 2px solid rgba(0,0,0,.08); border-radius: 12px; padding: 8px 12px; font-size: 15px; font-weight: 600; line-height: 1.45; color: #1e293b; }
+    .mxWhyLine.picked { border-color: rgba(220,38,38,.4); }
+    .mxWhyLine.answer { border-color: rgba(22,163,74,.5); }
+    .mxWhyLine b { font-weight: 900; }
+    .mxNextRow { display: flex; justify-content: center; margin-top: 10px; }
+    .bubbleBtn { position: relative; }
+    .bubbleBtn.mxPicked:disabled, .bubbleBtn.mxAnswer:disabled { opacity: 1; }
+    .bubbleBtn.mxPicked { outline: 4px solid var(--bad); outline-offset: 2px; }
+    .bubbleBtn.mxAnswer { outline: 4px solid var(--ok); outline-offset: 2px; }
+    .mxMark { position: absolute; top: -6px; right: -6px; width: 24px; height: 24px; border-radius: 50%; background: #fff; font-size: 15px; font-weight: 900; line-height: 24px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,.2); }
+    .mxPicked .mxMark { color: var(--bad); }
+    .mxAnswer .mxMark { color: var(--ok); }
 
     /* ── Responsive: mobile ────────────────────────────────────────── */
     @media (max-width: 680px) {
@@ -726,6 +741,8 @@
     <div class="options"     id="options"></div>
     <div class="feedback"    id="feedback" aria-live="assertive"></div>
     <div class="subFeedback" id="subFeedback" aria-live="polite"></div>
+    <div class="mxWhy" id="mxWhy" aria-live="polite" hidden></div>
+    <div class="mxNextRow" id="mxNextRow" hidden><button class="primaryBtn" id="mxNextBtn" type="button">Next word →</button></div>
     <div id="ealdTranslation" aria-live="polite"></div>
 
     <div class="actionRow">
@@ -909,6 +926,62 @@
     entries.forEach(function(e) { WordLabData.recordSpellingAttempt(e.setId, e.word, correct, 0); });
   }
 
+  // Real words from valid-combos.json, so feedback can show the word with its spelling
+  // changes (happy + ness = happiness). Keys: 'p|un|happy' and 's|happy|ness'.
+  var _mxWords = {};
+  // Bases that are a word on their own (run, happy), not only a root (fract, clos)
+  var _mxStandalone = {};
+  // Bases that take -est (weakest), so their -er is "more" (weaker), not a person
+  var _mxTakesEst = {};
+  // valid-combos.json splits that are not this prefix or suffix with this base's meaning
+  // (see + ed = seed, go + al = goal, re + treat = retreat), or that use another sense of
+  // the base (sound + ly, kind + s), or are names and short forms (moby, dems). These
+  // are never right answers and never shown as "a real word" in the why panel.
+  // Read by hand from all 464 prefix and 1,381 suffix pairs. Key: side|affix|word.
+  var _MX_FALSE_SPLITS = (function(){
+    var list = {
+      p: {
+        a: 'away alike awake around apart alive avid aspect aspire',
+        ad: 'account affair', bene: 'benedict', con: 'congo contest conquer',
+        contra: 'contraband', de: 'debit delight depart deserve depot',
+        dis: 'discount display disaster', e: 'erupt eject emerge easter even ever',
+        ex: 'exact', fore: 'foreman forever', mega: 'megabit', mono: 'monopoly',
+        ob: 'occurs', pro: 'protest proven', re: 'recollect remove retreat represent recover remiss resign',
+        sub: 'submerge', super: 'superman', un: 'unsound unlike', apo: 'apology', en: 'enjoy',
+        // over- is "too much" and under- is "below" in data.js; these words use another sense
+        over: 'oversee overview overtake overwrite overland overnight',
+        under: 'undergo undertake underway',
+        // improve is not in + prove (it comes from Old French emprouer, to make a profit)
+        'in': 'improve'
+      },
+      s: {
+        s: 'specs vids secs spires grams thermos autos bios dems paths corps fins mans mars pots pubs regs tens demos astros kinds fairs sweets ports',
+        es: 'planes spices verses spires graves fines mines tries misses',
+        ed: 'seed stared fasted missed cursed fined reged sacred tried arched',
+        ing: 'fasting winding harding mining missing arching',
+        er: 'former bitter flower goer seer liver sounder rounder tender archer miner primer jumper turner',
+        or: 'terror manor tenor', ion: 'portion pension', ive: 'archive respective',
+        ance: 'finance', ant: 'warrant expectant vacant',
+        // describing words, not "a person or thing that" (potent is not one that pots)
+        ent: 'potent lucent', eer: 'career', ible: 'terrible',
+        ure: 'endure secure manure tenure', ly: 'philly likely hardly soundly roundly',
+        ness: 'likeness soundness', ory: 'inventory', al: 'sandal goal seal portal spiral trial',
+        y: 'colony busy treaty tally party ready county fairy hardy missy phony terry many moby very spicy',
+        age: 'manage', est: 'finest', ish: 'finish', ial: 'colonial special',
+        en: 'warren eaten taken seen proven', ify: 'testify specify', tion: 'demotion', ific: 'specific terrific',
+        sion: 'mansion version'
+      }
+    };
+    var set = {};
+    ['p','s'].forEach(function(side){
+      Object.keys(list[side]).forEach(function(affix){
+        list[side][affix].split(' ').forEach(function(w){ set[side+'|'+affix+'|'+w] = true; });
+      });
+    });
+    // plac (please; calm) only ever pairs as place: placed, placing, places
+    set.root_greek_79 = true;
+    return set;
+  })();
   // ── Derive BASES / SUFFIX_BASES from valid-combos.json + apply custom morphemes + stage weighting ──
   var _missionDataReady = false;
   document.addEventListener('DOMContentLoaded', function() {
@@ -917,18 +990,27 @@
       .then(function(combos) {
         var prefixMap = {};
         var suffixMap = {};
+        // Only a prefix + base or base + suffix that is a word on its own counts as
+        // a right answer. un + help + ful (unhelpful) used to make UN- "right" for HELP,
+        // and help + ful + ly made -LY "right" for HELP, but unhelp and helply are not words.
+        var _mxFormOf = {};
+        ((window.MORPHEMES && window.MORPHEMES.bases) || []).forEach(function(m) { _mxFormOf[m.id] = m.form; });
         combos.forEach(function(c) {
-          if (c.p) {
+          if (!c.p && !c.s1 && !c.s2) _mxStandalone[c.b] = true;
+          if (!c.p && c.s1 === 'est' && !c.s2) _mxTakesEst[c.b] = true;
+          if (c.p && !c.s1 && !c.s2) {
+            if (_MX_FALSE_SPLITS['p|' + c.p + '|' + c.word]) return;
             if (!prefixMap[c.b]) prefixMap[c.b] = new Set();
             prefixMap[c.b].add(c.p);
+            if (c.word) _mxWords['p|' + c.p + '|' + c.b] = c.word;
           }
-          if (c.s1) {
+          if (!c.p && c.s1 && !c.s2) {
+            if (_MX_FALSE_SPLITS['s|' + c.s1 + '|' + c.word] || _MX_FALSE_SPLITS['root_' + c.b]) return;
+            // make + es = makes is really make + s (the base already ends in e), so only -S counts
+            if (c.s1 === 'es' && c.word === (_mxFormOf[c.b] || c.b) + 's') return;
             if (!suffixMap[c.b]) suffixMap[c.b] = new Set();
             suffixMap[c.b].add(c.s1);
-          }
-          if (c.s2) {
-            if (!suffixMap[c.b]) suffixMap[c.b] = new Set();
-            suffixMap[c.b].add(c.s2);
+            if (c.word) _mxWords['s|' + c.b + '|' + c.s1] = c.word;
           }
         });
 
@@ -1200,7 +1282,7 @@
       if(compat.length<1)continue;
       const correct=compat[Math.floor(Math.random()*compat.length)];
       // Wrong answers must NOT be valid combos with this morpheme (avoid ambiguous questions)
-      const invalidPool=allBases.filter(b=>b.id!==correct.id&&!isValidCombo(morpheme,b));
+      const _seen={};const invalidPool=allBases.filter(b=>{if(b.id===correct.id||_seen[b.id]||isValidCombo(morpheme,b))return false;_seen[b.id]=true;return true;});
       if(invalidPool.length<2)continue;
       const wrong=shuffleArray(invalidPool).slice(0,_supportMode?1:2);
       const targetMeaning=buildTargetMeaning(morpheme,correct,usePrefix);
@@ -1212,8 +1294,204 @@
   function getBaseLabel(b){return(b.form||"").toUpperCase();}
   function updateHud(){scorePillEl.textContent=`${score} XP`;streakPillEl.textContent=`🔥 Streak: ${streak}`;fuelBarEl.style.width=`${Math.max(fuel,0)}%`;fuelLabelEl.textContent=`${Math.max(Math.round(fuel),0)}%`;}
   function isCompatible(morpheme,base){if(!morpheme.allowedPos||!base.pos) return true; return base.pos.some(pos=>morpheme.allowedPos.includes(pos));}
-  function buildTargetMeaning(morpheme,base,isPrefix){let pattern=morpheme.meaningPattern||(isPrefix?"{base} "+morpheme.meaning:base.meaning+" "+morpheme.meaning);const sub=isPrefix?base.meaning:base.form;let result=pattern.replace(/\{base\}/g,sub);if(!isPrefix&&base.form.endsWith('e'))result=result.replace(new RegExp(base.form+'ing','gi'),base.form.slice(0,-1)+'ing');return result;}
-  function generateQuestion(){if(morphemeMode==='base')return generateBaseQuestion();const {morphemes,bases,isPrefix}=getActiveMorphemes();if(isPrefix){for(let i=0;i<50;i++){const base=bases[Math.floor(Math.random()*bases.length)];const compat=morphemes.filter(p=>isCompatible(p,base));const real=compat.filter(p=>isRealWord(p,base));if(!real.length)continue;const correct=real[Math.floor(Math.random()*real.length)];const wrong=shuffleArray(morphemes.filter(p=>p.id!==correct.id)).slice(0,_supportMode?1:2);return{base,correct,isPrefix,targetMeaning:buildTargetMeaning(correct,base,isPrefix),options:shuffleArray([correct,...wrong])};} const base=bases[Math.floor(Math.random()*bases.length)];const compat=morphemes.filter(p=>isCompatible(p,base));const correct=compat.length?compat[Math.floor(Math.random()*compat.length)]:morphemes[0];const wrong=shuffleArray(morphemes.filter(p=>p.id!==correct.id)).slice(0,_supportMode?1:2);return{base,correct,isPrefix,targetMeaning:buildTargetMeaning(correct,base,isPrefix),options:shuffleArray([correct,...wrong])};}else{const _vb=bases.filter(b=>b.validSuffixes&&b.validSuffixes.length);for(let i=0;i<50;i++){const base=_vb[Math.floor(Math.random()*_vb.length)];const compat=morphemes.filter(s=>base.validSuffixes.includes(s.id));if(!compat.length)continue;const correct=compat[Math.floor(Math.random()*compat.length)];const wrong=shuffleArray(morphemes.filter(s=>s.id!==correct.id)).slice(0,_supportMode?1:2);return{base,correct,isPrefix,targetMeaning:buildTargetMeaning(correct,base,isPrefix),options:shuffleArray([correct,...wrong])};} const _fb=_vb[0]||bases[0];const _fc=_fb.validSuffixes?morphemes.filter(s=>_fb.validSuffixes.includes(s.id)):[morphemes[0]];const correct=_fc[0]||morphemes[0];const wrong=shuffleArray(morphemes.filter(s=>s.id!==correct.id)).slice(0,_supportMode?1:2);return{base:_fb,correct,isPrefix,targetMeaning:buildTargetMeaning(correct,_fb,isPrefix),options:shuffleArray([correct,...wrong])};}}
+  // ── Target meaning ("the act of running") ──
+  // Spell the base correctly when the clue adds -ing, -s or -d to it (run → running,
+  // make → making, teach → teaches, read → read), where it used to read "runing",
+  // "teachs" and "readd". -ER on an adjective means "more" (weaker = "more weak"),
+  // not "a person who weaks".
+  var _MX_PAST={read:'read',pay:'paid',say:'said',lay:'laid',hear:'heard',bend:'bent',make:'made',
+    take:'taken',see:'seen',eat:'eaten',go:'gone',run:'run',buy:'bought',sell:'sold',tell:'told',
+    find:'found',hold:'held',win:'won',send:'sent',build:'built',teach:'taught',think:'thought',
+    spend:'spent',feel:'felt',keep:'kept',sleep:'slept',meet:'met',write:'written',speak:'spoken',
+    break:'broken',drive:'driven',ride:'ridden',wear:'worn',know:'known',grow:'grown',throw:'thrown',
+    draw:'drawn',fly:'flown',do:'done',sit:'sat',stand:'stood',understand:'understood',lead:'led',
+    feed:'fed',bring:'brought',catch:'caught',fight:'fought',forget:'forgotten',choose:'chosen',
+    freeze:'frozen',hide:'hidden',bite:'bitten',sing:'sung',drink:'drunk',swim:'swum',begin:'begun',
+    ring:'rung',wake:'woken',put:'put',cut:'cut',set:'set',hit:'hit',let:'let',shut:'shut',hurt:'hurt',
+    cost:'cost',lose:'lost',light:'lit',mean:'meant',hang:'hung',dig:'dug',stick:'stuck',shoot:'shot',
+    give:'given',fall:'fallen',forgive:'forgiven',shake:'shaken',steal:'stolen',get:'got',leave:'left',
+    lend:'lent',sweep:'swept',spin:'spun',swing:'swung',bear:'borne',tear:'torn',shine:'shone'};
+  function _mxIsCVC(w){ return /^[^aeiou]*[aeiou][^aeiouwxy]$/.test(w); }
+  // isWord: false for a root like clos or vis, which is joined as it is (no doubling)
+  function _mxInflect(w,end,isWord){
+    var lw=w.toLowerCase();
+    if(end==='ing'){
+      if(/ie$/.test(lw)) return w.slice(0,-2)+'ying';
+      if(/e$/.test(lw)&&!/(ee|oe|ye)$/.test(lw)&&lw.length>2) return w.slice(0,-1)+'ing';
+      if(isWord&&_mxIsCVC(lw)) return w+w.slice(-1)+'ing';
+      return w+'ing';
+    }
+    if(end==='s'){
+      if(!isWord) return w+'s';
+      if(/(s|sh|ch|x|z)$/.test(lw)||lw==='go'||lw==='do') return w+'es';
+      if(/[^aeiou]y$/.test(lw)) return w.slice(0,-1)+'ies';
+      return w+'s';
+    }
+    if(end==='d'){
+      if(!isWord) return w+'d'; // as before for roots ("can be visd" is rare and unchanged)
+      if(_MX_PAST[lw]) return _MX_PAST[lw];
+      if(/e$/.test(lw)) return w+'d';
+      if(/[^aeiou]y$/.test(lw)) return w.slice(0,-1)+'ied';
+      if(_mxIsCVC(lw)) return w+w.slice(-1)+'ed';
+      return w+'ed';
+    }
+    return w;
+  }
+  // Clues written by hand where the base has several senses and the pattern reads badly
+  // even with every sense kept. Key: p|prefix|base.
+  var _MX_CLUE_FIX={
+    'p|non|stick':'not sticking (food does not stick to it)',
+    'p|dis|anglo_87':'lose colour; the opposite of colour',
+    'p|multi|anglo_87':'many colours',
+    'p|re|anglo_60':'make warm again','p|pre|anglo_60':'make warm before','p|over|anglo_60':'make too warm',
+    'p|bi|cycle':'a vehicle with two wheels','p|uni|cycle':'a vehicle with one wheel','p|tri|cycle':'a vehicle with three wheels',
+    'p|mega|star':'a very large star; a very famous person','p|super|star':'a star above the others; a very famous person',
+    // IN- means "not; into". The pattern "not {base}" is right for incorrect and inactive, but
+    // these words use the "into" sense, so "not throw" for inject taught the wrong meaning.
+    'p|in|form':'give someone facts (put shape into their ideas)','p|in|latin_2':'give someone facts (put shape into their ideas)',
+    'p|in|anglo_23':'what is taken in','p|in|anglo_59':'press a mark into something',
+    'p|in|latin_6':'build knowledge into someone; teach','p|in|latin_9':'carry goods into a country',
+    'p|in|latin_13':'throw or push into (medicine into the body)','p|in|latin_15':'look into closely',
+    'p|in|latin_26':'turn inwards; turn upside down','p|in|latin_30':'a small animal with a body cut into parts',
+    'p|in|latin_37':'get germs into; make sick','p|in|latin_40':'stretch your mind towards; plan to do',
+    'p|in|latin_41':'press into; make someone admire you','p|in|latin_46':'fold a meaning in; suggest without saying it',
+    'p|in|latin_47':'breathe in; fill with an idea','p|in|latin_50':'write in or on something'
+  };
+  function buildTargetMeaning(morpheme,base,isPrefix){
+    if(isPrefix){
+      var fix=_MX_CLUE_FIX['p|'+morpheme.id+'|'+base.id];
+      if(fix) return fix;
+      var pp=morpheme.meaningPattern||("{base} "+morpheme.meaning);
+      // Every sense of the base, each without a leading "to" (un + pack is "not put
+      // things together for carrying; a bundle"). Keeping every sense means the sense the
+      // word uses is always there (stick: "a thin piece of wood; attach").
+      var bm=String(base.meaning||'').split(';').map(function(x){ return x.trim().replace(/^to\s+/,''); })
+        .filter(Boolean).join('; ')||base.meaning;
+      return pp.replace(/\{base\}/g,bm);
+    }
+    var pattern=morpheme.meaningPattern||(base.meaning+" "+morpheme.meaning);
+    // A Latin or Greek root (ten, man, sec) is joined as it is, even when it is
+    // spelt like an English word, so the clue never invents "manning" for mansion.
+    var isWord=!!_mxStandalone[base.id]&&!/^(latin|greek)_/.test(base.id);
+    // -ER on a describing word that also takes -EST (weak, weakest) means "more"
+    // (or is only ever a describing word, like happy)
+    var pos=base.pos||[];
+    // A root that takes -est (clos: closest) says "more" with its meaning: "more close", not "more clos".
+    if(morpheme.id==='er'&&_mxTakesEst[base.id]&&!isWord) return 'more '+String(base.meaning||'').split(';')[0].trim();
+    if(morpheme.id==='er'&&isWord&&(_mxTakesEst[base.id]||(pos.length===1&&pos[0]==='adj'))) pattern='more {base}';
+    var word=base.form||'';
+    return pattern.replace(/\{base\}(ing|s|d)\b/g,function(_,end){ return _mxInflect(word,end,isWord); })
+                  .replace(/\{base\}/g,word);
+  }
+
+  // ── Fair options and "why" feedback ──
+  // Two options that share a meaning (UN- and DIS- both mean "not", -FUL and -OUS both
+  // mean "full of") are never offered together, so there is only ever one right answer.
+  // Same rule as Meaning Match-Up: meanings are split into parts and tidied (a leading
+  // "having" and a trailing "of" dropped, plurals made singular) before comparing.
+  function _mxSingular(w){
+    if(w.length>4&&/ies$/.test(w)) return w.slice(0,-3)+'y';
+    if(w.length>3&&/s$/.test(w)&&!/(ss|us|is)$/.test(w)) return w.slice(0,-1);
+    return w;
+  }
+  function _mxMeaningParts(m){
+    return String((m&&m.meaning)||'').toLowerCase().split(/;|,|\bor\b/)
+      .map(function(x){
+        x=x.trim().replace(/^(to|a|an|the)\s+/,'').replace(/^having\s+/,'').replace(/\s+of$/,'');
+        return x.split(/\s+/).map(_mxSingular).join(' ');
+      }).filter(Boolean);
+  }
+  // Pairs whose meanings overlap in a way the wording does not show.
+  var _MX_SAME_MEANING=[['hyper','over'],['hyper','super'],['mis','mal'],
+    ['ary','al'],['ary','ial'],['ary','ic'],['ific','fy'],['ific','ify'],['graph','gram']];
+  function _mxSharesMeaning(a,b){
+    if(!a||!b) return false;
+    if((a.form||'').toLowerCase()===(b.form||'').toLowerCase()) return true;
+    // Same Mission pattern means the same target meaning ("the act of {base}ing")
+    if(a.meaningPattern&&a.meaningPattern===b.meaningPattern) return true;
+    var ia=(a.id||'').toLowerCase(), ib=(b.id||'').toLowerCase();
+    if(_MX_SAME_MEANING.some(function(p){ return (p[0]===ia&&p[1]===ib)||(p[0]===ib&&p[1]===ia); })) return true;
+    var pb=_mxMeaningParts(b);
+    return _mxMeaningParts(a).some(function(x){
+      return pb.some(function(y){ return x===y||x.indexOf(y+' ')===0||y.indexOf(x+' ')===0; });
+    });
+  }
+  function _mxDistractors(pool,correct){
+    var seen={};
+    return shuffleArray(pool.filter(function(p){
+      if(p.id===correct.id||seen[p.id]||_mxSharesMeaning(p,correct)) return false;
+      seen[p.id]=true; return true; // weightByStage can repeat an entry
+    })).slice(0,_supportMode?1:2);
+  }
+  function generateQuestion(){
+    if(morphemeMode==='base') return generateBaseQuestion();
+    const {morphemes,bases,isPrefix}=getActiveMorphemes();
+    const make=(base,correct)=>({base,correct,isPrefix,targetMeaning:buildTargetMeaning(correct,base,isPrefix),options:shuffleArray([correct,..._mxDistractors(morphemes,correct)])});
+    if(isPrefix){
+      for(let i=0;i<50;i++){
+        const base=bases[Math.floor(Math.random()*bases.length)];
+        const real=morphemes.filter(p=>isCompatible(p,base)&&isRealWord(p,base));
+        if(!real.length) continue;
+        return make(base,real[Math.floor(Math.random()*real.length)]);
+      }
+      // Fallback: any base with any real prefix, ignoring part of speech
+      for(const base of bases){ const real=morphemes.filter(p=>isRealWord(p,base)); if(real.length) return make(base,real[0]); }
+      return make(bases[0],morphemes[0]);
+    }
+    const _vb=bases.filter(b=>b.validSuffixes&&b.validSuffixes.length);
+    for(let i=0;i<50;i++){
+      const base=_vb[Math.floor(Math.random()*_vb.length)];
+      const compat=morphemes.filter(s=>base.validSuffixes.includes(s.id));
+      if(!compat.length) continue;
+      return make(base,compat[Math.floor(Math.random()*compat.length)]);
+    }
+    const _fb=_vb[0]||bases[0];
+    const _fc=_fb.validSuffixes?morphemes.filter(s=>_fb.validSuffixes.includes(s.id)):[];
+    return make(_fb,_fc[0]||morphemes[0]);
+  }
+  // The real word a morpheme and base make, e.g. un + happy → unhappy, happy + ness →
+  // happiness. Empty when they do not make a word in valid-combos.json.
+  function _mxWordFor(isPrefix,morpheme,base){
+    if(!morpheme||!base) return '';
+    return _mxWords[isPrefix?'p|'+morpheme.id+'|'+base.id:'s|'+base.id+'|'+morpheme.id]||'';
+  }
+  function _mxLabel(m,kind){var f=(m.form||'').toUpperCase();return kind==='prefix'?f+'-':kind==='suffix'?'-'+f:f;}
+  function _mxSum(isPrefix,morpheme,base){var e=WordLabData.escapeHtml;return isPrefix?e(morpheme.form)+' + '+e(base.form):e(base.form)+' + '+e(morpheme.form);}
+  // Built only from data.js morpheme meanings and real words from valid-combos.json,
+  // so the panel never states a meaning that the clue pattern made up.
+  function _mxBuildWhy(q,choice){
+    var e=WordLabData.escapeHtml, q1=String.fromCharCode(8220), q2=String.fromCharCode(8221);
+    var kind=q.isBaseMode?'base':(q.isPrefix?'prefix':'suffix');
+    var morph=q.isBaseMode?q.morpheme:q.correct, answer=q.isBaseMode?q.base:q.correct;
+    var picked='<div class="mxWhyLine picked"><span aria-hidden="true">✗ </span>You picked <b>'+e(_mxLabel(choice,kind))+'</b>. It means '+q1+e(choice.meaning||'')+q2+'.';
+    if(!q.isBaseMode){
+      var w=_mxWordFor(q.isPrefix,choice,q.base);
+      if(w) picked+=' '+_mxSum(q.isPrefix,choice,q.base)+' makes <b>'+e(w)+'</b>. That is a real word, but it does not match the target meaning.';
+    }
+    picked+='</div>';
+    var word=_mxWordFor(q.isPrefix,morph,q.base);
+    var ans='<div class="mxWhyLine answer"><span aria-hidden="true">✓ </span>The answer is <b>'+e(_mxLabel(answer,kind))+'</b>. '+
+      (q.isBaseMode?'It means '+q1+e(answer.meaning||'')+q2+', and ':e(_mxLabel(morph,kind))+' means '+q1+e(morph.meaning||'')+q2+', so ')+
+      _mxSum(q.isPrefix,morph,q.base)+(word?' = <b>'+e(word)+'</b>':'')+'.</div>';
+    return picked+ans;
+  }
+  var _mxReading=false; // true while the wrong-answer explanation is on screen (energy holds)
+  var _mxGuardUntil=0;  // option clicks before this time are ignored (just after Next)
+  function _mxHideWhy(){
+    _mxReading=false;
+    var w=document.getElementById('mxWhy'), n=document.getElementById('mxNextRow'), sk=document.getElementById('skipBtn');
+    if(w){ w.hidden=true; w.innerHTML=''; }
+    if(n) n.hidden=true;
+    if(sk) sk.style.display='';
+  }
+  function _mxMarkOptions(choice,answerId){
+    optionsEl.querySelectorAll('button').forEach(function(b){
+      var id=b.dataset.mid, mark=null;
+      if(id===answerId){ b.classList.add('mxAnswer'); mark='✓'; }
+      else if(id===choice.id){ b.classList.add('mxPicked'); mark='✗'; }
+      if(mark){ var sp=document.createElement('span'); sp.className='mxMark'; sp.setAttribute('aria-hidden','true'); sp.textContent=mark; b.appendChild(sp); }
+    });
+  }
 
   function resetDropZone(){dropZoneEl.classList.remove("flashSuccess","flashFail");dropZoneTextEl.textContent="____";dropZoneTextEl.style.color="#a5b4fc";}
   function loadQuestion(){
@@ -1238,11 +1516,11 @@
       dropZoneEl.style.order=q.isPrefix?'':'2';wordEl.textContent=getBaseLabel(q.base);
       baseMeaningEl.innerHTML=`<strong>Base meaning:</strong> ${WordLabData.escapeHtml(q.base.meaning)}<br><strong>Target meaning:</strong> ${WordLabData.escapeHtml(q.targetMeaning)}`;
     }
-    feedbackEl.textContent="";feedbackEl.className="feedback";subFeedbackEl.textContent="";
+    feedbackEl.textContent="";feedbackEl.className="feedback";subFeedbackEl.textContent="";_mxHideWhy();
     resetDropZone();optionsEl.innerHTML="";
     // Update hints for this question
     if(typeof WLHints!=='undefined'){var _hQ=q;WLHints.updateHints(function(){return 'Read the word stem and think about what morpheme would complete it.';},function(){if(!_hQ)return'';var _corr=_hQ.isBaseMode?_hQ.base:_hQ.correct;return'"'+(_corr.meaning||'')+'" \u2014 this morpheme means that.';});}
-    q.options.forEach((option,index)=>{const btn=document.createElement("button");btn.type="button";btn.className=`bubbleBtn ${["blue","green","purple","orange"][index%4]}`;btn.style.animationDelay=`${index*.18}s`;const inner=document.createElement("div");inner.className="bubbleInner";const main=document.createElement("span");const _lbl=getPrefixLabel(option);main.innerHTML=_lbl;var _plainLen=main.textContent.length;if(_plainLen>7)main.style.fontSize='11px';else if(_plainLen>5)main.style.fontSize='13px';else if(_plainLen>4)main.style.fontSize='15px';inner.appendChild(main);btn.appendChild(inner);btn.addEventListener("click",()=>checkAnswer(option));optionsEl.appendChild(btn);});
+    q.options.forEach((option,index)=>{const btn=document.createElement("button");btn.type="button";btn.className=`bubbleBtn ${["blue","green","purple","orange"][index%4]}`;btn.dataset.mid=option.id;btn.style.animationDelay=`${index*.18}s`;const inner=document.createElement("div");inner.className="bubbleInner";const main=document.createElement("span");const _lbl=getPrefixLabel(option);main.innerHTML=_lbl;var _plainLen=main.textContent.length;if(_plainLen>7)main.style.fontSize='11px';else if(_plainLen>5)main.style.fontSize='13px';else if(_plainLen>4)main.style.fontSize='15px';inner.appendChild(main);btn.appendChild(inner);btn.addEventListener("click",()=>checkAnswer(option));optionsEl.appendChild(btn);});
     // EALD: speak buttons + flip reveal on load
     var ealdSpeakEl=document.getElementById('ealdSpeakBtns');
     var ealdDefEl=document.getElementById('ealdDefinition');
@@ -1268,7 +1546,9 @@
   }
   function lockButtons(){optionsEl.querySelectorAll("button").forEach(b=>b.disabled=true);}
   function checkAnswer(choice){
-    if(buttonsLocked||(!_wltActive&&fuel<=0))return;buttonsLocked=true;lockButtons();
+    if(buttonsLocked||(!_wltActive&&fuel<=0))return;
+    if(!_wltActive&&Date.now()<_mxGuardUntil)return;
+    buttonsLocked=true;lockButtons();
     const q=currentQuestion;
     dropZoneTextEl.innerHTML=getPrefixLabel(choice);
     const isCorrect=choice.id===(q.isBaseMode?q.base.id:q.correct.id);
@@ -1283,7 +1563,8 @@
       if(!_wltActive && typeof WLAudio!=='undefined'){WLAudio.correct();if(streak>=3)WLAudio.streak(streak);}
       if(!_wltActive) _ssTrackMorpheme(q.isBaseMode ? q.base.form : q.correct.form, true);
       feedbackEl.textContent="✅ Correct!";feedbackEl.className="feedback ok";
-      subFeedbackEl.textContent=`You built the idea: "${q.targetMeaning}"`;
+      var _built=_mxWordFor(q.isPrefix,q.isBaseMode?q.morpheme:q.correct,q.base);
+      subFeedbackEl.textContent=(_built?`You built ${_built}: `:'You built the idea: ')+`"${q.targetMeaning}"`;
       dropZoneTextEl.style.color="var(--ok)";dropZoneEl.classList.add("flashSuccess");
       if(_wltActive){
         var _e=WordLabData.escapeHtml;
@@ -1302,7 +1583,9 @@
       if(typeof WLScientist!=='undefined') WLScientist.react('wrong');
       if(!_wltActive && typeof WLAudio!=='undefined') WLAudio.wrong();
       feedbackEl.textContent="❌ Not quite";feedbackEl.className="feedback bad";
-      subFeedbackEl.innerHTML=`Better answer: ${_correctLabel} — "${WordLabData.escapeHtml(q.targetMeaning)}"`;
+      _mxMarkOptions(choice,q.isBaseMode?q.base.id:q.correct.id);
+      if(_wltActive){ subFeedbackEl.innerHTML=`Better answer: ${_correctLabel} — "${WordLabData.escapeHtml(q.targetMeaning)}"`; }
+      else { subFeedbackEl.textContent=''; var _w=document.getElementById('mxWhy'); _w.innerHTML=_mxBuildWhy(q,choice); _w.hidden=false; _mxReading=true; }
 
       dropZoneTextEl.style.color="var(--bad)";dropZoneEl.classList.add("flashFail");
       if(_wltActive){
@@ -1333,10 +1616,32 @@
     // ── Round tracking ──
     _roundAnswered++;
     wlUpdateRoundProgress();
-    if (_roundAnswered >= _roundTotal) { showRoundWin(); return; }
-    if(fuel<=0){setTimeout(endGame,800);return;}setTimeout(loadQuestion,1500);
+    var _wasRight=choice.id===(q.isBaseMode?q.base.id:q.correct.id);
+    if(_wasRight){
+      if (_roundAnswered >= _roundTotal) { showRoundWin(); return; }
+      if(fuel<=0){setTimeout(endGame,800);return;}setTimeout(loadQuestion,1500);
+      return;
+    }
+    if(fuel<=0&&_roundAnswered<_roundTotal){_mxReading=false;setTimeout(endGame,800);return;}
+    // Wrong answer: no auto-advance. The explanation stays until the student presses Next.
+    var _nb=document.getElementById('mxNextBtn'), _nr=document.getElementById('mxNextRow'), _sk=document.getElementById('skipBtn');
+    _nb.textContent=_roundAnswered>=_roundTotal?'See my results →':'Next word →';
+    _nr.hidden=false; if(_sk) _sk.style.display='none';
+    var _calm=document.body.classList.contains('low-stim')||(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+    _nr.scrollIntoView({behavior:_calm?'auto':'smooth',block:'nearest'});
+    _nb.focus({preventScroll:true});
   }
-  function startFuelDrain(){if(_wltActive)return;clearInterval(fuelInterval);fuelInterval=setInterval(()=>{fuel-=getDiff().drainRate;if(fuel<=0){fuel=0;updateHud();endGame();clearInterval(fuelInterval);return;}updateHud();},220);}
+  document.getElementById('mxNextBtn').addEventListener('click',function(){
+    if(!_mxReading) return;
+    _mxHideWhy();
+    if(_roundAnswered>=_roundTotal){ showRoundWin(); return; }
+    loadQuestion();
+    // Focus the question, not an option, so a quick second Enter cannot answer it.
+    // Option clicks are also ignored for a moment after Next, for fast double taps.
+    _mxGuardUntil=Date.now()+500;
+    baseMeaningEl.setAttribute('tabindex','-1'); baseMeaningEl.focus({preventScroll:true});
+  });
+  function startFuelDrain(){if(_wltActive)return;clearInterval(fuelInterval);fuelInterval=setInterval(()=>{if(_mxReading)return;fuel-=getDiff().drainRate;if(fuel<=0){fuel=0;updateHud();endGame();clearInterval(fuelInterval);return;}updateHud();},220);}
   function endGame(){buttonsLocked=true;optionsEl.innerHTML="";feedbackEl.textContent="Mission over";feedbackEl.className="feedback bad";subFeedbackEl.textContent=`Final score: ${score} XP`;}
   document.getElementById("recalibrateBtn").addEventListener("click",()=>{_roundAnswered=0;_roundCorrect=0;score=0;streak=0;fuel=100;buttonsLocked=false;if(!_wltActive){updateHud();startFuelDrain();}loadQuestion();});
   document.getElementById("skipBtn").addEventListener("click",()=>{if(buttonsLocked)return;if(!_wltActive&&fuel<=0)return;streak=0;if(!_wltActive){fuel=Math.max(fuel-getDiff().skipPenalty,0);updateHud();if(fuel<=0){endGame();return;}}if(_wltActive){WLTeacher.clearFeedback();var nb=document.getElementById('wltNextBtn');if(nb)nb.style.display='none';}loadQuestion();});
