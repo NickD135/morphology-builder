@@ -2934,10 +2934,18 @@ const WordLabData = (() => {
 })();
 
 // Auto-apply low-stim mode CSS class and inject suppression stylesheet.
-// Runs synchronously during parse so styles are present before first paint.
+// Adds a <style> element rather than using document.write: most game pages load this file with
+// `defer`, and browsers ignore document.write from deferred scripts, so the low-stim styles were
+// never added on those pages. Appending works whether this file runs during parse or deferred.
 if (sessionStorage.getItem('wl_low_stim') === 'true') {
   document.documentElement.classList.add('low-stim');
-  document.write('<style id="wlLowStimCSS">' +
+  (function (css) {
+    if (document.getElementById('wlLowStimCSS')) return;
+    var st = document.createElement('style');
+    st.id = 'wlLowStimCSS';
+    st.textContent = css;
+    (document.head || document.documentElement).appendChild(st);
+  })(
     /* Hide gamification UI across all pages */
     '.low-stim .pill.score,' +
     '.low-stim .pill.streak,' +
@@ -2972,8 +2980,8 @@ if (sessionStorage.getItem('wl_low_stim') === 'true') {
     '.low-stim .student-sci-avatar { display:none !important; }' +
 
     /* Suppress confetti canvas */
-    '.low-stim canvas.confetti-canvas { display:none !important; }' +
-  '<\/style>');
+    '.low-stim canvas.confetti-canvas { display:none !important; }'
+  );
 }
 
 // Auto-apply support mode CSS class on page load.
