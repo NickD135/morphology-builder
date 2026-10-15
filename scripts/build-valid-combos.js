@@ -41,13 +41,47 @@ for (const line of dictText.split(/\r?\n/)) {
 }
 console.log(`Dictionary: ${DICT.size} words`);
 
+// Every leading part of every dictionary word ("u", "un", "unh"…), used only
+// to skip combinations that can never reach a word. Adding a suffix changes at
+// most the last two letters of the stem (ie → y, -le + ly, silent e, y → i),
+// so a stem whose first (length − 2) letters start no dictionary word cannot
+// lead to one, whatever suffixes follow. This pruning does not change the
+// output; it only makes the build fast enough to run on a laptop.
+const DICT_STARTS = new Set();
+for (const w of DICT) for (let i = 1; i <= w.length; i++) DICT_STARTS.add(w.slice(0, i));
+function couldLeadToWord(words) {
+  return words.some(w => {
+    const keep = w.slice(0, Math.max(0, w.length - 2));
+    return keep === '' || DICT_STARTS.has(keep);
+  });
+}
+function stemCandidates(prefix, base, suffix1) {
+  const pAdj = prefix ? applyPrefixRules(prefix.form, base.form) : '';
+  const stem = (pAdj + base.form).toLowerCase();
+  if (!suffix1) return [stem];
+  return computeWordCandidates(prefix, base, suffix1, null);
+}
+
 // ── Word blocklist ───────────────────────────────────────────────────────────
 // Words that are real dictionary entries but only ever arise here as FALSE
 // morpheme decompositions (e.g. ego = e- + go, ago = a- + go). They are
 // monomorphemic in modern English, so showing them as buildable combos in the
 // Morpheme Builder is miseducative. Blocked here rather than in dictionary.txt,
 // which is also used at runtime by speed-mode.html to validate typed words.
-const EXCLUDE_WORDS = new Set(['ego', 'ago']);
+const EXCLUDE_WORDS = new Set(['ego', 'ago', 'homer']);
+
+// Single false splits of a word that is otherwise fine. The word still builds
+// the right way; only the listed split is skipped. Written as the morpheme
+// forms joined with "+", then "=" and the word. Added 2026-10-15 with the
+// bases that revive dead tiles: theatre + es is really theatre + s, tonsil +
+// ity + s is not tonsillitis, human + y + ty is not humanity, and so on.
+const EXCLUDE_SPLITS = new Set([
+  'theatre+es=theatres', 'amphi+theatre+es=amphitheatres',
+  'space+es=spaces', 'home+es=homes', 'inter+rog+ate+es=interrogates',
+  'human+y+ty=humanity', 'brev+y+ty=brevity', 'electr+y+fy=electrify',
+  'tonsil+ity+s=tonsillitis', 'photo+gen+ic=photogenic',
+  'hyper+space=hyperspace',
+]);
 
 // ── Spelling rule helpers ────────────────────────────────────────────────────
 function isVowel(ch) { return 'aeiou'.includes(String(ch || '').toLowerCase()); }
@@ -172,7 +206,9 @@ function generateCombos(prefixes, bases, suffixes) {
 
   for (const base of bases) {
     for (const prefix of prefixOptions) {
+      if (!couldLeadToWord(stemCandidates(prefix, base, null))) continue;
       for (const s1 of suffixOptions) {
+        if (s1 && !couldLeadToWord(stemCandidates(prefix, base, s1))) continue;
         for (const s2 of suffixOptions) {
           // Skip duplicate suffix combos
           if (s1 && s2 && s1.id === s2.id) continue;
@@ -191,6 +227,8 @@ function generateCombos(prefixes, bases, suffixes) {
             if (!word || word.length < 2) continue;
             if (!DICT.has(word)) continue;
             if (EXCLUDE_WORDS.has(word)) continue;
+            const forms = [prefix?.form, base.form, s1?.form, s2?.form].filter(Boolean).join('+');
+            if (EXCLUDE_SPLITS.has(forms + '=' + word)) continue;
 
             const key = `${prefix?.id || ''}|${base.id}|${s1?.id || ''}|${s2?.id || ''}`;
             if (seen.has(key)) continue;
