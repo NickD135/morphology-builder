@@ -1747,10 +1747,18 @@ function showRoundComplete() {
     '<div style="font-size:22px;font-weight:900;color:#e0e7ff;margin-bottom:6px;">Round Complete!</div>' +
     '<div style="font-size:14px;font-weight:600;color:#94a3b8;margin-bottom:20px;">' + _roundAnswered + ' words · ' + accuracy + '% accuracy</div>' +
     '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">' +
-    '<button onclick="document.getElementById(\'roundCompleteOverlay\').remove();restartRound();" style="background:#4338ca;color:#fff;border:none;border-radius:14px;padding:12px 24px;font-family:Lexend,sans-serif;font-weight:800;font-size:14px;cursor:pointer;">Play Again</button>' +
+    '<button id="rlPlayAgainBtn" type="button" style="background:#4338ca;color:#fff;border:none;border-radius:14px;padding:12px 24px;font-family:Lexend,sans-serif;font-weight:800;font-size:14px;cursor:pointer;">Play Again</button>' +
     '<a href="landing.html" style="background:rgba(255,255,255,.06);color:#94a3b8;border:2px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 24px;font-family:Lexend,sans-serif;font-weight:800;font-size:14px;cursor:pointer;text-decoration:none;">Try Another Game</a>' +
     '</div></div>';
   document.body.appendChild(overlay);
+  // Keyboard users: focus Play Again so a second Enter does not load a word behind the overlay.
+  // Ignore presses for 500 ms so a double Enter on "See my results" does not restart straight away.
+  var again = document.getElementById('rlPlayAgainBtn'), openedAt = Date.now();
+  again.addEventListener('click', function(){
+    if(Date.now() - openedAt < 500) return;
+    overlay.remove(); restartRound();
+  });
+  try{ again.focus({preventScroll:true}); }catch(e){ again.focus(); }
 }
 
 function wlUpdateRoundProgress(){var f=document.getElementById('roundProgressFill');if(!f||!_roundTotal)return;var p=Math.min(1,_roundAnswered/_roundTotal);f.style.transform='scaleX('+p+')';}
@@ -2364,13 +2372,19 @@ function _rlWhyLines(w, best, typed, ans, ok){
     } else if(right === 'none'){
       line = 'You ' + verb + ' ' + mine + ', but ' + W + ' has no ' + z + ', so the answer is <b>none</b>.';
     } else {
-      line = 'You ' + verb + ' ' + mine + '. ' + W + (z === 'prefix' ? ' starts with ' : ' ends with ') +
+      // Only say "starts with" / "ends with" when it is literally true (telecommunications ends in -ions, not -ion)
+      const word = w.word.toLowerCase(), r = right.toLowerCase();
+      const literal = z === 'prefix' ? word.startsWith(r) : word.endsWith(r);
+      const where = literal ? (z === 'prefix' ? ' starts with ' : ' ends with ') : ' has ';
+      line = 'You ' + verb + ' ' + mine + '. ' + W + where +
         'the ' + z + ' ' + show(z, right) + meaningOf(z) + '.';
     }
     lines.push('<li><span class="whyTag">' + label + '</span> ' + line + '</li>');
   });
   if(!ok.meaning){
-    lines.push('<li><span class="whyTag">Meaning</span> Put the parts together: ' + buildBreakdown(w) + '.</li>');
+    // When marked against another fair split, say plainly that the meaning line uses the usual split
+    const lead = (typed && best.main === false) ? 'Here is the usual split, put together: ' : 'Put the parts together: ';
+    lines.push('<li><span class="whyTag">Meaning</span> ' + lead + buildBreakdown(w) + '.</li>');
   }
   if(!ok.cloze){
     lines.push('<li><span class="whyTag">Sentence</span> The sentence marked ✓ is the one that uses ' + W + ' the right way.</li>');

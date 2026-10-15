@@ -36,6 +36,7 @@ Score each surface 1 (poor) to 4 (strong) on each lens from IMPROVEMENT_AGENT.md
 
 - Root Lab: the 46 Challenge words are 2/3 of the pool and many are s4 (photosynthesis, antidisestablishment); Mixed for an s3e student is mostly typing. Check the Challenge share per stage with `weightByStage` and consider more Level Up words (Structured, Stretch)
 - Root Lab Challenge: other words where a student could defensibly split differently (demonstration de + monstr + ation vs demonstrate + ion, communication) still only accept the listed alternatives; extend `alts` with Nicholas's convention (same question as Breakdown Blitz psychology) (Teaching practice)
+- Round complete overlays in the other games (Phoneme, Syllable, Sound Sorter, Mission, Meaning, Breakdown): check whether focus moves to Play Again; in Root Lab it stayed behind the overlay until run 21 (Inclusive, keyboard)
 - Root Lab: the CASE HISTORY and INVESTIGATION PROTOCOL panels use an em dash and "Each correct zone = +10 pts"; rewrite the protocol in plain Year 5 language (Clear)
 - Root Lab: Need Advice step 2 now names the first part's meaning word, which gives the base away on bases ("think jump"); a gentler step 2 and a third step would suit the ladder used in other games (Scaffolded)
 - Root Lab Teacher Mode: `_showTeacherNext` lived inside the DOMContentLoaded handler, so checkAnswer threw in Teacher Mode (fixed run 20 by showing the button directly); check the other games for the same pattern (code health)
