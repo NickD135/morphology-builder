@@ -303,6 +303,29 @@
     }
     .missing-word.correct-placed{ background:rgba(22,163,74,.2); border-color:#4ade80; color:#86efac; opacity:1; }
     .missing-word.wrong-placed{ background:rgba(220,38,38,.2); border-color:#f87171; color:#fca5a5; opacity:1; }
+    /* Why panel after a wrong answer */
+    .rfWhy{ margin:10px auto 0; max-width:620px; display:flex; flex-direction:column; gap:6px; text-align:left; }
+    .rfWhy[hidden], .rfNextRow[hidden]{ display:none; }
+    .rfWhyLine{ background:rgba(28,10,0,.55); border:1.5px solid rgba(245,158,11,.3); border-radius:10px; padding:8px 12px; font-size:14px; line-height:1.5; color:#fef3c7; }
+    .rfWhyLine.answer{ border-color:rgba(74,222,128,.55); }
+    .rfWhyLine.tip{ border-color:rgba(251,191,36,.45); }
+    .rfWhyLine b{ font-weight:900; color:#fff; }
+    .rfOrder{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+    .rfOrder > span{ background:rgba(180,83,9,.3); border:1.5px solid rgba(245,158,11,.45); border-radius:8px; padding:3px 8px; font-size:14px; font-weight:800; }
+    .rfOrder > span.moved{ border-color:#f87171; border-style:dashed; }
+    .rfNextRow{ display:flex; justify-content:center; margin-top:10px; }
+    .rfNextRow .primaryBtn{ font-size:14px; padding:12px 26px; min-height:44px; }
+    .slot-mark{ margin-right:3px; font-size:12px; }
+    .missing-word:focus-visible, .cline-slot:focus-visible{ outline:3px solid #fbbf24; outline-offset:2px; }
+    .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    /* Scene motion stops in low-stim mode and when the device asks for reduced motion */
+    .low-stim .particle, .low-stim .vat-glow, .low-stim .steam, .low-stim .steam2, .low-stim .steam3, .low-stim #purityCursor, .low-stim .scene-prop-left svg, .low-stim [style*="animation"]{ animation:none!important; }
+    .low-stim #particles{ display:none!important; }
+    @media (prefers-reduced-motion: reduce){
+      .particle, .vat-glow, .steam, .steam2, .steam3, #purityCursor, #sciCharWrap, [style*="animation"]{ animation:none!important; }
+      #particles{ display:none!important; }
+      .missing-word:hover:not(.placed):not(.dragging), .primaryBtn:hover{ transform:none; }
+    }
 
     /* FIXED WORDS shown on the cline */
     .fixed-word{
@@ -641,7 +664,7 @@
     </div>
 
     <!-- Missing words to place -->
-    <div class="missing-words-label" id="missingLabel">Select a word then tap its position on the cline</div>
+    <div class="missing-words-label" id="missingLabel">Tap a word, then tap its place on the line</div>
     <div class="missing-words-pool" id="missingPool" role="listbox" aria-label="Word tiles to place on the cline"></div>
 
     <div style="display:flex;justify-content:center;margin-top:8px;">
@@ -652,11 +675,13 @@
     <div id="ealdDefinition" class="eald-definition"></div>
     <div class="feedback" id="feedback" aria-live="assertive"></div>
     <div class="subFeedback" id="subFeedback" aria-live="polite"></div>
+    <div class="rfWhy" id="rfWhy" aria-live="polite" hidden></div>
+    <div class="rfNextRow" id="rfNextRow" hidden><button class="primaryBtn" id="rfNextBtn" type="button">Next →</button></div>
     <div id="ealdTranslation" aria-live="polite"></div>
 
     <div class="actionRow">
-      <button class="secondaryBtn" onclick="restartGame()">Restart</button>
-      <button class="secondaryBtn" onclick="skipQuestion()">Skip →</button>
+      <button class="secondaryBtn" id="rfRestartBtn" onclick="restartGame()">Restart</button>
+      <button class="secondaryBtn" id="rfSkipBtn" onclick="skipQuestion()">Skip →</button>
     </div>
 
   </div></div>
@@ -1052,9 +1077,12 @@ document.addEventListener('DOMContentLoaded', function(){
 // ─────────────────────────────────────────────────────────────────────────────
 // GAME STATE
 // ─────────────────────────────────────────────────────────────────────────────
-var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+// Both are set once the deferred shared scripts have loaded (see INIT at the end)
+var _wltActive = false;
 var _supportMode = false;
-document.addEventListener('DOMContentLoaded', function(){ _supportMode = !!(typeof WordLabData !== 'undefined' && WordLabData.isSupportMode()); });
+let _rfReading = false;   // a wrong answer's why panel is showing (heat holds)
+let _rfNextAt = 0;        // time Next was pressed (guards a fast double press)
+function _rfTooSoon(){ return Date.now() - _rfNextAt < 500; }
 
 let gameMode = 'fill';
 let score = 0, streak = 0, fuel = 100;
@@ -1111,6 +1139,7 @@ function loadQuestion(){
   if(!_wltActive && fuel<=0) return;
   if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
   if(typeof WLHints!=='undefined') WLHints.resetHints();
+  _rfHideWhy();
   buttonsLocked = false;
   selectedWord = null;
   placed = {};
@@ -1191,7 +1220,7 @@ function buildClineTrack(c){
 
       slot.setAttribute('tabindex','0');
       slot.setAttribute('role','button');
-      slot.setAttribute('aria-label', 'Slot ' + (i+1) + ' — empty');
+      slot.setAttribute('aria-label', 'Place ' + (i+1) + ', empty');
       slot.addEventListener('click', () => placeInSlot(i, slot, wordLbl));
       slot.addEventListener('keydown', e => {
         if(e.key === 'Enter' || e.key === ' '){
@@ -1234,6 +1263,11 @@ function buildMissingPool(c){
       if(e.key === 'Enter' || e.key === ' '){
         e.preventDefault();
         selectWord(tile);
+        // Keyboard: go straight to the first empty place, so Enter again puts the word there
+        if(selectedWord === word){
+          const empty = Array.from(clineTrackEl.querySelectorAll('.cline-slot')).find(sl => !placed[sl.dataset.index]);
+          if(empty) empty.focus();
+        }
       }
     });
     // Drag start
@@ -1251,39 +1285,43 @@ function buildMissingPool(c){
       document.querySelectorAll('.cline-slot.drag-over').forEach(s => s.classList.remove('drag-over'));
     });
     // Touch drag support
+    // Only remember the word here. Calling preventDefault (as before) stopped the click that
+    // follows a tap, so "tap a word, then tap its place" did nothing on touchscreens.
+    // The drag ghost appears once the finger actually moves (see touchmove).
     tile.addEventListener('touchstart', e => {
-      if(tile.classList.contains('placed')) return;
-      e.preventDefault();
+      if(tile.classList.contains('placed') || buttonsLocked || _rfReading) return;
+      const t = e.touches[0];
       dragWord = word;
       dragTile = tile;
-      tile.classList.add('dragging');
-      const ghost = document.createElement('div');
-      ghost.className = 'drag-ghost';
-      ghost.id = 'dragGhost';
-      ghost.textContent = word;
-      document.body.appendChild(ghost);
-      const t = e.touches[0];
-      ghost.style.left = t.clientX + 'px';
-      ghost.style.top = t.clientY + 'px';
-    }, {passive:false});
+      _touchStartX = t.clientX; _touchStartY = t.clientY;
+    }, {passive:true});
     missingPoolEl.appendChild(tile);
   });
 
   document.getElementById('missingLabel').textContent =
-    gameMode === 'fill'
-      ? 'Drag words into position on the cline — or tap to select then tap a slot'
-      : 'Drag words into position — or tap to select then tap a slot';
+    'Tap a word, then tap its place on the line. You can drag it there too.';
 }
 
 // Drag state
 let dragWord = null, dragTile = null;
+let _touchStartX = 0, _touchStartY = 0;
 
 // Touch move/end handlers (global)
 document.addEventListener('touchmove', function(e){
-  const ghost = document.getElementById('dragGhost');
-  if(!ghost || !dragWord) return;
-  e.preventDefault();
+  if(!dragWord) return;
   const t = e.touches[0];
+  let ghost = document.getElementById('dragGhost');
+  if(!ghost){
+    // Start a drag only once the finger has moved a little, so a tap stays a tap
+    if(Math.abs(t.clientX - _touchStartX) + Math.abs(t.clientY - _touchStartY) < 10) return;
+    if(dragTile) dragTile.classList.add('dragging');
+    ghost = document.createElement('div');
+    ghost.className = 'drag-ghost';
+    ghost.id = 'dragGhost';
+    ghost.textContent = dragWord;
+    document.body.appendChild(ghost);
+  }
+  e.preventDefault();
   ghost.style.left = t.clientX + 'px';
   ghost.style.top = t.clientY + 'px';
   // Highlight slot under finger
@@ -1299,7 +1337,8 @@ document.addEventListener('touchmove', function(e){
 
 document.addEventListener('touchend', function(e){
   const ghost = document.getElementById('dragGhost');
-  if(!ghost || !dragWord) return;
+  if(!ghost){ dragWord = null; dragTile = null; return; } // a tap: the click handler selects the word
+  if(!dragWord){ ghost.remove(); return; }
   ghost.remove();
   if(dragTile) dragTile.classList.remove('dragging');
   // Find slot under touch
@@ -1313,15 +1352,22 @@ document.addEventListener('touchend', function(e){
     }
   });
   if(hitSlot && dragWord){
+    missingPoolEl.querySelectorAll('.missing-word').forEach(t => { t.classList.remove('selected'); t.setAttribute('aria-selected','false'); });
     selectedWord = dragWord;
     const idx = parseInt(hitSlot.dataset.index);
     placeInSlot(idx, hitSlot, hitSlot.querySelector('.slot-word-label'));
   }
   dragWord = null; dragTile = null;
 });
+document.addEventListener('touchcancel', function(){
+  const ghost = document.getElementById('dragGhost'); if(ghost) ghost.remove();
+  if(dragTile) dragTile.classList.remove('dragging');
+  document.querySelectorAll('.cline-slot.drag-over').forEach(s => s.classList.remove('drag-over'));
+  dragWord = null; dragTile = null;
+});
 
 function selectWord(tile){
-  if(tile.classList.contains('placed')) return;
+  if(tile.classList.contains('placed') || buttonsLocked || _rfReading) return;
   missingPoolEl.querySelectorAll('.missing-word').forEach(t => {
     t.classList.remove('selected');
     t.setAttribute('aria-selected','false');
@@ -1335,8 +1381,25 @@ function selectWord(tile){
   }
 }
 
+// Take the word in a place back out to the word bank
+function _rfTakeOut(slotIndex, slotEl){
+  const word = placed[slotIndex];
+  delete placed[slotIndex];
+  slotEl.classList.remove('filled');
+  slotEl.querySelector('.slot-word-label').textContent = '';
+  slotEl.querySelector('.slot-num-label').style.display = '';
+  slotEl.setAttribute('aria-label', 'Place ' + (slotIndex+1) + ', empty');
+  missingPoolEl.querySelectorAll('.missing-word').forEach(t => { if(t.dataset.word === word) t.classList.remove('placed'); });
+  checkBtnEl.style.display = 'none';
+}
+
 function placeInSlot(slotIndex, slotEl, wordLblEl){
-  if(!selectedWord || buttonsLocked) return;
+  if(buttonsLocked || _rfReading) return;
+  if(!selectedWord){
+    // Tapping a filled place with no word picked takes its word back out
+    if(placed[slotIndex]) _rfTakeOut(slotIndex, slotEl);
+    return;
+  }
 
   // Remove word from any slot it was already in
   Object.keys(placed).forEach(idx => {
@@ -1346,7 +1409,7 @@ function placeInSlot(slotIndex, slotEl, wordLblEl){
         oldSlot.classList.remove('filled');
         oldSlot.querySelector('.slot-word-label').textContent = '';
         oldSlot.querySelector('.slot-num-label').style.display = '';
-        oldSlot.setAttribute('aria-label', 'Slot ' + (parseInt(idx)+1) + ' — empty');
+        oldSlot.setAttribute('aria-label', 'Place ' + (parseInt(idx)+1) + ', empty');
       }
       delete placed[idx];
     }
@@ -1366,13 +1429,14 @@ function placeInSlot(slotIndex, slotEl, wordLblEl){
   slotEl.classList.add('filled');
   wordLblEl.textContent = selectedWord;
   slotEl.querySelector('.slot-num-label').style.display = 'none';
-  slotEl.setAttribute('aria-label', 'Slot ' + (slotIndex+1) + ' — ' + selectedWord);
+  slotEl.setAttribute('aria-label', 'Place ' + (slotIndex+1) + ', ' + selectedWord);
 
   // Mark tile as placed
   missingPoolEl.querySelectorAll('.missing-word').forEach(t => {
     if(t.dataset.word === selectedWord){
       t.classList.add('placed');
       t.classList.remove('selected');
+      t.setAttribute('aria-selected','false');
     }
   });
 
@@ -1386,13 +1450,15 @@ function placeInSlot(slotIndex, slotEl, wordLblEl){
   // Show check button when all gaps filled
   const allFilled = Object.keys(placed).length === currentCline.gaps.length;
   checkBtnEl.style.display = allFilled ? 'inline-flex' : 'none';
+  // Keyboard: after the last place is filled, move to Check
+  if(allFilled && slotEl === document.activeElement) checkBtnEl.focus();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CHECK ANSWER
 // ─────────────────────────────────────────────────────────────────────────────
 function checkCline(){
-  if(buttonsLocked || (!_wltActive && fuel<=0)) return;
+  if(buttonsLocked || _rfReading || _rfTooSoon() || (!_wltActive && fuel<=0)) return;
   buttonsLocked = true;
 
   const c = currentCline;
@@ -1405,7 +1471,12 @@ function checkCline(){
     const placedWord = placed[i];
 
     if(slot){
-      if(placedWord === correctWord){
+      const ok = placedWord === correctWord;
+      const mark = document.createElement('span');
+      mark.className = 'slot-mark'; mark.setAttribute('aria-hidden','true'); mark.textContent = ok ? '✓' : '✗';
+      const lbl = slot.querySelector('.slot-word-label'); if(lbl) lbl.insertBefore(mark, lbl.firstChild);
+      slot.setAttribute('aria-label', 'Place ' + (i+1) + ', ' + (placedWord || 'empty') + (ok ? ', right' : ', wrong'));
+      if(ok){
         slot.classList.add('correct');
         correct++;
         // Also highlight the pool tile green
@@ -1438,7 +1509,7 @@ function checkCline(){
     if(!_wltActive && typeof WLAudio !== 'undefined'){ WLAudio.correct(); if(streak>=3) WLAudio.streak(streak); }
     feedbackEl.textContent = '✅ Perfectly refined!';
     feedbackEl.className = 'feedback ok';
-    subFeedbackEl.textContent = c.explain;
+    subFeedbackEl.textContent = String(c.explain || '').replace(/\s+—\s+/g, ': ');
     gameCardEl.classList.add('flashSuccess');
     setTimeout(()=>gameCardEl.classList.remove('flashSuccess'),600);
     if(_wltActive){
@@ -1451,9 +1522,9 @@ function checkCline(){
     if(!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()) WordLabData.recordAttempt('word-refinery', cat, false, 0);
     if(typeof WLScientist !== 'undefined') WLScientist.react('wrong');
     if(!_wltActive && typeof WLAudio !== 'undefined') WLAudio.wrong();
-    feedbackEl.textContent = `❌ ${correct} of ${total} correct`;
+    feedbackEl.textContent = `❌ ${correct} of ${total} in the right place`;
     feedbackEl.className = 'feedback bad';
-    subFeedbackEl.textContent = `Correct order: ${c.explain}`;
+    subFeedbackEl.textContent = '';
     gameCardEl.classList.add('flashFail');
     setTimeout(()=>gameCardEl.classList.remove('flashFail'),600);
     if(_wltActive){
@@ -1479,8 +1550,63 @@ function checkCline(){
     });
   }
   if(_wltActive){ _showTeacherNext(); return; } // Teacher mode: wait for Next click
+  if(!allCorrect){ _rfShowWhy(_rfWhyHtml(c)); return; } // wait for Next so there is time to read why
   if(fuel<=0){ setTimeout(endGame,800); return; }
   setTimeout(loadQuestion, 2200);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WHY PANEL (wrong answers)
+// ─────────────────────────────────────────────────────────────────────────────
+function _rfEsc(t){ return String(t).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+function _rfUp(w){ return _rfEsc(String(w).toUpperCase()); }
+function _rfWhyHtml(c){
+  const gapSet = new Set(c.gaps);
+  // Where the student put each word: word -> place index
+  const putAt = {};
+  Object.keys(placed).forEach(idx => { putAt[placed[idx]] = parseInt(idx); });
+  const moved = c.words.filter((w, i) => gapSet.has(i) && placed[i] !== w);
+  let html = '<div class="rfWhyLine answer"><span aria-hidden="true">✓ </span>From <b>' + _rfUp(c.leftAnchor) + '</b> to <b>' + _rfUp(c.rightAnchor) + '</b>, the order is:' +
+    '<div class="rfOrder">' + c.words.map((w, i) => {
+      const mv = gapSet.has(i) && placed[i] !== w;
+      return '<span' + (mv ? ' class="moved"' : '') + '>' + (i+1) + '. ' + _rfUp(w) + (mv ? ' <span aria-hidden="true">✗</span><span class="sr-only"> (you had this in a different place)</span>' : '') + '</span>';
+    }).join('') + '</div></div>';
+  moved.slice(0, 3).forEach(w => {
+    const pos = c.words.indexOf(w) + 1;
+    const had = putAt[w];
+    html += '<div class="rfWhyLine picked">You put <b>' + _rfUp(w) + '</b> in place ' + (typeof had === 'number' ? had + 1 : '?') + '. It goes in place ' + pos + '.</div>';
+  });
+  // The clue says how the words change along this line (not every line goes everyday → specialist)
+  if(c.clue) html += '<div class="rfWhyLine tip"><span aria-hidden="true">💡 </span>The clue: ' + _rfEsc(c.clue) + '.</div>';
+  return html;
+}
+function _rfShowWhy(html){
+  const w = document.getElementById('rfWhy'), n = document.getElementById('rfNextRow'), sk = document.getElementById('rfSkipBtn');
+  w.innerHTML = html; w.hidden = false;
+  _rfReading = true;
+  if(sk) sk.hidden = true;
+  const nb = document.getElementById('rfNextBtn');
+  nb.textContent = fuel <= 0 ? 'See my results →' : 'Next →';
+  n.hidden = false;
+  try { nb.focus({ preventScroll:true }); } catch(e) { nb.focus(); }
+  try { n.scrollIntoView({ block:'nearest' }); } catch(e) {}
+}
+function _rfHideWhy(){
+  _rfReading = false;
+  const w = document.getElementById('rfWhy'), n = document.getElementById('rfNextRow'), sk = document.getElementById('rfSkipBtn');
+  if(w){ w.innerHTML = ''; w.hidden = true; }
+  if(n) n.hidden = true;
+  if(sk) sk.hidden = false;
+}
+function _rfNext(){
+  if(!_rfReading) return;
+  _rfNextAt = Date.now();
+  _rfHideWhy();
+  if(fuel <= 0){ endGame(); return; }
+  loadQuestion();
+  // Focus the question, never a word tile, so a second Enter cannot pick a word
+  const q = document.getElementById('clineClue');
+  if(q){ q.setAttribute('tabindex','-1'); try { q.focus({ preventScroll:true }); } catch(e) { q.focus(); } }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1490,6 +1616,7 @@ function startFuelDrain(){
   if(_wltActive) return;
   clearInterval(fuelInterval);
   fuelInterval = setInterval(()=>{
+    if(_rfReading) return; // heat holds while the why panel is open
     fuel -= _supportMode ? 0.075 : 0.15;
     if(fuel<=0){ fuel=0; updateHud(); endGame(); clearInterval(fuelInterval); return; }
     updateHud();
@@ -1501,19 +1628,22 @@ function endGame(){
   missingPoolEl.innerHTML = '';
   clineTrackEl.innerHTML = '';
   checkBtnEl.style.display = 'none';
+  _rfHideWhy();
   feedbackEl.textContent = 'Furnace cooled';
   feedbackEl.className = 'feedback bad';
-  subFeedbackEl.textContent = `Final score: ${score} XP`;
+  subFeedbackEl.textContent = `Final score: ${score} XP. Press Restart to play again.`;
+  const rb = document.getElementById('rfRestartBtn'); if(rb) rb.focus();
 }
 
 function restartGame(){
+  if(_rfTooSoon()) return; // a second Enter after "See my results" must not restart straight away
   score=0; streak=0; fuel=100;
   if(!_wltActive){ updateHud(); startFuelDrain(); }
   loadQuestion();
 }
 
 function skipQuestion(){
-  if(buttonsLocked) return;
+  if(buttonsLocked || _rfReading) return;
   if(!_wltActive && fuel<=0) return;
   streak=0;
   if(!_wltActive){ fuel=Math.max(fuel-(_supportMode?4:8),0); updateHud(); if(fuel<=0){ endGame(); return; } }
@@ -1521,19 +1651,45 @@ function skipQuestion(){
   loadQuestion();
 }
 
-if(_wltActive){
-  WLTeacher.init({game:'refinery'}).then(function(){ loadQuestion(); });
-  // Add teacher Next button
-  var _nBtn=document.createElement('button');_nBtn.textContent='Next Cline →';_nBtn.className='primaryBtn';_nBtn.style.cssText='margin:12px auto;display:none;padding:10px 24px;font-size:15px;font-weight:800;cursor:pointer;';_nBtn.id='wltNextBtn';
-  var _anchor=document.getElementById('feedback');if(_anchor&&_anchor.parentNode)_anchor.parentNode.insertBefore(_nBtn,_anchor.nextSibling);
-  _nBtn.addEventListener('click',function(){_nBtn.style.display='none';loadQuestion();});
-  // Poll to show Next button when answer is locked
-  function _showTeacherNext(){var nb=document.getElementById('wltNextBtn');if(nb)nb.style.display='block';}
-} else {
-  updateHud();
-  startFuelDrain();
-  loadQuestion();
+// ─────────────────────────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────────────────────────
+function _showTeacherNext(){var nb=document.getElementById('wltNextBtn');if(nb)nb.style.display='block';}
+// Support mode: show tier labels under the fixed words on the line
+function _rfApplySupport(){
+  var _smStyle = document.createElement('style');
+  _smStyle.textContent = '.fixed-word::after{content:attr(data-tier);display:block;font-size:9px;font-weight:900;color:var(--amber-2);letter-spacing:.08em;text-transform:uppercase;margin-top:2px;}';
+  document.head.appendChild(_smStyle);
+  var _origBuildClineTrack = buildClineTrack;
+  buildClineTrack = function(c){
+    _origBuildClineTrack(c);
+    var n = c.words.length;
+    clineTrackEl.querySelectorAll('.fixed-word').forEach(function(el){
+      var idx = c.words.indexOf(el.textContent);
+      if(idx >= 0) el.dataset.tier = idx < n/3 ? 'T1' : idx < 2*n/3 ? 'T2' : 'T3';
+    });
+  };
 }
+// The shared scripts (WordLabData, WLTeacher, WLHelp, WLHints) are deferred, so they only
+// exist once the page has been read. Start the game then, so Support Mode, Teacher Mode and
+// the help popup all apply from the first question (before, none of them did).
+document.addEventListener('DOMContentLoaded', function(){
+  _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+  _supportMode = !!(typeof WordLabData !== 'undefined' && WordLabData.isSupportMode && WordLabData.isSupportMode());
+  if(_supportMode) _rfApplySupport();
+  var nb = document.getElementById('rfNextBtn'); if(nb) nb.addEventListener('click', _rfNext);
+  if(_wltActive){
+    WLTeacher.init({game:'refinery'}).then(function(){ loadQuestion(); });
+    // Add teacher Next button
+    var _nBtn=document.createElement('button');_nBtn.textContent='Next Cline →';_nBtn.className='primaryBtn';_nBtn.style.cssText='margin:12px auto;display:none;padding:10px 24px;font-size:15px;font-weight:800;cursor:pointer;';_nBtn.id='wltNextBtn';
+    var _anchor=document.getElementById('feedback');if(_anchor&&_anchor.parentNode)_anchor.parentNode.insertBefore(_nBtn,_anchor.nextSibling);
+    _nBtn.addEventListener('click',function(){_nBtn.style.display='none';loadQuestion();});
+  } else {
+    updateHud();
+    startFuelDrain();
+    loadQuestion();
+  }
+});
 </script>
 
 <!-- Particles — warm smoke/steam -->
@@ -1592,15 +1748,16 @@ document.addEventListener('DOMContentLoaded', async function(){
     if(hud) hud.appendChild(extPill);
   }
 });
+document.addEventListener('DOMContentLoaded', function(){
 if(typeof WLHelp!=='undefined') WLHelp.init({
   game:'refinery', title:'The Refinery', emoji:'⚗️',
   steps:[
-    {icon:'📖',title:'Read the words',desc:'A set of words appears. They range from everyday language to specialist vocabulary.'},
-    {icon:'🎯',title:'Place the words',desc:'Drag or tap words into the correct slots, from Tier 1 everyday to Tier 3 specialist.'},
-    {icon:'📊',title:'Understand tiers',desc:'Tier 1 = everyday words, Tier 2 = academic words, Tier 3 = specialist or technical words.'},
-    {icon:'⚡',title:'Watch your energy',desc:'Energy drains over time. Correct placements refill it.'}
+    {icon:'📖',title:'Read the clue',desc:'The words go in order along a line, from the word at the left end to the word at the right end. The clue tells you how the words change along the line, for example from a gentle run to top speed.'},
+    {icon:'🎯',title:'Place the words',desc:'Tap a word, then tap its place on the line. You can drag it there too. Tap a filled place to take the word back out. On a keyboard, press Enter on a word, then Enter on a place.'},
+    {icon:'✅',title:'Check',desc:'When every place is full, press Check. If a word is in the wrong place, read why, then press Next. The heat waits while you read.'},
+    {icon:'🔥',title:'Keep the heat up',desc:'The furnace heat goes down slowly. Right answers heat it back up.'}
   ],
-  audioText:'In The Refinery, you sort words from everyday language to specialist vocabulary. Drag or tap words into the correct slots. Tier 1 means everyday words, Tier 2 means academic words, and Tier 3 means specialist or technical words. Your energy drains over time. Correct placements refill it.'
+  audioText:'In The Refinery, the words go in order along a line, from the word at the left end to the word at the right end. The clue tells you how the words change along the line. Tap a word, then tap its place on the line. You can drag it there too. When every place is full, press Check. If a word is in the wrong place, read why, then press Next. The heat waits while you read. The furnace heat goes down slowly, and right answers heat it back up.'
 });
 if(typeof WLHints!=='undefined') WLHints.register({
   getStrategyHint: function(){ return 'Think about which words you\'d hear every day vs in a textbook vs in a science class.'; },
@@ -1617,23 +1774,7 @@ if(typeof WLHints!=='undefined') WLHints.register({
     return 'Read the anchor words at each end for clues about the order.';
   }
 });
-// Support mode: show tier labels more prominently
-if(_supportMode){
-  var _smStyle = document.createElement('style');
-  _smStyle.textContent = '.fixed-word::after{content:attr(data-tier);display:block;font-size:9px;font-weight:900;color:var(--amber-2);letter-spacing:.08em;text-transform:uppercase;margin-top:2px;}';
-  document.head.appendChild(_smStyle);
-  // Patch buildClineTrack to add tier data attributes
-  var _origBuildClineTrack = buildClineTrack;
-  buildClineTrack = function(c){
-    _origBuildClineTrack(c);
-    var n = c.words.length;
-    clineTrackEl.querySelectorAll('.fixed-word').forEach(function(el){
-      var word = el.textContent;
-      var idx = c.words.indexOf(word);
-      if(idx >= 0) el.dataset.tier = idx < n/3 ? 'T1' : idx < 2*n/3 ? 'T2' : 'T3';
-    });
-  };
-}
+});
 </script>
 
 <footer style="text-align:center;padding:12px 16px;font-size:11px;color:#64748b;border-top:1px solid #e2e8f0;margin-top:auto;font-family:Lexend,sans-serif;">&#129514; Word Labs &middot; <a href="about.html" style="color:#64748b;">About</a> &middot; <a href="privacy.html" style="color:#64748b;">Privacy Policy</a> &middot; <a href="terms.html" style="color:#64748b;">Terms of Service</a> &middot; <a href="mailto:nick@wordlabs.app" style="color:#64748b;">Contact</a></footer>

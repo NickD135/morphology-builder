@@ -34,6 +34,8 @@ Updated every run from merged, closed and commented agent PRs. Record what he va
 - **Standing preference (stated 2026-10-12): fix a SOLO problem across the whole unit at once, for consistency,** not one outcome per run. For example: give every u31 outcome fresh Know numbers in one PR.
 - **Permission (stated 2026-10-12): the agent may check and change the SOLO `resources` table in Supabase.** It is written into hard rule 3a, and is limited to that table. Changes are always delivered as a SQL file for him to run, never written directly (his choice).
 - Run 25 (2026-10-16): #33 got "Reviewer verdict: MERGE" after revision 2 and waits on Nicholas. #34 got NEEDS CHANGES because its new help text said "Tap a word, then tap its place" and tapping did nothing on touchscreens (an older bug, but the PR made the text promise it). Lesson: any instruction text a PR writes must be true on every input the students use (mouse, keyboard and touch); test touch with `--touch` / `touch: true` and `page.tap()` before sending.
+- Run 26 (2026-10-16): #34 got "Reviewer verdict: MERGE" after revision 2; #33 and #34 both wait on Nicholas (merge #33, then retarget #34 to main). Both re-reviews noted that screenshot links wrapped in backticks in revision comments did not display. Lesson: in PR bodies and comments, put image URLs straight into `![](url)` with no backticks, and check the rendered comment.
+- Run 26: a why line or tip that describes "the direction" of a task must hold for every item in it. Word Refinery's page says Tier 1 everyday → Tier 3 specialist, but about a third of its clines are intensity scales (run → sprint, happy → euphoric), so the tip quotes each cline's own clue instead.
 
 ## Working notes (operational, not taste)
 
