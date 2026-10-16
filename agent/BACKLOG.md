@@ -19,7 +19,7 @@ Score each surface 1 (poor) to 4 (strong) on each lens from IMPROVEMENT_AGENT.md
 | speed-mode.html | | | | | | | | |
 | root-lab.html | 3 (was 2: help text wrong) | 3 | 3 (was 2: no why, empty Analyse marked wrong) | 3 | 3 (was 2: meaning marks colour only, full-screen stamp in low stim) | 3 (typed Challenge with fair alternative splits) | 18 (was 14) | 2026-10-15 (why panel, nudge, alternative splits, last word waits) |
 | homophone-mode.html | 3 | 3 | 3 (was 1: no why, auto-advance, right word shown in red) | 3 | 3 (was 2: marks colour only, no keyboard focus after answers) | 2 | 17 (was 14) | 2026-10-16 (why panel with meanings and memory tricks, 4 paragraph data bugs) |
-| word-spectrum.html | | | | | | | | |
+| word-spectrum.html | 3 (was 2: adult explain lines, no help popup) | 3 | 3 (was 1: no why, auto-advance, charge drained while reading) | 3 | 3 (was 1: Spectrum not keyboard playable, marks colour only, bubbles floated in low stim) | 2 | 17 (was 12) | 2026-10-16 (why panel with meanings, keyboard Spectrum, close pairs count, help popup loads) |
 | word-refinery.html | | | | | | | | |
 | spelling-test.html | | | | | | | | |
 | SOLO: login and unit picker | | | | | | | | |
@@ -33,6 +33,13 @@ Score each surface 1 (poor) to 4 (strong) on each lens from IMPROVEMENT_AGENT.md
 - Morpheme Builder dead tiles: done in run 19 (PR stacked on #30). **Waiting on Nicholas** for the 28 tiles still left: hide, keep, or suggest words. The list with reasons is in the PR.
 
 ## Ideas queue
+
+- **Help popup and ? button never load on 8 games (do next):** homophone, mission, meaning, phoneme, sound-sorter, speed, syllable and word-refinery call `WLHelp.init` / `WLHints.register` at top level of an inline script, which runs before the deferred `wordlab-help.js`, so no first-visit instructions and no ? button (checked in mock mode: `#wlhFloatBtn` count 0; Root Lab, Flashcards, Morpheme Builder, Word Study and Breakdown have it). Check each page's first `loadQuestion` and `_wltActive` too (Word Spectrum had both problems; fixed run 24 by starting on DOMContentLoaded). One small PR across the 8 games (Clear, Structured, Inclusive)
+- Word Spectrum: the 15 close pairs (Speed sluggish/slow, Happiness content/pleased/happy, Anger irritated/annoyed/cross, Effort simple/easy and challenging/difficult, Fear nervous/uneasy and scared/frightened, Certainty probable/likely, Formality casual/informal, Complexity basic/straightforward and involved/complex) need Nicholas's confirmation; a spectrum "discussion" prompt after a close pair would suit the semantic gradients routine (Teaching practice)
+- Word Spectrum: placed tiles stay in the word bank faded at 35% opacity; hiding them would cut clutter for Ben (Inclusive)
+- Word Spectrum: Need Advice says "Think about the strength or intensity of each word" in synonym and antonym mode too; give each mode its own strategy and a third step using `_WS_MEAN` (Scaffolded)
+- Word Spectrum: Speed Builder style round picker and a results screen; today a round only ends when the charge runs out (Structured)
+- Word Spectrum Stretch: a "write your own sentence with the stronger word" or "add a word to the spectrum" challenge for Chloe (Stretch)
 
 - Root Lab: the 46 Challenge words are 2/3 of the pool and many are s4 (photosynthesis, antidisestablishment); Mixed for an s3e student is mostly typing. Check the Challenge share per stage with `weightByStage` and consider more Level Up words (Structured, Stretch)
 - Root Lab Challenge: other words where a student could defensibly split differently (demonstration de + monstr + ation vs demonstrate + ion, communication) still only accept the listed alternatives; extend `alts` with Nicholas's convention (same question as Breakdown Blitz psychology) (Teaching practice)
@@ -72,7 +79,7 @@ Add ideas found while working. Keep each to one line with the surface and the le
 - Homophone Hunter: no mute button or student name pill in the header at any width (its `wlPillSlot` sits before the widget but stays empty); check why (polish, Inclusive)
 - Speed Builder at 768px: with the extra Base and Time pills the title truncates to "S…"; consider hiding the Base pill in the header on narrow screens (polish)
 - Syllable Splitter: at 768px the game column is very narrow and long words wrap across three lines; check the tablet layout (Inclusive, polish)
-- All fuel/round games: check whether wrong answers auto-advance before students can read the explanation (fixed in Syllable Splitter run 2, Phoneme Splitter run 3, Breakdown Blitz run 5). Sound Sorter fixed run 8, Meaning Match-Up run 11. Mission Mode fixed run 15. Root Lab checked run 20 (wrong answers never auto-advanced, but the last word of a round did jump to the results). Homophone Hunter fixed run 22. All 13 games with rounds now checked
+- All fuel/round games: check whether wrong answers auto-advance before students can read the explanation (fixed in Syllable Splitter run 2, Phoneme Splitter run 3, Breakdown Blitz run 5). Sound Sorter fixed run 8, Meaning Match-Up run 11. Mission Mode fixed run 15. Root Lab checked run 20 (wrong answers never auto-advanced, but the last word of a round did jump to the results). Homophone Hunter fixed run 22. Word Spectrum fixed run 24 (it had been missed). Word Refinery not yet checked
 - Breakdown Blitz: the Why list can reach 5 lines when every box is wrong; consider showing the first two and a "Show more" for Ben (Clear)
 - Help popups describe controls but give no worked example ("I do"); add one modelled example per game (Scaffolded, Clear)
 - SOLO: `units/SOLO_PROGRESS.md` status header is out of date (resources track)
