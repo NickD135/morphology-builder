@@ -42,6 +42,7 @@ async function openMock(opts) {
   const context = await browser.newContext({
     viewport: { width: opts.width || 1366, height: opts.height || 768 },
     reducedMotion: opts.reducedMotion ? 'reduce' : 'no-preference',
+    hasTouch: !!opts.touch,
     locale: 'en-AU', timezoneId: 'Australia/Sydney'
   });
   // Only the local mock server is reachable. No real APIs, fonts or CDNs.
@@ -148,7 +149,7 @@ if (require.main === module) {
   (async function () {
     const s = await openMock({
       as: arg('as', 'ava'), width: Number(arg('width', 1366)), height: Number(arg('height', 768)),
-      lowStim: flag('low-stim'), reducedMotion: flag('reduced-motion'), full: flag('full'),
+      lowStim: flag('low-stim'), reducedMotion: flag('reduced-motion'), touch: flag('touch'), full: flag('full'),
       wait: arg('wait') ? Number(arg('wait')) : undefined, keepData: !flag('reset') && flag('keep-data'),
       firstVisit: flag('first-visit')
     });

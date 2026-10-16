@@ -41,7 +41,7 @@ node tests/mock/browse.js --as chloe --solo --shot out/solo.png
 node tests/mock/browse.js --as teacher --page /dashboard --shot out/dash.png --wait 6000
 ```
 
-Options: `--low-stim`, `--reduced-motion`, `--full` (full page), `--wait <ms>`, `--first-visit`
+Options: `--low-stim`, `--reduced-motion`, `--touch` (touchscreen, for `page.tap()`), `--full` (full page), `--wait <ms>`, `--first-visit`
 (show the storage notice, tours and first-visit help popups that are otherwise treated as already
 seen), `--keep-data` (do not reset fake data). The command prints any page errors.
 

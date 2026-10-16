@@ -33,6 +33,7 @@ Updated every run from merged, closed and commented agent PRs. Record what he va
 
 - **Standing preference (stated 2026-10-12): fix a SOLO problem across the whole unit at once, for consistency,** not one outcome per run. For example: give every u31 outcome fresh Know numbers in one PR.
 - **Permission (stated 2026-10-12): the agent may check and change the SOLO `resources` table in Supabase.** It is written into hard rule 3a, and is limited to that table. Changes are always delivered as a SQL file for him to run, never written directly (his choice).
+- Run 25 (2026-10-16): #33 got "Reviewer verdict: MERGE" after revision 2 and waits on Nicholas. #34 got NEEDS CHANGES because its new help text said "Tap a word, then tap its place" and tapping did nothing on touchscreens (an older bug, but the PR made the text promise it). Lesson: any instruction text a PR writes must be true on every input the students use (mouse, keyboard and touch); test touch with `--touch` / `touch: true` and `page.tap()` before sending.
 
 ## Working notes (operational, not taste)
 
@@ -56,3 +57,4 @@ Updated every run from merged, closed and commented agent PRs. Record what he va
 - A game's question functions are plain globals: override `generateQuestion` in `page.evaluate` to get a fixed question for screenshots.
 - In scripted play, a correct answer's pending auto-advance `setTimeout` can fire after you start a new mode, and a 500 ms Next guard swallows an answer sent straight after Next. Wait 600 ms after Next and clear pending timeouts on start, or test results will look like bugs.
 - Performance in mock mode: headless Chromium renders on a software GPU, so fps and event latency are bounded by the GPU process, not the page script. Use CDP `Emulation.setCPUThrottlingRate` 6 plus Event Timing (`type:'event'`) and `longtask` observers for typing, a Chrome trace for paint/layout counts, and `document.getAnimations()` to list what is running. When A/B testing CSS by injecting `* {x:none!important}`, a page rule with a class selector and `!important` wins over `*`, so target the same selector.
+- Touch in mock mode: `openMock({ touch: true })` (or `--touch`) gives a `hasTouch` context, so `page.tap()` fires touchstart, touchend and then click like a real tap. For a touch drag use CDP `Input.dispatchTouchEvent` (touchStart, several touchMove, touchEnd). A `touchstart` that selects plus a `click` that toggles cancels itself on a tap.

@@ -796,7 +796,7 @@ const _WS_MEAN = {
   careless:"not taking care, so mistakes happen",
   caring:"kind and wanting to look after others",
   casual:"relaxed and easygoing",
-  certain:"completely sure",
+  certain:"sure to happen",
   challenging:"hard, so you have to try your best",
   cheerful:"happy and smiling",
   chilly:"cold enough to want a jumper",
@@ -1117,12 +1117,13 @@ document.addEventListener('touchend', (e) => {
   const touch = e.changedTouches[0];
   const el = document.elementFromPoint(touch.clientX, touch.clientY);
   const slot = el && (el.closest('.spectrumZone'));
-  if(slot){
+  // A tap (finger lifts on the same tile) is left to the click handler, which selects the word.
+  // Only a drag that ends on a place puts the word there.
+  if(slot && !(_touchDragTile && _touchDragTile.contains(el))){
     const idx = parseInt(slot.dataset.index);
+    document.querySelectorAll('.spectrumWord').forEach(t => { t.classList.remove('selected'); t.setAttribute('aria-pressed','false'); });
     spectrumSelected = _touchDragWord;
     placeWordInSlot(idx);
-  } else if(_touchDragTile) {
-    _touchDragTile.classList.remove('selected');
   }
   document.querySelectorAll('.spectrumZone').forEach(z => z.classList.remove('dragover'));
   _touchDragWord = null;
@@ -1374,10 +1375,9 @@ function loadSpectrum(){
     // Touch drag support
     tile.addEventListener('touchstart', (e) => {
       if(tile.classList.contains('placed')) return;
+      // Only remember the word here. Selecting it now would make the click after a tap switch it off again.
       _touchDragWord = word;
       _touchDragTile = tile;
-      tile.classList.add('selected');
-      spectrumSelected = word;
     }, {passive:true});
     wordsEl.appendChild(tile);
   });
