@@ -473,7 +473,15 @@ const ANGLO_BASE_INFO = {
   grace:{ stage:"s2e", meaning:"beauty of movement; a prayer", pos:["noun","verb"], examples:["<u>grace</u>","grace<u>ful</u>","dis<u>grace</u>","grace<u>fully</u>","un<u>grace</u>ful","<u>grace</u>s"] },
   comfort:{ stage:"s3e", meaning:"a state of ease; to soothe", pos:["noun","verb"], examples:["<u>comfort</u>","dis<u>comfort</u>","comfort<u>able</u>","<u>comfort</u>ed","un<u>comfort</u>able","<u>comfort</u>er"] },
   agree:{ stage:"s2e", meaning:"to have the same opinion", pos:["verb"], examples:["<u>agree</u>","dis<u>agree</u>","agree<u>ment</u>","<u>agree</u>able","<u>agree</u>s","dis<u>agree</u>ment"] },
-  colour:{ stage:"s2e", meaning:"the property of light; to add colour", pos:["noun","verb"], examples:["<u>colour</u>","dis<u>colour</u>","colour<u>ful</u>","multi<u>colour</u>","<u>colour</u>less","<u>colour</u>ed"] }
+  colour:{ stage:"s2e", meaning:"the property of light; to add colour", pos:["noun","verb"], examples:["<u>colour</u>","dis<u>colour</u>","colour<u>ful</u>","multi<u>colour</u>","<u>colour</u>less","<u>colour</u>ed"] },
+  // Added 2026-10-15 so that dead Morpheme Builder tiles (amphi-, cyber-, electro-, -oid, -ward, -itis) build real words.
+  theatre:{ stage:"s2l", meaning:"a building where plays and shows are put on", pos:["noun"], examples:["<u>theatre</u>","<u>theatre</u>s","<u>theatr</u>ical","amphi<u>theatre</u>","amphi<u>theatre</u>s","<u>theatr</u>ically"] },
+  magnet:{ stage:"s2l", meaning:"a piece of metal that pulls iron and steel towards it", pos:["noun"], examples:["<u>magnet</u>","<u>magnet</u>s","<u>magnet</u>ic","<u>magnet</u>ise","electro<u>magnet</u>","electro<u>magnet</u>ic"] },
+  bully:{ stage:"s2e", meaning:"to hurt or frighten someone again and again", pos:["verb","noun"], examples:["<u>bully</u>","<u>bully</u>ing","<u>bulli</u>ed","<u>bulli</u>es","cyber<u>bully</u>","cyber<u>bully</u>ing"] },
+  space:{ stage:"s2e", meaning:"an empty area; the universe beyond Earth", pos:["noun","verb"], examples:["<u>space</u>","<u>space</u>s","<u>spac</u>ious","<u>spac</u>ing","<u>space</u>d","cyber<u>space</u>"] },
+  human:{ stage:"s2e", meaning:"a person", pos:["noun","adj"], examples:["<u>human</u>","<u>human</u>s","<u>human</u>ity","in<u>human</u>","super<u>human</u>","<u>human</u>oid"] },
+  home:{ stage:"s2e", meaning:"the place where you live", pos:["noun"], examples:["<u>home</u>","<u>home</u>s","<u>home</u>less","<u>home</u>lessness","<u>home</u>ward","<u>home</u>wards"] },
+  tonsil:{ stage:"s3l", meaning:"one of two small lumps at the back of your throat", pos:["noun"], examples:["<u>tonsil</u>","<u>tonsil</u>s","<u>tonsil</u>litis"] }
 };
 
 const ANGLO_BASE_LIST = [
@@ -482,7 +490,8 @@ const ANGLO_BASE_LIST = [
   "sound","correct","part","live","sad","trust","merge","run","plan","hop",
   "play","work","read","think","kind","hope","fear","thank","harm","taste","doubt","count","start","stop","hold",
   "fill","print","heat","paint","load","order","spell","clean","sharp","bright","fair","safe","deep","weak","soft",
-  "dark","sweet","quick","slow","warm","fresh","hard","price","cover","land","test","grace","comfort","agree","colour"
+  "dark","sweet","quick","slow","warm","fresh","hard","price","cover","land","test","grace","comfort","agree","colour",
+  "theatre","magnet","bully","space","human","home","tonsil"
 ];
 
 const ANGLO_BASES = ANGLO_BASE_LIST.map((w,i)=>({
@@ -547,7 +556,9 @@ const LATIN_BASE_INFO = {
   spire:{ bound:true, stage:"s3l", meaning:"breathe; live", pos:["verb"], examples:["in<u>spire</u>","re<u>spire</u>","con<u>spire</u>","tran<u>spire</u>","per<u>spire</u>","a<u>spire</u>"] },
   grad:{ stage:"s3l", meaning:"step; go", pos:["verb","noun"], examples:["<u>grad</u>e","<u>grad</u>ual","up<u>grad</u>e","de<u>grad</u>e","<u>grad</u>uate","retro<u>grad</u>e"] },
   mot:{ bound:true, stage:"s3l", meaning:"move", pos:["verb","noun"], examples:["<u>mot</u>ion","<u>mot</u>or","pro<u>mot</u>e","e<u>mot</u>ion","re<u>mot</u>e","loco<u>mot</u>ive"] },
-  scribe:{ stage:"s3l", meaning:"write", pos:["verb"], examples:["de<u>scribe</u>","in<u>scribe</u>","pre<u>scribe</u>","sub<u>scribe</u>","tran<u>scribe</u>","pro<u>scribe</u>"] }
+  scribe:{ stage:"s3l", meaning:"write", pos:["verb"], examples:["de<u>scribe</u>","in<u>scribe</u>","pre<u>scribe</u>","sub<u>scribe</u>","tran<u>scribe</u>","pro<u>scribe</u>"] },
+  // Added 2026-10-15 so the dead ambi- tile builds ambidextrous. Bound: dextr is never a word on its own.
+  dextr:{ bound:true, stage:"s3l", meaning:"right hand; skilful with your hands", pos:["adj"], examples:["ambi<u>dextr</u>ous","<u>dextr</u>ous"] }
 };
 
 const LATIN_BASE_LIST = [
@@ -555,7 +566,8 @@ const LATIN_BASE_LIST = [
   "miss","mit","sci","pend","pens","vis","vid","fer","vers","vert","duc","duct","sec","sect","claus","clos","vit","viv",
   "cept","cess","fect","fix","sign","tend","press","gress","cede","claim","prove","ply","spire",
   "grad","mot",
-  "scribe"
+  "scribe",
+  "dextr"
 ];
 
 const LATIN_BASES = LATIN_BASE_LIST.map((w,i)=>({
@@ -713,14 +725,19 @@ const GREEK_BASE_INFO = {
   techno:{ stage:"s3l", meaning:"technology; skill", pos:["noun","adj"], examples:["<u>techno</u>cracy","<u>techno</u>logy"] },
   cata:{ stage:"s4", meaning:"down; against; completely", pos:["noun","verb"], examples:["<u>cata</u>lysis","<u>cata</u>logue"] },
   graphy:{ stage:"s3l", meaning:"writing or visual recording", pos:["noun"], examples:["bio<u>graphy</u>","photo<u>graphy</u>","geo<u>graphy</u>","carto<u>graphy</u>","choreo<u>graphy</u>","crypto<u>graphy</u>"] },
-  naut:{ stage:"s3l", meaning:"voyager or traveller", pos:["noun"], examples:["astro<u>naut</u>","cosmo<u>naut</u>","aero<u>nautics</u>","aqua<u>naut</u>","<u>naut</u>ical","<u>naut</u>ilus"] }
+  naut:{ stage:"s3l", meaning:"voyager or traveller", pos:["noun"], examples:["astro<u>naut</u>","cosmo<u>naut</u>","aero<u>nautics</u>","aqua<u>naut</u>","<u>naut</u>ical","<u>naut</u>ilus"] },
+  // Added 2026-10-15 (like hydr/hydro and therm/thermo) so mono-, mega- and neo- build monolith, megalith and neolithic,
+  // and so electric, electrician and electricity can be built.
+  lith:{ stage:"s3l", meaning:"stone; rock", pos:["noun"], examples:["mono<u>lith</u>","mega<u>lith</u>","neo<u>lith</u>ic","mono<u>lith</u>ic","mega<u>lith</u>ic","mono<u>lith</u>s"] },
+  electr:{ stage:"s3l", meaning:"electricity", pos:["noun","adj"], examples:["<u>electr</u>ic","<u>electr</u>ical","<u>electr</u>ician","<u>electr</u>icity","<u>electr</u>ify","<u>electr</u>ified"] }
 };
 
 const GREEK_BASE_LIST = [
   "graph","gram","micro","hydr","hydro","therm","thermo","phon","logy","chron","chrono","photo","scope","meter","aero"
 ,
   "anthrop","arch","aster","auto","bio","cardi","cosm","dem","derm","dyn","gen","geo","grav","greg","luc","mand","morph","mut","nav","nom","path","phil","phob","pneum","poli","psych","sol","soph","terr","theo","tox","typ","zoo","aqu","brev","capit","celer","corp","curs","dent","dom","fid","fin","flu","fract","junct","lateral","liber","liter","loc","magn","man","mar","mem","min","mob","mort","narr","neg","nov","numer","omn","ped","pel","plac","popul","pot","prim","pub","quer","reg","rog","sacr","scend","sequ","simil","sonor","spher","spir","tempor","ten","termin","turb","vac","ven","ver","vita","voc","volv","tele","mono","demo","astro","eco","peri","omni","carni","herbi","pseudo","proto","tri","poly","dia","mega","homo","acro","litho","pyro","socio","electro","ortho","gastro","para","soci","neur","entom","ornith","ana","geno","arthro","gyro","tetra","oxy","nitro","techno","cata",
-  "graphy","naut"
+  "graphy","naut",
+  "lith","electr"
 ];
 
 const GREEK_BASES = GREEK_BASE_LIST.map((w,i)=>({

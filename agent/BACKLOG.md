@@ -7,7 +7,7 @@ Score each surface 1 (poor) to 4 (strong) on each lens from IMPROVEMENT_AGENT.md
 | Surface | Clear | Structured | Scaffolded | Engaging | Inclusive | Stretch | Total | Last audited |
 |---|---|---|---|---|---|---|---|---|
 | landing.html (student view) | | | | | | | | |
-| morpheme-builder.html | | | | | | | | |
+| morpheme-builder.html | 3 | 3 | 2 | 3 (was 2: 61 dead-end tiles) | 3 | 3 | 17 | 2026-10-15 (33 dead tiles now build words; 28 left for Nicholas) |
 | flashcard-mode.html | | | | | | | | |
 | word-study.html | | | | | | | | |
 | mission-mode.html | 2 (clues still awkward for roots) | 3 | 3 (was 1: no why, auto-advance) | 3 | 3 (was 2: marks colour only) | 2 | 16 (was 13) | 2026-10-15 (real-word answers, false splits removed, fair options, why panel) |
@@ -30,9 +30,15 @@ Score each surface 1 (poor) to 4 (strong) on each lens from IMPROVEMENT_AGENT.md
 
 ## Requested by Nicholas (do first)
 
-- **Next run: Morpheme Builder dead tiles** (requested 2026-10-15; Breakdown Blitz lag was taken in run 18, PR for branch agent/2026-10-15-breakdown-lag). Many prefix, suffix and base tiles can be added but make no word with anything, so students hit a dead end. A quick count against `valid-combos.json` found 61 tiles in `data.js` that appear in no combo at all: 22 of 108 prefixes (ambi, amphi, ante, cata, demi, eu, hemi, macro, meta, neo, pseudo, vice, cosmo, cyber, electro…), 23 of 96 suffixes (archy, chrome, itis, morph, oid, phile, phobia, ward, emia…) and 16 of 450 bases (aero, dyn, phob, poli, soph, brev, pel…). Others may only make words with tiles above the student's stage, which looks the same to the student: count those per stage too. Fix at the source, not in the page: for each dead tile, either add the missing bases and dictionary words so it builds real, age-appropriate words, and rebuild with `node scripts/build-valid-combos.js` (never hand-edit `valid-combos.json`), Nicholas decided (2026-10-15): **add words, do not hide tiles.** Only hide a tile as a last resort if English genuinely has no age-appropriate word for it, and list any such tile in the PR for his call. Keep the bound-root (`bound:true`) and blocklist rules from Phase 7.34. Related: the CLAUDE.md follow-up that 56 Word Study words need component bases in `data.js`.
+- Morpheme Builder dead tiles: done in run 19 (PR stacked on #30). **Waiting on Nicholas** for the 28 tiles still left: hide, keep, or suggest words. The list with reasons is in the PR.
 
 ## Ideas queue
+- Morpheme Builder (run 19): 22 built words already on main have no Word Study page (watcher, taker, takers, constructor, misspelled, photos…) and the 115 new words from run 19 have none either. Word Study now says so; the real fix is running the scripts/word-study/ pipeline for them (Teaching practice)
+- Morpheme Builder junk that builds today on main: believeable, missy, philly, phillies, moby, dems, regs, reged, vac, vids, secs. Add them to EXCLUDE_WORDS in scripts/build-valid-combos.js with Nicholas, alongside moving Mission Mode's `_MX_FALSE_SPLITS` into the build (Teaching practice)
+- Build rule: base + es where base + s gives the same word (theatres, spheres, makes) and y + ty / y + fy (humanity, brevity) are false splits all through valid-combos.json. Run 19 blocked only the new ones; a general rule in scripts/build-valid-combos.js would remove the rest. Check every removal (Teaching practice)
+- Build rule: y → i is applied to Greek forms (poly + hedron → "polihedron", oxy + gen → "oxigen"), so polyhedron and oxygen can never build. A Greek-only exception would revive the oxy base (Teaching practice)
+- Morpheme Builder: 15 tiles only build words with a partner one stage up (cred and aud need s2l; kinesis, hedron, litho, ortho, gyro, geno need s4). Re-stage or add a word at the tile's own stage (Scaffolded)
+- word-phoneme-data.json is stale against its generator (regenerating changes 338 entries), so new combo words have no syllable/phoneme data for suggested sets. Check with Nicholas before regenerating (code health)
 
 Add ideas found while working. Keep each to one line with the surface and the lens it serves.
 

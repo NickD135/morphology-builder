@@ -83,6 +83,7 @@
     @media (prefers-reduced-motion:reduce){ .pendant-glow, .mote{ animation:none; } .mote{ opacity:.5; } }
     h1{ font-size:22px; margin:0 0 4px; letter-spacing:-.02em; }
     .sub{ color:var(--muted); font-size:14px; margin:0 0 18px; }
+    .notYet{ background:#fffbeb; border:1px solid #fcd34d; color:#78350f; border-radius:12px; padding:10px 14px; font-size:14px; line-height:1.5; margin:0 0 16px; }
     .btn{ font-family:'Lexend',sans-serif; font-weight:800; border-radius:12px; cursor:pointer; border:none; }
     .btnPrimary{ background:var(--accent); color:#fff; padding:12px 20px; font-size:15px; box-shadow:0 8px 18px rgba(124,58,237,.22); }
     .btnPrimary:hover{ filter:brightness(1.05); }
@@ -168,6 +169,7 @@
   <section id="startScreen" class="card">
     <h1>🔬 Word Study</h1>
     <p class="sub">Study one word deeply — its parts, sounds, meaning and use. Pick a morpheme to get a word built from it, or get a surprise word.</p>
+    <p id="notYet" class="notYet hidden" role="status"></p>
     <div class="pickTabs">
       <button class="pickTab on" data-kind="prefix">Prefixes</button>
       <button class="pickTab" data-kind="base">Bases</button>
@@ -373,7 +375,17 @@ window.addEventListener('DOMContentLoaded', function(){
   // deep link: ?word=X opens straight into studying that word (used by handoffs from Builder/Flashcards)
   try{
     var qp = new URLSearchParams(location.search).get('word');
-    if(qp){ var found = POOL.find(function(w){ return w.word===qp.toLowerCase(); }); if(found){ startWord(found); } }
+    if(qp){ var found = POOL.find(function(w){ return w.word===qp.toLowerCase(); }); if(found){ startWord(found); }
+      else {
+        // A word from the Morpheme Builder that has no study page yet: say so, rather than
+        // dropping the student on this screen with no explanation.
+        var note=document.getElementById('notYet');
+        note.textContent='';
+        note.appendChild(document.createTextNode('There is no study page for '));
+        var b=document.createElement('b'); b.textContent=qp.toLowerCase(); note.appendChild(b);
+        note.appendChild(document.createTextNode(' yet. Pick a word part below to study a word that uses it, or get a surprise word.'));
+        note.classList.remove('hidden');
+      } }
   }catch(e){}
   document.querySelectorAll('.pickTab').forEach(function(t){
     t.onclick=function(){ document.querySelectorAll('.pickTab').forEach(function(x){x.classList.remove('on');}); t.classList.add('on'); buildPicker(t.dataset.kind); };
