@@ -18,7 +18,7 @@ Score each surface 1 (poor) to 4 (strong) on each lens from IMPROVEMENT_AGENT.md
 | sound-sorter.html | 3 | 3 | 3 (was 2) | 3 | 3 (was 1: no keyboard play) | 2 | 17 (was 14) | 2026-10-13 |
 | speed-mode.html | | | | | | | | |
 | root-lab.html | 3 (was 2: help text wrong) | 3 | 3 (was 2: no why, empty Analyse marked wrong) | 3 | 3 (was 2: meaning marks colour only, full-screen stamp in low stim) | 3 (typed Challenge with fair alternative splits) | 18 (was 14) | 2026-10-15 (why panel, nudge, alternative splits, last word waits) |
-| homophone-mode.html | | | | | | | | |
+| homophone-mode.html | 3 | 3 | 3 (was 1: no why, auto-advance, right word shown in red) | 3 | 3 (was 2: marks colour only, no keyboard focus after answers) | 2 | 17 (was 14) | 2026-10-16 (why panel with meanings and memory tricks, 4 paragraph data bugs) |
 | word-spectrum.html | | | | | | | | |
 | word-refinery.html | | | | | | | | |
 | spelling-test.html | | | | | | | | |
@@ -49,6 +49,14 @@ Score each surface 1 (poor) to 4 (strong) on each lens from IMPROVEMENT_AGENT.md
 
 Add ideas found while working. Keep each to one line with the surface and the lens it serves.
 
+- Homophone Hunter Transmission: only the homophones are clickable and they have extra space around them, so the wrong words are easy to spot without reading. Make every word clickable (most are "already right") so students have to read (Teaching practice, Stretch)
+- Homophone Hunter Transmission: after a wrong pick the panel names the right word, so the next click on it earns full XP; consider no XP for a word fixed after a reveal (Engaging, fairness)
+- Homophone Hunter data: many `why` lines use em dashes and adult words ("Verb — it will influence", "An entitlement or privilege", "Climate conditions"); rewrite in Year 5 words. The why panel already turns " — " into ": " (Clear)
+- Homophone Hunter: when new sentences are added, give each one an `m` meaning if the word is used in a sense `_HH_MEANING` does not cover (run 23 did this for right, practice, effect and coarse) (Clear)
+- Homophone Hunter: the 77 meanings in `_HH_MEANING` could also feed Need Advice step 2 instead of `q.why`, which often gives the answer away ("The bags belong to them") (Scaffolded)
+- Homophone Hunter: pairs that sound different in Australian English are taught as homophones (pour/paw/poor, hour/our, descent/dissent, council/counsel for some speakers); check each with Nicholas (Teaching practice)
+- Homophone Hunter: a read-aloud button on the why panel, as in the backlog for other games (Inclusive)
+
 - **Other SOLO units: check for Know practice repeating Show questions.** It did in u31 (fixed 2026-10-12), so other units probably have it too. Run `validate.js`-style checks unit by unit, one whole unit per PR (fair assessment)
 - SOLO u31 g3: an interactive balance scale for "do the same to both sides" (bar models were added as a static scaffold) (Scaffolded, Stretch)
 - SOLO u31 resource gaps with no verified exact match yet: r2 end zeros, r3 factorising, y3 building a table of multiples (Resources)
@@ -64,7 +72,7 @@ Add ideas found while working. Keep each to one line with the surface and the le
 - Homophone Hunter: no mute button or student name pill in the header at any width (its `wlPillSlot` sits before the widget but stays empty); check why (polish, Inclusive)
 - Speed Builder at 768px: with the extra Base and Time pills the title truncates to "S…"; consider hiding the Base pill in the header on narrow screens (polish)
 - Syllable Splitter: at 768px the game column is very narrow and long words wrap across three lines; check the tablet layout (Inclusive, polish)
-- All fuel/round games: check whether wrong answers auto-advance before students can read the explanation (fixed in Syllable Splitter run 2, Phoneme Splitter run 3, Breakdown Blitz run 5). Sound Sorter fixed run 8, Meaning Match-Up run 11. Mission Mode fixed run 15. Root Lab checked run 20 (wrong answers never auto-advanced, but the last word of a round did jump to the results). Still to check: Homophone Hunter (2.2 to 2.8 s)
+- All fuel/round games: check whether wrong answers auto-advance before students can read the explanation (fixed in Syllable Splitter run 2, Phoneme Splitter run 3, Breakdown Blitz run 5). Sound Sorter fixed run 8, Meaning Match-Up run 11. Mission Mode fixed run 15. Root Lab checked run 20 (wrong answers never auto-advanced, but the last word of a round did jump to the results). Homophone Hunter fixed run 22. All 13 games with rounds now checked
 - Breakdown Blitz: the Why list can reach 5 lines when every box is wrong; consider showing the first two and a "Show more" for Ben (Clear)
 - Help popups describe controls but give no worked example ("I do"); add one modelled example per game (Scaffolded, Clear)
 - SOLO: `units/SOLO_PROGRESS.md` status header is out of date (resources track)

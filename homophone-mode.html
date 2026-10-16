@@ -211,6 +211,22 @@
     .feedback.ok{ color:#4ade80; }
     .feedback.bad{ color:#f87171; }
     .sub-feedback{ min-height:16px; text-align:center; color:#f9a8d4; font-weight:700; margin-top:3px; line-height:1.5; font-size:11px; }
+    /* Why panel after a wrong answer */
+    .hhWhy{ max-width:560px; margin:10px auto 0; text-align:left; display:grid; gap:8px; }
+    .hhWhy[hidden], .hhNextRow[hidden]{ display:none; }
+    .hhWhyLine{ background:rgba(255,255,255,.06); border:2px solid rgba(255,255,255,.12); border-radius:12px; padding:9px 13px; font-size:16px; font-weight:600; line-height:1.5; color:#fce7f3; }
+    .hhWhyLine.picked{ border-color:rgba(248,113,113,.55); }
+    .hhWhyLine.answer{ border-color:rgba(74,222,128,.55); }
+    .hhWhyLine.tip{ border-color:rgba(251,191,36,.45); color:#fef3c7; }
+    .hhWhyLine b{ font-weight:900; color:#fff; }
+    .hhWhyLine .hhClue{ color:#f9a8d4; font-weight:600; }
+    .hhNextRow{ display:flex; justify-content:center; margin-top:10px; }
+    .hhNextRow .pri-btn{ font-size:14px; padding:12px 26px; min-height:44px; }
+    .opt-btn.correct::before{ content:'\2713  '; }
+    .opt-btn.wrong::before{ content:'\2717  '; }
+    .sentence-gap.fixed{ border-bottom-style:solid; color:#4ade80; border-color:#4ade80; }
+    .drop-target.fixed{ border-style:solid; color:#4ade80; border-color:#4ade80; }
+    .drop-target s{ color:#f87171; font-weight:700; font-size:.8em; margin-right:6px; }
 
     /* Action row */
     .action-row{ display:flex; justify-content:center; gap:8px; flex-wrap:wrap; margin-top:10px; }
@@ -336,10 +352,12 @@
       <div id="ealdDefinition" class="eald-definition"></div>
       <div class="feedback" id="feedback" aria-live="assertive"></div>
       <div class="sub-feedback" id="subFeedback" aria-live="polite"></div>
+      <div class="hhWhy" id="hhWhy" hidden aria-live="polite"></div>
+      <div class="hhNextRow" id="hhNextRow" hidden><button class="pri-btn" id="hhNextBtn" type="button">Next →</button></div>
       <div id="ealdTranslation" aria-live="polite"></div>
       <div class="action-row">
         <button class="sec-btn" onclick="backToSetup()">← Change Mode</button>
-        <button class="sec-btn" onclick="skipQuestion()">Skip →</button>
+        <button class="sec-btn" id="hhSkipBtn" onclick="skipQuestion()">Skip →</button>
       </div>
     </div>
 
@@ -416,7 +434,7 @@ const HOMOPHONES = [
     {s:'Please ___ your name on the top of the page.', a:'write', why:'Putting words on paper'},
     {s:'That is the ___ answer — well done!', a:'right', why:'Means correct'},
     {s:'I need to ___ a letter to Grandma.', a:'write', why:'Creating a letter with words'},
-    {s:'You have the ___ to remain silent.', a:'right', why:'An entitlement or privilege'},
+    {s:'You have the ___ to remain silent.', a:'right', why:'An entitlement or privilege', m:'something you are allowed to do or have, like your rights'},
   ]},
   {group:['here','hear'], stage:'s2e', explain:'here = this place, hear = to listen/detect sound', sentences:[
     {s:'Come over ___ and sit down.', a:'here', why:'Refers to this place'},
@@ -456,9 +474,9 @@ const HOMOPHONES = [
   ]},
   {group:['mail','male'], stage:'s2l', explain:'mail = letters/parcels, male = a boy or man', sentences:[
     {s:'The ___ arrived late this morning.', a:'mail', why:'Post / letters delivered'},
-    {s:'A ___ lion has a big mane around its face.', a:'male', why:'The sex — a boy lion'},
+    {s:'A ___ lion has a big mane around its face.', a:'male', why:'A boy lion'},
     {s:'I sent the letter by ___ yesterday.', a:'mail', why:'The postal system'},
-    {s:'The ___ peacock has the colourful feathers.', a:'male', why:'The sex — a boy peacock'},
+    {s:'The ___ peacock has the colourful feathers.', a:'male', why:'A boy peacock'},
   ]},
   {group:['sail','sale'], stage:'s2l', explain:'sail = travel by wind on water, sale = selling at reduced price', sentences:[
     {s:'The boat raised its ___ and set off across the harbour.', a:'sail', why:'The fabric that catches wind'},
@@ -560,18 +578,18 @@ const EXT_HOMOPHONES = [
     {s:'The rain will ___ our outdoor sports day plans.', a:'affect', why:'Verb — it will influence/change the plans'},
     {s:'The ___ of the medicine was immediate — she felt better.', a:'effect', why:'Noun — the result of the medicine'},
     {s:'How does lack of sleep ___ your concentration?', a:'affect', why:'Verb — how does it influence it?'},
-    {s:'The sound ___ in the movie was incredible.', a:'effect', why:'Noun — a produced result'},
+    {s:'The sound ___ in the movie was incredible.', a:'effect', why:'Noun — a produced result', m:'a special sound or picture made for a film or show (a thing)'},
   ]},
   {group:['practice','practise'], stage:'s3l', explain:'practice = noun (the thing), practise = verb (the action) — Australian spelling', sentences:[
     {s:'Football ___ is at 4pm on Wednesdays.', a:'practice', why:'Noun — the scheduled training session'},
     {s:'You need to ___ your spelling every night before the test.', a:'practise', why:'Verb — the action of rehearsing'},
-    {s:'The doctor opened a new medical ___ in town.', a:'practice', why:'Noun — a place of business'},
+    {s:'The doctor opened a new medical ___ in town.', a:'practice', why:'Noun — a place of business', m:'the business where a doctor or vet works (a noun)'},
     {s:'She needs to ___ the piano piece before the concert.', a:'practise', why:'Verb — to rehearse'},
   ]},
   {group:['complement','compliment'], stage:'s3l', explain:'complement = to complete or go well with, compliment = praise', sentences:[
     {s:'The scarf was a perfect ___ to her winter outfit.', a:'complement', why:'It completed / went well with the outfit'},
     {s:'She gave me a lovely ___ about my drawing in art class.', a:'compliment', why:'Kind words of praise'},
-    {s:'Red wine is said to ___ a steak dinner perfectly.', a:'complement', why:'To go well with / complete'},
+    {s:'The yellow cushions ___ the blue couch perfectly.', a:'complement', why:'They go well with the couch'},
     {s:'What a nice ___ — thank you for saying that!', a:'compliment', why:'A kind remark'},
   ]},
   {group:['council','counsel'], stage:'s3l', explain:'council = a governing group, counsel = advice', sentences:[
@@ -607,7 +625,7 @@ const EXT_HOMOPHONES = [
   {group:['manner','manor'], stage:'s3l', explain:'manner = way of doing something, manor = a large house', sentences:[
     {s:'She always spoke in a very polite and friendly ___.', a:'manner', why:'The way she behaved'},
     {s:'The old ___ house had twenty rooms and a huge garden.', a:'manor', why:'A large, grand house'},
-    {s:'His table ___ were excellent — he used his knife and fork perfectly.', a:'manner', why:'The way of behaving'},
+    {s:'The nurse spoke to the nervous patient in a calm ___.', a:'manner', why:'The way she spoke'},
   ]},
   {group:['descent','dissent'], stage:'s4', explain:'descent = going down, dissent = disagreement', sentences:[
     {s:'The ___ down the mountain was steep and dangerous.', a:'descent', why:'Going downward'},
@@ -620,18 +638,18 @@ const EXT_HOMOPHONES = [
 // ══════════════════════════════════════════════════════════════
 const PARAGRAPHS = [
   {text:'The {whether:weather} was {fare:fair} so we decided to go for a walk. We could {here:hear} the birds singing in the trees and the {son:sun} felt warm.',errors:{'whether':'weather','fare':'fair','here':'hear','son':'sun'},explains:{'whether':'weather = climate conditions','fare':'fair = pleasant/fine','here':'hear = to listen (with your ears)','son':'sun = the star in the sky'}},
-  {text:'I went to the shops to buy {flour:flour} for the cake. {Their:There} was a big {sail:sale} on and everything was half price.',errors:{'Their':'There'},explains:{'Their':'There = introducing "there was" (a place)'}},
+  {text:'I went to the shops to buy {flour:flour} for the cake. {Their:There} was a big {sail:sale} on and everything was half price.',errors:{'Their':'There','sail':'sale'},explains:{'Their':'There = introducing "there was" (a place)','sail':'sale = selling things for less money'}},
   {text:'The brave {night:knight} rode his horse {threw:through} the dark forest. He had to find the missing {peace:piece} of the royal crown.',errors:{'night':'knight','threw':'through','peace':'piece'},explains:{'night':'knight = armoured warrior','threw':'through = passing from one side to another','peace':'piece = a part of something'}},
-  {text:'She didn\'t know {weather:whether} to {where:wear} her new coat. The {whether:weather} looked fine from {hear:here} but the forecast said rain.',errors:{'weather':'whether','where':'wear','hear':'here'},explains:{'weather':'whether = expressing a choice','where':'wear = to put on clothing','hear':'here = at this place'}},
+  {text:'She didn\'t know {weather:whether} to {where:wear} her new coat. The {whether:weather} looked fine from {hear:here} but the forecast said rain.',errors:{'weather':'whether','where':'wear','whether':'weather','hear':'here'},explains:{'weather':'whether = expressing a choice','whether':'weather = rain, sun and wind outside','where':'wear = to put on clothing','hear':'here = at this place'}},
   {text:'{Hour:Our} class went on a trip to the {see:sea}. We could {sea:see} dolphins jumping and {here:hear} the seagulls calling.',errors:{'Hour':'Our','see':'sea','sea':'see','here':'hear'},explains:{'Hour':'Our = belonging to us','see':'sea = the ocean','sea':'see = to view with eyes','here':'hear = detecting sound'}},
-  {text:'The children {road:rode} {there:their} bikes along the coastal path. They {new:knew} the {write:right} way home by following the lighthouse.',errors:{'road':'rode','new':'knew','write':'right'},explains:{'road':'rode = past tense of ride','new':'knew = past tense of know','write':'right = correct direction'}},
+  {text:'The children {road:rode} {there:their} bikes along the coastal path. They {new:knew} the {write:right} way home by following the lighthouse.',errors:{'road':'rode','there':'their','new':'knew','write':'right'},explains:{'road':'rode = past tense of ride','there':'their = belonging to them','new':'knew = past tense of know','write':'right = correct direction'}},
   {text:'Please {weight:wait} {hear:here} while I get a {peace:piece} of cake for you. I {no:know} you\'ve been waiting a long time.',errors:{'weight':'wait','hear':'here','peace':'piece','no':'know'},explains:{'weight':'wait = to stay/pause','hear':'here = at this place','peace':'piece = a portion','no':'know = to be aware of'}},
-  {text:'He {one:won} first prize at the science {fare:fair}. His ___ experiment showed the {affect:effect} of sunlight on plants.', errors:{'one':'won','fare':'fair','affect':'effect'}, explains:{'one':'won = past tense of win','fare':'fair = an event/exhibition','affect':'effect = a result (noun)'}},
+  {text:'He {one:won} first prize at the science {fare:fair}. His experiment showed the {affect:effect} of sunlight on plants.', errors:{'one':'won','fare':'fair','affect':'effect'}, explains:{'one':'won = past tense of win','fare':'fair = an event/exhibition','affect':'effect = a result (noun)'}},
 ];
 
 const EXT_PARAGRAPHS = [
-  {text:'The school {principle:principal} announced that {stationary:stationery} costs would {affect:effect} the budget. Of {coarse:course}, this caused some {decent:dissent} among parents.',errors:{'principle':'principal','stationary':'stationery','affect':'effect','coarse':'course','decent':'dissent'},explains:{'principle':'principal = head of school','stationary':'stationery = school supplies','affect':'effect = result (noun)','coarse':'course = "of course"','decent':'dissent = disagreement'}},
-  {text:'She needed to {practise:practise} before the concert, but the {coarse:coarse} sound from the old instrument was hard to {bare:bear}. A kind {complement:compliment} from her teacher helped her confidence.',errors:{'coarse':'coarse','bare':'bear','complement':'compliment'},explains:{'bare':'bear = to endure','complement':'compliment = kind words of praise'}},
+  {text:'The school {principle:principal} announced that {stationary:stationery} costs would have an {affect:effect} on the budget. Of {coarse:course}, this caused some {descent:dissent} among parents.',errors:{'principle':'principal','stationary':'stationery','affect':'effect','coarse':'course','descent':'dissent'},explains:{'principle':'principal = head of school','stationary':'stationery = school supplies','affect':'effect = result (noun)','coarse':'course = "of course"','descent':'dissent = disagreement'}},
+  {text:'She needed to {practise:practise} before the concert, but the {coarse:coarse} sound from the old instrument was hard to {bare:bear}. A kind {complement:compliment} from her teacher helped her confidence.',errors:{'coarse':'coarse','bare':'bear','complement':'compliment'},explains:{'bare':'bear = to endure','complement':'compliment = kind words of praise'}, means:{'coarse':'rough and harsh to hear'}},
 ];
 
 // ══════════════════════════════════════════════════════════════
@@ -660,6 +678,130 @@ const streakPillEl= document.getElementById('streakPill');
 const fuelBarEl   = document.getElementById('fuelBar');
 const fuelLabelEl = document.getElementById('fuelLabel');
 
+// ── Why panel after a wrong answer ─────────────────────────
+// Student friendly meaning of every word the game can show (groups and paragraphs).
+const _HH_MEANING = {
+  "there":"a place, or the start of “there is”", "their":"belongs to them", "they're":"a short way to say “they are”",
+  "to":"towards, or the word before a doing word (to go)", "too":"also, or more than you want (too hot)", "two":"the number 2",
+  "wear":"to have clothes on", "where":"asks or tells what place", "ware":"things made to sell, like kitchenware",
+  "right":"correct, or the side that is not left", "write":"to put words on paper",
+  "here":"this place", "hear":"to listen with your ears",
+  "see":"to look with your eyes", "sea":"the ocean",
+  "plain":"simple, with nothing added", "plane":"an aeroplane",
+  "knight":"a soldier in armour from long ago", "night":"the dark time after sunset",
+  "flower":"the bloom on a plant", "flour":"the powder you bake with",
+  "weather":"the rain, sun and wind outside", "whether":"if, when there is a choice",
+  "mail":"letters and parcels", "male":"a boy or a man, or a boy animal",
+  "sail":"the cloth that catches the wind on a boat, or to go by boat", "sale":"selling things, often for less money",
+  "tail":"the part at the back of an animal", "tale":"a story",
+  "bare":"with nothing on it or in it", "bear":"the big furry animal, or to put up with something",
+  "whole":"all of it", "hole":"a gap or an opening",
+  "peace":"calm, with no fighting", "piece":"one part of something",
+  "wait":"to stay until something happens", "weight":"how heavy something is",
+  "pour":"to tip out a liquid", "paw":"an animal’s foot", "poor":"having little money, or someone you feel sorry for",
+  "no":"the opposite of yes, or none at all", "know":"to have it in your head",
+  "brake":"the part that stops a car or bike", "break":"to smash or snap, or a short rest",
+  "son":"a boy child", "sun":"the star that lights up our day",
+  "won":"did win", "one":"the number 1",
+  "aloud":"out loud, so others can hear", "allowed":"let to do something",
+  "passed":"went by, or handed to someone (a doing word)", "past":"the time before now, or going beyond something",
+  "stationary":"standing still, not moving", "stationery":"pens, paper and other writing things",
+  "principal":"the head of a school, or the main one", "principle":"a rule or belief you live by",
+  "affect":"to change something (a doing word)", "effect":"the result, what happens after (a thing)",
+  "practice":"the thing or the session, like footy practice (a noun)", "practise":"to do something again and again to get better (a doing word)",
+  "complement":"to go well with something, or finish it off", "compliment":"kind words about someone",
+  "council":"a group of people who run a town or area", "counsel":"advice",
+  "cereal":"breakfast food made from grain", "serial":"in a series, one part after another",
+  "coarse":"rough to touch", "course":"the path something takes, or the “of course” word",
+  "altar":"a special table in a church", "alter":"to change",
+  "cite":"to say where you got your information", "site":"a place where something is, or is being built", "sight":"something you see, or being able to see",
+  "manner":"the way you do or say something", "manor":"a large old house with land around it",
+  "descent":"going down, or the way down", "dissent":"disagreeing",
+  "fare":"the money you pay for a ride", "fair":"fine and sunny, or an event with stalls (a science fair)",
+  "threw":"tossed (past of throw)", "through":"in one side and out the other",
+  "hour":"60 minutes", "our":"belongs to us",
+  "road":"a street for cars", "rode":"did ride",
+  "new":"just made or just bought", "knew":"did know"
+};
+// Memory tricks, only where a reliable one exists. Keyed by any word in the group.
+const _HH_TIPS = [
+  [["there","their","they're"], "they’re = they are. The apostrophe sits where the a was. There has here inside it, and both are places."],
+  [["to","too","two"], "Too has an extra o, and it means extra. Two starts with tw, like twin and twelve."],
+  [["wear","where","ware"], "Where has here inside it. Both are about a place."],
+  [["here","hear"], "You hear with your ear. Look: hear has ear inside it."],
+  [["peace","piece"], "A piece of pie: piece starts with pie."],
+  [["no","know"], "Know starts with kn, like knowledge."],
+  [["won","one"], "Won is what you did when you win: both start with w."],
+  [["aloud","allowed"], "Aloud has loud inside it."],
+  [["passed","past"], "Passed ends in ed, like other doing words that already happened (jumped, walked)."],
+  [["stationary","stationery"], "Stationery with an e is for envelopes. Stationary with an a means standing still."],
+  [["principal","principle"], "The principal is your pal. A principle is a rule: both end in le."],
+  [["affect","effect"], "Affect is the action. Effect is the end result."],
+  [["practice","practise"], "It works like advice (a thing, with c) and advise (a doing word, with s)."],
+  [["complement","compliment"], "A complement completes something. A compliment is one I like to get."],
+  [["cite","site","sight"], "Sight has igh, like light. You need light for sight."]
+];
+let _hhReading = false;   // a wrong answer's why panel is showing
+let _hhNextAt = 0;        // time Next was pressed (guards a fast double press)
+let _hhAdvanceT = null;   // pending move to the next question after a right answer
+function _hhEsc(t){ return String(t==null?'':t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function _hhMeans(w){ return _HH_MEANING[String(w||'').toLowerCase()] || ''; }
+// Meaning of a paragraph word as it is used in that paragraph
+function _hhParaMeans(q, w){ return (q && q.means && q.means[w]) || _hhMeans(w); }
+function _hhTip(words){
+  var low = (words||[]).map(function(w){ return String(w).toLowerCase(); });
+  for (var i=0;i<_HH_TIPS.length;i++){ if (_HH_TIPS[i][0].some(function(w){ return low.indexOf(w)>=0; })) return _HH_TIPS[i][1]; }
+  return '';
+}
+function _hhClue(why){ return why ? ' <span class="hhClue">(' + _hhEsc(String(why).replace(/\s+—\s+/g, ': ')) + ')</span>' : ''; }
+function _hhPickedLine(picked){
+  var m = _hhMeans(picked);
+  return '<div class="hhWhyLine picked"><span aria-hidden="true">✗ </span>You chose <b>' + _hhEsc(picked) + '</b>.' + (m ? ' The word <b>' + _hhEsc(picked) + '</b> means ' + _hhEsc(m) + '.' : '') + '</div>';
+}
+// A sentence can carry its own meaning (m) when the word is used in a sense the general list does not cover.
+function _hhNeedsLine(lead, answer, why, own){
+  var m = own || _hhMeans(answer);
+  return '<div class="hhWhyLine answer"><span aria-hidden="true">✓ </span>' + lead + ' <b>' + _hhEsc(answer) + '</b>' + (m ? ', which means ' + _hhEsc(m) : '') + '.' + _hhClue(why) + '</div>';
+}
+function _hhTipLine(words){
+  var t = _hhTip(words);
+  return t ? '<div class="hhWhyLine tip"><span aria-hidden="true">💡 </span>Memory trick: ' + _hhEsc(t) + '</div>' : '';
+}
+function _hhShowWhy(html, withNext){
+  var w = document.getElementById('hhWhy'), n = document.getElementById('hhNextRow'), sk = document.getElementById('hhSkipBtn');
+  w.innerHTML = html; w.hidden = !html;
+  if (!withNext) return;
+  _hhReading = true;
+  subFeedEl.textContent = '';
+  if (sk) sk.hidden = true;
+  var nb = document.getElementById('hhNextBtn');
+  nb.textContent = (currentQ + 1 >= questions.length || fuel <= 0) ? 'See my results →' : 'Next →';
+  n.hidden = false;
+  try { nb.focus({ preventScroll:true }); } catch(e) { nb.focus(); }
+  try { n.scrollIntoView({ block:'nearest' }); } catch(e) {}
+}
+function _hhHideWhy(){
+  _hhReading = false;
+  var w = document.getElementById('hhWhy'), n = document.getElementById('hhNextRow'), sk = document.getElementById('hhSkipBtn');
+  if (w) { w.innerHTML = ''; w.hidden = true; }
+  if (n) n.hidden = true;
+  if (sk) sk.hidden = false;
+}
+function _hhNext(){
+  if (!_hhReading) return;
+  _hhNextAt = Date.now();
+  _hhHideWhy();
+  currentQ++;
+  showQuestion();
+  // Focus the question, never an answer, so a second Enter cannot answer it
+  var box = document.querySelector('#gameArea .monitor-box');
+  if (box) { box.setAttribute('tabindex','-1'); try { box.focus({ preventScroll:true }); } catch(e) { box.focus(); } }
+}
+function _hhTooSoon(){ return Date.now() - _hhNextAt < 500; }
+document.addEventListener('DOMContentLoaded', function(){
+  var nb = document.getElementById('hhNextBtn'); if (nb) nb.addEventListener('click', _hhNext);
+});
+
 // ── Mode selection ─────────────────────────────────────────
 function selectMode(mode, el) {
   selectedMode = mode;
@@ -670,6 +812,7 @@ function selectMode(mode, el) {
 
 function backToSetup() {
   clearInterval(fuelInterval);
+  _hhHideWhy(); clearTimeout(_hhAdvanceT);
   document.getElementById('setupScreen').classList.remove('hidden');
   document.getElementById('gameScreen').classList.add('hidden');
   document.getElementById('resultsScreen').classList.add('hidden');
@@ -687,7 +830,7 @@ function buildMode1() {
   const pool = [];
   getAllHomophones().forEach(h => {
     h.sentences.forEach(s => {
-      pool.push({ group:h.group, sentence:s.s, answer:s.a, why:s.why, explain:h.explain });
+      pool.push({ group:h.group, sentence:s.s, answer:s.a, why:s.why, m:s.m, explain:h.explain });
     });
   });
   return shuffle(pool).slice(0, 15);
@@ -719,6 +862,8 @@ function buildMode3() {
 function _doStartGame() {
   score = 0; streak = 0; bestStreak = 0; totalCorrect = 0; totalAttempts = 0;
   currentQ = 0; fuel = 100; buttonsLocked = false;
+  _hhHideWhy();
+  _hhNextAt = 0; clearTimeout(_hhAdvanceT);
 
   if (selectedMode === 'mode1') questions = buildMode1();
   else if (selectedMode === 'mode2') questions = buildMode2();
@@ -771,6 +916,7 @@ function startFuelDrain() {
   if (_wltActive) return;
   clearInterval(fuelInterval);
   fuelInterval = setInterval(() => {
+    if (_hhReading) return; // signal holds while the why panel is open
     fuel -= (_supportMode ? 0.1 : 0.2);
     if (fuel <= 0) { fuel = 0; updateHud(); clearInterval(fuelInterval); endGame(); return; }
     updateHud();
@@ -803,6 +949,7 @@ function showQuestion() {
   if(typeof WLHints!=='undefined') WLHints.resetHints();
   feedbackEl.textContent = ''; feedbackEl.className = 'feedback';
   subFeedEl.textContent = '';
+  _hhHideWhy();
   buttonsLocked = false;
   questionStart = Date.now();
   const area = document.getElementById('gameArea');
@@ -859,7 +1006,7 @@ function renderMode1(area, q) {
 }
 
 function checkMode1(chosen, btn) {
-  if (buttonsLocked) return;
+  if (buttonsLocked || _hhTooSoon()) return;
   buttonsLocked = true;
   const q = questions[currentQ];
   const correct = chosen === q.answer;
@@ -873,11 +1020,16 @@ function checkMode1(chosen, btn) {
 
   const gap = document.getElementById('gapSpan');
   gap.textContent = q.answer;
-  gap.classList.add(correct ? 'correct' : 'wrong');
+  gap.classList.add(correct ? 'correct' : 'fixed');
 
-  handleResult(correct, timeMs, q.why, q.explain, q.answer);
+  var _student = !correct && !_wltActive; // students get the why panel; Teacher Mode keeps its own feedback
+  handleResult(correct, timeMs, _student ? 'Not quite. The answer is ' + q.answer + '.' : q.why, _student ? '' : q.explain, q.answer);
   if (_wltActive) return; // Teacher mode: wait for Next click
-  setTimeout(() => { currentQ++; showQuestion(); }, correct ? 1400 : 2200);
+  if (!correct) {
+    _hhShowWhy(_hhPickedLine(chosen) + _hhNeedsLine('This sentence needs', q.answer, q.why, q.m) + _hhTipLine(q.group), true);
+    return; // wait for Next, so there is time to read why
+  }
+  _hhAdvanceT = setTimeout(() => { currentQ++; showQuestion(); }, 1400);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1002,7 +1154,7 @@ document.addEventListener('touchcancel', function() {
 function dStart(e) { e.dataTransfer.setData('text/plain', e.target.dataset.word); e.dataTransfer.setData('tid', e.target.id); }
 
 function doDrop(dropId, word, tileId) {
-  if (buttonsLocked) return;
+  if (buttonsLocked || _hhTooSoon()) return;
   const drop = document.getElementById(dropId);
   const tile = tileId ? document.getElementById(tileId) : null;
   if (!drop || !word || drop.classList.contains('filled')) return;
@@ -1030,13 +1182,25 @@ function doDrop(dropId, word, tileId) {
     const c2 = m2State.placed.drop2 === q.s2.a;
     const correct = c1 && c2;
 
-    if (!c1) { document.getElementById('drop1').classList.add('wrong'); document.getElementById('drop1').textContent = q.s1.a; }
-    if (!c2) { document.getElementById('drop2').classList.add('wrong'); document.getElementById('drop2').textContent = q.s2.a; }
+    // A wrong slot shows the student's word crossed out, then the right word in green
+    [['drop1', c1, q.s1.a, 'Blank 1'], ['drop2', c2, q.s2.a, 'Blank 2']].forEach(function(d){
+      if (d[1]) return;
+      var el = document.getElementById(d[0]);
+      el.classList.add('fixed');
+      el.innerHTML = '<s>' + _hhEsc(m2State.placed[d[0]]) + '</s>' + _hhEsc(d[2]);
+      el.setAttribute('aria-label', d[3] + ': you put ' + m2State.placed[d[0]] + ', the answer is ' + d[2]);
+    });
 
-    const whyText = correct ? q.s1.why + ' / ' + q.s2.why : 'A: "' + q.s1.a + '" — ' + q.s1.why + ' · B: "' + q.s2.a + '" — ' + q.s2.why;
-    handleResult(correct, timeMs, whyText, q.explain);
+    const whyText = correct ? q.s1.why + ' / ' + q.s2.why
+      : _wltActive ? 'A: "' + q.s1.a + '" — ' + q.s1.why + ' · B: "' + q.s2.a + '" — ' + q.s2.why
+      : 'Not quite. The two words are swapped.';
+    handleResult(correct, timeMs, whyText, (correct || _wltActive) ? q.explain : '');
     if (_wltActive) return; // Teacher mode: wait for Next click
-    setTimeout(() => { currentQ++; showQuestion(); }, correct ? 1400 : 2800);
+    if (!correct) {
+        _hhShowWhy(_hhNeedsLine('Monitor A needs', q.s1.a, '', q.s1.m) + _hhNeedsLine('Monitor B needs', q.s2.a, '', q.s2.m) + _hhTipLine(q.words), true);
+      return; // wait for Next
+    }
+    _hhAdvanceT = setTimeout(() => { currentQ++; showQuestion(); }, 1400);
   }
 }
 
@@ -1046,9 +1210,8 @@ function doDrop(dropId, word, tileId) {
 let m3State = {};
 
 function renderMode3(area, q) {
-  const errors = q.errors;
-  const errorKeys = Object.keys(errors);
-  const totalErrors = errorKeys.filter(k => k !== errors[k]).length;
+  // Count the wrong words in the paragraph itself, so the count always matches what is on screen
+  const totalErrors = (q.text.match(/\{[^}]+\}/g) || []).filter(m => { const p = m.slice(1, -1).split(':'); return p[0] !== p[1]; }).length;
 
   const parts = q.text.split(/(\{[^}]+\})/g);
   let html = '';
@@ -1084,7 +1247,8 @@ function fixWord(el) {
   if (shown === correct) {
     el.style.animation = 'sciShake .4s ease-out';
     setTimeout(() => el.style.animation = '', 400);
-    showFeedback(false, 'That word is already correct!', '');
+    showFeedback(false, 'That word is already right!', '');
+    _hhShowWhy(_hhNeedsLine('This sentence does need', shown, '', _hhParaMeans(m3State.q, shown)), false);
     streak = 0; if (!_wltActive) updateHud();
     return;
   }
@@ -1119,20 +1283,24 @@ function applyFix(btn, chosen, correct) {
 
   totalAttempts++;
   if (isCorrect) {
+    _hhShowWhy('', false);
     el.textContent = correct;
     el.classList.remove('wrong-word');
     el.classList.add('fixed');
     m3State.fixed++;
     totalCorrect++;
     document.getElementById('errorsLeft').textContent = m3State.totalErrors - m3State.fixed;
-    handleResult(true, timeMs, correct + ' is correct' + (explainText ? ' — ' + explainText : ''), '', correct, true);
+    var _m = _hhParaMeans(q, correct);
+    handleResult(true, timeMs, correct + ' is right' + (_m ? ': ' + _m : (explainText ? ': ' + explainText : '')), '', correct, true);
 
     if (m3State.fixed >= m3State.totalErrors) {
       if (_wltActive) return; // Teacher mode: wait for Next click
-      setTimeout(() => { currentQ++; showQuestion(); }, 1500);
+      _hhAdvanceT = setTimeout(() => { currentQ++; showQuestion(); }, 1500);
     }
   } else {
-    handleResult(false, timeMs, 'It should be "' + correct + '"' + (explainText ? ' — ' + explainText : ''), '', correct, true);
+    handleResult(false, timeMs, _wltActive ? 'It should be "' + correct + '"' + (explainText ? ' — ' + explainText : '') : 'Not quite. Try that word again.', '', correct, true);
+    _hhShowWhy(_hhPickedLine(chosen) + _hhNeedsLine('This sentence needs', correct, '', _hhParaMeans(q, correct)) + _hhTipLine([chosen, correct]), false);
+    el.focus();
   }
 }
 
@@ -1186,7 +1354,11 @@ function handleResult(correct, timeMs, why, explain, word, skipCount) {
       WLTeacher.onAnswer(false, fbHTML);
     }
 
-    if (!_wltActive && fuel <= 0) { clearInterval(fuelInterval); setTimeout(endGame, 800); }
+    if (!_wltActive && fuel <= 0) {
+      clearInterval(fuelInterval);
+      // Intercept and Decode show why first, and their button opens the results
+      if (selectedMode === 'mode3') setTimeout(endGame, 800);
+    }
   }
   if (!_wltActive) updateHud();
 }
@@ -1262,6 +1434,9 @@ function endGame() {
       <button class="sec-btn" onclick="backToSetup()">← Change Mode</button>
       <a href="landing.html" class="sec-btn" style="text-decoration:none;">🏠 Home</a>
     </div>`;
+  // Keyboard users land on Play Again; a fast second Enter on "See my results" cannot restart at once
+  var pa = el.querySelector('.pri-btn');
+  if (pa && !_wltActive) { pa.disabled = true; setTimeout(function(){ pa.disabled = false; try { pa.focus({ preventScroll:true }); } catch(e) { pa.focus(); } }, 500); }
 }
 
 // ── Helpers ─────────────────────────────────────────────────
@@ -1325,10 +1500,10 @@ if(typeof WLHelp!=='undefined') WLHelp.init({
   steps:[
     {icon:'👀',title:'Read the sentence',desc:'A sentence appears with a gap. The homophones sound the same but are spelled differently.'},
     {icon:'🎯',title:'Pick the right spelling',desc:'Choose the correct homophone that fits the meaning of the sentence.'},
-    {icon:'💡',title:'Learn the difference',desc:'After each answer, you will see why each spelling has a different meaning.'},
+    {icon:'💡',title:'Learn from mistakes',desc:'If you pick the wrong word, you will see what your word means and what the sentence needed. Press Next when you are ready.'},
     {icon:'⚡',title:'Keep your signal',desc:'Your signal strength drops over time. Correct answers boost it.'}
   ],
-  audioText:'In Homophone Hunter, you read a sentence with a gap and pick the correct homophone. Homophones sound the same but have different spellings and meanings. Choose the spelling that fits the sentence. After each answer you will learn what each spelling means. Your signal strength drops over time, so try to answer quickly.'
+  audioText:'In Homophone Hunter, you read a sentence with a gap and pick the correct homophone. Homophones sound the same but have different spellings and meanings. Choose the spelling that fits the sentence. If you pick the wrong word, you will see what your word means and what the sentence needed, then press Next when you are ready. Your signal strength drops over time, so try to answer quickly.'
 });
 if(typeof WLHints!=='undefined') WLHints.register({
   getStrategyHint: function(){ return 'Read the sentence carefully \u2014 the meaning tells you which spelling to use.'; },
