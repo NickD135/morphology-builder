@@ -292,6 +292,35 @@
     .feedback.ok{ color:#4ade80; }
     .feedback.bad{ color:#f87171; }
     .subFeedback{ min-height:20px; text-align:center; color:#7dd3fc; font-weight:700; margin-top:4px; line-height:1.5; font-size:13px; }
+    /* Why panel after a wrong answer */
+    .wsWhy{ max-width:600px; margin:10px auto 0; text-align:left; display:grid; gap:8px; }
+    .wsWhy[hidden], .wsNextRow[hidden]{ display:none; }
+    .wsWhyLine{ background:rgba(255,255,255,.06); border:2px solid rgba(255,255,255,.12); border-radius:12px; padding:9px 13px; font-size:16px; font-weight:600; line-height:1.5; color:#e0f2fe; }
+    .wsWhyLine.picked{ border-color:rgba(248,113,113,.55); }
+    .wsWhyLine.answer{ border-color:rgba(74,222,128,.55); }
+    .wsWhyLine.tip{ border-color:rgba(251,191,36,.45); color:#fef3c7; }
+    .wsWhyLine b{ font-weight:900; color:#fff; }
+    .wsOrder{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+    .wsOrder > span{ background:rgba(14,116,144,.35); border:1.5px solid rgba(34,211,238,.45); border-radius:8px; padding:3px 8px; font-size:14px; font-weight:800; }
+    .wsOrder > span.moved{ border-color:#f87171; border-style:dashed; }
+    .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    .wsNextRow{ display:flex; justify-content:center; margin-top:10px; }
+    .wsNextRow .primaryBtn{ font-size:14px; padding:12px 26px; min-height:44px; }
+    /* Spectrum tiles and places are real buttons so they work by keyboard */
+    button.spectrumWord, button.spectrumZone{ font-family:inherit; }
+    button.spectrumZone{ color:inherit; }
+    .spectrumWord:focus-visible, .spectrumZone:focus-visible{ outline:3px solid #fbbf24; outline-offset:2px; }
+    .spectrumZone .zone-mark{ margin-right:4px; font-size:13px; }
+    .bubbleBtn.wsMarkRight:disabled{ opacity:1; border-color:#4ade80; }
+    .bubbleBtn.wsMarkPicked:disabled{ opacity:1; border-color:#f87171; }
+    /* Floating answer bubbles and scene motion stop in low-stim mode and when the device asks for reduced motion */
+    .low-stim .bubbleBtn, .low-stim .meter-needle, .low-stim .scene-prop-left svg, .low-stim .scene-prop-left [style*="animation"]{ animation:none!important; }
+    .low-stim #particles{ display:none!important; }
+    @media (prefers-reduced-motion: reduce){
+      .bubbleBtn, .meter-needle, .scene-prop-left svg, .scene-prop-left [style*="animation"], #sciCharWrap{ animation:none!important; }
+      #particles{ display:none!important; }
+      .spectrumWord:hover:not(.placed), .primaryBtn:hover{ transform:none; }
+    }
 
     /* Buttons */
     .actionRow{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:14px; }
@@ -525,11 +554,13 @@
     <div id="ealdDefinition" class="eald-definition"></div>
     <div class="feedback" id="feedback" aria-live="assertive"></div>
     <div class="subFeedback" id="subFeedback" aria-live="polite"></div>
+    <div class="wsWhy" id="wsWhy" hidden aria-live="polite"></div>
+    <div class="wsNextRow" id="wsNextRow" hidden><button class="primaryBtn" id="wsNextBtn" type="button">Next →</button></div>
     <div id="ealdTranslation" aria-live="polite"></div>
 
     <div class="actionRow">
-      <button class="secondaryBtn" onclick="restartGame()">Restart</button>
-      <button class="secondaryBtn" onclick="skipQuestion()">Skip →</button>
+      <button class="secondaryBtn" id="wsRestartBtn" onclick="restartGame()">Restart</button>
+      <button class="secondaryBtn" id="wsSkipBtn" onclick="skipQuestion()">Skip →</button>
     </div>
 
   </div></div>
@@ -553,15 +584,15 @@ document.addEventListener('DOMContentLoaded', function(){ _supportMode = !!(type
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SYNONYM_PAIRS = [
-  { word:"happy", stage:"s2e",      options:["joyful","miserable","angry"],       correct:"joyful",    explain:"Happy and joyful both mean feeling pleasure and contentment." },
+  { word:"happy", stage:"s2e",      options:["joyful","miserable","angry"],       correct:"joyful",    explain:"Happy and joyful both mean feeling glad." },
   { word:"big", stage:"s2e",        options:["large","tiny","dark"],              correct:"large",     explain:"Big and large both describe something of great size." },
   { word:"fast", stage:"s2e",       options:["quick","slow","calm"],              correct:"quick",     explain:"Fast and quick both mean moving at speed." },
-  { word:"angry", stage:"s2l",      options:["furious","peaceful","cheerful"],    correct:"furious",   explain:"Angry and furious both describe feeling strong displeasure." },
+  { word:"angry", stage:"s2l",      options:["furious","peaceful","cheerful"],    correct:"furious",   explain:"Angry and furious both describe feeling very cross." },
   { word:"cold", stage:"s2e",       options:["chilly","warm","bright"],           correct:"chilly",    explain:"Cold and chilly both describe low temperature." },
-  { word:"start", stage:"s2e",      options:["begin","finish","pause"],           correct:"begin",     explain:"Start and begin both mean to commence something." },
+  { word:"start", stage:"s2e",      options:["begin","finish","pause"],           correct:"begin",     explain:"Start and begin both mean to get something going." },
   { word:"end", stage:"s2e",        options:["finish","open","grow"],             correct:"finish",    explain:"End and finish both mean to bring something to a close." },
   { word:"help", stage:"s2l",       options:["assist","hinder","ignore"],         correct:"assist",    explain:"Help and assist both mean to support someone." },
-  { word:"look", stage:"s2l",       options:["observe","ignore","forget"],        correct:"observe",   explain:"Look and observe both involve paying visual attention." },
+  { word:"look", stage:"s2l",       options:["observe","ignore","forget"],        correct:"observe",   explain:"Look and observe both mean using your eyes to notice things." },
   { word:"brave", stage:"s2l",      options:["courageous","cowardly","nervous"],  correct:"courageous",explain:"Brave and courageous both describe facing danger without fear." },
   { word:"tired", stage:"s2l",      options:["exhausted","energetic","rested"],   correct:"exhausted", explain:"Tired and exhausted both describe lacking energy." },
   { word:"funny", stage:"s2l",      options:["amusing","boring","serious"],       correct:"amusing",   explain:"Funny and amusing both describe something that causes laughter." },
@@ -569,43 +600,43 @@ const SYNONYM_PAIRS = [
   { word:"make", stage:"s2e",       options:["create","destroy","remove"],        correct:"create",    explain:"Make and create both mean to produce something." },
   { word:"small", stage:"s2e",      options:["tiny","huge","wide"],               correct:"tiny",      explain:"Small and tiny both describe something of little size." },
   { word:"sad", stage:"s2e",        options:["unhappy","glad","excited"],         correct:"unhappy",   explain:"Sad and unhappy both describe feeling sorrow." },
-  { word:"smart", stage:"s2e",      options:["clever","foolish","careless"],      correct:"clever",    explain:"Smart and clever both describe having sharp intelligence." },
+  { word:"smart", stage:"s2e",      options:["clever","foolish","careless"],      correct:"clever",    explain:"Smart and clever both describe being quick to learn and think." },
   { word:"loud", stage:"s2e",       options:["noisy","quiet","silent"],           correct:"noisy",     explain:"Loud and noisy both describe producing a lot of sound." },
   { word:"right", stage:"s2e",      options:["correct","wrong","uncertain"],      correct:"correct",   explain:"Right and correct both mean accurate or without error." },
   { word:"walk", stage:"s2l",       options:["stroll","run","fly"],               correct:"stroll",    explain:"Walk and stroll both describe moving on foot at a relaxed pace." },
-  { word:"fix", stage:"s2e",        options:["repair","break","damage"],          correct:"repair",    explain:"Fix and repair both mean to restore something to working order." },
+  { word:"fix", stage:"s2e",        options:["repair","break","damage"],          correct:"repair",    explain:"Fix and repair both mean to make something work again." },
   { word:"old", stage:"s2l",        options:["ancient","modern","young"],         correct:"ancient",   explain:"Old and ancient both describe something from long ago." },
   { word:"pretty", stage:"s2e",     options:["beautiful","ugly","plain"],         correct:"beautiful", explain:"Pretty and beautiful both describe being pleasing to look at." },
-  { word:"wet", stage:"s2e",        options:["damp","dry","arid"],                correct:"damp",      explain:"Wet and damp both describe containing moisture." },
-  { word:"silent", stage:"s2e",     options:["quiet","loud","noisy"],             correct:"quiet",     explain:"Silent and quiet both describe an absence of sound." },
+  { word:"wet", stage:"s2e",        options:["damp","dry","arid"],                correct:"damp",      explain:"Wet and damp both describe having water on or in something." },
+  { word:"silent", stage:"s2e",     options:["quiet","loud","noisy"],             correct:"quiet",     explain:"Silent and quiet both describe having little or no sound." },
 ];
 
 const ANTONYM_PAIRS = [
-  { word:"happy", stage:"s2e",      options:["miserable","joyful","excited"],     correct:"miserable", explain:"Happy means feeling pleasure — miserable means feeling great unhappiness." },
-  { word:"big", stage:"s2e",        options:["tiny","large","tall"],              correct:"tiny",      explain:"Big means great in size — tiny means extremely small." },
-  { word:"fast", stage:"s2e",       options:["slow","quick","speedy"],            correct:"slow",      explain:"Fast means moving quickly — slow means moving at low speed." },
-  { word:"hot", stage:"s2e",        options:["freezing","warm","mild"],           correct:"freezing",  explain:"Hot describes high temperature — freezing describes extremely cold." },
-  { word:"brave", stage:"s2l",      options:["cowardly","daring","bold"],         correct:"cowardly",  explain:"Brave means facing danger without fear — cowardly means avoiding it." },
-  { word:"begin", stage:"s2e",      options:["finish","start","continue"],        correct:"finish",    explain:"Begin means to start something — finish means to bring it to an end." },
-  { word:"include", stage:"s2l",    options:["exclude","involve","contain"],      correct:"exclude",   explain:"Include means to add — exclude means to leave out." },
-  { word:"expand", stage:"s3e",     options:["contract","grow","extend"],         correct:"contract",  explain:"Expand means to grow larger — contract means to shrink." },
-  { word:"ancient", stage:"s2l",    options:["modern","old","historic"],          correct:"modern",    explain:"Ancient means from long ago — modern means of the present time." },
-  { word:"light", stage:"s2e",      options:["heavy","pale","bright"],            correct:"heavy",     explain:"Light means low in weight — heavy means great in weight." },
-  { word:"polite", stage:"s2e",     options:["rude","kind","gentle"],             correct:"rude",      explain:"Polite means courteous — rude means showing a lack of respect." },
-  { word:"success", stage:"s2l",    options:["failure","achievement","victory"],  correct:"failure",   explain:"Success means achieving a goal — failure means not achieving it." },
-  { word:"construct", stage:"s2l",  options:["demolish","build","create"],        correct:"demolish",  explain:"Construct means to build — demolish means to tear down." },
-  { word:"love", stage:"s2e",       options:["hate","like","adore"],              correct:"hate",      explain:"Love is strong affection — hate is strong dislike or hostility." },
-  { word:"clean", stage:"s2e",      options:["filthy","tidy","neat"],             correct:"filthy",    explain:"Clean means free from dirt — filthy means extremely dirty." },
-  { word:"generous", stage:"s2l",   options:["selfish","kind","caring"],          correct:"selfish",   explain:"Generous means giving freely — selfish means thinking only of oneself." },
-  { word:"encourage", stage:"s2l",  options:["discourage","support","praise"],    correct:"discourage",explain:"Encourage means to give confidence — discourage means to dissuade." },
-  { word:"transparent", stage:"s3e",options:["opaque","clear","visible"],         correct:"opaque",    explain:"Transparent means you can see through it — opaque means you cannot." },
-  { word:"arrive", stage:"s2l",     options:["depart","come","appear"],           correct:"depart",    explain:"Arrive means to reach a place — depart means to leave." },
-  { word:"remember", stage:"s2e",   options:["forget","recall","recollect"],      correct:"forget",    explain:"Remember means to retain in memory — forget means to be unable to recall." },
-  { word:"accept", stage:"s2l",     options:["reject","receive","take"],          correct:"reject",    explain:"Accept means to take or agree to — reject means to refuse." },
-  { word:"wild", stage:"s2l",       options:["tame","fierce","unruly"],           correct:"tame",      explain:"Wild means living in nature without control — tame means trained and gentle." },
-  { word:"narrow", stage:"s2e",     options:["wide","thin","slim"],               correct:"wide",      explain:"Narrow means of small width — wide means of great width." },
-  { word:"positive", stage:"s2l",   options:["negative","optimistic","hopeful"],  correct:"negative",  explain:"Positive means having a good or affirmative quality — negative is the opposite." },
-  { word:"question", stage:"s2e",   options:["answer","query","ask"],             correct:"answer",    explain:"A question is something asked — an answer is the response to it." },
+  { word:"happy", stage:"s2e",      options:["miserable","joyful","excited"],     correct:"miserable", explain:"Happy means feeling glad. Miserable means feeling very sad." },
+  { word:"big", stage:"s2e",        options:["tiny","large","tall"],              correct:"tiny",      explain:"Big means great in size. Tiny means extremely small." },
+  { word:"fast", stage:"s2e",       options:["slow","quick","speedy"],            correct:"slow",      explain:"Fast means moving quickly. Slow means moving at low speed." },
+  { word:"hot", stage:"s2e",        options:["freezing","warm","mild"],           correct:"freezing",  explain:"Hot describes high temperature. Freezing describes extremely cold." },
+  { word:"brave", stage:"s2l",      options:["cowardly","daring","bold"],         correct:"cowardly",  explain:"Brave means facing danger without fear. Cowardly means avoiding it." },
+  { word:"begin", stage:"s2e",      options:["finish","start","continue"],        correct:"finish",    explain:"Begin means to start something. Finish means to bring it to an end." },
+  { word:"include", stage:"s2l",    options:["exclude","involve","contain"],      correct:"exclude",   explain:"Include means to add. Exclude means to leave out." },
+  { word:"expand", stage:"s3e",     options:["contract","grow","extend"],         correct:"contract",  explain:"Expand means to grow larger. Contract means to shrink." },
+  { word:"ancient", stage:"s2l",    options:["modern","old","historic"],          correct:"modern",    explain:"Ancient means from long ago. Modern means of the present time." },
+  { word:"light", stage:"s2e",      options:["heavy","pale","bright"],            correct:"heavy",     wm:"not heavy",     explain:"Light means low in weight. Heavy means great in weight." },
+  { word:"polite", stage:"s2e",     options:["rude","kind","gentle"],             correct:"rude",      explain:"Polite means having good manners. Rude means having bad manners." },
+  { word:"success", stage:"s2l",    options:["failure","achievement","victory"],  correct:"failure",   explain:"Success means achieving a goal. Failure means not achieving it." },
+  { word:"construct", stage:"s2l",  options:["demolish","build","create"],        correct:"demolish",  explain:"Construct means to build. Demolish means to tear down." },
+  { word:"love", stage:"s2e",       options:["hate","like","adore"],              correct:"hate",      explain:"Love is a strong liking. Hate is a strong dislike." },
+  { word:"clean", stage:"s2e",      options:["filthy","tidy","neat"],             correct:"filthy",    explain:"Clean means free from dirt. Filthy means extremely dirty." },
+  { word:"generous", stage:"s2l",   options:["selfish","kind","caring"],          correct:"selfish",   explain:"Generous means giving freely. Selfish means thinking only of yourself." },
+  { word:"encourage", stage:"s2l",  options:["discourage","support","praise"],    correct:"discourage",explain:"Encourage means to give someone confidence to try. Discourage means to make them feel less like trying." },
+  { word:"transparent", stage:"s3e",options:["opaque","clear","visible"],         correct:"opaque",    m:{clear:"easy to see through, like clean glass"},    explain:"Transparent means you can see through it. Opaque means you cannot." },
+  { word:"arrive", stage:"s2l",     options:["depart","come","appear"],           correct:"depart",    explain:"Arrive means to reach a place. Depart means to leave." },
+  { word:"remember", stage:"s2e",   options:["forget","recall","recollect"],      correct:"forget",    explain:"Remember means to keep something in your mind. Forget means to lose it from your mind." },
+  { word:"accept", stage:"s2l",     options:["reject","receive","take"],          correct:"reject",    explain:"Accept means to take or agree to. Reject means to refuse." },
+  { word:"wild", stage:"s2l",       options:["tame","fierce","unruly"],           correct:"tame",      explain:"Wild means living in nature without control. Tame means trained and gentle." },
+  { word:"narrow", stage:"s2e",     options:["wide","thin","slim"],               correct:"wide",      explain:"Narrow means of small width. Wide means of great width." },
+  { word:"positive", stage:"s2l",   options:["negative","optimistic","hopeful"],  correct:"negative",  explain:"Positive means good or hopeful. Negative means bad, or looking at the bad side." },
+  { word:"question", stage:"s2e",   options:["answer","query","ask"],             correct:"answer",    explain:"A question is something asked. An answer is the response to it." },
 ];
 
 const SPECTRUM_SETS = [
@@ -628,6 +659,7 @@ const SPECTRUM_SETS = [
     leftAnchor:"MOTIONLESS", rightAnchor:"LIGHTNING",
     words:["sluggish","slow","steady","brisk","rapid","blazing"],
     order:[0,1,2,3,4,5],
+    close:[[0,1]], // neighbours so close in meaning that either order is fair
     clue:"Arrange from slowest to fastest"
   },
   {
@@ -635,6 +667,7 @@ const SPECTRUM_SETS = [
     leftAnchor:"DEVASTATED", rightAnchor:"ECSTATIC",
     words:["miserable","sad","content","pleased","happy","overjoyed"],
     order:[0,1,2,3,4,5],
+    close:[[2,3],[3,4]], // neighbours so close in meaning that either order is fair
     clue:"Arrange from least to most happy"
   },
   {
@@ -642,6 +675,7 @@ const SPECTRUM_SETS = [
     leftAnchor:"CALM", rightAnchor:"FURIOUS",
     words:["peaceful","irritated","annoyed","cross","angry","enraged"],
     order:[0,1,2,3,4,5],
+    close:[[1,2],[2,3]], // neighbours so close in meaning that either order is fair
     clue:"Arrange from calmest to most angry"
   },
   {
@@ -656,6 +690,7 @@ const SPECTRUM_SETS = [
     leftAnchor:"EFFORTLESS", rightAnchor:"GRUELLING",
     words:["simple","easy","moderate","challenging","difficult","exhausting"],
     order:[0,1,2,3,4,5],
+    close:[[0,1],[3,4]], // neighbours so close in meaning that either order is fair
     clue:"Arrange from easiest to hardest"
   },
   {
@@ -663,6 +698,7 @@ const SPECTRUM_SETS = [
     leftAnchor:"FEARLESS", rightAnchor:"TERRIFIED",
     words:["brave","nervous","uneasy","scared","frightened","petrified"],
     order:[0,1,2,3,4,5],
+    close:[[1,2],[3,4]], // neighbours so close in meaning that either order is fair
     clue:"Arrange from bravest to most afraid"
   },
 ];
@@ -675,21 +711,21 @@ const EXT_SYNONYM_PAIRS = [
   { word:"significant", stage:"s3e", options:["substantial","trivial","minor"],     correct:"substantial",explain:"Significant and substantial both mean of considerable importance." },
   { word:"ambiguous", stage:"s3e",   options:["vague","clear","explicit"],          correct:"vague",      explain:"Ambiguous and vague both describe something unclear or uncertain." },
   { word:"demonstrate", stage:"s3e", options:["illustrate","hide","conceal"],       correct:"illustrate", explain:"Demonstrate and illustrate both mean to show or explain something." },
-  { word:"establish", stage:"s3e",   options:["determine","question","disprove"],   correct:"determine",  explain:"Establish and determine both mean to find out or confirm something." },
+  { word:"establish", stage:"s3e",   options:["determine","question","disprove"],   correct:"determine",  m:{question:"to doubt whether something is true"},  explain:"Establish and determine both mean to find out or confirm something." },
   { word:"accumulate", stage:"s3l",  options:["amass","spend","reduce"],            correct:"amass",      explain:"Accumulate and amass both mean to gather or collect over time." },
   { word:"analyse", stage:"s3e",     options:["examine","ignore","overlook"],       correct:"examine",    explain:"Analyse and examine both mean to study something carefully." },
   { word:"modify", stage:"s3e",      options:["alter","preserve","maintain"],       correct:"alter",      explain:"Modify and alter both mean to change something." },
 ];
 
 const EXT_ANTONYM_PAIRS = [
-  { word:"convergent", stage:"s3l",  options:["divergent","similar","parallel"],    correct:"divergent",  explain:"Convergent means coming together — divergent means moving apart." },
-  { word:"explicit", stage:"s3l",    options:["implicit","clear","stated"],         correct:"implicit",   explain:"Explicit means stated directly — implicit means implied but not stated." },
-  { word:"concrete", stage:"s3l",    options:["abstract","solid","definite"],       correct:"abstract",   explain:"Concrete means tangible and specific — abstract means conceptual." },
-  { word:"objective", stage:"s3l",   options:["subjective","fair","neutral"],       correct:"subjective", explain:"Objective means based on facts — subjective means based on personal opinion." },
-  { word:"benevolent", stage:"s3l",  options:["malevolent","kind","generous"],      correct:"malevolent", explain:"Benevolent means wishing good to others — malevolent means wishing them harm." },
-  { word:"endorse", stage:"s3l",     options:["condemn","support","approve"],       correct:"condemn",    explain:"Endorse means to approve — condemn means to express strong disapproval." },
-  { word:"amplify", stage:"s3l",     options:["diminish","increase","magnify"],     correct:"diminish",   explain:"Amplify means to increase — diminish means to make smaller or weaker." },
-  { word:"transparent", stage:"s3l", options:["opaque","clear","visible"],          correct:"opaque",     explain:"Transparent means see-through — opaque means impossible to see through." },
+  { word:"convergent", stage:"s3l",  options:["divergent","similar","parallel"],    correct:"divergent",  explain:"Convergent means coming together. Divergent means moving apart." },
+  { word:"explicit", stage:"s3l",    options:["implicit","clear","stated"],         correct:"implicit",   explain:"Explicit means stated directly. Implicit means implied but not stated." },
+  { word:"concrete", stage:"s3l",    options:["abstract","solid","definite"],       correct:"abstract",   wm:"real, something you can touch or see",   explain:"Concrete means tangible and specific. Abstract means conceptual." },
+  { word:"objective", stage:"s3l",   options:["subjective","fair","neutral"],       correct:"subjective", wm:"based on facts, not feelings", explain:"Objective means based on facts. Subjective means based on personal opinion." },
+  { word:"benevolent", stage:"s3l",  options:["malevolent","kind","generous"],      correct:"malevolent", explain:"Benevolent means wishing good to others. Malevolent means wishing them harm." },
+  { word:"endorse", stage:"s3l",     options:["condemn","support","approve"],       correct:"condemn",    explain:"Endorse means to approve. Condemn means to express strong disapproval." },
+  { word:"amplify", stage:"s3l",     options:["diminish","increase","magnify"],     correct:"diminish",   explain:"Amplify means to increase. Diminish means to make smaller or weaker." },
+  { word:"transparent", stage:"s3l", options:["opaque","clear","visible"],          correct:"opaque",     m:{clear:"easy to see through, like clean glass"},     explain:"Transparent means see-through. Opaque means impossible to see through." },
 ];
 
 const EXT_SPECTRUM_SETS = [
@@ -698,6 +734,7 @@ const EXT_SPECTRUM_SETS = [
     leftAnchor:"UNCERTAIN", rightAnchor:"DEFINITIVE",
     words:["doubtful","possible","probable","likely","certain","conclusive"],
     order:[0,1,2,3,4,5],
+    close:[[2,3]], // neighbours so close in meaning that either order is fair
     clue:"Arrange from least to most certain"
   },
   {
@@ -705,6 +742,8 @@ const EXT_SPECTRUM_SETS = [
     leftAnchor:"COLLOQUIAL", rightAnchor:"FORMAL",
     words:["slang","casual","informal","neutral","professional","academic"],
     order:[0,1,2,3,4,5],
+    close:[[1,2]], // neighbours so close in meaning that either order is fair
+    m:{neutral:"in the middle, not chatty and not fancy"},
     clue:"Arrange from most informal to most formal"
   },
   {
@@ -712,9 +751,336 @@ const EXT_SPECTRUM_SETS = [
     leftAnchor:"SIMPLE", rightAnchor:"INTRICATE",
     words:["basic","straightforward","moderate","involved","complex","elaborate"],
     order:[0,1,2,3,4,5],
+    close:[[0,1],[3,4]], // neighbours so close in meaning that either order is fair
     clue:"Arrange from simplest to most complex"
   },
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WHY FEEDBACK — plain meanings for every option and spectrum word.
+// A question or set can carry its own meaning (m) when a word is used in
+// another sense there (clear = see-through for transparent), and wm says which
+// sense the target word has when it has several (light = not heavy).
+// ─────────────────────────────────────────────────────────────────────────────
+const _WS_MEAN = {
+  abstract:"about ideas, not things you can touch or see",
+  academic:"the careful, formal way of writing used in schools and books",
+  accurate:"exactly right, with no mistakes",
+  achievement:"something good you managed to do",
+  adore:"to love very much",
+  alter:"to change something",
+  amass:"to collect a big amount over time",
+  amusing:"making you smile or laugh",
+  ancient:"very, very old, from long ago",
+  angry:"very cross and upset",
+  annoyed:"a little angry",
+  answer:"what you say back to a question",
+  appear:"to come into sight",
+  approve:"to agree that something is good or OK",
+  arid:"very dry, with almost no rain",
+  ask:"to put a question to someone",
+  assist:"to help",
+  assume:"to think something is true without checking",
+  basic:"simple, with only the main parts",
+  beautiful:"very lovely to look at",
+  begin:"to start",
+  blazing:"extremely fast",
+  bold:"brave and willing to take risks",
+  boring:"not interesting",
+  brave:"willing to do something scary",
+  break:"to smash or stop something working",
+  bright:"full of light",
+  brisk:"quick and lively",
+  build:"to make something by putting parts together",
+  calm:"quiet and peaceful, not worried or upset",
+  careless:"not taking care, so mistakes happen",
+  caring:"kind and wanting to look after others",
+  casual:"relaxed and easygoing",
+  certain:"sure to happen",
+  challenging:"hard, so you have to try your best",
+  cheerful:"happy and smiling",
+  chilly:"cold enough to want a jumper",
+  clear:"easy to understand, with no doubt",
+  clever:"quick to learn and understand",
+  colossal:"extremely big",
+  come:"to move towards a place",
+  complex:"made of many parts, so it is hard to understand",
+  conceal:"to hide",
+  conclusive:"proving something so there is no doubt left",
+  condemn:"to say strongly that something is very bad",
+  contain:"to hold something inside",
+  content:"happy enough and calm",
+  continue:"to keep going",
+  contract:"to get smaller",
+  cool:"a little cold, in a pleasant way",
+  correct:"right, with no mistakes",
+  courageous:"very brave",
+  cowardly:"too scared to do something brave",
+  create:"to make something new",
+  cross:"quite angry",
+  damage:"to harm or break something",
+  damp:"a little wet",
+  daring:"brave enough to try something risky",
+  dark:"with little or no light",
+  dazzling:"so bright it is hard to look at",
+  deduce:"to work something out from clues",
+  definite:"clear and certain",
+  demolish:"to knock down a building",
+  depart:"to leave",
+  destroy:"to break something so badly it is ruined",
+  determine:"to find out for sure",
+  difficult:"hard to do",
+  dim:"not very bright",
+  diminish:"to make smaller or weaker",
+  discourage:"to make someone feel less like trying",
+  disprove:"to show that something is not true",
+  divergent:"moving apart in different directions",
+  doubtful:"probably not going to happen",
+  dry:"with no water",
+  easy:"not hard to do",
+  elaborate:"with lots of careful detail",
+  energetic:"full of energy",
+  enraged:"extremely angry, in a rage",
+  examine:"to look at something very carefully",
+  excited:"very happy and eager about something",
+  exclude:"to leave out",
+  exhausted:"very, very tired",
+  exhausting:"so hard it makes you very tired",
+  explicit:"said clearly and directly",
+  extend:"to make longer",
+  failure:"not managing to do what you tried to do",
+  fair:"treating everyone the same way",
+  familiar:"known well",
+  fierce:"wild and ready to attack",
+  filthy:"very dirty",
+  finish:"to come to the end",
+  fly:"to move through the air",
+  foolish:"silly, not sensible",
+  forget:"to not remember",
+  freezing:"extremely cold",
+  frightened:"scared",
+  furious:"extremely angry",
+  generous:"happy to give and share",
+  gentle:"soft and kind",
+  glad:"happy and pleased",
+  grow:"to get bigger",
+  guess:"to give an answer when you are not sure",
+  happy:"feeling glad",
+  hate:"to dislike very strongly",
+  heavy:"weighing a lot",
+  hide:"to put something where it cannot be seen",
+  hinder:"to get in the way and make things harder",
+  historic:"important in history",
+  hopeful:"thinking that good things will happen",
+  hot:"having a high temperature",
+  huge:"very big",
+  ignore:"to take no notice of",
+  illustrate:"to show or explain with examples or pictures",
+  implicit:"suggested but not said out loud",
+  increase:"to make bigger or more",
+  informal:"relaxed, the way you talk to friends",
+  involve:"to include as a part",
+  involved:"with many parts that link together",
+  irritated:"a little bothered",
+  joyful:"very happy",
+  kind:"caring and friendly to others",
+  large:"big",
+  lengthy:"very long",
+  like:"to enjoy or think well of",
+  likely:"will probably happen",
+  loud:"making a lot of sound",
+  lukewarm:"only just warm",
+  magnify:"to make something look bigger",
+  maintain:"to keep something the same or in good order",
+  malevolent:"wanting to hurt others",
+  medium:"in the middle, not big and not small",
+  mild:"not too hot or cold",
+  minor:"small and not very important",
+  miserable:"very sad",
+  moderate:"medium, not too much and not too little",
+  modern:"new, from the present time",
+  neat:"tidy and in order",
+  negative:"bad, or showing the bad side",
+  nervous:"a bit worried or scared",
+  neutral:"not taking anyone's side",
+  noisy:"making a lot of sound",
+  normal:"usual and ordinary",
+  observe:"to watch carefully",
+  old:"from a long time ago",
+  opaque:"you cannot see through it",
+  open:"to make something not closed",
+  optimistic:"expecting good things to happen",
+  overjoyed:"extremely happy",
+  overlook:"to miss or not notice",
+  pale:"light in colour",
+  parallel:"side by side and always the same distance apart",
+  pause:"to stop for a short time",
+  peaceful:"calm and quiet",
+  peculiar:"strange and unusual",
+  petrified:"so scared you cannot move",
+  plain:"simple and ordinary looking",
+  pleased:"happy about something",
+  possible:"could happen",
+  praise:"to say that someone did well",
+  preserve:"to keep something safe so it lasts",
+  probable:"will probably happen",
+  professional:"the careful, polite way people talk at work",
+  query:"a question",
+  question:"something you ask to find out",
+  quick:"fast",
+  quiet:"making very little sound",
+  rapid:"very fast",
+  recall:"to remember",
+  receive:"to get something given to you",
+  recollect:"to remember",
+  reduce:"to make smaller or less",
+  reject:"to say no to",
+  remove:"to take away",
+  repair:"to fix",
+  rested:"not tired any more",
+  rude:"not polite",
+  run:"to move fast on your feet",
+  sad:"unhappy",
+  scared:"afraid",
+  scorching:"extremely hot",
+  selfish:"thinking only about yourself",
+  serious:"not joking",
+  silent:"with no sound at all",
+  similar:"almost the same",
+  simple:"easy, with nothing tricky",
+  slang:"very casual words, like the way friends chat",
+  slim:"thin",
+  slow:"not fast",
+  sluggish:"very slow and lazy",
+  small:"not big",
+  soft:"gentle, not too bright or strong",
+  solid:"hard and firm",
+  speedy:"fast",
+  spend:"to use up, like money",
+  start:"to begin",
+  stated:"said out loud or written down",
+  steady:"at an even pace, not fast and not slow",
+  straightforward:"easy to understand or do",
+  stroll:"to walk slowly and calmly",
+  subjective:"based on what one person thinks or feels",
+  substantial:"large or important",
+  succinct:"short and clear",
+  support:"to help and back up",
+  take:"to get or hold something",
+  tall:"high, a long way from bottom to top",
+  tame:"gentle and used to people",
+  thin:"not thick or wide",
+  tidy:"neat, with everything in its place",
+  tiny:"very small",
+  trivial:"not important",
+  ugly:"not nice to look at",
+  uncertain:"not sure",
+  unclear:"hard to understand",
+  uneasy:"a bit worried that something is wrong",
+  unhappy:"sad",
+  unruly:"wild and hard to control",
+  vague:"not clear",
+  verbose:"using too many words",
+  victory:"a win",
+  visible:"able to be seen",
+  vivid:"very bright and strong",
+  warm:"nicely hot, but not too hot",
+  wide:"a long way from side to side",
+  wrong:"not right",
+  young:"not old"
+};
+
+let _wsReading = false;   // a wrong answer's why panel is showing (charge holds)
+let _wsNextAt = 0;        // time Next was pressed (guards a fast double press)
+let _wsAdvanceT = null;   // pending move on after a right answer
+function _wsEsc(t){ return String(t==null?'':t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function _wsMeans(q, w){ w = String(w||'').toLowerCase(); return (q && q.m && q.m[w]) || _WS_MEAN[w] || ''; }
+function _wsUp(w){ return _wsEsc(String(w).toUpperCase()); }
+function _wsTooSoon(){ return Date.now() - _wsNextAt < 500; }
+
+// Synonym / antonym: what the picked word means, then the answer and what it means.
+function _wsPairWhy(q, picked){
+  var syn = mode === 'synonym';
+  var pm = _wsMeans(q, picked), am = _wsMeans(q, q.correct);
+  var html = '<div class="wsWhyLine picked"><span aria-hidden="true">✗ </span>You chose <b>' + _wsUp(picked) + '</b>.' +
+    (pm ? ' ' + _wsUp(picked) + ' means ' + _wsEsc(pm) + '.' : '') +
+    ' That is not ' + (syn ? 'the same as' : 'the opposite of') + ' <b>' + _wsUp(q.word) + '</b>.</div>';
+  html += '<div class="wsWhyLine answer"><span aria-hidden="true">✓ </span>The ' + (syn ? 'synonym' : 'antonym') + ' is <b>' + _wsUp(q.correct) + '</b>.' +
+    (am ? ' ' + _wsUp(q.correct) + ' means ' + _wsEsc(am) + '.' : '') +
+    ' That is ' + (syn ? 'nearly the same as' : 'the opposite of') + ' <b>' + _wsUp(q.word) + '</b>' +
+    (q.wm ? ' (here ' + _wsUp(q.word) + ' means ' + _wsEsc(q.wm) + ')' : '') + '.</div>';
+  return html;
+}
+
+// Spectrum: is the student's order right, or right apart from swapping close neighbours?
+// placed = array of words in slot order. Returns { exact, fair, swapped:[[a,b],...] }.
+function _wsJudgeOrder(q, placed){
+  var exact = placed.every(function(w, i){ return w === q.words[i]; });
+  if (exact) return { exact:true, fair:true, swapped:[] };
+  var swapped = [], i = 0, ok = true;
+  var close = q.close || [];
+  while (i < q.words.length){
+    if (placed[i] === q.words[i]) { i++; continue; }
+    var pairOk = placed[i] === q.words[i+1] && placed[i+1] === q.words[i] &&
+      close.some(function(c){ return c[0] === i && c[1] === i+1; });
+    if (!pairOk) { ok = false; break; }
+    swapped.push([q.words[i], q.words[i+1]]);
+    i += 2;
+  }
+  return { exact:false, fair:ok, swapped: ok ? swapped : [] };
+}
+function _wsCloseNote(swapped){
+  return swapped.map(function(p){
+    return '<div class="wsWhyLine tip"><span aria-hidden="true">💡 </span><b>' + _wsUp(p[0]) + '</b> and <b>' + _wsUp(p[1]) +
+      '</b> are very close in meaning, so either order is fair. This game lists ' + _wsUp(p[0]) + ' first.</div>';
+  }).join('');
+}
+// Spectrum, wrong: the right order (moved words marked), then what up to 3 moved words mean.
+function _wsSpectrumWhy(q, placed){
+  var moved = q.words.filter(function(w, i){ return placed[i] !== w; });
+  var html = '<div class="wsWhyLine answer"><span aria-hidden="true">✓ </span>From <b>' + _wsUp(q.leftAnchor) + '</b> to <b>' + _wsUp(q.rightAnchor) + '</b>, the order is:' +
+    '<div class="wsOrder">' + q.words.map(function(w, i){
+      var mv = placed[i] !== w;
+      return '<span' + (mv ? ' class="moved"' : '') + '>' + (i+1) + '. ' + _wsUp(w) + (mv ? ' <span aria-hidden="true">✗</span><span class="sr-only"> (you had this in a different place)</span>' : '') + '</span>';
+    }).join('') + '</div></div>';
+  moved.slice(0, 3).forEach(function(w){
+    var m = _wsMeans(q, w), pos = q.words.indexOf(w) + 1;
+    html += '<div class="wsWhyLine picked"><b>' + _wsUp(w) + '</b> goes in place ' + pos + (m ? ': it means ' + _wsEsc(m) : '') + '.</div>';
+  });
+  return html;
+}
+function _wsShowWhy(html, withNext){
+  var w = document.getElementById('wsWhy'), n = document.getElementById('wsNextRow'), sk = document.getElementById('wsSkipBtn');
+  w.innerHTML = html; w.hidden = !html;
+  if (!withNext) return;
+  _wsReading = true;
+  if (sk) sk.hidden = true;
+  var nb = document.getElementById('wsNextBtn');
+  nb.textContent = fuel <= 0 ? 'See my results →' : 'Next →';
+  n.hidden = false;
+  try { nb.focus({ preventScroll:true }); } catch(e) { nb.focus(); }
+  try { n.scrollIntoView({ block:'nearest' }); } catch(e) {}
+}
+function _wsHideWhy(){
+  _wsReading = false;
+  var w = document.getElementById('wsWhy'), n = document.getElementById('wsNextRow'), sk = document.getElementById('wsSkipBtn');
+  if (w) { w.innerHTML = ''; w.hidden = true; }
+  if (n) n.hidden = true;
+  if (sk) sk.hidden = false;
+}
+function _wsNext(){
+  if (!_wsReading) return;
+  _wsNextAt = Date.now();
+  _wsHideWhy();
+  if (fuel <= 0) { endGame(); return; }
+  loadQuestion();
+  // Focus the question, never an answer, so a second Enter cannot answer it
+  var t = document.getElementById('targetWord');
+  if (t) { t.setAttribute('tabindex','-1'); try { t.focus({ preventScroll:true }); } catch(e) { t.focus(); } }
+}
+document.addEventListener('DOMContentLoaded', function(){
+  var nb = document.getElementById('wsNextBtn'); if (nb) nb.addEventListener('click', _wsNext);
+});
 
 // Apply extension mode (deferred until WordLabData is available)
 document.addEventListener('DOMContentLoaded', function(){
@@ -751,12 +1117,13 @@ document.addEventListener('touchend', (e) => {
   const touch = e.changedTouches[0];
   const el = document.elementFromPoint(touch.clientX, touch.clientY);
   const slot = el && (el.closest('.spectrumZone'));
-  if(slot){
+  // A tap (finger lifts on the same tile) is left to the click handler, which selects the word.
+  // Only a drag that ends on a place puts the word there.
+  if(slot && !(_touchDragTile && _touchDragTile.contains(el))){
     const idx = parseInt(slot.dataset.index);
+    document.querySelectorAll('.spectrumWord').forEach(t => { t.classList.remove('selected'); t.setAttribute('aria-pressed','false'); });
     spectrumSelected = _touchDragWord;
     placeWordInSlot(idx);
-  } else if(_touchDragTile) {
-    _touchDragTile.classList.remove('selected');
   }
   document.querySelectorAll('.spectrumZone').forEach(z => z.classList.remove('dragover'));
   _touchDragWord = null;
@@ -807,7 +1174,8 @@ function setMode(m){
   ['synonym','antonym','spectrum'].forEach(x => {
     document.getElementById('mode'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('active', x===m);
   });
-  score = 0; streak = 0; fuel = 100; if(!_wltActive) updateHud();
+  score = 0; streak = 0; fuel = 100; if(!_wltActive){ updateHud(); startFuelDrain(); }
+  _wsRestartLabel();
   loadQuestion();
 }
 
@@ -882,8 +1250,17 @@ function loadSynonymAntonym(){
 
 function lockButtons(){ optionsEl.querySelectorAll('button').forEach(b => b.disabled = true); }
 
+function _wsMarkButtons(choice, right){
+  optionsEl.querySelectorAll('button').forEach(function(b){
+    var span = b.querySelector('span'); if(!span) return;
+    var w = span.textContent.toLowerCase();
+    if(w === right){ span.textContent = '✓ ' + span.textContent; b.classList.add('wsMarkRight'); b.setAttribute('aria-label', right + ', the answer'); }
+    else if(w === choice){ span.textContent = '✗ ' + span.textContent; b.classList.add('wsMarkPicked'); b.setAttribute('aria-label', choice + ', your choice, not right'); }
+  });
+}
+
 function checkSynonymAntonym(choice){
-  if(buttonsLocked || (!_wltActive && fuel <= 0)) return;
+  if(buttonsLocked || _wsReading || _wsTooSoon() || (!_wltActive && fuel <= 0)) return;
   buttonsLocked = true;
   lockButtons();
   const q = currentQuestion;
@@ -913,12 +1290,14 @@ function checkSynonymAntonym(choice){
     if(!_wltActive && typeof WLAudio !== 'undefined') WLAudio.wrong();
     feedbackEl.textContent = '❌ Not quite';
     feedbackEl.className = 'feedback bad';
-    subFeedbackEl.textContent = `${mode === 'synonym' ? 'Synonym' : 'Antonym'} of "${q.word.toUpperCase()}" is "${q.correct.toUpperCase()}" — ${q.explain}`;
+    if(_wltActive) subFeedbackEl.textContent = `${mode === 'synonym' ? 'Synonym' : 'Antonym'} of "${q.word.toUpperCase()}" is "${q.correct.toUpperCase()}". ${q.explain}`;
+    else { subFeedbackEl.textContent = ''; _wsShowWhy(_wsPairWhy(q, choice), true); }
     gameCardEl.classList.add('flashFail');
     setTimeout(() => gameCardEl.classList.remove('flashFail'), 600);
     if(_wltActive) WLTeacher.onAnswer(false, 'The correct '+_modeLabel+' of \'<b>'+WordLabData.escapeHtml(q.word)+'</b>\' is \'<b>'+WordLabData.escapeHtml(q.correct)+'</b>\'. '+WordLabData.escapeHtml(q.explain)+'<br>You selected \'<b>'+WordLabData.escapeHtml(choice)+'</b>\'.');
   }
   if(!_wltActive) updateHud();
+  _wsMarkButtons(choice, q.correct);
   // EALD
   var ealdEl=document.getElementById('ealdTranslation');if(ealdEl)ealdEl.innerHTML='';
   if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&q){
@@ -933,9 +1312,9 @@ function checkSynonymAntonym(choice){
       if(pairs.length){contentEl.innerHTML='<div class="eald-translation-pill"><span class="eald-flag">🌐</span> '+pairs.join(' · ')+'</div>';}
     });
   }
-  if(!_wltActive && fuel <= 0){ setTimeout(endGame, 800); return; }
   if(_wltActive){ _showTeacherNext(); return; } // Teacher mode: wait for Next click
-  setTimeout(loadQuestion, 1600);
+  if(!correct) return; // the why panel waits for Next (it says See my results if the charge ran out)
+  _wsAdvanceT = setTimeout(loadQuestion, 1600);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -975,8 +1354,10 @@ function loadSpectrum(){
   wordsEl.innerHTML = '';
   const shuffled = shuffleArray([...q.words]);
   shuffled.forEach(word => {
-    const tile = document.createElement('div');
+    const tile = document.createElement('button');
+    tile.type = 'button';
     tile.className = 'spectrumWord';
+    tile.setAttribute('aria-pressed', 'false');
     tile.textContent = word.toUpperCase();
     tile.dataset.word = word;
     tile.draggable = true;
@@ -994,10 +1375,9 @@ function loadSpectrum(){
     // Touch drag support
     tile.addEventListener('touchstart', (e) => {
       if(tile.classList.contains('placed')) return;
+      // Only remember the word here. Selecting it now would make the click after a tap switch it off again.
       _touchDragWord = word;
       _touchDragTile = tile;
-      tile.classList.add('selected');
-      spectrumSelected = word;
     }, {passive:true});
     wordsEl.appendChild(tile);
   });
@@ -1007,9 +1387,11 @@ function loadSpectrum(){
   track.innerHTML = '';
   const n = q.words.length;
   q.words.forEach((word, i) => {
-    const slot = document.createElement('div');
+    const slot = document.createElement('button');
+    slot.type = 'button';
     slot.className = 'spectrumZone';
     slot.dataset.index = i;
+    slot.setAttribute('aria-label', 'Place ' + (i + 1) + ', empty');
     const lbl = document.createElement('div');
     lbl.className = 'zone-label';
     lbl.textContent = (i + 1);
@@ -1055,81 +1437,107 @@ function loadSpectrum(){
 }
 
 function selectSpectrumWord(tile){
-  if(tile.classList.contains('placed')) return;
-  document.querySelectorAll('.spectrumWord').forEach(t => t.classList.remove('selected'));
+  if(buttonsLocked || tile.classList.contains('placed')) return;
+  document.querySelectorAll('.spectrumWord').forEach(t => { t.classList.remove('selected'); t.setAttribute('aria-pressed','false'); });
   if(spectrumSelected === tile.dataset.word){
     spectrumSelected = null;
   } else {
     spectrumSelected = tile.dataset.word;
     tile.classList.add('selected');
+    tile.setAttribute('aria-pressed','true');
+    // Keyboard: go straight to the first empty place
+    const empty = [...document.querySelectorAll('.spectrumZone')].find(z => !z.classList.contains('filled'));
+    if(empty) empty.focus({ preventScroll:true });
   }
 }
 
-function placeWordInSlot(slotIndex){
-  if(!spectrumSelected) return;
-  const q = currentQuestion;
+function _wsSetSlot(idx, word){
+  const slot = document.querySelector(`.spectrumZone[data-index="${idx}"]`);
+  if(!slot) return;
+  slot.querySelector('.zone-label').textContent = word ? word.toUpperCase() : (parseInt(idx) + 1);
+  slot.classList.toggle('filled', !!word);
+  slot.setAttribute('aria-label', 'Place ' + (parseInt(idx) + 1) + (word ? ': ' + word : ', empty'));
+}
+function _wsSetTilePlaced(word, placed){
+  document.querySelectorAll('.spectrumWord').forEach(t => {
+    if(t.dataset.word !== word) return;
+    t.classList.toggle('placed', placed);
+    t.classList.remove('selected');
+    t.setAttribute('aria-pressed','false');
+    t.disabled = placed;
+  });
+}
 
-  // Find if this slot already has a word — swap back
-  const existingWord = spectrumPlaced[slotIndex];
-  if(existingWord){
-    // unplace existing
+function placeWordInSlot(slotIndex){
+  if(buttonsLocked) return;
+  const q = currentQuestion;
+  const checkBtn = document.getElementById('checkSpectrumBtn');
+
+  // Nothing chosen and the place has a word: take it back out so it can be moved
+  if(!spectrumSelected){
+    const back = spectrumPlaced[slotIndex];
+    if(!back) return;
     delete spectrumPlaced[slotIndex];
-    document.querySelectorAll('.spectrumWord').forEach(t => {
-      if(t.dataset.word === existingWord){ t.classList.remove('placed'); }
-    });
+    _wsSetSlot(slotIndex, null);
+    _wsSetTilePlaced(back, false);
+    checkBtn.style.display = 'none';
+    return;
   }
 
-  // Check if selected word is already in another slot — remove it
+  // This place already has a word: send it back to the word bank
+  const existingWord = spectrumPlaced[slotIndex];
+  if(existingWord){
+    delete spectrumPlaced[slotIndex];
+    _wsSetTilePlaced(existingWord, false);
+  }
+
+  // The chosen word is already in another place: take it out of there
   Object.keys(spectrumPlaced).forEach(idx => {
     if(spectrumPlaced[idx] === spectrumSelected){
       delete spectrumPlaced[idx];
-      const oldSlot = document.querySelector(`.spectrumZone[data-index="${idx}"]`);
-      if(oldSlot){ oldSlot.querySelector('.zone-label').textContent = parseInt(idx)+1; oldSlot.classList.remove('filled'); }
+      _wsSetSlot(idx, null);
     }
   });
 
   spectrumPlaced[slotIndex] = spectrumSelected;
-
-  // Update slot visual
-  const slot = document.querySelector(`.spectrumZone[data-index="${slotIndex}"]`);
-  slot.classList.add('filled');
-  const lbl = slot.querySelector('.zone-label');
-  lbl.textContent = spectrumSelected.toUpperCase();
-
-  // Mark tile as placed
-  document.querySelectorAll('.spectrumWord').forEach(t => {
-    if(t.dataset.word === spectrumSelected){
-      t.classList.add('placed');
-      t.classList.remove('selected');
-    }
-  });
-
+  _wsSetSlot(slotIndex, spectrumSelected);
+  _wsSetTilePlaced(spectrumSelected, true);
   spectrumSelected = null;
 
   // Show check button if all slots filled
   const allFilled = Object.keys(spectrumPlaced).length === q.words.length;
-  document.getElementById('checkSpectrumBtn').style.display = allFilled ? 'inline-flex' : 'none';
+  checkBtn.style.display = allFilled ? 'inline-flex' : 'none';
+  // Keyboard: move on to the next word still to place, or to Check
+  const nextTile = [...document.querySelectorAll('.spectrumWord')].find(t => !t.classList.contains('placed'));
+  if(nextTile) nextTile.focus({ preventScroll:true });
+  else if(allFilled) checkBtn.focus({ preventScroll:true });
 }
 
 function checkSpectrum(){
-  if(buttonsLocked || (!_wltActive && fuel <= 0)) return;
+  if(buttonsLocked || _wsReading || _wsTooSoon() || (!_wltActive && fuel <= 0)) return;
+  if(Object.keys(spectrumPlaced).length !== currentQuestion.words.length) return;
   buttonsLocked = true;
   const q = currentQuestion;
-  let allCorrect = true;
+  const placed = q.words.map((w, i) => spectrumPlaced[i]);
+  const judge = _wsJudgeOrder(q, placed);
+  const fairSwapped = {};
+  judge.swapped.forEach(p => { fairSwapped[p[0]] = fairSwapped[p[1]] = true; });
+  const allCorrect = judge.fair;
   let wrongCount = 0;
 
-  q.words.forEach((word, correctIndex) => {
-    // Find which slot this word was placed in
-    const placedSlot = Object.keys(spectrumPlaced).find(k => spectrumPlaced[k] === word);
-    const slot = document.querySelector(`.spectrumZone[data-index="${correctIndex}"]`);
-    if(parseInt(placedSlot) === correctIndex){
-      slot.classList.add('correct');
-    } else {
-      slot.classList.add('wrong');
-      allCorrect = false;
-      wrongCount++;
-    }
+  // Mark every place with a tick or a cross (not colour alone)
+  placed.forEach((word, i) => {
+    const slot = document.querySelector(`.spectrumZone[data-index="${i}"]`);
+    const ok = word === q.words[i] || fairSwapped[word];
+    if(!ok) wrongCount++;
+    slot.classList.add(ok ? 'correct' : 'wrong');
+    const mark = document.createElement('span');
+    mark.className = 'zone-mark'; mark.setAttribute('aria-hidden','true');
+    mark.textContent = ok ? '✓' : '✗';
+    slot.insertBefore(mark, slot.firstChild);
+    slot.setAttribute('aria-label', 'Place ' + (i + 1) + ': ' + word + (ok ? ', right' : ', not right'));
   });
+  document.querySelectorAll('.spectrumWord').forEach(t => { t.disabled = true; });
 
   const cat = 'spectrum:' + q.label.toLowerCase().replace(/\s+/g,'-');
 
@@ -1141,9 +1549,10 @@ function checkSpectrum(){
     }
     if(_wltActive && typeof WLScientist !== 'undefined') WLScientist.react('correct');
     if(!_wltActive && typeof WLAudio !== 'undefined'){ WLAudio.correct(); if(streak >= 3) WLAudio.streak(streak); }
-    feedbackEl.textContent = '✅ Perfect spectrum!';
+    feedbackEl.textContent = judge.exact ? '✅ Perfect spectrum!' : '✅ Great order!';
     feedbackEl.className = 'feedback ok';
     subFeedbackEl.textContent = `${q.leftAnchor} → ${q.words.join(' → ')} → ${q.rightAnchor}`;
+    if(!judge.exact) _wsShowWhy(_wsCloseNote(judge.swapped), !_wltActive);
     gameCardEl.classList.add('flashSuccess');
     setTimeout(() => gameCardEl.classList.remove('flashSuccess'), 600);
     if(_wltActive) WLTeacher.onAnswer(true, 'The correct order from <b>'+WordLabData.escapeHtml(q.leftAnchor.toLowerCase())+'</b> to <b>'+WordLabData.escapeHtml(q.rightAnchor.toLowerCase())+'</b> is: <b>'+q.words.map(function(w){return WordLabData.escapeHtml(w);}).join(' &rarr; ')+'</b>');
@@ -1152,9 +1561,10 @@ function checkSpectrum(){
     if(!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()) WordLabData.recordAttempt('word-spectrum', cat, false, 0);
     if(typeof WLScientist !== 'undefined') WLScientist.react('wrong');
     if(!_wltActive && typeof WLAudio !== 'undefined') WLAudio.wrong();
-    feedbackEl.textContent = `❌ ${wrongCount} word${wrongCount>1?'s':''} out of order`;
+    feedbackEl.textContent = `❌ ${wrongCount} word${wrongCount>1?'s are':' is'} in a different place`;
     feedbackEl.className = 'feedback bad';
-    subFeedbackEl.textContent = `Correct order: ${q.words.join(' → ')}`;
+    if(_wltActive) subFeedbackEl.textContent = `Correct order: ${q.words.join(' → ')}`;
+    else { subFeedbackEl.textContent = ''; _wsShowWhy(_wsSpectrumWhy(q, placed), true); }
     gameCardEl.classList.add('flashFail');
     setTimeout(() => gameCardEl.classList.remove('flashFail'), 600);
     if(_wltActive) WLTeacher.onAnswer(false, wrongCount+' word'+(wrongCount>1?'s were':' was')+' out of order. The correct order from <b>'+WordLabData.escapeHtml(q.leftAnchor.toLowerCase())+'</b> to <b>'+WordLabData.escapeHtml(q.rightAnchor.toLowerCase())+'</b> is: <b>'+q.words.map(function(w){return WordLabData.escapeHtml(w);}).join(' &rarr; ')+'</b>');
@@ -1176,16 +1586,18 @@ function checkSpectrum(){
       if(pairs.length){contentEl.innerHTML='<div class="eald-translation-pill"><span class="eald-flag">🌐</span> '+pairs.join(' · ')+'</div>';}
     });
   }
-  if(!_wltActive && fuel <= 0){ setTimeout(endGame, 800); return; }
   document.getElementById('checkSpectrumBtn').style.display = 'none';
   if(_wltActive){ _showTeacherNext(); return; } // Teacher mode: wait for Next click
-  setTimeout(loadQuestion, 2200);
+  if(_wsReading) return; // why panel or close-pair note: wait for Next
+  _wsAdvanceT = setTimeout(loadQuestion, 2200);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GAME FLOW
 // ─────────────────────────────────────────────────────────────────────────────
 function loadQuestion(){
+  clearTimeout(_wsAdvanceT); _wsAdvanceT = null;
+  _wsHideWhy();
   gameCardEl.classList.remove('flashSuccess','flashFail');
   if(!_wltActive && fuel <= 0) return;
   if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
@@ -1201,29 +1613,39 @@ function startFuelDrain(){
   if(_wltActive) return;
   clearInterval(fuelInterval);
   fuelInterval = setInterval(() => {
+    if(_wsReading) return; // charge holds while the why panel is open
     fuel -= (_supportMode ? 0.083 : 0.167);
     if(fuel <= 0){ fuel = 0; updateHud(); endGame(); clearInterval(fuelInterval); return; }
     updateHud();
   }, 220);
 }
 
+function _wsRestartLabel(){ var b = document.getElementById('wsRestartBtn'); if(b) b.textContent = 'Restart'; }
 function endGame(){
   buttonsLocked = true;
+  clearInterval(fuelInterval);
+  clearTimeout(_wsAdvanceT); _wsAdvanceT = null;
+  _wsHideWhy();
   optionsEl.innerHTML = '';
   spectrumAreaEl.style.display = 'none';
-  feedbackEl.textContent = 'Charge depleted';
+  feedbackEl.textContent = 'Out of charge';
   feedbackEl.className = 'feedback bad';
-  subFeedbackEl.textContent = `Final score: ${score} XP — well done!`;
+  subFeedbackEl.textContent = `Final score: ${score} XP. Well done!`;
+  var sk = document.getElementById('wsSkipBtn'); if(sk) sk.hidden = true;
+  var b = document.getElementById('wsRestartBtn');
+  if(b){ b.textContent = 'Play again'; try { b.focus({ preventScroll:true }); } catch(e) { b.focus(); } }
 }
 
 function restartGame(){
+  if(_wsTooSoon()) return;
+  _wsRestartLabel();
   score = 0; streak = 0; fuel = 100;
   if(!_wltActive){ updateHud(); startFuelDrain(); }
   loadQuestion();
 }
 
 function skipQuestion(){
-  if(buttonsLocked) return;
+  if(buttonsLocked || _wsReading) return;
   if(!_wltActive && fuel <= 0) return;
   streak = 0;
   if(!_wltActive){ fuel = Math.max(fuel - (_supportMode ? 4 : 8), 0); updateHud(); if(fuel <= 0){ endGame(); return; } }
@@ -1234,24 +1656,29 @@ function skipQuestion(){
 // ─────────────────────────────────────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────────────────────────────────────
-if(_wltActive){
-  WLTeacher.init({game:'spectrum'}).then(function(){ loadQuestion(); });
-  // Create Next button
-  var _nb = document.createElement('button');
-  _nb.id = 'wltNextBtn';
-  _nb.className = 'primaryBtn';
-  _nb.textContent = 'Next \u2192';
-  _nb.style.cssText = 'display:none;margin:12px auto 0;';
-  _nb.addEventListener('click', function(){ _nb.style.display='none'; loadQuestion(); });
-  var _actionRow = document.querySelector('.actionRow');
-  if(_actionRow) _actionRow.parentNode.insertBefore(_nb, _actionRow.nextSibling);
-  // Poll to show Next button when answer is locked
-  function _showTeacherNext(){ var nb=document.getElementById('wltNextBtn'); if(nb) nb.style.display='block'; }
-} else {
-  updateHud();
-  startFuelDrain();
-  loadQuestion();
-}
+function _showTeacherNext(){ var nb=document.getElementById('wltNextBtn'); if(nb) nb.style.display='block'; }
+// The shared scripts (WordLabData, WLTeacher, WLHelp, WLHints) are deferred, so they
+// only exist once the page has been read. Start the game then, so Support Mode,
+// Teacher Mode and the help popup all apply from the first question.
+document.addEventListener('DOMContentLoaded', function(){
+  _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+  if(_wltActive){
+    WLTeacher.init({game:'spectrum'}).then(function(){ loadQuestion(); });
+    // Create Next button
+    var _nb = document.createElement('button');
+    _nb.id = 'wltNextBtn';
+    _nb.className = 'primaryBtn';
+    _nb.textContent = 'Next \u2192';
+    _nb.style.cssText = 'display:none;margin:12px auto 0;';
+    _nb.addEventListener('click', function(){ _nb.style.display='none'; loadQuestion(); });
+    var _actionRow = document.querySelector('.actionRow');
+    if(_actionRow) _actionRow.parentNode.insertBefore(_nb, _actionRow.nextSibling);
+  } else {
+    updateHud();
+    startFuelDrain();
+    loadQuestion();
+  }
+});
 </script>
 
 <!-- Particles -->
@@ -1313,15 +1740,16 @@ document.addEventListener('DOMContentLoaded', async function(){
     if(hud) hud.appendChild(extPill);
   }
 });
+document.addEventListener('DOMContentLoaded', function(){
 if(typeof WLHelp!=='undefined') WLHelp.init({
   game:'spectrum', title:'Word Spectrum', emoji:'🧲',
   steps:[
-    {icon:'📖',title:'Read the words',desc:'Two or more words are shown. They have similar or opposite meanings.'},
-    {icon:'🎯',title:'Pick the match',desc:'Choose the synonym, antonym, or place words in order of intensity.'},
-    {icon:'📊',title:'Spectrum mode',desc:'In spectrum rounds, drag words to arrange them from weakest to strongest meaning.'},
-    {icon:'⚡',title:'Watch your energy',desc:'Energy drains over time. Correct answers refill it.'}
+    {icon:'🤝',title:'Synonyms',desc:'Pick the word that means nearly the same. Happy and joyful are synonyms.'},
+    {icon:'🔄',title:'Antonyms',desc:'Pick the word that means the opposite. Hot and freezing are antonyms.'},
+    {icon:'📊',title:'Spectrum',desc:'Put the words in order, from the weakest meaning to the strongest. Tap a word, then tap its place. Tap a place again to take a word back out.'},
+    {icon:'⚡',title:'Charge',desc:'Your charge goes down slowly. Right answers fill it up. If you get one wrong, read why, then press Next. Your charge waits while you read.'}
   ],
-  audioText:'In Word Spectrum, you work with synonyms, antonyms, and shades of meaning. Pick the correct synonym or antonym, or arrange words in order from weakest to strongest meaning. Your energy drains over time. Correct answers refill your energy bar.'
+  audioText:'In Word Spectrum, you work with synonyms, antonyms and shades of meaning. Synonyms mean nearly the same. Antonyms mean the opposite. In Spectrum, put the words in order from the weakest meaning to the strongest. Tap a word, then tap its place. Your charge goes down slowly, and right answers fill it up. If you get one wrong, read why, then press Next. Your charge waits while you read.'
 });
 if(typeof WLHints!=='undefined') WLHints.register({
   getStrategyHint: function(){ return 'Think about the strength or intensity of each word.'; },
@@ -1330,6 +1758,7 @@ if(typeof WLHints!=='undefined') WLHints.register({
     if(mode==='spectrum') return 'The weakest is near "'+(currentQuestion.leftAnchor||'')+'" and the strongest near "'+(currentQuestion.rightAnchor||'')+'".';
     return mode==='synonym' ? 'It means something very similar to "'+currentQuestion.word+'".' : 'It means the opposite of "'+currentQuestion.word+'".';
   }
+});
 });
 </script>
 
