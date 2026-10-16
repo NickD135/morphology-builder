@@ -52,6 +52,7 @@ Add ideas found while working. Keep each to one line with the surface and the le
 - Homophone Hunter Transmission: only the homophones are clickable and they have extra space around them, so the wrong words are easy to spot without reading. Make every word clickable (most are "already right") so students have to read (Teaching practice, Stretch)
 - Homophone Hunter Transmission: after a wrong pick the panel names the right word, so the next click on it earns full XP; consider no XP for a word fixed after a reveal (Engaging, fairness)
 - Homophone Hunter data: many `why` lines use em dashes and adult words ("Verb — it will influence", "An entitlement or privilege", "Climate conditions"); rewrite in Year 5 words. The why panel already turns " — " into ": " (Clear)
+- Homophone Hunter: when new sentences are added, give each one an `m` meaning if the word is used in a sense `_HH_MEANING` does not cover (run 23 did this for right, practice, effect and coarse) (Clear)
 - Homophone Hunter: the 77 meanings in `_HH_MEANING` could also feed Need Advice step 2 instead of `q.why`, which often gives the answer away ("The bags belong to them") (Scaffolded)
 - Homophone Hunter: pairs that sound different in Australian English are taught as homophones (pour/paw/poor, hour/our, descent/dissent, council/counsel for some speakers); check each with Nicholas (Teaching practice)
 - Homophone Hunter: a read-aloud button on the why panel, as in the backlog for other games (Inclusive)

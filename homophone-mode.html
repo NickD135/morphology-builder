@@ -434,7 +434,7 @@ const HOMOPHONES = [
     {s:'Please ___ your name on the top of the page.', a:'write', why:'Putting words on paper'},
     {s:'That is the ___ answer — well done!', a:'right', why:'Means correct'},
     {s:'I need to ___ a letter to Grandma.', a:'write', why:'Creating a letter with words'},
-    {s:'You have the ___ to remain silent.', a:'right', why:'An entitlement or privilege'},
+    {s:'You have the ___ to remain silent.', a:'right', why:'An entitlement or privilege', m:'something you are allowed to do or have, like your rights'},
   ]},
   {group:['here','hear'], stage:'s2e', explain:'here = this place, hear = to listen/detect sound', sentences:[
     {s:'Come over ___ and sit down.', a:'here', why:'Refers to this place'},
@@ -578,12 +578,12 @@ const EXT_HOMOPHONES = [
     {s:'The rain will ___ our outdoor sports day plans.', a:'affect', why:'Verb — it will influence/change the plans'},
     {s:'The ___ of the medicine was immediate — she felt better.', a:'effect', why:'Noun — the result of the medicine'},
     {s:'How does lack of sleep ___ your concentration?', a:'affect', why:'Verb — how does it influence it?'},
-    {s:'The sound ___ in the movie was incredible.', a:'effect', why:'Noun — a produced result'},
+    {s:'The sound ___ in the movie was incredible.', a:'effect', why:'Noun — a produced result', m:'a special sound or picture made for a film or show (a thing)'},
   ]},
   {group:['practice','practise'], stage:'s3l', explain:'practice = noun (the thing), practise = verb (the action) — Australian spelling', sentences:[
     {s:'Football ___ is at 4pm on Wednesdays.', a:'practice', why:'Noun — the scheduled training session'},
     {s:'You need to ___ your spelling every night before the test.', a:'practise', why:'Verb — the action of rehearsing'},
-    {s:'The doctor opened a new medical ___ in town.', a:'practice', why:'Noun — a place of business'},
+    {s:'The doctor opened a new medical ___ in town.', a:'practice', why:'Noun — a place of business', m:'the business where a doctor or vet works (a noun)'},
     {s:'She needs to ___ the piano piece before the concert.', a:'practise', why:'Verb — to rehearse'},
   ]},
   {group:['complement','compliment'], stage:'s3l', explain:'complement = to complete or go well with, compliment = praise', sentences:[
@@ -649,7 +649,7 @@ const PARAGRAPHS = [
 
 const EXT_PARAGRAPHS = [
   {text:'The school {principle:principal} announced that {stationary:stationery} costs would have an {affect:effect} on the budget. Of {coarse:course}, this caused some {descent:dissent} among parents.',errors:{'principle':'principal','stationary':'stationery','affect':'effect','coarse':'course','descent':'dissent'},explains:{'principle':'principal = head of school','stationary':'stationery = school supplies','affect':'effect = result (noun)','coarse':'course = "of course"','descent':'dissent = disagreement'}},
-  {text:'She needed to {practise:practise} before the concert, but the {coarse:coarse} sound from the old instrument was hard to {bare:bear}. A kind {complement:compliment} from her teacher helped her confidence.',errors:{'coarse':'coarse','bare':'bear','complement':'compliment'},explains:{'bare':'bear = to endure','complement':'compliment = kind words of praise'}},
+  {text:'She needed to {practise:practise} before the concert, but the {coarse:coarse} sound from the old instrument was hard to {bare:bear}. A kind {complement:compliment} from her teacher helped her confidence.',errors:{'coarse':'coarse','bare':'bear','complement':'compliment'},explains:{'bare':'bear = to endure','complement':'compliment = kind words of praise'}, means:{'coarse':'rough and harsh to hear'}},
 ];
 
 // ══════════════════════════════════════════════════════════════
@@ -746,6 +746,8 @@ let _hhNextAt = 0;        // time Next was pressed (guards a fast double press)
 let _hhAdvanceT = null;   // pending move to the next question after a right answer
 function _hhEsc(t){ return String(t==null?'':t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
 function _hhMeans(w){ return _HH_MEANING[String(w||'').toLowerCase()] || ''; }
+// Meaning of a paragraph word as it is used in that paragraph
+function _hhParaMeans(q, w){ return (q && q.means && q.means[w]) || _hhMeans(w); }
 function _hhTip(words){
   var low = (words||[]).map(function(w){ return String(w).toLowerCase(); });
   for (var i=0;i<_HH_TIPS.length;i++){ if (_HH_TIPS[i][0].some(function(w){ return low.indexOf(w)>=0; })) return _HH_TIPS[i][1]; }
@@ -756,8 +758,9 @@ function _hhPickedLine(picked){
   var m = _hhMeans(picked);
   return '<div class="hhWhyLine picked"><span aria-hidden="true">✗ </span>You chose <b>' + _hhEsc(picked) + '</b>.' + (m ? ' The word <b>' + _hhEsc(picked) + '</b> means ' + _hhEsc(m) + '.' : '') + '</div>';
 }
-function _hhNeedsLine(lead, answer, why){
-  var m = _hhMeans(answer);
+// A sentence can carry its own meaning (m) when the word is used in a sense the general list does not cover.
+function _hhNeedsLine(lead, answer, why, own){
+  var m = own || _hhMeans(answer);
   return '<div class="hhWhyLine answer"><span aria-hidden="true">✓ </span>' + lead + ' <b>' + _hhEsc(answer) + '</b>' + (m ? ', which means ' + _hhEsc(m) : '') + '.' + _hhClue(why) + '</div>';
 }
 function _hhTipLine(words){
@@ -827,7 +830,7 @@ function buildMode1() {
   const pool = [];
   getAllHomophones().forEach(h => {
     h.sentences.forEach(s => {
-      pool.push({ group:h.group, sentence:s.s, answer:s.a, why:s.why, explain:h.explain });
+      pool.push({ group:h.group, sentence:s.s, answer:s.a, why:s.why, m:s.m, explain:h.explain });
     });
   });
   return shuffle(pool).slice(0, 15);
@@ -1023,7 +1026,7 @@ function checkMode1(chosen, btn) {
   handleResult(correct, timeMs, _student ? 'Not quite. The answer is ' + q.answer + '.' : q.why, _student ? '' : q.explain, q.answer);
   if (_wltActive) return; // Teacher mode: wait for Next click
   if (!correct) {
-    _hhShowWhy(_hhPickedLine(chosen) + _hhNeedsLine('This sentence needs', q.answer, q.why) + _hhTipLine(q.group), true);
+    _hhShowWhy(_hhPickedLine(chosen) + _hhNeedsLine('This sentence needs', q.answer, q.why, q.m) + _hhTipLine(q.group), true);
     return; // wait for Next, so there is time to read why
   }
   _hhAdvanceT = setTimeout(() => { currentQ++; showQuestion(); }, 1400);
@@ -1194,7 +1197,7 @@ function doDrop(dropId, word, tileId) {
     handleResult(correct, timeMs, whyText, (correct || _wltActive) ? q.explain : '');
     if (_wltActive) return; // Teacher mode: wait for Next click
     if (!correct) {
-        _hhShowWhy(_hhNeedsLine('Monitor A needs', q.s1.a, '') + _hhNeedsLine('Monitor B needs', q.s2.a, '') + _hhTipLine(q.words), true);
+        _hhShowWhy(_hhNeedsLine('Monitor A needs', q.s1.a, '', q.s1.m) + _hhNeedsLine('Monitor B needs', q.s2.a, '', q.s2.m) + _hhTipLine(q.words), true);
       return; // wait for Next
     }
     _hhAdvanceT = setTimeout(() => { currentQ++; showQuestion(); }, 1400);
@@ -1245,7 +1248,7 @@ function fixWord(el) {
     el.style.animation = 'sciShake .4s ease-out';
     setTimeout(() => el.style.animation = '', 400);
     showFeedback(false, 'That word is already right!', '');
-    _hhShowWhy(_hhNeedsLine('This sentence does need', shown, ''), false);
+    _hhShowWhy(_hhNeedsLine('This sentence does need', shown, '', _hhParaMeans(m3State.q, shown)), false);
     streak = 0; if (!_wltActive) updateHud();
     return;
   }
@@ -1287,7 +1290,7 @@ function applyFix(btn, chosen, correct) {
     m3State.fixed++;
     totalCorrect++;
     document.getElementById('errorsLeft').textContent = m3State.totalErrors - m3State.fixed;
-    var _m = _hhMeans(correct);
+    var _m = _hhParaMeans(q, correct);
     handleResult(true, timeMs, correct + ' is right' + (_m ? ': ' + _m : (explainText ? ': ' + explainText : '')), '', correct, true);
 
     if (m3State.fixed >= m3State.totalErrors) {
@@ -1296,7 +1299,7 @@ function applyFix(btn, chosen, correct) {
     }
   } else {
     handleResult(false, timeMs, _wltActive ? 'It should be "' + correct + '"' + (explainText ? ' — ' + explainText : '') : 'Not quite. Try that word again.', '', correct, true);
-    _hhShowWhy(_hhPickedLine(chosen) + _hhNeedsLine('This sentence needs', correct, '') + _hhTipLine([chosen, correct]), false);
+    _hhShowWhy(_hhPickedLine(chosen) + _hhNeedsLine('This sentence needs', correct, '', _hhParaMeans(q, correct)) + _hhTipLine([chosen, correct]), false);
     el.focus();
   }
 }
