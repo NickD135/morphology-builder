@@ -186,7 +186,7 @@ var WLHints = (function() {
       text = _config.getStrategyHint();
     }
 
-    if (!text) text = 'Try your best — you can do this!';
+    if (!text) text = 'Have a go. You can do this!';
     showBubble(text);
   }
 

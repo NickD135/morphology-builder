@@ -35,7 +35,7 @@ Score each surface 1 (poor) to 4 (strong) on each lens from IMPROVEMENT_AGENT.md
 ## Ideas queue
 
 - Help popup, ? button, Need Advice and Support toggle: fixed on all 8 games in run 27 (breakdown was missing too). Teacher Mode is still broken on homophone, phoneme, sound-sorter and syllable: `_wltActive` is set at the top level of the inline script, before deferred `wordlab-teacher.js`, so it is always false (Word Spectrum and Refinery fixed this by starting on DOMContentLoaded). Not clickable in mock mode; needs a careful read per game (code health, teacher facing)
-- Need Advice step 2 gives the answer away in Mission Mode ("'before': this morpheme means that" when the target meaning is "before give money") and nearly in Meaning Match-Up (type + first letter with 2 or 3 options). Now that Need Advice works on these games, give each a gentler step 2 and a third step (Scaffolded, fair practice)
+- Need Advice step 2 gives the answer away in Mission Mode (run 28 only reworded it to "The missing part means ...") ("'before': this morpheme means that" when the target meaning is "before give money") and nearly in Meaning Match-Up (type + first letter with 2 or 3 options). Now that Need Advice works on these games, give each a gentler step 2 and a third step (Scaffolded, fair practice)
 - Help popup: at 768 px tall the "Got it" button sits below the fold inside the card on 5 or 6 step games; consider a sticky footer for the buttons (Clear, Inclusive)
 - Speed Builder: a random base can have only one viable affix (Ava got "tetra" with only -hedron); skip bases with fewer than 3 buildable words at the student's stage (Engaging, Scaffolded)
 - Word Spectrum: the 15 close pairs (Speed sluggish/slow, Happiness content/pleased/happy, Anger irritated/annoyed/cross, Effort simple/easy and challenging/difficult, Fear nervous/uneasy and scared/frightened, Certainty probable/likely, Formality casual/informal, Complexity basic/straightforward and involved/complex) need Nicholas's confirmation; a spectrum "discussion" prompt after a close pair would suit the semantic gradients routine (Teaching practice)
@@ -66,7 +66,7 @@ Add ideas found while working. Keep each to one line with the surface and the le
 
 - Homophone Hunter Transmission: only the homophones are clickable and they have extra space around them, so the wrong words are easy to spot without reading. Make every word clickable (most are "already right") so students have to read (Teaching practice, Stretch)
 - Homophone Hunter Transmission: after a wrong pick the panel names the right word, so the next click on it earns full XP; consider no XP for a word fixed after a reveal (Engaging, fairness)
-- Homophone Hunter data: many `why` lines use em dashes and adult words ("Verb — it will influence", "An entitlement or privilege", "Climate conditions"); rewrite in Year 5 words. The why panel already turns " — " into ": " (Clear)
+- Homophone Hunter data (em dashes removed in run 28; adult words remain): many `why` lines use adult words ("Verb — it will influence", "An entitlement or privilege", "Climate conditions"); rewrite in Year 5 words. The why panel already turns " — " into ": " (Clear)
 - Homophone Hunter: when new sentences are added, give each one an `m` meaning if the word is used in a sense `_HH_MEANING` does not cover (run 23 did this for right, practice, effect and coarse) (Clear)
 - Homophone Hunter: the 77 meanings in `_HH_MEANING` could also feed Need Advice step 2 instead of `q.why`, which often gives the answer away ("The bags belong to them") (Scaffolded)
 - Homophone Hunter: pairs that sound different in Australian English are taught as homophones (pour/paw/poor, hour/our, descent/dissent, council/counsel for some speakers); check each with Nicholas (Teaching practice)
@@ -92,7 +92,7 @@ Add ideas found while working. Keep each to one line with the surface and the le
 - Help popups describe controls but give no worked example ("I do"); add one modelled example per game (Scaffolded, Clear)
 - SOLO: `units/SOLO_PROGRESS.md` status header is out of date (resources track)
 - SOLO: dead or conflicting resource links listed in `SUGGESTIONS.md` (resources track). Now fixable directly under hard rule 3a: check the live `resources` rows, fix them, and remove the conflicting hardcoded blocks
-- Sound Sorter: Need Advice gives a strategy, then where the sound sits in the word; add a third step that names the position convention for this word (e.g. "at the end of a word, long a is usually ay"), reusing `_ssWhyNot` logic (Scaffolded)
+- Sound Sorter: Need Advice (run 28) gives a strategy, then where the gap sits, without naming the word or grapheme; add a third step that names the position convention for this word (e.g. "at the end of a word, long a is usually ay"), reusing `_ssWhyNot` logic (Scaffolded)
 - Sound Sorter: 190 distractors are never a spelling of the target sound anywhere in the game (e.g. "au" for Short A in calf, "nk" for NG in ring); review those distractor lists so every option is a real way to spell the sound (Teaching practice)
 - Sound Sorter: check every other tile game for div "buttons" that cannot be reached by keyboard (Meaning Match-Up, Mission Mode, Root Lab) (Inclusive)
 - Sound Sorter: some sound labels read awkwardly in feedback ("EAU = OH sound", "Diminutive -ette ending sound"); tidy `soundLabel` in `sound-sorter-data.js` (Clear)
@@ -125,3 +125,5 @@ Add ideas found while working. Keep each to one line with the surface and the le
 - Sound Sorter: the game panel also has `backdrop-filter: blur(8px)` over drifting particles; in Breakdown removing it took idle frames from about 20 to 60 fps in headless. Measure and remove if the panel is near opaque (Polish)
 - wordlab-data.js: turning low stim on mid-session via `loadLowStimMode()` adds the class but not the `#wlLowStimCSS` stylesheet (only added at page load). Low risk; check if teachers toggle it during lessons (Inclusive)
 - Breakdown Blitz: unload is taught as un- "not"; in unload, untie, unlock un- means "reverse the action". Same sense issue as Mission Mode run 17 (Clear)
+- Sound Sorter: the particle colour list (`var cs=[...]` near the end of the page) has 5 stray word objects pasted into it (vision, drought, surf, plait, chin), so most particles get `background:[object Object]` and do not show. Remove the 5 objects (code health)
+- Speed Builder: Teacher Mode setup line uses an em dash ("Explore word building — click End Round") (Clear, teacher facing)

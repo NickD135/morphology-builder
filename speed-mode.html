@@ -723,6 +723,36 @@
         return !!word && DICT_SET && DICT_SET.has(String(word).toLowerCase());
       }
 
+      // Need Advice step 2 (wordlab-hints.js). It names one tile that makes a
+      // word the student has not found yet, never the whole word.
+      window._speedSpecificHint = function(){
+        if (!state.running || !state.current.base) return 'Press Start round first. Then ask me again.';
+        if (!DICT_SET) return 'Try adding a prefix or a suffix to the base word.';
+        const base = state.current.base;
+        const fresh = w => w && isRealWord(w) && !state.foundWords.has(w);
+        if (fresh(computeWord(null, base, null, null))) return 'The base word "' + base.form + '" is a word on its own. Try submitting it with no tiles.';
+        for (const p of ALL_PREFIXES){
+          if (state.viablePrefixes.has(p.uid) && fresh(computeWord(p, base, null, null))) return 'Try putting the prefix ' + p.form + '- in front of the base.';
+        }
+        for (const sx of ALL_SUFFIXES){
+          if (state.viableSuffixes.has(sx.uid) && fresh(computeWord(null, base, sx, null))) return 'Try putting the suffix -' + sx.form + ' after the base.';
+        }
+        // Longer words: two suffixes, or a prefix with one or two suffixes.
+        const pres = [null, ...ALL_PREFIXES.filter(p => state.viablePrefixes.has(p.uid))];
+        const sufs = ALL_SUFFIXES.filter(sx => state.viableSuffixes.has(sx.uid));
+        for (const p of pres){
+          for (const s1 of sufs){
+            for (const s2 of [null, ...sufs]){
+              if (!p && !s2) continue;
+              if (!fresh(computeWord(p, base, s1, s2))) continue;
+              if (p) return 'Try the prefix ' + p.form + '- with ' + (s2 ? 'two suffixes' : 'a suffix') + '.';
+              return 'Try the suffix -' + s1.form + ', then add a second suffix after it.';
+            }
+          }
+        }
+        return 'Wow, you have found every word I know for this base! Press End round, or start a new round.';
+      };
+
       function redundantPrefix(prefixObj, baseObj){
         if (!prefixObj || !baseObj) return false;
         return baseObj.form.toLowerCase().startsWith(prefixObj.form.toLowerCase());
@@ -1111,7 +1141,7 @@
         }
 
         if (!isRealWord(word)){
-          els.statusOut.textContent = "That is not a real word in dictionary.txt.";
+          els.statusOut.textContent = "That is not a word in our word list. Try a different tile.";
           els.statusOut.className = "statusOut bad";
           return;
         }
@@ -1439,23 +1469,9 @@ if(typeof WLHints!=='undefined') WLHints.register({
   getStrategyHint: function(){ return 'Start with a base word, then try adding a prefix or suffix.'; },
   getSpecificHint: function(){
     // Find one valid word that can be built from current tiles
-    if(typeof state==='undefined' || !state.current.base || typeof DICT_SET==='undefined' || !DICT_SET) return 'Try combining the base with different affixes.';
-    var base = state.current.base;
-    // Try base alone first
-    if(isRealWord(base.form) && !state.foundWords.has(base.form)) return '"' + base.form + '" is a valid word on its own!';
-    // Try prefix + base
-    for(var p of ALL_PREFIXES){
-      if(!state.viablePrefixes.has(p.uid)) continue;
-      var w = computeWord(p, base, null, null);
-      if(w && isRealWord(w) && !state.foundWords.has(w)) return 'Try adding "' + p.form + '" as a prefix.';
-    }
-    // Try base + suffix
-    for(var s of ALL_SUFFIXES){
-      if(!state.viableSuffixes.has(s.uid)) continue;
-      var w2 = computeWord(null, base, s, null);
-      if(w2 && isRealWord(w2) && !state.foundWords.has(w2)) return 'Try adding "' + s.form + '" as a suffix.';
-    }
-    return 'Try different combinations of prefixes and suffixes with the base "' + base.form + '".';
+    // state lives inside the page's own closure, so ask it for the hint.
+    if(typeof window._speedSpecificHint==='function') return window._speedSpecificHint();
+    return 'Try adding a prefix or a suffix to the base word.';
   }
 });
 });
