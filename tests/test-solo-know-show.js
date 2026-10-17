@@ -8,6 +8,9 @@
 //   - a Know question or a Grow try-it repeats a Show or pre-test question, or Know repeats a try-it
 //   - a Know question, try-it, Grow hook or worked example uses the same numbers as a Show or pre-test
 //     question in the same outcome (two or more different numbers, same signs, in any order)
+//   - a Know question or try-it with only one number uses the same number and has the same answer as a
+//     Show or pre-test question in the same outcome ("P(blue) = ⅖, P(not blue)?" and "P(vowel) = ⅖,
+//     P(not a vowel)?" are both 1 − ⅖ = ⅗)
 //   - a Know question has no hint or no why line
 //   - an mc question does not have 4 different options with the answer among them
 //   - an order question's answer is not the same items as its tiles
@@ -35,6 +38,9 @@ const key = q => norm(q.text || q.question) + (q.cols ? JSON.stringify(q.cols) :
 // same numbers are the same sum in different words, e.g. "Compare ⅔ and ⅚" and "Which is bigger: ⅔ or ⅚?".
 // Signs count too, so "½ + ¼" and "½ − ¼" are different sums. Only checked within one outcome.
 const nums = t => { const m = String(t || '').match(/\d+\/\d+|\d*[½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]|\d+(\.\d+)?|[+−×÷]/g) || []; return new Set(m.filter(x => !/[+−×÷]/.test(x))).size >= 2 ? m.sort().join(' ') : ''; };
+// For a question with one distinct number: that number plus the answer, e.g. "⅖=⅗". Empty otherwise.
+const NUM_RE = /\d+\/\d+|\d*[½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]|\d+(\.\d+)?/g;
+const oneNum = (t, ans) => { const m = new Set(String(t || '').match(NUM_RE) || []); return m.size === 1 && ans != null && ans !== '' ? [...m][0] + '=' + norm(Array.isArray(ans) ? ans.join(',') : ans) : ''; };
 const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const containsAnswer = (hint, ans) => {
   const a = String(ans).trim();
@@ -69,6 +75,10 @@ for (const unit of UNITS) {
   const assessNums = new Map();
   for (const o of unit.outcomes) for (const q of o.questions) { const n = nums(q.text); if (n) assessNums.set(o.id + '|' + n, 'Show: ' + q.text); }
   for (const p of PRETESTS[unit.id] || []) for (const q of p.questions) { const n = nums(q.text); if (n) assessNums.set(p.outcomeId + '|' + n, 'pre-test: ' + q.text); }
+  const assessOne = new Map();
+  for (const o of unit.outcomes) for (const q of o.questions) { const n = oneNum(q.text, q.answer); if (n) assessOne.set(o.id + '|' + n, 'Show: ' + q.text); }
+  for (const p of PRETESTS[unit.id] || []) for (const q of p.questions) { const n = oneNum(q.text, q.answer); if (n) assessOne.set(p.outcomeId + '|' + n, 'pre-test: ' + q.text); }
+  const sameOne = (where, t, ans) => { const n = oneNum(t, ans); if (n && assessOne.has(where + '|' + n)) fail(where, 'uses the same number and answer as ' + assessOne.get(where + '|' + n) + '  <-  ' + t); };
   const sameSum = (where, t) => { const n = nums(t); if (n && assessNums.has(where + '|' + n)) fail(where, 'uses the same numbers as ' + assessNums.get(where + '|' + n) + '  <-  ' + t); };
   const tries = new Map();
   let count = 0;
@@ -79,6 +89,7 @@ for (const unit of UNITS) {
     if (L && L.workedExample) sameSum(o.id, L.workedExample.problem);
     for (const t of (L && L.tryIt) || []) {
       sameSum(o.id, t.question);
+      sameOne(o.id, t.question, t.answer);
       const n = key(t);
       if (assess.has(n)) fail(o.id, 'Grow try-it repeats ' + assess.get(n) + ': ' + t.question);
       if (!t.hints || t.hints.length !== 3) fail(o.id, 'Grow try-it needs 3 hints: ' + t.question);
@@ -93,6 +104,7 @@ for (const unit of UNITS) {
       if (assess.has(n)) fail(o.id, 'Know repeats ' + assess.get(n) + ': ' + q.text);
       if (tries.has(n)) fail(o.id, 'Know repeats a Grow try-it: ' + q.text);
       sameSum(o.id, q.text);
+      sameOne(o.id, q.text, q.answer);
       if (seen.has(n)) fail(o.id, 'Know question appears twice: ' + q.text);
       seen.add(n);
       if (!q.hint) fail(o.id, 'no hint: ' + q.text);

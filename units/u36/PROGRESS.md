@@ -86,3 +86,10 @@ A student met each Show question up to four times, with the answer, before the a
   repeats a Show or pre-test question in wording or in its numbers; mc answers in options; hints do not
   contain the answer). Mock mode: every Know question answered wrong then right by three pretend students.
 - The program docx is unchanged (it describes Show and the lesson sequence, not Know numbers).
+
+**Revision (2026-10-17, review of PR #37):** g3 Know question 8 was still the Show sum 1 − ⅖ = ⅗ (only one
+number, so the old check missed it); now "M, A, T, H and S: P(a vowel) = ⅕" → ⅘. The test now also fails a
+one-number question that shares its number and answer with a Show or pre-test question. The y6 Grow spinner was
+the Show y6 spinner (2 red, 1 blue, 1 green); it is now 2 red, 3 blue, 1 green (P(red) = 2/6 = ⅓). The spinner
+interactive now adds up every part with the target label, so its "theoretical" line matches the caption when a
+colour repeats (it said 0.25 for 2 red of 4; this also fixes u38 y1, which said 0.33 for 2 red of 3).

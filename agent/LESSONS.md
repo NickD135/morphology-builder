@@ -40,6 +40,8 @@ Updated every run from merged, closed and commented agent PRs. Record what he va
 
 - Run 29 (2026-10-17): #36 got "Reviewer verdict: MERGE" after its run 28 revision; #33, #34, #35 and #36 all wait on Nicholas (merge in that order, retargeting each to main). No new requests in BACKLOG.md. SOLO had gone 24 runs without work, so run 29 went back to it under the whole-unit preference. Lesson for SOLO checks: compare by numbers as well as by wording. u36 Grow worked examples and hooks used the Show sums in different words ("Compare ⅔ and ⅚" vs "Which is bigger: ⅔ or ⅚?"), which an exact-text check misses; `tests/test-solo-know-show.js` now checks both.
 
+- Run 30 (2026-10-17): #37 got NEEDS CHANGES for one Know question that kept a Show sum with only one number in it (P(x) = ⅖, P(not x)?). Lesson: an overlap check by numbers must also cover questions with a single number, compared with the answer; and when a checker has a blind spot, extend it and show it catching the case on the old data. Its worth-a-look on the Grow spinner also uncovered a renderer bug (repeated labels), so worth-a-looks are worth playing through in mock mode, not just reading.
+
 ## Working notes (operational, not taste)
 
 - GitHub: `gh api repos/NickD135/...` is refused in this sandbox; use the GitHub MCP tools with owner `nicholasd-art`.
