@@ -127,3 +127,4 @@ Add ideas found while working. Keep each to one line with the surface and the le
 - Breakdown Blitz: unload is taught as un- "not"; in unload, untie, unlock un- means "reverse the action". Same sense issue as Mission Mode run 17 (Clear)
 - Sound Sorter: the particle colour list (`var cs=[...]` near the end of the page) has 5 stray word objects pasted into it (vision, drought, surf, plait, chin), so most particles get `background:[object Object]` and do not show. Remove the 5 objects (code health)
 - Speed Builder: Teacher Mode setup line uses an em dash ("Explore word building — click End Round") (Clear, teacher facing)
+- Sound Sorter data: check `sound-sorter-data.js` for words that do not suit Year 5 (Starter shows "beer", clue "an alcoholic drink brewed from grain") (Inclusive)
