@@ -677,7 +677,7 @@
     if(typeof WLHints!=='undefined'){
       var _hintQ=q, _hintType=_typeLabel;
       WLHints.updateHints(
-        function(){ return 'Think about what this morpheme means \u2014 does it go at the start, middle, or end of a word?'; },
+        function(){ return 'Think about what this morpheme means. Does it go at the start, the middle or the end of a word?'; },
         function(){ return 'It is a '+_hintType+' and starts with "'+(_hintQ.correct.form||'').charAt(0).toUpperCase()+'".'; }
       );
     }
@@ -797,7 +797,7 @@
     _mmGuardUntil=Date.now()+500;
     baseMeaningEl.setAttribute('tabindex','-1'); baseMeaningEl.focus({preventScroll:true});
   });
-  function startFuelDrain(){clearInterval(fuelInterval);fuelInterval=setInterval(()=>{if(_mmReading)return;fuel-=(_supportMode?.12:.25);if(fuel<=0){fuel=0;updateHud();endGame();clearInterval(fuelInterval);return;}updateHud();},220);}
+  function startFuelDrain(){clearInterval(fuelInterval);fuelInterval=setInterval(()=>{if(_mmReading||(typeof WLHelp!=='undefined'&&WLHelp.isOpen&&WLHelp.isOpen()))return;fuel-=(_supportMode?.12:.25);if(fuel<=0){fuel=0;updateHud();endGame();clearInterval(fuelInterval);return;}updateHud();},220);}
   function endGame(){_mmHideWhy();buttonsLocked=true;optionsEl.innerHTML="";feedbackEl.textContent="Mission over";feedbackEl.className="feedback bad";subFeedbackEl.textContent=`Final score: ${score} XP`;}
   document.getElementById("recalibrateBtn").addEventListener("click",()=>{_roundAnswered=0;_roundCorrect=0;score=0;streak=0;fuel=100;buttonsLocked=false;if(!_wltActive){updateHud();startFuelDrain();}loadQuestion();});
   document.getElementById("skipBtn").addEventListener("click",()=>{if(buttonsLocked)return;if(!_wltActive&&fuel<=0)return;streak=0;if(!_wltActive){fuel=Math.max(fuel-(_supportMode?4:8),0);updateHud();if(fuel<=0){endGame();return;}}if(_wltActive){WLTeacher.clearFeedback();var nb=document.getElementById('wltNextBtn');if(nb)nb.style.display='none';}loadQuestion();});
@@ -822,25 +822,28 @@
     });
   }
 
+  // The shared help and hints scripts are deferred, so they only exist once the page has loaded.
+  document.addEventListener('DOMContentLoaded', function(){
   if(typeof WLHelp!=='undefined') WLHelp.init({
     game:'meaning', title:'Meaning Match-Up', emoji:'🧠',
     steps:[
-      {icon:'🎯',title:'Choose your round',desc:'Pick how many words to answer — 10, 15, 20, 25 or 30. Complete them all before the fuel runs out!'},
+      {icon:'🎯',title:'Choose your round',desc:'Pick how many words to answer: 10, 15, 20, 25 or 30. Finish them all before the energy runs out.'},
       {icon:'📖',title:'Read the meaning',desc:'A meaning is shown at the top. Find the morpheme that matches it.'},
-      {icon:'🎯',title:'Pick the answer',desc:'Choose the correct prefix, suffix, or base from the options below.'},
-      {icon:'⚡',title:'Watch your energy',desc:'The energy bar drains over time. Correct answers refill it.'},
+      {icon:'🎯',title:'Pick the answer',desc:'Choose the prefix, suffix or base from the options below.'},
+      {icon:'⚡',title:'Watch your energy',desc:'The energy bar goes down slowly. Right answers fill it up.'},
       {icon:'💡',title:'Learn from mistakes',desc:'If you get one wrong, read what both morphemes mean. Your energy waits while you read. Press Next when you are ready.'},
-      {icon:'🔄',title:'Switch modes',desc:'Use the tabs to practise prefixes, suffixes, bases, or mixed.'}
+      {icon:'🔄',title:'Switch modes',desc:'Use the tabs to practise prefixes, suffixes, bases or a mix.'}
     ],
-    audioText:'Choose how many words you want to answer before you start. Complete them all before your fuel runs out! In Meaning Match-Up, a meaning is shown and you pick the morpheme that matches. Choose from the options below. The energy bar drains over time, so try to answer quickly. Correct answers refill your energy. If you get one wrong, read what both morphemes mean. Your energy waits while you read. Press Next when you are ready. Use the tabs at the top to switch between prefixes, suffixes, bases, or mixed mode.'
+    audioText:'Choose how many words you want to answer: 10, 15, 20, 25 or 30. Finish them all before your energy runs out. In Meaning Match-Up, a meaning is shown and you pick the morpheme that matches. Choose from the options below. The energy bar goes down slowly, and right answers fill it up. If you get one wrong, read what both morphemes mean. Your energy waits while you read. Press Next when you are ready. Use the tabs at the top to practise prefixes, suffixes, bases or a mix.'
   });
   if(typeof WLHints!=='undefined') WLHints.register({
-    getStrategyHint: function(){ return 'Think about what this morpheme means \u2014 does it go at the start, middle, or end of a word?'; },
+    getStrategyHint: function(){ return 'Think about what this morpheme means. Does it go at the start, the middle or the end of a word?'; },
     getSpecificHint: function(){
       if(!currentQuestion) return '';
       var _t = PREFIXES.some(function(x){ return x.id===currentQuestion.correct.id; }) ? 'prefix' : (BASES.some(function(x){ return x.id===currentQuestion.correct.id; }) ? 'base' : 'suffix');
       return 'It is a '+_t+' and starts with "'+(currentQuestion.correct.form||'').charAt(0).toUpperCase()+'".';
     }
+  });
   });
 </script>
 <script>

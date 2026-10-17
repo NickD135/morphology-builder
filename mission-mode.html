@@ -1541,7 +1541,7 @@
     feedbackEl.textContent="";feedbackEl.className="feedback";subFeedbackEl.textContent="";_mxHideWhy();
     resetDropZone();optionsEl.innerHTML="";
     // Update hints for this question
-    if(typeof WLHints!=='undefined'){var _hQ=q;WLHints.updateHints(function(){return 'Read the word stem and think about what morpheme would complete it.';},function(){if(!_hQ)return'';var _corr=_hQ.isBaseMode?_hQ.base:_hQ.correct;return'"'+(_corr.meaning||'')+'" \u2014 this morpheme means that.';});}
+    if(typeof WLHints!=='undefined'){var _hQ=q;WLHints.updateHints(function(){return 'Read the word stem and think about what morpheme would complete it.';},function(){if(!_hQ)return'';var _corr=_hQ.isBaseMode?_hQ.base:_hQ.correct;return'The missing part means "'+(_corr.meaning||'')+'".';});}
     q.options.forEach((option,index)=>{const btn=document.createElement("button");btn.type="button";btn.className=`bubbleBtn ${["blue","green","purple","orange"][index%4]}`;btn.dataset.mid=option.id;btn.style.animationDelay=`${index*.18}s`;const inner=document.createElement("div");inner.className="bubbleInner";const main=document.createElement("span");const _lbl=getPrefixLabel(option);main.innerHTML=_lbl;var _plainLen=main.textContent.length;if(_plainLen>7)main.style.fontSize='11px';else if(_plainLen>5)main.style.fontSize='13px';else if(_plainLen>4)main.style.fontSize='15px';inner.appendChild(main);btn.appendChild(inner);btn.addEventListener("click",()=>checkAnswer(option));optionsEl.appendChild(btn);});
     // EALD: speak buttons + flip reveal on load
     var ealdSpeakEl=document.getElementById('ealdSpeakBtns');
@@ -1663,7 +1663,7 @@
     _mxGuardUntil=Date.now()+500;
     baseMeaningEl.setAttribute('tabindex','-1'); baseMeaningEl.focus({preventScroll:true});
   });
-  function startFuelDrain(){if(_wltActive)return;clearInterval(fuelInterval);fuelInterval=setInterval(()=>{if(_mxReading)return;fuel-=getDiff().drainRate;if(fuel<=0){fuel=0;updateHud();endGame();clearInterval(fuelInterval);return;}updateHud();},220);}
+  function startFuelDrain(){if(_wltActive)return;clearInterval(fuelInterval);fuelInterval=setInterval(()=>{if(_mxReading||(typeof WLHelp!=='undefined'&&WLHelp.isOpen&&WLHelp.isOpen()))return;fuel-=getDiff().drainRate;if(fuel<=0){fuel=0;updateHud();endGame();clearInterval(fuelInterval);return;}updateHud();},220);}
   function endGame(){buttonsLocked=true;optionsEl.innerHTML="";feedbackEl.textContent="Mission over";feedbackEl.className="feedback bad";subFeedbackEl.textContent=`Final score: ${score} XP`;}
   document.getElementById("recalibrateBtn").addEventListener("click",()=>{_roundAnswered=0;_roundCorrect=0;score=0;streak=0;fuel=100;buttonsLocked=false;if(!_wltActive){updateHud();startFuelDrain();}loadQuestion();});
   document.getElementById("skipBtn").addEventListener("click",()=>{if(buttonsLocked)return;if(!_wltActive&&fuel<=0)return;streak=0;if(!_wltActive){fuel=Math.max(fuel-getDiff().skipPenalty,0);updateHud();if(fuel<=0){endGame();return;}}if(_wltActive){WLTeacher.clearFeedback();var nb=document.getElementById('wltNextBtn');if(nb)nb.style.display='none';}loadQuestion();});
@@ -1785,24 +1785,27 @@ document.addEventListener('DOMContentLoaded', async function() {
     if(hud) hud.appendChild(extPill);
   }
 });
+// The shared help and hints scripts are deferred, so they only exist once the page has loaded.
+document.addEventListener('DOMContentLoaded', function(){
 if(typeof WLHelp!=='undefined') WLHelp.init({
   game:'mission', title:'Mission Mode', emoji:'🚀',
   steps:[
-    {icon:'🎯',title:'Choose your round',desc:'Pick how many words to answer — 10, 15, 20, 25 or 30. Complete them all before the fuel runs out!'},
-    {icon:'👀',title:'Read the word',desc:'A partial word appears. You need to find the missing morpheme to complete it.'},
-    {icon:'🎯',title:'Pick the morpheme',desc:'Choose the correct prefix or suffix from the bubble options to finish the word.'},
-    {icon:'⚡',title:'Watch your fuel',desc:'Your fuel drains over time. Correct answers refuel, wrong answers cost fuel.'},
-    {icon:'💡',title:'Learn the meaning',desc:'After each answer, you will see what the morpheme means and how it changes the word.'}
+    {icon:'🎯',title:'Choose your round',desc:'Pick how many words to answer: 10, 15, 20, 25 or 30. Finish them all before the reaction meter runs out.'},
+    {icon:'👀',title:'Read the meanings',desc:'A word has a part missing. Read the meaning of the part you can see. Then read the target meaning: it says what the finished word should mean.'},
+    {icon:'👆',title:'Pick the missing part',desc:'Tap the bubble that gives the word the target meaning. Use the tabs to practise prefixes, suffixes, bases or a mix.'},
+    {icon:'⚡',title:'Watch the meter',desc:'The reaction meter goes down slowly. Right answers fill it up. Wrong answers take some away.'},
+    {icon:'💡',title:'Learn from mistakes',desc:'If you pick the wrong part, read what each part means. The meter waits while you read. Press Next word when you are ready.'}
   ],
-  audioText:'Choose how many words you want to answer before you start. Complete them all before your fuel runs out! In Mission Mode, a partial word appears and you pick the missing morpheme to complete it. Choose from the bubble options. Your fuel drains over time, so try to answer quickly. Correct answers refuel your rocket. After each answer you will see what the morpheme means.'
+  audioText:'Choose how many words you want to answer: 10, 15, 20, 25 or 30. Finish them all before the reaction meter runs out. In Mission Mode, a word has a part missing. Read the meaning of the part you can see. Then read the target meaning. It says what the finished word should mean. Tap the bubble that gives the word the target meaning. Use the tabs to practise prefixes, suffixes, bases or a mix. The reaction meter goes down slowly. Right answers fill it up, and wrong answers take some away. If you pick the wrong part, read what each part means. The meter waits while you read. Press Next word when you are ready.'
 });
 if(typeof WLHints!=='undefined') WLHints.register({
   getStrategyHint: function(){ return 'Read the word stem and think about what morpheme would complete it.'; },
   getSpecificHint: function(){
     if(!currentQuestion) return '';
     var _corr = currentQuestion.isBaseMode ? currentQuestion.base : currentQuestion.correct;
-    return '"'+(_corr.meaning||'')+'" \u2014 this morpheme means that.';
+    return 'The missing part means "'+(_corr.meaning||'')+'".';
   }
+});
 });
 </script>
 

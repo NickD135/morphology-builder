@@ -16,7 +16,7 @@ Score each surface 1 (poor) to 4 (strong) on each lens from IMPROVEMENT_AGENT.md
 | phoneme-mode.html | 3 | 3 | 3 (was 2) | 3 | 3 (was 2) | 2 | 17 (was 15) | 2026-10-12 |
 | syllable-mode.html | 3 | 3 | 3 (was 2) | 3 | 3 (was 2) | 2 | 17 (was 15) | 2026-10-12 |
 | sound-sorter.html | 3 | 3 | 3 (was 2) | 3 | 3 (was 1: no keyboard play) | 2 | 17 (was 14) | 2026-10-13 |
-| speed-mode.html | | | | | | | | |
+| speed-mode.html | 3 (was 2: help never loaded, said drag and press Enter) | 3 | 2 (Need Advice now works) | 3 | 3 (clock holds during instructions) | 2 | 16 | 2026-10-17 (help popup, ? button, Need Advice, Support toggle load) |
 | root-lab.html | 3 (was 2: help text wrong) | 3 | 3 (was 2: no why, empty Analyse marked wrong) | 3 | 3 (was 2: meaning marks colour only, full-screen stamp in low stim) | 3 (typed Challenge with fair alternative splits) | 18 (was 14) | 2026-10-15 (why panel, nudge, alternative splits, last word waits) |
 | homophone-mode.html | 3 | 3 | 3 (was 1: no why, auto-advance, right word shown in red) | 3 | 3 (was 2: marks colour only, no keyboard focus after answers) | 2 | 17 (was 14) | 2026-10-16 (why panel with meanings and memory tricks, 4 paragraph data bugs) |
 | word-spectrum.html | 3 (was 2: adult explain lines, no help popup) | 3 | 3 (was 1: no why, auto-advance, charge drained while reading) | 3 | 3 (was 1: Spectrum not keyboard playable, marks colour only, bubbles floated in low stim) | 2 | 17 (was 12) | 2026-10-16 (why panel with meanings, keyboard Spectrum, close pairs count, help popup loads) |
@@ -34,7 +34,10 @@ Score each surface 1 (poor) to 4 (strong) on each lens from IMPROVEMENT_AGENT.md
 
 ## Ideas queue
 
-- **Help popup and ? button never load on 7 games (do next):** homophone, mission, meaning, phoneme, sound-sorter, speed and syllable call (word-refinery fixed run 26) `WLHelp.init` / `WLHints.register` at top level of an inline script, which runs before the deferred `wordlab-help.js`, so no first-visit instructions and no ? button (checked in mock mode: `#wlhFloatBtn` count 0; Root Lab, Flashcards, Morpheme Builder, Word Study and Breakdown have it). Check each page's first `loadQuestion` and `_wltActive` too (Word Spectrum had both problems; fixed run 24 by starting on DOMContentLoaded). One small PR across the 7 games (Clear, Structured, Inclusive)
+- Help popup, ? button, Need Advice and Support toggle: fixed on all 8 games in run 27 (breakdown was missing too). Teacher Mode is still broken on homophone, phoneme, sound-sorter and syllable: `_wltActive` is set at the top level of the inline script, before deferred `wordlab-teacher.js`, so it is always false (Word Spectrum and Refinery fixed this by starting on DOMContentLoaded). Not clickable in mock mode; needs a careful read per game (code health, teacher facing)
+- Need Advice step 2 gives the answer away in Mission Mode (run 28 only reworded it to "The missing part means ...") ("'before': this morpheme means that" when the target meaning is "before give money") and nearly in Meaning Match-Up (type + first letter with 2 or 3 options). Now that Need Advice works on these games, give each a gentler step 2 and a third step (Scaffolded, fair practice)
+- Help popup: at 768 px tall the "Got it" button sits below the fold inside the card on 5 or 6 step games; consider a sticky footer for the buttons (Clear, Inclusive)
+- Speed Builder: a random base can have only one viable affix (Ava got "tetra" with only -hedron); skip bases with fewer than 3 buildable words at the student's stage (Engaging, Scaffolded)
 - Word Spectrum: the 15 close pairs (Speed sluggish/slow, Happiness content/pleased/happy, Anger irritated/annoyed/cross, Effort simple/easy and challenging/difficult, Fear nervous/uneasy and scared/frightened, Certainty probable/likely, Formality casual/informal, Complexity basic/straightforward and involved/complex) need Nicholas's confirmation; a spectrum "discussion" prompt after a close pair would suit the semantic gradients routine (Teaching practice)
 - Word Refinery touch: fixed run 26. Homophone Hunter Decode checked by reading: its `touchstart` is passive with a 10 px drag threshold, so taps reach the click (not tested with `page.tap()` yet)
 - Word Refinery: the page frames every cline as Tier 1 everyday → Tier 3 specialist (tier pills, anchor labels, Support Mode T1/T2/T3 labels, Need Advice step 2), but about a third are intensity scales (Running, Eating, Being Scared, Being Happy, Being Angry, Talking Quietly, Wanting). Split the two kinds or relabel per cline; Nicholas's call (Teaching practice, Clear)
@@ -63,7 +66,7 @@ Add ideas found while working. Keep each to one line with the surface and the le
 
 - Homophone Hunter Transmission: only the homophones are clickable and they have extra space around them, so the wrong words are easy to spot without reading. Make every word clickable (most are "already right") so students have to read (Teaching practice, Stretch)
 - Homophone Hunter Transmission: after a wrong pick the panel names the right word, so the next click on it earns full XP; consider no XP for a word fixed after a reveal (Engaging, fairness)
-- Homophone Hunter data: many `why` lines use em dashes and adult words ("Verb — it will influence", "An entitlement or privilege", "Climate conditions"); rewrite in Year 5 words. The why panel already turns " — " into ": " (Clear)
+- Homophone Hunter data (em dashes removed in run 28; adult words remain): many `why` lines use adult words ("Verb — it will influence", "An entitlement or privilege", "Climate conditions"); rewrite in Year 5 words. The why panel already turns " — " into ": " (Clear)
 - Homophone Hunter: when new sentences are added, give each one an `m` meaning if the word is used in a sense `_HH_MEANING` does not cover (run 23 did this for right, practice, effect and coarse) (Clear)
 - Homophone Hunter: the 77 meanings in `_HH_MEANING` could also feed Need Advice step 2 instead of `q.why`, which often gives the answer away ("The bags belong to them") (Scaffolded)
 - Homophone Hunter: pairs that sound different in Australian English are taught as homophones (pour/paw/poor, hour/our, descent/dissent, council/counsel for some speakers); check each with Nicholas (Teaching practice)
@@ -89,7 +92,7 @@ Add ideas found while working. Keep each to one line with the surface and the le
 - Help popups describe controls but give no worked example ("I do"); add one modelled example per game (Scaffolded, Clear)
 - SOLO: `units/SOLO_PROGRESS.md` status header is out of date (resources track)
 - SOLO: dead or conflicting resource links listed in `SUGGESTIONS.md` (resources track). Now fixable directly under hard rule 3a: check the live `resources` rows, fix them, and remove the conflicting hardcoded blocks
-- Sound Sorter: Need Advice gives a strategy, then where the sound sits in the word; add a third step that names the position convention for this word (e.g. "at the end of a word, long a is usually ay"), reusing `_ssWhyNot` logic (Scaffolded)
+- Sound Sorter: Need Advice (run 28) gives a strategy, then where the gap sits, without naming the word or grapheme; add a third step that names the position convention for this word (e.g. "at the end of a word, long a is usually ay"), reusing `_ssWhyNot` logic (Scaffolded)
 - Sound Sorter: 190 distractors are never a spelling of the target sound anywhere in the game (e.g. "au" for Short A in calf, "nk" for NG in ring); review those distractor lists so every option is a real way to spell the sound (Teaching practice)
 - Sound Sorter: check every other tile game for div "buttons" that cannot be reached by keyboard (Meaning Match-Up, Mission Mode, Root Lab) (Inclusive)
 - Sound Sorter: some sound labels read awkwardly in feedback ("EAU = OH sound", "Diminutive -ette ending sound"); tidy `soundLabel` in `sound-sorter-data.js` (Clear)
@@ -122,3 +125,6 @@ Add ideas found while working. Keep each to one line with the surface and the le
 - Sound Sorter: the game panel also has `backdrop-filter: blur(8px)` over drifting particles; in Breakdown removing it took idle frames from about 20 to 60 fps in headless. Measure and remove if the panel is near opaque (Polish)
 - wordlab-data.js: turning low stim on mid-session via `loadLowStimMode()` adds the class but not the `#wlLowStimCSS` stylesheet (only added at page load). Low risk; check if teachers toggle it during lessons (Inclusive)
 - Breakdown Blitz: unload is taught as un- "not"; in unload, untie, unlock un- means "reverse the action". Same sense issue as Mission Mode run 17 (Clear)
+- Sound Sorter: the particle colour list (`var cs=[...]` near the end of the page) has 5 stray word objects pasted into it (vision, drought, surf, plait, chin), so most particles get `background:[object Object]` and do not show. Remove the 5 objects (code health)
+- Speed Builder: Teacher Mode setup line uses an em dash ("Explore word building — click End Round") (Clear, teacher facing)
+- Sound Sorter data: check `sound-sorter-data.js` for words that do not suit Year 5 (Starter shows "beer", clue "an alcoholic drink brewed from grain") (Inclusive)
