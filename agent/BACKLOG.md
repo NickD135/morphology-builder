@@ -25,6 +25,8 @@ Score each surface 1 (poor) to 4 (strong) on each lens from IMPROVEMENT_AGENT.md
 | SOLO: login and unit picker | | | | | | | | |
 | SOLO: Grow (guided lesson), u31 | 4 | 4 | 4 | 3 | 3 | 3 | 21 | 2026-10-12 (whole unit reworked; g2 still has no visual) |
 | SOLO: Know (practice), u31 | 4 | 3 | 4 | 3 | 3 | 3 | 20 | 2026-10-12 (whole unit: fresh numbers, hint + why on all 130, a challenge item per outcome) |
+| SOLO: Know (practice), u36 | 3 | 3 | 4 (was 1: copies of Show, no hints) | 3 | 3 | 3 (Challenge item per outcome) | 19 | 2026-10-17 (117 fresh questions, hint + why on all) |
+| SOLO: Grow (guided lesson), u36 | 3 | 4 | 3 (was 2: try-its, hooks and worked examples were Show questions) | 3 | 3 | 2 | 18 | 2026-10-17 (new numbers for 39 try-its, 12 hooks, 12 worked examples; y6 spinner no longer the Show spinner, and its theoretical line is right when a colour repeats) |
 | SOLO: Show (assessment), u31 | 4 | 3 | n/a | 2 | 3 | n/a | | 2026-10-12 (Know overlap removed; 6 Show fixes) |
 | SOLO: pre/post tests and reviews | | | | | | | | |
 
@@ -72,7 +74,12 @@ Add ideas found while working. Keep each to one line with the surface and the le
 - Homophone Hunter: pairs that sound different in Australian English are taught as homophones (pour/paw/poor, hour/our, descent/dissent, council/counsel for some speakers); check each with Nicholas (Teaching practice)
 - Homophone Hunter: a read-aloud button on the why panel, as in the backlog for other games (Inclusive)
 
-- **Other SOLO units: check for Know practice repeating Show questions.** It did in u31 (fixed 2026-10-12), so other units probably have it too. Run `validate.js`-style checks unit by unit, one whole unit per PR (fair assessment)
+- **SOLO Know copies of Show, next units (fair assessment, do next on the SOLO turn).** `node tests/test-solo-know-show.js` counts them: u35 117/117, u40 117/117, u39 116/117, u37 119/126, u38 112/117, u29 99/117, u34 92/117, u33 77/117, u32 36/108, u30 22/117, u25 20/135 (u31 and u36 fixed). One whole unit per PR, Know + Grow try-its + hooks + worked examples, then add the unit to `CHECKED` in the test. Next in teaching order: u37 (Term 4). Check each unit's Grow with the same-numbers check, not only Know
+- u36 Know `example` lines still use Show numbers (r3 "½ of 20 = 10; ¼ of 20 = 5…"). Know skips its example when there is a Grow lesson, so students rarely see them; fix with the next u36 touch (fair assessment)
+- u36 Grow watch prompts and hooks name the method in the same words as some Show "which step" questions (y1 "first find one quarter"); that is teaching, not a copy, but check with Nicholas whether Show should keep those method questions (Teaching practice)
+- SOLO practice: after an order question is submitted the student's own order is hidden; only the why line shows the right order. Show the order they built with ✓/✗ (Clear, Inclusive)
+- SOLO u36 y1 worked example: the bar model shades parts 1, 3 and 5 rather than the first two fifths (existing renderer, flagged in the #37 review); students may read it as 3 fifths. Check the bar renderer's shading across units (Clear)
+- SOLO u36 y6 Know Challenge (red, red, red, blue: P(red) = 75%) is the same 3 of 4 setup as a pre-test question; reviewer called it borderline, left for Nicholas (Scaffolded)
 - SOLO u31 g3: an interactive balance scale for "do the same to both sides" (bar models were added as a static scaffold) (Scaffolded, Stretch)
 - SOLO u31 resource gaps with no verified exact match yet: r2 end zeros, r3 factorising, y3 building a table of multiples (Resources)
 - Commit a shared u31 validator under tests/ (MC answer in options, arithmetic, no Know/Show overlap) and generalise it to all units (code health)
