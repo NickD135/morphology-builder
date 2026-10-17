@@ -261,6 +261,8 @@ var WLHelp = (function() {
 
   return {
     init: init,
+    // true while the instructions popup is on screen, so games can hold their timers
+    isOpen: function() { return !!_popupEl; },
     show: showPopup,
     close: closePopup
   };
