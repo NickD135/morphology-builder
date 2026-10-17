@@ -67,3 +67,22 @@ complementary events). Playwright load → React mounts, normal login landing, 0
 environmental favicon 404). window.UNITS live with u36 (13 outcomes), 13 units total.
 
 Both deliverables for Unit 36 are now complete. **All three units (34, 35, 36) are done — both deliverables each.**
+
+---
+
+## 2026-10-17 — Know and Grow no longer repeat Show (improvement agent, run 29)
+
+Know practice had been built as a copy of Show: 117 of 117 Know questions were Show questions, and every
+Grow try-it, 12 of 13 hooks and 12 of 13 worked examples were Show (or pre-test) questions in other words.
+A student met each Show question up to four times, with the answer, before the assessment.
+
+- **PRACTICE (Know):** all 13 outcomes rewritten, 9 questions each (117). Fresh numbers and contexts, a
+  `hint` that does not give the answer and a `why` line on every question, the last question of each outcome
+  is a Challenge item, y3 has 2 `order` questions.
+- **LEARN (Grow):** new numbers for all 39 try-its (3-step hint ladders kept), 12 hooks and 12 worked
+  examples, plus watch prompts that named a Show question. r2 (benchmark recall) hook and worked example kept.
+- **Not changed:** UNITS (Show), PRETESTS, outcome ids, BEYOND, resources, the DB.
+- **Check:** `node tests/test-solo-know-show.js u36` (0 problems: no Know, try-it, hook or worked example
+  repeats a Show or pre-test question in wording or in its numbers; mc answers in options; hints do not
+  contain the answer). Mock mode: every Know question answered wrong then right by three pretend students.
+- The program docx is unchanged (it describes Show and the lesson sequence, not Know numbers).
