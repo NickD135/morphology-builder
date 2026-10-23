@@ -1,0 +1,1119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Labs – Analytics</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="wordlab-common.css">
+  <style>
+    body{font-family:'Lexend',sans-serif;background:linear-gradient(180deg,#0d0b1a 0%,#110f1e 50%,#0d0b1a 100%);color:#cbd5e1;line-height:1.6;min-height:100vh;position:relative;overflow-x:hidden;}
+    body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 55% 30% at 0% 15%,rgba(99,102,241,.13) 0%,transparent 70%),radial-gradient(ellipse 45% 25% at 100% 40%,rgba(124,58,237,.10) 0%,transparent 70%),radial-gradient(ellipse 50% 20% at 0% 70%,rgba(67,56,202,.09) 0%,transparent 70%),radial-gradient(ellipse 40% 22% at 100% 90%,rgba(99,102,241,.11) 0%,transparent 70%);}
+    body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background-image:radial-gradient(circle,rgba(99,102,241,.18) 1px,transparent 1px);background-size:28px 28px;opacity:.18;}
+
+    .header-right{display:flex;align-items:center;gap:16px;}
+    .header-label{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:#6366f1;background:rgba(99,102,241,.1);padding:5px 12px;border-radius:8px;}
+    .header-link{font-size:13px;font-weight:700;color:#94a3b8;text-decoration:none;transition:color .15s;}
+    .header-link:hover{color:#e0e7ff;}
+
+    .page-wrap{position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:32px 24px 80px;}
+
+    /* States */
+    .state-msg{text-align:center;padding:80px 24px;font-size:15px;font-weight:700;color:#94a3b8;}
+    .state-msg .icon{font-size:48px;margin-bottom:16px;}
+
+    /* Section */
+    .section{margin-bottom:32px;}
+    .section-heading{font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.18em;color:#6366f1;margin-bottom:16px;}
+
+    /* Summary cards */
+    .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+    .card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:20px;backdrop-filter:blur(8px);}
+    .card-value{font-size:36px;font-weight:900;color:#fff;line-height:1;}
+    .card-label{font-size:12px;font-weight:700;color:#94a3b8;margin-top:6px;text-transform:uppercase;letter-spacing:.08em;}
+    .card-sub{font-size:12px;font-weight:600;color:#64748b;margin-top:4px;}
+
+    /* Plan pills */
+    .plan-pills{display:flex;gap:12px;flex-wrap:wrap;}
+    .plan-pill{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:800;}
+    .plan-pill .count{font-size:18px;font-weight:900;}
+    .plan-trial{background:rgba(217,119,6,.12);color:#fbbf24;border:1px solid rgba(217,119,6,.2);}
+    .plan-active{background:rgba(22,163,74,.12);color:#4ade80;border:1px solid rgba(22,163,74,.2);}
+    .plan-expired{background:rgba(220,38,38,.12);color:#f87171;border:1px solid rgba(220,38,38,.2);}
+    .plan-payment_failed{background:rgba(234,88,12,.12);color:#fb923c;border:1px solid rgba(234,88,12,.2);}
+    .plan-teacher{background:rgba(99,102,241,.12);color:#a5b4fc;border:1px solid rgba(99,102,241,.2);}
+
+    /* Growth grid */
+    .growth-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+    .growth-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:16px;text-align:center;}
+    .growth-value{font-size:28px;font-weight:900;color:#fff;}
+    .growth-label{font-size:11px;font-weight:700;color:#64748b;margin-top:4px;}
+
+    /* School table */
+    .table-wrap{overflow-x:auto;border-radius:16px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.02);}
+    table{width:100%;border-collapse:collapse;font-size:13px;}
+    th{text-align:left;padding:12px 14px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#64748b;border-bottom:1px solid rgba(255,255,255,.06);white-space:nowrap;}
+    th button{background:none;border:none;color:inherit;font:inherit;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:4px;}
+    th button:hover{color:#e0e7ff;}
+    th .sort-arrow{font-size:10px;opacity:.5;}
+    th .sort-arrow.active{opacity:1;color:#6366f1;}
+    td{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.03);color:#cbd5e1;font-weight:600;}
+    tr:hover td{background:rgba(99,102,241,.04);}
+    .plan-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;}
+    .plan-badge.trial{background:rgba(217,119,6,.15);color:#fbbf24;}
+    .plan-badge.active{background:rgba(22,163,74,.15);color:#4ade80;}
+    .plan-badge.expired{background:rgba(220,38,38,.15);color:#f87171;}
+    .plan-badge.payment_failed{background:rgba(234,88,12,.15);color:#fb923c;}
+    .plan-badge.teacher{background:rgba(99,102,241,.15);color:#a5b4fc;}
+    .stripe-check{color:#4ade80;font-weight:900;}
+    .stripe-no{color:#475569;}
+
+    /* Activity bars */
+    .act-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+    .act-label{width:160px;font-size:12px;font-weight:800;color:#e0e7ff;text-align:right;flex-shrink:0;}
+    .act-bar-wrap{flex:1;height:28px;background:rgba(255,255,255,.04);border-radius:8px;overflow:hidden;position:relative;}
+    .act-bar{height:100%;background:linear-gradient(90deg,#4338ca,#6366f1);border-radius:8px;transition:width .5s;}
+    .act-stats{width:140px;font-size:11px;font-weight:700;color:#64748b;flex-shrink:0;}
+    .act-stats strong{color:#e0e7ff;}
+
+    /* Sparkline */
+    .sparkline{display:flex;align-items:flex-end;gap:3px;height:80px;padding:8px 0;}
+    .spark-bar{flex:1;background:#4338ca;border-radius:3px 3px 0 0;min-height:2px;transition:height .3s;cursor:default;}
+    .spark-bar:hover{background:#6366f1;}
+    .spark-labels{display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:#475569;margin-top:4px;}
+
+    /* Footer */
+    .footer{position:relative;z-index:2;border-top:1px solid rgba(255,255,255,.04);padding:24px;text-align:center;font-size:12px;font-weight:700;color:#475569;}
+
+    @media(max-width:900px){
+      .summary-grid{grid-template-columns:repeat(2,1fr);}
+      .growth-grid{grid-template-columns:repeat(2,1fr);}
+      .act-label{width:100px;font-size:11px;}
+      .act-stats{width:100px;}
+    }
+    @media(max-width:500px){
+      .summary-grid{grid-template-columns:1fr;}
+      .growth-grid{grid-template-columns:1fr 1fr;}
+      .act-row{flex-wrap:wrap;}
+      .act-label{width:100%;text-align:left;}
+    }
+
+    /* ── Content Levels (stage tagging admin UI) ──────────────── */
+    .wl-cl-subtabs{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+    .wlCLSubtab{
+      padding:8px 16px;border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.03);color:#cbd5e1;
+      border-radius:999px;cursor:pointer;font-size:12px;font-weight:800;
+      font-family:'Lexend',sans-serif;
+    }
+    .wlCLSubtab:hover{background:rgba(99,102,241,.12);}
+    .wlCLSubtab.active{background:#6366f1;color:#fff;border-color:#6366f1;}
+    .wl-cl-filter-bar{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+    .wl-cl-filter-btn{
+      padding:5px 12px;border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.03);color:#94a3b8;
+      border-radius:999px;cursor:pointer;font-size:12px;font-weight:700;
+      font-family:'Lexend',sans-serif;
+    }
+    .wl-cl-filter-btn:hover{background:rgba(99,102,241,.12);color:#e0e7ff;}
+    .wl-cl-filter-btn.active{background:#6366f1;color:#fff;border-color:#6366f1;}
+    .wl-cl-unassigned-count{
+      font-size:12px;font-weight:800;color:#fbbf24;margin-bottom:10px;
+    }
+    .wl-cl-btn-group{display:flex;gap:8px;margin-bottom:12px;}
+    .wl-cl-btn{
+      padding:7px 14px;border:none;border-radius:8px;
+      cursor:pointer;font-size:12px;font-weight:800;
+      font-family:'Lexend',sans-serif;color:#fff;
+    }
+    .wl-cl-btn:hover{filter:brightness(1.1);}
+    .wl-cl-btn-primary{background:#6366f1;}
+    .wl-cl-btn-success{background:#16a34a;}
+    .wl-cl-table{width:100%;border-collapse:collapse;font-size:12px;}
+    .wl-cl-table th,.wl-cl-table td{
+      text-align:left;padding:7px 10px;
+      border-top:1px solid rgba(255,255,255,.04);
+      color:#cbd5e1;
+    }
+    .wl-cl-table thead th{
+      font-size:10px;text-transform:uppercase;letter-spacing:.1em;
+      color:#64748b;border-top:none;border-bottom:1px solid rgba(255,255,255,.08);
+      font-weight:900;
+    }
+    .wl-cl-table tbody tr:hover td{background:rgba(99,102,241,.04);}
+    .wl-cl-morph{font-weight:800;color:#e0e7ff;}
+    .wl-cl-examples{font-size:11px;color:#64748b;}
+    .wl-cl-table select{
+      padding:4px 8px;border:1px solid rgba(255,255,255,.1);
+      background:rgba(255,255,255,.04);color:#e0e7ff;
+      border-radius:6px;font-size:11px;font-family:'Lexend',sans-serif;
+      cursor:pointer;
+    }
+    .wl-cl-table-wrap{
+      max-height:560px;overflow-y:auto;
+      border-radius:12px;border:1px solid rgba(255,255,255,.06);
+      background:rgba(255,255,255,.02);
+    }
+    .wl-cl-help{
+      margin-top:14px;padding:12px 14px;
+      background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.2);
+      border-radius:10px;font-size:11px;color:#fbbf24;line-height:1.6;
+    }
+    .wl-cl-help code{
+      background:rgba(0,0,0,.3);padding:2px 6px;border-radius:4px;
+      color:#e0e7ff;font-family:ui-monospace,monospace;font-size:10px;
+    }
+    .wl-cl-word-note{
+      margin:8px 0 12px;color:#64748b;font-size:12px;font-weight:600;
+    }
+  </style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<header class="header" role="banner">
+  <div class="header-inner">
+    <a class="brand" href="landing.html">
+      <div class="brand-icon">🧪</div>
+      <span class="brand-name">Word Labs</span>
+    </a>
+    <div class="header-right" role="navigation" aria-label="Analytics navigation">
+      <span class="header-label">Owner Analytics</span>
+      <a href="item-creator.html" class="header-link">🎨 Item Creator</a>
+      <a href="dashboard.html" class="header-link">Dashboard</a>
+      <a href="account.html" class="header-link">Account</a>
+      <a href="#" class="header-link" onclick="WordLabData.teacherSignOut();return false;">Sign Out</a>
+    </div>
+  </div>
+</header>
+
+<div class="page-wrap" id="main-content" role="main">
+  <!-- Loading -->
+  <div id="loadingState" class="state-msg" aria-live="polite">
+    <div class="icon">📊</div>
+    Loading analytics...
+  </div>
+
+  <!-- Error / Access denied -->
+  <div id="errorState" class="state-msg" style="display:none;" aria-live="polite">
+    <div class="icon">🔒</div>
+    <div>Access denied. This page is restricted to the Word Labs owner.</div>
+    <div style="margin-top:12px;"><a href="dashboard.html" style="color:#6366f1;">← Back to Dashboard</a></div>
+  </div>
+
+  <!-- Dashboard content -->
+  <div id="content" style="display:none;">
+
+    <!-- Summary -->
+    <section class="section" aria-label="Summary metrics">
+      <div class="summary-grid">
+        <div class="card"><div class="card-value" id="totalSchools">—</div><div class="card-label">Schools</div><div class="card-sub" id="schoolsSub"></div></div>
+        <div class="card"><div class="card-value" id="totalTeachers">—</div><div class="card-label">Teachers</div></div>
+        <div class="card"><div class="card-value" id="totalStudents">—</div><div class="card-label">Students</div></div>
+        <div class="card"><div class="card-value" id="activeToday">—</div><div class="card-label">Active Today</div><div class="card-sub" id="activeWeekSub"></div></div>
+      </div>
+    </section>
+
+    <!-- Plan breakdown -->
+    <section class="section" aria-label="Subscription breakdown">
+      <div class="section-heading">Plan Breakdown</div>
+      <div class="plan-pills" id="planPills"></div>
+    </section>
+
+    <!-- Growth -->
+    <section class="section" aria-label="Growth metrics">
+      <div class="section-heading">Growth</div>
+      <div class="growth-grid" id="growthGrid"></div>
+    </section>
+
+    <!-- Schools table -->
+    <section class="section" aria-label="School details">
+      <div class="section-heading">Schools</div>
+      <div class="table-wrap">
+        <table id="schoolTable">
+          <thead><tr id="schoolHead"></tr></thead>
+          <tbody id="schoolBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Activity popularity -->
+    <section class="section" aria-label="Activity metrics">
+      <div class="section-heading">Activity Popularity</div>
+      <div id="activityBars"></div>
+    </section>
+
+    <!-- Daily active -->
+    <section class="section" aria-label="Daily engagement">
+      <div class="section-heading">Daily Active Students (30 days)</div>
+      <div class="sparkline" id="sparkline"></div>
+      <div class="spark-labels" id="sparkLabels"></div>
+    </section>
+
+    <div style="text-align:center;font-size:11px;font-weight:700;color:#475569;margin-top:8px;" id="generatedAt"></div>
+
+    <!-- Content Levels (stage tagging admin UI) -->
+    <section class="section" aria-label="Content stage tagging">
+      <div class="section-heading">Content Levels</div>
+      <div class="wl-cl-subtabs">
+        <button id="wlCLSubtabMorpheme" class="wlCLSubtab active" type="button">Morphemes</button>
+        <button id="wlCLSubtabWord" class="wlCLSubtab" type="button">Sound Sorter Words</button>
+      </div>
+      <div id="wlCLMorphemeView"></div>
+      <div id="wlCLWordView" style="display:none;"></div>
+      <div class="wl-cl-help">
+        <strong>Workflow:</strong> Tag morphemes/words here, then <em>Export CSV</em>.
+        To persist to code, run:
+        <code>node scripts/apply-stage-csv.js morpheme-stages-YYYY-MM-DD.csv data.js</code>
+        and commit the result. Drafts are saved to <code>localStorage</code>
+        so you can iterate across sessions before running the persist script.
+      </div>
+    </section>
+  </div>
+</div>
+
+<footer class="footer" role="contentinfo">Word Labs Analytics · Owner access only</footer>
+
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="wordlab-stage.js"></script>
+<script defer src="wordlab-data.js?v=20261023b"></script>
+<script defer src="data.js"></script>
+<script defer src="sound-sorter-data.js"></script>
+<script>
+const SUPABASE_URL = 'https://kdpavfrzmmzknqfpodrl.supabase.co';
+let _data = null;
+let _sortCol = 'student_count';
+let _sortAsc = false;
+
+const ACTIVITY_NAMES = {
+  'breakdown-blitz': 'Breakdown Blitz',
+  'phoneme-splitter': 'Phoneme Splitter',
+  'syllable-splitter': 'Syllable Splitter',
+  'mission-mode': 'Mission Mode',
+  'meaning-mode': 'Meaning Match-Up',
+  'sound-sorter': 'Sound Sorter',
+  'speed-builder': 'Speed Builder',
+  'word-refinery': 'Word Refinery',
+  'word-spectrum': 'Word Spectrum',
+  'homophone-hunter': 'Homophone Hunter',
+  'root-lab': 'Root Lab',
+  'flashcard-mode': 'Flashcards',
+};
+
+function _setLoadingError(msg) {
+  var el = document.getElementById('loadingState');
+  if (!el) return;
+  while (el.firstChild) el.removeChild(el.firstChild);
+  var icon = document.createElement('div');
+  icon.className = 'icon';
+  icon.textContent = '\u26A0\uFE0F';
+  el.appendChild(icon);
+  el.appendChild(document.createTextNode(String(msg)));
+}
+
+// Defer init until all `<script defer>` tags (WordLabData, data.js,
+// sound-sorter-data.js) have finished executing — DOMContentLoaded
+// fires after the defer queue drains.
+async function init() {
+  if (typeof WordLabData === 'undefined') {
+    _setLoadingError('Script load error: WordLabData unavailable.');
+    return;
+  }
+  var user = await WordLabData.requireTeacherAuth();
+  if (!user) return;
+
+  var sess = await WordLabData._sb().auth.getSession();
+  var session = sess && sess.data && sess.data.session;
+  if (!session) return;
+
+  try {
+    var resp = await fetch(SUPABASE_URL + '/functions/v1/get-analytics', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token,
+      },
+    });
+
+    if (resp.status === 403) {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('errorState').style.display = '';
+      return;
+    }
+
+    _data = await resp.json();
+    if (_data.error) throw new Error(_data.error);
+
+    renderAll();
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('content').style.display = '';
+  } catch (e) {
+    _setLoadingError('Error loading analytics: ' + (e && e.message ? String(e.message) : String(e)));
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+
+function renderAll() {
+  var t = _data.totals;
+  document.getElementById('totalSchools').textContent = t.schools;
+  document.getElementById('totalTeachers').textContent = t.teachers;
+  document.getElementById('totalStudents').textContent = t.students;
+  document.getElementById('activeToday').textContent = t.active_today;
+  document.getElementById('activeWeekSub').textContent = t.active_this_week + ' this week';
+
+  // Plan pills
+  var planNames = { trial: 'Trial', active: 'Active', expired: 'Expired', payment_failed: 'Failed', teacher: 'Teacher' };
+  var pills = '';
+  for (var p in _data.plan_breakdown) {
+    if (_data.plan_breakdown[p] > 0) {
+      pills += '<div class="plan-pill plan-' + p + '"><span class="count">' + _data.plan_breakdown[p] + '</span> ' + WordLabData.escapeHtml(planNames[p] || p) + '</div>';
+    }
+  }
+  document.getElementById('planPills').innerHTML = pills;
+
+  // Growth
+  var g = _data.growth;
+  document.getElementById('growthGrid').innerHTML =
+    '<div class="growth-card"><div class="growth-value">' + g.new_schools_this_week + '</div><div class="growth-label">New schools this week</div></div>' +
+    '<div class="growth-card"><div class="growth-value">' + g.new_schools_this_month + '</div><div class="growth-label">New schools this month</div></div>' +
+    '<div class="growth-card"><div class="growth-value">' + g.new_students_this_week + '</div><div class="growth-label">New students this week</div></div>' +
+    '<div class="growth-card"><div class="growth-value">' + g.new_students_this_month + '</div><div class="growth-label">New students this month</div></div>';
+
+  renderSchoolTable();
+  renderActivityBars();
+  renderSparkline();
+
+  document.getElementById('generatedAt').textContent = 'Generated ' + new Date(_data.generated_at).toLocaleString();
+
+  // Content Levels admin UI
+  try { _wlCLWireSubtabs(); renderMorphemeTagger(); } catch(e) { console.warn('Content Levels init error:', e); }
+}
+
+// ── School table ───────────────────────────────────────────
+var COLS = [
+  { key: 'name', label: 'School' },
+  { key: 'plan', label: 'Plan' },
+  { key: 'teacher_count', label: 'Teachers' },
+  { key: 'student_count', label: 'Students' },
+  { key: 'class_count', label: 'Classes' },
+  { key: 'last_active', label: 'Last Active' },
+  { key: 'created_at', label: 'Created' },
+  { key: 'has_stripe', label: 'Stripe' },
+];
+
+function renderSchoolTable() {
+  // Header
+  var head = '';
+  for (var i = 0; i < COLS.length; i++) {
+    var c = COLS[i];
+    var isActive = _sortCol === c.key;
+    var arrow = isActive ? (_sortAsc ? '▲' : '▼') : '↕';
+    head += '<th><button onclick="sortBy(\'' + c.key + '\')" aria-label="Sort by ' + c.label + '">' + c.label + ' <span class="sort-arrow' + (isActive ? ' active' : '') + '">' + arrow + '</span></button></th>';
+  }
+  document.getElementById('schoolHead').innerHTML = head;
+
+  // Sort
+  var schools = _data.schools.slice();
+  schools.sort(function(a, b) {
+    var va = getSortVal(a, _sortCol);
+    var vb = getSortVal(b, _sortCol);
+    if (va < vb) return _sortAsc ? -1 : 1;
+    if (va > vb) return _sortAsc ? 1 : -1;
+    return 0;
+  });
+
+  // Body
+  var body = '';
+  for (var i = 0; i < schools.length; i++) {
+    var s = schools[i];
+    body += '<tr>' +
+      '<td style="font-weight:800;color:#e0e7ff;">' + WordLabData.escapeHtml(s.name) + '<div style="font-size:10px;color:#64748b;font-weight:600;">' + WordLabData.escapeHtml(s.teacher_emails.join(', ')) + '</div></td>' +
+      '<td><span class="plan-badge ' + String(s.plan || '').replace(/[^a-z_-]/gi, '') + '">' + WordLabData.escapeHtml(s.plan) + '</span></td>' +
+      '<td>' + s.teacher_emails.length + '</td>' +
+      '<td style="font-weight:800;">' + s.student_count + '</td>' +
+      '<td>' + s.class_count + '</td>' +
+      '<td>' + (s.last_active ? timeAgo(s.last_active) : '<span style="color:#475569;">Never</span>') + '</td>' +
+      '<td style="font-size:11px;color:#64748b;">' + new Date(s.created_at).toLocaleDateString() + '</td>' +
+      '<td>' + (s.has_stripe ? '<span class="stripe-check">✓</span>' : '<span class="stripe-no">—</span>') + '</td>' +
+    '</tr>';
+  }
+  document.getElementById('schoolBody').innerHTML = body;
+}
+
+function getSortVal(school, col) {
+  if (col === 'teacher_count') return school.teacher_emails.length;
+  if (col === 'last_active') return school.last_active || '';
+  return school[col] || '';
+}
+
+function sortBy(col) {
+  if (_sortCol === col) { _sortAsc = !_sortAsc; }
+  else { _sortCol = col; _sortAsc = col === 'name'; }
+  renderSchoolTable();
+}
+
+// ── Activity bars ───────────────────────────────────────────
+function renderActivityBars() {
+  var acts = _data.activities;
+  if (!acts.length) { document.getElementById('activityBars').innerHTML = '<div style="color:#64748b;font-size:13px;">No activity data yet.</div>'; return; }
+  var max = acts[0].total_attempts;
+  var html = '';
+  for (var i = 0; i < acts.length; i++) {
+    var a = acts[i];
+    var pct = max > 0 ? Math.round((a.total_attempts / max) * 100) : 0;
+    var name = ACTIVITY_NAMES[a.activity] || a.activity;
+    html += '<div class="act-row">' +
+      '<div class="act-label">' + WordLabData.escapeHtml(name) + '</div>' +
+      '<div class="act-bar-wrap"><div class="act-bar" style="width:' + pct + '%;"></div></div>' +
+      '<div class="act-stats"><strong>' + a.total_attempts.toLocaleString() + '</strong> · ' + a.accuracy + '% acc · ' + a.unique_students + ' students</div>' +
+    '</div>';
+  }
+  document.getElementById('activityBars').innerHTML = html;
+}
+
+// ── Sparkline ───────────────────────────────────────────────
+function renderSparkline() {
+  var days = _data.daily_active;
+  var max = 1;
+  for (var i = 0; i < days.length; i++) { if (days[i].count > max) max = days[i].count; }
+
+  var bars = '';
+  for (var i = 0; i < days.length; i++) {
+    var d = days[i];
+    var h = Math.max(2, Math.round((d.count / max) * 72));
+    bars += '<div class="spark-bar" style="height:' + h + 'px;" title="' + d.date + ': ' + d.count + ' students" aria-label="' + d.date + ': ' + d.count + ' active students"></div>';
+  }
+  document.getElementById('sparkline').innerHTML = bars;
+
+  // Labels: first, middle, last
+  if (days.length > 0) {
+    document.getElementById('sparkLabels').innerHTML =
+      '<span>' + days[0].date.slice(5) + '</span>' +
+      '<span>' + days[Math.floor(days.length / 2)].date.slice(5) + '</span>' +
+      '<span>' + days[days.length - 1].date.slice(5) + '</span>';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// Content Levels — stage tagging admin UI (Phase 6)
+// ═══════════════════════════════════════════════════════════
+
+function _wlCLCollectMorphemes() {
+  var items = [];
+  if (typeof PREFIXES !== 'undefined') PREFIXES.forEach(function(p){ items.push({ type:'prefix', group:'', ref:p }); });
+  if (typeof SUFFIXES !== 'undefined') SUFFIXES.forEach(function(s){ items.push({ type:'suffix', group:'', ref:s }); });
+  if (typeof CORE_BASES  !== 'undefined') CORE_BASES.forEach(function(b){  items.push({ type:'base', group:'core',  ref:b }); });
+  if (typeof ANGLO_BASES !== 'undefined') ANGLO_BASES.forEach(function(b){ items.push({ type:'base', group:'anglo', ref:b }); });
+  if (typeof LATIN_BASES !== 'undefined') LATIN_BASES.forEach(function(b){ items.push({ type:'base', group:'latin', ref:b }); });
+  if (typeof GREEK_BASES !== 'undefined') GREEK_BASES.forEach(function(b){ items.push({ type:'base', group:'greek', ref:b }); });
+  return items;
+}
+
+function _wlCLKeyFor(item) {
+  return item.type + ':' + (item.group ? item.group + ':' : '') + item.ref.id;
+}
+
+function _wlCLRestoreMorphemeDrafts(items) {
+  try {
+    var saved = JSON.parse(localStorage.getItem('wl_stage_morpheme_overrides') || '{}');
+    items.forEach(function(it){
+      var k = _wlCLKeyFor(it);
+      if (saved.hasOwnProperty(k)) it.ref.stage = saved[k] || null;
+    });
+  } catch(e){}
+}
+
+function _wlCLSaveMorphemeOverrides(items) {
+  var overrides = {};
+  items.forEach(function(it){
+    var k = _wlCLKeyFor(it);
+    if (it.ref.stage) overrides[k] = it.ref.stage;
+  });
+  localStorage.setItem('wl_stage_morpheme_overrides', JSON.stringify(overrides));
+}
+
+var _WL_STAGE_OPTS = [
+  ['', 'Decide later'],
+  ['s2e', 'Explorer'],
+  ['s2l', 'Voyager'],
+  ['s3e', 'Wanderer'],
+  ['s3l', 'Trailblazer'],
+  ['s4',  'Pioneer']
+];
+
+var _WL_FILTER_OPTS = [
+  ['', 'All'],
+  ['unassigned', 'Unassigned'],
+  ['s2e', 'Explorer'],
+  ['s2l', 'Voyager'],
+  ['s3e', 'Wanderer'],
+  ['s3l', 'Trailblazer'],
+  ['s4',  'Pioneer']
+];
+
+function renderMorphemeTagger() {
+  var root = document.getElementById('wlCLMorphemeView');
+  if (!root) return;
+  while (root.firstChild) root.removeChild(root.firstChild);
+
+  if (typeof PREFIXES === 'undefined') {
+    var msg = document.createElement('p');
+    msg.style.color = '#fbbf24';
+    msg.textContent = 'data.js not loaded. Check <script> tag in analytics.html.';
+    root.appendChild(msg);
+    return;
+  }
+
+  var items = _wlCLCollectMorphemes();
+  _wlCLRestoreMorphemeDrafts(items);
+
+  // Filter bar
+  var filterBar = document.createElement('div');
+  filterBar.className = 'wl-cl-filter-bar';
+  var currentFilter = '';
+  _WL_FILTER_OPTS.forEach(function(f){
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = f[1];
+    btn.className = 'wl-cl-filter-btn' + (f[0] === '' ? ' active' : '');
+    btn.addEventListener('click', function(){
+      currentFilter = f[0];
+      filterBar.querySelectorAll('button').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      renderTable();
+    });
+    filterBar.appendChild(btn);
+  });
+  root.appendChild(filterBar);
+
+  // Export/Import buttons
+  var btnGroup = document.createElement('div');
+  btnGroup.className = 'wl-cl-btn-group';
+  var exportBtn = document.createElement('button');
+  exportBtn.type = 'button';
+  exportBtn.textContent = 'Export CSV';
+  exportBtn.className = 'wl-cl-btn wl-cl-btn-primary';
+  exportBtn.addEventListener('click', function(){ _wlCLExportMorphemeCSV(items); });
+  btnGroup.appendChild(exportBtn);
+  var importBtn = document.createElement('button');
+  importBtn.type = 'button';
+  importBtn.textContent = 'Import CSV';
+  importBtn.className = 'wl-cl-btn wl-cl-btn-success';
+  importBtn.addEventListener('click', function(){ _wlCLImportMorphemeCSV(items, renderTable); });
+  btnGroup.appendChild(importBtn);
+  var clearBtn = document.createElement('button');
+  clearBtn.type = 'button';
+  clearBtn.textContent = 'Clear drafts';
+  clearBtn.className = 'wl-cl-btn';
+  clearBtn.style.background = '#475569';
+  clearBtn.addEventListener('click', function(){
+    if (!confirm('Clear all localStorage stage drafts? (This does not touch data.js.)')) return;
+    localStorage.removeItem('wl_stage_morpheme_overrides');
+    // Reset stage to whatever's in the actual arrays (re-pulling from sources)
+    items.forEach(function(it){ it.ref.stage = it.ref.stage; });
+    renderMorphemeTagger();
+  });
+  btnGroup.appendChild(clearBtn);
+  root.appendChild(btnGroup);
+
+  var unassignedCount = document.createElement('div');
+  unassignedCount.className = 'wl-cl-unassigned-count';
+  root.appendChild(unassignedCount);
+
+  var tableWrap = document.createElement('div');
+  tableWrap.className = 'wl-cl-table-wrap';
+  var table = document.createElement('table');
+  table.className = 'wl-cl-table';
+  var thead = document.createElement('thead');
+  var headRow = document.createElement('tr');
+  ['Morpheme','Type','Group','Meaning','Stage','Examples'].forEach(function(h){
+    var th = document.createElement('th');
+    th.textContent = h;
+    headRow.appendChild(th);
+  });
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+  var tbody = document.createElement('tbody');
+  table.appendChild(tbody);
+  tableWrap.appendChild(table);
+  root.appendChild(tableWrap);
+
+  function renderTable() {
+    while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+    var shown = items.filter(function(it){
+      if (currentFilter === '') return true;
+      if (currentFilter === 'unassigned') return !it.ref.stage;
+      return it.ref.stage === currentFilter;
+    });
+    var unassigned = items.filter(function(it){ return !it.ref.stage; }).length;
+    unassignedCount.textContent = unassigned + ' of ' + items.length + ' morphemes unassigned';
+
+    shown.forEach(function(it){
+      var tr = document.createElement('tr');
+
+      var morphCell = document.createElement('td');
+      morphCell.textContent = it.ref.display || it.ref.form || it.ref.id;
+      morphCell.className = 'wl-cl-morph';
+      tr.appendChild(morphCell);
+
+      var typeCell = document.createElement('td');
+      typeCell.textContent = it.type;
+      tr.appendChild(typeCell);
+
+      var groupCell = document.createElement('td');
+      groupCell.textContent = it.group || '\u2014';
+      groupCell.style.color = '#64748b';
+      tr.appendChild(groupCell);
+
+      var meanCell = document.createElement('td');
+      meanCell.textContent = it.ref.meaning || '';
+      tr.appendChild(meanCell);
+
+      var stageCell = document.createElement('td');
+      var sel = document.createElement('select');
+      _WL_STAGE_OPTS.forEach(function(o){
+        var opt = document.createElement('option');
+        opt.value = o[0]; opt.textContent = o[1];
+        sel.appendChild(opt);
+      });
+      sel.value = it.ref.stage || '';
+      sel.addEventListener('change', function(){
+        it.ref.stage = sel.value || null;
+        _wlCLSaveMorphemeOverrides(items);
+        // Update count without full re-render
+        var u = items.filter(function(x){ return !x.ref.stage; }).length;
+        unassignedCount.textContent = u + ' of ' + items.length + ' morphemes unassigned';
+      });
+      stageCell.appendChild(sel);
+      tr.appendChild(stageCell);
+
+      var exCell = document.createElement('td');
+      exCell.className = 'wl-cl-examples';
+      var exStr = (it.ref.examples || []).slice(0, 3)
+        .map(function(e){ return String(e).replace(/<\/?u>/g, ''); }).join(', ');
+      exCell.textContent = exStr;
+      tr.appendChild(exCell);
+
+      tbody.appendChild(tr);
+    });
+  }
+  renderTable();
+}
+
+function _wlCLExportMorphemeCSV(items) {
+  var rows = [['type','group','id','display','meaning','stage']];
+  items.forEach(function(it){
+    rows.push([
+      it.type,
+      it.group || '',
+      it.ref.id || '',
+      it.ref.display || it.ref.form || '',
+      it.ref.meaning || '',
+      it.ref.stage || ''
+    ]);
+  });
+  var csv = rows.map(function(r){
+    return r.map(function(c){
+      c = String(c);
+      if (c.indexOf(',') !== -1 || c.indexOf('"') !== -1 || c.indexOf('\n') !== -1) {
+        c = '"' + c.replace(/"/g, '""') + '"';
+      }
+      return c;
+    }).join(',');
+  }).join('\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'morpheme-stages-' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+}
+
+function _wlCLParseCSV(text) {
+  var rows = [];
+  var lines = text.split(/\r?\n/);
+  for (var i = 0; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    var fields = [], cur = '', inQ = false;
+    for (var j = 0; j < lines[i].length; j++) {
+      var ch = lines[i][j];
+      if (inQ) {
+        if (ch === '"' && lines[i][j+1] === '"') { cur += '"'; j++; }
+        else if (ch === '"') inQ = false;
+        else cur += ch;
+      } else {
+        if (ch === ',') { fields.push(cur); cur = ''; }
+        else if (ch === '"') inQ = true;
+        else cur += ch;
+      }
+    }
+    fields.push(cur);
+    rows.push(fields);
+  }
+  return rows;
+}
+
+function _wlCLImportMorphemeCSV(items, onDone) {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.csv,text/csv';
+  input.addEventListener('change', function(){
+    var f = input.files && input.files[0];
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      var rows = _wlCLParseCSV(String(reader.result));
+      _wlCLApplyImport(rows, items, onDone);
+    };
+    reader.readAsText(f);
+  });
+  input.click();
+}
+
+function _wlCLApplyImport(rows, items, onDone) {
+  if (rows.length < 2) { alert('CSV is empty'); return; }
+  var header = rows[0];
+  var typeIdx = header.indexOf('type');
+  var idIdx = header.indexOf('id');
+  var stageIdx = header.indexOf('stage');
+  var groupIdx = header.indexOf('group'); // optional
+  if (typeIdx < 0 || idIdx < 0 || stageIdx < 0) {
+    alert('CSV must have columns: type, id, stage');
+    return;
+  }
+  var changes = 0, errors = 0;
+  // Dry-run: count changes
+  for (var i = 1; i < rows.length; i++) {
+    var type = rows[i][typeIdx];
+    var id = rows[i][idIdx];
+    var group = groupIdx >= 0 ? (rows[i][groupIdx] || '') : '';
+    var stage = rows[i][stageIdx] || null;
+    if (stage && (typeof WLStage === 'undefined' || WLStage.STAGE_ORDER.indexOf(stage) === -1)) { errors++; continue; }
+    var match = items.find(function(it){
+      return it.type === type && it.ref.id === id && (!group || it.group === group);
+    });
+    if (!match) { errors++; continue; }
+    if (match.ref.stage !== stage) changes++;
+  }
+  if (!confirm('Apply ' + changes + ' changes (' + errors + ' errors will be skipped)?')) return;
+  // Commit
+  for (var i = 1; i < rows.length; i++) {
+    var type = rows[i][typeIdx];
+    var id = rows[i][idIdx];
+    var group = groupIdx >= 0 ? (rows[i][groupIdx] || '') : '';
+    var stage = rows[i][stageIdx] || null;
+    if (stage && WLStage.STAGE_ORDER.indexOf(stage) === -1) continue;
+    var match = items.find(function(it){
+      return it.type === type && it.ref.id === id && (!group || it.group === group);
+    });
+    if (match) match.ref.stage = stage;
+  }
+  _wlCLSaveMorphemeOverrides(items);
+  if (typeof onDone === 'function') onDone();
+  alert('Applied ' + changes + ' changes. Export and run the persist script to commit to data.js.');
+}
+
+// ── Word tagger (Sound Sorter) ──────────────────────────────
+function renderWordTagger() {
+  var root = document.getElementById('wlCLWordView');
+  if (!root) return;
+  while (root.firstChild) root.removeChild(root.firstChild);
+
+  var words = (typeof SOUND_SORTER_WORDS !== 'undefined' && SOUND_SORTER_WORDS) || [];
+  if (!words.length) {
+    var p = document.createElement('p');
+    p.style.color = '#fbbf24';
+    p.textContent = 'sound-sorter-data.js not loaded or SOUND_SORTER_WORDS is empty.';
+    root.appendChild(p);
+    return;
+  }
+
+  // Restore drafts. New composite-key format: "sound-sorter:<word>|<sound>|<level>".
+  // Legacy format was "sound-sorter:<word>" (no disambiguation) — kept as a fallback
+  // so older drafts still apply.
+  try {
+    var saved = JSON.parse(localStorage.getItem('wl_stage_word_overrides') || '{}');
+    words.forEach(function(w){
+      var compositeKey = 'sound-sorter:' + w.word + '|' + w.sound + '|' + w.level;
+      var legacyKey = 'sound-sorter:' + w.word;
+      if (saved.hasOwnProperty(compositeKey)) w.stage = saved[compositeKey] || null;
+      else if (saved.hasOwnProperty(legacyKey)) w.stage = saved[legacyKey] || null;
+    });
+  } catch(e){}
+
+  var note = document.createElement('div');
+  note.className = 'wl-cl-word-note';
+  note.textContent = 'Currently only Sound Sorter words are tagged here. Breakdown Blitz, Phoneme Splitter, and Syllable Splitter tagging will be added later.';
+  root.appendChild(note);
+
+  var filterBar = document.createElement('div');
+  filterBar.className = 'wl-cl-filter-bar';
+  var currentFilter = '';
+  _WL_FILTER_OPTS.forEach(function(f){
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = f[1];
+    btn.className = 'wl-cl-filter-btn' + (f[0] === '' ? ' active' : '');
+    btn.addEventListener('click', function(){
+      currentFilter = f[0];
+      filterBar.querySelectorAll('button').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      renderTable();
+    });
+    filterBar.appendChild(btn);
+  });
+  root.appendChild(filterBar);
+
+  // Export/Import buttons
+  var btnGroup = document.createElement('div');
+  btnGroup.className = 'wl-cl-btn-group';
+  var exportBtn = document.createElement('button');
+  exportBtn.type = 'button';
+  exportBtn.textContent = 'Export CSV';
+  exportBtn.className = 'wl-cl-btn wl-cl-btn-primary';
+  exportBtn.addEventListener('click', function(){ _wlCLExportWordCSV(words); });
+  btnGroup.appendChild(exportBtn);
+  var importBtn = document.createElement('button');
+  importBtn.type = 'button';
+  importBtn.textContent = 'Import CSV';
+  importBtn.className = 'wl-cl-btn wl-cl-btn-success';
+  importBtn.addEventListener('click', function(){ _wlCLImportWordCSV(words, renderTable); });
+  btnGroup.appendChild(importBtn);
+  var clearBtn = document.createElement('button');
+  clearBtn.type = 'button';
+  clearBtn.textContent = 'Clear drafts';
+  clearBtn.className = 'wl-cl-btn';
+  clearBtn.style.background = '#475569';
+  clearBtn.addEventListener('click', function(){
+    if (!confirm('Clear all localStorage word stage drafts? (This does not touch sound-sorter-data.js.)')) return;
+    localStorage.removeItem('wl_stage_word_overrides');
+    renderWordTagger();
+  });
+  btnGroup.appendChild(clearBtn);
+  root.appendChild(btnGroup);
+
+  var unassignedCount = document.createElement('div');
+  unassignedCount.className = 'wl-cl-unassigned-count';
+  root.appendChild(unassignedCount);
+
+  var tableWrap = document.createElement('div');
+  tableWrap.className = 'wl-cl-table-wrap';
+  var table = document.createElement('table');
+  table.className = 'wl-cl-table';
+  var thead = document.createElement('thead');
+  var headRow = document.createElement('tr');
+  ['Word','Sound','Level','Stage'].forEach(function(h){
+    var th = document.createElement('th');
+    th.textContent = h;
+    headRow.appendChild(th);
+  });
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+  var tbody = document.createElement('tbody');
+  table.appendChild(tbody);
+  tableWrap.appendChild(table);
+  root.appendChild(tableWrap);
+
+  function renderTable() {
+    while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+    var shown = words.filter(function(w){
+      if (currentFilter === '') return true;
+      if (currentFilter === 'unassigned') return !w.stage;
+      return w.stage === currentFilter;
+    });
+    var unassigned = words.filter(function(w){ return !w.stage; }).length;
+    unassignedCount.textContent = unassigned + ' of ' + words.length + ' words unassigned';
+
+    shown.forEach(function(w){
+      var tr = document.createElement('tr');
+      var wCell = document.createElement('td');
+      wCell.className = 'wl-cl-morph';
+      wCell.textContent = w.word || '';
+      tr.appendChild(wCell);
+
+      var sCell = document.createElement('td');
+      sCell.textContent = w.soundLabel || w.sound || '';
+      tr.appendChild(sCell);
+
+      var lCell = document.createElement('td');
+      lCell.textContent = w.level || '';
+      lCell.style.color = '#64748b';
+      tr.appendChild(lCell);
+
+      var stageCell = document.createElement('td');
+      var sel = document.createElement('select');
+      _WL_STAGE_OPTS.forEach(function(o){
+        var opt = document.createElement('option');
+        opt.value = o[0]; opt.textContent = o[1];
+        sel.appendChild(opt);
+      });
+      sel.value = w.stage || '';
+      sel.addEventListener('change', function(){
+        w.stage = sel.value || null;
+        _wlCLSaveWordOverrides(words);
+        var u = words.filter(function(x){ return !x.stage; }).length;
+        unassignedCount.textContent = u + ' of ' + words.length + ' words unassigned';
+      });
+      stageCell.appendChild(sel);
+      tr.appendChild(stageCell);
+
+      tbody.appendChild(tr);
+    });
+  }
+  renderTable();
+}
+
+function _wlCLSaveWordOverrides(words) {
+  var overrides = {};
+  words.forEach(function(w){
+    // Composite key: word + sound + level (handles the 6 known duplicates)
+    if (w.stage) overrides['sound-sorter:' + w.word + '|' + w.sound + '|' + w.level] = w.stage;
+  });
+  localStorage.setItem('wl_stage_word_overrides', JSON.stringify(overrides));
+}
+
+function _wlCLExportWordCSV(words) {
+  var rows = [['word','sound','soundLabel','level','stage','extension']];
+  words.forEach(function(w){
+    rows.push([
+      w.word || '',
+      w.sound || '',
+      w.soundLabel || '',
+      w.level || '',
+      w.stage || '',
+      'false'  // Sound Sorter main pool — extension words live separately
+    ]);
+  });
+  var csv = rows.map(function(r){
+    return r.map(function(c){
+      c = String(c);
+      if (c.indexOf(',') !== -1 || c.indexOf('"') !== -1 || c.indexOf('\n') !== -1) {
+        c = '"' + c.replace(/"/g, '""') + '"';
+      }
+      return c;
+    }).join(',');
+  }).join('\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'sound-sorter-words-' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+}
+
+function _wlCLImportWordCSV(words, onDone) {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.csv,text/csv';
+  input.addEventListener('change', function(){
+    var f = input.files && input.files[0];
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      var rows = _wlCLParseCSV(String(reader.result));
+      _wlCLApplyWordImport(rows, words, onDone);
+    };
+    reader.readAsText(f);
+  });
+  input.click();
+}
+
+function _wlCLApplyWordImport(rows, words, onDone) {
+  if (rows.length < 2) { alert('CSV is empty'); return; }
+  var header = rows[0];
+  var wordIdx = header.indexOf('word');
+  var soundIdx = header.indexOf('sound');
+  var levelIdx = header.indexOf('level');
+  var stageIdx = header.indexOf('stage');
+  if (wordIdx < 0 || soundIdx < 0 || levelIdx < 0 || stageIdx < 0) {
+    alert('Word CSV must have columns: word, sound, level, stage');
+    return;
+  }
+  // Build an index of the in-memory words for O(1) lookup by composite key
+  var index = {};
+  words.forEach(function(w){
+    var key = (w.word || '') + '|' + (w.sound || '') + '|' + (w.level || '');
+    (index[key] = index[key] || []).push(w);
+  });
+  var changes = 0, errors = 0;
+  // Dry-run: count changes
+  for (var i = 1; i < rows.length; i++) {
+    var word = (rows[i][wordIdx] || '').trim();
+    var sound = (rows[i][soundIdx] || '').trim();
+    var level = (rows[i][levelIdx] || '').trim();
+    var stage = (rows[i][stageIdx] || '').trim() || null;
+    if (!word || !sound || !level) { errors++; continue; }
+    if (stage && (typeof WLStage === 'undefined' || WLStage.STAGE_ORDER.indexOf(stage) === -1)) { errors++; continue; }
+    var matches = index[word + '|' + sound + '|' + level];
+    if (!matches || !matches.length) { errors++; continue; }
+    // Count as a change if any matched entry has a different stage
+    if (matches.some(function(m){ return m.stage !== stage; })) changes++;
+  }
+  if (!confirm('Apply ' + changes + ' changes (' + errors + ' errors will be skipped)?')) return;
+  // Commit
+  for (var i = 1; i < rows.length; i++) {
+    var word = (rows[i][wordIdx] || '').trim();
+    var sound = (rows[i][soundIdx] || '').trim();
+    var level = (rows[i][levelIdx] || '').trim();
+    var stage = (rows[i][stageIdx] || '').trim() || null;
+    if (!word || !sound || !level) continue;
+    if (stage && WLStage.STAGE_ORDER.indexOf(stage) === -1) continue;
+    var matches = index[word + '|' + sound + '|' + level];
+    if (!matches) continue;
+    matches.forEach(function(m){ m.stage = stage; });
+  }
+  _wlCLSaveWordOverrides(words);
+  if (typeof onDone === 'function') onDone();
+  alert('Applied ' + changes + ' changes. Export and run the persist script to commit to sound-sorter-data.js.');
+}
+
+// ── Wire sub-tabs ────────────────────────────────────────────
+function _wlCLWireSubtabs() {
+  var mBtn = document.getElementById('wlCLSubtabMorpheme');
+  var wBtn = document.getElementById('wlCLSubtabWord');
+  var mView = document.getElementById('wlCLMorphemeView');
+  var wView = document.getElementById('wlCLWordView');
+  if (!mBtn || !wBtn || !mView || !wView) return;
+  mBtn.addEventListener('click', function(){
+    mBtn.classList.add('active');
+    wBtn.classList.remove('active');
+    mView.style.display = '';
+    wView.style.display = 'none';
+    renderMorphemeTagger();
+  });
+  wBtn.addEventListener('click', function(){
+    wBtn.classList.add('active');
+    mBtn.classList.remove('active');
+    wView.style.display = '';
+    mView.style.display = 'none';
+    renderWordTagger();
+  });
+}
+
+// ── Helpers ─────────────────────────────────────────────────
+function timeAgo(dateStr) {
+  var diff = Date.now() - new Date(dateStr).getTime();
+  var mins = Math.floor(diff / 60000);
+  if (mins < 1) return '<span style="color:#4ade80;font-weight:800;">Just now</span>';
+  if (mins < 60) return mins + 'm ago';
+  var hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  var days = Math.floor(hrs / 24);
+  if (days < 7) return days + 'd ago';
+  return new Date(dateStr).toLocaleDateString();
+}
+</script>
+
+<footer style="text-align:center;padding:12px 16px;font-size:11px;color:#64748b;border-top:1px solid #e2e8f0;margin-top:auto;font-family:Lexend,sans-serif;">&#129514; Word Labs &middot; <a href="about.html" style="color:#64748b;">About</a> &middot; <a href="privacy.html" style="color:#64748b;">Privacy Policy</a> &middot; <a href="terms.html" style="color:#64748b;">Terms of Service</a> &middot; <a href="mailto:nick@wordlabs.app" style="color:#64748b;">Contact</a></footer>
+</body>
+</html>

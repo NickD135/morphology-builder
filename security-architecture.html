@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Labs – Security Architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="wordlab-common.css">
+  <style>
+    body{ font-family:'Lexend',sans-serif; background:#f5f5f5; color:#0f172a; line-height:1.7; }
+
+    .printBar{ background:#eef2ff; border-bottom:2px solid #c7d2fe; padding:14px 20px; display:flex; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap; }
+    .printBar p{ font-size:13px; font-weight:700; color:#4338ca; }
+    .printBtn{ background:#4338ca; color:#fff; border:none; font-family:'Lexend',sans-serif; font-weight:900; font-size:13px; padding:10px 24px; border-radius:10px; cursor:pointer; }
+    .printBtn:hover{ background:#3730a3; }
+
+    .doc{ max-width:760px; margin:32px auto; background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:56px 64px; }
+
+    .docHeader{ text-align:center; padding-bottom:32px; border-bottom:3px solid #0f172a; margin-bottom:36px; }
+    .docHeader .logo{ font-size:28px; margin-bottom:12px; }
+    .docHeader h1{ font-size:22px; font-weight:900; color:#0f172a; text-transform:uppercase; letter-spacing:.06em; line-height:1.3; margin-bottom:8px; }
+    .docHeader .subtitle{ font-size:13px; font-weight:700; color:#64748b; }
+    .docVersion{ font-size:12px; font-weight:700; color:#64748b; margin-top:6px; }
+
+    h2{ font-size:14px; font-weight:900; color:#0f172a; text-transform:uppercase; letter-spacing:.08em; margin:32px 0 10px; border-bottom:1px solid #e2e8f0; padding-bottom:6px; }
+    h3{ font-size:13px; font-weight:800; color:#334155; margin:20px 0 6px; }
+    p{ font-size:13px; font-weight:600; color:#334155; margin-bottom:10px; line-height:1.75; }
+    ul{ margin:0 0 12px 20px; }
+    li{ font-size:13px; font-weight:600; color:#334155; margin-bottom:5px; line-height:1.7; }
+    strong{ font-weight:900; color:#0f172a; }
+    a{ color:#4338ca; }
+    table{ width:100%; border-collapse:collapse; margin-bottom:16px; font-size:13px; }
+    th{ background:#f8fafc; text-align:left; padding:8px 12px; font-weight:900; font-size:12px; color:#475569; border:1px solid #e2e8f0; }
+    td{ padding:8px 12px; font-weight:600; color:#334155; border:1px solid #e2e8f0; vertical-align:top; }
+    td.label{ font-weight:800; color:#0f172a; white-space:nowrap; }
+
+    .diagram{ background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:20px; margin-bottom:16px; font-family:'Courier New',monospace; font-size:12px; line-height:1.5; white-space:pre; overflow-x:auto; color:#334155; }
+
+    .defBlock{ background:#f8fafc; border-left:4px solid #4338ca; padding:12px 16px; margin-bottom:12px; border-radius:0 8px 8px 0; }
+    .defBlock strong{ font-weight:900; color:#312e81; }
+
+    .footer{ text-align:center; padding:32px 20px; color:#64748b; font-size:13px; font-weight:700; border-top:1px solid #e2e8f0; }
+
+    @media print {
+      body{ background:#fff; }
+      .header, .printBar, .footer{ display:none !important; }
+      .doc{ margin:0; border:none; border-radius:0; padding:20mm 20mm; box-shadow:none; max-width:100%; }
+      h2{ break-after:avoid; }
+      @page{ size:A4; margin:15mm; }
+    }
+
+    @media(max-width:680px){
+      .doc{ padding:32px 24px; }
+      .diagram{ font-size:10px; padding:12px; }
+    }
+  </style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<header class="header" role="banner">
+  <div class="header-inner">
+    <a href="landing.html" class="brand">
+      <div class="brand-icon">🧪</div>
+      <span class="brand-name">Word Labs</span>
+    </a>
+    <nav class="header-links" role="navigation" aria-label="Main navigation">
+      <a href="landing.html">Home</a>
+    </nav>
+  </div>
+</header>
+
+<div class="printBar">
+  <p>This document describes Word Labs' security architecture and can be printed or saved as a PDF.</p>
+  <button class="printBtn" onclick="window.print()">Print / Save as PDF</button>
+</div>
+
+<div class="doc" id="main-content" role="main">
+
+  <div class="docHeader">
+    <div class="logo">🧪</div>
+    <h1>Security Architecture Document</h1>
+    <div class="subtitle">Word Labs Education</div>
+    <div class="docVersion">Version 1.0 · March 2026</div>
+  </div>
+
+  <table>
+    <tr><td class="label">Author</td><td>Nicholas Deeney, Word Labs Education</td></tr>
+    <tr><td class="label">Contact</td><td>nick@wordlabs.app</td></tr>
+    <tr><td class="label">Website</td><td>wordlabs.app</td></tr>
+  </table>
+
+  <h2>1. System Overview</h2>
+  <p>Word Labs is a browser-based educational application for morphology and phonics instruction, targeted at upper primary students (ages 9–12). The application consists of:</p>
+  <ul>
+    <li><strong>Frontend:</strong> Static HTML/CSS/JavaScript pages served via Vercel CDN</li>
+    <li><strong>Backend:</strong> Supabase (hosted PostgreSQL with REST API, Auth, Edge Functions, Storage)</li>
+    <li><strong>Payments:</strong> Stripe (PCI DSS Level 1 compliant payment processor)</li>
+    <li><strong>Transactional email:</strong> Resend (domain-verified, sends from notifications@wordlabs.app)</li>
+  </ul>
+  <p>No user data is processed or stored on the Vercel frontend servers. All data operations are handled by Supabase in the <strong>Sydney (ap-southeast-2)</strong> region.</p>
+
+  <h2>2. Data Flow Diagram</h2>
+  <div class="diagram">┌──────────────┐     HTTPS (TLS 1.2+)     ┌──────────────────┐
+│   Student    │ &lt;─────────────────────&gt; │   Vercel CDN     │
+│   Browser    │                           │   (Static HTML)  │
+└──────┬───────┘                           └──────────────────┘
+       │
+       │  HTTPS (TLS 1.2+)
+       │  Supabase JS Client (anon key + JWT)
+       ▼
+┌──────────────────────────────────────────────────────────────┐
+│                    Supabase (Sydney)                          │
+│  ┌──────────┐  ┌──────────┐  ┌───────────┐  ┌────────────┐ │
+│  │ Auth     │  │ PostgREST│  │ Edge Fns  │  │ Storage    │ │
+│  │ (JWT)    │  │ (RLS)    │  │ (Deno)    │  │ (S3)       │ │
+│  └──────────┘  └──────────┘  └─────┬─────┘  └────────────┘ │
+│                                     │                        │
+│  ┌──────────────────────────────────┴──────────────────────┐ │
+│  │              PostgreSQL Database                         │ │
+│  │              Encrypted at rest (AES-256)                 │ │
+│  └─────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────┘
+       │
+       │  HTTPS (server-side only)
+       ▼
+┌──────────────┐         ┌──────────────┐
+│   Stripe     │         │   Resend     │
+│   Payments   │         │   Email      │
+└──────────────┘         └──────────────┘</div>
+
+  <h3>Teacher flow</h3>
+  <ul>
+    <li>Teacher signs up via email and password — Supabase Auth creates account with bcrypt-hashed password</li>
+    <li>Teacher creates classes and adds students — data written via Supabase REST API with RLS enforcement</li>
+    <li>Teacher views dashboard — data read via Supabase REST API, scoped to their school by RLS</li>
+  </ul>
+
+  <h3>Student flow</h3>
+  <ul>
+    <li>Student enters class code — Supabase REST API lookup (public, read-only via RLS)</li>
+    <li>Student selects name and enters 3-character code — verified against students table</li>
+    <li>Student plays games — progress recorded via atomic RPC function (increment_progress)</li>
+    <li>Session stored in browser sessionStorage (cleared on tab close)</li>
+  </ul>
+
+  <h2>3. Authentication Model</h2>
+
+  <h3>Teacher authentication</h3>
+  <table>
+    <tr><td class="label">Provider</td><td>Supabase Auth (built on GoTrue)</td></tr>
+    <tr><td class="label">Method</td><td>Email + password</td></tr>
+    <tr><td class="label">Password storage</td><td>bcrypt hash (cost factor 10)</td></tr>
+    <tr><td class="label">Session</td><td>JWT tokens issued by Supabase Auth, stored in browser memory</td></tr>
+    <tr><td class="label">Token refresh</td><td>Automatic via Supabase JS client</td></tr>
+    <tr><td class="label">Password reset</td><td>Email-based reset flow via Supabase Auth + Resend</td></tr>
+  </table>
+
+  <h3>Student authentication</h3>
+  <table>
+    <tr><td class="label">Method</td><td>Class code (6-char alphanumeric) + student name + 3-character student code</td></tr>
+    <tr><td class="label">Password</td><td>None — students are children (ages 9–12); codes are generated and managed by teachers</td></tr>
+    <tr><td class="label">Verification</td><td>Codes are verified server-side via the <code>verify_student_login</code> Postgres RPC. Student codes are never sent to the client for comparison — the client passes the entered code to the RPC, which performs a constant-time lookup and returns a session token if valid. This prevents enumeration of student codes via direct table access.</td></tr>
+    <tr><td class="label">Session</td><td>Stored in sessionStorage (not persistent across browser sessions)</td></tr>
+    <tr><td class="label">PII</td><td>Student records contain first name only — no email, no date of birth, no photo</td></tr>
+  </table>
+
+  <h3>CSRF protection</h3>
+  <ul>
+    <li>Supabase uses JWT bearer tokens in the Authorization header (not cookies), which is inherently CSRF-resistant</li>
+    <li>Student sessions use sessionStorage (not cookies), providing CSRF protection</li>
+    <li>All state-changing operations require a valid session</li>
+  </ul>
+
+  <h2>4. Authorisation — Row Level Security (RLS)</h2>
+  <p>All database tables have Row Level Security (RLS) enabled. Policies enforce:</p>
+  <table>
+    <thead>
+      <tr><th>Table</th><th>SELECT</th><th>INSERT / UPDATE / DELETE</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>schools</strong></td><td>Own school only (via teachers.school_id)</td><td>Own school only</td></tr>
+      <tr><td><strong>teachers</strong></td><td>Own record only</td><td>Own record only</td></tr>
+      <tr><td><strong>classes</strong></td><td>Open (students need to find their class)</td><td>Teacher's school only (via auth_user_id)</td></tr>
+      <tr><td><strong>students</strong></td><td>Open (students need to see classmates for login)</td><td>Teacher's school only</td></tr>
+      <tr><td><strong>student_progress</strong></td><td>Open (students view own progress)</td><td>Via increment_progress RPC only</td></tr>
+      <tr><td><strong>student_character</strong></td><td>Open (students view own character)</td><td>Open (students update own character)</td></tr>
+      <tr><td><strong>shop_items</strong></td><td>Open (all students browse shop)</td><td>Teacher's school only</td></tr>
+      <tr><td><strong>class_word_lists</strong></td><td>Open (students load word lists)</td><td>Teacher's school only (via <code>get_my_school_id()</code>)</td></tr>
+      <tr><td><strong>class_spelling_sets</strong></td><td>Open (students load assigned sets)</td><td>Teacher's school only (via <code>get_my_school_id()</code>)</td></tr>
+      <tr><td><strong>spelling_set_assignments</strong></td><td>Open (students load their assignments)</td><td>Teacher's school only (via <code>get_my_school_id()</code>)</td></tr>
+      <tr><td><strong>spelling_check_in_results</strong></td><td>Open (students view own results)</td><td>Teacher's school only (via <code>get_my_school_id()</code>)</td></tr>
+      <tr><td><strong>feedback</strong></td><td>Own record only</td><td>Insert-only via edge function</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Key RLS principles</h3>
+  <ul>
+    <li>Teachers can only modify data belonging to their own school</li>
+    <li>Students can read class-level data but cannot modify other students' records</li>
+    <li>All cross-school access is denied at the database level — even a compromised client cannot read another school's data</li>
+    <li>School scoping for spelling sets, word lists, and their assignments is enforced via the <code>get_my_school_id()</code> helper which chains teacher → school in a single RLS check</li>
+    <li>The Supabase anon key is intentionally public — RLS is the security boundary, not key secrecy</li>
+  </ul>
+
+  <h3>Atomic write operations (race condition prevention)</h3>
+  <p>State-changing operations that could race under concurrent requests are implemented as Postgres RPCs rather than client-side read-modify-write sequences. This guarantees atomicity at the database level and eliminates lost-update bugs.</p>
+  <table>
+    <thead>
+      <tr><th>RPC</th><th>Purpose</th><th>Mechanism</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>increment_progress</code></td><td>Game answer recording (most frequent write)</td><td>Single atomic UPSERT with SQL arithmetic (<code>correct = correct + 1</code>)</td></tr>
+      <tr><td><code>purchase</code></td><td>Shop item purchase (debit quarks, grant item)</td><td><code>SELECT FOR UPDATE</code> row lock on student_character</td></tr>
+      <tr><td><code>saveScientist</code></td><td>Character customisation saves</td><td>Targeted <code>jsonb_set</code> update (no full-row overwrite)</td></tr>
+      <tr><td><code>atomic_delete_class</code></td><td>Teacher deletes a class</td><td>Server-side transaction deleting class + students + progress in one statement</td></tr>
+      <tr><td><code>verify_student_login</code></td><td>Student login code verification</td><td>Server-side code comparison; codes never exposed to client</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. Encryption</h2>
+
+  <h3>In transit</h3>
+  <ul>
+    <li>All client-server communication uses HTTPS (TLS 1.2+)</li>
+    <li>Vercel enforces HTTPS with automatic certificate provisioning</li>
+    <li>Supabase enforces HTTPS for all API endpoints</li>
+    <li>WebSocket connections (Supabase realtime) use WSS</li>
+  </ul>
+
+  <h3>At rest</h3>
+  <ul>
+    <li><strong>Supabase PostgreSQL:</strong> AES-256 encryption at rest (AWS managed encryption)</li>
+    <li><strong>Supabase Storage:</strong> AES-256 encryption at rest (AWS S3 server-side encryption)</li>
+    <li><strong>Stripe:</strong> PCI DSS Level 1 (no card data touches Word Labs infrastructure)</li>
+  </ul>
+
+  <h3>Secrets management</h3>
+  <ul>
+    <li>Stripe secret key — stored in Supabase Edge Function secrets (environment variables)</li>
+    <li>Stripe webhook secret — stored in Supabase Edge Function secrets</li>
+    <li>Resend API key — stored in Supabase Edge Function secrets</li>
+    <li>Anthropic API key (for AI word analysis) — stored in Supabase Edge Function secrets</li>
+    <li><strong>No secrets are stored in frontend code or version control</strong></li>
+  </ul>
+
+  <h2>6. HTTP Security Headers</h2>
+  <p>The following security headers are deployed via Vercel configuration:</p>
+  <table>
+    <thead>
+      <tr><th>Header</th><th>Value</th><th>Purpose</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="label">X-Content-Type-Options</td><td>nosniff</td><td>Prevents MIME type sniffing</td></tr>
+      <tr><td class="label">X-Frame-Options</td><td>SAMEORIGIN</td><td>Prevents clickjacking</td></tr>
+      <tr><td class="label">X-XSS-Protection</td><td>1; mode=block</td><td>Legacy XSS filter (defence in depth)</td></tr>
+      <tr><td class="label">Referrer-Policy</td><td>strict-origin-when-cross-origin</td><td>Limits referrer leakage</td></tr>
+      <tr><td class="label">Content-Security-Policy</td><td>See below</td><td>Restricts resource loading</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Content Security Policy</h3>
+  <div class="diagram">default-src 'self';
+script-src 'self' 'unsafe-inline'
+  https://cdn.jsdelivr.net/npm/@supabase/
+  https://cdn.jsdelivr.net/npm/jszip@3/
+  https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/
+  https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/
+  https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/;
+style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+font-src 'self' https://fonts.gstatic.com;
+img-src 'self' data: blob: https://kdpavfrzmmzknqfpodrl.supabase.co;
+connect-src 'self' https://kdpavfrzmmzknqfpodrl.supabase.co
+  wss://kdpavfrzmmzknqfpodrl.supabase.co;
+form-action 'self';
+frame-ancestors 'none';
+object-src 'none';
+base-uri 'self'</div>
+  <p><strong>Note:</strong> <code>'unsafe-inline'</code> is required for <code>script-src</code> because the application uses inline script blocks (no build system or bundler). This is mitigated by: (1) HTML-escaping all user-supplied data before DOM insertion, (2) no dynamic code evaluation anywhere in the codebase, and (3) inline event handlers removed from security-sensitive pages (login, signup, account) in favour of <code>addEventListener()</code>. Script sources are restricted to specific CDN package paths rather than broad CDN wildcards.</p>
+
+  <h2>7. Input Validation and XSS Prevention</h2>
+
+  <h3>Server-side</h3>
+  <ul>
+    <li>Supabase RLS policies validate data types and ownership</li>
+    <li>Edge functions validate request bodies and authentication</li>
+    <li>PostgreSQL column types enforce data constraints</li>
+  </ul>
+
+  <h3>Client-side</h3>
+  <ul>
+    <li>All user-supplied data (student names, class names, word list names) is HTML-escaped via a dedicated <code>escapeHtml()</code> function before insertion into the DOM</li>
+    <li>Template literals in innerHTML use escaped values to prevent script injection</li>
+    <li>URL parameters are validated (e.g., <code>returnTo</code> only allows relative alphanumeric paths — prevents open redirect)</li>
+    <li>Form inputs use appropriate HTML5 types (<code>type="email"</code>, <code>required</code>, etc.)</li>
+  </ul>
+
+  <h2>8. Data Minimisation</h2>
+  <table>
+    <thead>
+      <tr><th>Data</th><th>Stored?</th><th>Purpose</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Student first name</td><td>Yes</td><td>Display in-game and on teacher dashboard</td></tr>
+      <tr><td>Student surname</td><td><strong>No</strong></td><td>Not collected</td></tr>
+      <tr><td>Student email</td><td><strong>No</strong></td><td>Not collected</td></tr>
+      <tr><td>Student date of birth</td><td><strong>No</strong></td><td>Not collected</td></tr>
+      <tr><td>Student photo</td><td><strong>No</strong></td><td>Not collected</td></tr>
+      <tr><td>Student IP address</td><td><strong>No</strong></td><td>Not logged by application</td></tr>
+      <tr><td>Game progress (scores)</td><td>Yes</td><td>Teacher reporting and student feedback</td></tr>
+      <tr><td>Teacher email</td><td>Yes</td><td>Authentication and communication</td></tr>
+      <tr><td>School name</td><td>Yes</td><td>Multi-tenancy and display</td></tr>
+      <tr><td>Payment details</td><td><strong>No</strong></td><td>Handled entirely by Stripe</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9. Sub-Processors and Data Sovereignty</h2>
+  <table>
+    <thead>
+      <tr><th>Sub-processor</th><th>Purpose</th><th>Data accessed</th><th>Location</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Supabase Inc.</strong></td>
+        <td>Database, auth, storage, edge functions</td>
+        <td>All application data</td>
+        <td>Sydney, Australia (ap-southeast-2)</td>
+      </tr>
+      <tr>
+        <td><strong>Vercel Inc.</strong></td>
+        <td>Static file hosting (CDN)</td>
+        <td>No user data (static files only)</td>
+        <td>Global CDN, Sydney edge</td>
+      </tr>
+      <tr>
+        <td><strong>Stripe Inc.</strong></td>
+        <td>Payment processing</td>
+        <td>Teacher email, school name (billing only). <strong>No student data.</strong></td>
+        <td>Global (PCI DSS Level 1)</td>
+      </tr>
+      <tr>
+        <td><strong>Anthropic PBC</strong></td>
+        <td>AI word analysis (via edge function)</td>
+        <td>Word lists only. <strong>No student data.</strong></td>
+        <td>United States</td>
+      </tr>
+      <tr>
+        <td><strong>Google Cloud (Google LLC)</strong></td>
+        <td>Text-to-speech audio</td>
+        <td>Word text only. <strong>No student data.</strong></td>
+        <td>United States / global</td>
+      </tr>
+      <tr>
+        <td><strong>YouTube (Google LLC)</strong></td>
+        <td>Embedded lesson videos in SOLO (privacy-enhanced player, loads only on tap)</td>
+        <td>Device IP and browser only. <strong>No student data.</strong></td>
+        <td>United States / global</td>
+      </tr>
+      <tr>
+        <td><strong>Resend Inc.</strong></td>
+        <td>Transactional email</td>
+        <td>Teacher email only. <strong>No student data.</strong></td>
+        <td>United States</td>
+      </tr>
+      <tr>
+        <td><strong>Cloudflare Inc.</strong></td>
+        <td>DNS and domain registration</td>
+        <td>No user data</td>
+        <td>Global</td>
+      </tr>
+    </tbody>
+  </table>
+  <p><strong>All student and teacher data is stored in Supabase Sydney (ap-southeast-2), Australia.</strong> No student data ever leaves Australia. Stripe processes payment data under PCI DSS compliance. Anthropic and Google Cloud only receive word content for analysis and text-to-speech respectively — no student names, progress, or personal data.</p>
+
+  <h2>10. Access Control</h2>
+
+  <h3>Production database</h3>
+  <ul>
+    <li>Only the application owner (Nicholas Deeney) has Supabase dashboard access</li>
+    <li>No shared admin accounts</li>
+    <li>Supabase management access requires email + password + MFA</li>
+  </ul>
+
+  <h3>Code repository</h3>
+  <ul>
+    <li>Private GitHub repository; only the owner has access</li>
+    <li>The public GitHub Pages mirror (for school networks that block Vercel) holds only the website files that wordlabs.app serves, never database code, scripts or data</li>
+    <li>Only the owner has push access to the main branch</li>
+    <li>Vercel auto-deploys from the main branch</li>
+  </ul>
+
+  <h3>Edge functions</h3>
+  <ul>
+    <li>Deployed via Supabase CLI</li>
+    <li>Only the owner has deployment credentials</li>
+    <li>Functions run in Deno isolates with limited permissions</li>
+  </ul>
+
+  <h2>11. Edge Function Security</h2>
+  <p>Word Labs runs 10 Supabase Edge Functions for server-side operations that cannot safely run in the client (Stripe checkout, AI word analysis, TTS generation, email delivery, etc.). Every client-facing edge function is hardened to the following standard.</p>
+
+  <h3>Authentication</h3>
+  <p>Every edge function that handles teacher-scoped or school-scoped data validates the caller's Supabase JWT before executing any work. Functions that accept public requests (student-facing TTS, for example) still validate that the request originates from an allowed origin via the CORS check below.</p>
+
+  <h3>CORS allowlist</h3>
+  <p>Client-facing edge functions restrict <code>Access-Control-Allow-Origin</code> to an explicit allowlist of five origins (production, Vercel preview deployments, and local development). Previously these returned the wildcard <code>*</code>, which was tightened to an allowlist as part of a full security audit.</p>
+
+  <h3>Rate limiting</h3>
+  <p>The <code>send-feedback</code> function enforces application-level rate limiting (1 submission per email address per 5 minutes) on top of Supabase's built-in platform limits. This prevents abuse of the feedback channel for spam or denial-of-wallet on the Resend mail delivery provider.</p>
+
+  <h3>Redirect validation</h3>
+  <p>The <code>create-checkout</code> and <code>create-portal-session</code> functions validate the Stripe redirect URL against an allowlist before constructing the checkout session. This prevents open-redirect vulnerabilities where an attacker could construct a checkout URL pointing at a phishing page.</p>
+
+  <h3>Secrets hygiene</h3>
+  <p>API keys and webhook secrets are stored in Supabase Edge Function environment variables, never in source code or version control. Logs are scrubbed of key prefixes — previously the <code>analyze-words</code> function logged the first few characters of its API key for debugging, which was removed to prevent key-prefix exposure through log aggregation.</p>
+
+  <h3>Email template safety</h3>
+  <p>The <code>send-feedback</code> function's email template HTML-escapes all user-supplied content before interpolating it into the email body, preventing HTML injection in feedback notifications delivered via Resend.</p>
+
+  <h2>12. Vulnerability Management</h2>
+
+  <h3>Current mitigations</h3>
+  <ul>
+    <li>HTML escaping of all user-supplied data in DOM operations</li>
+    <li>Content Security Policy headers restricting resource loading</li>
+    <li>Row Level Security enforcing data access boundaries</li>
+    <li>HTTPS everywhere (Vercel + Supabase)</li>
+    <li>Open redirect protection on login flow</li>
+  </ul>
+
+  <h3>Ongoing practices</h3>
+  <ul>
+    <li>Regular review of Supabase security advisories</li>
+    <li>Dependency updates for Supabase JS client (loaded via CDN — always latest)</li>
+    <li>Code review before deployment to production</li>
+  </ul>
+
+  <h3>Known limitations</h3>
+  <ul>
+    <li><code>'unsafe-inline'</code> in CSP script-src (required by architecture — no build system)</li>
+    <li>No external penetration testing conducted yet (planned)</li>
+    <li>No Web Application Firewall (WAF) in front of the application</li>
+    <li>Rate limiting is applied to the public feedback channel but otherwise relies on Supabase's built-in platform limits</li>
+  </ul>
+
+  <h2>13. Compliance Summary</h2>
+  <table>
+    <thead>
+      <tr><th>Requirement</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Australian Privacy Act 1988</td><td>Compliant — privacy policy published, APPs addressed</td></tr>
+      <tr><td>Australian Privacy Principles (APPs)</td><td>Compliant — data minimisation, access, correction, deletion</td></tr>
+      <tr><td>NSW PPIP Act 1998</td><td>Compliant — IPP alignment documented in privacy policy</td></tr>
+      <tr><td>Notifiable Data Breaches scheme</td><td>Documented — see Incident Response Plan</td></tr>
+      <tr><td>Data stored in Australia</td><td>Yes — Supabase Sydney (ap-southeast-2)</td></tr>
+      <tr><td>HTTPS / encryption in transit</td><td>Yes — TLS 1.2+ everywhere</td></tr>
+      <tr><td>Encryption at rest</td><td>Yes — AES-256 (Supabase/AWS)</td></tr>
+      <tr><td>Children's data protection</td><td>Yes — first names only, no PII, school is data controller</td></tr>
+      <tr><td>WCAG 2.1 AA accessibility</td><td>Compliant — skip links, ARIA landmarks, keyboard alternatives, colour contrast</td></tr>
+      <tr><td>PCI DSS (payments)</td><td>Handled by Stripe (Level 1 certified)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>14. Contact</h2>
+  <table>
+    <tr><td class="label">Security contact</td><td>Nicholas Deeney</td></tr>
+    <tr><td class="label">Email</td><td>nick@wordlabs.app</td></tr>
+    <tr><td class="label">Privacy policy</td><td>wordlabs.app/privacy</td></tr>
+    <tr><td class="label">Incident response plan</td><td>wordlabs.app/incident-response</td></tr>
+  </table>
+
+  <p style="margin-top:32px; font-size:12px; color:#64748b; font-weight:700; font-style:italic;">This document should be reviewed and updated whenever the architecture changes. Last reviewed: April 2026.</p>
+
+</div>
+
+<div class="footer">
+  🧪 Word Labs · <a href="landing.html" style="color:#64748b;">Home</a> · <a href="about.html" style="color:#64748b;">About</a> · <a href="for-schools.html" style="color:#64748b;">For schools</a> · <a href="privacy.html" style="color:#64748b;">Privacy</a> · <a href="terms.html" style="color:#64748b;">Terms</a> · <a href="pricing.html" style="color:#64748b;">Pricing</a> · <a href="mailto:nick@wordlabs.app" style="color:#64748b;">Contact</a>
+</div>
+
+</body>
+</html>

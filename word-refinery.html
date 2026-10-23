@@ -1,0 +1,1859 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Labs – The Refinery</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="wordlab-common.css">
+  <style>
+    :root{
+      --bg:#f5f5f5; --panel:#ffffff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b;
+      --amber:#b45309; --amber-2:#d97706; --amber-soft:#fffbeb; --amber-line:#fde68a; --amber-text:#78350f;
+      --copper:#92400e; --copper-2:#b45309;
+      --ok:#15803d; --warn:#b45309; --bad:#dc2626;
+      --accent:#92400e; --accent-rgb:146,64,14; --header-rgb:13,7,0;
+    }
+    body{ margin:0; font-family:'Lexend',sans-serif; background:var(--bg); color:var(--text); line-height:1.6; letter-spacing:.02em; }
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;}
+
+    /* ── Distillery / Refinery Lab scene ── */
+    html,body{ width:100%; height:100%; overflow:hidden; }
+    .lab-scene{ position:fixed; inset:0; z-index:0; display:flex; flex-direction:column; pointer-events:none; }
+
+    /* Warm dark amber/copper wall */
+    .lab-wall{
+      flex:0 0 62%; background:#1a0e04; position:relative; overflow:hidden;
+    }
+    /* Brick texture suggestion */
+    .lab-wall::before{
+      content:''; position:absolute; inset:0;
+      background:
+        repeating-linear-gradient(0deg, transparent 0, transparent 23px, rgba(180,83,9,.06) 24px),
+        repeating-linear-gradient(90deg, transparent 0, transparent 47px, rgba(180,83,9,.04) 48px);
+    }
+    /* Warm ambient glow from copper vats */
+    .lab-wall::after{
+      content:''; position:absolute; inset:0;
+      background:
+        radial-gradient(ellipse 40% 50% at 20% 80%, rgba(245,158,11,.12) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 50% at 80% 80%, rgba(245,158,11,.10) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 30% at 50% 100%, rgba(180,83,9,.08) 0%, transparent 60%);
+    }
+
+    /* Purity gauge at top — like a distillation column progress */
+    .purity-meter{
+      position:absolute; top:5%; left:50%; transform:translateX(-50%);
+      width:220px; background:#0d0700; border:2px solid #92400e; border-radius:8px;
+      padding:8px 14px; box-shadow:0 0 20px rgba(180,83,9,.2);
+      text-align:center;
+    }
+    .purity-label{ font-size:7px; font-weight:900; letter-spacing:.2em; color:#f59e0b; text-transform:uppercase; margin-bottom:6px; }
+    .purity-track-wrap{ display:flex; align-items:center; gap:6px; }
+    .purity-end{ font-size:8px; font-weight:900; }
+    .purity-end.t1{ color:#94a3b8; }
+    .purity-end.t3{ color:#fbbf24; }
+    .purity-track{ flex:1; height:8px; background:#1a0e04; border-radius:4px; position:relative; border:1px solid rgba(180,83,9,.3); overflow:hidden; }
+    .purity-fill{
+      height:100%; border-radius:4px;
+      background:linear-gradient(90deg,#374151,#78350f,#b45309,#d97706,#f59e0b,#fbbf24);
+      width:100%;
+    }
+    .purity-cursor{
+      position:absolute; top:50%; width:12px; height:12px; border-radius:50%;
+      background:#fbbf24; transform:translate(-50%,-50%);
+      box-shadow:0 0 8px rgba(251,191,36,.8);
+      left:50%;
+      transition:left .5s cubic-bezier(.34,1.56,.64,1);
+      animation:cursorPulse 2s ease-in-out infinite;
+    }
+    @keyframes cursorPulse{ 0%,100%{box-shadow:0 0 4px rgba(251,191,36,.5)} 50%{box-shadow:0 0 14px rgba(251,191,36,1)} }
+
+    /* Distillation column on left wall */
+    .distill-column{
+      position:absolute; left:18px; top:8%; width:28px; height:75%;
+      background:#1a0a02; border:2px solid #92400e; border-radius:6px;
+      display:flex; flex-direction:column;
+    }
+    .distill-band{
+      flex:1; border-radius:2px; margin:2px;
+      opacity:0.7;
+    }
+
+    /* Pipe network */
+    .pipes-svg{ position:absolute; inset:0; width:100%; height:100%; }
+
+    /* Wall shelves / gauges */
+    .gauge-panel{
+      position:absolute; background:#0d0700; border:1.5px solid #92400e;
+      border-radius:6px; padding:8px 10px;
+      box-shadow:0 0 10px rgba(180,83,9,.15);
+    }
+    .gauge-label{ font-size:7px; font-weight:900; letter-spacing:.15em; color:#f59e0b; text-transform:uppercase; margin-bottom:4px; }
+    .gauge-val{ font-size:14px; font-weight:900; color:#fbbf24; text-align:center; font-family:'Lexend',monospace; }
+    .gauge-unit{ font-size:7px; color:#92400e; text-align:center; font-weight:700; }
+
+    /* Tier label badges on wall */
+    .tier-badge{
+      position:absolute; border-radius:6px; padding:5px 10px; text-align:center;
+    }
+
+    /* Copper vats on floor level */
+    .vat-glow{ animation:vatGlow 3s ease-in-out infinite; }
+    @keyframes vatGlow{ 0%,100%{opacity:.6} 50%{opacity:1} }
+
+    /* Steam particles */
+    .steam{ animation:steamRise 2.5s ease-out infinite; transform-origin:center bottom; }
+    .steam2{ animation:steamRise 2.5s ease-out infinite 0.8s; }
+    .steam3{ animation:steamRise 2.5s ease-out infinite 1.6s; }
+    @keyframes steamRise{
+      0%{opacity:0;transform:translateY(0) scaleX(1)}
+      30%{opacity:0.5}
+      100%{opacity:0;transform:translateY(-40px) scaleX(1.5)}
+    }
+
+    /* Floor — stone/industrial */
+    .lab-floor{
+      flex:0 0 38%;
+      background:repeating-linear-gradient(90deg,#1a0e04 0,#1a0e04 50px,#140b02 50px,#140b02 100px);
+      position:relative; border-top:4px solid #92400e;
+      box-shadow:0 -4px 24px rgba(180,83,9,.2);
+    }
+    .floor-heat{
+      position:absolute; top:0; left:0; right:0; height:50px;
+      background:linear-gradient(180deg,rgba(245,158,11,.08) 0%,transparent 100%);
+    }
+    .lab-bench-ref{
+      position:absolute; bottom:0; height:70%; width:160px;
+      background:#0d0700; border-top:6px solid #92400e; border-radius:4px 4px 0 0;
+    }
+    .lab-bench-ref.left{ left:10px; }
+    .lab-bench-ref.right{ right:10px; }
+    .bench-top-ref{
+      position:absolute; top:-14px; left:-6px; right:-6px; height:14px;
+      background:#92400e; border-radius:4px 4px 0 0; border-top:2px solid #b45309;
+    }
+
+    /* Steam/smoke particles */
+    #particles{ position:fixed; inset:0; pointer-events:none; z-index:1; overflow:hidden; }
+    .particle{ position:absolute; bottom:-10px; border-radius:50%; animation:particleFloat linear infinite; }
+    @keyframes particleFloat{ from{transform:translateY(0) translateX(0);opacity:.6;} to{transform:translateY(calc(-100vh - 20px)) translateX(var(--dx,8px));opacity:0;} }
+
+    /* ── Header ── */
+    .header{ position:fixed; top:0; left:0; right:0; z-index:50; background:rgba(var(--header-rgb),.75); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border-bottom:1px solid rgba(255,255,255,.1); padding:0; }
+    .headerInner{ padding:0 20px; height:56px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; max-width:none; }
+    .brand{ display:flex; align-items:center; gap:12px; flex-shrink:0; }
+    .brandIcon{ width:36px; height:36px; border-radius:10px; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:0 8px 16px rgba(0,0,0,.15); flex:0 0 auto; }
+    .brandText h1{ margin:0; font-size:15px; font-weight:900; letter-spacing:-.02em; color:#f1f5f9; }
+    .brandText .sub{ font-size:9px; text-transform:uppercase; letter-spacing:.22em; color:rgba(255,255,255,.6); font-weight:800; display:block; margin-top:2px; }
+    .hud{ display:flex; gap:8px; align-items:center; flex-wrap:nowrap; overflow-x:auto; }
+    .hud::-webkit-scrollbar{ display:none; }
+    .pill{ display:inline-flex; align-items:center; justify-content:center; min-height:32px; border:1px solid rgba(var(--accent-rgb),.3); border-radius:999px; background:rgba(var(--accent-rgb),.12); padding:6px 14px; font-size:12px; font-weight:800; color:rgba(255,255,255,.85); white-space:nowrap; flex-shrink:0; }
+    .pill.score{ background:rgba(var(--accent-rgb),.45); color:#fff; border-color:transparent; }
+    .pill.streak{ background:rgba(251,146,60,.15); color:#fed7aa; border-color:rgba(251,146,60,.3); }
+    .topBtn{ border:none; background:rgba(255,255,255,.1); color:rgba(255,255,255,.85); font-weight:800; font-size:11px; text-transform:uppercase; letter-spacing:.12em; padding:7px 13px; border-radius:10px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; flex-shrink:0; transition:all .15s; }
+    .topBtn:hover{ background:rgba(255,255,255,.18); }
+    #wlLoginBtn{ border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.08); color:rgba(255,255,255,.85); font-weight:800; font-size:11px; padding:7px 13px; border-radius:10px; cursor:pointer; font-family:'Lexend',sans-serif; white-space:nowrap; flex-shrink:0; }
+
+    /* ── Game panel ── */
+    .wrap{
+      position:fixed!important; top:56px!important; bottom:0!important; left:50%!important;
+      transform:translateX(-50%)!important; width:78vw!important; max-width:none!important;
+      margin:0!important; z-index:10; display:flex!important; flex-direction:column!important;
+      justify-content:center!important; padding:16px 0!important; overflow-y:auto;
+    }
+    .wrap::-webkit-scrollbar{ width:0; }
+
+    .panel{
+      background:rgba(13,7,0,.9)!important;
+      backdrop-filter:blur(16px)!important; -webkit-backdrop-filter:blur(16px)!important;
+      border:2px solid rgba(var(--accent-rgb),.2);
+      box-shadow:0 16px 48px rgba(0,0,0,.6), 0 0 0 1px rgba(180,83,9,.1), inset 0 1px 0 rgba(245,158,11,.1);
+      border-radius:20px;
+    }
+    .panelInner{ padding:18px 24px!important; }
+
+    /* Heat bar — like a furnace temperature gauge */
+    .bar{ width:100%; height:8px!important; background:rgba(180,83,9,.12)!important; border-radius:999px; overflow:hidden; }
+    .barFill{ height:100%; width:100%; background:linear-gradient(90deg,#1e3a5f 0%,#374151 20%,#78350f 50%,#d97706 75%,#fbbf24 100%); transition:width .2s linear; border-radius:999px; }
+
+    /* Tier tabs */
+    .modeSel{
+      border:1.5px solid rgba(180,83,9,.3); background:rgba(180,83,9,.08); border-radius:10px;
+      padding:7px 16px; font-weight:800; font-size:11px; text-transform:uppercase;
+      letter-spacing:.1em; cursor:pointer; color:#f59e0b;
+      font-family:'Lexend',sans-serif; transition:all .15s;
+    }
+    .modeSel.active{ background:#92400e!important; color:#fde68a!important; border-color:#92400e!important; box-shadow:0 0 14px rgba(180,83,9,.5); }
+    .modeSel:hover:not(.active){ border-color:rgba(180,83,9,.5); color:#fde68a; }
+
+    /* Cline display */
+    .clineLabel{
+      font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.22em;
+      color:#f59e0b; text-align:center; margin-bottom:4px;
+    }
+    .clineCategory{
+      font-size:clamp(18px,4vw,32px); font-weight:900; color:#fde68a;
+      text-align:center; letter-spacing:-.02em; line-height:1;
+      text-shadow:0 0 30px rgba(245,158,11,.3);
+      margin:4px 0 6px;
+    }
+    .clineClue{
+      font-size:13px; font-weight:600; color:#d97706; text-align:center; margin-bottom:14px; line-height:1.5;
+    }
+    .clineClue strong{ color:#f59e0b; }
+
+    /* THE CLINE BAR — the core mechanic */
+    .cline-wrap{ margin:0 0 16px; }
+
+    .cline-tier-labels{
+      display:flex; justify-content:space-between; margin-bottom:8px;
+    }
+    .tier-label-pill{
+      padding:4px 12px; border-radius:999px; font-size:10px; font-weight:900;
+      text-transform:uppercase; letter-spacing:.1em;
+    }
+    .tier-label-pill.t1{ background:rgba(100,116,139,.2); border:1.5px solid rgba(100,116,139,.4); color:#94a3b8; }
+    .tier-label-pill.t2{ background:rgba(180,83,9,.2); border:1.5px solid rgba(180,83,9,.4); color:#f59e0b; }
+    .tier-label-pill.t3{ background:rgba(251,191,36,.15); border:1.5px solid rgba(251,191,36,.4); color:#fbbf24; }
+
+    /* The actual cline track */
+    .cline-track{
+      position:relative; height:48px; border-radius:12px;
+      background:linear-gradient(90deg,
+        rgba(100,116,139,.3) 0%,
+        rgba(100,116,139,.3) 33%,
+        rgba(180,83,9,.3) 33%,
+        rgba(180,83,9,.3) 66%,
+        rgba(251,191,36,.2) 66%,
+        rgba(251,191,36,.2) 100%
+      );
+      border:1.5px solid rgba(180,83,9,.25);
+      margin-bottom:4px;
+    }
+    /* Tier zone dividers */
+    .cline-track::before{
+      content:''; position:absolute; left:33.33%; top:0; bottom:0; width:2px;
+      background:rgba(180,83,9,.4); border-radius:0;
+    }
+    .cline-track::after{
+      content:''; position:absolute; left:66.66%; top:0; bottom:0; width:2px;
+      background:rgba(251,191,36,.35); border-radius:0;
+    }
+
+    /* Slots on the track */
+    .cline-slot{
+      position:absolute; top:50%; transform:translate(-50%,-50%);
+      min-width:60px; height:36px; border-radius:10px;
+      background:rgba(180,83,9,.1); border:2px dashed rgba(180,83,9,.4);
+      cursor:pointer; transition:all .2s; z-index:2;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .cline-slot:hover, .cline-slot.drag-over{ border-color:#f59e0b; background:rgba(245,158,11,.2); transform:translate(-50%,-50%) scale(1.08); }
+    .cline-slot.filled{ background:rgba(180,83,9,.4); border-color:#f59e0b; border-style:solid; }
+    .cline-slot.correct{ background:rgba(22,163,74,.4)!important; border-color:#4ade80!important; border-style:solid!important; box-shadow:0 0 10px rgba(74,222,128,.4); }
+    .cline-slot.wrong{ background:rgba(220,38,38,.4)!important; border-color:#f87171!important; border-style:solid!important; }
+    .slot-word-label{
+      font-size:11px; font-weight:800; color:#fde68a; white-space:nowrap;
+      pointer-events:none; text-shadow:0 1px 4px rgba(0,0,0,.8);
+    }
+    .slot-num-label{
+      font-size:9px; font-weight:900; color:rgba(180,83,9,.5); pointer-events:none;
+    }
+
+    /* Anchor words at each end */
+    .cline-anchors{ display:flex; justify-content:space-between; margin-top:12px; }
+    .cline-anchor{
+      font-size:13px; font-weight:900; padding:6px 14px; border-radius:10px;
+      max-width:30%;
+    }
+    .cline-anchor.left{ background:rgba(100,116,139,.2); border:1.5px solid rgba(100,116,139,.4); color:#94a3b8; text-align:left; }
+    .cline-anchor.right{ background:rgba(251,191,36,.15); border:1.5px solid rgba(251,191,36,.4); color:#fbbf24; text-align:right; }
+    .anchor-tier{ font-size:8px; font-weight:700; opacity:.7; display:block; margin-bottom:2px; letter-spacing:.1em; text-transform:uppercase; }
+
+    /* MISSING WORDS to place */
+    .missing-words-label{
+      font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.15em;
+      color:#92400e; text-align:center; margin:14px 0 8px;
+    }
+    .missing-words-pool{
+      display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;
+    }
+    .missing-word{
+      padding:8px 16px; border-radius:12px;
+      border:2px solid rgba(180,83,9,.4);
+      background:rgba(180,83,9,.12); color:#fde68a;
+      font-size:14px; font-weight:900;
+      cursor:pointer; transition:all .15s; user-select:none;
+      font-family:'Lexend',sans-serif;
+    }
+    .missing-word:hover:not(.placed):not(.dragging){ background:rgba(180,83,9,.28); border-color:#f59e0b; transform:translateY(-2px); }
+    .missing-word.selected{ background:rgba(180,83,9,.45); border-color:#fbbf24; box-shadow:0 0 12px rgba(245,158,11,.35); }
+    .missing-word.placed{ opacity:.3; cursor:default; transform:none; }
+    .missing-word.dragging{ opacity:.4; transform:scale(.95); }
+    .drag-ghost{
+      position:fixed; z-index:9999; pointer-events:none;
+      padding:8px 18px; border-radius:12px;
+      border:2px solid #fbbf24; background:rgba(146,64,14,.9);
+      color:#fde68a; font-size:14px; font-weight:900;
+      font-family:'Lexend',sans-serif;
+      box-shadow:0 8px 24px rgba(0,0,0,.5), 0 0 16px rgba(245,158,11,.3);
+      transform:translate(-50%,-50%);
+    }
+    .missing-word.correct-placed{ background:rgba(22,163,74,.2); border-color:#4ade80; color:#86efac; opacity:1; }
+    .missing-word.wrong-placed{ background:rgba(220,38,38,.2); border-color:#f87171; color:#fca5a5; opacity:1; }
+    /* Why panel after a wrong answer */
+    .rfWhy{ margin:10px auto 0; max-width:620px; display:flex; flex-direction:column; gap:6px; text-align:left; }
+    .rfWhy[hidden], .rfNextRow[hidden]{ display:none; }
+    .rfWhyLine{ background:rgba(28,10,0,.55); border:1.5px solid rgba(245,158,11,.3); border-radius:10px; padding:8px 12px; font-size:14px; line-height:1.5; color:#fef3c7; }
+    .rfWhyLine.answer{ border-color:rgba(74,222,128,.55); }
+    .rfWhyLine.tip{ border-color:rgba(251,191,36,.45); }
+    .rfWhyLine b{ font-weight:900; color:#fff; }
+    .rfOrder{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+    .rfOrder > span{ background:rgba(180,83,9,.3); border:1.5px solid rgba(245,158,11,.45); border-radius:8px; padding:3px 8px; font-size:14px; font-weight:800; }
+    .rfOrder > span.moved{ border-color:#f87171; border-style:dashed; }
+    .rfNextRow{ display:flex; justify-content:center; margin-top:10px; }
+    .rfNextRow .primaryBtn{ font-size:14px; padding:12px 26px; min-height:44px; }
+    .slot-mark{ margin-right:3px; font-size:12px; }
+    .missing-word:focus-visible, .cline-slot:focus-visible{ outline:3px solid #fbbf24; outline-offset:2px; }
+    .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    /* Scene motion stops in low-stim mode and when the device asks for reduced motion */
+    .low-stim .particle, .low-stim .vat-glow, .low-stim .steam, .low-stim .steam2, .low-stim .steam3, .low-stim #purityCursor, .low-stim .scene-prop-left svg, .low-stim [style*="animation"]{ animation:none!important; }
+    .low-stim #particles{ display:none!important; }
+    @media (prefers-reduced-motion: reduce){
+      .particle, .vat-glow, .steam, .steam2, .steam3, #purityCursor, #sciCharWrap, [style*="animation"]{ animation:none!important; }
+      #particles{ display:none!important; }
+      .missing-word:hover:not(.placed):not(.dragging), .primaryBtn:hover{ transform:none; }
+    }
+
+    /* FIXED WORDS shown on the cline */
+    .fixed-word{
+      position:absolute; top:50%; transform:translate(-50%,-50%);
+      background:rgba(13,7,0,.85); border:1.5px solid rgba(180,83,9,.5);
+      border-radius:10px; padding:6px 14px; height:36px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:11px; font-weight:900; color:#f59e0b;
+      white-space:nowrap; pointer-events:none; z-index:3;
+      box-shadow:0 2px 8px rgba(0,0,0,.4);
+    }
+
+    /* Feedback */
+    .feedback{ min-height:24px; text-align:center; font-size:20px; font-weight:900; }
+    .feedback.ok{ color:#4ade80; }
+    .feedback.bad{ color:#f87171; }
+    .subFeedback{ min-height:20px; text-align:center; color:#d97706; font-weight:700; margin-top:4px; line-height:1.5; font-size:13px; }
+
+    /* Buttons */
+    .actionRow{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:14px; }
+    .secondaryBtn{ border:1.5px solid rgba(180,83,9,.35); background:rgba(180,83,9,.1); color:#d97706; font-weight:800; font-size:12px; padding:10px 18px; border-radius:12px; cursor:pointer; text-transform:uppercase; letter-spacing:.08em; transition:all .15s; font-family:'Lexend',sans-serif; }
+    .secondaryBtn:hover{ background:rgba(180,83,9,.2); }
+    .primaryBtn{ border:none; background:#92400e; color:#fde68a; font-weight:900; font-size:12px; padding:12px 28px; border-radius:12px; cursor:pointer; text-transform:uppercase; letter-spacing:.08em; box-shadow:0 8px 20px rgba(180,83,9,.4); transition:all .15s; font-family:'Lexend',sans-serif; }
+    .primaryBtn:hover{ background:#b45309; transform:translateY(-1px); }
+
+    /* Scientist */
+    .scientist-stage{ position:fixed; right:0; width:calc((100vw - 78vw)/2); top:56px; bottom:0; z-index:11; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    #sciCharWrap{ width:120px; height:150px; display:flex; align-items:flex-end; justify-content:center; animation:sciIdle 3s ease-in-out infinite; }
+    #sciCharWrap.sci-correct{ animation:sciJump .6s ease-out; }
+    #sciCharWrap.sci-wrong{ animation:sciShake .5s ease-out; }
+    #sciCharWrap.sci-streak{ animation:sciDance .8s ease-in-out infinite; }
+    @keyframes sciIdle{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+    @keyframes sciJump{0%{transform:translateY(0)}30%{transform:translateY(-22px)}100%{transform:translateY(0)}}
+    @keyframes sciShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-4deg) translateX(-4px)}40%{transform:rotate(4deg) translateX(4px)}60%{transform:rotate(-3deg) translateX(-3px)}80%{transform:rotate(2deg)}}
+    @keyframes sciDance{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+
+    .scene-prop-left{ position:fixed; left:0; width:calc((100vw - 78vw)/2); top:56px; bottom:0; z-index:11; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; }
+
+    .flashSuccess{ box-shadow:0 0 0 3px rgba(74,222,128,.5), 0 16px 48px rgba(0,0,0,.6)!important; border-color:rgba(74,222,128,.5)!important; }
+    .flashFail{ box-shadow:0 0 0 3px rgba(248,113,113,.4), 0 16px 48px rgba(0,0,0,.6)!important; border-color:rgba(248,113,113,.4)!important; }
+
+    @media(max-width:700px){
+      .lab-scene{ display:none; }
+      body{ background:linear-gradient(160deg,#1a0800 0%,#78350f 60%,#d97706 100%)!important; overflow-y:auto!important; }
+      .wrap{ width:calc(100vw - 24px)!important; margin:0 auto!important; position:relative!important; top:auto; bottom:auto; left:auto; transform:none; justify-content:flex-start!important; padding-top:72px!important; }
+      .scientist-stage,.scene-prop-left{ display:none!important; }
+      /* Flatten the absolute-positioned cline into a wrapping flex row so
+         5+ slots never overlap on narrow phones. Keeps the gradient strip
+         as a background; tier labels above still signal direction. */
+      .cline-track{
+        display:flex!important; flex-wrap:wrap!important; gap:8px!important;
+        justify-content:center!important; align-items:stretch!important;
+        height:auto!important; min-height:56px!important; padding:10px 8px!important;
+      }
+      .cline-track::before, .cline-track::after{ display:none!important; }
+      .cline-slot, .fixed-word{
+        position:static!important; transform:none!important;
+        left:auto!important; top:auto!important;
+        flex:1 1 auto!important; min-width:68px!important; max-width:none!important;
+      }
+      .cline-slot:hover, .cline-slot.drag-over{ transform:scale(1.06)!important; }
+      .slot-num-label{ display:none!important; }
+    }
+  </style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<!-- ── Distillery / Refinery Lab Scene ── -->
+<div class="lab-scene" aria-hidden="true">
+  <div class="lab-wall">
+
+    <!-- Purity meter at top centre -->
+    <div class="purity-meter">
+      <div class="purity-label">⚗️ Refinery Output — Purity Grade</div>
+      <div class="purity-track-wrap">
+        <span class="purity-end t1">T1</span>
+        <div class="purity-track">
+          <div class="purity-fill"></div>
+          <div class="purity-cursor" id="purityCursor"></div>
+        </div>
+        <span class="purity-end t3">T3</span>
+      </div>
+    </div>
+
+    <!-- Distillation column - left wall -->
+    <div class="distill-column">
+      <div class="distill-band" style="background:#374151;flex:2;"></div>
+      <div class="distill-band" style="background:#78350f;flex:2;"></div>
+      <div class="distill-band" style="background:#b45309;flex:2;"></div>
+      <div class="distill-band" style="background:#d97706;flex:2;"></div>
+      <div class="distill-band" style="background:#f59e0b;flex:2;"></div>
+      <div class="distill-band" style="background:#fbbf24;flex:1;"></div>
+    </div>
+
+    <!-- Pipe network SVG -->
+    <svg class="pipes-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <!-- Main horizontal pipe -->
+      <rect x="5" y="48" width="90" height="4" fill="none" stroke="#92400e" stroke-width=".4"/>
+      <!-- Vertical feeds -->
+      <rect x="20" y="20" width="2" height="28" fill="none" stroke="#78350f" stroke-width=".3"/>
+      <rect x="40" y="15" width="2" height="33" fill="none" stroke="#78350f" stroke-width=".3"/>
+      <rect x="60" y="25" width="2" height="23" fill="none" stroke="#78350f" stroke-width=".3"/>
+      <rect x="80" y="18" width="2" height="30" fill="none" stroke="#78350f" stroke-width=".3"/>
+      <!-- Pipe joints -->
+      <circle cx="20" cy="48" r="1.5" fill="#92400e" opacity=".6"/>
+      <circle cx="40" cy="48" r="1.5" fill="#92400e" opacity=".6"/>
+      <circle cx="60" cy="48" r="1.5" fill="#92400e" opacity=".6"/>
+      <circle cx="80" cy="48" r="1.5" fill="#92400e" opacity=".6"/>
+      <!-- Drop lines to vats -->
+      <rect x="20" y="52" width="2" height="20" fill="none" stroke="#78350f" stroke-width=".3"/>
+      <rect x="80" y="52" width="2" height="20" fill="none" stroke="#78350f" stroke-width=".3"/>
+    </svg>
+
+    <!-- Tier labels on wall -->
+    <div class="tier-badge" style="left:60px;top:55%;background:rgba(100,116,139,.12);border:1px solid rgba(100,116,139,.3);">
+      <div style="font-size:8px;font-weight:900;color:#64748b;letter-spacing:.15em;">TIER 1</div>
+      <div style="font-size:7px;color:#475569;font-weight:700;">Everyday</div>
+    </div>
+    <div class="tier-badge" style="left:50%;transform:translateX(-50%);top:55%;background:rgba(180,83,9,.12);border:1px solid rgba(180,83,9,.3);">
+      <div style="font-size:8px;font-weight:900;color:#f59e0b;letter-spacing:.15em;">TIER 2</div>
+      <div style="font-size:7px;color:#d97706;font-weight:700;">Academic</div>
+    </div>
+    <div class="tier-badge" style="right:60px;top:55%;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);">
+      <div style="font-size:8px;font-weight:900;color:#fbbf24;letter-spacing:.15em;">TIER 3</div>
+      <div style="font-size:7px;color:#f59e0b;font-weight:700;">Specialist</div>
+    </div>
+
+    <!-- Gauges on right wall area -->
+    <div class="gauge-panel" style="right:20px;top:10%;">
+      <div class="gauge-label">Temp °C</div>
+      <div class="gauge-val">847°</div>
+      <div class="gauge-unit">FURNACE</div>
+    </div>
+    <div class="gauge-panel" style="right:20px;top:30%;">
+      <div class="gauge-label">Pressure</div>
+      <div class="gauge-val">2.4</div>
+      <div class="gauge-unit">BAR</div>
+    </div>
+    <div class="gauge-panel" style="right:20px;top:50%;">
+      <div class="gauge-label">Purity</div>
+      <div class="gauge-val" id="wallPurity">T1</div>
+      <div class="gauge-unit">OUTPUT</div>
+    </div>
+
+    <!-- Wall shelf equipment -->
+    <div style="position:absolute;top:65%;left:60px;right:160px;height:5px;background:#3d1a05;border-bottom:2px solid #78350f;"></div>
+    <div style="position:absolute;top:65%;left:60px;display:flex;align-items:flex-end;gap:12px;padding-bottom:5px;">
+      <!-- Alembic flask -->
+      <svg width="30" height="48" viewBox="0 0 30 48">
+        <path d="M12 6 L8 20 L2 40 Q2 48 8 48 L22 48 Q28 48 28 40 L22 20 L18 6Z" fill="#f59e0b" opacity="0.7"/>
+        <rect x="10" y="0" width="10" height="8" rx="2" fill="#92400e"/>
+        <ellipse cx="15" cy="36" rx="10" ry="3" fill="rgba(251,191,36,.5)"/>
+        <ellipse class="steam" cx="15" cy="2" rx="4" ry="2.5" fill="rgba(255,255,255,.25)"/>
+      </svg>
+      <!-- Test tube rack -->
+      <svg width="44" height="42" viewBox="0 0 44 42">
+        <rect x="0" y="0" width="44" height="6" rx="2" fill="#78350f"/>
+        <rect x="0" y="36" width="44" height="6" rx="2" fill="#78350f"/>
+        <rect x="6" y="6" width="6" height="30" rx="3" fill="#374151" opacity=".8"/>
+        <rect x="6" y="6" width="6" height="20" rx="3" fill="#94a3b8" opacity=".5"/>
+        <rect x="16" y="6" width="6" height="30" rx="3" fill="#92400e" opacity=".8"/>
+        <rect x="16" y="6" width="6" height="14" rx="3" fill="#f59e0b" opacity=".6"/>
+        <rect x="26" y="6" width="6" height="30" rx="3" fill="#b45309" opacity=".8"/>
+        <rect x="26" y="6" width="6" height="22" rx="3" fill="#d97706" opacity=".6"/>
+        <rect x="36" y="6" width="6" height="30" rx="3" fill="#78350f" opacity=".8"/>
+        <rect x="36" y="6" width="6" height="28" rx="3" fill="#fbbf24" opacity=".5"/>
+      </svg>
+      <!-- Round-bottom flask -->
+      <svg width="28" height="44" viewBox="0 0 28 44">
+        <rect x="10" y="0" width="8" height="12" rx="2" fill="#92400e"/>
+        <rect x="8" y="10" width="12" height="8" rx="2" fill="#78350f"/>
+        <circle cx="14" cy="32" r="12" fill="#d97706" opacity="0.75"/>
+        <ellipse cx="14" cy="28" rx="8" ry="3" fill="rgba(251,191,36,.4)"/>
+        <ellipse class="steam2" cx="14" cy="2" rx="3.5" ry="2" fill="rgba(255,255,255,.2)"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Floor -->
+  <div class="lab-floor">
+    <div class="floor-heat"></div>
+
+    <!-- Left vat -->
+    <div class="lab-bench-ref left"><div class="bench-top-ref"></div></div>
+    <!-- Right vat -->
+    <div class="lab-bench-ref right"><div class="bench-top-ref"></div></div>
+
+    <!-- Left copper vat on bench -->
+    <svg style="position:absolute;left:14px;bottom:0;" width="148" height="130" viewBox="0 0 148 130">
+      <!-- Vat body -->
+      <rect x="10" y="20" width="128" height="90" rx="8" fill="#1a0800" stroke="#92400e" stroke-width="2"/>
+      <!-- Copper shine bands -->
+      <rect x="10" y="20" width="128" height="12" rx="8" fill="#b45309" opacity=".6"/>
+      <rect x="10" y="98" width="128" height="12" rx="8" fill="#92400e" opacity=".5"/>
+      <!-- Liquid inside -->
+      <rect x="12" y="35" width="124" height="72" rx="4" fill="#78350f" opacity=".4"/>
+      <ellipse class="vat-glow" cx="74" cy="50" rx="55" ry="20" fill="#f59e0b" opacity=".08"/>
+      <!-- Steam rising -->
+      <ellipse class="steam" cx="40" cy="22" rx="8" ry="4" fill="rgba(255,200,100,.2)"/>
+      <ellipse class="steam2" cx="74" cy="20" rx="10" ry="5" fill="rgba(255,200,100,.15)"/>
+      <ellipse class="steam3" cx="110" cy="22" rx="8" ry="4" fill="rgba(255,200,100,.2)"/>
+      <!-- Pipe fitting -->
+      <rect x="60" y="10" width="28" height="12" rx="4" fill="#78350f" stroke="#92400e" stroke-width="1"/>
+      <!-- Liquid level line -->
+      <line x1="12" y1="60" x2="136" y2="60" stroke="rgba(245,158,11,.2)" stroke-width="1"/>
+      <!-- Label -->
+      <rect x="28" y="75" width="92" height="22" rx="4" fill="rgba(13,7,0,.7)"/>
+      <text x="74" y="90" text-anchor="middle" font-family="Lexend,sans-serif" font-size="9" font-weight="900" fill="#f59e0b">TIER 1 FEED</text>
+    </svg>
+
+    <!-- Right copper vat -->
+    <svg style="position:absolute;right:14px;bottom:0;" width="148" height="130" viewBox="0 0 148 130">
+      <rect x="10" y="20" width="128" height="90" rx="8" fill="#1a0800" stroke="#b45309" stroke-width="2"/>
+      <rect x="10" y="20" width="128" height="12" rx="8" fill="#d97706" opacity=".7"/>
+      <rect x="10" y="98" width="128" height="12" rx="8" fill="#b45309" opacity=".6"/>
+      <rect x="12" y="35" width="124" height="72" rx="4" fill="#92400e" opacity=".5"/>
+      <ellipse class="vat-glow" cx="74" cy="50" rx="55" ry="20" fill="#fbbf24" opacity=".12"/>
+      <ellipse class="steam2" cx="40" cy="22" rx="8" ry="4" fill="rgba(255,220,100,.25)"/>
+      <ellipse class="steam3" cx="74" cy="20" rx="10" ry="5" fill="rgba(255,220,100,.2)"/>
+      <ellipse class="steam" cx="110" cy="22" rx="8" ry="4" fill="rgba(255,220,100,.25)"/>
+      <rect x="60" y="10" width="28" height="12" rx="4" fill="#b45309" stroke="#d97706" stroke-width="1"/>
+      <line x1="12" y1="55" x2="136" y2="55" stroke="rgba(251,191,36,.25)" stroke-width="1"/>
+      <rect x="28" y="75" width="92" height="22" rx="4" fill="rgba(13,7,0,.7)"/>
+      <text x="74" y="90" text-anchor="middle" font-family="Lexend,sans-serif" font-size="9" font-weight="900" fill="#fbbf24">TIER 3 OUTPUT</text>
+    </svg>
+  </div>
+</div>
+
+<div id="particles"></div>
+
+<!-- Left prop — large distillation column -->
+<div class="scene-prop-left" aria-hidden="true">
+  <svg width="90" height="240" viewBox="0 0 90 240" style="animation:propSway 6s ease-in-out infinite">
+    <style>@keyframes propSway{0%,100%{transform:rotate(-1.5deg)}50%{transform:rotate(1.5deg)}}</style>
+    <!-- Column body -->
+    <rect x="28" y="30" width="34" height="180" rx="6" fill="#0d0700" stroke="#92400e" stroke-width="2"/>
+    <!-- Tier bands inside column -->
+    <rect x="30" y="32" width="30" height="30" rx="3" fill="#374151" opacity=".6"/>
+    <rect x="30" y="62" width="30" height="30" rx="3" fill="#78350f" opacity=".6"/>
+    <rect x="30" y="92" width="30" height="30" rx="3" fill="#b45309" opacity=".6"/>
+    <rect x="30" y="122" width="30" height="30" rx="3" fill="#d97706" opacity=".6"/>
+    <rect x="30" y="152" width="30" height="30" rx="3" fill="#f59e0b" opacity=".6"/>
+    <rect x="30" y="182" width="30" height="26" rx="3" fill="#fbbf24" opacity=".6"/>
+    <!-- Tier labels -->
+    <text x="45" y="50" text-anchor="middle" font-family="Lexend,sans-serif" font-size="7" font-weight="700" fill="#64748b">T1</text>
+    <text x="45" y="80" text-anchor="middle" font-family="Lexend,sans-serif" font-size="7" font-weight="700" fill="#b45309">T1+</text>
+    <text x="45" y="110" text-anchor="middle" font-family="Lexend,sans-serif" font-size="7" font-weight="700" fill="#d97706">T2</text>
+    <text x="45" y="140" text-anchor="middle" font-family="Lexend,sans-serif" font-size="7" font-weight="700" fill="#f59e0b">T2+</text>
+    <text x="45" y="170" text-anchor="middle" font-family="Lexend,sans-serif" font-size="7" font-weight="700" fill="#fbbf24">T3</text>
+    <text x="45" y="198" text-anchor="middle" font-family="Lexend,sans-serif" font-size="7" font-weight="900" fill="#fbbf24">T3+</text>
+    <!-- Pipe feeds -->
+    <rect x="0" y="62" width="28" height="5" rx="2" fill="#78350f"/>
+    <rect x="0" y="122" width="28" height="5" rx="2" fill="#b45309"/>
+    <rect x="62" y="92" width="28" height="5" rx="2" fill="#d97706"/>
+    <rect x="62" y="152" width="28" height="5" rx="2" fill="#f59e0b"/>
+    <!-- Top cap -->
+    <rect x="22" y="22" width="46" height="10" rx="4" fill="#78350f" stroke="#92400e" stroke-width="1"/>
+    <!-- Steam from top -->
+    <ellipse class="steam" cx="45" cy="20" rx="8" ry="4" fill="rgba(255,200,80,.3)"/>
+    <ellipse class="steam2" cx="38" cy="18" rx="5" ry="3" fill="rgba(255,200,80,.2)"/>
+    <ellipse class="steam3" cx="52" cy="19" rx="5" ry="3" fill="rgba(255,200,80,.2)"/>
+    <!-- Base -->
+    <rect x="18" y="210" width="54" height="10" rx="3" fill="#92400e" stroke="#b45309" stroke-width="1"/>
+    <rect x="22" y="220" width="46" height="8" rx="2" fill="#78350f"/>
+    <!-- Drain valve -->
+    <rect x="36" y="218" width="18" height="5" rx="2" fill="#d97706"/>
+    <!-- Indicator light -->
+    <circle cx="45" cy="230" r="3" fill="#f59e0b" style="animation:propPulse 1.5s ease-in-out infinite"/>
+    <style>@keyframes propPulse{0%,100%{opacity:.5;filter:none}50%{opacity:1;filter:drop-shadow(0 0 4px #f59e0b)}}</style>
+  </svg>
+</div>
+
+<div class="scientist-stage"><div id="petCharWrap" class="pet-idle"></div><div id="sciCharWrap"></div></div>
+
+<!-- ── Header ── -->
+<header class="header wl-game-header" role="banner">
+  <div class="headerInner">
+    <div class="brand">
+      <div class="brandIcon">⚗️</div>
+      <div class="brandText"><h1>The Refinery</h1><span class="sub">Word Labs · Distillery Lab</span></div>
+    </div>
+    <div class="hud" role="navigation" aria-label="Game controls">
+      <span class="pill streak" id="streakPill" aria-live="polite">🔥 Streak: 0</span>
+      <span class="pill score" id="scorePill" aria-live="polite">0 XP</span>
+      <span id="wlPillSlot"></span>
+      <button id="wlLoginBtn" onclick="wlShowLogin()" style="border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);border-radius:10px;padding:7px 13px;font-weight:800;font-size:11px;cursor:pointer;font-family:'Lexend',sans-serif;color:rgba(255,255,255,.85);">👤 Log in</button>
+      <a href="landing.html" title="Home" class="topBtn">🏠 <span class="topBtnLabel">Home</span></a>
+      <a href="scientist.html" title="My Scientist" class="topBtn" style="background:rgba(99,102,241,.2)!important;color:#c7d2fe!important;">🧬 <span class="topBtnLabel">My Scientist</span></a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap" id="main-content" role="main">
+  <div class="panel" id="gameCard"><div class="panelInner">
+
+    <!-- Heat bar -->
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <span style="font-size:10px;font-weight:700;letter-spacing:.06em;color:#f59e0b;text-transform:uppercase;">🔥 Furnace Heat</span>
+        <span id="fuelLabel" style="font-size:10px;font-weight:700;color:#f59e0b;" aria-live="polite">100%</span>
+      </div>
+      <div class="bar"><div class="barFill" id="fuelBar"></div></div>
+      <div style="font-size:10px;color:#92400e;opacity:.8;margin-top:3px;text-align:center;letter-spacing:.03em;" id="missionSubLabel">Active Mission · The Refinery · Arrange words from Tier 1 to Tier 3</div>
+    </div>
+
+    <!-- Mode selector -->
+    <div style="display:flex;justify-content:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+      <button class="modeSel active" id="modeFill" onclick="setMode('fill')">⚗️ Fill the Gap</button>
+      <button class="modeSel" id="modeOrder" onclick="setMode('order')">📊 Full Cline</button>
+    </div>
+
+    <!-- Cline label -->
+    <div class="clineLabel" id="clineLabel">⚗️ Refine This Word</div>
+    <div class="clineCategory" id="clineCategory">SPEAK</div>
+    <div class="clineClue" id="clineClue">Arrange from <strong>everyday Tier 1</strong> to <strong>specialist Tier 3</strong></div>
+
+    <!-- THE CLINE -->
+    <div class="cline-wrap">
+      <div class="cline-tier-labels">
+        <span class="tier-label-pill t1">Tier 1 — Everyday</span>
+        <span class="tier-label-pill t2">Tier 2 — Academic</span>
+        <span class="tier-label-pill t3">Tier 3 — Specialist</span>
+      </div>
+      <div class="cline-track" id="clineTrack"></div>
+      <div class="cline-anchors">
+        <div class="cline-anchor left" id="leftAnchor">
+          <span class="anchor-tier">Tier 1</span>
+          <span id="leftAnchorWord">say</span>
+        </div>
+        <div class="cline-anchor right" id="rightAnchor">
+          <span class="anchor-tier">Tier 3</span>
+          <span id="rightAnchorWord">enunciate</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Missing words to place -->
+    <div class="missing-words-label" id="missingLabel">Tap a word, then tap its place on the line</div>
+    <div class="missing-words-pool" id="missingPool" role="listbox" aria-label="Word tiles to place on the cline"></div>
+
+    <div style="display:flex;justify-content:center;margin-top:8px;">
+      <button class="primaryBtn" id="checkBtn" onclick="checkCline()" style="display:none;">Check Refinery ⚗️</button>
+    </div>
+
+    <span id="ealdSpeakBtns"></span>
+    <div id="ealdDefinition" class="eald-definition"></div>
+    <div class="feedback" id="feedback" aria-live="assertive"></div>
+    <div class="subFeedback" id="subFeedback" aria-live="polite"></div>
+    <div class="rfWhy" id="rfWhy" aria-live="polite" hidden></div>
+    <div class="rfNextRow" id="rfNextRow" hidden><button class="primaryBtn" id="rfNextBtn" type="button">Next →</button></div>
+    <div id="ealdTranslation" aria-live="polite"></div>
+
+    <div class="actionRow">
+      <button class="secondaryBtn" id="rfRestartBtn" onclick="restartGame()">Restart</button>
+      <button class="secondaryBtn" id="rfSkipBtn" onclick="skipQuestion()">Skip →</button>
+    </div>
+
+  </div></div>
+</div>
+
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="wordlab-stage.js"></script>
+<script defer src="wordlab-data.js?v=20261023b"></script>
+<script defer src="wordlab-scientist.js?v=20261019"></script>
+<script defer src="wordlab-audio.js"></script>
+<script defer src="wordlab-teacher.js"></script>
+<script defer src="wordlab-help.js"></script>
+<script defer src="wordlab-hints.js"></script>
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// THE REFINERY — Data
+// Clines move from Tier 1 (everyday) → Tier 2 (academic) → Tier 3 (specialist)
+// Format: { category, leftAnchor (T1), rightAnchor (T3), words (in order T1→T3),
+//           gaps: indices of words to remove (students must place these),
+//           clue }
+// ─────────────────────────────────────────────────────────────────────────────
+
+const CLINES = [
+  {
+    category:"Talking", stage:"s3e",
+    leftAnchor:"say", rightAnchor:"enunciate",
+    words:["say","speak","state","communicate","articulate","enunciate"],
+    gaps:[2,3,4],
+    clue:"From a quick word to precise speech",
+    explain:"say (T1) → speak → state → communicate → articulate → enunciate (T3: say each sound carefully and clearly)"
+  },
+  {
+    category:"Thinking", stage:"s3l",
+    leftAnchor:"think", rightAnchor:"hypothesise",
+    words:["think","wonder","consider","reflect","analyse","hypothesise"],
+    gaps:[2,3,4],
+    clue:"From casual thought to scientific reasoning",
+    explain:"think (T1) → wonder → consider → reflect → analyse → hypothesise (T3: suggest an idea you can test)"
+  },
+  {
+    category:"Looking", stage:"s3e",
+    leftAnchor:"look", rightAnchor:"scrutinise",
+    words:["look","watch","observe","examine","inspect","scrutinise"],
+    gaps:[2,3,4],
+    clue:"From a glance to careful study",
+    explain:"look (T1) → watch → observe → examine → inspect → scrutinise (T3: examine very closely and critically)"
+  },
+  {
+    category:"Changing", stage:"s3l",
+    leftAnchor:"change", rightAnchor:"metamorphose",
+    words:["change","shift","alter","modify","transform","metamorphose"],
+    gaps:[2,3,4],
+    clue:"From a small shift to a complete transformation",
+    explain:"change (T1) → shift → alter → modify → transform → metamorphose (T3: change completely, like a caterpillar into a butterfly)"
+  },
+  {
+    category:"Getting Bigger", stage:"s3l",
+    leftAnchor:"grow", rightAnchor:"proliferate",
+    words:["grow","increase","expand","multiply","escalate","proliferate"],
+    gaps:[2,3,4],
+    clue:"From growing bit by bit to growing very fast and spreading everywhere",
+    explain:"grow (T1) → increase → expand (get bigger in size) → multiply (grow many times over) → escalate (grow quickly and become more serious) → proliferate (T3: grow and spread very fast)"
+  },
+  {
+    category:"Making", stage:"s3l",
+    leftAnchor:"make", rightAnchor:"synthesise",
+    words:["make","build","create","construct","fabricate","synthesise"],
+    gaps:[2,3,4],
+    clue:"From making something to combining elements scientifically",
+    explain:"make (T1) → build → create → construct → fabricate → synthesise (T3: make by combining substances)"
+  },
+  {
+    category:"Breaking Down", stage:"s3e",
+    leftAnchor:"break", rightAnchor:"decompose",
+    words:["break","split","divide","separate","fragment","decompose"],
+    gaps:[2,3,4],
+    clue:"From snapping something to chemical breakdown",
+    explain:"break (T1) → split → divide → separate → fragment → decompose (T3: rot and break down naturally)"
+  },
+  {
+    category:"Showing", stage:"s3l",
+    leftAnchor:"show", rightAnchor:"elucidate",
+    words:["show","explain","present","demonstrate","illustrate","elucidate"],
+    gaps:[2,3,4],
+    clue:"From pointing something out to making it perfectly clear",
+    explain:"show (T1) → explain → present → demonstrate → illustrate → elucidate (T3: make very clear)"
+  },
+  {
+    category:"Disagreeing", stage:"s3e",
+    leftAnchor:"disagree", rightAnchor:"refute",
+    words:["disagree","argue","object","dispute","contradict","refute"],
+    gaps:[2,3,4],
+    clue:"From not agreeing to proving something is wrong",
+    explain:"disagree (T1) → argue → object (say you are against it) → dispute (argue that it is not true) → contradict (say the opposite is true) → refute (T3: prove it is wrong with evidence)"
+  },
+  {
+    category:"Deciding", stage:"s3l",
+    leftAnchor:"choose", rightAnchor:"adjudicate",
+    words:["choose","decide","judge","determine","evaluate","adjudicate"],
+    gaps:[2,3,4],
+    clue:"From picking a favourite to formal judging",
+    explain:"choose (T1) → decide → judge → determine → evaluate → adjudicate (T3: make an official decision, like a referee or judge)"
+  },
+  {
+    category:"Collecting", stage:"s3e",
+    leftAnchor:"gather", rightAnchor:"consolidate",
+    words:["gather","collect","accumulate","assemble","compile","consolidate"],
+    gaps:[2,3,4],
+    clue:"From picking things up to bringing everything together into one organised whole",
+    explain:"gather (T1) → collect → accumulate (build up a pile over time) → assemble (bring together in one place) → compile (put together in order) → consolidate (T3: combine into one stronger whole)"
+  },
+  {
+    category:"Moving", stage:"s3e",
+    leftAnchor:"move", rightAnchor:"emigrate",
+    words:["move","shift","transfer","relocate","migrate","emigrate"],
+    gaps:[2,3,4],
+    clue:"From moving something a little way to moving to live in another country",
+    explain:"move (T1) → shift (move a short way) → transfer (move from one place to another) → relocate (move to a new place to live or work) → migrate (move to a new region, often in groups) → emigrate (T3: leave your country to live in another one)"
+  },
+  {
+    category:"Writing", stage:"s3e",
+    leftAnchor:"write", rightAnchor:"transcribe",
+    words:["write","note","record","document","chronicle","transcribe"],
+    gaps:[2,3,4],
+    clue:"From jotting something down to formal written recording",
+    explain:"write (T1) → note → record → document → chronicle (record events in order) → transcribe (T3: write down exactly what was said)"
+  },
+  {
+    category:"Asking", stage:"s3e",
+    leftAnchor:"ask", rightAnchor:"interrogate",
+    words:["ask","question","enquire","query","probe","interrogate"],
+    gaps:[2,3,4],
+    clue:"From a simple question to long, hard questioning",
+    explain:"ask (T1) → question → enquire (ask politely and formally) → query (ask whether something is right) → probe (ask deep, searching questions) → interrogate (T3: question someone hard and for a long time)"
+  },
+  {
+    category:"Helping", stage:"s3e",
+    leftAnchor:"help", rightAnchor:"facilitate",
+    words:["help","support","assist","aid","enable","facilitate"],
+    gaps:[2,3,4],
+    clue:"From helping out to formally enabling something to happen",
+    explain:"help (T1) → support → assist → aid → enable → facilitate (T3: make something easier to happen)"
+  },
+  {
+    category:"Stopping", stage:"s3e",
+    leftAnchor:"stop", rightAnchor:"terminate",
+    words:["stop","end","finish","conclude","cease","terminate"],
+    gaps:[2,3,4],
+    clue:"From halting to formally ending something",
+    explain:"stop (T1) → end → finish → conclude → cease → terminate (T3: bring to an official end)"
+  },
+  {
+    category:"Starting", stage:"s3l",
+    leftAnchor:"start", rightAnchor:"instigate",
+    words:["start","begin","launch","initiate","commence","instigate"],
+    gaps:[2,3,4],
+    clue:"From getting going to formally setting something in motion",
+    explain:"start (T1) → begin → launch → initiate → commence → instigate (T3: cause something to begin)"
+  },
+  {
+    category:"Checking", stage:"s3l",
+    leftAnchor:"check", rightAnchor:"corroborate",
+    words:["check","test","review","verify","validate","corroborate"],
+    gaps:[2,3,4],
+    clue:"From a quick look to formal confirmation with evidence",
+    explain:"check (T1) → test → review → verify → validate → corroborate (T3: back up with more evidence)"
+  },
+  {
+    category:"Connecting", stage:"s3l",
+    leftAnchor:"join", rightAnchor:"amalgamate",
+    words:["join","link","connect","combine","integrate","amalgamate"],
+    gaps:[2,3,4],
+    clue:"From joining together to a formal merger",
+    explain:"join (T1) → link → connect → combine → integrate → amalgamate (T3: merge into one)"
+  },
+  {
+    category:"Measuring", stage:"s3l",
+    leftAnchor:"guess", rightAnchor:"quantify",
+    words:["guess","estimate","approximate","measure","calculate","quantify"],
+    gaps:[2,3,4],
+    clue:"From a rough guess to stating an exact amount",
+    explain:"guess (T1) → estimate → approximate (get close to the right amount) → measure (use a tool to find the amount) → calculate (work it out exactly with maths) → quantify (T3: state exactly how much, as a number)"
+  },
+  {
+    category:"Hiding", stage:"s3e",
+    leftAnchor:"hide", rightAnchor:"obscure",
+    words:["hide","cover","mask","conceal","camouflage","obscure"],
+    gaps:[2,3,4],
+    clue:"From hiding something to making it impossible to see",
+    explain:"hide (T1) → cover → mask → conceal → camouflage → obscure (T3: make unclear or hard to see)"
+  },
+  {
+    category:"Fixing", stage:"s3e",
+    leftAnchor:"fix", rightAnchor:"rectify",
+    words:["fix","mend","repair","restore","remedy","rectify"],
+    gaps:[2,3,4],
+    clue:"From a quick fix to formally putting something right",
+    explain:"fix (T1) → mend → repair → restore → remedy → rectify (T3: put right formally)"
+  },
+  {
+    category:"Wanting", stage:"s3e",
+    leftAnchor:"want", rightAnchor:"pine",
+    words:["want","wish","desire","crave","yearn","pine"],
+    gaps:[2,3,4],
+    clue:"From wanting something to longing for it so much it makes you sad",
+    explain:"want (T1) → wish → desire → crave (want something very strongly) → yearn (long deeply for something you cannot easily have) → pine (T3: long for something so much it makes you sad)"
+  },
+  {
+    category:"Eating", stage:"s3e",
+    leftAnchor:"nibble", rightAnchor:"devour",
+    words:["nibble","eat","munch","gobble","gorge","devour"],
+    gaps:[2,3,4],
+    clue:"From tiny bites to eating greedily",
+    explain:"nibble (T1: tiny bites) → eat → munch (chew steadily) → gobble (eat fast and greedily) → gorge (eat far too much) → devour (T3: eat hungrily until it is all gone)"
+  },
+  {
+    category:"Running", stage:"s2l",
+    leftAnchor:"jog", rightAnchor:"hurtle",
+    words:["jog","run","race","dash","sprint","hurtle"],
+    gaps:[2,3,4],
+    clue:"From a slow run to going so fast you can hardly stop",
+    explain:"jog (T1: run slowly) → run → race → dash (run very fast for a short way) → sprint (run at top speed) → hurtle (T3: move so fast you are almost out of control)"
+  },
+  {
+    category:"Being Scared", stage:"s3e",
+    leftAnchor:"uneasy", rightAnchor:"petrified",
+    words:["uneasy","nervous","scared","frightened","terrified","petrified"],
+    gaps:[2,3,4],
+    clue:"From feeling a little worried to being frozen with fear",
+    explain:"uneasy (T1: a little worried) → nervous → scared → frightened → terrified → petrified (T3: so scared you cannot move)"
+  },
+  {
+    category:"Being Happy", stage:"s3e",
+    leftAnchor:"happy", rightAnchor:"euphoric",
+    words:["happy","glad","pleased","delighted","elated","euphoric"],
+    gaps:[2,3,4],
+    clue:"From a smile to overwhelming joy",
+    explain:"happy (T1) → glad → pleased → delighted → elated → euphoric (T3: intensely happy)"
+  },
+  {
+    category:"Being Angry", stage:"s3l",
+    leftAnchor:"annoyed", rightAnchor:"incensed",
+    words:["annoyed","cross","angry","furious","enraged","incensed"],
+    gaps:[2,3,4],
+    clue:"From mild annoyance to absolute fury",
+    explain:"annoyed (T1: a little angry) → cross → angry → furious → enraged → incensed (T3: extremely angry)"
+  },
+  {
+    category:"Teaching", stage:"s3l",
+    leftAnchor:"show", rightAnchor:"enlighten",
+    words:["show","teach","instruct","train","educate","enlighten"],
+    gaps:[2,3,4],
+    clue:"From showing someone how to helping them truly understand",
+    explain:"show (T1) → teach → instruct (give clear directions) → train (teach a skill with lots of practice) → educate (teach knowledge over a long time) → enlighten (T3: give someone deep understanding)"
+  },
+];
+
+// Extension mode clines — more abstract, higher academic demand
+const EXT_CLINES = [
+  {
+    category:"Influencing", stage:"s3l",
+    leftAnchor:"affect", rightAnchor:"dictate",
+    words:["affect","influence","shape","steer","determine","dictate"],
+    gaps:[2,3,4],
+    clue:"From having some effect to completely controlling what happens",
+    explain:"affect (T1) → influence → shape (help form) → steer (guide the direction) → determine (decide the outcome) → dictate (T3: control it completely)"
+  },
+  {
+    category:"Understanding", stage:"s3l",
+    leftAnchor:"know", rightAnchor:"extrapolate",
+    words:["know","understand","interpret","infer","predict","extrapolate"],
+    gaps:[2,3,4],
+    clue:"From knowing the facts to reasoning far beyond them",
+    explain:"know (T1: have the facts) → understand → interpret (explain what the facts mean) → infer (work out what is not said) → predict (say what will happen) → extrapolate (T3: extend a pattern beyond the facts you have)"
+  },
+  {
+    category:"Disagreeing Formally", stage:"s3l",
+    leftAnchor:"disagree", rightAnchor:"repudiate",
+    words:["disagree","dispute","challenge","contradict","denounce","repudiate"],
+    gaps:[2,3,4],
+    clue:"From disagreeing to formally rejecting with authority",
+    explain:"disagree (T1) → dispute → challenge → contradict → denounce (speak out against publicly) → repudiate (T3: formally refuse to accept)"
+  },
+  {
+    category:"Making Worse", stage:"s3l",
+    leftAnchor:"worsen", rightAnchor:"exacerbate",
+    words:["worsen","damage","harm","deteriorate","aggravate","exacerbate"],
+    gaps:[2,3,4],
+    clue:"From getting worse to formally intensifying a problem",
+    explain:"worsen (T1) → damage → harm → deteriorate → aggravate → exacerbate (T3: make a problem even worse)"
+  },
+  {
+    category:"Getting Better", stage:"s4",
+    leftAnchor:"help", rightAnchor:"ameliorate",
+    words:["help","improve","ease","relieve","alleviate","ameliorate"],
+    gaps:[2,3,4],
+    clue:"From making a problem a bit better to formally easing suffering",
+    explain:"help (T1) → improve → ease (make less painful or hard) → relieve (take away some of the pain or worry) → alleviate (make suffering less severe) → ameliorate (T3: make a bad situation better)"
+  },
+  {
+    category:"Spreading Ideas", stage:"s3l",
+    leftAnchor:"share", rightAnchor:"disseminate",
+    words:["share","spread","broadcast","circulate","propagate","disseminate"],
+    gaps:[1,2,3,4],
+    clue:"From sharing casually to formally distributing information widely",
+    explain:"share (T1) → spread → broadcast → circulate → propagate → disseminate (T3: spread information widely)"
+  },
+  {
+    category:"Predicting", stage:"s4",
+    leftAnchor:"guess", rightAnchor:"prognosticate",
+    words:["guess","predict","expect","anticipate","forecast","prognosticate"],
+    gaps:[2,3,4],
+    clue:"From a wild guess to a formal expert prediction",
+    explain:"guess (T1) → predict → expect → anticipate → forecast → prognosticate (T3: foretell formally)"
+  },
+  {
+    category:"Criticising", stage:"s3l",
+    leftAnchor:"criticise", rightAnchor:"excoriate",
+    words:["criticise","blame","condemn","censure","denounce","excoriate"],
+    gaps:[2,3,4],
+    clue:"From pointing out faults to severe public criticism",
+    explain:"criticise (T1) → blame → condemn → censure → denounce → excoriate (T3: criticise very harshly)"
+  },
+];
+
+// Full-order mode — students arrange all words (harder)
+const ORDER_CLINES = [
+  {
+    category:"Feeling Sad", stage:"s3e",
+    leftAnchor:"sad", rightAnchor:"despondent",
+    words:["sad","unhappy","sorrowful","melancholy","dejected","despondent"],
+    gaps:[1,2,3,4],
+    clue:"Arrange all words from least to most formal/intense",
+    explain:"sad (T1) → unhappy → sorrowful → melancholy → dejected → despondent (T3)"
+  },
+  {
+    category:"Being Wrong", stage:"s3l",
+    leftAnchor:"wrong", rightAnchor:"fallacious",
+    words:["wrong","incorrect","mistaken","inaccurate","erroneous","fallacious"],
+    gaps:[1,2,3,4],
+    clue:"Arrange from everyday to academic to technical",
+    explain:"wrong (T1) → incorrect → mistaken → inaccurate → erroneous → fallacious (T3 — based on false reasoning)"
+  },
+  {
+    category:"Enough", stage:"s3l",
+    leftAnchor:"enough", rightAnchor:"commensurate",
+    words:["enough","plenty","sufficient","adequate","ample","commensurate"],
+    gaps:[1,2,3,4],
+    clue:"Arrange from everyday to academic language",
+    explain:"enough (T1) → plenty → sufficient → adequate → ample → commensurate (T3 — proportionate)"
+  },
+  {
+    category:"Being Brave", stage:"s3l",
+    leftAnchor:"brave", rightAnchor:"intrepid",
+    words:["brave","bold","daring","courageous","valiant","intrepid"],
+    gaps:[1,2,3,4],
+    clue:"Arrange from simple bravery to fearless exploration",
+    explain:"brave (T1) → bold → daring → courageous → valiant → intrepid (T3 — fearlessly adventurous)"
+  },
+  {
+    category:"Being Clever", stage:"s3e",
+    leftAnchor:"clever", rightAnchor:"astute",
+    words:["clever","smart","bright","intelligent","shrewd","astute"],
+    gaps:[1,2,3,4],
+    clue:"Arrange from casual cleverness to sharp judgement",
+    explain:"clever (T1) → smart → bright → intelligent → shrewd → astute (T3 — sharply perceptive)"
+  },
+];
+
+// What each word means, for the sense it has on its line (Need Advice step 2). Keyed by
+// category, then word. A meaning never uses another word that can be moved on the same
+// line (tests/test-refinery-hints.js checks this), so it explains the word without
+// giving away the order.
+const _RF_MEAN = {
+  "Talking": { state:"to say something clearly and firmly, as a fact", communicate:"to share ideas or information with someone, by talking, writing or signing", articulate:"to put your ideas into clear, well-chosen words" },
+  "Thinking": { consider:"to think carefully about something before you decide", reflect:"to think back over something so you can learn from it", analyse:"to look closely at each part of something to understand how it works" },
+  "Looking": { observe:"to look carefully and notice details", examine:"to look at something closely to find out more about it", inspect:"to look over something closely for problems or mistakes" },
+  "Changing": { alter:"to make something a little different", modify:"to make small changes to something to make it better", transform:"to make something completely different in how it looks or what it is" },
+  "Getting Bigger": { expand:"to get bigger and take up more space", multiply:"to grow in number again and again, like rabbits do", escalate:"to get bigger or worse quickly, step by step" },
+  "Making": { create:"to make something new that was not there before", construct:"to put something together carefully from parts, like a bridge or a tower", fabricate:"to make something from materials, often in a factory" },
+  "Breaking Down": { divide:"to cut or share something into equal parts", separate:"to pull things apart so they are no longer together", fragment:"to break into lots of small pieces" },
+  "Showing": { present:"to show information to a group, like in a talk", demonstrate:"to show how something works by doing it", illustrate:"to make an idea clear with examples or pictures" },
+  "Disagreeing": { object:"to say that you are against something or do not like it", dispute:"to say that something is not true or not fair", contradict:"to say the opposite of what someone else said" },
+  "Deciding": { judge:"to form an opinion about something after thinking about it", determine:"to find out or settle something for certain", evaluate:"to work out how good or useful something is, using evidence" },
+  "Collecting": { accumulate:"to slowly gather more and more of something over time", assemble:"to bring people or parts together in one place", compile:"to put information from different places into one list or book" },
+  "Moving": { transfer:"to move someone or something from one place, job or team to another", relocate:"to move to live or work in a new place", migrate:"to move a long way to live somewhere else for a time, often in a big group, like birds in winter" },
+  "Writing": { record:"to write something down so it can be kept", document:"to write careful details about something, often with photos or proof", chronicle:"to write about events in the order they happened" },
+  "Asking": { enquire:"to ask politely to find something out", query:"to ask about something because you are not sure it is right", probe:"to keep asking careful questions to find out something hidden" },
+  "Helping": { assist:"to help someone do a task", aid:"to give help, often to people who need it", enable:"to make it possible for someone to do something" },
+  "Stopping": { finish:"to get to the last part of a task so it is done", conclude:"to bring something to a close in a formal way, like a speech", cease:"to stop, often for good (a formal word)" },
+  "Starting": { launch:"to start something big, like a new product or a rocket", initiate:"to set a plan or a process going", commence:"a formal word for start, used at ceremonies and events" },
+  "Checking": { review:"to look over something again to see if it needs changing", verify:"to make sure something is true or correct", validate:"to officially show that something is correct or allowed" },
+  "Connecting": { connect:"to bring two things together so they are joined", combine:"to mix or put things together to make one thing", integrate:"to fit parts together so they work as one whole" },
+  "Measuring": { approximate:"to give an amount that is close, but not exact", measure:"to find the size or amount of something with a tool, like a ruler or scales", calculate:"to work out an exact amount using maths" },
+  "Hiding": { mask:"to cover something so it cannot be seen clearly", conceal:"to keep something hidden on purpose", camouflage:"to blend in with the background so you are hard to spot" },
+  "Fixing": { repair:"to fix something that is broken or damaged", restore:"to bring something back to how it was when it was new", remedy:"to put a problem right" },
+  "Wanting": { desire:"to want something strongly", crave:"to want something so much it is hard to think about anything else", yearn:"to long for something for a long time, often something far away" },
+  "Eating": { munch:"to chew food steadily, often with a crunching sound", gobble:"to eat fast, in big mouthfuls", gorge:"to eat far too much, very greedily" },
+  "Running": { race:"to run fast to beat others, or to get somewhere quickly", dash:"to run fast for a short way, in a hurry", sprint:"to run as fast as you possibly can, for a short way" },
+  "Being Scared": { scared:"a bit afraid of something", frightened:"feeling real fear that something bad might happen", terrified:"filled with very great fear" },
+  "Being Happy": { pleased:"happy about something that has happened", delighted:"very happy", elated:"so happy you feel like you are floating" },
+  "Being Angry": { angry:"upset and mad because something seems wrong or unfair", furious:"full of strong, wild anger", enraged:"filled with so much anger you could explode" },
+  "Teaching": { instruct:"to tell someone how to do something, step by step", train:"to teach a skill by showing it and practising it many times", educate:"to teach someone over a long time, like at school" },
+  // Extension lines: places 2 to 5 can all be moved in Arrange the Cline
+  "Influencing": { influence:"to have an effect on what someone does or thinks", shape:"to have a big part in how something turns out", steer:"to guide something in the direction you want it to go", determine:"to decide how something will turn out" },
+  "Understanding": { understand:"to know what something means", interpret:"to work out what something means and explain it", infer:"to work something out from clues, when it is not said", predict:"to use what you know to say what will happen next" },
+  "Disagreeing Formally": { dispute:"to say that something is not true or not fair", challenge:"to question whether something is right and ask for proof", contradict:"to say the opposite of what someone else said", denounce:"to say in public that something is very wrong" },
+  "Making Worse": { damage:"to break or spoil part of something", harm:"to hurt someone or something", deteriorate:"to slowly get worse over time", aggravate:"to make a problem or an injury worse" },
+  "Getting Better": { improve:"to make something better than it was", ease:"to make pain or worry a little lighter", relieve:"to make pain or worry go down, so someone feels better", alleviate:"to make pain or suffering much less (a formal word)" },
+  "Spreading Ideas": { spread:"to pass something on so it reaches more people", broadcast:"to send out news on TV, radio or online for many people", circulate:"to pass something around from person to person", propagate:"to make an idea or a belief grow and reach more and more people" },
+  "Predicting": { predict:"to say what you think will happen", expect:"to think something will probably happen", anticipate:"to see something coming and get ready for it", forecast:"to say what will happen using data, like the weather" },
+  "Criticising": { blame:"to say someone is at fault for something bad", condemn:"to say strongly that something is very wrong", censure:"to formally and officially criticise someone", denounce:"to speak out in public against someone and accuse them" },
+  "Feeling Sad": { unhappy:"not happy", sorrowful:"full of deep sadness", melancholy:"a quiet, heavy sadness that lasts a while", dejected:"so sad and let down that it feels like there is no hope left" },
+  "Being Wrong": { incorrect:"not right", mistaken:"wrong about something you believed", inaccurate:"not exact, with small errors", erroneous:"containing errors (a formal word)" },
+  "Enough": { plenty:"more than you need", sufficient:"as much as is needed (a formal word)", adequate:"good enough, but not great", ample:"more than enough, with some to spare" },
+  "Being Brave": { bold:"confident and not afraid to take risks", daring:"willing to do dangerous or surprising things", courageous:"brave when facing danger or pain", valiant:"very brave, like a hero in a battle" },
+  "Being Clever": { smart:"quick to learn and understand", bright:"quick to learn, often said about children", intelligent:"able to learn, think and understand well", shrewd:"good at judging people and situations, so you are not tricked" },
+};
+
+// Apply extension mode (deferred until WordLabData is available)
+document.addEventListener('DOMContentLoaded', function(){
+  if(typeof WordLabData !== 'undefined' && WordLabData.isExtensionMode && WordLabData.isExtensionMode('word-refinery')){
+    CLINES.push(...EXT_CLINES);
+    ORDER_CLINES.push(...EXT_CLINES.map(c => ({...c, gaps:[1,2,3,4]})));
+  }
+  // Apply stage filtering to CLINES pool (once per page load)
+  try {
+    var _filteredClines = WordLabData.weightByStage(CLINES.slice(), 'word-refinery');
+    CLINES.splice(0, CLINES.length, ..._filteredClines);
+  } catch(e){}
+  // Apply teacher word corrections
+  try { WordLabData.getWordCorrections('refinery').then(function(c){ WordLabData.applyCorrections(CLINES, c, 'category'); WordLabData.applyCorrections(ORDER_CLINES, c, 'category'); }); } catch(e){}
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GAME STATE
+// ─────────────────────────────────────────────────────────────────────────────
+// Both are set once the deferred shared scripts have loaded (see INIT at the end)
+var _wltActive = false;
+var _supportMode = false;
+let _rfReading = false;   // a wrong answer's why panel is showing (heat holds)
+let _rfNextAt = 0;        // time Next was pressed (guards a fast double press)
+function _rfTooSoon(){ return Date.now() - _rfNextAt < 500; }
+
+let gameMode = 'fill';
+let score = 0, streak = 0, fuel = 100;
+let currentCline = null, buttonsLocked = false, fuelInterval = null;
+let selectedWord = null;
+let placed = {}; // slotIndex → word
+
+const clineTrackEl  = document.getElementById('clineTrack');
+const missingPoolEl = document.getElementById('missingPool');
+const feedbackEl    = document.getElementById('feedback');
+const subFeedbackEl = document.getElementById('subFeedback');
+const scorePillEl   = document.getElementById('scorePill');
+const streakPillEl  = document.getElementById('streakPill');
+const fuelBarEl     = document.getElementById('fuelBar');
+const fuelLabelEl   = document.getElementById('fuelLabel');
+const gameCardEl    = document.getElementById('gameCard');
+const checkBtnEl    = document.getElementById('checkBtn');
+const purityCursor  = document.getElementById('purityCursor');
+const wallPurityEl  = document.getElementById('wallPurity');
+
+function shuffleArray(arr){ return [...arr].sort(()=>Math.random()-.5); }
+
+function updateHud(){
+  if(_wltActive) return;
+  scorePillEl.textContent = `${score} XP`;
+  streakPillEl.textContent = `🔥 Streak: ${streak}`;
+  fuelBarEl.style.width = `${Math.max(fuel,0)}%`;
+  fuelLabelEl.textContent = `${Math.max(Math.round(fuel),0)}%`;
+}
+
+function setPurityMeter(pct){
+  if(purityCursor) purityCursor.style.left = pct+'%';
+  if(wallPurityEl){
+    if(pct < 33) wallPurityEl.textContent = 'T1';
+    else if(pct < 66) wallPurityEl.textContent = 'T2';
+    else wallPurityEl.textContent = 'T3';
+  }
+}
+
+function setMode(m){
+  gameMode = m;
+  ['fill','order'].forEach(x => {
+    document.getElementById('mode'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('active', x===m);
+  });
+  if(!_wltActive){ score=0; streak=0; fuel=100; updateHud(); }
+  loadQuestion();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOAD QUESTION
+// ─────────────────────────────────────────────────────────────────────────────
+function loadQuestion(){
+  gameCardEl.classList.remove('flashSuccess','flashFail');
+  if(!_wltActive && fuel<=0) return;
+  if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
+  if(typeof WLHints!=='undefined') WLHints.resetHints();
+  _rfHideWhy();
+  buttonsLocked = false;
+  selectedWord = null;
+  placed = {};
+  feedbackEl.textContent = '';
+  feedbackEl.className = 'feedback';
+  subFeedbackEl.textContent = '';
+  checkBtnEl.style.display = 'none';
+
+  const pool = gameMode === 'order' ? ORDER_CLINES : CLINES;
+  // Never the same cline twice in a row
+  const _prev = currentCline && currentCline.category;
+  const _fresh = pool.length > 1 ? pool.filter(p => p.category !== _prev) : pool;
+  currentCline = WordLabData.nextByStage(_fresh, 'word-refinery', 'word-refinery:' + gameMode) || _fresh[Math.floor(Math.random()*_fresh.length)];
+  const c = currentCline;
+
+  document.getElementById('clineLabel').textContent = gameMode === 'fill' ? '⚗️ Fill the Gaps' : '📊 Arrange the Cline';
+  document.getElementById('clineCategory').textContent = c.category.toUpperCase();
+  document.getElementById('clineClue').textContent = c.clue;
+  document.getElementById('leftAnchorWord').textContent = c.leftAnchor;
+  document.getElementById('rightAnchorWord').textContent = c.rightAnchor;
+  document.getElementById('missionSubLabel').textContent = `Active Mission · The Refinery · ${c.category}`;
+
+  setPurityMeter(50);
+  buildClineTrack(c);
+  buildMissingPool(c);
+  // EALD: speak buttons + flip reveal on load
+  var ealdSpeakEl=document.getElementById('ealdSpeakBtns');
+  var ealdDefEl=document.getElementById('ealdDefinition');
+  var ealdEl=document.getElementById('ealdTranslation');
+  if(ealdSpeakEl) ealdSpeakEl.innerHTML='';
+  if(ealdDefEl) ealdDefEl.innerHTML='';
+  if(ealdEl){ealdEl.innerHTML='';ealdEl.dataset.translatedWord='';ealdEl.dataset.englishWord='';}
+  if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&c){
+    WordLabData.injectEALDStyles();
+    var langName=(WordLabData.EALD_LANGUAGES[WordLabData.getEALDLanguage()]||'').split(' (')[0];
+    var allWords=c.words||[];
+    if(ealdEl) ealdEl.dataset.englishWord=allWords.join(', ');
+    if(ealdSpeakEl) ealdSpeakEl.innerHTML=WordLabData.buildEALDSpeakButtons();
+    if(ealdDefEl) ealdDefEl.innerHTML='<button class="eald-def-btn" id="ealdDefBtn" onclick="this.classList.toggle(\'flipped\')"><span class="eald-def-front">🌐 Show in '+WordLabData.escapeHtml(langName)+'</span><span class="eald-def-back" id="ealdDefText">Loading...</span></button>';
+    var contexts=allWords.map(function(){return 'word';});
+    WordLabData.getTranslations(allWords,contexts).then(function(t){
+      if(!t)return;
+      var defText=document.getElementById('ealdDefText');
+      var pairs=allWords.filter(function(w){return t[w];}).map(function(w){return w+' = '+t[w];});
+      if(defText&&pairs.length) defText.textContent='🌐 '+pairs.join(' · ');
+      if(ealdEl&&t[allWords[0]]) ealdEl.dataset.translatedWord=t[allWords[0]];
+    });
+  }
+}
+
+function buildClineTrack(c){
+  clineTrackEl.innerHTML = '';
+  const n = c.words.length;
+  const gapSet = new Set(c.gaps);
+
+  c.words.forEach((word,i) => {
+    const pct = ((i + 0.5) / n) * 100;
+
+    if(!gapSet.has(i)){
+      // Fixed word — shown on track
+      const fixed = document.createElement('div');
+      fixed.className = 'fixed-word';
+      fixed.style.left = pct+'%';
+      fixed.textContent = word;
+      clineTrackEl.appendChild(fixed);
+    } else {
+      // Gap slot — student must fill
+      const slot = document.createElement('div');
+      slot.className = 'cline-slot';
+      slot.style.left = pct+'%';
+      slot.dataset.index = i;
+
+      const numLbl = document.createElement('div');
+      numLbl.className = 'slot-num-label';
+      numLbl.textContent = i+1;
+      slot.appendChild(numLbl);
+
+      const wordLbl = document.createElement('div');
+      wordLbl.className = 'slot-word-label';
+      slot.appendChild(wordLbl);
+
+      slot.setAttribute('tabindex','0');
+      slot.setAttribute('role','button');
+      slot.setAttribute('aria-label', 'Place ' + (i+1) + ', empty');
+      slot.addEventListener('click', () => placeInSlot(i, slot, wordLbl));
+      slot.addEventListener('keydown', e => {
+        if(e.key === 'Enter' || e.key === ' '){
+          e.preventDefault();
+          placeInSlot(i, slot, wordLbl);
+        }
+      });
+      // Drop target for drag-and-drop
+      slot.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; slot.classList.add('drag-over'); });
+      slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
+      slot.addEventListener('drop', e => {
+        e.preventDefault();
+        slot.classList.remove('drag-over');
+        const word = e.dataTransfer.getData('text/plain');
+        if(word){ selectedWord = word; placeInSlot(i, slot, wordLbl); }
+      });
+      clineTrackEl.appendChild(slot);
+    }
+  });
+}
+
+function buildMissingPool(c){
+  missingPoolEl.innerHTML = '';
+  const gapSet = new Set(c.gaps);
+  const missingWords = c.words.filter((_,i) => gapSet.has(i));
+  const shuffled = shuffleArray(missingWords);
+
+  shuffled.forEach(word => {
+    const tile = document.createElement('div');
+    tile.className = 'missing-word';
+    tile.textContent = word;
+    tile.dataset.word = word;
+    tile.setAttribute('draggable','true');
+    tile.setAttribute('tabindex','0');
+    tile.setAttribute('role','option');
+    tile.setAttribute('aria-label', word);
+    tile.setAttribute('aria-selected','false');
+    tile.addEventListener('click', () => selectWord(tile));
+    tile.addEventListener('keydown', e => {
+      if(e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        selectWord(tile);
+        // Keyboard: go straight to the first empty place, so Enter again puts the word there
+        if(selectedWord === word){
+          const empty = Array.from(clineTrackEl.querySelectorAll('.cline-slot')).find(sl => !placed[sl.dataset.index]);
+          if(empty) empty.focus();
+        }
+      }
+    });
+    // Drag start
+    tile.addEventListener('dragstart', e => {
+      if(tile.classList.contains('placed')) { e.preventDefault(); return; }
+      e.dataTransfer.setData('text/plain', word);
+      e.dataTransfer.effectAllowed = 'move';
+      dragWord = word;
+      dragTile = tile;
+      setTimeout(() => tile.classList.add('dragging'), 0);
+    });
+    tile.addEventListener('dragend', () => {
+      tile.classList.remove('dragging');
+      dragWord = null; dragTile = null;
+      document.querySelectorAll('.cline-slot.drag-over').forEach(s => s.classList.remove('drag-over'));
+    });
+    // Touch drag support
+    // Only remember the word here. Calling preventDefault (as before) stopped the click that
+    // follows a tap, so "tap a word, then tap its place" did nothing on touchscreens.
+    // The drag ghost appears once the finger actually moves (see touchmove).
+    tile.addEventListener('touchstart', e => {
+      if(tile.classList.contains('placed') || buttonsLocked || _rfReading) return;
+      const t = e.touches[0];
+      dragWord = word;
+      dragTile = tile;
+      _touchStartX = t.clientX; _touchStartY = t.clientY;
+    }, {passive:true});
+    missingPoolEl.appendChild(tile);
+  });
+
+  document.getElementById('missingLabel').textContent =
+    'Tap a word, then tap its place on the line. You can drag it there too.';
+}
+
+// Drag state
+let dragWord = null, dragTile = null;
+let _touchStartX = 0, _touchStartY = 0;
+
+// Touch move/end handlers (global)
+document.addEventListener('touchmove', function(e){
+  if(!dragWord) return;
+  const t = e.touches[0];
+  let ghost = document.getElementById('dragGhost');
+  if(!ghost){
+    // Start a drag only once the finger has moved a little, so a tap stays a tap
+    if(Math.abs(t.clientX - _touchStartX) + Math.abs(t.clientY - _touchStartY) < 10) return;
+    if(dragTile) dragTile.classList.add('dragging');
+    ghost = document.createElement('div');
+    ghost.className = 'drag-ghost';
+    ghost.id = 'dragGhost';
+    ghost.textContent = dragWord;
+    document.body.appendChild(ghost);
+  }
+  e.preventDefault();
+  ghost.style.left = t.clientX + 'px';
+  ghost.style.top = t.clientY + 'px';
+  // Highlight slot under finger
+  document.querySelectorAll('.cline-slot').forEach(s => {
+    const r = s.getBoundingClientRect();
+    if(t.clientX >= r.left && t.clientX <= r.right && t.clientY >= r.top && t.clientY <= r.bottom){
+      s.classList.add('drag-over');
+    } else {
+      s.classList.remove('drag-over');
+    }
+  });
+}, {passive:false});
+
+document.addEventListener('touchend', function(e){
+  const ghost = document.getElementById('dragGhost');
+  if(!ghost){ dragWord = null; dragTile = null; return; } // a tap: the click handler selects the word
+  if(!dragWord){ ghost.remove(); return; }
+  ghost.remove();
+  if(dragTile) dragTile.classList.remove('dragging');
+  // Find slot under touch
+  const t = e.changedTouches[0];
+  let hitSlot = null;
+  document.querySelectorAll('.cline-slot').forEach(s => {
+    s.classList.remove('drag-over');
+    const r = s.getBoundingClientRect();
+    if(t.clientX >= r.left && t.clientX <= r.right && t.clientY >= r.top && t.clientY <= r.bottom){
+      hitSlot = s;
+    }
+  });
+  if(hitSlot && dragWord){
+    missingPoolEl.querySelectorAll('.missing-word').forEach(t => { t.classList.remove('selected'); t.setAttribute('aria-selected','false'); });
+    selectedWord = dragWord;
+    const idx = parseInt(hitSlot.dataset.index);
+    placeInSlot(idx, hitSlot, hitSlot.querySelector('.slot-word-label'));
+  }
+  dragWord = null; dragTile = null;
+});
+document.addEventListener('touchcancel', function(){
+  const ghost = document.getElementById('dragGhost'); if(ghost) ghost.remove();
+  if(dragTile) dragTile.classList.remove('dragging');
+  document.querySelectorAll('.cline-slot.drag-over').forEach(s => s.classList.remove('drag-over'));
+  dragWord = null; dragTile = null;
+});
+
+function selectWord(tile){
+  if(tile.classList.contains('placed') || buttonsLocked || _rfReading) return;
+  missingPoolEl.querySelectorAll('.missing-word').forEach(t => {
+    t.classList.remove('selected');
+    t.setAttribute('aria-selected','false');
+  });
+  if(selectedWord === tile.dataset.word){
+    selectedWord = null;
+  } else {
+    selectedWord = tile.dataset.word;
+    tile.classList.add('selected');
+    tile.setAttribute('aria-selected','true');
+  }
+}
+
+// Take the word in a place back out to the word bank
+function _rfTakeOut(slotIndex, slotEl){
+  const word = placed[slotIndex];
+  delete placed[slotIndex];
+  slotEl.classList.remove('filled');
+  slotEl.querySelector('.slot-word-label').textContent = '';
+  slotEl.querySelector('.slot-num-label').style.display = '';
+  slotEl.setAttribute('aria-label', 'Place ' + (slotIndex+1) + ', empty');
+  missingPoolEl.querySelectorAll('.missing-word').forEach(t => { if(t.dataset.word === word) t.classList.remove('placed'); });
+  checkBtnEl.style.display = 'none';
+}
+
+function placeInSlot(slotIndex, slotEl, wordLblEl){
+  if(buttonsLocked || _rfReading) return;
+  if(!selectedWord){
+    // Tapping a filled place with no word picked takes its word back out
+    if(placed[slotIndex]) _rfTakeOut(slotIndex, slotEl);
+    return;
+  }
+
+  // Remove word from any slot it was already in
+  Object.keys(placed).forEach(idx => {
+    if(placed[idx] === selectedWord){
+      const oldSlot = clineTrackEl.querySelector(`.cline-slot[data-index="${idx}"]`);
+      if(oldSlot){
+        oldSlot.classList.remove('filled');
+        oldSlot.querySelector('.slot-word-label').textContent = '';
+        oldSlot.querySelector('.slot-num-label').style.display = '';
+        oldSlot.setAttribute('aria-label', 'Place ' + (parseInt(idx)+1) + ', empty');
+      }
+      delete placed[idx];
+    }
+  });
+
+  // If slot already had a word, put it back in pool
+  if(placed[slotIndex]){
+    const displaced = placed[slotIndex];
+    missingPoolEl.querySelectorAll('.missing-word').forEach(t => {
+      if(t.dataset.word === displaced) t.classList.remove('placed');
+    });
+    delete placed[slotIndex];
+  }
+
+  // Place selected word
+  placed[slotIndex] = selectedWord;
+  slotEl.classList.add('filled');
+  wordLblEl.textContent = selectedWord;
+  slotEl.querySelector('.slot-num-label').style.display = 'none';
+  slotEl.setAttribute('aria-label', 'Place ' + (slotIndex+1) + ', ' + selectedWord);
+
+  // Mark tile as placed
+  missingPoolEl.querySelectorAll('.missing-word').forEach(t => {
+    if(t.dataset.word === selectedWord){
+      t.classList.add('placed');
+      t.classList.remove('selected');
+      t.setAttribute('aria-selected','false');
+    }
+  });
+
+  // Update purity meter based on how far along this slot is
+  const n = currentCline.words.length;
+  const avgPct = Object.keys(placed).reduce((sum,idx) => sum + (parseInt(idx)/n*100), 0) / Object.keys(placed).length;
+  setPurityMeter(Math.round(avgPct));
+
+  selectedWord = null;
+
+  // Show check button when all gaps filled
+  const allFilled = Object.keys(placed).length === currentCline.gaps.length;
+  checkBtnEl.style.display = allFilled ? 'inline-flex' : 'none';
+  // Keyboard: after the last place is filled, move to Check
+  if(allFilled && slotEl === document.activeElement) checkBtnEl.focus();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHECK ANSWER
+// ─────────────────────────────────────────────────────────────────────────────
+function checkCline(){
+  if(buttonsLocked || _rfReading || _rfTooSoon() || (!_wltActive && fuel<=0)) return;
+  buttonsLocked = true;
+
+  const c = currentCline;
+  let correct = 0;
+  let total = c.gaps.length;
+
+  c.gaps.forEach(i => {
+    const slot = clineTrackEl.querySelector(`.cline-slot[data-index="${i}"]`);
+    const correctWord = c.words[i];
+    const placedWord = placed[i];
+
+    if(slot){
+      const ok = placedWord === correctWord;
+      const mark = document.createElement('span');
+      mark.className = 'slot-mark'; mark.setAttribute('aria-hidden','true'); mark.textContent = ok ? '✓' : '✗';
+      const lbl = slot.querySelector('.slot-word-label'); if(lbl) lbl.insertBefore(mark, lbl.firstChild);
+      slot.setAttribute('aria-label', 'Place ' + (i+1) + ', ' + (placedWord || 'empty') + (ok ? ', right' : ', wrong'));
+      if(ok){
+        slot.classList.add('correct');
+        correct++;
+        // Also highlight the pool tile green
+        missingPoolEl.querySelectorAll('.missing-word').forEach(t => {
+          if(t.dataset.word === placedWord) t.classList.add('correct-placed');
+        });
+      } else {
+        slot.classList.add('wrong');
+        missingPoolEl.querySelectorAll('.missing-word').forEach(t => {
+          if(t.dataset.word === placedWord) t.classList.add('wrong-placed');
+        });
+      }
+    }
+  });
+
+  const allCorrect = correct === total;
+  const cat = 'cline:' + c.category.toLowerCase().replace(/\s+/g,'-');
+
+  // Build tier labels for feedback
+  function _tierLabel(idx, n){ if(idx < n/3) return 'Tier 1 (everyday)'; if(idx < 2*n/3) return 'Tier 2 (academic)'; return 'Tier 3 (specialist)'; }
+
+  if(allCorrect){
+    if(!_wltActive){ score += 70 + (streak*10); streak++; fuel = Math.min(fuel+(_supportMode?15:10),100); }
+    setPurityMeter(95);
+    if(!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()){
+      const res = WordLabData.recordAttempt('word-refinery', cat, true, 0, streak);
+      if(typeof WLScientist !== 'undefined') WLScientist.react('correct', res);
+    }
+    if(_wltActive && typeof WLScientist !== 'undefined') WLScientist.react('correct');
+    if(!_wltActive && typeof WLAudio !== 'undefined'){ WLAudio.correct(); if(streak>=3) WLAudio.streak(streak); }
+    feedbackEl.textContent = '✅ Perfectly refined!';
+    feedbackEl.className = 'feedback ok';
+    subFeedbackEl.textContent = String(c.explain || '').replace(/\s+—\s+/g, ': ');
+    gameCardEl.classList.add('flashSuccess');
+    setTimeout(()=>gameCardEl.classList.remove('flashSuccess'),600);
+    if(_wltActive){
+      var _fb = 'Correctly ordered! ' + c.words.map(function(w,i){ return '<b>' + WordLabData.escapeHtml(_tierLabel(i,c.words.length)) + '</b>: "' + WordLabData.escapeHtml(w) + '"'; }).join(' → ');
+      WLTeacher.onAnswer(true, _fb);
+    }
+  } else {
+    streak=0; if(!_wltActive){ fuel=Math.max(fuel-(_supportMode?5:10),0); }
+    setPurityMeter(20);
+    if(!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()) WordLabData.recordAttempt('word-refinery', cat, false, 0);
+    if(typeof WLScientist !== 'undefined') WLScientist.react('wrong');
+    if(!_wltActive && typeof WLAudio !== 'undefined') WLAudio.wrong();
+    feedbackEl.textContent = `❌ ${correct} of ${total} in the right place`;
+    feedbackEl.className = 'feedback bad';
+    subFeedbackEl.textContent = '';
+    gameCardEl.classList.add('flashFail');
+    setTimeout(()=>gameCardEl.classList.remove('flashFail'),600);
+    if(_wltActive){
+      var _fb2 = 'The correct order from everyday to specialist is:<br>' + c.words.map(function(w,i){ return '<b>' + WordLabData.escapeHtml(_tierLabel(i,c.words.length)) + '</b>: "' + WordLabData.escapeHtml(w) + '"'; }).join(' → ');
+      WLTeacher.onAnswer(false, _fb2);
+    }
+  }
+
+  if(!_wltActive) updateHud();
+  checkBtnEl.style.display = 'none';
+  // EALD: translate the cline words
+  var ealdEl=document.getElementById('ealdTranslation');if(ealdEl)ealdEl.innerHTML='';
+  if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&c){
+    WordLabData.injectEALDStyles();
+    ealdEl.innerHTML=WordLabData.buildEALDRevealButton();
+    var allWords=c.words||[];var contexts=allWords.map(function(){return 'word';});
+    WordLabData.getTranslations(allWords,contexts).then(function(t){
+      if(!t)return;
+      var contentEl=document.getElementById('ealdTranslationContent');
+      if(!contentEl)return;
+      var pairs=allWords.filter(function(w){return t[w];}).map(function(w){return WordLabData.escapeHtml(w)+' = '+WordLabData.escapeHtml(t[w]);});
+      if(pairs.length){contentEl.innerHTML='<div class="eald-translation-pill"><span class="eald-flag">🌐</span> '+pairs.join(' · ')+'</div>';}
+    });
+  }
+  if(_wltActive){ _showTeacherNext(); return; } // Teacher mode: wait for Next click
+  if(!allCorrect){ _rfShowWhy(_rfWhyHtml(c)); return; } // wait for Next so there is time to read why
+  if(fuel<=0){ setTimeout(endGame,800); return; }
+  setTimeout(loadQuestion, 2200);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WHY PANEL (wrong answers)
+// ─────────────────────────────────────────────────────────────────────────────
+function _rfEsc(t){ return String(t).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+function _rfUp(w){ return _rfEsc(String(w).toUpperCase()); }
+function _rfWhyHtml(c){
+  const gapSet = new Set(c.gaps);
+  // Where the student put each word: word -> place index
+  const putAt = {};
+  Object.keys(placed).forEach(idx => { putAt[placed[idx]] = parseInt(idx); });
+  const moved = c.words.filter((w, i) => gapSet.has(i) && placed[i] !== w);
+  let html = '<div class="rfWhyLine answer"><span aria-hidden="true">✓ </span>From <b>' + _rfUp(c.leftAnchor) + '</b> to <b>' + _rfUp(c.rightAnchor) + '</b>, the order is:' +
+    '<div class="rfOrder">' + c.words.map((w, i) => {
+      const mv = gapSet.has(i) && placed[i] !== w;
+      return '<span' + (mv ? ' class="moved"' : '') + '>' + (i+1) + '. ' + _rfUp(w) + (mv ? ' <span aria-hidden="true">✗</span><span class="sr-only"> (you had this in a different place)</span>' : '') + '</span>';
+    }).join('') + '</div></div>';
+  moved.slice(0, 3).forEach(w => {
+    const pos = c.words.indexOf(w) + 1;
+    const had = putAt[w];
+    html += '<div class="rfWhyLine picked">You put <b>' + _rfUp(w) + '</b> in place ' + (typeof had === 'number' ? had + 1 : '?') + '. It goes in place ' + pos + '.</div>';
+  });
+  // The clue says how the words change along this line (not every line goes everyday → specialist)
+  if(c.clue) html += '<div class="rfWhyLine tip"><span aria-hidden="true">💡 </span>The clue: ' + _rfEsc(c.clue) + '.</div>';
+  return html;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+// NEED ADVICE LADDER (WLHints getLadder): gentlest first, never says which word goes where
+// (1) read the clue and step along from the left end, (2) what up to two words still to
+// place mean, (3) a check of the line so far: how many placed words are right and the first
+// place to look at again. Check only accepts the exact order, so step 3 counts against it.
+// ─────────────────────────────────────────────────────────────────────────────
+function _rfMeans(c, w){ var m = _RF_MEAN[c && c.category]; return (m && m[String(w).toLowerCase()]) || ''; }
+function _rfLadder(){
+  var c = currentCline;
+  if(!c) return [];
+  var L = '<b>' + _rfUp(c.leftAnchor) + '</b>', R = '<b>' + _rfUp(c.rightAnchor) + '</b>';
+  var clue = String(c.clue || '').replace(/[.\s]+$/, '');
+  var steps = [(clue ? 'Read the clue: ' + _rfEsc(clue) + '. ' : '') + 'The line goes from ' + L + ' to ' + R +
+    '. Each word is one step further along. For each empty place, look at the word just before it and pick the word that comes next.'];
+  var placedN = 0, rightN = 0, firstWrong = -1;
+  c.gaps.slice().sort(function(a, b){ return a - b; }).forEach(function(i){
+    var w = placed[i];
+    if(!w) return;
+    placedN++;
+    if(w === c.words[i]) rightN++; else if(firstWrong < 0) firstWrong = i;
+  });
+  // Words not yet in their right place, in a fixed order so the hint is the same every click
+  var todo = c.gaps.filter(function(i){ return placed[i] !== c.words[i]; })
+    .map(function(i){ return c.words[i]; })
+    .sort().filter(function(w){ return _rfMeans(c, w); }).slice(0, 2);
+  if(todo.length){
+    steps.push('Not sure what a word means? ' + todo.map(function(w){
+      return '<b>' + _rfUp(w) + '</b> means ' + _rfEsc(_rfMeans(c, w)) + '.';
+    }).join(' ') + (todo.length > 1 ? ' Where do they fit' : ' Where does it fit') + ' between ' + L + ' and ' + R + '?');
+  }
+  var NUM = ['None', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'];
+  var n = c.gaps.length, s3;
+  var back = ' Tap it, or press Enter on it, to take the word back out.';
+  if(!placedN) s3 = 'Put a word in an empty place first. Then press Need Advice again and I will check your line.';
+  else if(rightN === placedN) s3 = placedN === n ? 'All ' + n + ' words are in the right place. Press Check!' :
+    (placedN === 1 ? 'The word you placed is' : 'All ' + placedN + ' words you placed are') + ' in the right place. Keep going.';
+  else if(placedN === 1) s3 = 'The word you placed is not in the right place yet. Look again at place ' + (firstWrong + 1) + '.' + back;
+  else s3 = NUM[rightN] + ' of the ' + placedN + ' words you placed ' + (rightN === 1 ? 'is' : 'are') +
+    ' in the right place. Look again at place ' + (firstWrong + 1) + '.' + back;
+  steps.push(s3);
+  return steps;
+}
+
+function _rfShowWhy(html){
+  const w = document.getElementById('rfWhy'), n = document.getElementById('rfNextRow'), sk = document.getElementById('rfSkipBtn');
+  w.innerHTML = html; w.hidden = false;
+  _rfReading = true;
+  if(sk) sk.hidden = true;
+  const nb = document.getElementById('rfNextBtn');
+  nb.textContent = fuel <= 0 ? 'See my results →' : 'Next →';
+  n.hidden = false;
+  try { nb.focus({ preventScroll:true }); } catch(e) { nb.focus(); }
+  try { n.scrollIntoView({ block:'nearest' }); } catch(e) {}
+}
+function _rfHideWhy(){
+  _rfReading = false;
+  const w = document.getElementById('rfWhy'), n = document.getElementById('rfNextRow'), sk = document.getElementById('rfSkipBtn');
+  if(w){ w.innerHTML = ''; w.hidden = true; }
+  if(n) n.hidden = true;
+  if(sk) sk.hidden = false;
+}
+function _rfNext(){
+  if(!_rfReading) return;
+  _rfNextAt = Date.now();
+  _rfHideWhy();
+  if(fuel <= 0){ endGame(); return; }
+  loadQuestion();
+  // Focus the question, never a word tile, so a second Enter cannot pick a word
+  const q = document.getElementById('clineClue');
+  if(q){ q.setAttribute('tabindex','-1'); try { q.focus({ preventScroll:true }); } catch(e) { q.focus(); } }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GAME FLOW
+// ─────────────────────────────────────────────────────────────────────────────
+function startFuelDrain(){
+  if(_wltActive) return;
+  clearInterval(fuelInterval);
+  fuelInterval = setInterval(()=>{
+    if(_rfReading || (typeof WLHelp!=='undefined'&&WLHelp.isOpen&&WLHelp.isOpen())) return; // heat holds while the why panel or the instructions are open
+    fuel -= _supportMode ? 0.075 : 0.15;
+    if(fuel<=0){ fuel=0; updateHud(); endGame(); clearInterval(fuelInterval); return; }
+    updateHud();
+  }, 220);
+}
+
+function endGame(){
+  buttonsLocked = true;
+  missingPoolEl.innerHTML = '';
+  clineTrackEl.innerHTML = '';
+  checkBtnEl.style.display = 'none';
+  _rfHideWhy();
+  feedbackEl.textContent = 'Furnace cooled';
+  feedbackEl.className = 'feedback bad';
+  subFeedbackEl.textContent = `Final score: ${score} XP. Press Restart to play again.`;
+  const rb = document.getElementById('rfRestartBtn'); if(rb) rb.focus();
+}
+
+function restartGame(){
+  if(_rfTooSoon()) return; // a second Enter after "See my results" must not restart straight away
+  score=0; streak=0; fuel=100;
+  if(!_wltActive){ updateHud(); startFuelDrain(); }
+  loadQuestion();
+}
+
+function skipQuestion(){
+  if(buttonsLocked || _rfReading) return;
+  if(!_wltActive && fuel<=0) return;
+  streak=0;
+  if(!_wltActive){ fuel=Math.max(fuel-(_supportMode?4:8),0); updateHud(); if(fuel<=0){ endGame(); return; } }
+  if(_wltActive){ WLTeacher.clearFeedback(); var nb=document.getElementById('wltNextBtn'); if(nb) nb.style.display='none'; }
+  loadQuestion();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────────────────────────
+function _showTeacherNext(){var nb=document.getElementById('wltNextBtn');if(nb)nb.style.display='block';}
+// Support mode: show tier labels under the fixed words on the line
+function _rfApplySupport(){
+  var _smStyle = document.createElement('style');
+  _smStyle.textContent = '.fixed-word::after{content:attr(data-tier);display:block;font-size:9px;font-weight:900;color:var(--amber-2);letter-spacing:.08em;text-transform:uppercase;margin-top:2px;}';
+  document.head.appendChild(_smStyle);
+  var _origBuildClineTrack = buildClineTrack;
+  buildClineTrack = function(c){
+    _origBuildClineTrack(c);
+    var n = c.words.length;
+    clineTrackEl.querySelectorAll('.fixed-word').forEach(function(el){
+      var idx = c.words.indexOf(el.textContent);
+      if(idx >= 0) el.dataset.tier = idx < n/3 ? 'T1' : idx < 2*n/3 ? 'T2' : 'T3';
+    });
+  };
+}
+// The shared scripts (WordLabData, WLTeacher, WLHelp, WLHints) are deferred, so they only
+// exist once the page has been read. Start the game then, so Support Mode, Teacher Mode and
+// the help popup all apply from the first question (before, none of them did).
+document.addEventListener('DOMContentLoaded', function(){
+  _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+  _supportMode = !!(typeof WordLabData !== 'undefined' && WordLabData.isSupportMode && WordLabData.isSupportMode());
+  if(_supportMode) _rfApplySupport();
+  var nb = document.getElementById('rfNextBtn'); if(nb) nb.addEventListener('click', _rfNext);
+  if(_wltActive){
+    WLTeacher.init({game:'refinery'}).then(function(){ loadQuestion(); });
+    // Add teacher Next button
+    var _nBtn=document.createElement('button');_nBtn.textContent='Next Cline →';_nBtn.className='primaryBtn';_nBtn.style.cssText='margin:12px auto;display:none;padding:10px 24px;font-size:15px;font-weight:800;cursor:pointer;';_nBtn.id='wltNextBtn';
+    var _anchor=document.getElementById('feedback');if(_anchor&&_anchor.parentNode)_anchor.parentNode.insertBefore(_nBtn,_anchor.nextSibling);
+    _nBtn.addEventListener('click',function(){_nBtn.style.display='none';loadQuestion();});
+  } else {
+    updateHud();
+    startFuelDrain();
+    loadQuestion();
+  }
+});
+</script>
+
+<!-- Particles — warm smoke/steam -->
+<script>
+(function(){
+  var w=document.getElementById('particles');
+  if(!w) return;
+  var cs=['rgba(245,158,11,.15)','rgba(180,83,9,.2)','rgba(251,191,36,.12)','rgba(255,255,255,.08)'];
+  for(var i=0;i<22;i++){
+    var p=document.createElement('div');
+    p.className='particle';
+    var s=(Math.random()*5+3)+'px';
+    var dx=(Math.random()*20-10)+'px';
+    p.style.cssText='width:'+s+';height:'+s+';left:'+(Math.random()*100)+'%;bottom:'+(Math.random()*100)+'%;background:'+cs[Math.floor(Math.random()*cs.length)]+';--dx:'+dx+';border-radius:50%;animation-duration:'+(16+Math.random()*20)+'s;animation-delay:'+(Math.random()*18)+'s;';
+    w.appendChild(p);
+  }
+})();
+(async function(){
+  if(typeof WLScientist==='undefined'){await new Promise(function(r){document.addEventListener('DOMContentLoaded',function(){r();},{once:true});});}
+  var w=document.getElementById('sciCharWrap');
+  if(!w||typeof WLScientist==='undefined') return;
+  function _p(svg){while(w.firstChild)w.removeChild(w.firstChild);w.appendChild(document.createRange().createContextualFragment(svg));}
+  _p(WLScientist.buildSVG({},'neutral'));
+  try{
+    var sd=typeof WordLabData!=='undefined'?await WordLabData.getStudentData():null;
+    if(sd&&sd.scientist) _p(WLScientist.buildSVG(sd.scientist,'neutral'));
+  }catch(e){console.error('Scientist load failed',e);}
+})();
+</script>
+
+<!-- Login -->
+<script>
+document.addEventListener('DOMContentLoaded', async function(){
+  if(typeof WordLabData!=='undefined'&&WordLabData.getSession()){
+    try{
+      const limit=await WordLabData.checkDailyLimit();
+      if(limit&&limit.blocked){
+        const o=document.createElement('div');
+        o.style.cssText='position:fixed;inset:0;background:rgba(13,7,0,.95);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        o.innerHTML='<div style="background:#1a0800;border:2px solid #92400e;border-radius:24px;padding:40px;max-width:440px;text-align:center;color:#fde68a;font-family:Lexend,sans-serif;"><div style="font-size:48px;margin-bottom:16px;">⚗️</div><h2 style="font-size:22px;font-weight:900;margin-bottom:12px;">Furnace cooled for today</h2><p style="color:#d97706;font-size:14px;margin-bottom:24px;">You\'ve completed 30 questions today on the free plan. Come back tomorrow or ask your teacher about upgrading.</p><a href="landing.html" style="background:#92400e;color:#fde68a;padding:12px 24px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px;">Back to Home</a></div>';
+        document.body.appendChild(o);
+        return;
+      }
+    }catch(e){}
+  }
+  if(typeof WordLabData==='undefined') return;
+  WordLabData.initLoginUI({accentColor:'#92400e',accentSoft:'#fffbeb',accentLine:'#fde68a',accentText:'#78350f',onLogin:function(){location.reload();}});
+  var session=WordLabData.getSession();
+  var btn=document.getElementById('wlLoginBtn');
+  if(btn){ btn.onclick=function(){wlShowLogin();}; if(session) btn.textContent='👤 '+session.studentName; }
+  if(typeof WordLabData!=='undefined'&&WordLabData.isExtensionMode&&WordLabData.isExtensionMode('word-refinery')){
+    var extPill=document.createElement('div');
+    extPill.style.cssText='background:#92400e;color:#fde68a;font-size:10px;font-weight:900;padding:4px 10px;border-radius:20px;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;';
+    extPill.textContent='🔬 Extension';
+    var hud=document.querySelector('.hud');
+    if(hud) hud.appendChild(extPill);
+  }
+});
+document.addEventListener('DOMContentLoaded', function(){
+if(typeof WLHelp!=='undefined') WLHelp.init({
+  game:'refinery', title:'The Refinery', emoji:'⚗️',
+  steps:[
+    {icon:'📖',title:'Read the clue',desc:'The words go in order along a line, from the word at the left end to the word at the right end. The clue tells you how the words change along the line, for example from a gentle run to top speed.'},
+    {icon:'🎯',title:'Place the words',desc:'Tap a word, then tap its place on the line. You can drag it there too. Tap a filled place to take the word back out. On a keyboard, press Enter on a word, then Enter on a place.'},
+    {icon:'✅',title:'Check',desc:'When every place is full, press Check. If a word is in the wrong place, read why, then press Next. The heat waits while you read.'},
+    {icon:'🔥',title:'Keep the heat up',desc:'The furnace heat goes down slowly. Right answers heat it back up.'}
+  ],
+  audioText:'In The Refinery, the words go in order along a line, from the word at the left end to the word at the right end. The clue tells you how the words change along the line. Tap a word, then tap its place on the line. You can drag it there too. When every place is full, press Check. If a word is in the wrong place, read why, then press Next. The heat waits while you read. The furnace heat goes down slowly, and right answers heat it back up.'
+});
+if(typeof WLHints!=='undefined') WLHints.register({
+  // Need Advice: a 3 step ladder (see _rfLadder)
+  getLadder: function(){ return _rfLadder(); }
+});
+});
+</script>
+
+<footer style="text-align:center;padding:12px 16px;font-size:11px;color:#64748b;border-top:1px solid #e2e8f0;margin-top:auto;font-family:Lexend,sans-serif;">&#129514; Word Labs &middot; <a href="about.html" style="color:#64748b;">About</a> &middot; <a href="privacy.html" style="color:#64748b;">Privacy Policy</a> &middot; <a href="terms.html" style="color:#64748b;">Terms of Service</a> &middot; <a href="mailto:nick@wordlabs.app" style="color:#64748b;">Contact</a></footer>
+</body>
+</html>

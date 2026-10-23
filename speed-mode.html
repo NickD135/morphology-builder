@@ -1,0 +1,1640 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Labs – Speed Builder</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="wordlab-common.css">
+  <style>
+    :root{
+      --bg:#f5f5f5; --panel:#ffffff; --panel-soft:#f8fafc; --line:#e2e8f0; --text:#0f172a; --muted:#64748b;
+      --accent:#1e3a5f; --accent-rgb:30,58,95; --header-rgb:4,8,20;
+      --indigo:#4338ca; --indigo-2:#6366f1; --indigo-soft:#eef2ff;
+      --blue:#2563eb; --blue-soft:#eff6ff; --blue-line:#bfdbfe; --blue-text:#1e40af;
+      --green:#16a34a; --green-soft:#f0fdf4; --green-line:#bbf7d0; --green-text:#166534;
+      --orange:#ea580c; --orange-soft:#fff7ed; --orange-line:#fed7aa; --orange-text:#9a3412;
+      --ok:#15803d; --warn:#b45309; --bad:#dc2626;
+    }
+    body{ margin:0; padding-top:56px; font-family:'Lexend',sans-serif; background:var(--bg); color:var(--text); line-height:1.5; letter-spacing:.02em; }
+    h1,h2,h3,p{ margin:0; }
+
+    .header{ position:fixed; top:0; left:0; right:0; z-index:50; background:rgba(var(--header-rgb),.75); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border-bottom:1px solid rgba(255,255,255,.1); padding:0; }
+    .headerInner{ padding:0 20px; height:56px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; max-width:none; }
+    .brand{ display:flex; align-items:center; gap:12px; flex-shrink:0; }
+    .brandIcon{ width:36px; height:36px; border-radius:10px; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:0 8px 16px rgba(0,0,0,.15); flex:0 0 auto; }
+    .brand h1{ margin:0; font-size:15px; font-weight:900; letter-spacing:-.02em; color:#f1f5f9; }
+    .brand .sub{ font-size:9px; text-transform:uppercase; letter-spacing:.22em; color:rgba(255,255,255,.6); font-weight:800; display:block; margin-top:2px; }
+    .hud{ display:flex; gap:8px; align-items:center; flex-wrap:nowrap; overflow-x:auto; } .hud::-webkit-scrollbar{display:none;} .hud{-ms-overflow-style:none;scrollbar-width:none;}
+    .pill{ display:inline-flex; align-items:center; justify-content:center; min-height:32px; border:1px solid rgba(var(--accent-rgb),.2); border-radius:999px; background:rgba(var(--accent-rgb),.1); padding:6px 14px; font-size:12px; font-weight:800; color:#cbd5e1; white-space:nowrap; flex-shrink:0; }
+    .pill.score{ background:rgba(var(--accent-rgb),.35); color:#e2e8f0; border-color:rgba(var(--accent-rgb),.4); }
+    .pill.time{ background:rgba(251,146,60,.15); color:#fed7aa; border-color:rgba(251,146,60,.3); }
+    .topBtn{ border:none; background:rgba(var(--accent-rgb),.18); color:#cbd5e1; font-weight:800; font-size:11px; text-transform:uppercase; letter-spacing:.12em; padding:7px 13px; border-radius:10px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; white-space:nowrap; flex-shrink:0; }
+    .topBtn:hover{ background:rgba(var(--accent-rgb),.3); }
+
+    .wrap{ max-width:1500px; margin:0 auto; padding:20px; }
+    .grid{ display:grid; grid-template-columns:minmax(280px,.9fr) minmax(0,1.4fr) minmax(280px,.9fr); gap:20px; align-items:start; }
+    @media(max-width:1180px){ .grid{ grid-template-columns:1fr; } }
+
+    .panel{ background:rgba(255,255,255,.92); border:2px solid rgba(var(--accent-rgb),.2); border-radius:20px; box-shadow:0 16px 48px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.6); overflow:hidden; }
+    .panelInner{ padding:22px; }
+    .panelTitle{ margin:0 0 14px 0; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.22em; color:var(--indigo); }
+
+    .stack{ display:flex; flex-direction:column; gap:16px; }
+    .field{ display:flex; flex-direction:column; gap:6px; }
+    .field label{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.16em; color:var(--muted); }
+    .plainInput{ width:100%; background:#fff; border:2px solid var(--line); border-radius:14px; color:var(--text); padding:12px 14px; outline:none; transition:border-color .15s, box-shadow .15s; font-size:14px; }
+    .plainInput:focus{ border-color:var(--indigo-2); box-shadow:0 0 0 4px rgba(99,102,241,.12); }
+
+    .setupActions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:4px; }
+    .primaryBtn{ border:none; background:var(--indigo); color:#fff; font-weight:900; font-size:13px; text-transform:uppercase; letter-spacing:.1em; padding:14px 22px; border-radius:16px; cursor:pointer; box-shadow:0 10px 20px rgba(67,56,202,.2); transition:all .15s; }
+    .primaryBtn:hover{ background:#3730a3; transform:translateY(-1px); }
+    .secondaryBtn{ border:2px solid var(--line); background:#fff; color:#334155; font-weight:800; font-size:13px; padding:12px 18px; border-radius:16px; cursor:pointer; transition:all .15s; }
+    .secondaryBtn:hover{ background:#f8fafc; }
+
+    .statusBox{ background:var(--panel-soft); border:2px solid var(--line); border-radius:16px; padding:14px; font-size:13px; color:var(--muted); line-height:1.6; margin-top:4px; }
+
+    .builderHero{ margin-bottom:16px; }
+    .mini{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.2em; color:var(--muted); margin-bottom:4px; }
+    .builderHero h2{ font-size:22px; font-weight:900; color:#312e81; margin:4px 0; }
+    .builderHero p{ color:var(--muted); font-size:13px; }
+
+    .fixedBaseWrap{ margin-bottom:16px; }
+    .fixedBase{ background:var(--indigo-soft); border:2px solid #c7d2fe; border-radius:20px; padding:18px 22px; }
+    .fixedBase .word{ font-size:42px; font-weight:900; color:#312e81; letter-spacing:-.02em; line-height:1; margin:6px 0; }
+    .fixedBase .meaning{ font-size:14px; color:var(--indigo-2); font-weight:700; }
+
+    .slots{ display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:16px; }
+    @media(max-width:700px){ .slots{ grid-template-columns:1fr 1fr; } }
+    .slotLabel{ font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); margin-bottom:6px; }
+    .dropzone{ min-height:80px; border:3px dashed #cbd5e1; border-radius:18px; display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:6px; padding:10px; background:#fff; transition:border-color .15s, background .15s; }
+    .dropzone.prefix{ background:var(--blue-soft); border-color:var(--blue-line); }
+    .dropzone.base{ background:var(--green-soft); border-color:var(--green-line); }
+    .dropzone.suffix{ background:var(--orange-soft); border-color:var(--orange-line); }
+    .dropzone.prefix:empty::before{ content:"PREFIX"; color:var(--blue-text); font-size:10px; font-weight:900; letter-spacing:.12em; }
+    .dropzone.base:empty::before{ content:"BASE"; color:var(--green-text); font-size:10px; font-weight:900; letter-spacing:.12em; }
+    .dropzone.suffix:empty::before{ content:"SUFFIX"; color:var(--orange-text); font-size:10px; font-weight:900; letter-spacing:.12em; }
+
+    .actionRow{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+    .buildBtn{ border:none; border-radius:14px; padding:12px 18px; font-weight:900; font-size:13px; cursor:pointer; text-transform:uppercase; letter-spacing:.08em; transition:all .15s; }
+    .submitBtn{ background:var(--green); color:#fff; box-shadow:0 8px 16px rgba(22,163,74,.2); }
+    .submitBtn:hover{ background:#15803d; transform:translateY(-1px); }
+    .clearAffixBtn{ background:#fff; color:#334155; border:2px solid var(--line); }
+    .clearAffixBtn:hover{ background:#f8fafc; }
+
+    .output{ background:var(--panel-soft); border:2px solid var(--line); border-radius:16px; padding:16px 18px; }
+    .outputLabel{ font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.18em; color:var(--muted); margin-bottom:4px; }
+    .wordOut{ font-size:28px; font-weight:900; color:#312e81; margin-bottom:4px; }
+    .meaningOut{ font-size:13px; color:#475569; font-weight:600; }
+    .statusOut{ font-size:13px; font-weight:800; margin-top:6px; }
+    .statusOut.ok{ color:var(--ok); }
+    .statusOut.warn{ color:var(--warn); }
+    .statusOut.bad{ color:var(--bad); }
+
+    /* Tiles */
+    .bank{ display:flex; flex-direction:column; gap:8px; }
+    .bankHead{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+    .bankHead h3{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.16em; color:var(--muted); margin:0; }
+    .countBadge{ display:inline-flex; align-items:center; justify-content:center; min-width:28px; padding:3px 7px; border-radius:7px; color:#fff; font-size:10px; font-weight:900; }
+    .prefixBadge{ background:var(--blue); }
+    .suffixBadge{ background:var(--orange); }
+    .tiles{ display:flex; flex-direction:column; gap:8px; }
+    .tiny{ font-size:12px; color:var(--muted); margin-top:8px; line-height:1.5; }
+
+    .tile{ background:#fff; border:2px solid var(--line); border-radius:14px; padding:12px 14px; cursor:grab; user-select:none; transition:transform .12s, box-shadow .12s; }
+    .tile:hover{ transform:translateY(-1px); box-shadow:0 8px 16px rgba(15,23,42,.08); }
+    .tile.selected{ box-shadow:0 0 0 3px rgba(99,102,241,.2); }
+    .tile.disabled{ opacity:.28; cursor:not-allowed; filter:grayscale(1); }
+    .tile .form{ font-size:20px; font-weight:800; color:var(--indigo-2); }
+    .tile .meaning{ font-size:12px; color:var(--muted); font-weight:600; margin-top:4px; }
+
+    /* Found words */
+    .summaryBox{ background:var(--indigo-soft); border:2px solid #c7d2fe; border-radius:14px; padding:14px; font-size:14px; font-weight:700; line-height:1.7; color:#312e81; }
+    .foundList{ display:flex; flex-direction:column; gap:6px; max-height:280px; overflow-y:auto; }
+    .foundItem{ display:flex; align-items:center; gap:8px; background:#fff; border:2px solid var(--green-line); border-radius:12px; padding:10px 14px; }
+    .foundItem .fw{ font-size:16px; font-weight:800; color:var(--green-text); flex:1; }
+    .foundItem .fp{ font-size:12px; color:var(--muted); }
+    .prefixBank .tile .form{ color:var(--blue-text); }
+    .suffixBank .tile .form{ color:var(--orange-text); }
+
+  /* ── Rocket Launch Control Room scene ── */
+  html{height:100%;}body{min-height:100vh;overflow-y:auto;background:transparent;}
+  .lab-scene{position:fixed;inset:0;z-index:0;display:flex;flex-direction:column;pointer-events:none;}
+  .lab-wall{flex:0 0 62%;background:#1e293b;position:relative;overflow:hidden;}
+  .lab-wall::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0,transparent 99px,rgba(255,255,255,.035) 100px),repeating-linear-gradient(0deg,transparent 0,transparent 79px,rgba(255,255,255,.035) 80px);}
+  .launch-window{position:absolute;right:18px;top:7%;width:175px;height:135px;border:6px solid #334155;border-radius:8px;overflow:hidden;box-shadow:0 0 18px rgba(59,130,246,.28);}
+  .launch-window-sky{width:100%;height:70%;background:linear-gradient(180deg,#020817 0%,#0f172a 60%,#1e3a5f 100%);position:relative;}
+  .launch-window-ground{width:100%;height:30%;background:linear-gradient(180deg,#1e293b,#0f172a);border-top:2px solid #334155;position:relative;}
+  .r-steam{width:4px;height:9px;background:rgba(200,220,255,.45);border-radius:2px;animation:rSteam 1.5s ease-in-out infinite;}
+  .r-steam:nth-child(2){animation-delay:.4s;}.r-steam:nth-child(3){animation-delay:.8s;}
+  @keyframes rSteam{0%{opacity:0;transform:translateY(0);}50%{opacity:.7;}100%{opacity:0;transform:translateY(-18px) scaleX(1.5);}}
+  .ctrl-screen{background:#040e1e;border:2px solid #1e3a5f;border-radius:5px;overflow:hidden;box-shadow:0 0 7px rgba(59,130,246,.18);flex:1;}
+  .ctrl-screen-header{padding:2px 5px;font-size:6px;font-weight:900;letter-spacing:.1em;color:#60a5fa;font-family:'Lexend',monospace;border-bottom:1px solid #1e3a5f;}
+  .ctrl-screen-body{padding:3px 5px;}
+  .screen-wall{position:absolute;left:0;right:200px;top:100px;bottom:0;display:flex;flex-direction:column;justify-content:space-around;padding:10px 18px;gap:7px;}
+  .screen-row{display:flex;gap:7px;align-items:center;}
+  .countdown-display{position:absolute;left:50%;transform:translateX(-50%);top:8px;background:#020817;border:3px solid #1e3a5f;border-radius:8px;padding:6px 14px;box-shadow:0 0 18px rgba(59,130,246,.28);text-align:center;}
+  .countdown-label{font-size:6px;color:#60a5fa;font-weight:900;letter-spacing:.15em;display:block;font-family:'Lexend',monospace;}
+  .countdown-time{font-size:20px;font-weight:900;color:#22c55e;font-family:monospace;letter-spacing:.05em;animation:cdPulse 1s ease-in-out infinite;}
+  @keyframes cdPulse{0%,100%{color:#22c55e;}50%{color:#4ade80;}}
+  .status-lights{position:absolute;left:18px;top:10px;display:flex;gap:9px;align-items:center;}
+  .status-light{width:9px;height:9px;border-radius:50%;}
+  .status-light.green{background:#22c55e;box-shadow:0 0 7px rgba(34,197,94,.8);animation:blinkG 3s ease-in-out infinite;}
+  .status-light.amber{background:#f59e0b;box-shadow:0 0 7px rgba(245,158,11,.8);animation:blinkA 2s ease-in-out infinite;}
+  .status-light.red{background:#ef4444;box-shadow:0 0 5px rgba(239,68,68,.6);animation:blinkR 4s ease-in-out infinite;}
+  @keyframes blinkG{0%,100%{opacity:1;}50%{opacity:.4;}}@keyframes blinkA{0%,100%{opacity:1;}50%{opacity:.3;}}@keyframes blinkR{0%,90%{opacity:.3;}95%{opacity:1;}100%{opacity:.3;}}
+  .lab-floor{flex:0 0 38%;background:repeating-linear-gradient(90deg,#0f172a 0,#0f172a 60px,#0d1526 60px,#0d1526 120px);position:relative;border-top:4px solid #334155;}
+  .lab-bench{position:absolute;bottom:0;height:72%;background:#060c1a;border-top:8px solid #1e3a5f;border-radius:4px 4px 0 0;}
+  .lab-bench.left{left:10px;width:175px;}.lab-bench.right{right:10px;width:175px;}
+  .bench-top{position:absolute;top:-17px;left:-6px;right:-6px;height:17px;background:#0a1628;border-radius:4px 4px 0 0;border-top:3px solid #1e3a5f;}
+  #particles{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden;}
+  .particle{position:absolute;border-radius:50%;animation:particleFloat linear infinite;}
+  @keyframes particleFloat{from{transform:translateY(0);opacity:.5;}to{transform:translateY(calc(-100vh - 20px));opacity:0;}}
+  /* ── Mission Control header: scene refinements ── */
+  /* ── Fixed layout ── */
+  body{overflow:hidden!important;}
+  .wrap{position:fixed!important;top:56px!important;bottom:0!important;left:50%!important;transform:translateX(-50%)!important;width:min(1200px,calc(100vw - 160px))!important;max-width:none!important;margin:0!important;z-index:10;padding:16px 0!important;overflow-y:auto;}
+  .wrap::-webkit-scrollbar{width:0;}
+  /* ── Mission Control panels ── */
+  .panel{background:rgba(235,242,255,.92)!important;backdrop-filter:blur(8px)!important;-webkit-backdrop-filter:blur(8px)!important;border:2px solid rgba(59,130,246,.25)!important;box-shadow:0 16px 48px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.7)!important;border-radius:20px!important;}
+  #centerCol{background:rgba(225,235,255,.9)!important;backdrop-filter:blur(10px)!important;border:2px solid rgba(59,130,246,.3)!important;border-radius:20px!important;padding:20px;box-shadow:0 16px 48px rgba(0,0,0,.28)!important;}
+  #centerCol .panel{background:rgba(240,246,255,.7)!important;border:1px solid rgba(59,130,246,.2)!important;box-shadow:none!important;backdrop-filter:none!important;}
+  /* ── Mission patch tiles ── */
+  .tile{background:rgba(235,242,255,.95)!important;border-color:rgba(96,165,250,.3)!important;}
+  .tile:hover{box-shadow:0 8px 16px rgba(59,130,246,.15)!important;}
+  .tile .form{color:#1d4ed8!important;}
+  .prefixBank .tile .form{color:#1e40af!important;}
+  .suffixBank .tile .form{color:#9a3412!important;}
+  /* ── Drop zones ── */
+  .dropzone.prefix{background:rgba(239,246,255,.9)!important;border-color:rgba(96,165,250,.4)!important;}
+  .dropzone.base{background:rgba(240,253,244,.9)!important;border-color:rgba(74,222,128,.4)!important;}
+  .dropzone.suffix{background:rgba(255,247,237,.9)!important;border-color:rgba(251,146,60,.4)!important;}
+  /* ── Output/summary ── */
+  .output{background:rgba(235,242,255,.8)!important;border-color:rgba(96,165,250,.3)!important;}
+  .wordOut{color:#1e3a5f!important;}
+  .summaryBox{background:rgba(235,242,255,.85)!important;border-color:rgba(96,165,250,.3)!important;color:#1e3a5f!important;}
+  .foundItem{background:rgba(240,253,244,.9)!important;border-color:rgba(74,222,128,.3)!important;}
+  .foundItem .fw{color:#166534!important;}
+  .statusBox{background:rgba(235,242,255,.8)!important;border-color:rgba(96,165,250,.25)!important;}
+  /* ── Buttons ── */
+  .primaryBtn{background:#1d4ed8!important;box-shadow:0 10px 20px rgba(29,78,216,.2)!important;}
+  .primaryBtn:hover{background:#1e40af!important;}
+  .secondaryBtn{background:rgba(235,242,255,.9)!important;border-color:rgba(96,165,250,.3)!important;color:#1e3a5f!important;}
+  .submitBtn{background:#15803d!important;box-shadow:0 8px 16px rgba(21,128,61,.2)!important;}
+  .submitBtn:hover{background:#166534!important;}
+  .clearAffixBtn{background:rgba(235,242,255,.9)!important;border-color:rgba(96,165,250,.25)!important;color:#1e3a5f!important;}
+  .panelTitle{color:#1e3a5f!important;}
+  .fixedBase{background:rgba(239,246,255,.9)!important;border-color:rgba(96,165,250,.3)!important;}
+  .fixedBase .word{color:#1e3a5f!important;}
+  .fixedBase .meaning{color:#2563eb!important;}
+  .plainInput{background:rgba(235,242,255,.9)!important;border-color:rgba(96,165,250,.25)!important;}
+  .plainInput:focus{border-color:#3b82f6!important;box-shadow:0 0 0 4px rgba(59,130,246,.12)!important;}
+  /* ── Scientist ── */
+  .scientist-stage{position:fixed;left:16px;bottom:12%;z-index:11;display:flex;flex-direction:column;align-items:center;}
+  #sciCharWrap{width:80px;height:100px;display:flex;align-items:flex-end;justify-content:center;animation:sciIdle 3s ease-in-out infinite;}
+  #sciCharWrap.sci-correct{animation:sciJump .6s ease-out;}#sciCharWrap.sci-wrong{animation:sciShake .5s ease-out;}#sciCharWrap.sci-streak{animation:sciDance .8s ease-in-out infinite;}
+  @keyframes sciIdle{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}@keyframes sciJump{0%{transform:translateY(0)}30%{transform:translateY(-22px)}100%{transform:translateY(0)}}@keyframes sciShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-4deg) translateX(-4px)}40%{transform:rotate(4deg) translateX(4px)}60%{transform:rotate(-3deg) translateX(-3px)}80%{transform:rotate(2deg)}}@keyframes sciDance{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+  @media(max-width:700px){.lab-scene{display:none;}body{background:linear-gradient(160deg,#0f172a,#1e293b,#1e3a5f)!important;overflow-y:auto!important;}.wrap{position:relative!important;top:auto!important;bottom:auto!important;left:auto!important;transform:none!important;width:calc(100vw - 24px)!important;padding-top:72px!important;}}
+  @media(max-width:480px){
+    .slots{grid-template-columns:1fr!important;}
+    .grid{grid-template-columns:1fr!important;}
+    .lab-bench{display:none!important;}
+    button,input[type="text"]{min-height:44px;font-size:14px!important;}
+    .startBtn,.morphBtn{padding:14px 20px!important;min-height:44px;}
+  }
+  /* ── End-of-round overlay ── */
+  .speed-end-overlay{position:fixed;inset:0;z-index:200;background:rgba(4,8,20,.85);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;animation:endFadeIn .4s ease;}
+  @keyframes endFadeIn{from{opacity:0}to{opacity:1}}
+  .speed-end-card{background:linear-gradient(135deg,#0f172a,#1e3a5f);border:3px solid rgba(96,165,250,.4);border-radius:28px;padding:36px 40px;max-width:440px;width:90%;text-align:center;font-family:'Lexend',sans-serif;box-shadow:0 30px 80px rgba(0,0,0,.5);animation:endCardPop .5s cubic-bezier(.17,.67,.35,1.15);}
+  @keyframes endCardPop{from{opacity:0;transform:scale(.85) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+  .speed-end-icon{font-size:56px;margin-bottom:8px;}
+  .speed-end-title{font-size:24px;font-weight:900;color:#e0e7ff;margin-bottom:4px;}
+  .speed-end-sub{font-size:13px;font-weight:600;color:#93c5fd;margin-bottom:20px;}
+  .speed-end-stats{display:flex;justify-content:center;gap:16px;margin-bottom:24px;}
+  .speed-end-stat{background:rgba(59,130,246,.12);border:1.5px solid rgba(96,165,250,.25);border-radius:14px;padding:12px 16px;min-width:80px;}
+  .speed-end-stat-val{font-size:28px;font-weight:900;color:#60a5fa;}
+  .speed-end-stat-label{font-size:10px;font-weight:800;color:#93c5fd;text-transform:uppercase;letter-spacing:.08em;margin-top:2px;}
+  .speed-end-best{font-size:13px;font-weight:700;color:#94a3b8;margin-bottom:20px;}
+  .speed-end-best strong{color:#60a5fa;}
+  .speed-end-btn{border:none;border-radius:14px;padding:14px 28px;font-size:15px;font-weight:900;font-family:'Lexend',sans-serif;cursor:pointer;transition:transform .15s;}
+  .speed-end-btn:hover{transform:scale(1.04);}
+  .speed-end-btn.primary{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;margin-right:8px;}
+  .speed-end-btn.secondary{background:rgba(96,165,250,.15);color:#93c5fd;border:1.5px solid rgba(96,165,250,.3);}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;}
+  .tile:focus{outline:3px solid #4338ca;outline-offset:2px;}
+  .dropzone:focus{outline:3px solid #4338ca;outline-offset:2px;}
+  /* Decorative scene motion stops in low-stim mode and when the device asks for reduced motion */
+  .low-stim .particle,.low-stim .status-light,.low-stim .countdown-time,.low-stim .r-steam,.low-stim .wlEmpty-illus,.low-stim #sciCharWrap{animation:none!important;}
+  @media (prefers-reduced-motion: reduce){ .particle,.status-light,.countdown-time,.r-steam,.wlEmpty-illus,#sciCharWrap{animation:none!important;} }
+  </style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<div class="lab-scene" aria-hidden="true">
+  <div class="lab-wall">
+    <div class="status-lights">
+      <div class="status-light green"></div>
+      <div class="status-light green"></div>
+      <div class="status-light amber"></div>
+      <div class="status-light green"></div>
+      <div class="status-light red"></div>
+      <div class="status-light green"></div>
+    </div>
+    <div class="countdown-display">
+      <span class="countdown-label">LAUNCH</span>
+      <div class="countdown-time">T-00:07</div>
+    </div>
+    <div class="screen-wall">
+      <div class="screen-row">
+        <div class="ctrl-screen"><div class="ctrl-screen-header">SYS STATUS</div><div class="ctrl-screen-body"></div></div>
+        <div class="ctrl-screen"><div class="ctrl-screen-header">TELEMETRY</div><div class="ctrl-screen-body"></div></div>
+      </div>
+      <div class="screen-row">
+        <div class="ctrl-screen"><div class="ctrl-screen-header">FUEL</div><div class="ctrl-screen-body"></div></div>
+        <div class="ctrl-screen"><div class="ctrl-screen-header">TRAJECTORY</div><div class="ctrl-screen-body"></div></div>
+      </div>
+      <div class="screen-row">
+        <div class="ctrl-screen"><div class="ctrl-screen-header">COMMS</div><div class="ctrl-screen-body"></div></div>
+        <div class="ctrl-screen"><div class="ctrl-screen-header">POWER</div><div class="ctrl-screen-body"></div></div>
+      </div>
+    </div>
+    <div class="launch-window">
+      <div class="launch-window-sky">
+        <div class="r-steam" style="position:absolute;left:40%;bottom:0;margin:0"></div>
+        <div class="r-steam" style="position:absolute;left:50%;bottom:0;margin:0"></div>
+        <div class="r-steam" style="position:absolute;left:60%;bottom:0;margin:0"></div>
+      </div>
+      <div class="launch-window-ground"></div>
+    </div>
+    <div class="lab-bench left"><div class="bench-top"></div></div>
+    <div class="lab-bench right"><div class="bench-top"></div></div>
+  </div>
+  <div class="lab-floor"></div>
+</div>
+<div id="particles"></div>
+<div class="scientist-stage"><div id="petCharWrap" class="pet-idle"></div><div id="sciCharWrap"></div></div>
+
+<header class="header wl-game-header" role="banner">
+    <div class="headerInner">
+      <div class="brand">
+        <div class="brandIcon">⚡</div>
+        <div>
+          <h1>Speed Builder</h1>
+          <span class="sub">Word Labs · Speed Builder</span>
+        </div>
+      </div>
+
+      <div class="hud" role="navigation" aria-label="Game controls">
+        <span class="pill" id="basePill">Base: none</span>
+        <span class="pill time" id="timerPill" aria-live="polite">Time: 00:00</span>
+        <span class="pill score" id="scorePill" aria-live="polite">Score: 0</span>
+        <span id="wlPillSlot"></span>
+        <button id="wlLoginBtn" onclick="wlShowLogin()" style="border:1px solid rgba(var(--accent-rgb),.25);background:rgba(var(--accent-rgb),.18);border-radius:10px;padding:7px 13px;font-weight:800;font-size:11px;cursor:pointer;font-family:'Lexend',sans-serif;color:#cbd5e1;">👤 Log in</button>
+        <a href="landing.html" title="Home" class="topBtn">🏠 <span class="topBtnLabel">Home</span></a>
+        <a href="scientist.html" title="My Scientist" class="topBtn" style="background:var(--indigo-2);">🧬 <span class="topBtnLabel">My Scientist</span></a>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap" id="main-content" role="main">
+    <div class="grid">
+      <div class="panel">
+        <div class="panelInner">
+          <h2 class="panelTitle">Round setup</h2>
+
+          <div class="stack">
+            <div class="field">
+              <label for="baseMode">Base mode</label>
+              <select id="baseMode" class="plainInput">
+                <option value="random">Random base</option>
+                <option value="chosen">Chosen base</option>
+              </select>
+            </div>
+
+            <div class="field" id="chosenBaseWrap" style="display:none;">
+              <label for="chosenBase">Choose a base</label>
+              <select id="chosenBase" class="plainInput"></select>
+            </div>
+
+            <div class="field">
+              <label>Difficulty</label>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <button type="button" class="plainInput" style="flex:1;cursor:pointer;text-align:center;padding:8px;border-radius:10px;font-weight:800;font-size:12px;" onclick="setDifficulty('easy',this)">🟢 Easy<br><span style="font-size:10px;font-weight:600;color:#64748b;">5 min · fewer options</span></button>
+                <button type="button" class="plainInput" style="flex:1;cursor:pointer;text-align:center;padding:8px;border-radius:10px;font-weight:800;font-size:12px;border-color:#6366f1;background:#eef2ff;" onclick="setDifficulty('medium',this)">🟡 Medium<br><span style="font-size:10px;font-weight:600;color:#64748b;">3 min · standard</span></button>
+                <button type="button" class="plainInput" style="flex:1;cursor:pointer;text-align:center;padding:8px;border-radius:10px;font-weight:800;font-size:12px;" onclick="setDifficulty('hard',this)">🔴 Hard<br><span style="font-size:10px;font-weight:600;color:#64748b;">90 sec · all options</span></button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="timerSelect">Timer</label>
+              <select id="timerSelect" class="plainInput">
+                <option value="60">1 minute</option>
+                <option value="90">90 seconds</option>
+                <option value="120">2 minutes</option>
+                <option value="180" selected>3 minutes</option>
+                <option value="240">4 minutes</option>
+                <option value="300">5 minutes</option>
+              </select>
+            </div>
+
+            <div class="setupActions">
+              <button id="startBtn" class="primaryBtn" type="button">Start round</button>
+              <button id="endBtn" class="secondaryBtn" type="button">End round</button>
+            </div>
+
+            <div class="statusBox" id="setupStatus">
+              Choose a random or selected base, set the timer, then start the round. You will only see prefixes and suffixes that can make real words with that base.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="centerCol">
+        <div class="builderHero">
+          <div class="mini">Active protocol</div>
+          <h2>Build as many real words as possible</h2>
+          <p>One fixed base. Up to one prefix and two suffixes. Duplicate words do not score twice.</p>
+        </div>
+
+        <div class="fixedBaseWrap">
+          <div class="fixedBase">
+            <div class="mini">Fixed base</div>
+            <div class="word" id="fixedBaseWord">—</div>
+            <div class="meaning" id="fixedBaseMeaning">Start a round to lock in a base.</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panelInner">
+            <div class="slots">
+              <div>
+                <div class="slotLabel">Prefix slot</div>
+                <div class="dropzone prefix" id="prefixZone" data-zone="prefix" tabindex="0" role="listbox" aria-label="Prefix slot — press Enter to clear"></div>
+              </div>
+
+              <div>
+                <div class="slotLabel">Base slot</div>
+                <div class="dropzone base" id="baseZone" data-zone="base" tabindex="0" role="listbox" aria-label="Base slot (fixed for round)"></div>
+              </div>
+
+              <div>
+                <div class="slotLabel">Suffix 1 slot</div>
+                <div class="dropzone suffix" id="suffix1Zone" data-zone="suffix1" tabindex="0" role="listbox" aria-label="Suffix 1 slot — press Enter to clear"></div>
+              </div>
+
+              <div>
+                <div class="slotLabel">Suffix 2 slot</div>
+                <div class="dropzone suffix" id="suffix2Zone" data-zone="suffix2" tabindex="0" role="listbox" aria-label="Suffix 2 slot — press Enter to clear"></div>
+              </div>
+            </div>
+
+            <div class="actionRow">
+              <button id="submitWordBtn" class="buildBtn submitBtn" type="button">Submit word</button>
+              <button id="clearAffixesBtn" class="buildBtn clearAffixBtn" type="button">Clear affixes</button>
+            </div>
+
+            <div class="output">
+              <div class="outputLabel">Current word</div>
+              <div class="wordOut" id="wordOut">Choose a base to begin</div>
+              <div class="meaningOut" id="meaningOut">Then build as many real words as you can.</div>
+              <div class="statusOut warn" id="statusOut" aria-live="assertive"></div>
+              <span id="ealdSpeakBtns"></span>
+              <div id="ealdDefinition" class="eald-definition"></div>
+              <div id="ealdTranslation" aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="panel">
+          <div class="panelInner">
+            <div class="bank prefixBank">
+              <div class="bankHead">
+                <h3>Viable prefixes</h3>
+                <span class="countBadge prefixBadge" id="prefixCount">0</span>
+              </div>
+              <p class="sr-only">Press Enter or Space on a tile to select it. Press Enter or Space on a drop zone to clear it.</p>
+              <div class="tiles" id="prefixBank" role="listbox" aria-label="Available prefixes"></div>
+              <div class="tiny">Only prefixes that can make at least one real word with this base are shown.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panelInner">
+            <div class="bank suffixBank">
+              <div class="bankHead">
+                <h3>Viable suffixes</h3>
+                <span class="countBadge suffixBadge" id="suffixCount">0</span>
+              </div>
+              <div class="tiles" id="suffixBank" role="listbox" aria-label="Available suffixes"></div>
+              <div class="tiny">Only suffixes that can make at least one real word with this base are shown.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panelInner">
+            <h2 class="panelTitle">Found words</h2>
+            <div class="summaryBox" id="summaryBox">
+              <strong>Words found:</strong> 0<br>
+              <strong>Best word:</strong> —
+            </div>
+            <div style="height:12px;"></div>
+            <div class="foundList" id="foundList">
+              <div class="wlEmpty">
+                <div class="wlEmpty-illus">⚡</div>
+                <div class="wlEmpty-title">Round not started</div>
+                <div class="wlEmpty-sub">Press Start round. Then tap prefix and suffix tiles to build real words, and press Submit word to score.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script defer src="data.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const rawData = window.MORPHEMES || {};
+      const rawPrefixes = Array.isArray(rawData.prefixes) ? rawData.prefixes : [];
+      const rawSuffixes = Array.isArray(rawData.suffixes) ? rawData.suffixes : [];
+      const rawBases = Array.isArray(rawData.bases) ? rawData.bases : [];
+
+      const FALLBACK_ALLOWED_WORDS = [
+        "apply","applied","applying","application",
+        "create","creating","creation","creative",
+        "run","running","runner",
+        "plan","planned","planning",
+        "hop","hopped","hopping",
+        "happy","happiness",
+        "pay","payment",
+        "care","careful",
+        "use","usable","useful","useless",
+        "impossible","illegal","irregular","compose","employ",
+        "attract","attraction","attractive",
+        "sign","signal","signals","signify","signifies","signifying","significant","significance"
+      ];
+
+      function normalisePrefix(item, i){
+        if (typeof item === "string"){
+          const cleaned = item.replace(/-/g, "").trim();
+          return { id:`prefix_${i}`, form:cleaned, meaning:"", altForms:[] };
+        }
+        return {
+          id:item.id || `prefix_${i}`,
+          form:String(item.form || item.text || "").replace(/-/g, "").trim(),
+          meaning:item.meaning || "",
+          altForms:Array.isArray(item.altForms) ? item.altForms.map(x => String(x).replace(/-/g, "").trim()) : [],
+          stage:item.stage // kept so weightByStage can filter by the student's level
+        };
+      }
+
+      function normaliseSuffix(item, i){
+        if (typeof item === "string"){
+          const cleaned = item.replace(/-/g, "").trim();
+          return { id:`suffix_${i}`, form:cleaned, meaning:"", hint:"" };
+        }
+        return {
+          id:item.id || `suffix_${i}`,
+          form:String(item.form || item.text || "").replace(/-/g, "").trim(),
+          meaning:item.meaning || "",
+          hint:item.hint || "",
+          stage:item.stage
+        };
+      }
+
+      function normaliseBase(item, i){
+        if (typeof item === "string"){
+          return { id:`base_${i}`, form:item.trim(), meaning:"" };
+        }
+        return {
+          id:item.id || `base_${i}`,
+          form:String(item.form || item.text || "").trim(),
+          meaning:item.meaning || "",
+          stage:item.stage
+        };
+      }
+
+      const PREFIXES = rawPrefixes.map(normalisePrefix).filter(x => x.form);
+      const SUFFIXES = rawSuffixes.map(normaliseSuffix).filter(x => x.form);
+      const BASES = rawBases.map(normaliseBase).filter(x => x.form);
+
+      if (!PREFIXES.length || !SUFFIXES.length || !BASES.length){
+        document.body.innerHTML = `
+          <div style="max-width:900px;margin:40px auto;padding:24px;font-family:Arial,sans-serif;">
+            <h1>Speed Builder could not load</h1>
+            <p>This page needs a <strong>data.js</strong> file beside it that defines:</p>
+            <pre style="background:#f8fafc;border:1px solid #e2e8f0;padding:16px;border-radius:12px;overflow:auto;">window.MORPHEMES = {
+  bases: [...],
+  prefixes: [...],
+  suffixes: [...]
+};</pre>
+          </div>
+        `;
+        return;
+      }
+
+      const els = {
+        baseMode: document.getElementById("baseMode"),
+        chosenBaseWrap: document.getElementById("chosenBaseWrap"),
+        chosenBase: document.getElementById("chosenBase"),
+        timerSelect: document.getElementById("timerSelect"),
+        startBtn: document.getElementById("startBtn"),
+        endBtn: document.getElementById("endBtn"),
+        setupStatus: document.getElementById("setupStatus"),
+
+        basePill: document.getElementById("basePill"),
+        timerPill: document.getElementById("timerPill"),
+        scorePill: document.getElementById("scorePill"),
+
+        fixedBaseWord: document.getElementById("fixedBaseWord"),
+        fixedBaseMeaning: document.getElementById("fixedBaseMeaning"),
+
+        prefixBank: document.getElementById("prefixBank"),
+        suffixBank: document.getElementById("suffixBank"),
+        prefixCount: document.getElementById("prefixCount"),
+        suffixCount: document.getElementById("suffixCount"),
+
+        prefixZone: document.getElementById("prefixZone"),
+        baseZone: document.getElementById("baseZone"),
+        suffix1Zone: document.getElementById("suffix1Zone"),
+        suffix2Zone: document.getElementById("suffix2Zone"),
+
+        submitWordBtn: document.getElementById("submitWordBtn"),
+        clearAffixesBtn: document.getElementById("clearAffixesBtn"),
+
+        wordOut: document.getElementById("wordOut"),
+        meaningOut: document.getElementById("meaningOut"),
+        statusOut: document.getElementById("statusOut"),
+
+        foundList: document.getElementById("foundList"),
+        summaryBox: document.getElementById("summaryBox")
+      };
+
+      var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+      var _supportMode = (typeof WordLabData !== 'undefined' && WordLabData.isSupportMode());
+
+      function mkUid(type, id){ return `${type}:${id}`; }
+
+      const ALL_PREFIXES = WordLabData.weightByStage(PREFIXES.map(p => ({ ...p, uid:mkUid("prefix", p.id) })), 'speed-mode');
+      const ALL_SUFFIXES = WordLabData.weightByStage(SUFFIXES.map(s => ({ ...s, uid:mkUid("suffix", s.id) })), 'speed-mode');
+      const ALL_BASES = WordLabData.weightByStage(BASES.map(b => ({ ...b, uid:mkUid("base", b.id) })), 'speed-mode');
+
+      const S_SUFFIX = ALL_SUFFIXES.find(x => x.form === 's') || null;
+
+      const BY_UID = new Map();
+      [...ALL_PREFIXES, ...ALL_SUFFIXES, ...ALL_BASES].forEach(item => BY_UID.set(item.uid, item));
+
+      let DICT_SET = null;
+      // false-splits.json (also used by the Morpheme Builder and Word Study build scripts):
+      // words that are real but not made of these parts (goal is not go + al, seal is not
+      // see + al) and words unsuitable for students. Need Advice never leads to these, and
+      // they do not count towards "I know N more words" or the 3 words a random base needs.
+      let FS_PAIRS = new Set(), FS_SPLITS = new Set(), FS_EXCLUDE = new Set();
+      // valid-combos.json: every word the Morpheme Builder builds. Its build script also
+      // skips the words Word Study and the content checks rejected (genocide, homer, ego,
+      // fakes.json, bare bound roots such as tract), so Need Advice only leads to a word
+      // that is in it. Other dictionary words still score when a student builds them.
+      let HINT_WORDS = null;
+      let DICT_STEMS = null; // every start of every dictionary word ("", "u", "un", "unh", ...)
+      function buildStems(set){
+        const stems = new Set();
+        for (const w of set){ for (let i = 0; i <= w.length; i++) stems.add(w.slice(0, i)); }
+        return stems;
+      }
+      let timerId = null;
+
+      const state = {
+        running:false,
+        roundSeconds:180,
+        timeLeft:180,
+        score:0,
+        foundWords:new Map(),
+        bestWord:"",
+        current:{
+          prefix:null,
+          base:null,
+          suffix1:null,
+          suffix2:null
+        },
+        viablePrefixes:new Set(),
+        viableSuffixes:new Set(),
+        allWords:[],      // every real word this round's base can make (buildWordList)
+        baseWords:null    // buildWordList result for the base chooseBase picked
+      };
+
+      function isVowel(ch){
+        return ["a","e","i","o","u"].includes(String(ch || "").toLowerCase());
+      }
+
+      function isConsonant(ch){
+        const c = String(ch || "").toLowerCase();
+        return c >= "a" && c <= "z" && !isVowel(c);
+      }
+
+      function isCVC(word){
+        const w = String(word || "").toLowerCase();
+        if (w.length < 3) return false;
+        const a = w[w.length - 3], b = w[w.length - 2], c = w[w.length - 1];
+        if (!isConsonant(a) || !isVowel(b) || !isConsonant(c)) return false;
+        if (["w","x","y"].includes(c)) return false;
+        return true;
+      }
+
+      function applyPrefixRulesDetailed(prefixForm, baseForm){
+        const prefix = String(prefixForm || "");
+        const base = String(baseForm || "");
+        if (!prefix || !base){
+          return { prefixAfter:prefix };
+        }
+
+        const p = prefix.toLowerCase();
+        const first = base[0]?.toLowerCase() || "";
+
+        if (p === "ad"){
+          const map = { c:"ac", f:"af", l:"al", p:"ap", s:"as", t:"at" };
+          return { prefixAfter:map[first] || prefix };
+        }
+
+        if (p === "in"){
+          if (["p","b","m"].includes(first)) return { prefixAfter:"im" };
+          if (first === "l") return { prefixAfter:"il" };
+          if (first === "r") return { prefixAfter:"ir" };
+          return { prefixAfter:prefix };
+        }
+
+        if (p === "con" && ["p","b","m"].includes(first)) return { prefixAfter:"com" };
+        if (p === "en" && ["p","b","m"].includes(first)) return { prefixAfter:"em" };
+
+        if (p === "sub"){
+          const map = { c:"suc", f:"suf", g:"sug", p:"sup", s:"sus", t:"subt" };
+          return { prefixAfter:map[first] || prefix };
+        }
+
+        if (p === "ob"){
+          const map = { c:"oc", f:"of", p:"op", s:"os", t:"obt" };
+          return { prefixAfter:map[first] || prefix };
+        }
+
+        return { prefixAfter:prefix };
+      }
+
+      function applyPrefixRules(prefixForm, baseForm){
+        return applyPrefixRulesDetailed(prefixForm, baseForm).prefixAfter || prefixForm;
+      }
+
+      function applySuffixRulesDetailed(baseForm, suffixForm){
+        const base = String(baseForm || "");
+        const suff = String(suffixForm || "");
+        if (!suff){
+          return { baseAfter:base };
+        }
+
+        const last = base.slice(-1).toLowerCase();
+        const prev = base.slice(-2, -1).toLowerCase();
+        const first = suff[0]?.toLowerCase() || "";
+        const suffixLower = suff.toLowerCase();
+
+        if (suffixLower === "ing" && base.toLowerCase().endsWith("ie")){
+          return { baseAfter:base.slice(0, -2) + "y" };
+        }
+
+        if (last === "e" && isVowel(first)){
+          return { baseAfter:base.slice(0, -1) };
+        }
+
+        if (last === "y" && prev && isConsonant(prev) && suffixLower !== "ing"){
+          return { baseAfter:base.slice(0, -1) + "i" };
+        }
+
+        if (isCVC(base) && isVowel(first)){
+          return { baseAfter:base + base.slice(-1) };
+        }
+
+        return { baseAfter:base };
+      }
+
+      function applySuffixOnce(baseForm, suffixObj){
+        if (!suffixObj){
+          return String(baseForm || "");
+        }
+        const detail = applySuffixRulesDetailed(baseForm, suffixObj.form);
+        return String(detail.baseAfter) + String(suffixObj.form);
+      }
+
+      function computeWord(prefixObj, baseObj, suffix1Obj, suffix2Obj){
+        if (!baseObj) return "";
+        const base = baseObj.form;
+        const pAdj = prefixObj ? applyPrefixRules(prefixObj.form, base) : "";
+        const prefixedBase = String(pAdj) + String(base);
+        const afterS1 = applySuffixOnce(prefixedBase, suffix1Obj);
+        const afterS2 = applySuffixOnce(afterS1, suffix2Obj);
+        return afterS2.toLowerCase();
+      }
+
+      function computeMeaning(prefixObj, baseObj, suffix1Obj, suffix2Obj){
+        const parts = [];
+        if (prefixObj?.meaning) parts.push(prefixObj.meaning);
+        if (baseObj?.meaning) parts.push(baseObj.meaning);
+        if (suffix1Obj?.meaning) parts.push(suffix1Obj.meaning);
+        if (suffix2Obj?.meaning) parts.push(suffix2Obj.meaning);
+        return parts.join(" + ");
+      }
+
+      function isRealWord(word){
+        return !!word && DICT_SET && DICT_SET.has(String(word).toLowerCase());
+      }
+
+      // Need Advice (wordlab-hints.js getLadder): 3 hints for one word the student has
+      // not found yet, the simplest first. Hint 1 says what kind of word is left, hint 2
+      // gives the meaning of the tiles it needs, hint 3 names the tiles. No hint shows
+      // the whole word, so the student still builds it and sees any spelling change.
+      const _esc = x => (typeof WordLabData !== 'undefined' && WordLabData.escapeHtml)
+        ? WordLabData.escapeHtml(x)
+        : String(x == null ? '' : x).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      const _meaning = t => String((t && t.meaning) || '').split(/\s*;\s*/).filter(Boolean).join(' or ');
+      function _kindOf(t){
+        const n = (t.s1 ? 1 : 0) + (t.s2 ? 1 : 0);
+        const suf = n === 2 ? 'two suffixes, one after the other' : 'a suffix';
+        if (t.p && n) return 'a prefix and ' + suf;
+        if (t.p) return 'a prefix';
+        if (n) return suf;
+        return '';
+      }
+      function _clue(t, type){
+        const m = _meaning(t);
+        return m ? 'the ' + type + ' that means <b>"' + _esc(m) + '"</b>' : 'a ' + type + ' from the ' + type + ' list';
+      }
+      window._speedHintLadder = function(){
+        if (!state.running || !state.current.base) return ['Press Start round first. Then ask me again.'];
+        const base = state.current.base;
+        if (!(state.allWords || []).length) return ['I do not know any words I can help you build with <b>' + _esc(base.form) + '</b>. Try building one yourself, or choose another base and start a new round.'];
+        const left = (state.allWords || []).filter(w => !state.foundWords.has(w.word));
+        if (!left.length) return ['Wow, you have found every word I know for <b>' + _esc(base.form) + '</b>! Press End round, or start a new round.'];
+        const baseLineWith = 'Your base is <b>' + _esc(base.form) + '</b>' + (base.meaning ? ', which means "' + _esc(_meaning(base)) + '"' : '') + '. ';
+        const more = 'I know ' + left.length + ' more word' + (left.length === 1 ? '' : 's') + ' you can build with it.';
+        const ladderFor = (t, noBaseMeaning) => {
+          const baseLine = noBaseMeaning ? 'Your base is <b>' + _esc(base.form) + '</b>. ' : baseLineWith;
+          if (!t.parts){
+            return [
+              baseLine + more + ' Start with the easiest one.',
+              'Read the base all by itself: <b>' + _esc(base.form) + '</b>. Is it already a word?',
+              'Yes! <b>' + _esc(base.form) + '</b> is a word on its own. Take every tile off and press Submit word.'
+            ];
+          }
+          const step2 = [];
+          if (t.p) step2.push('Put ' + _clue(t.p, 'prefix') + ' in front of the base.');
+          if (t.s1) step2.push((t.p ? 'Then add ' : 'Add ') + _clue(t.s1, 'suffix') + ' after the base.');
+          if (t.s2) step2.push('Then add ' + _clue(t.s2, 'suffix') + ' after that.');
+          const step3 = [];
+          if (t.p) step3.push('<b>' + _esc(t.p.form) + '-</b> in front');
+          if (t.s1) step3.push('<b>-' + _esc(t.s1.form) + '</b>' + (t.s2 ? ', then <b>-' + _esc(t.s2.form) + '</b>,' : '') + ' after the base');
+          return [
+            baseLine + more + ' Next, try a word with ' + _kindOf(t) + '.',
+            step2.join(' '),
+            'Try ' + step3.join(', and ') + '. Watch how the word is spelt when you join them.'
+          ];
+        };
+        // The simplest word left whose hints do not show the word itself (mand means
+        // "order or command", so command is not the word hint 1 leads to)
+        const shows = (t, lines) => t.parts && lines.some(l => new RegExp('\\b' + t.word + '\\b', 'i').test(l.replace(/<[^>]+>/g, '')));
+        for (const t of left){
+          const lines = ladderFor(t);
+          if (!shows(t, lines)) return lines;
+        }
+        // Every word left is named by a hint. Usually it is the base's own meaning
+        // (nitro means "nitrogen or nitric"), so leave the meaning out of hint 1.
+        return ladderFor(left[0], true);
+      };
+
+      function redundantPrefix(prefixObj, baseObj){
+        if (!prefixObj || !baseObj) return false;
+        return baseObj.form.toLowerCase().startsWith(prefixObj.form.toLowerCase());
+      }
+
+      function clearAffixes(){
+        state.current.prefix = null;
+        state.current.suffix1 = null;
+        state.current.suffix2 = null;
+        renderZones();
+        renderBanks();
+        updateOutput();
+      }
+
+      function resetRoundState(){
+        state.running = false;
+        state.score = 0;
+        state.foundWords = new Map();
+        state.bestWord = "";
+        state.timeLeft = Number(els.timerSelect.value);
+        state.roundSeconds = Number(els.timerSelect.value);
+        state.viablePrefixes = new Set();
+        state.viableSuffixes = new Set();
+        state.allWords = [];
+        state.baseWords = null;
+        state.current.prefix = null;
+        state.current.base = null;
+        state.current.suffix1 = null;
+        state.current.suffix2 = null;
+      }
+
+      function stopTimer(){
+        clearInterval(timerId);
+        timerId = null;
+      }
+
+      function formatTime(sec){
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+      }
+
+      function updateHud(){
+        if (!_wltActive) {
+          els.timerPill.textContent = `Time: ${formatTime(state.timeLeft)}`;
+          els.scorePill.textContent = `Score: ${state.score}`;
+        }
+        els.basePill.textContent = `Base: ${state.current.base ? state.current.base.form : "none"}`;
+        els.summaryBox.innerHTML = _wltActive
+          ? `<strong>Words found:</strong> ${state.foundWords.size}<br><strong>Best word:</strong> ${state.bestWord || "—"}`
+          : `<strong>Words found:</strong> ${state.foundWords.size}<br><strong>Score:</strong> ${state.score}<br><strong>Best word:</strong> ${state.bestWord || "—"}`;
+      }
+
+      async function loadFalseSplits(){
+        try{
+          const res = await fetch("false-splits.json");
+          if (!res.ok) throw new Error("no false-splits.json");
+          const fs = await res.json();
+          FS_PAIRS = new Set(fs.pairs || []);
+          FS_SPLITS = new Set(fs.splits || []);
+          FS_EXCLUDE = new Set((fs.excludeWords || []).map(w => String(w).toLowerCase()));
+        } catch (e) {
+          console.warn("Speed Builder: false-splits.json did not load, so Need Advice may suggest a false split", e);
+        }
+      }
+
+      async function loadHintWords(){
+        try{
+          const res = await fetch("valid-combos.json");
+          if (!res.ok) throw new Error("no valid-combos.json");
+          const combos = await res.json();
+          HINT_WORDS = new Set(combos.map(c => String(c.word).toLowerCase()));
+        } catch (e) {
+          console.warn("Speed Builder: valid-combos.json did not load, so Need Advice uses the dictionary", e);
+        }
+      }
+
+      async function loadDictionary(){
+        const fsReady = Promise.all([loadFalseSplits(), loadHintWords()]);
+        try{
+          const res = await fetch("dictionary.txt", { cache:"no-store" });
+          if (!res.ok) throw new Error("no dictionary");
+          const text = await res.text();
+          const set = new Set();
+          for (const raw of text.split(/\r?\n/)){
+            const w = raw.trim().toLowerCase();
+            if (!w) continue;
+            if (w.startsWith("#")) continue;
+            set.add(w);
+          }
+          await fsReady;
+          DICT_SET = set;
+          DICT_STEMS = buildStems(set);
+          els.setupStatus.textContent = `Dictionary loaded with ${set.size.toLocaleString()} words. Choose your round settings and start.`;
+        } catch {
+          DICT_SET = new Set(FALLBACK_ALLOWED_WORDS.map(x => String(x).toLowerCase()));
+          els.setupStatus.textContent = "dictionary.txt was not found, so the game is using a very small fallback list. The mode will work better when dictionary.txt is beside this file.";
+        }
+      }
+
+      function makeTileHtml(item, type, selected = false){
+        const tileClass = type === "prefix" ? "prefixTile" : type === "suffix" ? "suffixTile" : "baseTile";
+        const ariaLabel = type + ": " + item.form + (item.meaning ? " — " + item.meaning : "") + (selected ? " (selected)" : "");
+        return `
+          <div class="tile ${tileClass}${selected ? " selected" : ""}"
+               draggable="${state.running ? "true" : "false"}"
+               tabindex="0"
+               role="option"
+               aria-selected="${selected ? "true" : "false"}"
+               aria-label="${ariaLabel}"
+               data-uid="${item.uid}"
+               data-type="${type}">
+            <div class="form">${type === "prefix" ? item.form : type === "suffix" ? item.form : item.form}</div>
+            ${type === "prefix" && item.altForms?.length ? `<div class="alts">(${item.altForms.join(", ")})</div>` : ""}
+            <div class="meaning">${item.meaning || ""}</div>
+            <div class="meta">${
+              type === "prefix"
+                ? "prefix"
+                : type === "suffix"
+                  ? `suffix${item.hint ? " • " + item.hint : ""}`
+                  : "base"
+            }</div>
+          </div>
+        `;
+      }
+
+      function renderZoneTile(zoneEl, item, type){
+        zoneEl.innerHTML = item ? makeTileHtml(item, type, false) : "";
+      }
+
+      function renderZones(){
+        renderZoneTile(els.prefixZone, state.current.prefix, "prefix");
+        renderZoneTile(els.baseZone, state.current.base, "base");
+        renderZoneTile(els.suffix1Zone, state.current.suffix1, "suffix");
+        renderZoneTile(els.suffix2Zone, state.current.suffix2, "suffix");
+      }
+
+      function addToBuilder(type, item){
+        if (!state.running) return;
+
+        if (type === "prefix"){
+          state.current.prefix = state.current.prefix?.uid === item.uid ? null : item;
+          if (state.current.base && redundantPrefix(state.current.prefix, state.current.base)){
+            state.current.prefix = null;
+          }
+        }
+
+        if (type === "suffix"){
+          if (!state.current.suffix1){
+            state.current.suffix1 = item;
+          } else if (!state.current.suffix2){
+            if (state.current.suffix1.uid === item.uid){
+              state.current.suffix1 = null;
+            } else {
+              state.current.suffix2 = item;
+            }
+          } else {
+            if (state.current.suffix1.uid === item.uid){
+              state.current.suffix1 = null;
+              state.current.suffix2 = null;
+            } else if (state.current.suffix2.uid === item.uid){
+              state.current.suffix2 = null;
+            } else {
+              state.current.suffix2 = item;
+            }
+          }
+        }
+
+        if (!state.current.suffix1 && state.current.suffix2){
+          state.current.suffix2 = null;
+        }
+
+        renderZones();
+        renderBanks();
+        updateOutput();
+      }
+
+      function updateOutput(){
+        if (!state.current.base){
+          els.wordOut.textContent = "Choose a base to begin";
+          els.meaningOut.textContent = "Then build as many real words as you can.";
+          els.statusOut.textContent = "";
+          els.statusOut.className = "statusOut";
+          return;
+        }
+
+        const w = computeWord(state.current.prefix, state.current.base, state.current.suffix1, state.current.suffix2);
+
+        if (!state.current.prefix && !state.current.suffix1 && !state.current.suffix2){
+          els.wordOut.textContent = state.current.base.form;
+          els.meaningOut.textContent = state.current.base.meaning || "Add a prefix or suffix.";
+          els.statusOut.textContent = state.running ? "Build a real word using the fixed base." : "Start a round to build words.";
+          els.statusOut.className = "statusOut warn";
+          return;
+        }
+
+        els.wordOut.textContent = w;
+        els.meaningOut.textContent = computeMeaning(state.current.prefix, state.current.base, state.current.suffix1, state.current.suffix2) || " ";
+        if (isRealWord(w)){
+          if (state.foundWords.has(w)){
+            els.statusOut.textContent = "That is a real word, but you already found it.";
+            els.statusOut.className = "statusOut warn";
+          } else {
+            els.statusOut.textContent = "Real word. Submit it to score.";
+            els.statusOut.className = "statusOut ok";
+          }
+        } else {
+          els.statusOut.textContent = "Not a real word. Try another viable option.";
+          els.statusOut.className = "statusOut bad";
+        }
+      }
+
+      // Could adding suffixes to this text still make a dictionary word? Adding a suffix
+      // changes at most the last two letters (drop e, y to i, ie to y, double a letter), so
+      // if the text minus two letters starts no dictionary word, nothing built on it can be
+      // a word. Lets the viability check skip most of its ~1 million combinations.
+      // trim: letters the later suffixes may change (2 for one more suffix, 3 for two more,
+      // since a one-letter suffix like -s or -y can itself be changed by the next one)
+      function couldGrow(text, trim){
+        const stem = String(text || "").toLowerCase().slice(0, -(trim || 2));
+        return !DICT_STEMS || DICT_STEMS.has(stem);
+      }
+
+      // Every real word this base can make with up to one prefix and two suffixes,
+      // simplest first. The banks show every tile used in at least one of these words,
+      // so a suffix that only works second (the -ly in carefully, the -ness in
+      // carelessness) is shown too. Before, only tiles that worked first were shown,
+      // so words like carefully could not be built.
+      function buildWordList(baseObj){
+        const byWord = new Map();
+        const viablePrefixes = new Set();
+        const viableSuffixes = new Set();
+        if (!baseObj) return { words:[], viablePrefixes, viableSuffixes };
+        const add = (p, s1, s2) => {
+          const word = computeWord(p, baseObj, s1, s2);
+          if (!isRealWord(word)) return;
+          // Unsuitable words: no hint, no count, and no tile shown just for them
+          if (FS_EXCLUDE.has(word)) return;
+          // -es only where English uses it (box + es). see + es is really see + s, so
+          // hints use -s for sees (the Morpheme Builder build skips the same analyses)
+          const last = s2 || s1;
+          if (last && last.form === 'es' && S_SUFFIX && computeWord(p, baseObj, s2 ? s1 : S_SUFFIX, s2 ? S_SUFFIX : null) === word) return;
+          // A false split, or a word the Morpheme Builder does not build, still scores
+          // if a student builds it, but hints and the word count skip it
+          const forms = [p, baseObj, s1, s2].filter(Boolean).map(x => x.form).join('+');
+          const pair = p ? p.form + '+' + baseObj.form : baseObj.form + '+' + (s1 ? s1.form : '');
+          if (FS_PAIRS.has(pair) || FS_SPLITS.has(forms + '=' + word) || (HINT_WORDS && !HINT_WORDS.has(word))){
+            if (p) viablePrefixes.add(p.uid);
+            if (s1) viableSuffixes.add(s1.uid);
+            if (s2) viableSuffixes.add(s2.uid);
+            return;
+          }
+          if (p) viablePrefixes.add(p.uid);
+          if (s1) viableSuffixes.add(s1.uid);
+          if (s2) viableSuffixes.add(s2.uid);
+          // When a word can be built two ways, Need Advice uses the one with fewer
+          // parts (legality is legal + ity, not legal + y + ty)
+          const parts = (p ? 1 : 0) + (s1 ? 1 : 0) + (s2 ? 1 : 0);
+          const had = byWord.get(word);
+          if (!had || parts < had.parts) byWord.set(word, { word, p, s1, s2, parts });
+        };
+        for (const p of [null, ...ALL_PREFIXES]){
+          if (p && redundantPrefix(p, baseObj)) continue;
+          const w0 = computeWord(p, baseObj, null, null);
+          if (p && !couldGrow(w0, 3)) continue;
+          add(p, null, null);
+          for (const s1 of ALL_SUFFIXES){
+            add(p, s1, null);
+            if (!couldGrow(computeWord(p, baseObj, s1, null))) continue;
+            for (const s2 of ALL_SUFFIXES){
+              if (s2.uid !== s1.uid) add(p, s1, s2);
+            }
+          }
+        }
+        const words = [...byWord.values()].sort((a, b) => a.parts - b.parts);
+        return { words, viablePrefixes, viableSuffixes };
+      }
+
+      // For tests/test-speed-hints.js: the words Need Advice can lead to for each base
+      // this student's level offers (mock mode only reads it; nothing in the game uses it)
+      window._speedHintWords = function(){
+        return [...new Map(ALL_BASES.map(b => [b.uid, b])).values()].map(b => ({ base:b.form, words:buildWordList(b).words.map(t => ({
+          word:t.word, p:t.p ? t.p.form : null, s1:t.s1 ? t.s1.form : null, s2:t.s2 ? t.s2.form : null })) }));
+      };
+
+      function renderBanks(){
+        if (!state.current.base){
+          els.prefixBank.innerHTML = "";
+          els.suffixBank.innerHTML = "";
+          els.prefixCount.textContent = "0";
+          els.suffixCount.textContent = "0";
+          return;
+        }
+
+        const prefixesEnabled = [];
+        const suffixesEnabled = [];
+
+        for (const p of ALL_PREFIXES){
+          if (!state.viablePrefixes.has(p.uid)) continue;
+          prefixesEnabled.push(makeTileHtml(p, "prefix", state.current.prefix?.uid === p.uid));
+        }
+
+        for (const s of ALL_SUFFIXES){
+          if (!state.viableSuffixes.has(s.uid)) continue;
+          const selected = state.current.suffix1?.uid === s.uid || state.current.suffix2?.uid === s.uid;
+          suffixesEnabled.push(makeTileHtml(s, "suffix", selected));
+        }
+
+        els.prefixBank.innerHTML = prefixesEnabled.join("");
+        els.suffixBank.innerHTML = suffixesEnabled.join("");
+        els.prefixCount.textContent = String(prefixesEnabled.length);
+        els.suffixCount.textContent = String(suffixesEnabled.length);
+      }
+
+      function renderFoundWords(){
+        const entries = [...state.foundWords.values()].sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          return a.word.localeCompare(b.word);
+        });
+
+        if (!entries.length){
+          els.foundList.replaceChildren();
+          const wrap = document.createElement('div');
+          wrap.className = 'wlEmpty';
+          const illus = document.createElement('div');
+          illus.className = 'wlEmpty-illus';
+          illus.textContent = '⚡';
+          const title = document.createElement('div');
+          title.className = 'wlEmpty-title';
+          title.textContent = state.running ? 'No words yet' : 'Round not started';
+          const sub = document.createElement('div');
+          sub.className = 'wlEmpty-sub';
+          sub.textContent = state.running
+            ? 'Tap a tile to add it to the base. When it makes a real word, press Submit word. Stuck? Press Need Advice.'
+            : 'Press Start round. Then tap prefix and suffix tiles to build real words, and press Submit word to score.';
+          wrap.append(illus, title, sub);
+          els.foundList.appendChild(wrap);
+          return;
+        }
+
+        els.foundList.innerHTML = entries.map(entry => `
+          <div class="foundItem">
+            <div class="foundWord">${entry.word}</div>
+            <div class="foundMeta">
+              ${_wltActive ? '' : 'Score: ' + entry.score + '<br>'}
+              ${entry.breakdown}
+            </div>
+          </div>
+        `).join("");
+      }
+
+      function getTileFromEventTarget(target){
+        const tile = target.closest(".tile");
+        if (!tile) return null;
+        const uid = tile.dataset.uid;
+        if (!uid) return null;
+        const item = BY_UID.get(uid);
+        if (!item) return null;
+        return { tile, item, type: tile.dataset.type };
+      }
+
+      function setupBankEvents(bankEl){
+        bankEl.addEventListener("click", e => {
+          const hit = getTileFromEventTarget(e.target);
+          if (!hit || hit.tile.classList.contains("disabled")) return;
+          addToBuilder(hit.type, hit.item);
+        });
+
+        bankEl.addEventListener("keydown", e => {
+          if (e.key !== "Enter" && e.key !== " ") return;
+          const hit = getTileFromEventTarget(e.target);
+          if (!hit || hit.tile.classList.contains("disabled")) return;
+          e.preventDefault();
+          addToBuilder(hit.type, hit.item);
+        });
+
+        bankEl.addEventListener("dragstart", e => {
+          const hit = getTileFromEventTarget(e.target);
+          if (!hit || hit.tile.classList.contains("disabled")) return;
+          e.dataTransfer.setData("text/plain", JSON.stringify({ type: hit.type, uid: hit.item.uid }));
+        });
+      }
+
+      function setupZone(zoneEl){
+        zoneEl.addEventListener("dragover", e => {
+          e.preventDefault();
+          zoneEl.classList.add("dragover");
+        });
+
+        zoneEl.addEventListener("dragleave", () => zoneEl.classList.remove("dragover"));
+
+        zoneEl.addEventListener("drop", e => {
+          e.preventDefault();
+          zoneEl.classList.remove("dragover");
+          const payload = e.dataTransfer.getData("text/plain");
+          if (!payload) return;
+
+          let data;
+          try { data = JSON.parse(payload); } catch { return; }
+
+          const item = BY_UID.get(data.uid);
+          if (!item) return;
+
+          const zoneType = zoneEl.dataset.zone;
+          if (zoneType === "prefix" && data.type === "prefix"){
+            addToBuilder("prefix", item);
+          }
+          if ((zoneType === "suffix1" || zoneType === "suffix2") && data.type === "suffix"){
+            addToBuilder("suffix", item);
+          }
+        });
+
+        zoneEl.addEventListener("dblclick", () => {
+          clearZone(zoneEl);
+        });
+
+        zoneEl.addEventListener("keydown", e => {
+          if (e.key !== "Enter" && e.key !== " ") return;
+          e.preventDefault();
+          clearZone(zoneEl);
+        });
+      }
+
+      function clearZone(zoneEl){
+          const zoneType = zoneEl.dataset.zone;
+          if (zoneType === "prefix") state.current.prefix = null;
+          if (zoneType === "suffix1"){
+            state.current.suffix1 = null;
+            state.current.suffix2 = null;
+          }
+          if (zoneType === "suffix2") state.current.suffix2 = null;
+          renderZones();
+          renderBanks();
+          updateOutput();
+      }
+
+      function scoreWord(word){
+        let points = 1;
+        if (state.current.prefix && (state.current.suffix1 || state.current.suffix2)) points += 1;
+        if (state.current.suffix1 && state.current.suffix2) points += 1;
+        if (word.length >= 8) points += 1;
+        return points;
+      }
+
+      function submitWord(){
+        if (!state.running || !state.current.base) return;
+
+        const word = computeWord(state.current.prefix, state.current.base, state.current.suffix1, state.current.suffix2);
+
+        if (!word){
+          els.statusOut.textContent = "Build a word first.";
+          els.statusOut.className = "statusOut warn";
+          return;
+        }
+
+        if (!isRealWord(word)){
+          els.statusOut.textContent = "That is not a word in our word list. Try a different tile.";
+          els.statusOut.className = "statusOut bad";
+          return;
+        }
+
+        if (state.foundWords.has(word)){
+          els.statusOut.textContent = "You already found that word.";
+          els.statusOut.className = "statusOut warn";
+          return;
+        }
+
+        const points = scoreWord(word);
+        if (!_wltActive) state.score += points;
+        if (!state.bestWord || word.length > state.bestWord.length) state.bestWord = word;
+
+        if (!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()) {
+          const _wlResult = WordLabData.recordAttempt('speed-mode', state.current.base.form, true, 0);
+          Promise.resolve(_wlResult).then(r => {
+            if (typeof WLScientist !== 'undefined') WLScientist.react('correct', r);
+          });
+        }
+        if (_wltActive && typeof WLScientist !== 'undefined') {
+          WLScientist.react('correct', null);
+        }
+
+        const breakdown = [
+          state.current.prefix?.form || "—",
+          state.current.base.form,
+          state.current.suffix1?.form || "—",
+          state.current.suffix2?.form || "—"
+        ].join(" | ");
+
+        state.foundWords.set(word, {
+          word,
+          score:points,
+          breakdown
+        });
+
+        els.statusOut.textContent = _wltActive
+          ? `Found: ${word}`
+          : `Scored ${points} point${points === 1 ? "" : "s"} for ${word}.`;
+        els.statusOut.className = "statusOut ok";
+        // EALD: speak buttons + flip reveal
+        var ealdSpeakEl=document.getElementById('ealdSpeakBtns');
+        var ealdDefEl=document.getElementById('ealdDefinition');
+        var ealdEl=document.getElementById('ealdTranslation');
+        if(ealdSpeakEl) ealdSpeakEl.innerHTML='';
+        if(ealdDefEl) ealdDefEl.innerHTML='';
+        if(ealdEl){ealdEl.innerHTML='';ealdEl.dataset.translatedWord='';ealdEl.dataset.englishWord='';}
+        if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()){
+          WordLabData.injectEALDStyles();
+          var langName=(WordLabData.EALD_LANGUAGES[WordLabData.getEALDLanguage()]||'').split(' (')[0];
+          if(ealdEl) ealdEl.dataset.englishWord=word;
+          if(ealdSpeakEl) ealdSpeakEl.innerHTML=WordLabData.buildEALDSpeakButtons();
+          if(ealdDefEl) ealdDefEl.innerHTML='<button class="eald-def-btn" id="ealdDefBtn" onclick="this.classList.toggle(\'flipped\')"><span class="eald-def-front">🌐 Show in '+WordLabData.escapeHtml(langName)+'</span><span class="eald-def-back" id="ealdDefText">Loading...</span></button>';
+          WordLabData.getTranslations([word],['word']).then(function(t){
+            if(t&&t[word]){
+              var defText=document.getElementById('ealdDefText');
+              if(defText) defText.textContent='🌐 '+t[word];
+              if(ealdEl) ealdEl.dataset.translatedWord=t[word];
+            }
+          });
+        }
+
+        renderFoundWords();
+        updateHud();
+        // The next Need Advice starts again at hint 1, for the next word to find
+        if (typeof WLHints !== 'undefined') WLHints.resetHints();
+        // clearAffixes() resets the status line, so put the "Scored ..." message back after it
+        const _scoredMsg = els.statusOut.textContent;
+        clearAffixes();
+        els.statusOut.textContent = _scoredMsg;
+        els.statusOut.className = "statusOut ok";
+      }
+
+      function chooseBase(){
+        if (els.baseMode.value === "chosen"){
+          const uid = els.chosenBase.value;
+          return ALL_BASES.find(b => b.uid === uid) || ALL_BASES[0];
+        }
+        // A random base needs at least 3 words to find (tetra only makes tetrahedron),
+        // so skip thin bases. Gives up after a few tries rather than stall.
+        let pick = null;
+        for (let tries = 0; tries < 12; tries++){
+          pick = WordLabData.nextByStage(ALL_BASES, 'speed-mode', null, state.lastBase) || ALL_BASES[Math.floor(Math.random() * ALL_BASES.length)];
+          state.baseWords = buildWordList(pick);
+          state.baseWords.base = pick;
+          if (state.baseWords.words.length >= 3) break;
+        }
+        state.lastBase = pick;
+        return pick;
+      }
+
+      window.setDifficulty = function(level, btn) {
+        document.querySelectorAll('.field button.plainInput').forEach(function(b){b.style.borderColor='';b.style.background='';});
+        btn.style.borderColor='#6366f1';btn.style.background='#eef2ff';
+        var sel = document.getElementById('timerSelect');
+        if(level==='easy') sel.value='300';
+        else if(level==='medium') sel.value='180';
+        else sel.value='90';
+      };
+
+      function startRound(){
+        if (!DICT_SET){
+          els.setupStatus.textContent = "Still loading dictionary. Please wait a moment and try again.";
+          return;
+        }
+
+        stopTimer();
+        resetRoundState();
+        if(typeof WLHints!=='undefined') WLHints.resetHints();
+
+        const chosenBase = chooseBase();
+        state.current.base = chosenBase;
+
+        state.roundSeconds = Number(els.timerSelect.value);
+        if(_supportMode) state.roundSeconds = Math.round(state.roundSeconds * 1.5);
+        state.timeLeft = state.roundSeconds;
+
+        const viable = state.baseWords && state.baseWords.base === chosenBase
+          ? state.baseWords : buildWordList(chosenBase);
+        state.viablePrefixes = viable.viablePrefixes;
+        state.viableSuffixes = viable.viableSuffixes;
+        state.allWords = viable.words;
+
+        state.running = true;
+
+        els.fixedBaseWord.textContent = chosenBase.form;
+        els.fixedBaseMeaning.textContent = chosenBase.meaning || "No base meaning supplied in data.js.";
+        els.setupStatus.textContent = _wltActive
+          ? `Round started with base "${chosenBase.form}". Explore word building, then click End round when you are finished.`
+          : `Round started with base "${chosenBase.form}". Build as many real words as you can before time runs out.`;
+
+        renderZones();
+        renderBanks();
+        renderFoundWords();
+        updateHud();
+        updateOutput();
+
+        // On tablets the setup panel sits on top, so the base and tiles start off
+        // screen. Jump to them (no smooth scroll, so nothing moves on its own).
+        const cc = document.getElementById('centerCol');
+        if (cc && cc.getBoundingClientRect().top > window.innerHeight * 0.6) cc.scrollIntoView({ block:'start' });
+
+        if (!_wltActive) {
+          timerId = setInterval(() => {
+            if (typeof WLHelp !== 'undefined' && WLHelp.isOpen && WLHelp.isOpen()) return; // clock holds while the instructions are open
+            state.timeLeft -= 1;
+            updateHud();
+
+            if (state.timeLeft <= 0){
+              endRound();
+            }
+          }, 1000);
+        } else {
+          // Show End Round button in teacher mode
+          var erb = document.getElementById('wltEndRoundBtn');
+          if (erb) erb.style.display = 'inline-flex';
+        }
+      }
+
+      function endRound(){
+        stopTimer();
+        if (!state.running) return;
+        state.running = false;
+
+        // Hide End Round button when round ends
+        var endRoundTeacher = document.getElementById('wltEndRoundBtn');
+        if (endRoundTeacher) endRoundTeacher.style.display = 'none';
+
+        const totalWords = state.foundWords.size;
+        if (_wltActive) {
+          els.setupStatus.textContent = `Round finished. ${totalWords} word${totalWords === 1 ? "" : "s"} explored.`;
+        } else {
+          els.setupStatus.textContent = `Round finished. You found ${totalWords} word${totalWords === 1 ? "" : "s"} and scored ${state.score} point${state.score === 1 ? "" : "s"}.`;
+        }
+
+        if (!totalWords){
+          els.statusOut.textContent = "Round over. No words were submitted this time.";
+          els.statusOut.className = "statusOut warn";
+        } else {
+          els.statusOut.textContent = _wltActive
+            ? `Round over. Best word: ${state.bestWord || "—"}.`
+            : `Round over. Best word: ${state.bestWord || "—"}.`;
+          els.statusOut.className = "statusOut ok";
+        }
+
+        renderBanks();
+        if (!_wltActive) showEndOverlay(totalWords, state.score, state.bestWord);
+      }
+
+      function showEndOverlay(words, score, bestWord) {
+        var old = document.getElementById('speedEndOverlay');
+        if (old) old.remove();
+
+        var icon = score === 0 ? '🔬' : score >= 100 ? '🏆' : score >= 50 ? '⭐' : '⚡';
+        var title = score === 0 ? 'Round Over' : score >= 100 ? 'Outstanding!' : score >= 50 ? 'Great Job!' : 'Round Complete!';
+
+        var overlay = document.createElement('div');
+        overlay.id = 'speedEndOverlay';
+        overlay.className = 'speed-end-overlay';
+        overlay.innerHTML =
+          '<div class="speed-end-card">' +
+            '<div class="speed-end-icon">' + icon + '</div>' +
+            '<div class="speed-end-title">' + title + '</div>' +
+            '<div class="speed-end-sub">Here is how you did</div>' +
+            '<div class="speed-end-stats">' +
+              '<div class="speed-end-stat"><div class="speed-end-stat-val">' + score + '</div><div class="speed-end-stat-label">Points</div></div>' +
+              '<div class="speed-end-stat"><div class="speed-end-stat-val">' + words + '</div><div class="speed-end-stat-label">Words</div></div>' +
+            '</div>' +
+            (bestWord ? '<div class="speed-end-best">Longest word: <strong>' + (typeof WordLabData !== 'undefined' ? WordLabData.escapeHtml(bestWord) : bestWord) + '</strong></div>' : '') +
+            '<div>' +
+              '<button class="speed-end-btn primary" onclick="document.getElementById(\'speedEndOverlay\').remove();document.getElementById(\'startBtn\').click();">Play Again</button>' +
+              '<a href="landing.html" class="speed-end-btn secondary">Home</a>' +
+            '</div>' +
+          '</div>';
+        document.body.appendChild(overlay);
+      }
+
+      function populateBaseDropdown(){
+        const sorted = [...ALL_BASES].sort((a, b) => a.form.localeCompare(b.form));
+        els.chosenBase.innerHTML = sorted.map(base => `
+          <option value="${base.uid}">${base.form}${base.meaning ? " — " + base.meaning : ""}</option>
+        `).join("");
+      }
+
+      els.baseMode.addEventListener("change", () => {
+        els.chosenBaseWrap.style.display = els.baseMode.value === "chosen" ? "block" : "none";
+      });
+
+      els.startBtn.addEventListener("click", startRound);
+      els.endBtn.addEventListener("click", endRound);
+      els.submitWordBtn.addEventListener("click", submitWord);
+      els.clearAffixesBtn.addEventListener("click", clearAffixes);
+
+      setupBankEvents(els.prefixBank);
+      setupBankEvents(els.suffixBank);
+
+      setupZone(els.prefixZone);
+      setupZone(els.baseZone);
+      setupZone(els.suffix1Zone);
+      setupZone(els.suffix2Zone);
+
+      populateBaseDropdown();
+      updateHud();
+      renderZones();
+      renderBanks();
+      renderFoundWords();
+      updateOutput();
+      loadDictionary();
+
+      // ── Teacher Mode init ──
+      if (_wltActive) {
+        // Hide timer select and difficulty buttons (not needed in untimed mode)
+        els.timerSelect.closest('.field').style.display = 'none';
+        var diffField = document.querySelector('.field:has(button[onclick^="setDifficulty"])');
+        if (diffField) diffField.style.display = 'none';
+
+        // Create End Round button in the HUD area
+        var endRoundBtn = document.createElement('button');
+        endRoundBtn.id = 'wltEndRoundBtn';
+        endRoundBtn.textContent = 'End Round';
+        endRoundBtn.style.cssText = 'display:none;border:none;background:#4338ca;color:#fff;font-family:Lexend,sans-serif;font-weight:900;font-size:14px;padding:12px 28px;border-radius:999px;cursor:pointer;text-transform:uppercase;letter-spacing:.1em;box-shadow:0 8px 20px rgba(67,56,202,.3);transition:all .15s;margin-left:8px;flex-shrink:0;';
+        endRoundBtn.addEventListener('mouseenter', function(){ this.style.background='#3730a3'; });
+        endRoundBtn.addEventListener('mouseleave', function(){ this.style.background='#4338ca'; });
+        endRoundBtn.addEventListener('click', endRound);
+        var hud = document.querySelector('.hud');
+        if (hud) hud.appendChild(endRoundBtn);
+
+        // Update setup status for teacher mode
+        els.setupStatus.textContent = 'Teacher Mode — choose a base and start. No timer, no scoring. Click End Round when finished.';
+
+        // Init teacher mode — skip word count picker (speed-mode uses End Round button instead)
+        WLTeacher.init({ game: 'speed', skipPicker: true });
+      }
+    });
+  </script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="wordlab-stage.js"></script>
+<script defer src="wordlab-data.js?v=20261023b"></script>
+<script defer src="wordlab-scientist.js?v=20261019"></script>
+<script defer src="wordlab-effects.js"></script>
+<script defer src="wordlab-worlds.js"></script>
+<script defer src="wordlab-audio.js"></script>
+<script defer src="wordlab-teacher.js"></script>
+<script defer src="wordlab-help.js"></script>
+<script defer src="wordlab-hints.js"></script>
+<script>
+(function(){var w=document.getElementById('particles');if(!w)return;var cs=['rgba(59,130,246,.3)','rgba(96,165,250,.25)','rgba(147,197,253,.2)'];for(var i=0;i<18;i++){var p=document.createElement('div');p.className='particle';p.style.cssText='left:'+(Math.random()*100)+'%;width:'+(6+Math.random()*8)+'px;height:'+(6+Math.random()*8)+'px;background:'+cs[Math.floor(Math.random()*cs.length)]+';animation-duration:'+(8+Math.random()*12)+'s;animation-delay:'+(-Math.random()*20)+'s;';w.appendChild(p);}})();
+(async function(){
+  if(typeof WLScientist==='undefined'){await new Promise(function(r){document.addEventListener('DOMContentLoaded',function(){r();},{once:true});});}
+  var w=document.getElementById('sciCharWrap');
+  if(!w||typeof WLScientist==='undefined')return;
+  function _p(svg){while(w.firstChild)w.removeChild(w.firstChild);w.appendChild(document.createRange().createContextualFragment(svg));}
+  _p(WLScientist.buildSVG({},'neutral'));
+  try{var sd=typeof WordLabData!=='undefined'?await WordLabData.getStudentData():null;if(sd&&sd.scientist)_p(WLScientist.buildSVG(sd.scientist,'neutral'));}catch(e){console.error('Scientist load failed',e);}
+})();
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+  // Daily limit check
+  if(typeof WordLabData !== 'undefined' && WordLabData.getSession()){
+    try {
+      const limit = await WordLabData.checkDailyLimit();
+      if(limit && limit.blocked){
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(13,11,26,.92);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = '<div style="background:#1a1630;border:2px solid #4338ca;border-radius:24px;padding:40px;max-width:440px;text-align:center;color:#e0e7ff;font-family:Lexend,sans-serif;"><div style="font-size:48px;margin-bottom:16px;">🧪</div><h2 style="font-size:22px;font-weight:900;margin-bottom:12px;">Daily limit reached</h2><p style="color:#94a3b8;font-size:14px;margin-bottom:24px;">You\\\'ve completed 30 questions today on the free plan. Come back tomorrow or ask your teacher about upgrading.</p><a href="landing.html" style="background:#4338ca;color:#fff;padding:12px 24px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px;">Back to Home</a></div>';
+        document.body.appendChild(overlay);
+        return;
+      }
+    } catch(e) { console.warn('Daily limit check failed', e); }
+  }
+
+  if(typeof WordLabData !== 'undefined') {
+    WordLabData.initLoginUI({
+      accentColor: '#1e3a5f',
+      accentSoft:  '#eff6ff',
+      accentLine:  '#bfdbfe',
+      accentText:  '#1e3a5f',
+      onLogin: function() { location.reload(); }
+    });
+    var session = WordLabData.getSession();
+    var btn = document.getElementById('wlLoginBtn');
+    if(btn && session) btn.textContent = '👤 ' + session.studentName;
+  }
+  if(typeof WordLabData !== 'undefined' && WordLabData.isExtensionMode && WordLabData.isExtensionMode('speed-mode')){
+    var extPill = document.createElement('div');
+    extPill.style.cssText = 'background:#4338ca;color:#e0e7ff;font-size:10px;font-weight:900;padding:4px 10px;border-radius:20px;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;';
+    extPill.textContent = '🔬 Extension';
+    var hud = document.querySelector('.hud, .headerInner, header .innerHud');
+    if(hud) hud.appendChild(extPill);
+  }
+});
+// The shared help and hints scripts are deferred, so they only exist once the page has loaded.
+document.addEventListener('DOMContentLoaded', function(){
+if(typeof WLHelp!=='undefined') WLHelp.init({
+  game:'speed', title:'Speed Builder', emoji:'⚡',
+  steps:[
+    {icon:'⚙️',title:'Set up your round',desc:'Pick a difficulty and a timer, then press Start round. You get one base word for the whole round.'},
+    {icon:'🧩',title:'Build a word',desc:'Tap a prefix or suffix tile to add it to the base. You can drag tiles into the slots too. Only tiles that can make a real word with this base are shown.'},
+    {icon:'✅',title:'Submit it',desc:'When it is a real word, press Submit word. Press Clear affixes to take the tiles off and try another word.'},
+    {icon:'🏆',title:'Score points',desc:'Every real word scores. Words with more parts, and words with 8 or more letters, score more. Each word only counts once.'},
+    {icon:'⏱️',title:'Beat the clock',desc:'Build as many words as you can before the time runs out.'}
+  ],
+  audioText:'In Speed Builder, first pick a difficulty and a timer, then press Start round. You get one base word for the whole round. Tap a prefix or suffix tile to add it to the base, or drag it into a slot. Only tiles that can make a real word with this base are shown. When it is a real word, press Submit word. Press Clear affixes to take the tiles off and try another word. Every real word scores. Words with more parts, and long words, score more. Each word only counts once. Build as many words as you can before the time runs out.'
+});
+if(typeof WLHints!=='undefined') WLHints.register({
+  // state lives inside the page's own closure, so ask it for the ladder.
+  getLadder: function(){
+    if(typeof window._speedHintLadder==='function') return window._speedHintLadder();
+    return ['Try adding a prefix or a suffix to the base.'];
+  }
+});
+});
+// Support mode: colour-code tiles by type.
+// _supportMode is declared inside another DOMContentLoaded handler's scope
+// (line 576), so we can't reference it here. Re-check via WordLabData
+// directly, inside a DOMContentLoaded handler so WordLabData is ready.
+document.addEventListener('DOMContentLoaded', function(){
+  if(typeof WordLabData !== 'undefined' && WordLabData.isSupportMode()){
+    var _smStyle = document.createElement('style');
+    _smStyle.textContent = '.prefixTile{border-left:4px solid #7c3aed !important;} .suffixTile{border-left:4px solid #ea580c !important;} .baseTile{border-left:4px solid #2563eb !important;} .prefixTile .form{color:#7c3aed;} .suffixTile .form{color:#ea580c;}';
+    document.head.appendChild(_smStyle);
+  }
+});
+</script>
+
+<footer style="text-align:center;padding:12px 16px;font-size:11px;color:#64748b;border-top:1px solid #e2e8f0;margin-top:auto;font-family:Lexend,sans-serif;">&#129514; Word Labs &middot; <a href="about.html" style="color:#64748b;">About</a> &middot; <a href="privacy.html" style="color:#64748b;">Privacy Policy</a> &middot; <a href="terms.html" style="color:#64748b;">Terms of Service</a> &middot; <a href="mailto:nick@wordlabs.app" style="color:#64748b;">Contact</a></footer>
+</body>
+</html>

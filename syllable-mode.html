@@ -1,0 +1,1555 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Labs – Syllable Splitter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="wordlab-common.css">
+  <style>
+    :root{
+      --bg:#f5f5f5;
+      --panel:#ffffff;
+      --line:#e2e8f0;
+      --text:#0f172a;
+      --muted:#64748b;
+      --indigo:#4338ca;
+      --indigo-2:#6366f1;
+      --indigo-soft:#eef2ff;
+      --green:#16a34a;
+      --green-soft:#f0fdf4;
+      --green-line:#bbf7d0;
+      --green-text:#166534;
+      --orange:#ea580c;
+      --orange-soft:#fff7ed;
+      --orange-line:#fed7aa;
+      --orange-text:#9a3412;
+      --red:#dc2626;
+      --ok:#15803d;
+      --warn:#b45309;
+      --bad:#dc2626;
+      --accent:#92400e; --accent-rgb:146,64,14; --header-rgb:18,10,2;
+    }
+
+    body{
+      margin:0;
+      padding-top:56px;
+      font-family:'Lexend', sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      line-height:1.5;
+      letter-spacing:.02em;
+    }
+
+    /* Unified chrome — dark variant, amber hud tint (syllable workshop) */
+    .header{ position:fixed; top:0; left:0; right:0; z-index:50; background:rgba(var(--header-rgb),.55); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border-bottom:none; padding:0; }
+    .headerInner{ padding:0 20px; height:56px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; max-width:none; }
+    .brand{ display:flex; align-items:center; gap:12px; flex-shrink:0; }
+    .brandIcon{ width:36px; height:36px; border-radius:10px; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:0 8px 16px rgba(0,0,0,.15); flex:0 0 auto; }
+    .brand h1{ margin:0; font-size:15px; font-weight:900; letter-spacing:-.02em; color:#fde68a; }
+    .brand .sub{ font-size:9px; text-transform:uppercase; letter-spacing:.22em; color:#fbbf24; font-weight:800; display:block; margin-top:2px; }
+    .hud{ display:flex; gap:8px; align-items:center; flex-wrap:nowrap; overflow-x:auto; }
+    .hud::-webkit-scrollbar{ display:none; }
+    .pill{ display:inline-flex; align-items:center; justify-content:center; min-height:32px; border:1px solid rgba(255,200,80,.2); border-radius:999px; background:rgba(255,255,255,.08); padding:6px 14px; font-size:12px; font-weight:800; color:#fde68a; white-space:nowrap; flex-shrink:0; }
+    .pill.score{ background:var(--accent); color:#fde68a; border-color:transparent; }
+    .pill.streak{ background:rgba(251,191,36,.1); color:#fbbf24; border-color:rgba(251,191,36,.25); }
+    .topBtn{ border:none; background:rgba(251,191,36,.12); color:#fde68a; font-weight:800; font-size:11px; text-transform:uppercase; letter-spacing:.12em; padding:7px 13px; border-radius:10px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; flex-shrink:0; transition:all .15s; }
+    .topBtn:hover{ background:rgba(251,191,36,.2); }
+    #wlLoginBtn{ border:1px solid rgba(251,191,36,.22); background:rgba(251,191,36,.08); color:#fde68a; border-radius:10px; padding:7px 13px; font-weight:800; font-size:11px; cursor:pointer; font-family:'Lexend',sans-serif; white-space:nowrap; flex-shrink:0; }
+
+    /* ── Layout ── */
+    .wrap{ max-width:1100px; margin:0 auto; padding:20px; }
+    .mainGrid{
+      display:grid;
+      grid-template-columns:1fr 340px;
+      gap:20px; align-items:start;
+    }
+    @media(max-width:820px){ .mainGrid{ grid-template-columns:1fr; } }
+
+    .panel{ background:rgba(255,255,255,.92); border:2px solid rgba(var(--accent-rgb),.2); border-radius:20px; box-shadow:0 16px 48px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.6); overflow:hidden; }
+    .panelInner{ padding:28px; }
+    .panelTitle{
+      margin:0 0 6px 0; font-size:11px; font-weight:900;
+      text-transform:uppercase; letter-spacing:.22em; color:var(--accent);
+    }
+
+    /* ── Difficulty selector ── */
+    .diffRow{
+      display:flex; gap:8px; margin-bottom:28px; flex-wrap:wrap;
+    }
+    .diffBtn{
+      border:2px solid var(--line); background:#fff; border-radius:14px;
+      padding:10px 18px; font-weight:800; font-size:13px; cursor:pointer;
+      color:var(--muted); transition:all .15s;
+    }
+    .diffBtn.active{
+      border-color:var(--accent); background:rgba(var(--accent-rgb),.1); color:var(--accent);
+    }
+    .diffBtn:hover:not(.active){ border-color:#cbd5e1; color:var(--text); }
+
+    /* ── Word display & chop zone ── */
+    .gameArea{
+      display:flex; flex-direction:column; align-items:center;
+      gap:24px; padding:20px 0;
+    }
+
+    .wordPrompt{
+      font-size:11px; font-weight:900; text-transform:uppercase;
+      letter-spacing:.22em; color:var(--muted); text-align:center;
+    }
+
+    .chopContainer{
+      display:flex; align-items:center; justify-content:safe center;
+      flex-wrap:nowrap; gap:0; user-select:none;
+      min-height:100px;
+      /* The word always stays on one line. wlAutoFitChop() measures it and
+         sets --wl-fit so long words shrink to fit the panel. */
+      align-self:stretch; width:100%; min-width:0; box-sizing:border-box;
+      --wl-fit:1;
+    }
+
+    .letterBlock{
+      display:inline-flex; align-items:center;
+      cursor:default; position:relative; flex-shrink:0;
+    }
+
+    .letterChar{
+      font-size:calc(56px * var(--wl-fit,1)); font-weight:900; line-height:1;
+      color:#312e81; letter-spacing:-.01em;
+      padding:0 2px;
+      transition:color .15s;
+    }
+
+    .chopGap{
+      width:max(14px, calc(24px * var(--wl-fit,1))); height:64px; flex-shrink:0;
+      display:inline-flex; align-items:center; justify-content:center;
+      cursor:pointer; position:relative;
+      transition:transform .1s;
+    }
+    .chopGap:hover .chopLine{ background:var(--indigo-2); transform:scaleY(1.1); }
+    .chopGap.active .chopLine{ background:var(--indigo); }
+    .chopLine{
+      width:3px; height:max(28px, calc(44px * var(--wl-fit,1))); border-radius:999px;
+      background:#e2e8f0;
+      transition:background .15s, transform .15s;
+    }
+    .chopGap.correct-break .chopLine{
+      background:var(--green) !important;
+      box-shadow:0 0 0 4px rgba(22,163,74,.15);
+    }
+    .chopGap.chopped .chopLine{
+      background:var(--indigo-2);
+      box-shadow:0 0 0 4px rgba(99,102,241,.18);
+    }
+    .chopGap .chopHint{
+      position:absolute; top:-22px; left:50%; transform:translateX(-50%);
+      font-size:10px; font-weight:800; color:var(--indigo-2);
+      opacity:0; transition:opacity .1s; white-space:nowrap;
+      pointer-events:none;
+    }
+    .chopGap:hover .chopHint{ opacity:1; }
+    .chopGap:focus-visible{ outline:3px solid #b45309; outline-offset:2px; border-radius:6px; }
+    .chopGap.chopped.wrong-break .chopLine{ background:var(--bad) !important; box-shadow:0 0 0 4px rgba(220,38,38,.15) !important; }
+    .chopGap.marked .chopHint{ opacity:1; font-size:14px; top:-24px; }
+    .chopGap.correct-break.marked .chopHint{ color:#15803d; }
+    .chopGap.wrong-break.marked .chopHint{ color:#b91c1c; }
+    .whyChops{ margin-top:10px; text-align:left; color:#1f2937; font-size:15px; font-weight:600; line-height:1.55; }
+    .whyChops .whyTitle{ font-weight:900; color:#92400e; margin-bottom:4px; }
+    .whyChops ul{ margin:0; padding-left:20px; }
+    .whyChops li{ margin:3px 0; }
+    .whyChops .ruleTag{ display:inline-block; font-size:11px; font-weight:900; color:#92400e; background:#fef3c7; border-radius:999px; padding:1px 8px; margin-left:4px; }
+
+    /* syllable preview */
+    .syllablePreview{
+      display:flex; gap:10px; flex-wrap:wrap; justify-content:center;
+      min-height:56px; align-items:center;
+    }
+    .syllChip{
+      padding:10px 18px; border-radius:16px;
+      border:2px solid var(--indigo-soft);
+      background:var(--indigo-soft); color:var(--indigo);
+      font-size:22px; font-weight:800;
+      transition:all .2s;
+      animation:popIn .2s ease-out;
+    }
+    @keyframes popIn{
+      0%{ transform:scale(.8); opacity:0; }
+      100%{ transform:scale(1); opacity:1; }
+    }
+
+    /* action buttons */
+    .actionRow{
+      display:flex; gap:12px; flex-wrap:wrap; justify-content:center;
+    }
+    .checkBtn{
+      border:none; background:var(--indigo); color:#fff;
+      font-weight:900; font-size:15px; letter-spacing:.06em;
+      padding:16px 36px; border-radius:18px; cursor:pointer;
+      text-transform:uppercase;
+      box-shadow:0 12px 24px rgba(67,56,202,.22);
+      transition:all .15s;
+    }
+    .checkBtn:hover{ background:#3730a3; transform:translateY(-1px); }
+    .checkBtn:disabled{ background:#cbd5e1; box-shadow:none; cursor:not-allowed; transform:none; }
+    .clearBtn{
+      border:2px solid var(--line); background:#fff; color:#334155;
+      font-weight:800; font-size:13px; padding:14px 22px;
+      border-radius:16px; cursor:pointer;
+      transition:all .15s;
+    }
+    .clearBtn:hover{ background:#f8fafc; border-color:#cbd5e1; }
+
+    /* feedback */
+    .feedbackBanner{
+      width:100%; border-radius:20px; padding:18px 24px;
+      font-weight:800; font-size:15px; text-align:center;
+      display:none;
+      animation:slideIn .25s ease-out;
+    }
+    @keyframes slideIn{
+      0%{ transform:translateY(-8px); opacity:0; }
+      100%{ transform:translateY(0); opacity:1; }
+    }
+    .feedbackBanner.correct{
+      display:block;
+      background:var(--green-soft); color:var(--green-text);
+      border:2px solid var(--green-line);
+    }
+    .feedbackBanner.wrong{
+      display:block;
+      background:#fef2f2; color:var(--bad);
+      border:2px solid #fecaca;
+    }
+
+    .nextBtn{
+      border:none; background:#0f172a; color:#fff;
+      font-weight:900; font-size:14px; letter-spacing:.08em;
+      padding:14px 32px; border-radius:16px; cursor:pointer;
+      text-transform:uppercase; display:none; margin-top:8px;
+      transition:background .15s;
+    }
+    .nextBtn:hover{ background:#000; }
+    .nextBtn.visible{ display:inline-flex; }
+
+    /* ── Right column ── */
+    .scorePanel .bigNum{
+      font-size:64px; font-weight:900; letter-spacing:-.04em;
+      color:#312e81; line-height:1;
+    }
+    .scorePanel .bigLabel{
+      font-size:11px; font-weight:900; text-transform:uppercase;
+      letter-spacing:.2em; color:var(--muted); margin-bottom:6px;
+    }
+    .scorePanel .subRow{
+      display:flex; gap:16px; margin-top:16px; flex-wrap:wrap;
+    }
+    .subStat{ flex:1; min-width:80px; }
+    .subStat .val{ font-size:28px; font-weight:900; color:var(--indigo-2); line-height:1; }
+    .subStat .lbl{ font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin-top:2px; }
+
+    .historyPanel .histList{
+      display:flex; flex-direction:column; gap:8px;
+      max-height:280px; overflow-y:auto;
+    }
+    .histItem{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 14px; border-radius:14px;
+      border:2px solid var(--line); font-size:13px;
+    }
+    .histItem.correct{ background:var(--green-soft); border-color:var(--green-line); }
+    .histItem.correct::before{content:'\2713 ';font-weight:900;}
+    .rightCol > .panel { flex-shrink: 0; }
+    .histItem.wrong{ background:#fef2f2; border-color:#fecaca; }
+    .histItem.wrong::before{content:'\2717 ';font-weight:900;}
+    .histWord{ font-weight:800; flex:1; }
+    .histAnswer{ color:var(--muted); font-size:12px; }
+    .histMark{ font-size:16px; }
+
+    .rulesPanel .rule{
+      display:flex; gap:10px; align-items:flex-start;
+      margin-bottom:12px; font-size:13px; color:#334155; line-height:1.5;
+    }
+    .rulesPanel .ruleNum{
+      min-width:22px; height:22px; border-radius:6px;
+      background:var(--indigo-soft); color:var(--indigo);
+      font-weight:900; font-size:11px;
+      display:flex; align-items:center; justify-content:center;
+      flex-shrink:0; margin-top:1px;
+    }
+
+    /* ── Start screen ── */
+    .startScreen{
+      text-align:center; padding:40px 20px;
+    }
+    .startIcon{
+      width:80px; height:80px; border-radius:24px;
+      background:var(--accent); color:#fff;
+      display:flex; align-items:center; justify-content:center;
+      font-size:36px; margin:0 auto 20px auto;
+      box-shadow:0 20px 40px rgba(67,56,202,.22);
+    }
+    .startTitle{ font-size:32px; font-weight:900; color:#312e81; margin:0 0 8px; }
+    .startSub{ color:var(--muted); font-size:15px; margin-bottom:32px; }
+    .startBtn{
+      border:none; background:var(--accent); color:#fff;
+      font-weight:900; font-size:16px; letter-spacing:.08em;
+      padding:18px 48px; border-radius:20px; cursor:pointer;
+      text-transform:uppercase;
+      box-shadow:0 16px 32px rgba(var(--accent-rgb),.24);
+      transition:all .15s;
+    }
+    .startBtn:hover{ filter:brightness(.9); transform:translateY(-2px); }
+    .round-picker{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;}
+    .round-btn{background:rgba(67,56,202,.06);border:2px solid rgba(67,56,202,.15);color:var(--muted);font-family:'Lexend',sans-serif;font-weight:800;font-size:13px;padding:6px 14px;border-radius:10px;cursor:pointer;transition:all .15s;}
+    .round-btn:hover{border-color:rgba(67,56,202,.4);color:#312e81;}
+    .round-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+    .hidden{ display:none !important; }
+
+    /* letter shake on wrong */
+    @keyframes shake{
+      0%,100%{ transform:translateX(0); }
+      20%{ transform:translateX(-6px); }
+      40%{ transform:translateX(6px); }
+      60%{ transform:translateX(-4px); }
+      80%{ transform:translateX(4px); }
+    }
+    .shake{ animation:shake .4s ease-out; }
+
+  /* ── Cutting/Fabrication Workshop Lab scene ── */
+  html{height:100%;}body{min-height:100vh;overflow-y:auto;background:transparent;}
+  .lab-scene{position:fixed;inset:0;z-index:0;display:flex;flex-direction:column;pointer-events:none;}
+  .lab-wall{flex:0 0 62%;background:#c4a35a;position:relative;overflow:hidden;}
+  .lab-wall::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(170deg,transparent 0,transparent 8px,rgba(139,90,30,.07) 8px,rgba(139,90,30,.07) 9px);}
+  .pegboard{position:absolute;right:0;top:0;bottom:0;width:36%;background:#d4b878;border-left:4px solid #a0784a;}
+  .pegboard::before{content:'';position:absolute;inset:6px;background:radial-gradient(circle 3px at 50% 50%,rgba(139,90,30,.28) 2px,transparent 2px);background-size:24px 24px;}
+  .pendant-lamp{position:absolute;top:0;display:flex;flex-direction:column;align-items:center;}
+  .pendant-wire{width:2px;background:#555;margin:0 auto;}
+  .pendant-shade{border-radius:0 0 50% 50%;border:3px solid #333;background:linear-gradient(180deg,#222,#444);overflow:hidden;}
+  .pendant-glow{width:100%;height:100%;background:radial-gradient(ellipse at 50% 120%,rgba(255,200,80,.55),transparent 70%);animation:lampGlow 4s ease-in-out infinite;}
+  @keyframes lampGlow{0%,100%{opacity:.7;}50%{opacity:1;}}
+  .vice-grip{position:absolute;left:18px;bottom:0;}
+  .measure-tape{position:absolute;bottom:18px;left:0;right:0;height:9px;background:repeating-linear-gradient(90deg,#f5e642 0,#f5e642 10px,#000 10px,#000 20px);opacity:.55;}
+  .shaving{position:absolute;background:rgba(180,130,60,.65);border-radius:10px;transform-origin:left center;animation:shavedFall linear infinite;}
+  @keyframes shavedFall{0%{opacity:0;transform:translateY(-20px) rotate(0deg);}10%{opacity:.7;}100%{opacity:0;transform:translateY(100vh) rotate(720deg);}}
+  .lab-floor{flex:0 0 38%;background:repeating-linear-gradient(90deg,#94a3b8 0,#94a3b8 40px,#8a9ab0 40px,#8a9ab0 80px);position:relative;border-top:6px solid #64748b;}
+  .lab-bench{position:absolute;bottom:0;height:72%;background:#6b4423;border-top:8px solid #8b6040;border-radius:4px 4px 0 0;}
+  .lab-bench.left{left:10px;width:195px;}.lab-bench.right{right:10px;width:195px;}
+  .bench-top{position:absolute;top:-19px;left:-6px;right:-6px;height:19px;background:#a07040;border-radius:4px 4px 0 0;border-top:3px solid #c89060;}
+  #particles{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden;}
+  .particle{position:absolute;border-radius:50%;animation:particleFloat linear infinite;}
+  @keyframes particleFloat{from{transform:translateY(0) translateX(0);opacity:.5;}to{transform:translateY(calc(-100vh - 20px)) translateX(-12px);opacity:0;}}
+  /* ── Fixed centered layout ── */
+  body{overflow:hidden!important;}
+  .wrap{position:fixed!important;top:56px!important;bottom:0!important;left:50%!important;transform:translateX(-50%)!important;width:75vw!important;max-width:none!important;margin:0!important;z-index:10;padding:16px 0!important;overflow-y:auto;}
+  .wrap::-webkit-scrollbar{width:0;}
+  .mainGrid{grid-template-columns:1fr 260px!important;gap:14px!important;align-items:start!important;}
+  /* ── Workshop panels ── */
+  .panel{background:rgba(255,250,235,.92)!important;backdrop-filter:blur(8px)!important;-webkit-backdrop-filter:blur(8px)!important;border:2px solid rgba(180,130,50,.25)!important;box-shadow:0 16px 48px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,240,180,.5)!important;border-radius:20px!important;}
+  .rightCol{position:sticky;top:0;max-height:calc(100vh - 88px);overflow-y:auto;padding-right:2px;max-width:260px;}
+  .rightCol > .panel{flex-shrink:0;}
+  .rightCol::-webkit-scrollbar{width:0;}
+  /* ── Workshop chop styling ── */
+  .letterChar{color:#78350f!important;}
+  .chopLine{background:rgba(120,53,15,.18)!important;}
+  .chopGap:hover .chopLine{background:#f59e0b!important;}
+  .chopGap.chopped .chopLine{background:#d97706!important;box-shadow:0 0 0 4px rgba(217,119,6,.2)!important;}
+  .chopGap.correct-break .chopLine{background:#16a34a!important;box-shadow:0 0 0 4px rgba(22,163,74,.15)!important;}
+  .syllChip{background:rgba(254,243,199,.9)!important;border-color:rgba(217,119,6,.3)!important;color:#92400e!important;}
+  .wordPrompt{color:#92400e!important;opacity:.8;}
+  /* ── Difficulty buttons ── */
+  .diffBtn{background:rgba(255,243,199,.8)!important;border-color:rgba(180,130,50,.3)!important;color:#78350f!important;}
+  .diffBtn.active{background:#92400e!important;color:#fde68a!important;border-color:#92400e!important;}
+  /* ── Check / Next buttons ── */
+  .checkBtn{background:#92400e!important;box-shadow:0 10px 20px rgba(146,64,14,.22)!important;}
+  .checkBtn:hover{background:#7c2d12!important;}
+  .checkBtn:disabled{background:#d1d5db!important;}
+  .clearBtn{background:rgba(255,243,199,.9)!important;border-color:rgba(180,130,50,.3)!important;color:#78350f!important;}
+  .nextBtn{background:#7c2d12!important;color:#fde68a!important;}
+  .nextBtn:hover{background:#6b1d0a!important;}
+  /* ── Score panel ── */
+  .scorePanel .bigNum{color:#92400e!important;}
+  .scorePanel .bigLabel,.subStat .lbl{color:#a16207!important;}
+  .subStat .val{color:#b45309!important;}
+  .panelTitle{color:#92400e!important;}
+  .ruleNum{background:rgba(254,243,199,.9)!important;color:#92400e!important;}
+  /* ── Start screen ── */
+  .startTitle{color:#78350f!important;}
+  .startIcon{background:#92400e!important;}
+  .startBtn{background:#92400e!important;box-shadow:0 16px 32px rgba(146,64,14,.24)!important;}
+  .startBtn:hover{background:#7c2d12!important;}
+  /* ── Scientist ── */
+  .scientist-stage{position:fixed;right:0;width:calc((100vw - 75vw)/2);top:56px;bottom:0;z-index:11;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  #sciCharWrap{width:120px;height:150px;display:flex;align-items:flex-end;justify-content:center;animation:sciIdle 3s ease-in-out infinite;}
+  #sciCharWrap.sci-correct{animation:sciJump .6s ease-out;}#sciCharWrap.sci-wrong{animation:sciShake .5s ease-out;}#sciCharWrap.sci-streak{animation:sciDance .8s ease-in-out infinite;}
+  @keyframes sciIdle{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}@keyframes sciJump{0%{transform:translateY(0)}30%{transform:translateY(-22px)}100%{transform:translateY(0)}}@keyframes sciShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-4deg) translateX(-4px)}40%{transform:rotate(4deg) translateX(4px)}60%{transform:rotate(-3deg) translateX(-3px)}80%{transform:rotate(2deg)}}@keyframes sciDance{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+  .scene-prop-left{position:fixed;left:0;width:calc((100vw - 75vw)/2);top:56px;bottom:0;z-index:11;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;}
+  @keyframes propSway{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
+  @keyframes propPulse{0%,100%{opacity:.8}50%{opacity:1}}
+  /* Chromebook width: give the word more room so long words stay readable. */
+  @media(min-width:961px) and (max-width:1200px){
+    .mainGrid{grid-template-columns:minmax(0,1fr) 240px!important;}
+    .rightCol{max-width:240px;}
+    .panelInner{padding:20px 18px;}
+  }
+  /* Portrait tablets: the score, history and rules panels go below the game. */
+  @media(min-width:701px) and (max-width:960px){
+    .mainGrid{grid-template-columns:minmax(0,1fr)!important;}
+    .rightCol{position:static;max-height:none;max-width:none;overflow:visible;}
+  }
+  @media(max-width:700px){
+    .lab-scene{display:none;}
+    body{background:linear-gradient(160deg,#92400e,#c4a35a,#94a3b8)!important;overflow-y:auto!important;}
+    .wrap{position:relative!important;top:auto!important;bottom:auto!important;left:auto!important;transform:none!important;width:calc(100vw - 24px)!important;margin:0 auto!important;padding-top:72px!important;}
+    .scientist-stage,.scene-prop-left{display:none!important;}
+    /* Long words like "responsibility" (14 letters) were wrapping onto
+       two lines which destroys the chopping metaphor. On mobile the
+       container becomes nowrap + horizontally scrollable, and letters
+       + gaps shrink with clamp() so short words still look generous
+       and long words swipe left-right on a single line. */
+    .gameArea{ min-width:0!important; width:100%!important; box-sizing:border-box; }
+    .chopContainer{
+      flex-wrap:nowrap!important;
+      justify-content:safe center!important;
+      align-self:stretch!important;
+      width:100%!important;
+      max-width:100%!important;
+      min-width:0!important;
+      box-sizing:border-box;
+      overflow:hidden;
+      padding:8px 12px;
+      min-height:auto!important;
+      --wl-fit:1;
+    }
+    /* Letters and gaps scale via --wl-fit, which JS sets after each
+       word renders. Short words keep the generous 46px base size; long
+       words (investigation, responsibility) shrink just enough to fit
+       on one line inside the panel. No horizontal scroll. */
+    .letterChar{font-size:calc(46px * var(--wl-fit,1))!important;padding:0 1px!important;}
+    .chopGap{width:calc(22px * var(--wl-fit,1))!important;height:60px!important;flex-shrink:0;}
+    .chopLine{height:calc(40px * var(--wl-fit,1))!important;}
+    .letterBlock{flex-shrink:0;}
+  }
+  @media(max-width:480px){
+    .mainGrid{grid-template-columns:1fr!important;}
+    /* Use the --wl-fit scaled sizes here too, otherwise this block
+       overrides the 700px auto-fit rules on any phone <=480px. */
+    .letterChar{font-size:calc(42px * var(--wl-fit,1))!important;}
+    .chopGap{width:calc(20px * var(--wl-fit,1))!important;height:56px!important;}
+    .chopLine{height:calc(36px * var(--wl-fit,1))!important;}
+    .diffBtn,.startBtn,.speakBtn{min-height:44px!important;padding:12px 16px!important;}
+  }
+
+  /* Room scenery stays still in low-stim mode and when the device asks for reduced motion */
+  .low-stim .lab-scene *, .low-stim .scene-prop-left, .low-stim .scene-prop-left *{ animation:none!important; }
+  .low-stim #particles{ display:none!important; }
+  @media (prefers-reduced-motion: reduce){
+    .lab-scene *, .scene-prop-left, .scene-prop-left *{ animation:none!important; }
+    #particles{ display:none!important; }
+  }
+  </style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<div class="lab-scene" aria-hidden="true">
+  <div class="lab-wall">
+    <div class="pegboard"></div>
+    <div class="pendant-lamp" style="left:28%">
+      <div class="pendant-wire" style="height:38px"></div>
+      <div class="pendant-shade" style="width:48px;height:28px"><div class="pendant-glow"></div></div>
+    </div>
+    <div class="pendant-lamp" style="left:52%">
+      <div class="pendant-wire" style="height:52px"></div>
+      <div class="pendant-shade" style="width:44px;height:26px"><div class="pendant-glow"></div></div>
+    </div>
+    <div class="measure-tape"></div>
+    <div class="vice-grip">
+      <svg width="50" height="36" viewBox="0 0 50 36">
+        <rect x="8" y="14" width="34" height="14" rx="3" fill="#374151"/>
+        <rect x="0" y="10" width="16" height="8" rx="2" fill="#4b5563"/>
+        <rect x="34" y="10" width="16" height="8" rx="2" fill="#4b5563"/>
+        <rect x="22" y="0" width="6" height="16" rx="2" fill="#6b7280"/>
+      </svg>
+    </div>
+    <div class="lab-bench left"><div class="bench-top"></div></div>
+    <div class="lab-bench right"><div class="bench-top"></div></div>
+  </div>
+  <div class="lab-floor"></div>
+</div>
+<div id="particles"></div>
+<div class="scene-prop-left" aria-hidden="true">
+  <svg width="110" height="200" viewBox="0 0 110 200" style="animation:propSway 5s ease-in-out infinite">
+    <!-- Tool rack with saw - workshop / syllable theme -->
+    <!-- Back panel (pegboard) -->
+    <rect x="10" y="20" width="90" height="150" rx="6" fill="#4a3510" opacity=".9"/>
+    <!-- Pegboard holes pattern -->
+    <circle cx="22" cy="32" r="2" fill="rgba(0,0,0,.3)"/><circle cx="32" cy="32" r="2" fill="rgba(0,0,0,.3)"/>
+    <circle cx="42" cy="32" r="2" fill="rgba(0,0,0,.3)"/><circle cx="52" cy="32" r="2" fill="rgba(0,0,0,.3)"/>
+    <circle cx="62" cy="32" r="2" fill="rgba(0,0,0,.3)"/><circle cx="72" cy="32" r="2" fill="rgba(0,0,0,.3)"/>
+    <circle cx="82" cy="32" r="2" fill="rgba(0,0,0,.3)"/><circle cx="92" cy="32" r="2" fill="rgba(0,0,0,.3)"/>
+    <circle cx="22" cy="44" r="2" fill="rgba(0,0,0,.3)"/><circle cx="92" cy="44" r="2" fill="rgba(0,0,0,.3)"/>
+    <!-- Hand saw hung on rack -->
+    <rect x="22" y="52" width="70" height="12" rx="4" fill="#7c4a1a"/>
+    <rect x="26" y="48" width="62" height="8" rx="3" fill="#c4a35a"/>
+    <!-- Saw teeth -->
+    <path d="M26 56 L30 62 L34 56 L38 62 L42 56 L46 62 L50 56 L54 62 L58 56 L62 62 L66 56 L70 62 L74 56 L78 62 L82 56 L86 62 L88 56" stroke="#8b7030" stroke-width="1.5" fill="none"/>
+    <!-- Hammer hung on rack -->
+    <rect x="38" y="80" width="8" height="60" rx="4" fill="#6b4c2a"/>
+    <rect x="22" y="78" width="40" height="16" rx="4" fill="#4a3510"/>
+    <rect x="24" y="80" width="36" height="12" rx="3" fill="#374151"/>
+    <!-- Tape measure -->
+    <circle cx="75" cy="110" r="14" fill="#d97706" stroke="#92400e" stroke-width="2"/>
+    <circle cx="75" cy="110" r="8" fill="#b45309"/>
+    <path d="M75 96 L75 90" stroke="#f59e0b" stroke-width="3"/>
+    <rect x="73" y="86" width="4" height="8" rx="2" fill="#fbbf24"/>
+    <!-- Level tool -->
+    <rect x="16" y="148" width="78" height="12" rx="6" fill="#6b7280" stroke="#4b5563" stroke-width="1.5"/>
+    <circle cx="55" cy="154" r="5" fill="rgba(100,220,100,.4)" stroke="#4b5563" stroke-width="1"/>
+    <circle cx="55" cy="154" r="2" fill="#4ade80" style="animation:propPulse 2s ease-in-out infinite"/>
+    <!-- Base shelf -->
+    <rect x="6" y="170" width="98" height="10" rx="5" fill="#3d2a10"/>
+    <rect x="6" y="180" width="98" height="6" rx="3" fill="#2d1f08"/>
+  </svg>
+</div>
+<div class="scientist-stage"><div id="petCharWrap" class="pet-idle"></div><div id="sciCharWrap"></div></div>
+
+<header class="header wl-game-header" role="banner">
+  <div class="headerInner">
+    <div class="brand">
+      <div class="brandIcon">✂️</div>
+      <div>
+        <h1>Syllable Splitter</h1>
+        <span class="sub">Word Labs · Syllable Splitter</span>
+      </div>
+    </div>
+    <div class="hud" role="navigation" aria-label="Game controls">
+      <span class="pill score" id="scoreDisplay" aria-live="polite">Score: 0</span>
+      <span class="pill streak" id="streakDisplay" aria-live="polite">🔥 0 streak</span>
+      <span id="wlPillSlot"></span>
+      <button id="wlLoginBtn" onclick="wlShowLogin()" style="border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);font-weight:800;font-size:11px;padding:7px 13px;border-radius:10px;cursor:pointer;font-family:'Lexend',sans-serif;white-space:nowrap;flex-shrink:0;">👤 Log in</button>
+      <a href="landing.html" title="Home" class="topBtn">🏠 <span class="topBtnLabel">Home</span></a>
+      <a href="scientist.html" title="My Scientist" class="topBtn" style="background:var(--indigo-2);">🧬 <span class="topBtnLabel">My Scientist</span></a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap" id="main-content" role="main">
+  <div class="mainGrid">
+
+    <!-- Left: Game panel -->
+    <div class="panel">
+      <div class="panelInner">
+
+        <!-- Start screen -->
+        <div id="startScreen" class="startScreen">
+          <div class="startIcon">✂️</div>
+          <div class="startTitle">Syllable Splitter</div>
+          <div class="startSub">Click between letters to chop words into syllables.</div>
+          <div class="diffRow" style="justify-content:center; margin-bottom:28px;">
+            <button class="diffBtn active" data-diff="0" onclick="setDiff(0)">Mixed</button>
+            <button class="diffBtn" data-diff="1" onclick="setDiff(1)">2 syllables</button>
+            <button class="diffBtn" data-diff="2" onclick="setDiff(2)">3 syllables</button>
+            <button class="diffBtn" data-diff="3" onclick="setDiff(3)">4+ syllables</button>
+          </div>
+          <div id="roundPickerWrap" style="margin:16px 0 8px;text-align:center;">
+            <div style="font-size:11px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;">Words this round</div>
+            <div class="round-picker" id="roundPicker">
+              <button class="round-btn" data-count="10" onclick="setRoundCount(10,this)">10</button>
+              <button class="round-btn active" data-count="15" onclick="setRoundCount(15,this)">15</button>
+              <button class="round-btn" data-count="20" onclick="setRoundCount(20,this)">20</button>
+              <button class="round-btn" data-count="25" onclick="setRoundCount(25,this)">25</button>
+              <button class="round-btn" data-count="30" onclick="setRoundCount(30,this)">30</button>
+            </div>
+          </div>
+          <button class="startBtn" onclick="startGame()">Start Chopping!</button>
+        </div>
+
+        <!-- Game screen -->
+        <div id="gameScreen" class="hidden">
+          <div class="wlProgressBar" id="roundProgress" hidden><div class="wlProgressBar-fill" id="roundProgressFill"></div></div>
+          <div class="diffRow" id="diffRow">
+            <button class="diffBtn active" data-diff="0" onclick="setDiff(0)">Mixed</button>
+            <button class="diffBtn" data-diff="1" onclick="setDiff(1)">2 syllables</button>
+            <button class="diffBtn" data-diff="2" onclick="setDiff(2)">3 syllables</button>
+            <button class="diffBtn" data-diff="3" onclick="setDiff(3)">4+ syllables</button>
+          </div>
+
+          <div class="gameArea">
+            <div class="wordPrompt">Tap between letters to chop the syllables</div>
+            <div style="text-align:center;margin-bottom:4px;" id="ealdSpeakRow"></div>
+            <div id="ealdDefinition" class="eald-definition" style="text-align:center;"></div>
+
+            <div class="chopContainer" id="chopContainer"></div>
+
+            <div style="text-align:center;">
+              <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.18em;color:var(--muted);margin-bottom:10px;">Your syllables</div>
+              <div class="syllablePreview" id="syllablePreview">
+                <span style="color:var(--muted);font-size:14px;font-weight:700;">Make a chop to see syllables</span>
+              </div>
+            </div>
+
+            <div class="feedbackBanner" id="feedbackBanner" aria-live="assertive"></div>
+            <div id="ealdTranslation" aria-live="polite"></div>
+
+            <div class="actionRow">
+              <button class="clearBtn" onclick="clearChops()">Clear chops</button>
+              <button class="checkBtn" id="checkBtn">Check ✓</button>
+            </div>
+            <button class="nextBtn" id="nextBtn">Next word →</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Right: stats + history + rules -->
+    <div class="rightCol" style="display:flex;flex-direction:column;gap:16px;">
+
+      <div class="panel scorePanel">
+        <div class="panelInner">
+          <div class="panelTitle">Score</div>
+          <div class="bigNum" id="bigScore">0</div>
+          <div class="subRow">
+            <div class="subStat">
+              <div class="val" id="statCorrect">0</div>
+              <div class="lbl">Correct</div>
+            </div>
+            <div class="subStat">
+              <div class="val" id="statWrong">0</div>
+              <div class="lbl">Wrong</div>
+            </div>
+            <div class="subStat">
+              <div class="val" id="statBest">0</div>
+              <div class="lbl">Best streak</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel historyPanel">
+        <div class="panelInner">
+          <div class="panelTitle" style="margin-bottom:12px;">History</div>
+          <div class="histList" id="histList">
+            <div style="color:var(--muted);font-size:13px;">No attempts yet.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel rulesPanel">
+        <div class="panelInner">
+          <div class="panelTitle" style="margin-bottom:14px;">Syllable rules</div>
+          <div class="rule"><span class="ruleNum">1</span><span>Every syllable has one vowel sound (a, e, i, o, u).</span></div>
+          <div class="rule"><span class="ruleNum">2</span><span>Split between two consonants: <b>but·ter</b>, <b>hap·py</b>.</span></div>
+          <div class="rule"><span class="ruleNum">3</span><span>One consonant between vowels: if the first vowel is <b>long</b> it joins the next syllable (<b>o·pen</b>, <b>ti·ger</b>); if it's <b>short</b> it stays (<b>lem·on</b>, <b>cab·in</b>).</span></div>
+          <div class="rule"><span class="ruleNum">4</span><span>Prefixes and suffixes often form their own syllable: <b>re·play</b>, <b>help·ful</b>.</span></div>
+          <div class="rule"><span class="ruleNum">5</span><span>Compound words split between their two words: <b>sun·shine</b>.</span></div>
+          <div class="rule"><span class="ruleNum">6</span><span>A consonant before <b>-le</b> takes it: <b>ta·ble</b>, <b>ap·ple</b>, <b>lit·tle</b>.</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="wordlab-stage.js"></script>
+<script defer src="wordlab-data.js?v=20261023b"></script>
+<script defer src="wordlab-scientist.js?v=20261019"></script>
+<script defer src="wordlab-effects.js"></script>
+<script defer src="wordlab-worlds.js"></script>
+<script defer src="wordlab-audio.js"></script>
+<script defer src="wordlab-teacher.js"></script>
+<script defer src="wordlab-help.js"></script>
+<script defer src="wordlab-hints.js"></script>
+<script>
+// ── Word list ────────────────────────────────────────────────────────────────
+// Format: { word, syllables: ["syl","la","bles"] }
+const WORDS = [
+  // 2-syllable
+  {word:"butter", stage:"s2e",    syllables:["but","ter"]},
+  {word:"open", stage:"s2e",      syllables:["o","pen"]},
+  {word:"paper", stage:"s2e",     syllables:["pa","per"]},
+  {word:"happy", stage:"s2e",     syllables:["hap","py"]},
+  {word:"garden", stage:"s2e",    syllables:["gar","den"]},
+  {word:"pencil", stage:"s2e",    syllables:["pen","cil"]},
+  {word:"basket", stage:"s2e",    syllables:["bas","ket"]},
+  {word:"window", stage:"s2e",    syllables:["win","dow"]},
+  {word:"carpet", stage:"s2e",    syllables:["car","pet"]},
+  {word:"helmet", stage:"s2e",    syllables:["hel","met"]},
+  {word:"rabbit", stage:"s2e",    syllables:["rab","bit"]},
+  {word:"market", stage:"s2e",    syllables:["mar","ket"]},
+  {word:"parrot", stage:"s2e",    syllables:["par","rot"]},
+  {word:"mitten", stage:"s2e",    syllables:["mit","ten"]},
+  {word:"expand", stage:"s2e",    syllables:["ex","pand"]},
+  {word:"protect", stage:"s2e",   syllables:["pro","tect"]},
+  {word:"connect", stage:"s2e",   syllables:["con","nect"]},
+  {word:"perform", stage:"s2e",   syllables:["per","form"]},
+  {word:"reflect", stage:"s2e",   syllables:["re","flect"]},
+  {word:"subtract", stage:"s2e",  syllables:["sub","tract"]},
+  {word:"morning", stage:"s2e",   syllables:["morn","ing"]},
+  {word:"sunshine", stage:"s2e",  syllables:["sun","shine"]},
+  {word:"kingdom", stage:"s2e",   syllables:["king","dom"]},
+  {word:"signal", stage:"s2e",    syllables:["sig","nal"]},
+  {word:"captain", stage:"s2e",   syllables:["cap","tain"]},
+  {word:"carbon", stage:"s2e",    syllables:["car","bon"]},
+  {word:"orbit", stage:"s2e",     syllables:["or","bit"]},
+  {word:"vertex", stage:"s2e",    syllables:["ver","tex"]},
+  {word:"splendid", stage:"s2e",  syllables:["splen","did"]},
+  {word:"blanket", stage:"s2e",   syllables:["blan","ket"]},
+  // 3-syllable
+  {word:"together", stage:"s2e",  syllables:["to","geth","er"]},
+  {word:"tomorrow", stage:"s2e",  syllables:["to","mor","row"]},
+  {word:"remember", stage:"s2e",  syllables:["re","mem","ber"]},
+  {word:"consider", stage:"s2l",  syllables:["con","sid","er"]},
+  {word:"however", stage:"s2e",   syllables:["how","ev","er"]},
+  {word:"important", stage:"s2l", syllables:["im","por","tant"]},
+  {word:"wonderful", stage:"s2e", syllables:["won","der","ful"]},
+  {word:"basketball", stage:"s2e",syllables:["bas","ket","ball"]},
+  {word:"hamburger", stage:"s2e", syllables:["ham","bur","ger"]},
+  {word:"elephant", stage:"s2e",  syllables:["el","e","phant"]},
+  {word:"december", stage:"s2e",  syllables:["de","cem","ber"]},
+  {word:"umbrella", stage:"s2e",  syllables:["um","brel","la"]},
+  {word:"example", stage:"s2e",   syllables:["ex","am","ple"]},
+  {word:"computer", stage:"s2e",  syllables:["com","pu","ter"]},
+  {word:"adventure", stage:"s2l", syllables:["ad","ven","ture"]},
+  {word:"entertain", stage:"s2l", syllables:["en","ter","tain"]},
+  {word:"understand", stage:"s2l", syllables:["un","der","stand"]},
+  {word:"educate", stage:"s2l",   syllables:["ed","u","cate"]},
+  {word:"different", stage:"s2l",  syllables:["dif","fer","ent"]},
+  {word:"beautiful", stage:"s2l",  syllables:["beau","ti","ful"]},
+  {word:"fantastic", stage:"s2e",  syllables:["fan","tas","tic"]},
+  {word:"september", stage:"s2e",  syllables:["sep","tem","ber"]},
+  {word:"volcano", stage:"s2e",    syllables:["vol","ca","no"]},
+  {word:"melody", stage:"s2e",     syllables:["mel","o","dy"]},
+  {word:"calendar", stage:"s2l",   syllables:["cal","en","dar"]},
+  {word:"telescope", stage:"s2l",  syllables:["tel","e","scope"]},
+  {word:"victory", stage:"s2e",    syllables:["vic","to","ry"]},
+  {word:"syllable", stage:"s2l",   syllables:["syl","la","ble"]},
+  {word:"decimal", stage:"s2l",    syllables:["dec","i","mal"]},
+  // 4+-syllable
+  {word:"information", stage:"s2l",    syllables:["in","for","ma","tion"]},
+  {word:"communication", stage:"s3e",  syllables:["com","mu","ni","ca","tion"]},
+  {word:"education", stage:"s2l",      syllables:["ed","u","ca","tion"]},
+  {word:"organisation", stage:"s3e",   syllables:["or","gan","i","sa","tion"]},
+  {word:"investigation", stage:"s3e",  syllables:["in","ves","ti","ga","tion"]},
+  {word:"vocabulary", stage:"s3e",     syllables:["vo","cab","u","lar","y"]},
+  {word:"responsibility", stage:"s3l", syllables:["re","spon","si","bil","i","ty"]},
+  {word:"approximately", stage:"s3l",  syllables:["ap","prox","i","mate","ly"]},
+  {word:"construction", stage:"s2l",   syllables:["con","struc","tion"]},
+  {word:"understanding", stage:"s2l",  syllables:["un","der","stand","ing"]},
+  {word:"independent", stage:"s3e",    syllables:["in","de","pend","ent"]},
+  {word:"celebration", stage:"s2l",    syllables:["cel","e","bra","tion"]},
+  {word:"environment", stage:"s3e",    syllables:["en","vi","ron","ment"]},
+  {word:"international", stage:"s3e",  syllables:["in","ter","na","tion","al"]},
+  {word:"multiplication", stage:"s3e", syllables:["mul","ti","pli","ca","tion"]},
+  {word:"immediately", stage:"s3e",    syllables:["im","me","di","ate","ly"]},
+  {word:"photography", stage:"s3e",    syllables:["pho","tog","ra","phy"]},
+  {word:"electricity", stage:"s3e",    syllables:["e","lec","tric","i","ty"]},
+  {word:"democracy", stage:"s3e",      syllables:["de","moc","ra","cy"]},
+  {word:"geography", stage:"s3e",      syllables:["ge","og","ra","phy"]},
+  {word:"temperature", stage:"s3e",    syllables:["tem","per","a","ture"]},
+  {word:"caterpillar", stage:"s2l",    syllables:["cat","er","pil","lar"]},
+  {word:"discovery", stage:"s2e",      syllables:["dis","cov","er","y"]},
+
+  {word:"significant", stage:"s3l",    syllables:["sig","nif","i","cant"]},
+  {word:"hyperactive", stage:"s3l",    syllables:["hy","per","ac","tive"]},
+  {word:"extraordinary", stage:"s3l",    syllables:["ex","tra","or","di","na","ry"]},
+  {word:"unforgettable", stage:"s3l",    syllables:["un","for","get","ta","ble"]},
+  {word:"misunderstanding", stage:"s3l",    syllables:["mis","un","der","stand","ing"]},
+  {word:"universal", stage:"s3l",    syllables:["u","ni","ver","sal"]},
+  {word:"degradation", stage:"s3l",    syllables:["deg","ra","da","tion"]},
+  {word:"communicative", stage:"s3l",    syllables:["com","mu","ni","ca","tive"]},
+  {word:"magazine", stage:"s3l",    syllables:["mag","a","zine"]},
+  {word:"silhouette", stage:"s3l",    syllables:["sil","hou","ette"]},
+  {word:"elaborate", stage:"s3l",    syllables:["e","lab","o","rate"]},
+  {word:"catastrophe", stage:"s3l",    syllables:["ca","tas","tro","phe"]},
+  {word:"apparatus", stage:"s3l",    syllables:["ap","pa","ra","tus"]},
+  {word:"avalanche", stage:"s3l",    syllables:["av","a","lanche"]},
+  {word:"calamity", stage:"s3l",    syllables:["ca","lam","i","ty"]},
+  {word:"plateau", stage:"s4",    syllables:["pla","teau"]},
+  {word:"bureau", stage:"s4",    syllables:["bu","reau"]},
+  {word:"boulevard", stage:"s4",    syllables:["bou","le","vard"]},
+  {word:"aesthetic", stage:"s4",    syllables:["aes","thet","ic"]},
+  {word:"guerrilla", stage:"s4",    syllables:["guer","ril","la"]},
+  {word:"memoir", stage:"s4",    syllables:["mem","oir"]},
+  {word:"manoeuvre", stage:"s4",    syllables:["ma","noeu","vre"]},
+  {word:"rendezvous", stage:"s4",    syllables:["ren","dez","vous"]},
+  {word:"rheumatism", stage:"s4",    syllables:["rheu","ma","tism"]},
+  {word:"reconnoitre", stage:"s4",    syllables:["re","con","noi","tre"]},
+
+  {word:"subtle", stage:"s3l",    syllables:["sub","tle"]},
+  {word:"genre", stage:"s3l",    syllables:["gen","re"]},
+  {word:"chaos", stage:"s3l",    syllables:["cha","os"]},
+  {word:"naive", stage:"s3l",    syllables:["na","ive"]},
+  {word:"depot", stage:"s3l",    syllables:["de","pot"]},
+  {word:"chalet", stage:"s3l",    syllables:["cha","let"]},
+  {word:"debris", stage:"s3l",    syllables:["de","bris"]},
+  {word:"cliché", stage:"s3l",    syllables:["cli","ché"]},
+  {word:"ballet", stage:"s3l",    syllables:["bal","let"]},
+  {word:"bouquet", stage:"s3l",    syllables:["bou","quet"]},
+  {word:"buffet", stage:"s3l",    syllables:["buf","fet"]},
+  {word:"crochet", stage:"s3l",    syllables:["cro","chet"]},
+  {word:"ricochet", stage:"s3l",    syllables:["ric","o","chet"]},
+  {word:"vague", stage:"s3l",    syllables:["vague"]},
+  {word:"queue", stage:"s3l",    syllables:["queue"]},
+  {word:"opaque", stage:"s3l",    syllables:["o","paque"]},
+  {word:"unique", stage:"s3l",    syllables:["u","nique"]},
+  {word:"antique", stage:"s3l",    syllables:["an","tique"]},
+  {word:"physique", stage:"s3l",    syllables:["phy","sique"]},
+  {word:"brusque", stage:"s3l",    syllables:["brusque"]},
+  {word:"esquire", stage:"s3l",    syllables:["es","quire"]},
+  {word:"curriculum", stage:"s3l",    syllables:["cur","ric","u","lum"]},
+  {word:"phenomenon", stage:"s3l",    syllables:["phe","nom","e","non"]},
+  {word:"hypothesis", stage:"s3l",    syllables:["hy","poth","e","sis"]},
+  {word:"trajectory", stage:"s3l",    syllables:["tra","jec","to","ry"]},
+  {word:"apocalypse", stage:"s3l",    syllables:["a","poc","a","lypse"]},
+  {word:"melancholy", stage:"s3l",    syllables:["mel","an","chol","y"]},
+  {word:"philanthropy", stage:"s3l",    syllables:["phi","lan","thro","py"]},
+  {word:"renaissance", stage:"s3l",    syllables:["ren","ais","sance"]},
+  {word:"bureaucracy", stage:"s3l",    syllables:["bu","reauc","ra","cy"]},
+  {word:"circumference", stage:"s4",    syllables:["cir","cum","fer","ence"]},
+  {word:"psychology", stage:"s4",    syllables:["psy","chol","o","gy"]},
+  {word:"archaeology", stage:"s4",    syllables:["ar","chae","ol","o","gy"]},
+  {word:"metabolism", stage:"s3l",    syllables:["me","tab","o","lism"]},
+  {word:"omnivorous", stage:"s3l",    syllables:["om","niv","o","rous"]},
+  {word:"indigenous", stage:"s3l",    syllables:["in","dig","e","nous"]},
+  {word:"contemporary", stage:"s3l",    syllables:["con","tem","po","rar","y"]},
+  {word:"aristocracy", stage:"s3l",    syllables:["ar","is","toc","ra","cy"]},
+  {word:"choreography", stage:"s4",    syllables:["cho","re","og","ra","phy"]},
+  {word:"bibliography", stage:"s4",    syllables:["bib","li","og","ra","phy"]},
+  {word:"metamorphosis", stage:"s4",    syllables:["met","a","mor","pho","sis"]},
+  {word:"perpendicular", stage:"s4",    syllables:["per","pen","dic","u","lar"]},
+  {word:"extraterrestrial", stage:"s4",    syllables:["ex","tra","ter","res","tri","al"]},
+  {word:"electromagnetic", stage:"s4",    syllables:["e","lec","tro","mag","net","ic"]},
+  {word:"photosynthesis", stage:"s4",    syllables:["pho","to","syn","the","sis"]},
+  {word:"cardiovascular", stage:"s4",    syllables:["car","di","o","vas","cu","lar"]},
+  {word:"geomorphology", stage:"s4",    syllables:["ge","o","mor","phol","o","gy"]},
+  {word:"telecommunications", stage:"s4",    syllables:["tel","e","com","mu","ni","ca","tions"]},
+  {word:"autobiographical", stage:"s4",    syllables:["au","to","bi","o","graph","i","cal"]},
+  {word:"biodegradable", stage:"s4",    syllables:["bi","o","de","grad","a","ble"]},
+  {word:"anthropological", stage:"s4",    syllables:["an","thro","po","log","i","cal"]},
+  {word:"unconstitutional", stage:"s4",    syllables:["un","con","sti","tu","tion","al"]},
+  {word:"misrepresentation", stage:"s4",    syllables:["mis","rep","re","sen","ta","tion"]},
+  {word:"oversimplification", stage:"s4",    syllables:["o","ver","sim","pli","fi","ca","tion"]},
+  {word:"paradigm", stage:"s3l",    syllables:["par","a","digm"]},
+  {word:"archipelago", stage:"s3l",    syllables:["ar","chi","pel","a","go"]},
+  {word:"epiphany", stage:"s3l",    syllables:["e","piph","a","ny"]},
+  {word:"camaraderie", stage:"s3l",    syllables:["cam","a","ra","de","rie"]},
+  {word:"entrepreneur", stage:"s3l",    syllables:["en","tre","pre","neur"]},
+  {word:"bureaucratic", stage:"s4",    syllables:["bu","reau","crat","ic"]},
+  {word:"idiosyncratic", stage:"s4",    syllables:["id","i","o","syn","crat","ic"]},
+  {word:"onomatopoeia", stage:"s3l",    syllables:["on","o","mat","o","poe","ia"]},
+  {word:"mnemonic", stage:"s3l",    syllables:["mne","mon","ic"]},
+  {word:"conscientious", stage:"s4",    syllables:["con","sci","en","tious"]},
+];
+
+// Extension content has been migrated into the WORDS array above with s3l/s4
+// stage tags; the runtime filterByStage call further down handles the +1
+// stage semantic for extension students — no swap needed.
+
+// Load custom word lists, spelling set words, and Word of the Week.
+// Deferred so WordLabData (loaded with defer) is available.
+var _originalSylWords = WORDS.slice();
+document.addEventListener('DOMContentLoaded', async function(){
+  if (typeof WordLabData === 'undefined') return;
+  // Custom word lists for syllable mode (respects priority setting)
+  try {
+    var custom = await WordLabData.getCustomWords('syllable');
+    if (custom.length) {
+      var customWords = custom.filter(function(w) { return w.word && w.syllables && w.syllables.length > 1; })
+        .map(function(w) { return { word: w.word, syllables: w.syllables }; });
+      if (customWords.length) {
+        var priority = WordLabData.getCustomWordPriority('syllable');
+        if (priority === 'custom_only') {
+          WORDS.splice(0, WORDS.length, ...customWords);
+        } else if (priority === 'custom_first') {
+          WORDS.splice(0, WORDS.length, ...customWords, ..._originalSylWords);
+        } else {
+          customWords.forEach(function(w) { WORDS.push(w); });
+        }
+      }
+    }
+  } catch(e) { console.warn('custom word load error', e); }
+  // Spelling set words (prepended — highest priority)
+  try {
+    if (WordLabData.getSpellingSetWords) {
+      var ssWords = await WordLabData.getSpellingSetWords();
+      var ssSyllables = ssWords.filter(function(w){ return w.word && w.syllables && w.syllables.length > 0; }).map(function(w){
+        return {word:w.word, syllables:w.syllables, clue:w.clue||'', _spellingSetId:w._spellingSetId};
+      });
+      if (ssSyllables.length) WORDS.splice(0, 0, ...ssSyllables);
+    }
+  } catch(e) { console.warn('spelling set load error', e); }
+  // Word of the Week (prepended)
+  try {
+    if (WordLabData.getWordOfTheWeek) {
+      var _wotw = WordLabData.getWordOfTheWeek();
+      if (_wotw && _wotw.syllables && !WORDS.some(function(w){ return w.word === _wotw.word; })) {
+        WORDS.unshift({ word: _wotw.word, syllables: _wotw.syllables, level: 'mixed', _wotw: true });
+      }
+    }
+  } catch(e) { console.warn('WOTW load error', e); }
+  // Apply teacher word corrections
+  try { WordLabData.getWordCorrections('syllable').then(function(c){ WordLabData.applyCorrections(WORDS, c, 'word'); WordLabData.applyCorrections(_originalSylWords, c, 'word'); }); } catch(e){}
+});
+// Helper: also record spelling set progress when a spelling set word is answered
+function _ssTrack(question, correct) {
+  if (question && question._spellingSetId && typeof WordLabData !== 'undefined' && WordLabData.recordSpellingAttempt) {
+    WordLabData.recordSpellingAttempt(question._spellingSetId, question.word, correct, 0);
+  }
+}
+
+// ── Teacher mode flag ────────────────────────────────────────────────────────
+var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+var _supportMode = false;
+document.addEventListener('DOMContentLoaded', function(){ _supportMode = !!(typeof WordLabData !== 'undefined' && WordLabData.isSupportMode()); });
+
+// ── State ────────────────────────────────────────────────────────────────────
+let currentWord = null;
+let choppedGaps = new Set();
+let score = 0;
+let streak = 0;
+let bestStreak = 0;
+let correct = 0;
+let wrong = 0;
+let currentDiff = 0; // 0=mixed, 1=2-syl, 2=3-syl, 3=4+
+let usedWords = new Set();
+let checked = false;
+let autoNextTimer = null;
+
+var _roundTotal = 15;
+var _roundAnswered = 0;
+
+function setRoundCount(n, btn) {
+  _roundTotal = n;
+  document.querySelectorAll('.round-btn').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+}
+
+function showRoundComplete() {
+  var total = correct + wrong;
+  var accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
+  var overlay = document.createElement('div');
+  overlay.id = 'roundCompleteOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(13,11,26,.95);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = '<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:40px 36px;max-width:400px;width:90%;text-align:center;">' +
+    '<div style="font-size:48px;margin-bottom:12px;">' + (accuracy >= 80 ? '🏆' : accuracy >= 60 ? '⭐' : '🔬') + '</div>' +
+    '<div style="font-size:22px;font-weight:900;color:#e0e7ff;margin-bottom:6px;">Round Complete!</div>' +
+    '<div style="font-size:14px;font-weight:600;color:#94a3b8;margin-bottom:20px;">' + _roundAnswered + ' words · ' + accuracy + '% accuracy</div>' +
+    '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">' +
+    '<button onclick="document.getElementById(\'roundCompleteOverlay\').remove();restartRound();" style="background:#4338ca;color:#fff;border:none;border-radius:14px;padding:12px 24px;font-family:Lexend,sans-serif;font-weight:800;font-size:14px;cursor:pointer;">Play Again</button>' +
+    '<a href="landing.html" style="background:rgba(255,255,255,.06);color:#94a3b8;border:2px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 24px;font-family:Lexend,sans-serif;font-weight:800;font-size:14px;cursor:pointer;text-decoration:none;">Try Another Game</a>' +
+    '</div></div>';
+  document.body.appendChild(overlay);
+}
+
+function wlUpdateRoundProgress(){var f=document.getElementById('roundProgressFill');if(!f||!_roundTotal)return;var p=Math.min(1,_roundAnswered/_roundTotal);f.style.transform='scaleX('+p+')';}
+
+function restartRound() {
+  _roundAnswered = 0;
+  wlUpdateRoundProgress();
+  var pb = document.getElementById('roundProgress');
+  if(pb && !_wltActive) pb.hidden = false;
+  score = 0; streak = 0; bestStreak = 0; correct = 0; wrong = 0;
+  usedWords.clear();
+  updateStats();
+  renderWord();
+}
+
+// ── Difficulty helpers ────────────────────────────────────────────────────────
+function setDiff(d){
+  currentDiff = d;
+  document.querySelectorAll('.diffBtn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.diff) === d);
+  });
+  usedWords.clear();
+  // Reset all state and load a fresh word immediately
+  choppedGaps.clear();
+  checked = false;
+  renderWord();
+}
+
+function getPool(){
+  let pool;
+  // Spelling set words always included regardless of difficulty filter
+  const ssWords = WORDS.filter(w => w._spellingSetId);
+  if(currentDiff === 1) pool = WORDS.filter(w => w.syllables.length === 2 || w._spellingSetId);
+  else if(currentDiff === 2) pool = WORDS.filter(w => w.syllables.length === 3 || w._spellingSetId);
+  else if(currentDiff === 3) pool = WORDS.filter(w => w.syllables.length >= 4 || w._spellingSetId);
+  else pool = WORDS;
+  pool = WordLabData.weightByStage(pool, 'syllable-splitter');
+  const fresh = pool.filter(w => !usedWords.has(w.word));
+  return fresh.length > 0 ? fresh : pool;
+}
+
+// ── Render word ───────────────────────────────────────────────────────────────
+// Fit the word on one line. Letters and chop gaps are sized from --wl-fit
+// (CSS above). If the word is too wide for the panel at full size, find
+// the largest size that fits (never above full size, and letters never
+// below 16 px, 13 px on phones). Chop gaps keep a minimum width so they stay easy to click.
+// Runs after every word, on resize and when the font finishes loading.
+function wlFitWordRow(c, letterSel){
+  if(!c || !c.firstElementChild) return;
+  c.style.overflowX = '';
+  var fits = function(f){ c.style.setProperty('--wl-fit', f.toFixed(3)); return c.scrollWidth <= c.clientWidth; };
+  if(fits(1) || c.clientWidth <= 0) return; // fits, or board not on screen yet (startGame renders again)
+  var ch = c.querySelector(letterSel);
+  var base = ch ? parseFloat(getComputedStyle(ch).fontSize) : 40;
+  var minPx = (document.documentElement.clientWidth || window.innerWidth) <= 700 ? 13 : 16; // phones get a little smaller
+  var lo = Math.min(1, Math.max(0.25, minPx / base)), hi = 1;
+  if(!fits(lo)){ c.style.overflowX = 'auto'; return; } // longest words on the smallest screens: smallest size, swipe to see the end
+  for(var k = 0; k < 8; k++){ var mid = (lo + hi) / 2; if(fits(mid)) lo = mid; else hi = mid; }
+  fits(lo);
+}
+function wlAutoFitChop(){ wlFitWordRow(document.getElementById('chopContainer'), '.letterChar'); }
+// Re-fit on resize / orientation change (debounced)
+(function(){
+  var _fitT = null;
+  window.addEventListener('resize', function(){
+    clearTimeout(_fitT);
+    _fitT = setTimeout(wlAutoFitChop, 120);
+  });
+  // Lexend may arrive after the first word is fitted with the fallback font.
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(wlAutoFitChop);
+})();
+
+function renderWord(){
+  if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
+  clearTimeout(autoNextTimer); autoNextTimer = null;
+  const pool = getPool();
+  if(!pool || pool.length === 0) return;
+  const pick = WordLabData.nextByStage(pool, 'syllable-splitter', null, currentWord) || pool[Math.floor(Math.random() * pool.length)];
+  usedWords.add(pick.word);
+  currentWord = pick;
+  choppedGaps.clear();
+  checked = false;
+  if(typeof WLHints!=='undefined') WLHints.resetHints();
+  if(typeof WordLabData!=='undefined'&&WordLabData.preloadTTS) WordLabData.preloadTTS(pick.word,'en-AU');
+  // Clear any correct-break markers from previous word
+  document.querySelectorAll('.chopGap').forEach(g => {
+    g.classList.remove('chopped','correct-break');
+    const line = g.querySelector('.chopLine');
+    if(line) line.style.background = '';
+  });
+
+  const container = document.getElementById('chopContainer');
+  container.innerHTML = '';
+
+  const letters = pick.word.split('');
+  letters.forEach((ch, i) => {
+    const block = document.createElement('div');
+    block.className = 'letterBlock';
+
+    const lc = document.createElement('span');
+    lc.className = 'letterChar';
+    lc.textContent = ch;
+    block.appendChild(lc);
+
+    if(i < letters.length - 1){
+      const gap = document.createElement('div');
+      gap.className = 'chopGap';
+      gap.dataset.pos = i;
+
+      const line = document.createElement('div');
+      line.className = 'chopLine';
+
+      const hint = document.createElement('div');
+      hint.className = 'chopHint';
+      hint.textContent = 'chop!';
+
+      gap.appendChild(line);
+      gap.appendChild(hint);
+      gap.tabIndex = 0;
+      gap.setAttribute('role', 'button');
+      gap.setAttribute('aria-pressed', 'false');
+      gap.setAttribute('aria-label', 'Chop between ' + ch + ' and ' + letters[i+1]);
+      gap.addEventListener('click', () => toggleChop(i, gap));
+      gap.addEventListener('keydown', (e) => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggleChop(i, gap); } });
+      block.appendChild(gap);
+    }
+
+    container.appendChild(block);
+  });
+
+  wlAutoFitChop();
+  updateSyllablePreview();
+  hideFeedback();
+  document.getElementById('nextBtn').classList.remove('visible');
+  document.getElementById('checkBtn').disabled = false;
+  // Support mode: show expected syllable count badge
+  var _smBadge = document.getElementById('supportSyllableCount');
+  if(_supportMode && currentWord){
+    if(!_smBadge){
+      _smBadge = document.createElement('div');
+      _smBadge.id = 'supportSyllableCount';
+      _smBadge.style.cssText = 'text-align:center;margin:6px 0 2px;font-size:12px;font-weight:800;color:#b45309;letter-spacing:.04em;';
+      var chopC = document.getElementById('chopContainer');
+      if(chopC && chopC.parentNode) chopC.parentNode.insertBefore(_smBadge, chopC);
+    }
+    _smBadge.textContent = 'This word has ' + currentWord.syllables.length + ' syllables';
+    _smBadge.style.display = '';
+  } else if(_smBadge){ _smBadge.style.display = 'none'; }
+  // EALD: speak buttons + definition on load
+  var ealdSpeakEl=document.getElementById('ealdSpeakRow');
+  var ealdDefEl=document.getElementById('ealdDefinition');
+  var ealdEl=document.getElementById('ealdTranslation');
+  if(ealdSpeakEl) ealdSpeakEl.innerHTML='';
+  if(ealdDefEl) ealdDefEl.textContent='';
+  if(ealdEl){ealdEl.innerHTML='';ealdEl.dataset.translatedWord='';ealdEl.dataset.englishWord='';}
+  if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&currentWord){
+    WordLabData.injectEALDStyles();
+    var langName=(WordLabData.EALD_LANGUAGES[WordLabData.getEALDLanguage()]||'').split(' (')[0];
+    if(ealdEl) ealdEl.dataset.englishWord=currentWord.word;
+    if(ealdSpeakEl) ealdSpeakEl.innerHTML='<button class="eald-speak-btn" onclick="WordLabData.speakInLanguage((typeof currentWord!==\'undefined\'&&currentWord)?currentWord.word:\'\',\'en-AU\')">🔊 Hear word</button>'+WordLabData.buildEALDSpeakButtons();
+    if(ealdDefEl) ealdDefEl.innerHTML='<button class="eald-def-btn" id="ealdDefBtn" onclick="this.classList.toggle(\'flipped\')"><span class="eald-def-front">🌐 Show in '+WordLabData.escapeHtml(langName)+'</span><span class="eald-def-back" id="ealdDefText">Loading...</span></button>';
+    WordLabData.getTranslations([currentWord.word],['word']).then(function(t){
+      if(t&&t[currentWord.word]){
+        var defText=document.getElementById('ealdDefText');
+        if(defText) defText.textContent='🌐 '+t[currentWord.word];
+        if(ealdEl) ealdEl.dataset.translatedWord=t[currentWord.word];
+      }
+    });
+  }
+}
+
+function toggleChop(pos, gapEl){
+  if(checked) { return; }
+  if(choppedGaps.has(pos)){
+    choppedGaps.delete(pos);
+    gapEl.classList.remove('chopped');
+  } else {
+    choppedGaps.add(pos);
+    gapEl.classList.add('chopped');
+  }
+  gapEl.setAttribute('aria-pressed', choppedGaps.has(pos) ? 'true' : 'false');
+  updateSyllablePreview();
+}
+
+function clearChops(){
+  if(checked) return; // already marked: press Next word instead
+  // Reset state
+  choppedGaps.clear();
+  checked = false;
+
+  // Clear all visual marks from gaps without rebuilding DOM
+  document.querySelectorAll('.chopGap').forEach(g => {
+    g.classList.remove('chopped');
+    const line = g.querySelector('.chopLine');
+    if(line) line.style.background = '';
+  });
+
+  hideFeedback();
+  document.getElementById('checkBtn').disabled = false;
+  document.getElementById('nextBtn').classList.remove('visible');
+  updateSyllablePreview();
+}
+
+function updateSyllablePreview(){
+  const preview = document.getElementById('syllablePreview');
+  if(choppedGaps.size === 0){
+    preview.innerHTML = '<span style="color:var(--muted);font-size:14px;font-weight:700;">Make a chop to see syllables</span>';
+    return;
+  }
+
+  const letters = currentWord.word.split('');
+  const breaks = Array.from(choppedGaps).sort((a,b) => a-b);
+  const parts = [];
+  let start = 0;
+  breaks.forEach(b => {
+    parts.push(letters.slice(start, b + 1).join(''));
+    start = b + 1;
+  });
+  parts.push(letters.slice(start).join(''));
+
+  preview.innerHTML = parts.map(p =>
+    `<span class="syllChip">${p}</span>`
+  ).join('<span style="font-size:20px;color:var(--muted);align-self:center;">·</span>');
+}
+
+// ── Check ─────────────────────────────────────────────────────────────────────
+// Explain a syllable break in student language, linked to the numbered rules in the side panel.
+// Works from the letters either side of the break, so it suits any word list (built-in, custom, spelling sets).
+var _SYL_SUFFIXES = ['ful','less','ness','ment','ing','ly','able','ible'];
+var _SYL_DIGRAPHS = ['ck','sh','th','ch','ph','ng','wh','gh','tch','dge'];
+function _sylIsVowel(word, idx){
+  var ch = word.charAt(idx);
+  if('aeiouáéíóú'.indexOf(ch) !== -1) return true;
+  if(ch === 'y'){ var nx = word.charAt(idx+1); return idx > 0 && (nx === '' || 'aeiou'.indexOf(nx) === -1); } // y is a vowel unless it starts the word or comes before a vowel
+  return false;
+}
+// Which pattern a break follows. Shared by the Why panel and the Need Advice ladder.
+function _sylBreakKind(syls, i){
+  var word = syls.join('').toLowerCase();
+  var R = syls[i+1].toLowerCase();
+  var cut = syls.slice(0, i+1).join('').length; // index of first letter after the break
+  // consonant runs either side of the break
+  var a = cut; while(a > 0 && !_sylIsVowel(word, a-1)) a--;
+  var b = cut; while(b < word.length && !_sylIsVowel(word, b)) b++;
+  var k = { leftC: word.slice(a, cut), rightC: word.slice(cut, b), R: R, L: syls[i].toLowerCase() };
+  var lastVowelLeft = k.leftC === '', firstVowelRight = k.rightC === '';
+  if(i + 1 === syls.length - 1 && /^[^aeiou]le$/.test(R)) k.kind = 'le';
+  else if(i + 1 === syls.length - 1 && _SYL_SUFFIXES.indexOf(R) !== -1) k.kind = 'suffix';
+  else if(!lastVowelLeft && !firstVowelRight) k.kind = 'between';
+  else if(lastVowelLeft && !firstVowelRight){
+    k.oneSound = k.rightC.length === 1 || _SYL_DIGRAPHS.indexOf(k.rightC) !== -1;
+    k.kind = 'open';
+  }
+  else if(!lastVowelLeft && firstVowelRight){
+    k.kind = k.leftC.length === 1 ? 'closed' : (_SYL_DIGRAPHS.indexOf(k.leftC) !== -1 ? 'closedDigraph' : 'closedRun');
+  }
+  else k.kind = 'vowels';
+  return k;
+}
+function _syllableBreakReason(syls, i){
+  var _e = WordLabData.escapeHtml;
+  var k = _sylBreakKind(syls, i);
+  var leftC = k.leftC, rightC = k.rightC, L = k.L, R = k.R;
+  var show = '<b>' + _e(syls[i]) + ' · ' + _e(syls[i+1]) + '</b>: ';
+  var tag = function(n){ return ' <span class="ruleTag">Rule ' + n + '</span>'; };
+  if(k.kind === 'le') return show + 'the consonant before <b>-le</b> (' + _e(R.charAt(0)) + ') goes with it.' + tag(6);
+  if(k.kind === 'suffix') return show + '<b>-' + _e(R) + '</b> is a suffix, so it makes its own syllable.' + tag(4);
+  if(k.kind === 'between') return show + 'the consonants <b>' + _e(leftC) + '</b> and <b>' + _e(rightC) + '</b> sit together, so the chop goes between them.' + tag(2);
+  if(k.kind === 'open') return show + 'the first syllable ends with a vowel, so <b>' + _e(rightC) + '</b>' + (rightC.length > 1 && k.oneSound ? ' (one sound)' : '') + ' starts the next syllable.' + (k.oneSound ? tag(3) : '');
+  if(k.kind === 'closed') return show + 'one consonant (<b>' + _e(leftC) + '</b>) sits between two vowels. Here it stays with the first syllable.' + tag(3);
+  if(k.kind === 'closedDigraph') return show + '<b>' + _e(leftC) + '</b> makes one sound, so it stays together with the first syllable.' + tag(3);
+  if(k.kind === 'closedRun') return show + 'the consonants <b>' + _e(leftC) + '</b> stay with the first syllable, and the next syllable starts with a vowel.';
+  return show + 'the vowels <b>' + _e(L.slice(-1)) + '</b> and <b>' + _e(R.charAt(0)) + '</b> are next to each other but make two different sounds, so each gets its own syllable.' + tag(1);
+}
+// Need Advice: 3 hints, gentlest first. None of them shows where a chop goes or
+// names letters from the word: (1) how to listen, (2) how many chops are needed
+// and how many there are now, (3) a look-for clue about ONE chop, chosen from
+// what is on screen now: an extra chop first, then the first chop still missing.
+function _sylHintLadder(){
+  if(!currentWord) return ['Say the word slowly and clap each beat.'];
+  var n = currentWord.syllables.length, need = n - 1;
+  var have = choppedGaps.size;
+  var tag = function(r){ return ' (Rule ' + r + ')'; };
+  var lines = ['Say the word slowly and clap each beat. Each beat is a syllable, and every syllable has one vowel sound.'];
+  lines.push('This word has ' + n + ' syllables, so it needs ' + need + ' chop' + (need === 1 ? '' : 's') + '. You have ' + have + ' now.');
+  var want = getCorrectBreaks();
+  var extra = Array.from(choppedGaps).some(function(g){ return want.indexOf(g) === -1; });
+  if(extra){
+    lines.push('One of your chops is not needed. Say each part out loud. Each part should be one beat with one vowel sound.');
+    return lines;
+  }
+  var miss = -1;
+  for(var i = 0; i < want.length; i++){ if(!choppedGaps.has(want[i])){ miss = i; break; } }
+  if(miss === -1){
+    lines.push('Say each part out loud. Each part should be one beat with one vowel sound. If it sounds right, press Check.');
+    return lines;
+  }
+  var k = _sylBreakKind(currentWord.syllables, miss), clue;
+  if(k.kind === 'le') clue = 'Look at the end of the word. A consonant and <b>le</b> make the last syllable together.' + tag(6);
+  else if(k.kind === 'suffix') clue = 'Look at the end of the word. Is there a suffix? A suffix makes its own syllable.' + tag(4);
+  else if(k.kind === 'between') clue = 'Look for consonants side by side between two vowel sounds. The chop goes between two of those consonants.' + tag(2);
+  else if(k.kind === 'open') clue = 'Look for a syllable that ends with a vowel. The ' + (k.rightC.length > 1 && !k.oneSound ? 'consonants' : 'consonant sound') + ' after that vowel ' + (k.rightC.length > 1 && !k.oneSound ? 'start' : 'starts') + ' the next syllable.' + (k.oneSound ? tag(3) : '');
+  else if(k.kind === 'closed') clue = 'Look for one consonant between two vowels. In this word it stays with the first syllable.' + tag(3);
+  else if(k.kind === 'closedDigraph') clue = 'Look for two letters that make one sound between two vowels. They stay in the first syllable.' + tag(3);
+  else if(k.kind === 'closedRun') clue = 'Look for a syllable that starts with a vowel. The chop goes just before that vowel.';
+  else clue = 'Look for two vowels side by side that make two different sounds. Each one gets its own syllable.' + tag(1);
+  // No extra chops reach here, so need - have is exactly how many are missing.
+  var left = need - have;
+  var lead = !have ? 'Start with one chop. ' : (left === 1 ? 'One chop is still missing. ' : (['', '', 'Two', 'Three', 'Four', 'Five', 'Six'][left] || left) + ' chops are still missing. Here is a clue for one of them. ');
+  lines.push(lead + clue);
+  return lines;
+}
+// Only explain what the student got wrong: missed chops get a reason, extra chops are named.
+function _buildWhyChops(correctBreaks, userBreaks){
+  var _e = WordLabData.escapeHtml;
+  var syls = currentWord.syllables, letters = currentWord.word.split('');
+  var items = [];
+  correctBreaks.forEach(function(pos, i){ if(userBreaks.indexOf(pos) === -1) items.push('<li>' + _syllableBreakReason(syls, i) + '</li>'); });
+  userBreaks.forEach(function(pos){ if(correctBreaks.indexOf(pos) === -1) items.push('<li>No chop between <b>' + _e(letters[pos]) + '</b> and <b>' + _e(letters[pos+1]) + '</b>. That would split up a syllable.</li>'); });
+  if(!items.length) return '';
+  return '<div class="whyChops"><div class="whyTitle">Why the chops go there</div><ul>' + items.join('') + '</ul></div>';
+}
+
+function checkAnswer(){
+  if(!currentWord || checked) return;
+  checked = true;
+
+  const correct_breaks = getCorrectBreaks();
+  const user_breaks = Array.from(choppedGaps).sort((a,b) => a-b);
+
+  const isCorrect = arraysEqual(correct_breaks, user_breaks);
+
+  const banner = document.getElementById('feedbackBanner');
+  const correctSylls = currentWord.syllables.join(' · ');
+
+  if(isCorrect){
+    if(!_wltActive){
+      const pts = 10 + (streak >= 3 ? 5 : 0);
+      score += pts;
+      streak++;
+      correct++;
+      if(streak > bestStreak) bestStreak = streak;
+    }
+
+    const _sylCat=(currentWord.syllables.length>=4?'4+':currentWord.syllables.length)+' syllables';
+    if(!_wltActive && typeof WordLabData!=='undefined'&&WordLabData.getSession()){var _wlResult=WordLabData.recordAttempt('syllable-splitter',_sylCat+':'+currentWord.word,true,0,streak);if(typeof WLScientist!=='undefined') WLScientist.react('correct',_wlResult);}
+    if(!_wltActive) _ssTrack(currentWord, true);
+    if(_wltActive && typeof WLScientist!=='undefined') WLScientist.react('correct');
+    if(!_wltActive && typeof WLAudio!=='undefined') WLAudio.correct();
+    if(!_wltActive && streak>=3&&typeof WLScientist!=='undefined') WLScientist.react('streak',{streak:streak});
+    if(!_wltActive && streak>=3&&typeof WLAudio!=='undefined') WLAudio.streak(streak);
+    if(_wltActive){
+      // Enhanced green overlay: show syllable labels above word
+      _wltShowSyllableLabels();
+      WLTeacher.onAnswer(true,"Perfect! '<b>"+WordLabData.escapeHtml(currentWord.word)+"</b>' has "+currentWord.syllables.length+" syllables: <b>"+WordLabData.escapeHtml(correctSylls)+"</b>");
+    }
+    banner.className = 'feedbackBanner correct';
+    banner.innerHTML = `✅ Perfect! <b>${WordLabData.escapeHtml(currentWord.word)}</b> = ${WordLabData.escapeHtml(correctSylls)}${!_wltActive && streak >= 3 ? ` <span style="color:var(--orange-text)">🔥 +5 streak bonus!</span>` : ''}`;
+  } else {
+    if(!_wltActive){ score = Math.max(0, score - 2); streak = 0; } wrong++;
+    if(!_wltActive && typeof WordLabData!=='undefined'&&WordLabData.getSession()){const _sylCatW=(currentWord.syllables.length>=4?'4+':currentWord.syllables.length)+' syllables';WordLabData.recordAttempt('syllable-splitter',_sylCatW+':'+currentWord.word,false,0);_ssTrack(currentWord, false);}
+    if(typeof WLScientist!=='undefined') WLScientist.react('wrong');
+    if(!_wltActive && typeof WLAudio!=='undefined') WLAudio.wrong();
+
+    // Show correct breaks on word
+    markCorrectBreaks(correct_breaks);
+    if(_wltActive){
+      // Enhanced green overlay: show syllable labels above word
+      _wltShowSyllableLabels();
+      WLTeacher.onAnswer(false,"The correct syllable split is: <b>"+WordLabData.escapeHtml(correctSylls)+"</b>. Green lines (✓) show where the chops go, red lines (✗) show chops that were not needed."+_buildWhyChops(correct_breaks, user_breaks));
+    }
+
+    banner.className = 'feedbackBanner wrong';
+    banner.innerHTML = `❌ Not quite. <b>${WordLabData.escapeHtml(currentWord.word)}</b> = ${WordLabData.escapeHtml(correctSylls)}<br><span style="font-size:12px;font-weight:700;opacity:.8;">Green lines (✓) show where the chops go. Red lines (✗) were not needed.</span>${_buildWhyChops(correct_breaks, user_breaks)}`;
+
+    document.getElementById('chopContainer').classList.add('shake');
+    setTimeout(() => document.getElementById('chopContainer').classList.remove('shake'), 400);
+  }
+
+  banner.style.display = 'block';
+  if(!_wltActive) updateStats();
+  addHistory(currentWord.word, correctSylls, isCorrect);
+  var _roundDone = false;
+  if(!_wltActive){ _roundAnswered++; wlUpdateRoundProgress(); if(_roundAnswered >= _roundTotal){ clearTimeout(autoNextTimer); autoNextTimer = null; _roundDone = true; if(isCorrect){ setTimeout(showRoundComplete, 800); return; } } }
+
+  // EALD reveal button
+  var ealdEl=document.getElementById('ealdTranslation');if(ealdEl){
+    if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&currentWord){
+      WordLabData.injectEALDStyles();
+      ealdEl.innerHTML=WordLabData.buildEALDRevealButton();
+      var cached=ealdEl.dataset.translatedWord;
+      if(cached){
+        var contentEl=document.getElementById('ealdTranslationContent');
+        if(contentEl) contentEl.innerHTML='<div class="eald-translation-pill"><span class="eald-flag">🌐</span> <b>'+WordLabData.escapeHtml(currentWord.word)+'</b> = '+WordLabData.escapeHtml(cached)+'</div>';
+      }
+    } else { ealdEl.innerHTML=''; }
+  }
+
+  var _nextBtnEl = document.getElementById('nextBtn');
+  _nextBtnEl.textContent = _roundDone ? 'See my results →' : 'Next word →';
+  _nextBtnEl.classList.add('visible');
+  document.getElementById('checkBtn').disabled = true;
+  if(_wltActive) return; // Teacher mode: wait for Next click
+  // Wrong answer: wait for the student to read the reasons and press Next word.
+  if(!isCorrect){ try{ _nextBtnEl.focus({preventScroll:true}); }catch(e){} return; }
+  var _ealdExtra=(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage())?1500:0;
+  autoNextTimer = setTimeout(nextWord, 1400+_ealdExtra);
+}
+
+function getCorrectBreaks(){
+  // Build break positions from syllables array
+  const breaks = [];
+  let pos = 0;
+  for(let i = 0; i < currentWord.syllables.length - 1; i++){
+    pos += currentWord.syllables[i].length - 1;
+    breaks.push(pos);
+    pos++;
+  }
+  return breaks;
+}
+
+function markCorrectBreaks(breaks){
+  document.querySelectorAll('.chopGap').forEach(g => {
+    const p = parseInt(g.dataset.pos);
+    const line = g.querySelector('.chopLine');
+    const hint = g.querySelector('.chopHint');
+    if(breaks.includes(p)){
+      g.classList.add('correct-break', 'marked');
+      if(hint) hint.textContent = '✓';
+    } else if(g.classList.contains('chopped')){
+      // Wrong chop: red line + ✗
+      g.classList.add('wrong-break', 'marked');
+      if(hint) hint.textContent = '✗';
+    }
+  });
+}
+
+// ── Teacher mode: enhanced green overlay with syllable labels ────────────────
+function _wltShowSyllableLabels(){
+  if(!_wltActive || !currentWord) return;
+  var syllables = currentWord.syllables;
+  var container = document.getElementById('chopContainer');
+  var letterBlocks = container.querySelectorAll('.letterBlock');
+  // Group letterBlocks by syllable boundaries
+  var letterIdx = 0;
+  for(var si = 0; si < syllables.length; si++){
+    var sylLen = syllables[si].length;
+    var startIdx = letterIdx;
+    var endIdx = letterIdx + sylLen - 1;
+    // Find the middle letterBlock for positioning
+    var midIdx = Math.floor((startIdx + endIdx) / 2);
+    var midBlock = letterBlocks[midIdx];
+    if(midBlock){
+      midBlock.style.position = 'relative';
+      var label = document.createElement('div');
+      label.className = 'wlt-correct-label';
+      label.textContent = syllables[si];
+      midBlock.appendChild(label);
+      var arrow = document.createElement('div');
+      arrow.className = 'wlt-correct-bracket';
+      midBlock.appendChild(arrow);
+    }
+    letterIdx += sylLen;
+  }
+}
+
+function arraysEqual(a, b){
+  if(a.length !== b.length) return false;
+  return a.every((v,i) => v === b[i]);
+}
+
+function hideFeedback(){
+  document.getElementById('feedbackBanner').style.display = 'none';
+  document.getElementById('feedbackBanner').className = 'feedbackBanner';
+}
+
+function nextWord(){
+  clearTimeout(autoNextTimer); autoNextTimer = null;
+  renderWord();
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+function updateStats(){
+  document.getElementById('scoreDisplay').textContent = `Score: ${score}`;
+  document.getElementById('streakDisplay').textContent = `🔥 ${streak} streak`;
+  document.getElementById('bigScore').textContent = score;
+  document.getElementById('statCorrect').textContent = correct;
+  document.getElementById('statWrong').textContent = wrong;
+  document.getElementById('statBest').textContent = bestStreak;
+}
+
+function addHistory(word, answer, isCorrect){
+  const list = document.getElementById('histList');
+  const first = list.querySelector('div[style]');
+  if(first) first.remove();
+
+  const item = document.createElement('div');
+  item.className = `histItem ${isCorrect ? 'correct' : 'wrong'}`;
+  item.innerHTML = `
+    <span class="histMark">${isCorrect ? '✅' : '❌'}</span>
+    <span class="histWord">${WordLabData.escapeHtml(word)}</span>
+    <span class="histAnswer">${WordLabData.escapeHtml(answer)}</span>
+  `;
+  list.insertBefore(item, list.firstChild);
+}
+
+// ── Start ─────────────────────────────────────────────────────────────────────
+function startGame(){
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.remove('hidden');
+  _roundAnswered = 0;
+  wlUpdateRoundProgress();
+  if(!_wltActive){ var pb = document.getElementById('roundProgress'); if(pb) pb.hidden = false; }
+  if(_wltActive){
+    WLTeacher.init({game:'syllable'}).then(function(){ renderWord(); });
+  } else {
+    renderWord();
+  }
+}
+
+// Hide round picker in teacher mode
+if(_wltActive){ var _rpw = document.getElementById('roundPickerWrap'); if(_rpw) _rpw.style.display = 'none'; }
+
+document.getElementById('checkBtn').addEventListener('click', checkAnswer);
+document.getElementById('nextBtn').addEventListener('click', function(){
+  if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
+  if(!_wltActive && _roundTotal && _roundAnswered >= _roundTotal && checked){ showRoundComplete(); return; }
+  nextWord();
+});
+
+// The shared help and hints scripts are deferred, so they only exist once the page has loaded.
+document.addEventListener('DOMContentLoaded', function(){
+if(typeof WLHelp!=='undefined') WLHelp.init({
+  game:'syllable', title:'Syllable Splitter', emoji:'✂️',
+  steps:[
+    {icon:'🎯',title:'Choose your round',desc:'Pick how many words you want to practise: 10, 15, 20, 25 or 30. You will see your results at the end.'},
+    {icon:'👀',title:'Read the word',desc:'Look at the word and say it slowly to hear the beats.'},
+    {icon:'✂️',title:'Chop the syllables',desc:'Click between letters to chop the word into syllables. Each syllable has one vowel sound. On a keyboard, press Tab to move between gaps and Enter to chop.'},
+    {icon:'🔄',title:'Undo a chop',desc:'Click a line again to remove a chop if you change your mind.'},
+    {icon:'✅',title:'Check your answer',desc:'Press Check. Green lines with a tick show where the chops go. Red lines with a cross were not needed. If you got it wrong, read why, then press Next word.'}
+  ],
+  audioText:'Choose how many words you want to practise: 10, 15, 20, 25 or 30. In Syllable Splitter, you chop words into syllables. Each syllable has one vowel sound. Click between letters to add a chop. Click a line again to undo it. Press Check to see your result. Green lines with a tick show where the chops go. Red lines with a cross were not needed. If you got it wrong, read why the chops go there, then press Next word when you are ready.'
+});
+if(typeof WLHints!=='undefined') WLHints.register({
+  getStrategyHint: function(){ return 'Clap the word out. Each clap is a syllable. Every syllable has a vowel sound.'; },
+  getLadder: function(){ return _sylHintLadder(); }
+});
+});
+</script>
+
+<script>
+(function(){var w=document.getElementById('particles');if(!w)return;var cs=['rgba(245,158,11,.3)','rgba(180,130,60,.25)','rgba(254,243,199,.2)'];for(var i=0;i<18;i++){var p=document.createElement('div');p.className='particle';p.style.cssText='left:'+(Math.random()*100)+'%;width:'+(6+Math.random()*8)+'px;height:'+(6+Math.random()*8)+'px;background:'+cs[Math.floor(Math.random()*cs.length)]+';animation-duration:'+(8+Math.random()*12)+'s;animation-delay:'+(-Math.random()*20)+'s;';w.appendChild(p);}})();
+(async function(){
+  if(typeof WLScientist==='undefined'){await new Promise(function(r){document.addEventListener('DOMContentLoaded',function(){r();},{once:true});});}
+  var w=document.getElementById('sciCharWrap');
+  if(!w||typeof WLScientist==='undefined')return;
+  function _p(svg){while(w.firstChild)w.removeChild(w.firstChild);w.appendChild(document.createRange().createContextualFragment(svg));}
+  _p(WLScientist.buildSVG({},'neutral'));
+  try{var sd=typeof WordLabData!=='undefined'?await WordLabData.getStudentData():null;if(sd&&sd.scientist)_p(WLScientist.buildSVG(sd.scientist,'neutral'));}catch(e){console.error('Scientist load failed',e);}
+})();
+</script>
+
+<script>
+
+
+// ── Word Labs login (shared) ──────────────────────────────────────
+
+
+document.addEventListener('DOMContentLoaded', async function() {
+  // Daily limit check
+  if(typeof WordLabData !== 'undefined' && WordLabData.getSession()){
+    try {
+      const limit = await WordLabData.checkDailyLimit();
+      if(limit && limit.blocked){
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(13,11,26,.92);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = '<div style="background:#1a1630;border:2px solid #4338ca;border-radius:24px;padding:40px;max-width:440px;text-align:center;color:#e0e7ff;font-family:Lexend,sans-serif;"><div style="font-size:48px;margin-bottom:16px;">🧪</div><h2 style="font-size:22px;font-weight:900;margin-bottom:12px;">Daily limit reached</h2><p style="color:#94a3b8;font-size:14px;margin-bottom:24px;">You\\\'ve completed 30 questions today on the free plan. Come back tomorrow or ask your teacher about upgrading.</p><a href="landing.html" style="background:#4338ca;color:#fff;padding:12px 24px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px;">Back to Home</a></div>';
+        document.body.appendChild(overlay);
+        return;
+      }
+    } catch(e) { console.warn('Daily limit check failed', e); }
+  }
+
+  if (typeof WordLabData === 'undefined') return;
+  WordLabData.initLoginUI({
+    accentColor: '#4338ca',
+    accentSoft:  '#eef2ff',
+    accentLine:  '#c7d2fe',
+    accentText:  '#312e81',
+    onLogin: function() { location.reload(); }
+  });
+  var session = WordLabData.getSession();
+  var btn = document.getElementById('wlLoginBtn');
+  if (btn) {
+    btn.onclick = function() { wlShowLogin(); };
+    if (session) btn.textContent = '👤 ' + session.studentName;
+  }
+  if(typeof WordLabData !== 'undefined' && WordLabData.isExtensionMode && WordLabData.isExtensionMode('syllable-splitter')){
+    var extPill = document.createElement('div');
+    extPill.style.cssText = 'background:#4338ca;color:#e0e7ff;font-size:10px;font-weight:900;padding:4px 10px;border-radius:20px;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;';
+    extPill.textContent = '🔬 Extension';
+    var hud = document.querySelector('.hud, .headerInner, header .innerHud');
+    if(hud) hud.appendChild(extPill);
+  }
+});
+</script>
+
+<footer style="text-align:center;padding:12px 16px;font-size:11px;color:#64748b;border-top:1px solid #e2e8f0;margin-top:auto;font-family:Lexend,sans-serif;">&#129514; Word Labs &middot; <a href="about.html" style="color:#64748b;">About</a> &middot; <a href="privacy.html" style="color:#64748b;">Privacy Policy</a> &middot; <a href="terms.html" style="color:#64748b;">Terms of Service</a> &middot; <a href="mailto:nick@wordlabs.app" style="color:#64748b;">Contact</a></footer>
+</body>
+</html>

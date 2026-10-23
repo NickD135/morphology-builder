@@ -1,0 +1,1685 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Labs – Homophone Hunter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="wordlab-common.css">
+  <style>
+    :root{
+      --accent:#9d174d; --accent-rgb:157,23,77; --header-rgb:12,8,20;
+      --rose:#9d174d; --rose-2:#be185d; --rose-soft:#fdf2f8; --rose-line:#f9a8d4; --rose-text:#831843;
+      --indigo:#4338ca; --indigo-2:#6366f1;
+      --ok:#15803d; --warn:#b45309; --bad:#dc2626;
+      --green-soft:#f0fdf4; --green-line:#bbf7d0; --green-text:#166534;
+      --orange-soft:#fff7ed; --orange-line:#fed7aa; --orange-text:#9a3412;
+      --line:#e2e8f0; --muted:#64748b; --text:#0f172a;
+    }
+    html,body{ margin:0; width:100%; height:100%; overflow:hidden; font-family:'Lexend',sans-serif; color:#e0e7ff; }
+
+    /* ── Signal Interception Lab Scene ── */
+    .lab-scene{ position:fixed; inset:0; z-index:0; display:flex; flex-direction:column; pointer-events:none; }
+    .lab-wall{
+      flex:0 0 62%; background:#0c0a14; position:relative; overflow:hidden;
+    }
+    .lab-wall::before{
+      content:''; position:absolute; inset:0;
+      background:
+        repeating-linear-gradient(0deg, transparent 0, transparent 39px, rgba(157,23,77,.06) 40px),
+        repeating-linear-gradient(90deg, transparent 0, transparent 39px, rgba(157,23,77,.06) 40px);
+    }
+    .lab-wall::after{
+      content:''; position:absolute; inset:0;
+      background:
+        radial-gradient(ellipse 60% 40% at 50% 100%, rgba(157,23,77,.06) 0%, transparent 70%),
+        radial-gradient(circle 2px at 15% 25%, rgba(244,114,182,.5) 0%, transparent 2px),
+        radial-gradient(circle 2px at 85% 40%, rgba(244,114,182,.4) 0%, transparent 2px),
+        radial-gradient(circle 1.5px at 40% 65%, rgba(244,114,182,.6) 0%, transparent 2px),
+        radial-gradient(circle 1.5px at 70% 20%, rgba(244,114,182,.5) 0%, transparent 2px);
+    }
+    .lab-floor{
+      flex:0 0 38%; position:relative; border-top:3px solid rgba(157,23,77,.3);
+      background:repeating-linear-gradient(90deg, #0e0b18 0px, #0e0b18 48px, #100d1c 48px, #100d1c 96px);
+    }
+
+    /* Wall monitors */
+    .wall-mon{ position:absolute; background:#060810; border:2px solid rgba(157,23,77,.5); border-radius:6px; padding:8px 12px; box-shadow:0 0 12px rgba(157,23,77,.2), inset 0 0 20px rgba(0,0,0,.5); }
+    .wall-mon-left{ left:18px; top:14%; width:110px; }
+    .wall-mon-right{ right:18px; top:14%; width:110px; }
+    .mon-label{ font-size:7px; font-weight:900; letter-spacing:.2em; color:#f472b6; text-transform:uppercase; margin-bottom:4px; }
+    .mon-wave{ width:100%; height:28px; overflow:hidden; }
+    .mon-wave svg{ width:100%; height:100%; }
+    @keyframes waveShift{ from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+    /* Overhead signal dish */
+    .sig-dish{ position:absolute; top:0; left:50%; transform:translateX(-50%); text-align:center; }
+    .sig-wire{ width:2px; height:24px; background:rgba(244,114,182,.4); margin:0 auto; }
+    .sig-icon{ font-size:28px; filter:drop-shadow(0 0 8px rgba(244,114,182,.6)); animation:dishPulse 3s ease-in-out infinite; }
+    @keyframes dishPulse{ 0%,100%{filter:drop-shadow(0 0 6px rgba(244,114,182,.4))} 50%{filter:drop-shadow(0 0 14px rgba(244,114,182,.8))} }
+
+    /* Antenna pillars */
+    .antenna-left{ position:absolute; left:6px; top:30%; width:12px; height:90px; background:linear-gradient(180deg,#9d174d,#4a044e); border-radius:0 4px 4px 0; box-shadow:3px 0 12px rgba(157,23,77,.3); }
+    .antenna-right{ position:absolute; right:6px; top:30%; width:12px; height:90px; background:linear-gradient(180deg,#4a044e,#9d174d); border-radius:4px 0 0 4px; box-shadow:-3px 0 12px rgba(157,23,77,.3); }
+
+    /* Particles */
+    #particles{ position:fixed; inset:0; pointer-events:none; z-index:1; overflow:hidden; }
+    .particle{ position:absolute; bottom:-10px; border-radius:50%; animation:pFloat linear infinite; }
+    @keyframes pFloat{ from{transform:translateY(0);opacity:.7} to{transform:translateY(calc(-100vh - 20px));opacity:0} }
+
+    /* ── Header ── */
+    .header{ position:fixed; top:0; left:0; right:0; z-index:50; background:rgba(var(--header-rgb),.75); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border-bottom:1px solid rgba(255,255,255,.1); padding:0; }
+    .headerInner{ padding:0 20px; height:56px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; max-width:none; }
+    .brand{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+    .brandIcon{ width:36px; height:36px; border-radius:10px; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:0 8px 16px rgba(0,0,0,.15); flex:0 0 auto; }
+    .brandText h1{ margin:0; font-size:15px; font-weight:900; letter-spacing:-.02em; color:#f1f5f9; }
+    .brandText .sub{ font-size:9px; text-transform:uppercase; letter-spacing:.22em; color:rgba(255,255,255,.6); font-weight:800; display:block; margin-top:2px; }
+    .hud{ display:flex; gap:8px; align-items:center; flex-wrap:nowrap; overflow-x:auto; margin-left:auto; }
+    .hud::-webkit-scrollbar{ display:none; }
+    .pill{ display:inline-flex; align-items:center; padding:5px 12px; border-radius:999px; font-size:12px; font-weight:800; white-space:nowrap; flex-shrink:0; }
+    .pill.score{ background:rgba(var(--accent-rgb),.65); color:#fff; }
+    .pill.streak{ background:rgba(255,237,213,.12); color:#fed7aa; border:1px solid rgba(251,146,60,.25); }
+    .topBtn{ padding:7px 13px; border-radius:10px; font-size:11px; font-weight:800; text-decoration:none; transition:all .15s; border:none; cursor:pointer; font-family:'Lexend',sans-serif; white-space:nowrap; flex-shrink:0; background:rgba(255,255,255,.08); color:#94a3b8; border:1px solid rgba(255,255,255,.1); }
+    .topBtn:hover{ background:rgba(255,255,255,.15); color:#e0e7ff; }
+
+    /* ── Scientist Stage ── */
+    .scientist-stage{
+      position:fixed; right:0; width:calc((100vw - 75vw)/2); top:56px; bottom:0; z-index:11;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+    }
+    #sciCharWrap{ width:120px; height:150px; display:flex; align-items:flex-end; justify-content:center; animation:sciIdle 3s ease-in-out infinite; }
+    #sciCharWrap.sci-correct{ animation:sciJump .6s ease-out; }
+    #sciCharWrap.sci-wrong{ animation:sciShake .5s ease-out; }
+    #sciCharWrap.sci-streak{ animation:sciDance .8s ease-in-out infinite; }
+    @keyframes sciIdle{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+    @keyframes sciJump{ 0%{transform:translateY(0)} 30%{transform:translateY(-22px)} 100%{transform:translateY(0)} }
+    @keyframes sciShake{ 0%,100%{transform:rotate(0)} 20%{transform:rotate(-4deg) translateX(-4px)} 40%{transform:rotate(4deg) translateX(4px)} 60%{transform:rotate(-3deg)} 80%{transform:rotate(2deg)} }
+    @keyframes sciDance{ 0%,100%{transform:rotate(-6deg)} 50%{transform:rotate(6deg)} }
+    @media(max-width:900px){ .scientist-stage{ display:none; } }
+
+    /* ── Game Zone ── */
+    .game-zone{
+      position:fixed; top:56px; left:50%; transform:translateX(-50%);
+      width:75vw; bottom:8px; z-index:10;
+      display:flex; flex-direction:column; gap:8px;
+      overflow-y:auto; padding:8px 0;
+    }
+    .game-zone::-webkit-scrollbar{ width:0; }
+
+    /* Fuel bar */
+    .fuel-pill{
+      background:rgba(255,255,255,.06); backdrop-filter:blur(6px); border-radius:12px;
+      padding:6px 14px; border:1px solid rgba(255,255,255,.1); flex:0 0 auto;
+    }
+    .fuel-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:11px; font-weight:800; color:#f9a8d4; }
+    .fuel-track{ width:100%; height:8px; background:rgba(0,0,0,.3); border-radius:999px; overflow:hidden; }
+    .fuel-fill{ height:100%; width:100%; background:linear-gradient(90deg,#dc2626 0%,#f472b6 50%,#4ade80 100%); transition:width .2s; border-radius:999px; }
+
+    /* Game panel */
+    .game-panel{
+      flex:1 1 auto; background:rgba(15,10,30,.75); backdrop-filter:blur(8px);
+      border:2px solid rgba(157,23,77,.25); border-radius:20px; padding:20px;
+      box-shadow:0 8px 32px rgba(0,0,0,.4); overflow-y:auto; min-height:0;
+    }
+
+    /* Setup screen */
+    .setup-title{ text-align:center; font-size:22px; font-weight:900; color:#fce7f3; margin-bottom:4px; }
+    .setup-sub{ text-align:center; font-size:12px; color:#f9a8d4; font-weight:600; margin-bottom:14px; line-height:1.6; }
+    .rules-box{ background:rgba(157,23,77,.1); border:1px solid rgba(157,23,77,.25); border-radius:14px; padding:12px 16px; margin-bottom:14px; font-size:11px; font-weight:600; color:#f9a8d4; line-height:1.6; }
+    .rules-box strong{ color:#fce7f3; }
+    .mode-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:14px; }
+    @media(max-width:600px){ .mode-grid{ grid-template-columns:1fr; } }
+    .mode-card{ border:2px solid rgba(157,23,77,.3); border-radius:14px; padding:12px; cursor:pointer; transition:all .15s; text-align:center; background:rgba(157,23,77,.05); }
+    .mode-card:hover{ border-color:rgba(157,23,77,.6); background:rgba(157,23,77,.12); }
+    .mode-card.active{ border-color:#f472b6; background:rgba(157,23,77,.2); box-shadow:0 0 16px rgba(244,114,182,.15); }
+    .mode-emoji{ font-size:26px; margin-bottom:4px; }
+    .mode-name{ font-size:13px; font-weight:900; color:#fce7f3; margin-bottom:3px; }
+    .mode-desc{ font-size:10px; font-weight:600; color:#f9a8d4; line-height:1.4; }
+    .start-btn{
+      border:none; background:var(--rose); color:#fff; font-weight:900; font-size:14px;
+      letter-spacing:.08em; padding:14px 40px; border-radius:16px; cursor:pointer;
+      text-transform:uppercase; box-shadow:0 10px 24px rgba(157,23,77,.3);
+      transition:all .15s; display:block; margin:0 auto; font-family:'Lexend',sans-serif;
+    }
+    .start-btn:hover{ background:var(--rose-2); transform:translateY(-2px); }
+
+    /* Sentence monitor */
+    .monitor-box{ background:#060810; border-radius:16px; padding:24px 22px; margin-bottom:16px; position:relative; overflow:hidden; border:1px solid rgba(157,23,77,.2); }
+    .monitor-box::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,#f472b6,transparent); }
+    .monitor-label{ font-size:9px; font-weight:900; text-transform:uppercase; letter-spacing:.2em; color:#f472b6; margin-bottom:10px; }
+    .sentence-text{ font-size:20px; font-weight:700; color:#e0e7ff; line-height:1.8; }
+    .sentence-gap{ display:inline-block; min-width:100px; border-bottom:3px dashed #f472b6; color:#f472b6; font-weight:900; font-size:20px; text-align:center; margin:0 4px; padding:0 8px; transition:all .3s; }
+    .sentence-gap.correct{ border-bottom-style:solid; color:#4ade80; border-color:#4ade80; }
+    .sentence-gap.wrong{ border-color:#ef4444; color:#ef4444; }
+
+    /* Options */
+    .options-row{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom:14px; }
+    .opt-btn{
+      border:2px solid rgba(244,114,182,.25); background:rgba(157,23,77,.08); border-radius:14px;
+      padding:14px 28px; font-size:19px; font-weight:900; color:#fce7f3; cursor:pointer;
+      transition:all .15s; min-width:110px; text-align:center; font-family:'Lexend',sans-serif;
+    }
+    .opt-btn:hover:not(:disabled){ border-color:#f472b6; background:rgba(157,23,77,.2); transform:translateY(-2px); }
+    .opt-btn.correct{ border-color:#4ade80; background:rgba(22,163,74,.15); color:#4ade80; }
+    .opt-btn.wrong{ border-color:#ef4444; background:rgba(220,38,38,.1); color:#ef4444; opacity:.6; }
+    .opt-btn:disabled{ cursor:default; transform:none; }
+
+    /* Dual monitors (Mode 2) */
+    .dual-monitors{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+    @media(max-width:550px){ .dual-monitors{ grid-template-columns:1fr; } }
+    .drop-target{ display:inline-block; min-width:90px; min-height:30px; border:2px dashed #f472b6; border-radius:8px; padding:3px 8px; vertical-align:middle; transition:all .15s; margin:0 2px; text-align:center; font-weight:900; font-size:18px; color:#f472b6; cursor:pointer; }
+    .drop-target.filled{ border-style:solid; color:#4ade80; border-color:#4ade80; }
+    .drop-target.wrong{ border-color:#ef4444; color:#ef4444; }
+    .drop-target.dragover{ background:rgba(244,114,182,.12); }
+    .drag-tiles{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom:14px; }
+    .drag-tile{
+      border:2px solid rgba(244,114,182,.3); background:rgba(157,23,77,.1); border-radius:14px;
+      padding:12px 24px; font-size:19px; font-weight:900; color:#fce7f3; cursor:grab;
+      transition:all .15s; user-select:none; font-family:'Lexend',sans-serif;
+    }
+    .drag-tile:active{ cursor:grabbing; }
+    .drag-tile.used{ opacity:.25; cursor:default; }
+    .drag-tile.selected{ border-color:#f472b6; background:rgba(157,23,77,.25); box-shadow:0 0 12px rgba(244,114,182,.2); }
+    .drag-tile.dragging{ opacity:.4; transform:scale(.95); }
+    .drag-ghost{
+      position:fixed; z-index:9999; pointer-events:none;
+      padding:12px 24px; border-radius:14px;
+      border:2px solid #f472b6; background:rgba(157,23,77,.9);
+      color:#fce7f3; font-size:19px; font-weight:900;
+      font-family:'Lexend',sans-serif;
+      box-shadow:0 8px 24px rgba(0,0,0,.5), 0 0 16px rgba(244,114,182,.3);
+      transform:translate(-50%,-50%);
+    }
+
+    /* Mode 3 paragraph */
+    .para-text{ font-size:19px; font-weight:700; color:#e0e7ff; line-height:2; }
+    .para-word{ cursor:pointer; padding:2px 4px; border-radius:5px; transition:all .15s; }
+    .para-word:hover{ background:rgba(244,114,182,.12); }
+    .para-word.wrong-word{ background:rgba(239,68,68,.15); text-decoration:underline wavy #ef4444; }
+    .para-word.fixed{ background:rgba(74,222,128,.1); color:#4ade80; text-decoration:none; }
+
+    /* Fix modal */
+    .fix-modal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:999; align-items:center; justify-content:center; }
+    .fix-modal.open{ display:flex; }
+    .fix-panel{ background:#1a1030; border:2px solid rgba(157,23,77,.3); border-radius:20px; padding:24px; max-width:420px; width:90vw; text-align:center; }
+    .fix-title{ font-size:20px; font-weight:900; color:#fce7f3; margin-bottom:6px; }
+    .fix-sub{ font-size:13px; color:#f9a8d4; font-weight:600; margin-bottom:14px; }
+
+    /* Feedback */
+    .feedback{ min-height:24px; text-align:center; font-size:18px; font-weight:900; margin-top:8px; }
+    .feedback.ok{ color:#4ade80; }
+    .feedback.bad{ color:#f87171; }
+    .sub-feedback{ min-height:16px; text-align:center; color:#f9a8d4; font-weight:700; margin-top:3px; line-height:1.5; font-size:11px; }
+    /* Why panel after a wrong answer */
+    .hhWhy{ max-width:560px; margin:10px auto 0; text-align:left; display:grid; gap:8px; }
+    .hhWhy[hidden], .hhNextRow[hidden]{ display:none; }
+    .hhWhyLine{ background:rgba(255,255,255,.06); border:2px solid rgba(255,255,255,.12); border-radius:12px; padding:9px 13px; font-size:16px; font-weight:600; line-height:1.5; color:#fce7f3; }
+    .hhWhyLine.picked{ border-color:rgba(248,113,113,.55); }
+    .hhWhyLine.answer{ border-color:rgba(74,222,128,.55); }
+    .hhWhyLine.tip{ border-color:rgba(251,191,36,.45); color:#fef3c7; }
+    .hhWhyLine b{ font-weight:900; color:#fff; }
+    .hhWhyLine .hhClue{ color:#f9a8d4; font-weight:600; }
+    .hhNextRow{ display:flex; justify-content:center; margin-top:10px; }
+    .hhNextRow .pri-btn{ font-size:14px; padding:12px 26px; min-height:44px; }
+    .opt-btn.correct::before{ content:'\2713  '; }
+    .opt-btn.wrong::before{ content:'\2717  '; }
+    .sentence-gap.fixed{ border-bottom-style:solid; color:#4ade80; border-color:#4ade80; }
+    .drop-target.fixed{ border-style:solid; color:#4ade80; border-color:#4ade80; }
+    .drop-target s{ color:#f87171; font-weight:700; font-size:.8em; margin-right:6px; }
+
+    /* Action row */
+    .action-row{ display:flex; justify-content:center; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .sec-btn{ border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.06); color:#94a3b8; font-weight:800; font-size:11px; padding:8px 14px; border-radius:10px; cursor:pointer; text-transform:uppercase; letter-spacing:.08em; transition:all .15s; font-family:'Lexend',sans-serif; }
+    .sec-btn:hover{ background:rgba(255,255,255,.12); color:#e0e7ff; }
+    .pri-btn{ border:none; background:var(--rose); color:#fff; font-weight:900; font-size:11px; padding:9px 20px; border-radius:10px; cursor:pointer; text-transform:uppercase; letter-spacing:.08em; box-shadow:0 6px 16px rgba(157,23,77,.25); transition:all .15s; font-family:'Lexend',sans-serif; }
+    .pri-btn:hover{ background:var(--rose-2); transform:translateY(-1px); }
+
+    /* Results */
+    .result-emoji{ font-size:48px; text-align:center; margin-bottom:8px; }
+    .result-title{ font-size:20px; font-weight:900; color:#fce7f3; text-align:center; margin-bottom:4px; }
+    .result-sub{ font-size:12px; color:#f9a8d4; font-weight:600; text-align:center; margin-bottom:16px; }
+    .result-stats{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:20px; }
+    .result-stat{ background:rgba(157,23,77,.12); border:1px solid rgba(157,23,77,.25); border-radius:12px; padding:10px 16px; min-width:80px; text-align:center; }
+    .result-val{ font-size:20px; font-weight:900; color:#f472b6; }
+    .result-lbl{ font-size:8px; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:#f9a8d4; margin-top:2px; }
+
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;}
+    .hidden{ display:none !important; }
+    @media(max-width:900px){
+      .game-zone{ width:calc(100vw - 16px); }
+    }
+    @media(max-width:480px){
+      .game-zone{ top:56px; bottom:0; padding:8px 0; }
+      .sentence-gap{min-width:50px!important;}
+      .opt-btn{min-width:70px!important;font-size:13px!important;padding:8px 14px!important;}
+      .setup-title{font-size:18px!important;}
+      .mode-grid{grid-template-columns:1fr!important;}
+    }
+  /* Room scenery stays still in low-stim mode and when the device asks for reduced motion */
+  .low-stim .lab-scene *, .low-stim .scene-prop-left, .low-stim .scene-prop-left *{ animation:none!important; }
+  .low-stim #particles{ display:none!important; }
+  @media (prefers-reduced-motion: reduce){
+    .lab-scene *, .scene-prop-left, .scene-prop-left *{ animation:none!important; }
+    #particles{ display:none!important; }
+  }
+  </style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<!-- ── Lab Scene ── -->
+<div class="lab-scene">
+  <div class="lab-wall">
+    <div class="sig-dish"><div class="sig-wire"></div><div class="sig-icon">📡</div></div>
+    <div class="antenna-left"></div>
+    <div class="antenna-right"></div>
+    <div class="wall-mon wall-mon-left">
+      <div class="mon-label">Signal A</div>
+      <div class="mon-wave"><svg viewBox="0 0 200 28"><g style="animation:waveShift 3s linear infinite"><polyline points="0,14 10,6 20,22 30,8 40,20 50,14 60,6 70,22 80,8 90,20 100,14 110,6 120,22 130,8 140,20 150,14 160,6 170,22 180,8 190,20 200,14" fill="none" stroke="#f472b6" stroke-width="1.5" opacity=".6"/></g></svg></div>
+    </div>
+    <div class="wall-mon wall-mon-right">
+      <div class="mon-label">Signal B</div>
+      <div class="mon-wave"><svg viewBox="0 0 200 28"><g style="animation:waveShift 4s linear infinite"><polyline points="0,14 12,4 24,24 36,10 48,18 60,14 72,4 84,24 96,10 108,18 120,14 132,4 144,24 156,10 168,18 180,14 192,4 200,14" fill="none" stroke="#f9a8d4" stroke-width="1.5" opacity=".5"/></g></svg></div>
+    </div>
+  </div>
+  <div class="lab-floor"></div>
+</div>
+<div id="particles"></div>
+
+<!-- ── Scientist ── -->
+<div class="scientist-stage"><div id="petCharWrap" class="pet-idle"></div><div id="sciCharWrap"></div></div>
+
+<!-- ── Header ── -->
+<header class="header wl-game-header" role="banner">
+  <div class="headerInner">
+    <div class="brand">
+      <div class="brandIcon">📡</div>
+      <div class="brandText"><h1>Homophone Hunter</h1><span class="sub">Signal Interception Lab</span></div>
+    </div>
+    <div class="hud" role="navigation" aria-label="Game controls">
+      <span id="wlPillSlot"></span>
+      <span class="pill streak" id="streakPill" style="display:none;" aria-live="polite">🔥 0</span>
+      <span class="pill score" id="scorePill" aria-live="polite">0 XP</span>
+      <button id="wlLoginBtn" class="topBtn" style="display:none;background:rgba(255,255,255,.08);color:#94a3b8;border:1px solid rgba(255,255,255,.1);">👤 Log in</button>
+      <a href="landing.html" title="Home" class="topBtn">🏠 <span class="topBtnLabel">Home</span></a>
+      <a href="scientist.html" title="My Scientist" class="topBtn" style="background:var(--accent);color:#fff;" aria-label="My Scientist">🧬</a>
+    </div>
+  </div>
+</header>
+
+<!-- ── Game Zone ── -->
+<div class="game-zone" id="main-content" role="main">
+  <!-- Fuel -->
+  <div class="fuel-pill" id="fuelPill" style="display:none;">
+    <div class="fuel-row"><span>📡 Signal Strength</span><span id="fuelLabel" aria-live="polite">100%</span></div>
+    <div class="fuel-track"><div class="fuel-fill" id="fuelBar"></div></div>
+  </div>
+
+  <div class="game-panel">
+    <!-- ── Setup Screen ── -->
+    <div id="setupScreen">
+      <div class="setup-title">📡 Signal Interception Lab</div>
+      <div class="setup-sub">Two words, same sound, different meaning. Intercept the signal and decode the correct spelling.</div>
+
+      <div class="rules-box">
+        <strong>How to play:</strong><br>
+        • Read the sentence carefully — context tells you which spelling is correct<br>
+        • <strong>Intercept</strong> — pick the right homophone to fill the gap<br>
+        • <strong>Decode</strong> — two sentences, two monitors — drag each word to its correct sentence<br>
+        • <strong>Transmission</strong> — find and fix the wrong homophones hidden in a paragraph<br><br>
+        <strong>Fuel:</strong> Correct answers boost your signal. Wrong answers drain it. If the signal dies, the mission ends!
+      </div>
+
+      <div class="mode-grid" role="radiogroup" aria-label="Game mode selection">
+        <div class="mode-card active" tabindex="0" role="radio" aria-checked="true" onclick="selectMode('mode1',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectMode('mode1',this);}">
+          <div class="mode-emoji">📡</div>
+          <div class="mode-name">Intercept</div>
+          <div class="mode-desc">Pick the right word to complete each sentence.</div>
+        </div>
+        <div class="mode-card" tabindex="0" role="radio" aria-checked="false" onclick="selectMode('mode2',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectMode('mode2',this);}">
+          <div class="mode-emoji">🖥️</div>
+          <div class="mode-name">Decode</div>
+          <div class="mode-desc">Two sentences — drag each word to the right monitor.</div>
+        </div>
+        <div class="mode-card" tabindex="0" role="radio" aria-checked="false" onclick="selectMode('mode3',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectMode('mode3',this);}">
+          <div class="mode-emoji">⚡</div>
+          <div class="mode-name">Transmission</div>
+          <div class="mode-desc">Find and fix the wrong homophones in a paragraph.</div>
+        </div>
+      </div>
+
+      <button class="start-btn" onclick="startGame()">Start Mission →</button>
+    </div>
+
+    <!-- ── Game Screen ── -->
+    <div id="gameScreen" class="hidden">
+      <div id="gameArea"></div>
+      <span id="ealdSpeakBtns"></span>
+      <div id="ealdDefinition" class="eald-definition"></div>
+      <div class="feedback" id="feedback" aria-live="assertive"></div>
+      <div class="sub-feedback" id="subFeedback" aria-live="polite"></div>
+      <div class="hhWhy" id="hhWhy" hidden aria-live="polite"></div>
+      <div class="hhNextRow" id="hhNextRow" hidden><button class="pri-btn" id="hhNextBtn" type="button">Next →</button></div>
+      <div id="ealdTranslation" aria-live="polite"></div>
+      <div class="action-row">
+        <button class="sec-btn" onclick="backToSetup()">← Change Mode</button>
+        <button class="sec-btn" id="hhSkipBtn" onclick="skipQuestion()">Skip →</button>
+      </div>
+    </div>
+
+    <!-- ── Results Screen ── -->
+    <div id="resultsScreen" class="hidden" id="resultsArea"></div>
+  </div>
+</div>
+
+<!-- Fix modal -->
+<div class="fix-modal" id="fixModal" role="dialog" aria-modal="true" aria-label="Choose the correct spelling">
+  <div class="fix-panel">
+    <div class="fix-title" id="fixWord"></div>
+    <div class="fix-sub">Choose the correct spelling:</div>
+    <div class="options-row" id="fixOptions"></div>
+  </div>
+</div>
+
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="wordlab-stage.js"></script>
+<script defer src="wordlab-data.js?v=20261023b"></script>
+<script defer src="wordlab-scientist.js?v=20261019"></script>
+<script defer src="wordlab-effects.js"></script>
+<script defer src="wordlab-worlds.js"></script>
+<script defer src="wordlab-audio.js"></script>
+<script defer src="wordlab-teacher.js"></script>
+<script defer src="wordlab-help.js"></script>
+<script defer src="wordlab-hints.js"></script>
+<script>
+var _supportMode = false;
+document.addEventListener('DOMContentLoaded', function(){ _supportMode = !!(typeof WordLabData !== 'undefined' && WordLabData.isSupportMode()); });
+
+// Apply teacher word corrections for homophones
+try { WordLabData.getWordCorrections('homophone').then(function(c){
+  if(!c||!c.length) return;
+  var map = {};
+  c.forEach(function(x){ map[x.word_key] = x.corrections; });
+  HOMOPHONES.forEach(function(h){
+    var key = h.group.join('/');
+    var fix = map[key];
+    if(fix) Object.keys(fix).forEach(function(k){ h[k] = fix[k]; });
+  });
+}); } catch(e){}
+
+// ══════════════════════════════════════════════════════════════
+// HOMOPHONE DATA — Standard
+// ══════════════════════════════════════════════════════════════
+const HOMOPHONES = [
+  {group:['there','their','they\'re'], stage:'s2l', explain:'there = place, their = belonging to them, they\'re = they are', sentences:[
+    {s:'I think ___ going to the park after school.', a:'they\'re', why:'Short for "they are going"'},
+    {s:'The students left ___ bags in the classroom.', a:'their', why:'The bags belong to them'},
+    {s:'Put the books over ___ on the shelf.', a:'there', why:'Refers to a place'},
+    {s:'Is ___ a canteen at your new school?', a:'there', why:'"Is there" asks if something exists'},
+    {s:'Mum says ___ always the first to arrive at netball.', a:'they\'re', why:'Short for "they are always"'},
+    {s:'The children packed ___ lunches carefully.', a:'their', why:'The lunches belong to them'},
+  ]},
+  {group:['to','too','two'], stage:'s2e', explain:'to = direction/purpose, too = also/excessively, two = the number 2', sentences:[
+    {s:'She walked ___ the shops with her mum.', a:'to', why:'Direction: walking towards'},
+    {s:'That bag is ___ heavy for me to carry.', a:'too', why:'Means more than is wanted'},
+    {s:'I have ___ brothers and one sister.', a:'two', why:'The number 2'},
+    {s:'Can I come ___?', a:'too', why:'Means "also" or "as well"'},
+    {s:'We need ___ go home before dark.', a:'to', why:'Purpose: in order to go'},
+    {s:'There are ___ slices of cake left.', a:'two', why:'The number 2'},
+  ]},
+  {group:['wear','where'], stage:'s2l', explain:'wear = put on clothing, where = a place/location', sentences:[
+    {s:'Can you tell me ___ you put my lunchbox?', a:'where', why:'Asking about a place'},
+    {s:'I need to ___ my school uniform today.', a:'wear', why:'Putting on clothing'},
+    {s:'Do you know ___ the library is?', a:'where', why:'Asking about a place'},
+    {s:'What will you ___ to the school disco?', a:'wear', why:'Choosing clothing'},
+    {s:'You must ___ a hat when you play outside in summer.', a:'wear', why:'Having a hat on'},
+    {s:'This is the beach ___ we saw the dolphins.', a:'where', why:'Tells which place'},
+  ]},
+  {group:['right','write'], stage:'s2e', explain:'right = correct or direction, write = to put words on paper', sentences:[
+    {s:'Turn ___ at the traffic lights.', a:'right', why:'A direction: opposite of left'},
+    {s:'Please ___ your name at the top of the page.', a:'write', why:'Putting words on paper'},
+    {s:'That is the ___ answer. Well done!', a:'right', why:'Means correct'},
+    {s:'I need to ___ a letter to Grandma.', a:'write', why:'Creating a letter with words'},
+    {s:'Every child has the ___ to go to school.', a:'right', why:'Something every child is allowed to have', m:'something you are allowed to do or have, like your rights'},
+    {s:'Can you ___ a story about a koala?', a:'write', why:'Putting a story into words'},
+  ]},
+  {group:['here','hear'], stage:'s2e', explain:'here = this place, hear = to listen/detect sound', sentences:[
+    {s:'Come over ___ and sit down.', a:'here', why:'Refers to this place'},
+    {s:'I can ___ the kookaburras laughing outside.', a:'hear', why:'Detecting sound with ears'},
+    {s:'Can you ___ what the teacher is saying?', a:'hear', why:'Listening to words'},
+    {s:'The treasure is buried right ___.', a:'here', why:'At this place'},
+    {s:'Please speak up. I can\'t ___ you.', a:'hear', why:'Listening with your ears'},
+    {s:'Is anyone sitting ___, or can I have this seat?', a:'here', why:'This place'},
+  ]},
+  {group:['see','sea'], stage:'s2e', explain:'see = to look/view, sea = the ocean', sentences:[
+    {s:'We went swimming in the ___ during the holidays.', a:'sea', why:'The ocean'},
+    {s:'I can ___ the mountains from my window.', a:'see', why:'To look with your eyes'},
+    {s:'The ___ was rough and the waves were huge.', a:'sea', why:'The ocean was stormy'},
+    {s:'Let me ___ if I can find your pencil case.', a:'see', why:'To check or look for'},
+    {s:'Put on your glasses so you can ___ the board.', a:'see', why:'To look with your eyes'},
+    {s:'The ___ water tasted very salty.', a:'sea', why:'Water from the ocean'},
+  ]},
+  {group:['plain','plane'], stage:'s2l', explain:'plain = simple/flat, plane = aircraft or flat surface', sentences:[
+    {s:'The ___ flew high above the clouds.', a:'plane', why:'An aircraft'},
+    {s:'She wore a ___ white shirt with no pattern.', a:'plain', why:'Simple, without decoration'},
+    {s:'We watched the ___ take off from the runway.', a:'plane', why:'An aircraft taking off'},
+    {s:'I like ___ toast with nothing on it.', a:'plain', why:'Simple, with nothing added'},
+    {s:'We caught a ___ from Sydney to Perth.', a:'plane', why:'An aircraft you travel in'},
+    {s:'The instructions were written in ___ English so everyone could understand.', a:'plain', why:'Simple and easy to understand', m:'simple and easy to understand'},
+  ]},
+  {group:['knight','night'], stage:'s2l', explain:'knight = armoured warrior, night = after sunset', sentences:[
+    {s:'The ___ wore shining armour and rode a horse.', a:'knight', why:'A warrior from long ago'},
+    {s:'The stars come out at ___.', a:'night', why:'The time after sunset'},
+    {s:'A brave ___ protected the castle from invaders.', a:'knight', why:'A warrior defending the castle'},
+    {s:'We stayed up late into the ___ reading stories.', a:'night', why:'The dark hours'},
+    {s:'The ___ knelt in front of the queen.', a:'knight', why:'A soldier who served the queen'},
+    {s:'Owls hunt for food at ___.', a:'night', why:'The dark time after sunset'},
+  ]},
+  {group:['flower','flour'], stage:'s2l', explain:'flower = a plant bloom, flour = powder for baking', sentences:[
+    {s:'She picked a beautiful ___ from the garden.', a:'flower', why:'A bloom from a plant'},
+    {s:'We need ___ to bake a cake.', a:'flour', why:'Powder used in baking'},
+    {s:'The ___ smelled lovely in the sunshine.', a:'flower', why:'A plant bloom'},
+    {s:'Sift the ___ into the mixing bowl carefully.', a:'flour', why:'A baking ingredient'},
+    {s:'A waratah is a bright red ___.', a:'flower', why:'A bloom from a plant'},
+    {s:'Dad dusted the bench with ___ before rolling the dough.', a:'flour', why:'Powder used in baking'},
+  ]},
+  {group:['weather','whether'], stage:'s3e', explain:'weather = climate conditions, whether = if (a choice)', sentences:[
+    {s:'The ___ forecast says it will rain tomorrow.', a:'weather', why:'Rain, sun and wind outside'},
+    {s:'I don\'t know ___ to bring a jumper or not.', a:'whether', why:'Showing a choice between options'},
+    {s:'The ___ has been sunny all week.', a:'weather', why:'Rain, sun and wind outside'},
+    {s:'She asked ___ we wanted pizza or pasta for dinner.', a:'whether', why:'Giving two options'},
+    {s:'We will check ___ the pool is open today.', a:'whether', why:'Means "if"'},
+    {s:'Hot, dry ___ makes bushfires more likely.', a:'weather', why:'Rain, sun and wind outside'},
+  ]},
+  {group:['mail','male'], stage:'s2l', explain:'mail = letters/parcels, male = a boy or man', sentences:[
+    {s:'The ___ arrived late this morning.', a:'mail', why:'Letters and parcels delivered'},
+    {s:'A ___ lion has a big mane around its face.', a:'male', why:'A boy lion'},
+    {s:'I sent the letter by ___ yesterday.', a:'mail', why:'The postal system'},
+    {s:'The ___ peacock has the colourful feathers.', a:'male', why:'A boy peacock'},
+    {s:'A ___ kangaroo is called a boomer.', a:'male', why:'A boy kangaroo'},
+    {s:'Check the letterbox to see if any ___ has come.', a:'mail', why:'Letters and parcels'},
+  ]},
+  {group:['sail','sale'], stage:'s2l', explain:'sail = travel by wind on water, sale = selling at reduced price', sentences:[
+    {s:'The boat raised its ___ and set off across the harbour.', a:'sail', why:'The cloth that catches the wind'},
+    {s:'Everything in the shop was on ___ at half price!', a:'sale', why:'Being sold for less money'},
+    {s:'We went for a ___ around the bay in a yacht.', a:'sail', why:'A trip on a boat with sails'},
+    {s:'The garage ___ raised over two hundred dollars.', a:'sale', why:'An event where things are sold'},
+    {s:'The wind filled the ___ and the boat sped up.', a:'sail', why:'The cloth that catches the wind'},
+    {s:'Our neighbours have put their house up for ___.', a:'sale', why:'Being sold'},
+  ]},
+  {group:['tail','tale'], stage:'s2e', explain:'tail = an animal’s tail, tale = a story', sentences:[
+    {s:'The dog wagged its ___ happily when we got home.', a:'tail', why:'The body part dogs wag'},
+    {s:'Grandad told us a ___ about growing up on a farm.', a:'tale', why:'A story'},
+    {s:'A fairy ___ often has a happy ending.', a:'tale', why:'A type of story'},
+    {s:'The cat flicked its ___ back and forth.', a:'tail', why:'The cat\'s tail'},
+    {s:'A possum can hang from a branch by its ___.', a:'tail', why:'The possum\'s tail'},
+    {s:'The old ___ was about a clever fox and a crow.', a:'tale', why:'A story'},
+  ]},
+  {group:['bare','bear'], stage:'s2l', explain:'bare = uncovered/empty, bear = the animal or to carry/endure', sentences:[
+    {s:'A grizzly ___ lives in the forest and catches salmon.', a:'bear', why:'The large furry animal'},
+    {s:'The cupboard was completely ___ with nothing inside.', a:'bare', why:'Empty, with nothing in it'},
+    {s:'He walked across the grass in ___ feet.', a:'bare', why:'Uncovered: no shoes'},
+    {s:'I couldn\'t ___ the freezing cold any longer.', a:'bear', why:'To put up with'},
+    {s:'In winter the trees were ___, with no leaves left.', a:'bare', why:'Uncovered, with nothing on them'},
+    {s:'A koala is not a real ___. It is a marsupial.', a:'bear', why:'The large furry animal'},
+  ]},
+  {group:['whole','hole'], stage:'s2l', explain:'whole = complete/entire, hole = an opening or gap', sentences:[
+    {s:'The rabbit dug a deep ___ under the fence.', a:'hole', why:'An opening in the ground'},
+    {s:'She ate the ___ pizza by herself, every slice!', a:'whole', why:'The entire thing'},
+    {s:'There was a ___ in my sock and my toe poked through.', a:'hole', why:'A gap in the fabric'},
+    {s:'The ___ class went on the excursion together.', a:'whole', why:'The entire class: everyone'},
+    {s:'The golfer hit the ball straight into the ___.', a:'hole', why:'A gap in the ground'},
+    {s:'We spent the ___ day at the beach.', a:'whole', why:'The entire day'},
+  ]},
+  {group:['peace','piece'], stage:'s2l', explain:'peace = calm/no conflict, piece = a part of something', sentences:[
+    {s:'Can I have a ___ of cake, please?', a:'piece', why:'A slice or part'},
+    {s:'After the long war, there was finally ___ in the land.', a:'peace', why:'No more fighting'},
+    {s:'She needed some ___ and quiet to finish her homework.', a:'peace', why:'Calm, without noise'},
+    {s:'A ___ of the jigsaw puzzle is missing from the box.', a:'piece', why:'One part of a larger whole'},
+    {s:'Please put each ___ of rubbish in the bin.', a:'piece', why:'One bit of something'},
+    {s:'A white dove is often used as a sign of ___.', a:'peace', why:'No fighting'},
+  ]},
+  {group:['wait','weight'], stage:'s2l', explain:'wait = stay/pause, weight = how heavy something is', sentences:[
+    {s:'Please ___ here until I come back.', a:'wait', why:'To stay in place'},
+    {s:'The ___ of the suitcase was too much for the flight.', a:'weight', why:'How heavy it is'},
+    {s:'I can\'t ___ for the holidays to start!', a:'wait', why:'To be patient until then'},
+    {s:'She checked the ___ of the parcel before posting it.', a:'weight', why:'How heavy it is'},
+    {s:'We had to ___ in a long line for the waterslide.', a:'wait', why:'To stay until it is your turn'},
+    {s:'The vet checked the puppy\'s ___ on the scales.', a:'weight', why:'How heavy it is'},
+  ]},
+  {group:['pour','paw','poor'], stage:'s2l', explain:'pour = flow liquid, paw = animal foot, poor = not wealthy or unfortunate', sentences:[
+    {s:'Can you ___ me a glass of water, please?', a:'pour', why:'To make liquid flow from a container'},
+    {s:'The dog hurt its front ___ on a sharp stone.', a:'paw', why:'An animal\'s foot'},
+    {s:'The ___ kitten was shivering in the cold rain.', a:'poor', why:'Unlucky, so we feel sorry for it'},
+    {s:'Be careful not to ___ too much milk on your cereal.', a:'pour', why:'To make liquid flow'},
+    {s:'The cat licked its ___ clean.', a:'paw', why:'An animal\'s foot'},
+    {s:'The ___ bird had hurt its wing.', a:'poor', why:'Unlucky, so we feel sorry for it'},
+  ]},
+  {group:['no','know'], stage:'s2e', explain:'no = negative, know = to understand or be aware of', sentences:[
+    {s:'Do you ___ where the scissors are?', a:'know', why:'To be aware of something'},
+    {s:'There are ___ more biscuits left in the tin.', a:'no', why:'None left at all'},
+    {s:'I ___ the answer to that maths question!', a:'know', why:'To have the answer in your head'},
+    {s:'Mum said ___ when I asked to stay up late.', a:'no', why:'The opposite of yes'},
+    {s:'Did you ___ that echidnas lay eggs?', a:'know', why:'To be aware of a fact'},
+    {s:'There was ___ one home when we knocked.', a:'no', why:'Not any: nobody'},
+  ]},
+  {group:['brake','break'], stage:'s2l', explain:'brake = to slow down, break = to snap/damage or a pause', sentences:[
+    {s:'Press the ___ pedal to stop the car safely.', a:'brake', why:'The part that slows a vehicle'},
+    {s:'Be careful not to ___ the glass ornament.', a:'break', why:'To snap or damage'},
+    {s:'We had a short ___ for morning tea.', a:'break', why:'A pause or rest time'},
+    {s:'The bike ___ wasn\'t working, so he couldn\'t stop.', a:'brake', why:'The part for stopping'},
+    {s:'Lunch ___ starts at one o\'clock.', a:'break', why:'A rest time'},
+    {s:'The train driver put on the ___ as we came into the station.', a:'brake', why:'The part that slows the train'},
+  ]},
+  {group:['son','sun'], stage:'s2e', explain:'son = male child, sun = the star in the sky', sentences:[
+    {s:'The ___ was shining brightly on the first day of summer.', a:'sun', why:'The star that gives us light'},
+    {s:'She introduced her ___ to the new teacher.', a:'son', why:'A male child'},
+    {s:'Don\'t look straight at the ___. It can hurt your eyes.', a:'sun', why:'The bright star in the sky'},
+    {s:'Their ___ scored the winning goal in the grand final.', a:'son', why:'Their male child'},
+    {s:'Always wear sunscreen when you play in the ___.', a:'sun', why:'The bright star in the sky'},
+    {s:'Mr Lee\'s ___ is in Year 2.', a:'son', why:'A male child'},
+  ]},
+  {group:['won','one'], stage:'s2e', explain:'won = past tense of win, one = the number 1', sentences:[
+    {s:'She ___ first prize in the art competition.', a:'won', why:'Past tense of "win"'},
+    {s:'There is only ___ slice of pizza left.', a:'one', why:'The number 1'},
+    {s:'Our team ___ the grand final by three points!', a:'won', why:'Past tense of "win"'},
+    {s:'Choose ___ book from the library shelf.', a:'one', why:'A single book: the number 1'},
+    {s:'Our class ___ the trophy for reading the most books.', a:'won', why:'Past tense of "win"'},
+    {s:'I can only find ___ sock. Where is the other?', a:'one', why:'The number 1'},
+  ]},
+  {group:['aloud','allowed'], stage:'s3e', explain:'aloud = out loud with voice, allowed = permitted', sentences:[
+    {s:'She read the poem ___ to the whole class.', a:'aloud', why:'Using her voice, not reading silently'},
+    {s:'We\'re not ___ to run in the corridors.', a:'allowed', why:'Not permitted: against the rules'},
+    {s:'He said his thoughts ___ without meaning to.', a:'aloud', why:'Out loud, not just thinking'},
+    {s:'Are dogs ___ in this park?', a:'allowed', why:'Are they permitted here?'},
+    {s:'Mobile phones are not ___ in class.', a:'allowed', why:'Not permitted'},
+    {s:'Read the instructions ___ so everyone can hear.', a:'aloud', why:'Out loud with your voice'},
+  ]},
+  {group:['passed','past'], stage:'s3e', explain:'passed = went by (verb), past = previous time or beyond', sentences:[
+    {s:'She ___ the ball to her teammate quickly.', a:'passed', why:'A doing word: she threw it to a teammate'},
+    {s:'In the ___, people travelled by horse and cart.', a:'past', why:'A time before now'},
+    {s:'We ___ three petrol stations on the way home.', a:'passed', why:'A doing word: we went by them'},
+    {s:'Walk ___ the post office and turn left.', a:'past', why:'Beyond: going further than'},
+    {s:'It is half ___ three.', a:'past', why:'After the hour'},
+    {s:'The bus ___ our house without stopping.', a:'passed', why:'A doing word: it went by'},
+  ]},
+];
+
+// ══════════════════════════════════════════════════════════════
+// EXTENSION HOMOPHONES — harder, academic words
+// ══════════════════════════════════════════════════════════════
+const EXT_HOMOPHONES = [
+  {group:['stationary','stationery'], stage:'s3e', explain:'stationary = not moving, stationery = pens/paper/school supplies', sentences:[
+    {s:'The car was ___ at the traffic lights, waiting for green.', a:'stationary', why:'Not moving: standing still'},
+    {s:'I need to buy some ___ for school: pens, rulers and notebooks.', a:'stationery', why:'School supplies such as pens and paper'},
+    {s:'The train was ___ at the platform for ten minutes.', a:'stationary', why:'Not moving: still at the station'},
+    {s:'The ___ cupboard has everything you need for the project.', a:'stationery', why:'The cupboard with school supplies'},
+    {s:'Keep your seatbelt on until the bus is completely ___.', a:'stationary', why:'Not moving at all'},
+    {s:'The newsagent sells ___ such as pencils and glue.', a:'stationery', why:'Writing and school supplies'},
+  ]},
+  {group:['principal','principle'], stage:'s3l', explain:'principal = the head of a school / main, principle = a rule or belief', sentences:[
+    {s:'The ___ spoke at assembly about the new uniform rules.', a:'principal', why:'The head of the school'},
+    {s:'Honesty is an important ___ to live by.', a:'principle', why:'A rule or belief about right and wrong'},
+    {s:'The ___ reason for the delay was the heavy rain.', a:'principal', why:'Means "main" or "most important"'},
+    {s:'Telling the truth is a ___ I always try to follow.', a:'principle', why:'A personal rule or belief'},
+    {s:'Our school ___ visited every classroom on the first day.', a:'principal', why:'The head of the school'},
+    {s:'Recycling is based on the ___ that we should not waste things.', a:'principle', why:'An idea or rule that guides what we do'},
+  ]},
+  {group:['affect','effect'], stage:'s3e', explain:'affect = to influence (verb), effect = a result (noun)', sentences:[
+    {s:'The rain will ___ our sports day plans.', a:'affect', why:'Verb: it will change the plans'},
+    {s:'The ___ of the medicine was quick and she felt better.', a:'effect', why:'Noun: the result of the medicine'},
+    {s:'How does lack of sleep ___ your concentration?', a:'affect', why:'Verb: how does it change it?'},
+    {s:'The sound ___ in the movie was incredible.', a:'effect', why:'Noun: a sound made for the film', m:'a special sound or picture made for a film or show (a thing)'},
+    {s:'Too much screen time can ___ how well you sleep.', a:'affect', why:'Verb: it changes your sleep'},
+    {s:'Planting trees had a good ___ on the shade in the playground.', a:'effect', why:'Noun: the result of planting trees'},
+  ]},
+  {group:['practice','practise'], stage:'s3l', explain:'practice = noun (the thing), practise = verb (the action), Australian spelling', sentences:[
+    {s:'Netball ___ is at 4pm on Wednesdays.', a:'practice', why:'Noun: the training session'},
+    {s:'You need to ___ your spelling every night before the test.', a:'practise', why:'Verb: the action of rehearsing'},
+    {s:'The doctor opened a new medical ___ in town.', a:'practice', why:'Noun: a place of business', m:'the business where a doctor or vet works (a noun)'},
+    {s:'She needs to ___ the piano piece before the concert.', a:'practise', why:'Verb: to rehearse'},
+    {s:'I ___ my times tables on the bus.', a:'practise', why:'Verb: the action of going over something'},
+    {s:'Swimming ___ starts at seven o\'clock.', a:'practice', why:'Noun: the training session'},
+  ]},
+  {group:['complement','compliment'], stage:'s3l', explain:'complement = to complete or go well with, compliment = praise', sentences:[
+    {s:'The scarf was a perfect ___ to her winter outfit.', a:'complement', why:'It went well with the outfit'},
+    {s:'She gave me a lovely ___ about my drawing in art class.', a:'compliment', why:'Kind words of praise'},
+    {s:'The yellow cushions ___ the blue couch perfectly.', a:'complement', why:'They go well with the couch'},
+    {s:'What a nice ___. Thank you for saying that!', a:'compliment', why:'A kind remark'},
+    {s:'Mint sauce is a classic ___ to roast lamb.', a:'complement', why:'Something that goes well with it'},
+    {s:'She smiled when her coach paid her a ___.', a:'compliment', why:'Kind words of praise'},
+  ]},
+  {group:['council','counsel'], stage:'s3l', explain:'council = a governing group, counsel = advice', sentences:[
+    {s:'The local ___ is responsible for collecting rubbish bins.', a:'council', why:'The local government group'},
+    {s:'The teacher gave him wise ___ about studying for exams.', a:'counsel', why:'Advice or guidance'},
+    {s:'The town ___ voted to build a new playground.', a:'council', why:'The group of elected people'},
+    {s:'She asked a lawyer for legal ___ before signing the contract.', a:'counsel', why:'Advice from an expert'},
+    {s:'Our Student Representative ___ meets every Friday.', a:'council', why:'A group that makes decisions'},
+    {s:'The wise old owl gave the young animals good ___.', a:'counsel', why:'Advice'},
+  ]},
+  {group:['cereal','serial'], stage:'s3e', explain:'cereal = breakfast grain food, serial = in a series/sequence', sentences:[
+    {s:'I had ___ and milk for breakfast.', a:'cereal', why:'The grain breakfast food'},
+    {s:'Each laptop has a ___ number printed on the back.', a:'serial', why:'A number in a sequence'},
+    {s:'What\'s your favourite kind of breakfast ___?', a:'cereal', why:'The breakfast food'},
+    {s:'The ___ podcast kept us hooked with each new episode.', a:'serial', why:'Told in a series of parts'},
+    {s:'Wheat, rice and oats are all ___ crops.', a:'cereal', why:'Grain plants'},
+    {s:'The story came out as a ___ in the magazine, one chapter each week.', a:'serial', why:'A story told in parts'},
+  ]},
+  {group:['coarse','course'], stage:'s3e', explain:'coarse = rough texture, course = path/direction or "of course"', sentences:[
+    {s:'The sandpaper felt very ___ and rough on my fingers.', a:'coarse', why:'Rough in texture'},
+    {s:'Of ___ you can come to my birthday party!', a:'course', why:'Part of "of course": certainly'},
+    {s:'The ___ wool scratched against her skin.', a:'coarse', why:'Rough, not smooth'},
+    {s:'We followed the ___ of the river downstream.', a:'course', why:'The path or direction'},
+    {s:'The golf ___ has eighteen holes.', a:'course', why:'An area laid out for a sport'},
+    {s:'Rock salt is ___, but table salt is fine.', a:'coarse', why:'Made of big, rough grains'},
+  ]},
+  {group:['altar','alter'], stage:'s3l', explain:'altar = a sacred table in a church, alter = to change', sentences:[
+    {s:'The flowers were placed on the ___ at the front of the church.', a:'altar', why:'A special table used in a church'},
+    {s:'We might need to ___ the plan because of the weather.', a:'alter', why:'To change'},
+    {s:'The bride and groom stood at the ___ during the wedding.', a:'altar', why:'The special table in a church'},
+    {s:'Can you ___ the hem of these trousers for me?', a:'alter', why:'To change clothing to fit'},
+    {s:'The church ___ was covered with a white cloth.', a:'altar', why:'The special table in a church'},
+    {s:'Floods can ___ the shape of a riverbank.', a:'alter', why:'To change'},
+  ]},
+  {group:['cite','site','sight'], stage:'s3l', explain:'cite = to reference/quote, site = a location, sight = vision/something seen', sentences:[
+    {s:'The building ___ was fenced off with safety barriers.', a:'site', why:'A place where building happens'},
+    {s:'The sunset over the ocean was a beautiful ___.', a:'sight', why:'Something you see'},
+    {s:'Remember to ___ your sources in the bibliography.', a:'cite', why:'To name where your facts came from'},
+    {s:'The camping ___ had showers and a barbecue area.', a:'site', why:'A set place for camping'},
+    {s:'Eagles have excellent ___ and can spot a mouse from far away.', a:'sight', why:'The ability to see'},
+    {s:'When you use a fact from a book, you should ___ the author.', a:'cite', why:'To name the source'},
+  ]},
+  {group:['manner','manor'], stage:'s3l', explain:'manner = way of doing something, manor = a large house', sentences:[
+    {s:'She always spoke in a polite and friendly ___.', a:'manner', why:'The way she behaved'},
+    {s:'The old ___ house had twenty rooms and a huge garden.', a:'manor', why:'A large, grand house'},
+    {s:'The nurse spoke to the nervous patient in a calm ___.', a:'manner', why:'The way she spoke'},
+    {s:'The ghost story was set in a spooky old ___ on a hill.', a:'manor', why:'A large old house'},
+    {s:'Please behave in a sensible ___ on the excursion.', a:'manner', why:'The way you act'},
+    {s:'The lord of the ___ owned all the farmland nearby.', a:'manor', why:'A large house with land'},
+  ]},
+  {group:['descent','dissent'], stage:'s4', explain:'descent = going down, dissent = disagreement', sentences:[
+    {s:'The ___ down the mountain was steep and dangerous.', a:'descent', why:'Going downward'},
+    {s:'There was strong ___ among the students about the new homework rule.', a:'dissent', why:'Disagreement'},
+    {s:'The plane began its ___ into Sydney Airport.', a:'descent', why:'Coming down to land'},
+    {s:'When the vote was taken there was no ___. Everyone agreed.', a:'dissent', why:'Disagreement'},
+    {s:'The climbers\' slow ___ took three hours.', a:'descent', why:'Climbing down'},
+    {s:'The player was warned for showing ___ to the umpire.', a:'dissent', why:'Arguing against a decision'},
+  ]},
+];
+
+// ══════════════════════════════════════════════════════════════
+// MODE 3 PARAGRAPHS
+// ══════════════════════════════════════════════════════════════
+const PARAGRAPHS = [
+  {text:'The {whether:weather} was {fare:fair} so we decided to go for a walk. We could {here:hear} the birds singing in the trees and the {son:sun} felt warm.',errors:{'whether':'weather','fare':'fair','here':'hear','son':'sun'},explains:{'whether':'weather = climate conditions','fare':'fair = pleasant/fine','here':'hear = to listen (with your ears)','son':'sun = the star in the sky'}},
+  {text:'I went to the shops to buy {flour:flour} for the cake. {Their:There} was a big {sail:sale} on and everything was half price.',errors:{'Their':'There','sail':'sale'},explains:{'Their':'There = introducing "there was" (a place)','sail':'sale = selling things for less money'}},
+  {text:'The brave {night:knight} rode his horse {threw:through} the dark forest. He had to find the missing {peace:piece} of the royal crown.',errors:{'night':'knight','threw':'through','peace':'piece'},explains:{'night':'knight = armoured warrior','threw':'through = passing from one side to another','peace':'piece = a part of something'}},
+  {text:'She didn\'t know {weather:whether} to {where:wear} her new coat. The {whether:weather} looked fine from {hear:here} but the forecast said rain.',errors:{'weather':'whether','where':'wear','whether':'weather','hear':'here'},explains:{'weather':'whether = expressing a choice','whether':'weather = rain, sun and wind outside','where':'wear = to put on clothing','hear':'here = at this place'}},
+  {text:'{Hour:Our} class went on a trip to the {see:sea}. We could {sea:see} dolphins jumping and {here:hear} the seagulls calling.',errors:{'Hour':'Our','see':'sea','sea':'see','here':'hear'},explains:{'Hour':'Our = belonging to us','see':'sea = the ocean','sea':'see = to view with eyes','here':'hear = detecting sound'}},
+  {text:'The children {road:rode} {there:their} bikes along the coastal path. They {new:knew} the {write:right} way home by following the lighthouse.',errors:{'road':'rode','there':'their','new':'knew','write':'right'},explains:{'road':'rode = past tense of ride','there':'their = belonging to them','new':'knew = past tense of know','write':'right = correct direction'}},
+  {text:'Please {weight:wait} {hear:here} while I get a {peace:piece} of cake for you. I {no:know} you\'ve been waiting a long time.',errors:{'weight':'wait','hear':'here','peace':'piece','no':'know'},explains:{'weight':'wait = to stay/pause','hear':'here = at this place','peace':'piece = a portion','no':'know = to be aware of'}},
+  {text:'He {one:won} first prize at the science {fare:fair}. His experiment showed the {affect:effect} of sunlight on plants.', errors:{'one':'won','fare':'fair','affect':'effect'}, explains:{'one':'won = past tense of win','fare':'fair = an event/exhibition','affect':'effect = a result (noun)'}},
+];
+
+const EXT_PARAGRAPHS = [
+  {text:'The school {principle:principal} announced that {stationary:stationery} costs would have an {affect:effect} on the budget. Of {coarse:course}, this caused some {descent:dissent} among parents.',errors:{'principle':'principal','stationary':'stationery','affect':'effect','coarse':'course','descent':'dissent'},explains:{'principle':'principal = head of school','stationary':'stationery = school supplies','affect':'effect = result (noun)','coarse':'course = "of course"','descent':'dissent = disagreement'}},
+  {text:'She needed to {practise:practise} before the concert, but the {coarse:coarse} sound from the old instrument was hard to {bare:bear}. A kind {complement:compliment} from her teacher helped her confidence.',errors:{'coarse':'coarse','bare':'bear','complement':'compliment'},explains:{'bare':'bear = to endure','complement':'compliment = kind words of praise'}, means:{'coarse':'rough and harsh to hear'}},
+];
+
+// ══════════════════════════════════════════════════════════════
+// GAME STATE
+// ══════════════════════════════════════════════════════════════
+let selectedMode = 'mode1';
+let questions = [];
+let currentQ = 0;
+let score = 0;
+let streak = 0;
+let bestStreak = 0;
+let totalCorrect = 0;
+let totalAttempts = 0;
+let fuel = 100;
+let fuelInterval = null;
+let buttonsLocked = false;
+let questionStart = 0;
+let isExt = false;
+
+var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+
+const feedbackEl  = document.getElementById('feedback');
+const subFeedEl   = document.getElementById('subFeedback');
+const scorePillEl = document.getElementById('scorePill');
+const streakPillEl= document.getElementById('streakPill');
+const fuelBarEl   = document.getElementById('fuelBar');
+const fuelLabelEl = document.getElementById('fuelLabel');
+
+// ── Why panel after a wrong answer ─────────────────────────
+// Student friendly meaning of every word the game can show (groups and paragraphs).
+const _HH_MEANING = {
+  "there":"a place, or the start of “there is”", "their":"belongs to them", "they're":"a short way to say “they are”",
+  "to":"towards, or the word before a doing word (to go)", "too":"also, or more than you want (too hot)", "two":"the number 2",
+  "wear":"to have clothes on", "where":"asks or tells what place", "ware":"things made to sell, like kitchenware",
+  "right":"correct, or the side that is not left", "write":"to put words on paper",
+  "here":"this place", "hear":"to listen with your ears",
+  "see":"to look with your eyes", "sea":"the ocean",
+  "plain":"simple, with nothing added", "plane":"an aeroplane",
+  "knight":"a soldier in armour from long ago", "night":"the dark time after sunset",
+  "flower":"the bloom on a plant", "flour":"the powder you bake with",
+  "weather":"the rain, sun and wind outside", "whether":"if, when there is a choice",
+  "mail":"letters and parcels", "male":"a boy or a man, or a boy animal",
+  "sail":"the cloth that catches the wind on a boat, or to go by boat", "sale":"selling things, often for less money",
+  "tail":"the part at the back of an animal", "tale":"a story",
+  "bare":"with nothing on it or in it", "bear":"the big furry animal, or to put up with something",
+  "whole":"all of it", "hole":"a gap or an opening",
+  "peace":"calm, with no fighting", "piece":"one part of something",
+  "wait":"to stay until something happens", "weight":"how heavy something is",
+  "pour":"to tip out a liquid", "paw":"an animal’s foot", "poor":"having little money, or someone you feel sorry for",
+  "no":"the opposite of yes, or none at all", "know":"to have it in your head",
+  "brake":"the part that stops a car or bike", "break":"to smash or snap, or a short rest",
+  "son":"a boy child", "sun":"the star that lights up our day",
+  "won":"did win", "one":"the number 1",
+  "aloud":"out loud, so others can hear", "allowed":"let to do something",
+  "passed":"went by, or handed to someone (a doing word)", "past":"the time before now, or going beyond something",
+  "stationary":"standing still, not moving", "stationery":"pens, paper and other writing things",
+  "principal":"the head of a school, or the main one", "principle":"a rule or belief you live by",
+  "affect":"to change something (a doing word)", "effect":"the result, what happens after (a thing)",
+  "practice":"the thing or the session, like footy practice (a noun)", "practise":"to do something again and again to get better (a doing word)",
+  "complement":"to go well with something, or finish it off", "compliment":"kind words about someone",
+  "council":"a group of people who run a town or area", "counsel":"advice",
+  "cereal":"breakfast food made from grain", "serial":"in a series, one part after another",
+  "coarse":"rough to touch", "course":"the path something takes, or the “of course” word",
+  "altar":"a special table in a church", "alter":"to change",
+  "cite":"to say where you got your information", "site":"a place where something is, or is being built", "sight":"something you see, or being able to see",
+  "manner":"the way you do or say something", "manor":"a large old house with land around it",
+  "descent":"going down, or the way down", "dissent":"disagreeing",
+  "fare":"the money you pay for a ride", "fair":"fine and sunny, or an event with stalls (a science fair)",
+  "threw":"tossed (past of throw)", "through":"in one side and out the other",
+  "hour":"60 minutes", "our":"belongs to us",
+  "road":"a street for cars", "rode":"did ride",
+  "new":"just made or just bought", "knew":"did know"
+};
+// Memory tricks, only where a reliable one exists. Keyed by any word in the group.
+const _HH_TIPS = [
+  [["there","their","they're"], "they’re = they are. The apostrophe sits where the a was. There has here inside it, and both are places."],
+  [["to","too","two"], "Too has an extra o, and it means extra. Two starts with tw, like twin and twelve."],
+  [["wear","where"], "Where has here inside it. Both are about a place."],
+  [["here","hear"], "You hear with your ear. Look: hear has ear inside it."],
+  [["peace","piece"], "A piece of pie: piece starts with pie."],
+  [["no","know"], "Know starts with kn, like knowledge."],
+  [["won","one"], "Won is what you did when you win: both start with w."],
+  [["aloud","allowed"], "Aloud has loud inside it."],
+  [["passed","past"], "Passed ends in ed, like other doing words that already happened (jumped, walked)."],
+  [["stationary","stationery"], "Stationery with an e is for envelopes. Stationary with an a means standing still."],
+  [["principal","principle"], "The principal is your pal. A principle is a rule: both end in le."],
+  [["affect","effect"], "Affect is the action. Effect is the end result."],
+  [["practice","practise"], "It works like advice (a thing, with c) and advise (a doing word, with s)."],
+  [["complement","compliment"], "A complement completes something. A compliment is one I like to get."],
+  [["cite","site","sight"], "Sight has igh, like light. You need light for sight."]
+];
+let _hhReading = false;   // a wrong answer's why panel is showing
+let _hhNextAt = 0;        // time Next was pressed (guards a fast double press)
+let _hhAdvanceT = null;   // pending move to the next question after a right answer
+function _hhEsc(t){ return String(t==null?'':t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function _hhMeans(w){ return _HH_MEANING[String(w||'').toLowerCase()] || ''; }
+// Meaning of a paragraph word as it is used in that paragraph
+function _hhParaMeans(q, w){ return (q && q.means && q.means[w]) || _hhMeans(w); }
+function _hhTip(words){
+  var low = (words||[]).map(function(w){ return String(w).toLowerCase(); });
+  for (var i=0;i<_HH_TIPS.length;i++){ if (_HH_TIPS[i][0].some(function(w){ return low.indexOf(w)>=0; })) return _HH_TIPS[i][1]; }
+  return '';
+}
+function _hhClue(why){ return why ? ' <span class="hhClue">(' + _hhEsc(String(why).replace(/\s+—\s+/g, ': ')) + ')</span>' : ''; }
+function _hhPickedLine(picked){
+  var m = _hhMeans(picked);
+  return '<div class="hhWhyLine picked"><span aria-hidden="true">✗ </span>You chose <b>' + _hhEsc(picked) + '</b>.' + (m ? ' The word <b>' + _hhEsc(picked) + '</b> means ' + _hhEsc(m) + '.' : '') + '</div>';
+}
+// A sentence can carry its own meaning (m) when the word is used in a sense the general list does not cover.
+function _hhNeedsLine(lead, answer, why, own){
+  var m = own || _hhMeans(answer);
+  return '<div class="hhWhyLine answer"><span aria-hidden="true">✓ </span>' + lead + ' <b>' + _hhEsc(answer) + '</b>' + (m ? ', which means ' + _hhEsc(m) : '') + '.' + _hhClue(why) + '</div>';
+}
+function _hhTipLine(words){
+  var t = _hhTip(words);
+  return t ? '<div class="hhWhyLine tip"><span aria-hidden="true">💡 </span>Memory trick: ' + _hhEsc(t) + '</div>' : '';
+}
+// ── Need Advice: a 3-step ladder per mode, gentlest first ─────────────
+// Never says which word is right. Step 2 lists every word on screen with its
+// meaning (the student still matches meaning to sentence). A rule-out is only
+// given when 3 or more words are on screen, so it never leaves just the answer.
+const _HH_NUM = ['No','One','Two','Three','Four','Five','Six','Seven'];
+const _HH_ORD = ['first','second','third','fourth','fifth','sixth','seventh'];
+function _hhOptionsOnScreen(sel, group){
+  var shown = Array.prototype.map.call(document.querySelectorAll(sel), function(b){ return b.textContent.trim(); });
+  // Keep the group's own order so the hint reads the same every time it is shown
+  var out = (group || []).filter(function(w){ return shown.indexOf(w) >= 0; });
+  return out.length ? out : shown;
+}
+function _hhWordBank(words, answer, own){
+  var lines = words.map(function(w){
+    var m = _hhMeans(w);
+    if (own && w === answer) m = m ? m + '. It can also mean ' + own : own;
+    return '<br>• <b>' + _hhEsc(w) + '</b>: ' + _hhEsc(m || 'a word that sounds the same');
+  });
+  return 'Here is what each word means:' + lines.join('');
+}
+function _hhRuleOut(words, answer){
+  if (words.length < 3) return '';
+  var w = words.filter(function(x){ return x !== answer; })[0];
+  var m = _hhMeans(w);
+  return m ? 'It is not <b>' + _hhEsc(w) + '</b>. ' + _hhEsc(w) + ' means ' + _hhEsc(m) + '.' : '';
+}
+// Split a paragraph into sentences, keeping the {shown:correct} tokens
+function _hhSentences(text){ return String(text).split(/(?<=[.!?])\s+(?=[A-Z{])/); }
+function _hhCountLine(n, one, many){ return n === 1 ? 'One ' + one : (_HH_NUM[n] || n) + ' ' + many; }
+function _hhLadder(){
+  if (!questions || currentQ >= questions.length) return [];
+  var q = questions[currentQ];
+  if (selectedMode === 'mode1') {
+    var opts = _hhOptionsOnScreen('#gameArea .options-row .opt-btn', q.group);
+    var s3 = [_hhRuleOut(opts, q.answer), _hhTip(q.group) ? 'Memory trick: ' + _hhEsc(_hhTip(q.group)) : ''].filter(Boolean).join(' ');
+    return [
+      'Read all of the sentence. Say “blank” for the gap. What meaning does the missing word need?',
+      _hhWordBank(opts, q.answer, q.m),
+      s3 || 'Read the sentence again with each word in the gap. Pick the word whose meaning fits.'
+    ];
+  }
+  if (selectedMode === 'mode2') {
+    var ws = (q.group || []).filter(function(w){ return q.words.indexOf(w) >= 0; });
+    var tip = _hhTip(q.words);
+    return [
+      'Read both sentences. Each word belongs in just a single sentence. Start with the sentence you feel surest about.',
+      _hhWordBank(ws, null, null),
+      tip ? 'Memory trick: ' + _hhEsc(tip) : 'Put a word in the sentence you are surest about. Read it again: does the meaning fit?'
+    ];
+  }
+  // Mode 3: the fix pop-up, if it is open
+  var modal = document.getElementById('fixModal');
+  if (modal && modal.classList.contains('open') && m3State.currentEl) {
+    var correct = m3State.currentEl.dataset.correct;
+    var fopts = _hhOptionsOnScreen('#fixOptions .opt-btn', (getAllHomophones().find(function(h){ return h.group.indexOf(correct) >= 0; }) || {}).group);
+    var ftip = _hhTip(fopts);
+    return [
+      'Read that sentence again. Which meaning does this sentence need?',
+      _hhWordBank(fopts, null, null),
+      [_hhRuleOut(fopts, correct), ftip ? 'Memory trick: ' + _hhEsc(ftip) : ''].filter(Boolean).join(' ') || 'Read the sentence with each word. Pick the word whose meaning fits.'
+    ];
+  }
+  // Mode 3: the paragraph. Find the first wrong word not fixed yet, and its sentence.
+  var spans = Array.prototype.slice.call(document.querySelectorAll('#gameArea .para-word'));
+  var left = spans.filter(function(s){ return s.dataset.shown !== s.dataset.correct && !s.classList.contains('fixed'); });
+  if (!left.length) return ['You found them all. Well done!'];
+  var sents = _hhSentences(q.text), idx = spans.indexOf(left[0]), seen = 0, sNo = 0;
+  for (var i = 0; i < sents.length; i++) {
+    var n = (sents[i].match(/\{[^}]+\}/g) || []).length;
+    if (idx < seen + n) { sNo = i; break; }
+    seen += n;
+  }
+  var where = sents.length > 1 ? 'the ' + _HH_ORD[sNo] + ' sentence' : 'the paragraph';
+  var need = _hhParaMeans(q, left[0].dataset.correct);
+  var names = function(t, w){ return new RegExp('(^|[^a-z’\'])' + w.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^a-z’\'])').test(String(t).toLowerCase()); };
+  var s3 = (need && !names(need, left[0].dataset.correct) && !names(need, left[0].dataset.shown))
+    ? 'In ' + where + ', find the word that should mean “' + _hhEsc(need) + '”. Click it to fix it.'
+    : 'In ' + where + ', one word has the right sound but the wrong spelling. Click it to fix it.';
+  return [
+    'Read one sentence at a time. For each word, ask: does its spelling match what the sentence means? ' + _hhCountLine(left.length, 'word is still wrong.', 'words are still wrong.'),
+    _hhCountLine(left.length, 'word is still wrong.', 'words are still wrong.') + ' Look in ' + where + '.',
+    s3
+  ];
+}
+window._hhLadder = _hhLadder;
+function _hhShowWhy(html, withNext){
+  var w = document.getElementById('hhWhy'), n = document.getElementById('hhNextRow'), sk = document.getElementById('hhSkipBtn');
+  w.innerHTML = html; w.hidden = !html;
+  if (!withNext) return;
+  _hhReading = true;
+  subFeedEl.textContent = '';
+  if (sk) sk.hidden = true;
+  var nb = document.getElementById('hhNextBtn');
+  nb.textContent = (currentQ + 1 >= questions.length || fuel <= 0) ? 'See my results →' : 'Next →';
+  n.hidden = false;
+  try { nb.focus({ preventScroll:true }); } catch(e) { nb.focus(); }
+  try { n.scrollIntoView({ block:'nearest' }); } catch(e) {}
+}
+function _hhHideWhy(){
+  _hhReading = false;
+  var w = document.getElementById('hhWhy'), n = document.getElementById('hhNextRow'), sk = document.getElementById('hhSkipBtn');
+  if (w) { w.innerHTML = ''; w.hidden = true; }
+  if (n) n.hidden = true;
+  if (sk) sk.hidden = false;
+}
+function _hhNext(){
+  if (!_hhReading) return;
+  _hhNextAt = Date.now();
+  _hhHideWhy();
+  currentQ++;
+  showQuestion();
+  // Focus the question, never an answer, so a second Enter cannot answer it
+  var box = document.querySelector('#gameArea .monitor-box');
+  if (box) { box.setAttribute('tabindex','-1'); try { box.focus({ preventScroll:true }); } catch(e) { box.focus(); } }
+}
+function _hhTooSoon(){ return Date.now() - _hhNextAt < 500; }
+document.addEventListener('DOMContentLoaded', function(){
+  var nb = document.getElementById('hhNextBtn'); if (nb) nb.addEventListener('click', _hhNext);
+});
+
+// ── Mode selection ─────────────────────────────────────────
+function selectMode(mode, el) {
+  selectedMode = mode;
+  document.querySelectorAll('.mode-card').forEach(c => { c.classList.remove('active'); c.setAttribute('aria-checked', 'false'); });
+  el.classList.add('active');
+  el.setAttribute('aria-checked', 'true');
+}
+
+function backToSetup() {
+  clearInterval(fuelInterval);
+  _hhHideWhy(); clearTimeout(_hhAdvanceT);
+  document.getElementById('setupScreen').classList.remove('hidden');
+  document.getElementById('gameScreen').classList.add('hidden');
+  document.getElementById('resultsScreen').classList.add('hidden');
+  document.getElementById('fuelPill').style.display = 'none';
+}
+
+// ── Build questions ────────────────────────────────────────
+function getAllHomophones() {
+  const base = [...HOMOPHONES];
+  const all = isExt ? base.concat(EXT_HOMOPHONES) : base;
+  return WordLabData.weightByStage(all, 'homophone-hunter');
+}
+
+function buildMode1() {
+  const pool = [];
+  getAllHomophones().forEach(h => {
+    h.sentences.forEach(s => {
+      pool.push({ group:h.group, sentence:s.s, answer:s.a, why:s.why, m:s.m, explain:h.explain, stage:h.stage });
+    });
+  });
+  // 80/20 stage order for students with a stage (shuffling would undo it)
+  return (WordLabData.orderByStage(pool, 'homophone-hunter') || shuffle(pool)).slice(0, 15);
+}
+
+function buildMode2() {
+  const pool = [];
+  getAllHomophones().forEach(h => {
+    if (h.sentences.length >= 2) {
+      for (let i = 0; i < h.sentences.length - 1; i++) {
+        for (let j = i + 1; j < h.sentences.length; j++) {
+          if (h.sentences[i].a !== h.sentences[j].a) {
+            pool.push({ group:h.group, s1:h.sentences[i], s2:h.sentences[j], words:[h.sentences[i].a, h.sentences[j].a], explain:h.explain, stage:h.stage });
+          }
+        }
+      }
+    }
+  });
+  return (WordLabData.orderByStage(pool, 'homophone-hunter') || shuffle(pool)).slice(0, 10);
+}
+
+function buildMode3() {
+  const base = [...PARAGRAPHS];
+  if (isExt) base.push(...EXT_PARAGRAPHS);
+  return shuffle(base).slice(0, 6);
+}
+
+// ── Start game ─────────────────────────────────────────────
+function _doStartGame() {
+  score = 0; streak = 0; bestStreak = 0; totalCorrect = 0; totalAttempts = 0;
+  currentQ = 0; fuel = 100; buttonsLocked = false;
+  _hhHideWhy();
+  _hhNextAt = 0; clearTimeout(_hhAdvanceT);
+
+  if (selectedMode === 'mode1') questions = buildMode1();
+  else if (selectedMode === 'mode2') questions = buildMode2();
+  else questions = buildMode3();
+
+  document.getElementById('setupScreen').classList.add('hidden');
+  document.getElementById('resultsScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.remove('hidden');
+  if (!_wltActive) document.getElementById('fuelPill').style.display = '';
+
+  if (!_wltActive) updateHud();
+  startFuelDrain();
+  showQuestion();
+}
+
+function startGame() {
+  if (_wltActive) {
+    WLTeacher.init({ game: 'homophone-hunter' }).then(function() {
+      _doStartGame();
+      // Add Next button for teacher mode
+      var actionRow = document.querySelector('#gameScreen .action-row');
+      if (actionRow && !document.getElementById('wltNextBtn')) {
+        var nextBtn = document.createElement('button');
+        nextBtn.className = 'pri-btn';
+        nextBtn.id = 'wltNextBtn';
+        nextBtn.textContent = 'Next →';
+        nextBtn.style.display = 'none';
+        nextBtn.onclick = function() {
+          nextBtn.style.display = 'none';
+          WLTeacher.clearFeedback();
+          currentQ++;
+          showQuestion();
+        };
+        actionRow.appendChild(nextBtn);
+      }
+      // Poll to show Next button after answer (one poll only, even after Play Again)
+      clearInterval(window._hhWltPoll);
+      window._hhWltPoll = setInterval(function() {
+        if (buttonsLocked && _wltActive) {
+          var nb = document.getElementById('wltNextBtn');
+          if (nb) nb.style.display = 'block';
+        }
+      }, 200);
+    });
+  } else {
+    _doStartGame();
+  }
+}
+
+function startFuelDrain() {
+  if (_wltActive) return;
+  clearInterval(fuelInterval);
+  fuelInterval = setInterval(() => {
+    if (_hhReading || (typeof WLHelp!=='undefined'&&WLHelp.isOpen&&WLHelp.isOpen())) return; // signal holds while the why panel or the instructions are open
+    fuel -= (_supportMode ? 0.1 : 0.2);
+    if (fuel <= 0) { fuel = 0; updateHud(); clearInterval(fuelInterval); endGame(); return; }
+    updateHud();
+  }, 250);
+}
+
+function updateHud() {
+  scorePillEl.textContent = score + ' XP';
+  if (streak >= 2) { streakPillEl.style.display = ''; streakPillEl.textContent = '🔥 ' + streak; }
+  else streakPillEl.style.display = 'none';
+  fuelBarEl.style.width = Math.max(fuel, 0) + '%';
+  fuelLabelEl.textContent = Math.max(Math.round(fuel), 0) + '%';
+}
+
+function skipQuestion() {
+  if (!_wltActive && fuel <= 0) return;
+  if (buttonsLocked) return;
+  streak = 0;
+  if (!_wltActive) { fuel = Math.max(fuel - (_supportMode ? 4 : 8), 0); updateHud(); if (fuel <= 0) { endGame(); return; } }
+  if (_wltActive) { WLTeacher.clearFeedback(); var nb = document.getElementById('wltNextBtn'); if (nb) nb.style.display = 'none'; }
+  currentQ++;
+  showQuestion();
+}
+
+// ── Show question ──────────────────────────────────────────
+function showQuestion() {
+  if (!_wltActive && fuel <= 0) { endGame(); return; }
+  if (_wltActive) { WLTeacher.clearFeedback(); if (WLTeacher.shouldEnd()) { WLTeacher.showEndScreen(); return; } }
+  if (currentQ >= questions.length) { endGame(); return; }
+  if(typeof WLHints!=='undefined') WLHints.resetHints();
+  feedbackEl.textContent = ''; feedbackEl.className = 'feedback';
+  subFeedEl.textContent = '';
+  _hhHideWhy();
+  buttonsLocked = false;
+  questionStart = Date.now();
+  const area = document.getElementById('gameArea');
+  const q = questions[currentQ];
+
+  if (selectedMode === 'mode1') renderMode1(area, q);
+  else if (selectedMode === 'mode2') renderMode2(area, q);
+  else renderMode3(area, q);
+  // Support mode scaffold: highlight gap more prominently
+  if(_supportMode){ var _gap=document.getElementById('gapSpan'); if(_gap) _gap.style.cssText='background:#4338ca;color:#e0e7ff;padding:2px 12px;border-radius:8px;font-weight:900;font-size:1.15em;'; }
+  // Update hints for this question
+  // (Need Advice reads the question on screen through _hhLadder; resetHints above starts it at step 1)
+  // EALD: speak buttons + flip reveal on load
+  var ealdSpeakEl=document.getElementById('ealdSpeakBtns');
+  var ealdDefEl=document.getElementById('ealdDefinition');
+  var ealdEl=document.getElementById('ealdTranslation');
+  if(ealdSpeakEl) ealdSpeakEl.innerHTML='';
+  if(ealdDefEl) ealdDefEl.innerHTML='';
+  if(ealdEl){ealdEl.innerHTML='';ealdEl.dataset.translatedWord='';ealdEl.dataset.englishWord='';}
+  if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&q){
+    WordLabData.injectEALDStyles();
+    var langName=(WordLabData.EALD_LANGUAGES[WordLabData.getEALDLanguage()]||'').split(' (')[0];
+    var words=q.words||q.group||[q.word||''];
+    if(ealdEl) ealdEl.dataset.englishWord=words.join(', ');
+    if(ealdSpeakEl) ealdSpeakEl.innerHTML=WordLabData.buildEALDSpeakButtons();
+    if(ealdDefEl) ealdDefEl.innerHTML='<button class="eald-def-btn" id="ealdDefBtn" onclick="this.classList.toggle(\'flipped\')"><span class="eald-def-front">🌐 Show in '+WordLabData.escapeHtml(langName)+'</span><span class="eald-def-back" id="ealdDefText">Loading...</span></button>';
+    var toTranslate=[];var contexts=[];
+    words.forEach(function(w){toTranslate.push(w);contexts.push('word');});
+    var defs=q.definitions||[];
+    defs.forEach(function(d,i){if(d){toTranslate.push(d);contexts.push('definition');}});
+    WordLabData.getTranslations(toTranslate,contexts).then(function(t){
+      if(!t)return;
+      var defText=document.getElementById('ealdDefText');
+      var pairs=words.filter(function(w){return t[w];}).map(function(w){return w+' = '+t[w];});
+      if(defText&&pairs.length) defText.textContent='🌐 '+pairs.join(' · ');
+      if(ealdEl&&t[words[0]]) ealdEl.dataset.translatedWord=t[words[0]];
+    });
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MODE 1: INTERCEPT
+// ══════════════════════════════════════════════════════════════
+function renderMode1(area, q) {
+  const html = q.sentence.replace('___', '<span class="sentence-gap" id="gapSpan">___</span>');
+  area.innerHTML = `
+    <div class="monitor-box">
+      <div class="monitor-label">📡 Incoming signal — ${currentQ+1} of ${questions.length}</div>
+      <div class="sentence-text">${html}</div>
+    </div>
+    <div class="options-row">${(_supportMode && q.group.length > 2 ? [q.answer].concat(q.group.filter(function(w){return w!==q.answer;}).slice(0,1)).sort(function(){return Math.random()-.5;}) : q.group).map(w =>
+      `<button class="opt-btn" onclick="checkMode1('${w.replace(/'/g,"\\'")}',this)">${w}</button>`
+    ).join('')}</div>`;
+}
+
+function checkMode1(chosen, btn) {
+  if (buttonsLocked || _hhTooSoon()) return;
+  buttonsLocked = true;
+  const q = questions[currentQ];
+  const correct = chosen === q.answer;
+  const timeMs = Date.now() - questionStart;
+
+  document.querySelectorAll('.opt-btn').forEach(b => {
+    b.disabled = true;
+    if (b.textContent.trim() === q.answer) b.classList.add('correct');
+    else if (b === btn && !correct) b.classList.add('wrong');
+  });
+
+  const gap = document.getElementById('gapSpan');
+  gap.textContent = q.answer;
+  gap.classList.add(correct ? 'correct' : 'fixed');
+
+  var _student = !correct && !_wltActive; // students get the why panel; Teacher Mode keeps its own feedback
+  handleResult(correct, timeMs, _student ? 'Not quite. The answer is ' + q.answer + '.' : q.why, _student ? '' : q.explain, q.answer);
+  if (_wltActive) return; // Teacher mode: wait for Next click
+  if (!correct) {
+    _hhShowWhy(_hhPickedLine(chosen) + _hhNeedsLine('This sentence needs', q.answer, q.why, q.m) + _hhTipLine(q.group), true);
+    return; // wait for Next, so there is time to read why
+  }
+  _hhAdvanceT = setTimeout(() => { currentQ++; showQuestion(); }, 1400);
+}
+
+// ══════════════════════════════════════════════════════════════
+// MODE 2: DECODE
+// ══════════════════════════════════════════════════════════════
+let m2State = {};
+
+function renderMode2(area, q) {
+  m2State = { placed:{}, q, selectedTile:null };
+  const words = shuffle([...q.words]);
+  area.innerHTML = `
+    <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.15em;color:#f9a8d4;text-align:center;margin-bottom:8px;">Signal ${currentQ+1} of ${questions.length} — Drag or tap each word to its correct monitor</div>
+    <div class="dual-monitors">
+      <div class="monitor-box" id="mon1">
+        <div class="monitor-label">🖥️ Monitor A</div>
+        <div class="sentence-text" style="font-size:15px;">${q.s1.s.replace('___','<span class="drop-target" id="drop1" data-answer="'+q.s1.a+'" tabindex="0" role="button" aria-label="Blank 1 — Monitor A drop target">?</span>')}</div>
+      </div>
+      <div class="monitor-box" id="mon2">
+        <div class="monitor-label">🖥️ Monitor B</div>
+        <div class="sentence-text" style="font-size:15px;">${q.s2.s.replace('___','<span class="drop-target" id="drop2" data-answer="'+q.s2.a+'" tabindex="0" role="button" aria-label="Blank 2 — Monitor B drop target">?</span>')}</div>
+      </div>
+    </div>
+    <div class="drag-tiles">${words.map((w,i) =>
+      `<div class="drag-tile" draggable="true" id="dtile_${i}" data-word="${w}" ondragstart="dStart(event)" tabindex="0" role="button" aria-label="Word tile: ${w}">${w}</div>`
+    ).join('')}</div>`;
+
+  ['drop1','drop2'].forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('dragover'); });
+    el.addEventListener('dragleave', () => el.classList.remove('dragover'));
+    el.addEventListener('drop', e => { e.preventDefault(); el.classList.remove('dragover'); doDrop(id, e.dataTransfer.getData('text/plain'), e.dataTransfer.getData('tid')); });
+    const placeSelected = () => { if(m2State.selectedTile){ doDrop(id, m2State.selectedTile.dataset.word, m2State.selectedTile.id); m2State.selectedTile=null; } };
+    el.addEventListener('click', placeSelected);
+    el.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); placeSelected(); } });
+  });
+  document.querySelectorAll('.drag-tile').forEach(t => {
+    const selectTile = () => {
+      if (_m2TouchMoved) return; // Don't select on touch drag
+      document.querySelectorAll('.drag-tile').forEach(x => x.classList.remove('selected'));
+      if (!t.classList.contains('used')) { t.classList.add('selected'); m2State.selectedTile = t; }
+    };
+    t.addEventListener('click', selectTile);
+    t.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); selectTile(); } });
+    // Touch drag support
+    t.addEventListener('touchstart', e => {
+      if (t.classList.contains('used')) return;
+      _m2TouchMoved = false;
+      _m2TouchStartX = e.touches[0].clientX;
+      _m2TouchStartY = e.touches[0].clientY;
+      _m2DragWord = t.dataset.word;
+      _m2DragTile = t;
+    }, {passive: true});
+  });
+}
+
+// Touch drag state for Mode 2
+let _m2DragWord = null, _m2DragTile = null, _m2TouchMoved = false;
+let _m2TouchStartX = 0, _m2TouchStartY = 0;
+const _M2_DRAG_THRESHOLD = 10;
+
+document.addEventListener('touchmove', function(e) {
+  if (!_m2DragTile || !_m2DragWord) return;
+  const t = e.touches[0];
+  // Start dragging only after moving past threshold
+  if (!_m2TouchMoved) {
+    const dx = t.clientX - _m2TouchStartX, dy = t.clientY - _m2TouchStartY;
+    if (Math.abs(dx) < _M2_DRAG_THRESHOLD && Math.abs(dy) < _M2_DRAG_THRESHOLD) return;
+    _m2TouchMoved = true;
+    _m2DragTile.classList.add('dragging');
+    const ghost = document.createElement('div');
+    ghost.className = 'drag-ghost';
+    ghost.id = 'm2DragGhost';
+    ghost.textContent = _m2DragWord;
+    document.body.appendChild(ghost);
+  }
+  e.preventDefault();
+  const ghost = document.getElementById('m2DragGhost');
+  if (ghost) {
+    ghost.style.left = t.clientX + 'px';
+    ghost.style.top = t.clientY + 'px';
+  }
+  // Highlight drop target under finger
+  document.querySelectorAll('.drop-target').forEach(d => {
+    const r = d.getBoundingClientRect();
+    if (t.clientX >= r.left && t.clientX <= r.right && t.clientY >= r.top && t.clientY <= r.bottom) {
+      d.classList.add('dragover');
+    } else {
+      d.classList.remove('dragover');
+    }
+  });
+}, {passive: false});
+
+document.addEventListener('touchend', function(e) {
+  const ghost = document.getElementById('m2DragGhost');
+  if (ghost) ghost.remove();
+  if (_m2DragTile) _m2DragTile.classList.remove('dragging');
+  if (!_m2TouchMoved || !_m2DragWord) { _m2DragWord = null; _m2DragTile = null; return; }
+  // Find drop target under finger
+  const t = e.changedTouches[0];
+  let hitDrop = null;
+  document.querySelectorAll('.drop-target').forEach(d => {
+    d.classList.remove('dragover');
+    const r = d.getBoundingClientRect();
+    if (t.clientX >= r.left && t.clientX <= r.right && t.clientY >= r.top && t.clientY <= r.bottom) {
+      hitDrop = d;
+    }
+  });
+  if (hitDrop && _m2DragWord) {
+    doDrop(hitDrop.id, _m2DragWord, _m2DragTile ? _m2DragTile.id : '');
+  }
+  _m2DragWord = null; _m2DragTile = null;
+});
+
+document.addEventListener('touchcancel', function() {
+  const ghost = document.getElementById('m2DragGhost');
+  if (ghost) ghost.remove();
+  if (_m2DragTile) _m2DragTile.classList.remove('dragging');
+  _m2DragWord = null; _m2DragTile = null;
+  document.querySelectorAll('.drop-target').forEach(d => d.classList.remove('dragover'));
+});
+
+function dStart(e) { e.dataTransfer.setData('text/plain', e.target.dataset.word); e.dataTransfer.setData('tid', e.target.id); }
+
+function doDrop(dropId, word, tileId) {
+  if (buttonsLocked || _hhTooSoon()) return;
+  const drop = document.getElementById(dropId);
+  const tile = tileId ? document.getElementById(tileId) : null;
+  if (!drop || !word || drop.classList.contains('filled')) return;
+
+  // Remove from other slot if already placed
+  Object.keys(m2State.placed).forEach(k => {
+    if (m2State.placed[k] === word) {
+      delete m2State.placed[k];
+      const el = document.getElementById(k);
+      if(el){ el.textContent='?'; el.classList.remove('filled'); }
+    }
+  });
+
+  drop.textContent = word;
+  drop.classList.add('filled');
+  drop.setAttribute('aria-label', (dropId === 'drop1' ? 'Blank 1' : 'Blank 2') + ' — filled with: ' + word);
+  if (tile) { tile.classList.add('used'); tile.setAttribute('aria-disabled', 'true'); }
+  m2State.placed[dropId] = word;
+
+  if (m2State.placed.drop1 && m2State.placed.drop2) {
+    buttonsLocked = true;
+    const timeMs = Date.now() - questionStart;
+    const q = m2State.q;
+    const c1 = m2State.placed.drop1 === q.s1.a;
+    const c2 = m2State.placed.drop2 === q.s2.a;
+    const correct = c1 && c2;
+
+    // A wrong slot shows the student's word crossed out, then the right word in green
+    [['drop1', c1, q.s1.a, 'Blank 1'], ['drop2', c2, q.s2.a, 'Blank 2']].forEach(function(d){
+      if (d[1]) return;
+      var el = document.getElementById(d[0]);
+      el.classList.add('fixed');
+      el.innerHTML = '<s>' + _hhEsc(m2State.placed[d[0]]) + '</s>' + _hhEsc(d[2]);
+      el.setAttribute('aria-label', d[3] + ': you put ' + m2State.placed[d[0]] + ', the answer is ' + d[2]);
+    });
+
+    const whyText = correct ? q.s1.why + ' / ' + q.s2.why
+      : _wltActive ? 'A: "' + q.s1.a + '" — ' + q.s1.why + ' · B: "' + q.s2.a + '" — ' + q.s2.why
+      : 'Not quite. The two words are swapped.';
+    handleResult(correct, timeMs, whyText, (correct || _wltActive) ? q.explain : '');
+    if (_wltActive) return; // Teacher mode: wait for Next click
+    if (!correct) {
+        _hhShowWhy(_hhNeedsLine('Monitor A needs', q.s1.a, '', q.s1.m) + _hhNeedsLine('Monitor B needs', q.s2.a, '', q.s2.m) + _hhTipLine(q.words), true);
+      return; // wait for Next
+    }
+    _hhAdvanceT = setTimeout(() => { currentQ++; showQuestion(); }, 1400);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MODE 3: TRANSMISSION
+// ══════════════════════════════════════════════════════════════
+let m3State = {};
+
+function renderMode3(area, q) {
+  // Count the wrong words in the paragraph itself, so the count always matches what is on screen
+  const totalErrors = (q.text.match(/\{[^}]+\}/g) || []).filter(m => { const p = m.slice(1, -1).split(':'); return p[0] !== p[1]; }).length;
+
+  const parts = q.text.split(/(\{[^}]+\})/g);
+  let html = '';
+  parts.forEach(part => {
+    const m = part.match(/^\{([^:]+):([^}]+)\}$/);
+    if (m) {
+      const shown = m[1], correct = m[2];
+      const isError = shown !== correct;
+      html += `<span class="para-word" data-shown="${shown}" data-correct="${correct}" onclick="fixWord(this)" tabindex="0" role="button" aria-label="Word: ${shown}">${shown}</span>`;
+    } else {
+      html += part;
+    }
+  });
+
+  m3State = { totalErrors, fixed:0, q };
+  area.innerHTML = `
+    <div class="monitor-box">
+      <div class="monitor-label">⚡ Intercepted transmission ${currentQ+1} of ${questions.length} — find and fix the errors</div>
+      <div class="para-text">${html}</div>
+    </div>
+    <div style="text-align:center;font-size:12px;color:#f9a8d4;font-weight:700;margin-top:8px;">Some homophones are wrong — click any word you think is incorrect · <strong id="errorsLeft">${totalErrors}</strong> to find</div>`;
+
+  // Add keyboard support for para-words
+  area.querySelectorAll('.para-word').forEach(pw => {
+    pw.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fixWord(pw); } });
+  });
+}
+
+function fixWord(el) {
+  if (buttonsLocked || el.classList.contains('fixed')) return;
+  const shown = el.dataset.shown, correct = el.dataset.correct;
+
+  if (shown === correct) {
+    el.style.animation = 'sciShake .4s ease-out';
+    setTimeout(() => el.style.animation = '', 400);
+    showFeedback(false, 'That word is already right!', '');
+    _hhShowWhy(_hhNeedsLine('This sentence does need', shown, '', _hhParaMeans(m3State.q, shown)), false);
+    streak = 0; if (!_wltActive) updateHud();
+    return;
+  }
+
+  const group = getAllHomophones().find(h => h.group.includes(correct));
+  var options = group ? group.group : [shown, correct];
+  // In support mode, cap at 2 options (correct + 1 distractor)
+  if (_supportMode && options.length > 2) {
+    var others = options.filter(w => w !== correct);
+    others.sort(() => Math.random() - 0.5);
+    options = [correct, others[0]].sort(() => Math.random() - 0.5);
+  }
+
+  document.getElementById('fixWord').textContent = '"' + shown + '" → which is correct?';
+  document.getElementById('fixOptions').innerHTML = options.map(w =>
+    `<button class="opt-btn" onclick="applyFix(this,'${w.replace(/'/g,"\\'")}','${correct.replace(/'/g,"\\'")}')">${w}</button>`
+  ).join('');
+  document.getElementById('fixModal').classList.add('open');
+  if (typeof WLHints !== 'undefined') WLHints.resetHints();
+  // Focus first option for keyboard users
+  const firstOpt = document.querySelector('#fixOptions .opt-btn');
+  if (firstOpt) firstOpt.focus();
+  m3State.currentEl = el;
+}
+
+function applyFix(btn, chosen, correct) {
+  document.getElementById('fixModal').classList.remove('open');
+  const el = m3State.currentEl;
+  const timeMs = Date.now() - questionStart;
+  const isCorrect = chosen === correct;
+  const q = m3State.q;
+  const explainText = (q.explains && q.explains[el.dataset.shown]) || '';
+
+  totalAttempts++;
+  if (isCorrect) {
+    _hhShowWhy('', false);
+    el.textContent = correct;
+    el.classList.remove('wrong-word');
+    el.classList.add('fixed');
+    m3State.fixed++;
+    totalCorrect++;
+    document.getElementById('errorsLeft').textContent = m3State.totalErrors - m3State.fixed;
+    if (typeof WLHints !== 'undefined') WLHints.resetHints();
+    var _m = _hhParaMeans(q, correct);
+    handleResult(true, timeMs, correct + ' is right' + (_m ? ': ' + _m : (explainText ? ': ' + explainText : '')), '', correct, true);
+
+    if (m3State.fixed >= m3State.totalErrors) {
+      if (_wltActive) return; // Teacher mode: wait for Next click
+      _hhAdvanceT = setTimeout(() => { currentQ++; showQuestion(); }, 1500);
+    }
+  } else {
+    handleResult(false, timeMs, _wltActive ? 'It should be "' + correct + '"' + (explainText ? ' — ' + explainText : '') : 'Not quite. Try that word again.', '', correct, true);
+    _hhShowWhy(_hhPickedLine(chosen) + _hhNeedsLine('This sentence needs', correct, '', _hhParaMeans(q, correct)) + _hhTipLine([chosen, correct]), false);
+    el.focus();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// SHARED: handle result, feedback, XP, scientist
+// ══════════════════════════════════════════════════════════════
+function handleResult(correct, timeMs, why, explain, word, skipCount) {
+  if (!skipCount) { totalAttempts++; if(correct) totalCorrect++; }
+  var q = questions[currentQ];
+  var groupId = (q && (q.group || q.words) || []).join('/');
+  // Mode 3 paragraphs have no group of their own: use the homophone group of the word being fixed
+  if (!groupId && word) { var _g = HOMOPHONES.concat(EXT_HOMOPHONES).find(function(h){ return h.group.indexOf(word) !== -1; }); if (_g) groupId = _g.group.join('/'); }
+  const cat = groupId ? selectedMode + ':' + groupId : selectedMode;
+
+  if (correct) {
+    if (!_wltActive) {
+      const pts = 50 + (streak * 10);
+      score += pts;
+      streak++;
+      if (streak > bestStreak) bestStreak = streak;
+      fuel = Math.min(fuel + (_supportMode ? 12 : 8), 100);
+    }
+
+    if (!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()) {
+      const res = WordLabData.recordAttempt('homophone-hunter', cat, true, timeMs, streak);
+      if (typeof WLScientist !== 'undefined') WLScientist.react('correct', res);
+    }
+    if (_wltActive && typeof WLScientist !== 'undefined') WLScientist.react('correct');
+    if (!_wltActive && typeof WLAudio !== 'undefined') { WLAudio.correct(); if (streak >= 3) WLAudio.streak(streak); }
+
+    showFeedback(true, why || '', explain || '');
+
+    if (_wltActive) {
+      var q = questions[currentQ];
+      var fbHTML = _buildRichFeedback(true, q, why, explain, word);
+      WLTeacher.onAnswer(true, fbHTML);
+    }
+  } else {
+    streak = 0;
+    if (!_wltActive) { fuel = Math.max(fuel - (_supportMode ? 6 : 12), 0); }
+
+    if (!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()) {
+      WordLabData.recordAttempt('homophone-hunter', cat, false, timeMs, 0);
+    }
+    if (typeof WLScientist !== 'undefined') WLScientist.react('wrong');
+    if (!_wltActive && typeof WLAudio !== 'undefined') WLAudio.wrong();
+
+    showFeedback(false, why || '', explain || '');
+
+    if (_wltActive) {
+      var q = questions[currentQ];
+      var fbHTML = _buildRichFeedback(false, q, why, explain, word);
+      WLTeacher.onAnswer(false, fbHTML);
+    }
+
+    if (!_wltActive && fuel <= 0) {
+      clearInterval(fuelInterval);
+      // Intercept and Decode show why first, and their button opens the results
+      if (selectedMode === 'mode3') setTimeout(endGame, 800);
+    }
+  }
+  if (!_wltActive) updateHud();
+}
+
+function _buildRichFeedback(correct, q, why, explain, word) {
+  var _e = WordLabData.escapeHtml;
+  var html = '';
+  if (correct) {
+    html += '<b>' + _e(word || q.answer || '') + '</b> is correct.';
+    if (why) html += '<br>' + _e(why);
+  } else {
+    html += 'The correct answer is <b>' + _e(word || q.answer || '') + '</b>.';
+    if (why) html += '<br>' + _e(why);
+  }
+  // Show full group explanation
+  var groupExplain = explain || (q && q.explain) || '';
+  if (groupExplain) {
+    html += '<br><br><b>Homophone group:</b> ' + _e(groupExplain);
+  } else if (q && q.group) {
+    html += '<br><br><b>Homophones:</b> ' + q.group.map(function(g){return _e(g);}).join(', ');
+  }
+  return html;
+}
+
+function showFeedback(correct, main, sub) {
+  feedbackEl.className = 'feedback ' + (correct ? 'ok' : 'bad');
+  feedbackEl.textContent = (correct ? '✓ ' : '✗ ') + (main || (correct ? 'Correct!' : 'Not quite!'));
+  subFeedEl.textContent = sub || '';
+  // EALD translation
+  var ealdEl=document.getElementById('ealdTranslation');if(ealdEl)ealdEl.innerHTML='';
+  if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&questions&&questions[currentQ]){
+    WordLabData.injectEALDStyles();
+    ealdEl.innerHTML=WordLabData.buildEALDRevealButton();
+    var q=questions[currentQ];
+    var words=q.words||[q.word||''];var defs=q.definitions||[];
+    var toTranslate=[];var contexts=[];
+    words.forEach(function(w,i){toTranslate.push(w);contexts.push('word');if(defs[i]){toTranslate.push(defs[i]);contexts.push('definition');}});
+    WordLabData.getTranslations(toTranslate,contexts).then(function(t){
+      if(!t)return;
+      var contentEl=document.getElementById('ealdTranslationContent');
+      if(!contentEl)return;
+      var pairs=words.filter(function(w){return t[w];}).map(function(w){return '<b>'+WordLabData.escapeHtml(w)+'</b> = '+WordLabData.escapeHtml(t[w]);});
+      if(pairs.length){contentEl.innerHTML='<div class="eald-translation-pill"><span class="eald-flag">🌐</span> '+pairs.join(' · ')+'</div>';}
+    });
+  }
+}
+
+// ── End game / results ─────────────────────────────────────
+function endGame() {
+  clearInterval(fuelInterval);
+  buttonsLocked = true;
+  document.getElementById('gameScreen').classList.add('hidden');
+  document.getElementById('fuelPill').style.display = 'none';
+  const el = document.getElementById('resultsScreen');
+  el.classList.remove('hidden');
+
+  const accuracy = totalAttempts > 0 ? Math.round(totalCorrect / totalAttempts * 100) : 0;
+  const emoji = accuracy >= 90 ? '🏆' : accuracy >= 70 ? '⭐' : accuracy >= 50 ? '📡' : '🔧';
+  const title = accuracy >= 90 ? 'Signal decoded!' : accuracy >= 70 ? 'Good work, agent!' : accuracy >= 50 ? 'Keep practising!' : 'Try again, agent!';
+  const modeLabel = selectedMode === 'mode1' ? 'Intercept' : selectedMode === 'mode2' ? 'Decode' : 'Transmission';
+
+  el.innerHTML = `
+    <div class="result-emoji">${emoji}</div>
+    <div class="result-title">${title}</div>
+    <div class="result-sub">${modeLabel} mode · ${totalCorrect} of ${totalAttempts} signals decoded</div>
+    <div class="result-stats">
+      <div class="result-stat"><div class="result-val">${accuracy}%</div><div class="result-lbl">Accuracy</div></div>
+      <div class="result-stat"><div class="result-val">${score}</div><div class="result-lbl">XP earned</div></div>
+      <div class="result-stat"><div class="result-val">🔥 ${bestStreak}</div><div class="result-lbl">Best streak</div></div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button class="pri-btn" onclick="startGame()">Play Again →</button>
+      <button class="sec-btn" onclick="backToSetup()">← Change Mode</button>
+      <a href="landing.html" class="sec-btn" style="text-decoration:none;">🏠 Home</a>
+    </div>`;
+  // Keyboard users land on Play Again; a fast second Enter on "See my results" cannot restart at once
+  var pa = el.querySelector('.pri-btn');
+  if (pa && !_wltActive) { pa.disabled = true; setTimeout(function(){ pa.disabled = false; try { pa.focus({ preventScroll:true }); } catch(e) { pa.focus(); } }, 500); }
+}
+
+// ── Helpers ─────────────────────────────────────────────────
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// ── Particles ──────────────────────────────────────────────
+(function(){
+  const w = document.getElementById('particles');
+  if(!w) return;
+  const cs = ['rgba(244,114,182,.2)','rgba(157,23,77,.25)','rgba(255,255,255,.08)'];
+  for(let i = 0; i < 16; i++){
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.cssText = `left:${Math.random()*100}%;width:${4+Math.random()*6}px;height:${4+Math.random()*6}px;background:${cs[Math.floor(Math.random()*cs.length)]};animation-duration:${10+Math.random()*14}s;animation-delay:${-Math.random()*20}s;`;
+    w.appendChild(p);
+  }
+})();
+
+// ── Scientist setup + react patch ──────────────────────────
+(async function(){
+  if(typeof WLScientist==='undefined'){await new Promise(function(r){document.addEventListener('DOMContentLoaded',function(){r();},{once:true});});}
+  if(typeof WLScientist==='undefined') return;
+  const wrap = document.getElementById('sciCharWrap');
+  if(!wrap) return;
+  function _p(svg){while(wrap.firstChild)wrap.removeChild(wrap.firstChild);wrap.appendChild(document.createRange().createContextualFragment(svg));}
+  _p(WLScientist.buildSVG({},'neutral'));
+  try{
+    const sd = typeof WordLabData !== 'undefined' ? await WordLabData.getStudentData() : null;
+    if(sd && sd.scientist) _p(WLScientist.buildSVG(sd.scientist,'neutral'));
+  }catch(e){console.error('Scientist load failed',e);}
+
+  // Patch react to animate
+  const _orig = WLScientist.react.bind(WLScientist);
+  WLScientist.react = function(type, extras){
+    _orig(type, extras);
+    if(!wrap) return;
+    wrap.classList.remove('sci-correct','sci-wrong','sci-streak');
+    void wrap.offsetWidth;
+    if(type==='correct') wrap.classList.add('sci-correct');
+    else if(type==='wrong') wrap.classList.add('sci-wrong');
+    else if(type==='streak') wrap.classList.add('sci-streak');
+    setTimeout(() => wrap.classList.remove('sci-correct','sci-wrong','sci-streak'), type==='streak'?2400:900);
+  };
+})();
+
+// ── Login & extension mode ─────────────────────────────────
+(async function(){
+  if(typeof WordLabData === 'undefined') return;
+  WordLabData.initLoginUI({ accentColor:'#9d174d', accentSoft:'#fdf2f8', accentLine:'#f9a8d4', accentText:'#831843', onLogin:function(){ location.reload(); } });
+
+  isExt = typeof WordLabData.isExtensionMode === 'function' && WordLabData.isExtensionMode('homophone-hunter');
+})();
+// The shared help and hints scripts are deferred, so they only exist once the page has loaded.
+document.addEventListener('DOMContentLoaded', function(){
+if(typeof WLHelp!=='undefined') WLHelp.init({
+  game:'homophone', title:'Homophone Hunter', emoji:'📡',
+  steps:[
+    {icon:'📡',title:'Pick a mode',desc:'Intercept: pick the word that fits the gap. Decode: put each word in the sentence it belongs to. Transmission: find the wrong words in a paragraph and fix them.'},
+    {icon:'👀',title:'Read the whole sentence',desc:'Homophones sound the same but are spelled differently and mean different things. The meaning of the sentence tells you which spelling is right.'},
+    {icon:'💡',title:'Learn from mistakes',desc:'If you pick the wrong word, you will see what your word means and what the sentence needed. Press Next when you are ready.'},
+    {icon:'⚡',title:'Keep your signal',desc:'Your signal goes down slowly. Right answers boost it. It waits while you read why.'}
+  ],
+  audioText:'In Homophone Hunter, first pick a mode. In Intercept, you pick the word that fits the gap. In Decode, you put each word in the sentence it belongs to. In Transmission, you find the wrong words in a paragraph and fix them. Homophones sound the same but are spelled differently and mean different things. Read the whole sentence. Its meaning tells you which spelling is right. If you pick the wrong word, you will see what your word means and what the sentence needed. Press Next when you are ready. Your signal goes down slowly, and right answers boost it. It waits while you read why.'
+});
+if(typeof WLHints!=='undefined') WLHints.register({
+  getStrategyHint: function(){ return 'Read the whole sentence carefully. The meaning tells you which spelling to use.'; },
+  getLadder: function(){ return window._hhLadder ? window._hhLadder() : []; }
+});
+});
+</script>
+
+<footer style="text-align:center;padding:12px 16px;font-size:11px;color:#64748b;border-top:1px solid #e2e8f0;margin-top:auto;font-family:Lexend,sans-serif;">&#129514; Word Labs &middot; <a href="about.html" style="color:#64748b;">About</a> &middot; <a href="privacy.html" style="color:#64748b;">Privacy Policy</a> &middot; <a href="terms.html" style="color:#64748b;">Terms of Service</a> &middot; <a href="mailto:nick@wordlabs.app" style="color:#64748b;">Contact</a></footer>
+</body>
+</html>

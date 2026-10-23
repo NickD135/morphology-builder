@@ -1,0 +1,1931 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Labs – Mission Mode</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="wordlab-common.css">
+  <style>
+    /* ── CSS custom properties ───────────────────────────────────── */
+    :root {
+      --indigo:#4338ca; --indigo-2:#6366f1; --indigo-soft:#eef2ff;
+      --ok:#15803d; --warn:#b45309; --bad:#dc2626;
+      --orange-soft:#fff7ed; --orange-line:#fed7aa; --orange-text:#9a3412;
+      --green-soft:#f0fdf4; --green-line:#bbf7d0; --green-text:#166534;
+      --line:#e2e8f0; --muted:#64748b; --text:#0f172a;
+      --accent:#16a34a; --accent-rgb:22,163,74; --header-rgb:2,20,12;
+    }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body { font-family: 'Lexend', sans-serif; color: var(--text); line-height: 1.6; letter-spacing: .02em; }
+
+    /* ── Lab scene (fixed full-bleed backdrop) ───────────────────── */
+    .lab-scene {
+      position: fixed; inset: 0; z-index: 0;
+      display: flex; flex-direction: column;
+    }
+
+    /* Wall (top 62%) */
+    .lab-wall {
+      flex: 0 0 62%;
+      background: #f8f4ee;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Sky windows */
+    .lab-windows {
+      position: absolute; top: 14px; left: 0; right: 0;
+      display: flex; justify-content: space-around; align-items: flex-start;
+      padding: 0 40px;
+    }
+    .lab-window {
+      width: 80px; height: 90px;
+      border: 6px solid #c8b89a;
+      border-radius: 6px 6px 40px 40px;
+      overflow: hidden;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.1);
+      background: linear-gradient(180deg, #87CEEB 0%, #b0e0ff 100%);
+      animation: skyDay 60s linear infinite;
+      position: relative;
+    }
+    .lab-window::after {
+      content: '';
+      position: absolute; inset: 0;
+      border-top: 3px solid rgba(255,255,255,.35);
+      border-left: 3px solid rgba(255,255,255,.35);
+      pointer-events: none;
+    }
+    /* Cross pane */
+    .lab-window::before {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 3px; background: #c8b89a; z-index: 1;
+    }
+    @keyframes skyDay {
+      0%,100% { background: linear-gradient(180deg,#87CEEB,#b0e0ff); }
+      30%      { background: linear-gradient(180deg,#FFD580,#ffe8a0); }
+      50%      { background: linear-gradient(180deg,#FF8C42,#ffc08a); }
+      70%      { background: linear-gradient(180deg,#2C3E6B,#4a5e90); }
+    }
+
+    /* Overhead bulb */
+    .lab-bulb {
+      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    }
+    .lab-bulb-wire {
+      width: 2px; height: 28px; background: #888; margin: 0 auto;
+    }
+    .lab-bulb-glass {
+      width: 28px; height: 32px;
+      background: radial-gradient(circle at 40% 35%, #fffde0 0%, #ffe96b 55%, #f5c518 100%);
+      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      margin: 0 auto;
+      box-shadow: 0 0 18px 8px rgba(255,230,0,.5), 0 0 40px 18px rgba(255,200,0,.25);
+      animation: bulbPulse 3s ease-in-out infinite;
+    }
+    @keyframes bulbPulse {
+      0%,100% { box-shadow: 0 0 18px 8px rgba(255,230,0,.5), 0 0 40px 18px rgba(255,200,0,.25); }
+      50%      { box-shadow: 0 0 28px 14px rgba(255,230,0,.8), 0 0 60px 28px rgba(255,200,0,.4); }
+    }
+
+    /* Shelves */
+    .lab-shelf {
+      position: absolute; left: 0; right: 0; height: 10px;
+      background: #c8b89a;
+      border-bottom: 3px solid #a89070;
+    }
+    .lab-shelf-1 { top: 38%; }
+    .lab-shelf-2 { top: 56%; }
+    .shelf-items {
+      position: absolute; bottom: 10px; left: 0; right: 0;
+      display: flex; align-items: flex-end; gap: 14px;
+      padding: 0 20px;
+    }
+    .shelf-items svg { display: block; }
+
+    /* Wall monitor — hidden (score/streak shown in header) */
+    .wall-monitor { display: none; }
+
+    /* Floor (bottom 38%) */
+    .lab-floor {
+      flex: 0 0 38%;
+      background: repeating-linear-gradient(
+        90deg,
+        #e8e0d4 0px, #e8e0d4 48px,
+        #d4ccc0 48px, #d4ccc0 96px
+      );
+      position: relative;
+      border-top: 4px solid #b0a898;
+    }
+
+    /* Benches */
+    .lab-bench {
+      position: absolute; bottom: 0;
+      height: 70%; width: 160px;
+      background: #8b7355;
+      border-top: 6px solid #a08060;
+      border-radius: 4px 4px 0 0;
+    }
+    .lab-bench.left  { left: 16px; }
+    .lab-bench.right { right: 16px; }
+    .bench-top {
+      position: absolute; top: -18px; left: -6px; right: -6px;
+      height: 18px; background: #c8a878;
+      border-radius: 4px 4px 0 0;
+      border-top: 3px solid #d4b888;
+    }
+    .bench-items {
+      position: absolute; top: -70px; left: 0; right: 0;
+      display: flex; justify-content: center; gap: 10px; align-items: flex-end;
+    }
+
+    /* Animated beakers (SVG) */
+    .beaker-wrap { position: relative; }
+
+    /* Steam wisps */
+    .steam {
+      position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 4px;
+    }
+    .steam-line {
+      width: 3px; height: 16px;
+      background: rgba(200,220,255,.7);
+      border-radius: 2px;
+      animation: steamRise 2s ease-in-out infinite;
+    }
+    .steam-line:nth-child(2) { animation-delay: .4s; height: 20px; }
+    .steam-line:nth-child(3) { animation-delay: .8s; height: 12px; }
+    @keyframes steamRise {
+      0%   { opacity: 0; transform: translateY(0) scaleX(1); }
+      40%  { opacity: .8; }
+      100% { opacity: 0; transform: translateY(-22px) scaleX(1.4); }
+    }
+
+    /* Floating particles */
+    #particles { position: fixed; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+    .particle {
+      position: absolute; bottom: -10px;
+      border-radius: 50%;
+      animation: particleFloat linear infinite;
+    }
+    @keyframes particleFloat {
+      from { transform: translateY(0); opacity: .8; }
+      to   { transform: translateY(calc(-100vh - 20px)); opacity: 0; }
+    }
+
+    /* ── Fixed header ─────────────────────────────────────────────── */
+    .header{ position:fixed; top:0; left:0; right:0; z-index:50; background:rgba(var(--header-rgb),.75); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border-bottom:1px solid rgba(255,255,255,.1); padding:0; }
+    .headerInner{ padding:0 20px; height:56px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; max-width:none; }
+    .brand{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+    .brandIcon{ width:36px; height:36px; border-radius:10px; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:0 8px 16px rgba(0,0,0,.15); flex:0 0 auto; }
+    .brandText h1{ margin:0; font-size:15px; font-weight:900; letter-spacing:-.02em; color:#d1fae5; }
+    .brandText .sub{ font-size:9px; text-transform:uppercase; letter-spacing:.22em; color:#6ee7b7; font-weight:800; display:block; margin-top:2px; }
+    .hud{ display:flex; gap:8px; align-items:center; flex-wrap:nowrap; overflow-x:auto; margin-left:auto; }
+    .hud::-webkit-scrollbar{ display:none; }
+    .pill{ display:inline-flex; align-items:center; justify-content:center; min-height:32px; border:1px solid rgba(var(--accent-rgb),.3); border-radius:999px; background:rgba(var(--accent-rgb),.12); padding:6px 14px; font-size:12px; font-weight:800; color:#d1fae5; white-space:nowrap; flex-shrink:0; }
+    .pill.score{ background:#065f46; color:#fff; border-color:transparent; }
+    .pill.streak{ background:rgba(110,231,183,.12); color:#6ee7b7; border-color:rgba(110,231,183,.3); }
+    .topBtn{ border:none; background:rgba(110,231,183,.12); color:#d1fae5; font-weight:800; font-size:11px; text-transform:uppercase; letter-spacing:.12em; padding:7px 13px; border-radius:10px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; flex-shrink:0; transition:all .15s; }
+    .topBtn:hover{ background:rgba(110,231,183,.22); }
+
+    /* ── Scientist character (fixed left) ─────────────────────────── */
+    .scientist-stage {
+      position: fixed; right: 0;
+      width: calc((100vw - 75vw) / 2);
+      top: 56px; bottom: 0;
+      z-index: 11;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    #sciCharWrap {
+      width: 120px; height: 150px;
+      display: flex; align-items: flex-end; justify-content: center;
+      animation: sciIdle 3s ease-in-out infinite;
+    }
+    .scene-prop-left {
+      position: fixed; left: 0;
+      width: calc((100vw - 75vw) / 2);
+      top: 56px; bottom: 0;
+      z-index: 11;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      pointer-events: none;
+    }
+    @keyframes propBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    @keyframes propPulse { 0%,100%{opacity:.85} 50%{opacity:1} }
+    #sciCharWrap.sci-correct { animation: sciJump .6s ease-out; }
+    #sciCharWrap.sci-wrong   { animation: sciShake .5s ease-out; }
+    #sciCharWrap.sci-streak  { animation: sciDance .8s ease-in-out infinite; }
+
+    @keyframes sciIdle  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+    @keyframes sciJump  { 0%{transform:translateY(0)} 30%{transform:translateY(-22px)} 100%{transform:translateY(0)} }
+    @keyframes sciShake { 0%,100%{transform:rotate(0)} 20%{transform:rotate(-4deg) translateX(-4px)} 40%{transform:rotate(4deg) translateX(4px)} 60%{transform:rotate(-3deg) translateX(-3px)} 80%{transform:rotate(2deg)} }
+    @keyframes sciDance { 0%,100%{transform:rotate(-6deg)} 50%{transform:rotate(6deg)} }
+
+    /* ── Main game zone (fixed centered) ─────────────────────────── */
+    .game-zone {
+      position: fixed;
+      top: 90px; bottom: 8px;
+      left: 50%; transform: translateX(-50%);
+      width: 75vw;
+      z-index: 10;
+      display: flex; flex-direction: column; gap: 6px;
+      overflow-y: auto;
+      padding-bottom: 4px;
+    }
+    /* Scrollbar hidden but functional */
+    .game-zone::-webkit-scrollbar { width: 0; }
+
+    /* Fuel pill */
+    .fuel-pill {
+      background: rgba(255,255,255,.75);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      border-radius: 12px;
+      padding: 6px 14px;
+      border: 1px solid rgba(255,255,255,.6);
+      box-shadow: 0 4px 12px rgba(0,0,0,.08);
+      flex: 0 0 auto;
+    }
+    .fuel-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 11px; font-weight: 800; color: var(--muted); }
+    .fuel-bar-track { width: 100%; height: 8px; background: rgba(0,0,0,.08); border-radius: 999px; overflow: hidden; }
+    .fuel-bar-fill   { height: 100%; width: 100%; background: linear-gradient(90deg, var(--bad) 0%, var(--warn) 50%, var(--ok) 100%); transition: width .2s linear; border-radius: 999px; }
+
+    /* Main panel (frosted card) */
+    .game-panel {
+      background: rgba(255,255,255,.85);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      border-radius: 24px;
+      border: 3px solid rgba(255,255,255,.6);
+      box-shadow: 0 8px 32px rgba(0,0,0,.12);
+      padding: 14px 18px;
+      flex: 1 1 auto;
+      display: flex; flex-direction: column; gap: 0;
+    }
+
+    /* Mode buttons */
+    .mode-row { display: flex; justify-content: center; gap: 8px; margin-bottom: 8px; }
+    .modeSel {
+      border: 2px solid var(--line); background: rgba(255,255,255,.8); border-radius: 12px;
+      padding: 7px 18px; font-weight: 800; font-size: 11px; text-transform: uppercase;
+      letter-spacing: .1em; cursor: pointer; color: var(--muted);
+      font-family: 'Lexend', sans-serif; transition: all .15s;
+    }
+    .modeSel.active  { background: var(--indigo); color: #fff; border-color: var(--indigo); }
+    .modeSel:hover:not(.active) { border-color: #cbd5e1; color: var(--text); }
+
+    /* Challenge labels */
+    .challengeLabel { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .22em; color: var(--muted); text-align: center; margin-bottom: 2px; }
+    .challengeSub   { color: var(--muted); font-weight: 700; font-size: 12px; text-align: center; margin-bottom: 8px; }
+
+    /* Word area */
+    .wordArea { display: flex; justify-content: center; align-items: center; gap: 14px; flex-wrap: wrap; margin: 8px 0 6px; }
+
+    .dropZone {
+      width: 90px; height: 60px;
+      border: 4px dashed #c7d2fe; border-radius: 16px;
+      background: var(--indigo-soft);
+      display: flex; align-items: center; justify-content: center;
+      transition: .2s ease;
+    }
+    .dropZoneText { font-size: 20px; font-weight: 900; color: #a5b4fc; letter-spacing: .05em; }
+    .flashSuccess { background: var(--green-soft) !important; border-color: var(--green-line) !important; }
+    .flashFail    { background: #fef2f2 !important; border-color: #fecaca !important; }
+
+    .baseWord { font-size: 42px; line-height: 1; font-weight: 900; color: #312e81; text-align: center; letter-spacing: -.02em; }
+    .baseMeaning { text-align: center; color: #334155; font-weight: 700; margin-bottom: 8px; font-size: 13px; line-height: 1.5; }
+    .baseMeaning strong { color: var(--indigo); }
+
+    /* Options */
+    .options { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 8px; }
+    .bubbleBtn {
+      width: 85px; height: 85px; border-radius: 999px; border: 3px solid;
+      background: rgba(255,255,255,.9); cursor: pointer;
+      transition: transform .15s ease, box-shadow .15s ease;
+      animation: float 3s ease-in-out infinite;
+    }
+    .bubbleBtn:hover    { transform: translateY(-4px) scale(1.04); box-shadow: 0 16px 28px rgba(0,0,0,.12); }
+    .bubbleBtn:disabled { opacity: .55; cursor: not-allowed; transform: none; animation: none; }
+    .bubbleBtn.blue   { border-color: #bfdbfe; color: #1e40af; }
+    .bubbleBtn.green  { border-color: #bbf7d0; color: #166534; }
+    .bubbleBtn.purple { border-color: #ddd6fe; color: #6d28d9; }
+    .bubbleBtn.orange { border-color: var(--orange-line); color: var(--orange-text); }
+    .bubbleInner { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 100%; padding: 6px; text-align: center; }
+    .bubbleInner span { font-size: 17px; font-weight: 900; }
+    @keyframes float { 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-6px); } }
+
+    /* Feedback */
+    .feedback    { min-height: 20px; text-align: center; font-size: 17px; font-weight: 900; }
+    .feedback.ok  { color: var(--ok); }
+    .feedback.bad { color: var(--bad); }
+    .subFeedback  { min-height: 16px; text-align: center; color: var(--muted); font-weight: 700; margin-top: 2px; line-height: 1.4; font-size: 12px; }
+
+    /* Action row */
+    .actionRow { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+    .secondaryBtn {
+      border: 2px solid var(--line); background: rgba(255,255,255,.8); color: #334155;
+      font-weight: 800; font-size: 12px; padding: 11px 18px;
+      border-radius: 14px; cursor: pointer; text-transform: uppercase; letter-spacing: .08em;
+      transition: all .15s; font-family: 'Lexend', sans-serif;
+    }
+    .secondaryBtn:hover { background: #f8fafc; }
+    .primaryBtn {
+      border: none; background: var(--indigo); color: #fff;
+      font-weight: 900; font-size: 12px; padding: 13px 26px;
+      border-radius: 14px; cursor: pointer; text-transform: uppercase; letter-spacing: .08em;
+      box-shadow: 0 10px 20px rgba(67,56,202,.2); transition: all .15s;
+      font-family: 'Lexend', sans-serif;
+    }
+    .primaryBtn:hover { background: #3730a3; transform: translateY(-1px); }
+    /* Why panel: shown after a wrong answer, stays until the student presses Next */
+    .mxWhy { max-width: 520px; margin: 8px auto 0; text-align: left; display: grid; gap: 6px; }
+    .mxWhy[hidden], .mxNextRow[hidden] { display: none; }
+    .mxWhyLine { background: rgba(255,255,255,.85); border: 2px solid rgba(0,0,0,.08); border-radius: 12px; padding: 8px 12px; font-size: 15px; font-weight: 600; line-height: 1.45; color: #1e293b; }
+    .mxWhyLine.picked { border-color: rgba(220,38,38,.4); }
+    .mxWhyLine.answer { border-color: rgba(22,163,74,.5); }
+    .mxWhyLine b { font-weight: 900; }
+    .mxNextRow { display: flex; justify-content: center; margin-top: 10px; }
+    .bubbleBtn { position: relative; }
+    .bubbleBtn.mxPicked:disabled, .bubbleBtn.mxAnswer:disabled { opacity: 1; }
+    .bubbleBtn.mxPicked { outline: 4px solid var(--bad); outline-offset: 2px; }
+    .bubbleBtn.mxAnswer { outline: 4px solid var(--ok); outline-offset: 2px; }
+    .mxMark { position: absolute; top: -6px; right: -6px; width: 24px; height: 24px; border-radius: 50%; background: #fff; font-size: 15px; font-weight: 900; line-height: 24px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,.2); }
+    .mxPicked .mxMark { color: var(--bad); }
+    .mxAnswer .mxMark { color: var(--ok); }
+
+    /* ── Responsive: mobile ────────────────────────────────────────── */
+    @media (max-width: 680px) {
+      .lab-wall, .lab-floor, .scientist-stage, .wall-monitor, .scene-prop-left { display: none; }
+      .lab-scene { background: linear-gradient(160deg, #1e1b4b 0%, #4338ca 60%, #6366f1 100%); }
+      .game-zone { width: calc(100vw - 16px); top: 90px; }
+      .headerInner { padding: 0 10px; }
+    }
+    @media (max-width: 480px) {
+      .headerInner { padding: 0 8px; gap: 6px; }
+      .brand h1, .brandText h1 { font-size: 13px; }
+      .brand .sub, .brandText .sub { display: none; }
+      .pill { font-size: 10px; padding: 4px 10px; min-height: 28px; }
+      .topBtn { font-size: 10px; padding: 5px 9px; }
+      .game-zone { width: calc(100vw - 12px); top: 60px; padding: 8px 0; }
+      .game-panel { padding: 10px 12px; border-radius: 16px; }
+      .mode-row { gap: 4px; margin-bottom: 4px; }
+      .modeSel { padding: 6px 10px; font-size: 10px; min-height: 44px; }
+      .challengeLabel { font-size: 10px; letter-spacing: .15em; }
+      .challengeSub { font-size: 11px; }
+      .wordArea { gap: 8px; margin: 6px 0 4px; }
+      .dropZone { width: 70px; height: 50px; border-radius: 12px; border-width: 3px; }
+      .dropZoneText { font-size: 16px; }
+      .baseWord { font-size: 28px; }
+      .baseMeaning { font-size: 11px; margin-bottom: 4px; }
+      .options { gap: 8px; margin: 4px 0 6px; }
+      .bubbleBtn { width: 70px; height: 70px; min-width: 70px; min-height: 70px; }
+      .bubbleInner span { font-size: 14px; }
+      .bubbleInner { padding: 4px; gap: 1px; }
+      .feedback { font-size: 14px; min-height: 16px; }
+      .subFeedback { font-size: 11px; min-height: 14px; }
+      .actionRow { gap: 6px; margin-top: 6px; }
+      .secondaryBtn { padding: 10px 14px; font-size: 11px; min-height: 44px; }
+      .primaryBtn { padding: 10px 20px; font-size: 11px; min-height: 44px; }
+      .fuel-row { font-size: 10px; }
+      .fuel-bar-track { height: 6px; }
+      .round-picker { gap: 4px; }
+      .round-btn { font-size: 11px; padding: 6px 10px; min-height: 44px; }
+    }
+
+    /* ── Round picker ── */
+    .round-picker{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;}
+    .round-btn{background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.1);color:#94a3b8;font-family:'Lexend',sans-serif;font-weight:800;font-size:13px;padding:6px 14px;border-radius:10px;cursor:pointer;transition:all .15s;}
+    .round-btn:hover{border-color:rgba(99,102,241,.4);color:#e0e7ff;}
+    .round-btn.active{background:#4338ca;border-color:#4338ca;color:#fff;}
+
+    /* ── Chemistry Lab personality ───────────────────────────────────── */
+    .game-zone{top:56px!important;bottom:0!important;display:flex!important;flex-direction:column!important;justify-content:center!important;padding:16px 0!important;overflow-y:auto;flex:none!important;}
+    .game-zone::-webkit-scrollbar{width:0;}
+    .game-panel{background:rgba(255,255,255,.92)!important;backdrop-filter:blur(12px)!important;-webkit-backdrop-filter:blur(12px)!important;border:2px solid rgba(var(--accent-rgb),.2)!important;box-shadow:0 16px 48px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.6)!important;border-radius:20px!important;overflow:hidden!important;flex:0 0 auto!important;}
+    .fuel-pill{display:none!important;}
+    .fuel-bar-track{background:rgba(0,60,30,.12)!important;border-radius:999px!important;}
+    .fuel-bar-fill{background:linear-gradient(90deg,#dc2626,#eab308,#4ade80)!important;}
+    .dropZone{border-color:rgba(74,222,128,.6)!important;background:rgba(220,252,231,.9)!important;border-radius:16px!important;}
+    .dropZoneText{color:#16a34a!important;}
+    .flashSuccess{background:rgba(187,247,208,.9)!important;border-color:#4ade80!important;}
+    .flashFail{background:#fef2f2!important;border-color:#fecaca!important;}
+    .bubbleBtn{background:rgba(240,253,244,.98)!important;border-width:3px!important;}
+    .bubbleBtn.blue{border-color:#22d3ee!important;color:#0e7490!important;}
+    .bubbleBtn.green{border-color:#4ade80!important;color:#166534!important;}
+    .bubbleBtn.purple{border-color:#a78bfa!important;color:#5b21b6!important;}
+    .bubbleBtn.orange{border-color:#6ee7b7!important;color:#065f46!important;}
+    .baseWord{color:#14532d!important;}
+    .baseMeaning strong{color:#059669!important;}
+    .challengeLabel{color:#059669!important;}
+    .modeSel{background:rgba(240,253,244,.8)!important;border-color:rgba(74,222,128,.35)!important;color:#065f46!important;}
+    .modeSel.active{background:#065f46!important;color:#d1fae5!important;border-color:#065f46!important;}
+    .primaryBtn{background:#065f46!important;box-shadow:0 8px 20px rgba(6,95,70,.3)!important;}
+    .primaryBtn:hover{background:#064e3b!important;}
+    .secondaryBtn{background:rgba(240,253,244,.9)!important;border-color:rgba(74,222,128,.35)!important;color:#065f46!important;}
+    .feedback.ok{color:#15803d!important;}
+  /* Decorative scene motion stops in low-stim mode and when the device asks for reduced motion */
+  .low-stim .particle,.low-stim .lab-bulb-glass,.low-stim .lab-window,.low-stim .steam-line,.low-stim .scene-prop-left svg,.low-stim .scene-prop-left svg *,.low-stim .bubbleBtn,.low-stim #sciCharWrap{animation:none!important;}
+  @media (prefers-reduced-motion: reduce){ .particle,.lab-bulb-glass,.lab-window,.steam-line,.scene-prop-left svg,.scene-prop-left svg *,.bubbleBtn,#sciCharWrap{animation:none!important;} }
+  </style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<!-- ════════════════════════════════════════════════════════════════
+     LAB SCENE BACKDROP
+════════════════════════════════════════════════════════════════ -->
+<div class="lab-scene">
+  <!-- Wall -->
+  <div class="lab-wall">
+
+    <!-- Overhead bulb -->
+    <div class="lab-bulb">
+      <div class="lab-bulb-wire"></div>
+      <div class="lab-bulb-glass"></div>
+    </div>
+
+    <!-- Windows -->
+    <div class="lab-windows">
+      <div class="lab-window"></div>
+      <div class="lab-window" style="animation-delay:-20s"></div>
+      <div class="lab-window" style="animation-delay:-40s"></div>
+    </div>
+
+    <!-- Shelf 1 with items -->
+    <div class="lab-shelf lab-shelf-1">
+      <div class="shelf-items">
+        <!-- Small flask SVG -->
+        <svg width="22" height="32" viewBox="0 0 22 32">
+          <rect x="9" y="0" width="4" height="10" rx="1" fill="#a08060"/>
+          <polygon points="4,30 18,30 16,16 6,16" fill="#7dd3fc" opacity=".8"/>
+          <polygon points="4,30 18,30 16,16 6,16" fill="none" stroke="#5b9fb5" stroke-width="1.5"/>
+          <rect x="6" y="22" width="10" height="3" rx="1" fill="#38bdf8" opacity=".5"/>
+        </svg>
+        <!-- Book 1 -->
+        <svg width="14" height="26" viewBox="0 0 14 26">
+          <rect width="14" height="26" rx="2" fill="#f87171"/>
+          <rect x="2" y="4" width="10" height="1.5" rx="1" fill="#fff" opacity=".6"/>
+          <rect x="2" y="8" width="8" height="1.5" rx="1" fill="#fff" opacity=".6"/>
+          <rect x="0" y="0" width="2.5" height="26" rx="1" fill="#dc2626"/>
+        </svg>
+        <!-- Book 2 -->
+        <svg width="12" height="22" viewBox="0 0 12 22">
+          <rect width="12" height="22" rx="2" fill="#a78bfa"/>
+          <rect x="1.5" y="3" width="9" height="1.5" rx="1" fill="#fff" opacity=".6"/>
+          <rect x="0" y="0" width="2.5" height="22" rx="1" fill="#7c3aed"/>
+        </svg>
+        <!-- Erlenmeyer flask -->
+        <svg width="26" height="34" viewBox="0 0 26 34">
+          <rect x="10" y="0" width="6" height="10" rx="1" fill="#a08060"/>
+          <polygon points="2,32 24,32 18,14 8,14" fill="#86efac" opacity=".85"/>
+          <polygon points="2,32 24,32 18,14 8,14" fill="none" stroke="#4ade80" stroke-width="1.5"/>
+          <rect x="4" y="24" width="18" height="4" rx="2" fill="#4ade80" opacity=".4"/>
+          <animateTransform attributeName="transform" type="translate" values="0,0;0,-1;0,0" dur="1.8s" repeatCount="indefinite"/>
+        </svg>
+        <!-- Book 3 -->
+        <svg width="16" height="28" viewBox="0 0 16 28">
+          <rect width="16" height="28" rx="2" fill="#fb923c"/>
+          <rect x="2" y="5" width="12" height="1.5" rx="1" fill="#fff" opacity=".6"/>
+          <rect x="2" y="9" width="9" height="1.5" rx="1" fill="#fff" opacity=".6"/>
+          <rect x="0" y="0" width="2.5" height="28" rx="1" fill="#ea580c"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Shelf 2 with items -->
+    <div class="lab-shelf lab-shelf-2">
+      <div class="shelf-items">
+        <!-- Round-bottom flask -->
+        <svg width="24" height="30" viewBox="0 0 24 30">
+          <rect x="9" y="0" width="6" height="8" rx="1" fill="#a08060"/>
+          <ellipse cx="12" cy="21" rx="10" ry="9" fill="#fde68a" opacity=".85"/>
+          <ellipse cx="12" cy="21" rx="10" ry="9" fill="none" stroke="#f59e0b" stroke-width="1.5"/>
+          <ellipse cx="12" cy="24" rx="7" ry="3" fill="#fbbf24" opacity=".4"/>
+        </svg>
+        <!-- Test tube -->
+        <svg width="14" height="32" viewBox="0 0 14 32">
+          <rect x="3" y="0" width="8" height="26" rx="4" fill="#c4b5fd" opacity=".9"/>
+          <rect x="3" y="18" width="8" height="8" rx="4" fill="#8b5cf6" opacity=".7"/>
+          <rect x="3" y="0" width="8" height="26" rx="4" fill="none" stroke="#7c3aed" stroke-width="1.5"/>
+        </svg>
+        <!-- Book -->
+        <svg width="18" height="30" viewBox="0 0 18 30">
+          <rect width="18" height="30" rx="2" fill="#34d399"/>
+          <rect x="2" y="5" width="14" height="1.5" rx="1" fill="#fff" opacity=".6"/>
+          <rect x="2" y="9" width="10" height="1.5" rx="1" fill="#fff" opacity=".6"/>
+          <rect x="0" y="0" width="2.5" height="30" rx="1" fill="#059669"/>
+        </svg>
+        <!-- Beaker small -->
+        <svg width="20" height="28" viewBox="0 0 20 28">
+          <polygon points="2,26 18,26 16,8 4,8" fill="#f9a8d4" opacity=".85"/>
+          <polygon points="2,26 18,26 16,8 4,8" fill="none" stroke="#ec4899" stroke-width="1.5"/>
+          <rect x="3" y="8" width="14" height="4" fill="#a08060"/>
+          <rect x="4" y="18" width="12" height="4" rx="1" fill="#f472b6" opacity=".5"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Wall monitor -->
+    <div class="wall-monitor">
+      <div class="mon-label">Score</div>
+      <div class="mon-val" id="monitorScore">0 XP</div>
+      <div class="mon-label">Streak</div>
+      <div class="mon-val" id="monitorStreak">🔥 0</div>
+    </div>
+
+  </div><!-- /lab-wall -->
+
+  <!-- Floor -->
+  <div class="lab-floor">
+
+    <!-- Left bench -->
+    <div class="lab-bench left">
+      <div class="bench-top"></div>
+      <div class="bench-items">
+        <!-- Beaker 1 with steam -->
+        <div class="beaker-wrap">
+          <div class="steam">
+            <div class="steam-line"></div>
+            <div class="steam-line"></div>
+            <div class="steam-line"></div>
+          </div>
+          <svg width="38" height="52" viewBox="0 0 38 52">
+            <polygon points="4,50 34,50 30,10 8,10" fill="none" stroke="#7dd3fc" stroke-width="2"/>
+            <clipPath id="bk1clip"><polygon points="4,50 34,50 30,10 8,10"/></clipPath>
+            <rect x="4" y="10" width="30" height="40" clip-path="url(#bk1clip)" fill="#bae6fd" opacity=".4"/>
+            <rect x="4" y="10" width="30" height="40" clip-path="url(#bk1clip)">
+              <animate attributeName="y" values="28;26;28;30;28" dur="1.6s" repeatCount="indefinite"/>
+              <animate attributeName="height" values="22;24;22;20;22" dur="1.6s" repeatCount="indefinite"/>
+              <set attributeName="fill" to="#38bdf8"/>
+              <set attributeName="opacity" to="0.75"/>
+            </rect>
+            <rect x="6" y="8" width="26" height="5" rx="1" fill="#a08060"/>
+          </svg>
+        </div>
+        <!-- Beaker 2 (green liquid) -->
+        <div class="beaker-wrap">
+          <svg width="32" height="46" viewBox="0 0 32 46">
+            <ellipse cx="16" cy="42" rx="12" ry="4" fill="none" stroke="#4ade80" stroke-width="2"/>
+            <path d="M4,42 Q4,10 16,10 Q28,10 28,42" fill="none" stroke="#4ade80" stroke-width="2"/>
+            <clipPath id="bk2clip"><path d="M4,42 Q4,10 16,10 Q28,10 28,42 Z"/></clipPath>
+            <ellipse cx="16" cy="42" rx="12" ry="4" clip-path="url(#bk2clip)" fill="#86efac" opacity=".5"/>
+            <rect x="4" y="10" width="24" height="32" clip-path="url(#bk2clip)">
+              <animate attributeName="y" values="26;24;26;28;26" dur="2.1s" repeatCount="indefinite"/>
+              <animate attributeName="height" values="16;18;16;14;16" dur="2.1s" repeatCount="indefinite"/>
+              <set attributeName="fill" to="#4ade80"/>
+              <set attributeName="opacity" to="0.7"/>
+            </rect>
+            <rect x="5" y="6" width="22" height="5" rx="1" fill="#a08060"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right bench -->
+    <div class="lab-bench right">
+      <div class="bench-top"></div>
+      <div class="bench-items">
+        <!-- Beaker 3 (purple) -->
+        <div class="beaker-wrap">
+          <svg width="34" height="48" viewBox="0 0 34 48">
+            <polygon points="3,46 31,46 27,8 7,8" fill="none" stroke="#c084fc" stroke-width="2"/>
+            <clipPath id="bk3clip"><polygon points="3,46 31,46 27,8 7,8"/></clipPath>
+            <rect x="3" y="8" width="28" height="38" clip-path="url(#bk3clip)" fill="#e9d5ff" opacity=".4"/>
+            <rect x="3" y="8" width="28" height="38" clip-path="url(#bk3clip)">
+              <animate attributeName="y" values="28;26;30;27;28" dur="1.9s" repeatCount="indefinite"/>
+              <animate attributeName="height" values="18;20;16;19;18" dur="1.9s" repeatCount="indefinite"/>
+              <set attributeName="fill" to="#a855f7"/>
+              <set attributeName="opacity" to="0.65"/>
+            </rect>
+            <rect x="5" y="6" width="24" height="4" rx="1" fill="#a08060"/>
+          </svg>
+        </div>
+        <!-- Flask (orange) -->
+        <div class="beaker-wrap">
+          <svg width="36" height="50" viewBox="0 0 36 50">
+            <rect x="14" y="0" width="8" height="14" rx="2" fill="#a08060"/>
+            <ellipse cx="18" cy="38" rx="14" ry="12" fill="#fed7aa" opacity=".85"/>
+            <ellipse cx="18" cy="38" rx="14" ry="12" fill="none" stroke="#fb923c" stroke-width="2"/>
+            <rect x="6" y="14" width="24" height="24" clip-path="url(#flkclip)">
+              <animate attributeName="y" values="36;34;37;35;36" dur="2.4s" repeatCount="indefinite"/>
+              <animate attributeName="height" values="12;14;11;13;12" dur="2.4s" repeatCount="indefinite"/>
+              <set attributeName="fill" to="#f97316"/>
+              <set attributeName="opacity" to="0.6"/>
+            </rect>
+            <clipPath id="flkclip"><ellipse cx="18" cy="38" rx="14" ry="12"/></clipPath>
+            <ellipse cx="18" cy="44" rx="10" ry="4" fill="#fb923c" opacity=".35"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /lab-floor -->
+</div><!-- /lab-scene -->
+
+<!-- Floating particles container -->
+<div id="particles"></div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FIXED HEADER
+════════════════════════════════════════════════════════════════ -->
+<header class="header wl-game-header" role="banner">
+  <div class="headerInner">
+  <div class="brand">
+    <div class="brandIcon">⚡</div>
+    <div class="brandText">
+      <h1>Mission Mode</h1>
+      <span class="sub">Word Labs</span>
+    </div>
+  </div>
+  <div class="hud" role="navigation" aria-label="Game controls">
+    <span class="pill streak" id="streakPill" aria-live="polite">🔥 Streak: 0</span>
+    <span class="pill score"  id="scorePill" aria-live="polite">0 XP</span>
+    <span id="wlPillSlot"></span>
+    <button id="wlLoginBtn" style="border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);font-weight:800;font-size:11px;padding:7px 13px;border-radius:10px;cursor:pointer;font-family:'Lexend',sans-serif;white-space:nowrap;flex-shrink:0;">👤 Log in</button>
+    <a href="landing.html" title="Home" class="topBtn">🏠 <span class="topBtnLabel">Home</span></a>
+  </div>
+  <a href="scientist.html" title="My Scientist" class="topBtn" style="flex-shrink:0;">🧬 <span class="topBtnLabel">My Scientist</span></a>
+  </div>
+</header>
+
+<!-- ════════════════════════════════════════════════════════════════
+     SCIENTIST CHARACTER
+════════════════════════════════════════════════════════════════ -->
+<div class="scene-prop-left" aria-hidden="true">
+  <svg width="110" height="200" viewBox="0 0 110 200" style="animation:propBob 4s ease-in-out infinite">
+    <!-- Large bubbling flask - chemistry theme -->
+    <!-- Flask neck -->
+    <rect x="46" y="10" width="18" height="50" rx="4" fill="#2d6a4f"/>
+    <!-- Flask stopper -->
+    <rect x="42" y="6" width="26" height="10" rx="3" fill="#1b4332"/>
+    <!-- Flask body (Erlenmeyer shape) -->
+    <path d="M46 60 L18 148 Q14 168 30 174 L80 174 Q96 168 92 148 L64 60 Z" fill="rgba(74,222,128,.6)" stroke="#4ade80" stroke-width="2"/>
+    <!-- Liquid fill -->
+    <path d="M24 148 Q20 165 33 170 L77 170 Q90 165 86 148 L62 118 L48 118 Z" fill="rgba(16,185,129,.7)"/>
+    <!-- Bubbles in liquid -->
+    <circle cx="45" cy="155" r="4" fill="rgba(110,231,183,.6)"><animate attributeName="cy" values="155;145;135;125;115" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.6;0.8;0.5;0.3;0" dur="2s" repeatCount="indefinite"/></circle>
+    <circle cx="60" cy="160" r="3" fill="rgba(110,231,183,.5)"><animate attributeName="cy" values="160;148;138;128;118" dur="2.4s" begin="0.6s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.5;0.7;0.4;0.2;0" dur="2.4s" begin="0.6s" repeatCount="indefinite"/></circle>
+    <circle cx="72" cy="152" r="5" fill="rgba(110,231,183,.4)"><animate attributeName="cy" values="152;140;130;120;110" dur="1.8s" begin="1.1s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.4;0.6;0.3;0.1;0" dur="1.8s" begin="1.1s" repeatCount="indefinite"/></circle>
+    <!-- Steam puffs -->
+    <ellipse cx="55" cy="4" rx="5" ry="8" fill="rgba(187,247,208,.4)" style="animation:propPulse 1.5s ease-in-out infinite"/>
+    <ellipse cx="48" cy="-4" rx="4" ry="6" fill="rgba(187,247,208,.3)" style="animation:propPulse 1.5s ease-in-out infinite 0.5s"/>
+    <ellipse cx="62" cy="-2" rx="3" ry="5" fill="rgba(187,247,208,.3)" style="animation:propPulse 1.5s ease-in-out infinite 0.9s"/>
+    <!-- Stand/base -->
+    <rect x="38" y="174" width="34" height="6" rx="3" fill="#1b4332"/>
+    <rect x="30" y="180" width="50" height="8" rx="4" fill="#1b4332"/>
+    <!-- Label on flask -->
+    <rect x="32" y="130" width="46" height="22" rx="3" fill="rgba(255,255,255,.25)"/>
+    <text x="55" y="143" text-anchor="middle" font-size="7" font-weight="900" fill="#064e3b" font-family="Lexend,sans-serif">FORMULA X</text>
+    <!-- Flask shine -->
+    <path d="M28 100 Q24 120 26 140" stroke="rgba(255,255,255,.3)" stroke-width="3" fill="none" stroke-linecap="round"/>
+  </svg>
+</div>
+<div class="scientist-stage">
+  <div id="petCharWrap" class="pet-idle"></div>
+  <div id="sciCharWrap"></div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     GAME ZONE
+════════════════════════════════════════════════════════════════ -->
+<div class="game-zone" id="main-content" role="main">
+
+  <!-- Single Chemistry Lab panel -->
+  <div class="game-panel" id="gameCard">
+    <!-- Reaction meter -->
+    <div style="margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <span style="font-size:11px;font-weight:700;letter-spacing:.06em;color:#065f46;text-transform:uppercase;">⚗️ Reaction Meter</span>
+        <span id="fuelLabel" style="font-size:11px;font-weight:700;color:#065f46;" aria-live="polite">100%</span>
+      </div>
+      <div class="fuel-bar-track" style="height:8px;"><div class="fuel-bar-fill" id="fuelBar"></div></div>
+      <div style="font-size:11px;color:#047857;opacity:.75;margin-top:4px;text-align:center;letter-spacing:.03em;">Active Mission · Prefix Power-Up · Build words by adding the right morpheme</div>
+    </div>
+
+    <!-- Round count picker (hidden in teacher mode) -->
+    <div id="roundPickerWrap" style="margin:10px 0 8px;text-align:center;">
+      <div style="font-size:11px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;">Words this round</div>
+      <div class="round-picker" id="roundPicker">
+        <button class="round-btn" data-count="10" onclick="setRoundCount(10,this)">10</button>
+        <button class="round-btn active" data-count="15" onclick="setRoundCount(15,this)">15</button>
+        <button class="round-btn" data-count="20" onclick="setRoundCount(20,this)">20</button>
+        <button class="round-btn" data-count="25" onclick="setRoundCount(25,this)">25</button>
+        <button class="round-btn" data-count="30" onclick="setRoundCount(30,this)">30</button>
+      </div>
+    </div>
+    <div class="wlProgressBar" id="roundProgress"><div class="wlProgressBar-fill" id="roundProgressFill"></div></div>
+    <!-- Difficulty -->
+    <div class="mode-row" style="margin-bottom:6px;">
+      <button class="modeSel" id="diffEasy" onclick="setDifficulty('easy')" style="font-size:11px;">🟢 Easy</button>
+      <button class="modeSel active" id="diffMedium" onclick="setDifficulty('medium')" style="font-size:11px;">🟡 Medium</button>
+      <button class="modeSel" id="diffHard" onclick="setDifficulty('hard')" style="font-size:11px;">🔴 Hard</button>
+    </div>
+    <!-- Mode buttons -->
+    <div class="mode-row">
+      <button class="modeSel active"  id="modeMixed"  onclick="setMorphemeMode('mixed')">Mixed</button>
+      <button class="modeSel"        id="modePrefix" onclick="setMorphemeMode('prefix')">Prefixes</button>
+      <button class="modeSel"        id="modeSuffix" onclick="setMorphemeMode('suffix')">Suffixes</button>
+      <button class="modeSel"        id="modeBase"   onclick="setMorphemeMode('base')">Bases</button>
+    </div>
+
+    <div class="challengeLabel" id="challengeLabel">Prefix challenge</div>
+    <div class="challengeSub"   id="challengeSub">Pick the prefix that gives the base word the right meaning.</div>
+
+    <div class="wordArea">
+      <div class="dropZone" id="prefixDropZone">
+        <div class="dropZoneText" id="dropZoneText">____</div>
+      </div>
+      <div class="baseWord" id="word">BASE</div>
+    </div>
+
+    <div class="baseMeaning" id="baseMeaning">Loading...</div>
+    <span id="ealdSpeakBtns"></span>
+    <div id="ealdDefinition" class="eald-definition"></div>
+    <div class="options"     id="options"></div>
+    <div class="feedback"    id="feedback" aria-live="assertive"></div>
+    <div class="subFeedback" id="subFeedback" aria-live="polite"></div>
+    <div class="mxWhy" id="mxWhy" aria-live="polite" hidden></div>
+    <div class="mxNextRow" id="mxNextRow" hidden><button class="primaryBtn" id="mxNextBtn" type="button">Next word →</button></div>
+    <div id="ealdTranslation" aria-live="polite"></div>
+
+    <div class="actionRow">
+      <button class="secondaryBtn" id="recalibrateBtn" type="button">Restart</button>
+      <button class="primaryBtn"   id="skipBtn"        type="button">Skip →</button>
+    </div>
+  </div><!-- /game-panel -->
+
+</div><!-- /game-zone -->
+
+<!-- ════════════════════════════════════════════════════════════════
+     SCRIPTS
+════════════════════════════════════════════════════════════════ -->
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="wordlab-stage.js"></script>
+<script defer src="wordlab-data.js?v=20261023b"></script>
+<script defer src="wordlab-scientist.js?v=20261019"></script>
+<script defer src="wordlab-effects.js"></script>
+<script defer src="wordlab-worlds.js"></script>
+<script defer src="wordlab-audio.js"></script>
+<script defer src="wordlab-teacher.js"></script>
+<script defer src="wordlab-help.js"></script>
+<script defer src="wordlab-hints.js"></script>
+<script src="data.js"></script>
+<script>
+  var _supportMode = false;
+  document.addEventListener('DOMContentLoaded', function(){ _supportMode = !!(typeof WordLabData !== 'undefined' && WordLabData.isSupportMode()); });
+  const MISSION_PREFIX_PATTERNS = {
+    "ad": "towards {base}",
+    "anti": "against {base}",
+    "de": "remove or undo {base}",
+    "dis": "not or opposite of {base}",
+    "in": "not {base}",
+    "inter": "between {base}",
+    "mis": "wrongly {base}",
+    "non": "not {base}",
+    "over": "too much {base}",
+    "post": "after {base}",
+    "pre": "before {base}",
+    "re": "{base} again",
+    "sub": "under or below {base}",
+    "super": "above or beyond {base}",
+    "trans": "across {base}",
+    "un": "not {base}",
+    "under": "below {base}",
+    "con": "together or with {base}",
+    "contra": "against or opposite of {base}",
+    "en": "make {base}",
+    "em": "make {base}",
+    "ex": "out of {base}",
+    "e": "out of {base}",
+    "extra": "beyond or outside {base}",
+    "fore": "before {base}",
+    "hyper": "excessively {base}",
+    "mal": "badly done {base}",
+    "mega": "very large {base}",
+    "micro": "very small {base}",
+    "mid": "middle of {base}",
+    "multi": "many {base}",
+    "pro": "in favour of {base}",
+    "semi": "half or partly {base}",
+    "ob": "against or towards {base}",
+    "a": "not or without {base}",
+    "be": "to make {base}",
+    "hypo": "under or below {base}",
+    "circum": "around {base}",
+    "uni": "one {base}",
+    "arch": "chief or most important {base}"
+  };
+
+  const MISSION_SUFFIX_PATTERNS = {
+    "s": "more than one {base}",
+    "es": "more than one {base}",
+    "ed": "the past form of {base}; already happened",
+    "ing": "the action of {base}ing; right now",
+    "en": "to make {base}",
+    "er": "a person who {base}s",
+    "or": "a person or thing that {base}s",
+    "est": "the most {base}",
+    "ly": "in a {base} way",
+    "ion": "the act of {base}ing",
+    "able": "can be {base}d",
+    "ible": "can be {base}d",
+    "y": "full of {base}",
+    "ful": "full of {base}",
+    "less": "without {base}",
+    "ish": "somewhat like a {base}",
+    "ness": "the quality of being {base}",
+    "ment": "the result of {base}ing",
+    "al": "relating to {base}",
+    "ial": "relating to {base}",
+    "ty": "the state of being {base}",
+    "ity": "the quality of being {base}",
+    "ous": "full of {base}",
+    "ee": "a person who is {base}d",
+    "ist": "a person connected with {base}",
+    "ance": "the state of {base}ing",
+    "ence": "the state of {base}ing",
+    "ant": "one that {base}s",
+    "ent": "one that {base}s",
+    "ate": "to make {base}",
+    "eer": "a person who works with {base}",
+    "fy": "to make {base}",
+    "ify": "to make {base}",
+    "ific": "making or doing {base}",
+    "hood": "the state of being a {base}",
+    "ian": "a person connected to {base}",
+    "ic": "relating to {base}",
+    "ive": "relating to or causing {base}ing",
+    "ize": "to make {base}",
+    "like": "like a {base}",
+    "logy": "the study of {base}",
+    "ologist": "a person who studies {base}",
+    "ship": "the state or skill of {base}",
+    "ure": "the result of {base}ing",
+    "age": "the state of {base}ing",
+    "ory": "relating to {base}ing",
+    "ary": "relating to {base}",
+    "ise": "to make {base}",
+    "ious": "full of {base}",
+    "eous": "having qualities of {base}",
+    "ative": "tending to {base}",
+    "tion": "the act of {base}ing",
+    "sion": "the act of {base}ing",
+    "ation": "the act of {base}ing",
+    "pathy": "feeling or suffering of {base}"
+  };
+
+  var PREFIXES = (window.MORPHEMES && window.MORPHEMES.prefixes) ? window.MORPHEMES.prefixes.map(function(p) {
+    return {
+      id: p.id, stage: p.stage, form: p.form, meaning: p.meaning,
+      meaningPattern: MISSION_PREFIX_PATTERNS[p.id] || p.meaning + ' {base}',
+      allowedPos: p.allowedPos || ['noun','adj','verb'],
+      altForms: p.altForms || null
+    };
+  }) : [];
+  var SUFFIXES = (window.MORPHEMES && window.MORPHEMES.suffixes) ? window.MORPHEMES.suffixes.map(function(s) {
+    return {
+      id: s.id, stage: s.stage, form: s.form, meaning: s.meaning,
+      meaningPattern: MISSION_SUFFIX_PATTERNS[s.id] || s.meaning + ' {base}',
+      allowedPos: s.allowedPos || ['noun','adj','verb']
+    };
+  }) : [];
+  var SUFFIX_BASES = [];
+  let missionDifficulty = 'medium'; // easy | medium | hard
+  const DIFF_SETTINGS = {
+    easy:   { drainRate:0.15, wrongPenalty:8,  correctGain:12, skipPenalty:5, options:3 },
+    medium: { drainRate:0.25, wrongPenalty:12, correctGain:8,  skipPenalty:8, options:4 },
+    hard:   { drainRate:0.35, wrongPenalty:16, correctGain:6,  skipPenalty:10, options:5 },
+  };
+  function getDiff(){
+    var d = DIFF_SETTINGS[missionDifficulty];
+    if(!_supportMode) return d;
+    return { drainRate: d.drainRate * 0.5, wrongPenalty: d.wrongPenalty * 0.5, correctGain: d.correctGain * 1.5, skipPenalty: d.skipPenalty * 0.5, options: Math.min(d.options, 3) };
+  }
+  function setDifficulty(level){
+    missionDifficulty = level;
+    ['Easy','Medium','Hard'].forEach(function(l){ document.getElementById('diff'+l).classList.toggle('active', l.toLowerCase()===level); });
+    _roundAnswered=0;_roundCorrect=0;score=0; streak=0; fuel=100; if(!_wltActive){updateHud(); startFuelDrain();} loadQuestion();
+  }
+  let morphemeMode = 'mixed'; // 'prefix' | 'suffix' | 'base' | 'mixed'
+  function setMorphemeMode(mode){
+    morphemeMode = mode;
+    ['prefix','suffix','base','mixed'].forEach(m => document.getElementById('mode'+m.charAt(0).toUpperCase()+m.slice(1)).classList.toggle('active', m===mode));
+    _roundAnswered=0;_roundCorrect=0;score=0; streak=0; fuel=100; if(!_wltActive) updateHud(); loadQuestion();
+  }
+  function getActiveMorphemes(){
+    if(morphemeMode==='prefix') return {morphemes:PREFIXES, bases:BASES, isPrefix:true};
+    if(morphemeMode==='suffix') return {morphemes:SUFFIXES, bases:SUFFIX_BASES, isPrefix:false};
+    // mixed: 50/50 chance each question
+    const isPrefix = Math.random() > 0.5;
+    return {morphemes: isPrefix?PREFIXES:SUFFIXES, bases: isPrefix?BASES:SUFFIX_BASES, isPrefix};
+  }
+  var BASES = [];
+  // ── Spelling set tracking (module-scope, assigned inside IIFE) ──
+  var _ssMorphemeToWords = {};
+  function _ssTrackMorpheme(morphemeForm, correct) {
+    if (!morphemeForm || typeof WordLabData === 'undefined' || !WordLabData.recordSpellingAttempt) return;
+    var entries = _ssMorphemeToWords[morphemeForm.toLowerCase()];
+    if (!entries) return;
+    entries.forEach(function(e) { WordLabData.recordSpellingAttempt(e.setId, e.word, correct, 0); });
+  }
+
+  // Real words from valid-combos.json, so feedback can show the word with its spelling
+  // changes (happy + ness = happiness). Keys: 'p|un|happy' and 's|happy|ness'.
+  var _mxWords = {};
+  // Bases that are a word on their own (run, happy), not only a root (fract, clos)
+  var _mxStandalone = {};
+  // Bases that take -est (weakest), so their -er is "more" (weaker), not a person
+  var _mxTakesEst = {};
+  // valid-combos.json splits that are not this prefix or suffix with this base's meaning
+  // (see + ed = seed, go + al = goal, re + treat = retreat), or that use another sense of
+  // the base (sound + ly, kind + s), or are names and short forms (moby, dems). These
+  // are never right answers and never shown as "a real word" in the why panel.
+  // Read by hand from all 464 prefix and 1,381 suffix pairs. Key: side|affix|word.
+  var _MX_FALSE_SPLITS = (function(){
+    var list = {
+      p: {
+        a: 'away alike awake around apart alive avid aspect aspire',
+        ad: 'account affair', bene: 'benedict', con: 'congo contest conquer',
+        contra: 'contraband', de: 'debit delight depart deserve depot',
+        dis: 'discount display disaster', e: 'erupt eject emerge easter even ever',
+        ex: 'exact', fore: 'foreman forever', mega: 'megabit', mono: 'monopoly',
+        ob: 'occurs', pro: 'protest proven', re: 'recollect remove retreat represent recover remiss resign',
+        sub: 'submerge', super: 'superman', un: 'unsound unlike', apo: 'apology', en: 'enjoy',
+        // over- is "too much" and under- is "below" in data.js; these words use another sense
+        over: 'oversee overview overtake overwrite overland overnight',
+        under: 'undergo undertake underway',
+        // improve is not in + prove (it comes from Old French emprouer, to make a profit)
+        'in': 'improve'
+      },
+      s: {
+        s: 'specs vids secs spires grams thermos autos bios dems paths corps fins mans mars pots pubs regs tens demos astros kinds fairs sweets ports',
+        es: 'planes spices verses spires graves fines mines tries misses',
+        ed: 'seed stared fasted missed cursed fined reged sacred tried arched',
+        ing: 'fasting winding harding mining missing arching',
+        er: 'former bitter flower goer seer liver sounder rounder tender archer miner primer jumper turner',
+        or: 'terror manor tenor', ion: 'portion pension', ive: 'archive respective',
+        ance: 'finance', ant: 'warrant expectant vacant',
+        // describing words, not "a person or thing that" (potent is not one that pots)
+        ent: 'potent lucent', eer: 'career', ible: 'terrible',
+        ure: 'endure secure manure tenure', ly: 'philly likely hardly soundly roundly',
+        ness: 'likeness soundness', ory: 'inventory', al: 'sandal goal seal portal spiral trial',
+        y: 'colony busy treaty tally party ready county fairy hardy missy phony terry many moby very spicy',
+        age: 'manage', est: 'finest', ish: 'finish', ial: 'colonial special',
+        en: 'warren eaten taken seen proven', ify: 'testify specify', tion: 'demotion', ific: 'specific terrific',
+        sion: 'mansion version'
+      }
+    };
+    var set = {};
+    ['p','s'].forEach(function(side){
+      Object.keys(list[side]).forEach(function(affix){
+        list[side][affix].split(' ').forEach(function(w){ set[side+'|'+affix+'|'+w] = true; });
+      });
+    });
+    // plac (please; calm) only ever pairs as place: placed, placing, places
+    set.root_greek_79 = true;
+    return set;
+  })();
+  // ── Derive BASES / SUFFIX_BASES from valid-combos.json + apply custom morphemes + stage weighting ──
+  var _missionDataReady = false;
+  document.addEventListener('DOMContentLoaded', function() {
+    fetch('valid-combos.json')
+      .then(function(r) { return r.json(); })
+      .then(function(combos) {
+        var prefixMap = {};
+        var suffixMap = {};
+        // Only a prefix + base or base + suffix that is a word on its own counts as
+        // a right answer. un + help + ful (unhelpful) used to make UN- "right" for HELP,
+        // and help + ful + ly made -LY "right" for HELP, but unhelp and helply are not words.
+        var _mxFormOf = {};
+        ((window.MORPHEMES && window.MORPHEMES.bases) || []).forEach(function(m) { _mxFormOf[m.id] = m.form; });
+        combos.forEach(function(c) {
+          if (!c.p && !c.s1 && !c.s2) _mxStandalone[c.b] = true;
+          if (!c.p && c.s1 === 'est' && !c.s2) _mxTakesEst[c.b] = true;
+          if (c.p && !c.s1 && !c.s2) {
+            if (_MX_FALSE_SPLITS['p|' + c.p + '|' + c.word]) return;
+            if (!prefixMap[c.b]) prefixMap[c.b] = new Set();
+            prefixMap[c.b].add(c.p);
+            if (c.word) _mxWords['p|' + c.p + '|' + c.b] = c.word;
+          }
+          if (!c.p && c.s1 && !c.s2) {
+            if (_MX_FALSE_SPLITS['s|' + c.s1 + '|' + c.word] || _MX_FALSE_SPLITS['root_' + c.b]) return;
+            // make + es = makes is really make + s (the base already ends in e), so only -S counts
+            if (c.s1 === 'es' && c.word === (_mxFormOf[c.b] || c.b) + 's') return;
+            if (!suffixMap[c.b]) suffixMap[c.b] = new Set();
+            suffixMap[c.b].add(c.s1);
+            if (c.word) _mxWords['s|' + c.b + '|' + c.s1] = c.word;
+          }
+        });
+
+        var allBases = (window.MORPHEMES && window.MORPHEMES.bases) || [];
+        var newBases = [];
+        var newSuffixBases = [];
+        allBases.forEach(function(m) {
+          var vp = prefixMap[m.id];
+          if (vp && vp.size > 0) {
+            newBases.push({
+              id: m.id, stage: m.stage, form: m.form,
+              meaning: m.meaning, pos: m.pos || ['verb','noun'],
+              validPrefixes: Array.from(vp)
+            });
+          }
+          var vs = suffixMap[m.id];
+          if (vs && vs.size > 0) {
+            newSuffixBases.push({
+              id: m.id, stage: m.stage, form: m.form,
+              meaning: m.meaning, pos: m.pos || ['verb','noun'],
+              validSuffixes: Array.from(vs)
+            });
+          }
+        });
+
+        BASES.splice(0, BASES.length, ...newBases);
+        SUFFIX_BASES.splice(0, SUFFIX_BASES.length, ...newSuffixBases);
+
+        // ── Custom morphemes merge ──
+        return (async function() {
+          try {
+            if (typeof WordLabData === 'undefined' || !WordLabData.getCustomMorphemes) return;
+            var custom = await WordLabData.getCustomMorphemes('mission');
+            if (!custom.length) return;
+
+            var priority = WordLabData.getCustomMorphemePriority('mission');
+
+            // Extract by type
+            var cPrefixes = custom.filter(function(m){ return m.type === 'prefix' && m.form && m.meaning; });
+            var cSuffixes = custom.filter(function(m){ return m.type === 'suffix' && m.form && m.meaning; });
+            var cBases = custom.filter(function(m){ return m.type === 'base' && m.form && m.meaning; });
+
+            // Build prefix entries for Mission Mode format
+            var newPfx = cPrefixes.map(function(m){
+              return {id: m.id, form: m.form, display: m.display || m.form + '-', meaning: m.meaning, meaningPattern: m.meaning + ' {base}', allowedPos: ['verb','noun','adj']};
+            });
+
+            // Build suffix entries
+            var newSfx = cSuffixes.map(function(m){
+              return {id: m.id, form: m.form, display: m.display || '-' + m.form, meaning: m.meaning, allowedPos: ['verb','noun','adj']};
+            });
+
+            // Build base entries with validPrefixes for prefix mode
+            var customBases = [];
+            cPrefixes.forEach(function(pfx){
+              (pfx.validBases || []).forEach(function(b){
+                var existing = customBases.find(function(x){ return x.id === b.id; });
+                if (existing) {
+                  if (existing.validPrefixes.indexOf(pfx.id) === -1) existing.validPrefixes.push(pfx.id);
+                } else {
+                  customBases.push({id: b.id, form: b.form, meaning: b.meaning, pos: b.pos || ['verb','noun'], validPrefixes: [pfx.id]});
+                }
+              });
+            });
+            cBases.forEach(function(b){
+              if (!b.validPrefixes || !b.validPrefixes.length) return;
+              var existing = customBases.find(function(x){ return x.id === b.id; });
+              if (existing) {
+                b.validPrefixes.forEach(function(p){ if (existing.validPrefixes.indexOf(p) === -1) existing.validPrefixes.push(p); });
+              } else {
+                customBases.push({id: b.id, form: b.form, meaning: b.meaning, pos: ['verb','noun'], validPrefixes: b.validPrefixes});
+              }
+            });
+
+            // Build suffix bases
+            var customSfxBases = [];
+            cSuffixes.forEach(function(sfx){
+              (sfx.validBases || []).forEach(function(b){
+                var existing = customSfxBases.find(function(x){ return x.id === b.id; });
+                if (existing) {
+                  if (existing.validSuffixes.indexOf(sfx.id) === -1) existing.validSuffixes.push(sfx.id);
+                } else {
+                  customSfxBases.push({id: b.id, form: b.form, meaning: b.meaning, pos: b.pos || ['verb','noun'], validSuffixes: [sfx.id]});
+                }
+              });
+            });
+            cBases.forEach(function(b){
+              if (!b.validSuffixes || !b.validSuffixes.length) return;
+              var existing = customSfxBases.find(function(x){ return x.id === b.id; });
+              if (existing) {
+                b.validSuffixes.forEach(function(s){ if (existing.validSuffixes.indexOf(s) === -1) existing.validSuffixes.push(s); });
+              } else {
+                customSfxBases.push({id: b.id, form: b.form, meaning: b.meaning, pos: ['verb','noun'], validSuffixes: b.validSuffixes});
+              }
+            });
+
+            // Merge with deduplication
+            function dedup(arr, items) {
+              var ids = new Set(arr.map(function(x){ return x.id; }));
+              return items.filter(function(x){ return !ids.has(x.id); });
+            }
+
+            var uniquePfx = dedup(PREFIXES, newPfx);
+            var uniqueSfx = dedup(SUFFIXES, newSfx);
+            var uniqueBases = dedup(BASES, customBases);
+            var uniqueSfxBases = dedup(SUFFIX_BASES, customSfxBases);
+
+            if (priority === 'custom_only') {
+              PREFIXES.splice(0, PREFIXES.length); uniquePfx.forEach(function(m){ PREFIXES.push(m); });
+              SUFFIXES.splice(0, SUFFIXES.length); uniqueSfx.forEach(function(m){ SUFFIXES.push(m); });
+              BASES.splice(0, BASES.length); customBases.forEach(function(m){ BASES.push(m); });
+              SUFFIX_BASES.splice(0, SUFFIX_BASES.length); customSfxBases.forEach(function(m){ SUFFIX_BASES.push(m); });
+            } else if (priority === 'custom_first') {
+              var origPfx = PREFIXES.slice(), origSfx = SUFFIXES.slice();
+              PREFIXES.splice(0, PREFIXES.length); uniquePfx.forEach(function(m){ PREFIXES.push(m); }); origPfx.forEach(function(m){ PREFIXES.push(m); });
+              SUFFIXES.splice(0, SUFFIXES.length); uniqueSfx.forEach(function(m){ SUFFIXES.push(m); }); origSfx.forEach(function(m){ SUFFIXES.push(m); });
+              uniqueBases.forEach(function(m){ BASES.push(m); });
+              uniqueSfxBases.forEach(function(m){ SUFFIX_BASES.push(m); });
+            } else {
+              uniquePfx.forEach(function(m){ PREFIXES.push(m); });
+              uniqueSfx.forEach(function(m){ SUFFIXES.push(m); });
+              uniqueBases.forEach(function(m){ BASES.push(m); });
+              uniqueSfxBases.forEach(function(m){ SUFFIX_BASES.push(m); });
+            }
+          } catch(e) { console.warn('Custom morphemes load error:', e); }
+
+          // ── Spelling set morphemes — extract, prioritise, and build tracking map ──
+          try {
+            if (typeof WordLabData !== 'undefined' && WordLabData.getSpellingSetWords) {
+              var ssWords = await WordLabData.getSpellingSetWords();
+              if (ssWords && ssWords.length) {
+                var seenPfx = {}, seenSfx = {};
+                var ssPfxIds = [], ssSfxIds = [];
+
+                ssWords.forEach(function(w) {
+                  if (!w._spellingSetId) return;
+                  function mapMorpheme(form) {
+                    if (!form) return;
+                    var key = form.toLowerCase();
+                    if (!_ssMorphemeToWords[key]) _ssMorphemeToWords[key] = [];
+                    _ssMorphemeToWords[key].push({ word: w.word, setId: w._spellingSetId });
+                  }
+                  mapMorpheme(w.prefix);
+                  mapMorpheme(w.base);
+                  mapMorpheme(w.suffix1 || w.suffix);
+                  mapMorpheme(w.suffix2);
+
+                  if (w.prefix && !seenPfx[w.prefix.toLowerCase()]) {
+                    seenPfx[w.prefix.toLowerCase()] = true;
+                    var match = PREFIXES.find(function(p){ return p.form.toLowerCase() === w.prefix.toLowerCase(); });
+                    if (match) ssPfxIds.push(match.id);
+                  }
+                  var sfx = w.suffix1 || w.suffix;
+                  if (sfx && !seenSfx[sfx.toLowerCase()]) {
+                    seenSfx[sfx.toLowerCase()] = true;
+                    var match = SUFFIXES.find(function(s){ return s.form.toLowerCase() === sfx.toLowerCase(); });
+                    if (match) ssSfxIds.push(match.id);
+                  }
+                  if (w.suffix2 && !seenSfx[w.suffix2.toLowerCase()]) {
+                    seenSfx[w.suffix2.toLowerCase()] = true;
+                    var match = SUFFIXES.find(function(s){ return s.form.toLowerCase() === w.suffix2.toLowerCase(); });
+                    if (match) ssSfxIds.push(match.id);
+                  }
+                });
+
+                // Move spelling set prefixes to front
+                if (ssPfxIds.length) {
+                  var ssSet = new Set(ssPfxIds);
+                  var front = PREFIXES.filter(function(p){ return ssSet.has(p.id); });
+                  var rest = PREFIXES.filter(function(p){ return !ssSet.has(p.id); });
+                  PREFIXES.splice(0, PREFIXES.length);
+                  front.forEach(function(p){ PREFIXES.push(p); });
+                  rest.forEach(function(p){ PREFIXES.push(p); });
+                }
+                // Move spelling set suffixes to front
+                if (ssSfxIds.length) {
+                  var ssSet2 = new Set(ssSfxIds);
+                  var front2 = SUFFIXES.filter(function(s){ return ssSet2.has(s.id); });
+                  var rest2 = SUFFIXES.filter(function(s){ return !ssSet2.has(s.id); });
+                  SUFFIXES.splice(0, SUFFIXES.length);
+                  front2.forEach(function(s){ SUFFIXES.push(s); });
+                  rest2.forEach(function(s){ SUFFIXES.push(s); });
+                }
+              }
+            }
+          } catch(e) { console.warn('Spelling set morphemes load error:', e); }
+        })();
+      })
+      .then(function() {
+        // Apply stage weighting after all data is assembled
+        if (typeof WordLabData !== 'undefined' && WordLabData.weightByStage) {
+          try {
+            var fp = WordLabData.weightByStage(PREFIXES.slice(), 'mission-mode');
+            PREFIXES.splice(0, PREFIXES.length, ...fp);
+            var fs = WordLabData.weightByStage(SUFFIXES.slice(), 'mission-mode');
+            SUFFIXES.splice(0, SUFFIXES.length, ...fs);
+            var fsb = WordLabData.weightByStage(SUFFIX_BASES.slice(), 'mission-mode');
+            SUFFIX_BASES.splice(0, SUFFIX_BASES.length, ...fsb);
+            var fb = WordLabData.weightByStage(BASES.slice(), 'mission-mode');
+            BASES.splice(0, BASES.length, ...fb);
+          } catch(e) { console.warn('stage filter error', e); }
+        }
+        // Apply teacher morpheme corrections
+        try { var wc = WordLabData.getWordCorrections('morpheme');
+          if (wc && typeof wc.then === 'function') wc.then(function(c){
+            WordLabData.applyCorrections(PREFIXES, c, 'id');
+            WordLabData.applyCorrections(SUFFIXES, c, 'id');
+            WordLabData.applyCorrections(BASES, c, 'id');
+            WordLabData.applyCorrections(SUFFIX_BASES, c, 'id');
+          });
+        } catch(e){}
+        _missionDataReady = true;
+      })
+      .catch(function(e) {
+        console.warn('Failed to load valid-combos.json:', e);
+        _missionDataReady = true;
+      });
+  });
+  var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+  // ── Round count system ──
+  var _roundTotal = 15, _roundAnswered = 0, _roundCorrect = 0;
+  function wlUpdateRoundProgress(){var f=document.getElementById('roundProgressFill');if(!f||!_roundTotal)return;var p=Math.min(1,_roundAnswered/_roundTotal);f.style.transform='scaleX('+p+')';}
+  function setRoundCount(n, btn) {
+    _roundTotal = n;
+    document.querySelectorAll('.round-btn').forEach(function(b){ b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+  }
+  if (_wltActive) { var _rpw = document.getElementById('roundPickerWrap'); if (_rpw) _rpw.style.display = 'none'; }
+  function showRoundWin() {
+    clearInterval(fuelInterval);
+    var accuracy = _roundAnswered > 0 ? Math.round((_roundCorrect / _roundAnswered) * 100) : 0;
+    var overlay = document.createElement('div');
+    overlay.id = 'roundCompleteOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(13,11,26,.95);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML = '<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:40px 36px;max-width:400px;width:90%;text-align:center;">' +
+      '<div style="font-size:48px;margin-bottom:12px;">' + (accuracy >= 80 ? '\uD83C\uDFC6' : accuracy >= 60 ? '\u2B50' : '\uD83D\uDD2C') + '</div>' +
+      '<div style="font-size:22px;font-weight:900;color:#e0e7ff;margin-bottom:6px;">Round Complete!</div>' +
+      '<div style="font-size:14px;font-weight:600;color:#94a3b8;margin-bottom:20px;">' + _roundAnswered + ' words \u00B7 ' + accuracy + '% accuracy</div>' +
+      '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">' +
+      '<button onclick="document.getElementById(\'roundCompleteOverlay\').remove();restartRound();" style="background:#4338ca;color:#fff;border:none;border-radius:14px;padding:12px 24px;font-family:Lexend,sans-serif;font-weight:800;font-size:14px;cursor:pointer;">Play Again</button>' +
+      '<a href="landing.html" style="background:rgba(255,255,255,.06);color:#94a3b8;border:2px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 24px;font-family:Lexend,sans-serif;font-weight:800;font-size:14px;cursor:pointer;text-decoration:none;">Try Another Game</a>' +
+      '</div></div>';
+    document.body.appendChild(overlay);
+  }
+  function restartRound() {
+    _roundAnswered = 0; _roundCorrect = 0;
+    wlUpdateRoundProgress();
+    score = 0; streak = 0; fuel = 100;
+    buttonsLocked = false;
+    updateHud(); startFuelDrain(); loadQuestion();
+  }
+  let score=0,streak=0,fuel=100,currentQuestion=null,buttonsLocked=false,fuelInterval=null;
+  function isRealWord(prefix,base){return !!(base.validPrefixes && base.validPrefixes.includes(prefix.id));}
+  const wordEl=document.getElementById("word"),baseMeaningEl=document.getElementById("baseMeaning"),optionsEl=document.getElementById("options"),feedbackEl=document.getElementById("feedback"),subFeedbackEl=document.getElementById("subFeedback"),scorePillEl=document.getElementById("scorePill"),streakPillEl=document.getElementById("streakPill"),fuelBarEl=document.getElementById("fuelBar"),fuelLabelEl=document.getElementById("fuelLabel"),dropZoneEl=document.getElementById("prefixDropZone"),dropZoneTextEl=document.getElementById("dropZoneText");
+  function shuffleArray(arr){return[...arr].sort(()=>Math.random()-.5);}
+  function getPrefixLabel(p){if(currentQuestion&&currentQuestion.isBaseMode)return(p.form||"").toUpperCase();if(currentQuestion&&!currentQuestion.isPrefix)return"-"+(p.form||"").toUpperCase();var label=(p.form||"").toUpperCase()+"-";var pfxData=PREFIXES.find(function(x){return x.id===p.id;});if(pfxData&&pfxData.altForms&&pfxData.altForms.length){label+=' <span style="font-size:8px;opacity:0.5;">('+ pfxData.altForms.join(", ")+')</span>';}return label;}
+  function generateBaseQuestion(){
+    const usePrefix=Math.random()>0.5;
+    const morphemes=usePrefix?PREFIXES:SUFFIXES;
+    const allBases=usePrefix?BASES:SUFFIX_BASES;
+    function isValidCombo(morpheme,base){
+      return usePrefix
+        ?(base.validPrefixes&&base.validPrefixes.includes(morpheme.id))
+        :(base.validSuffixes?base.validSuffixes.includes(morpheme.id):isCompatible(morpheme,base));
+    }
+    // Students with a stage: the target base comes from the 80/20 stage order
+    // (WordLabData.nextByStage); otherwise a random morpheme and base as before.
+    const _staged=!!WordLabData.getStudentStage('mission-mode');
+    for(let i=0;i<60;i++){
+      let morpheme,correct;
+      if(_staged){
+        correct=WordLabData.nextByStage(allBases,'mission-mode','mission-mode:base-'+(usePrefix?'p':'s'),currentQuestion&&currentQuestion.base);
+        if(!correct)break;
+        const ms=morphemes.filter(m=>isValidCombo(m,correct));
+        if(!ms.length)continue;
+        morpheme=ms[Math.floor(Math.random()*ms.length)];
+      } else {
+      morpheme=morphemes[Math.floor(Math.random()*morphemes.length)];
+      const compat=allBases.filter(b=>isValidCombo(morpheme,b));
+      if(compat.length<1)continue;
+      correct=compat[Math.floor(Math.random()*compat.length)];
+      }
+      // Wrong answers must NOT be valid combos with this morpheme (avoid ambiguous questions)
+      const _seen={};const invalidPool=allBases.filter(b=>{if(b.id===correct.id||_seen[b.id]||isValidCombo(morpheme,b))return false;_seen[b.id]=true;return true;});
+      if(invalidPool.length<2)continue;
+      const wrong=shuffleArray(invalidPool).slice(0,_supportMode?1:getDiff().options-1);
+      const targetMeaning=buildTargetMeaning(morpheme,correct,usePrefix);
+      return{base:correct,morpheme,isPrefix:usePrefix,isBaseMode:true,targetMeaning,options:shuffleArray([correct,...wrong])};
+    }
+    const m0=PREFIXES[0],b0=BASES[0],w0=shuffleArray(BASES.filter(b=>b.id!==b0.id)).slice(0,_supportMode?1:2);
+    return{base:b0,morpheme:m0,isPrefix:true,isBaseMode:true,targetMeaning:buildTargetMeaning(m0,b0,true),options:shuffleArray([b0,...w0])};
+  }
+  function getBaseLabel(b){return(b.form||"").toUpperCase();}
+  function updateHud(){scorePillEl.textContent=`${score} XP`;streakPillEl.textContent=`🔥 Streak: ${streak}`;fuelBarEl.style.width=`${Math.max(fuel,0)}%`;fuelLabelEl.textContent=`${Math.max(Math.round(fuel),0)}%`;}
+  function isCompatible(morpheme,base){if(!morpheme.allowedPos||!base.pos) return true; return base.pos.some(pos=>morpheme.allowedPos.includes(pos));}
+  // ── Target meaning ("the act of running") ──
+  // Spell the base correctly when the clue adds -ing, -s or -d to it (run → running,
+  // make → making, teach → teaches, read → read), where it used to read "runing",
+  // "teachs" and "readd". -ER on an adjective means "more" (weaker = "more weak"),
+  // not "a person who weaks".
+  var _MX_PAST={read:'read',pay:'paid',say:'said',lay:'laid',hear:'heard',bend:'bent',make:'made',
+    take:'taken',see:'seen',eat:'eaten',go:'gone',run:'run',buy:'bought',sell:'sold',tell:'told',
+    find:'found',hold:'held',win:'won',send:'sent',build:'built',teach:'taught',think:'thought',
+    spend:'spent',feel:'felt',keep:'kept',sleep:'slept',meet:'met',write:'written',speak:'spoken',
+    break:'broken',drive:'driven',ride:'ridden',wear:'worn',know:'known',grow:'grown',throw:'thrown',
+    draw:'drawn',fly:'flown',do:'done',sit:'sat',stand:'stood',understand:'understood',lead:'led',
+    feed:'fed',bring:'brought',catch:'caught',fight:'fought',forget:'forgotten',choose:'chosen',
+    freeze:'frozen',hide:'hidden',bite:'bitten',sing:'sung',drink:'drunk',swim:'swum',begin:'begun',
+    ring:'rung',wake:'woken',put:'put',cut:'cut',set:'set',hit:'hit',let:'let',shut:'shut',hurt:'hurt',
+    cost:'cost',lose:'lost',light:'lit',mean:'meant',hang:'hung',dig:'dug',stick:'stuck',shoot:'shot',
+    give:'given',fall:'fallen',forgive:'forgiven',shake:'shaken',steal:'stolen',get:'got',leave:'left',
+    lend:'lent',sweep:'swept',spin:'spun',swing:'swung',bear:'borne',tear:'torn',shine:'shone'};
+  // Inflect only the first word of a phrase ("find where it is" → "finding where it is")
+  function _mxInflectPhrase(w,end,isWord){ var m=/^(\S+)(.*)$/.exec(w); return m?_mxInflect(m[1],end,isWord)+m[2]:w; }
+  function _mxIsCVC(w){ return /^[^aeiou]*[aeiou][^aeiouwxy]$/.test(w); }
+  // isWord: false for a root like clos or vis, which is joined as it is (no doubling)
+  function _mxInflect(w,end,isWord){
+    var lw=w.toLowerCase();
+    if(end==='ing'){
+      if(/ie$/.test(lw)) return w.slice(0,-2)+'ying';
+      if(/e$/.test(lw)&&!/(ee|oe|ye)$/.test(lw)&&lw.length>2) return w.slice(0,-1)+'ing';
+      if(isWord&&_mxIsCVC(lw)) return w+w.slice(-1)+'ing';
+      return w+'ing';
+    }
+    if(end==='s'){
+      if(!isWord) return w+'s';
+      if(/(s|sh|ch|x|z)$/.test(lw)||lw==='go'||lw==='do') return w+'es';
+      if(/[^aeiou]y$/.test(lw)) return w.slice(0,-1)+'ies';
+      return w+'s';
+    }
+    if(end==='d'){
+      if(!isWord) return /e$/i.test(w)?w+'d':w+'ed'; // roots: form → formed, not formd
+      if(_MX_PAST[lw]) return _MX_PAST[lw];
+      if(/e$/.test(lw)) return w+'d';
+      if(/[^aeiou]y$/.test(lw)) return w.slice(0,-1)+'ied';
+      if(_mxIsCVC(lw)) return w+w.slice(-1)+'ed';
+      return w+'ed';
+    }
+    return w;
+  }
+  // Clues written by hand where the base has several senses and the pattern reads badly
+  // even with every sense kept. Key: p|prefix|base.
+  var _MX_CLUE_FIX={
+    'p|non|stick':'not sticking (food does not stick to it)',
+    'p|dis|anglo_87':'lose colour; the opposite of colour',
+    'p|multi|anglo_87':'many colours',
+    'p|re|anglo_60':'make warm again','p|pre|anglo_60':'make warm before','p|over|anglo_60':'make too warm',
+    'p|bi|cycle':'a vehicle with two wheels','p|uni|cycle':'a vehicle with one wheel','p|tri|cycle':'a vehicle with three wheels',
+    'p|mega|star':'a very large star; a very famous person','p|super|star':'a star above the others; a very famous person',
+    // IN- means "not; into". The pattern "not {base}" is right for incorrect and inactive, but
+    // these words use the "into" sense, so "not throw" for inject taught the wrong meaning.
+    'p|in|form':'give someone facts (put shape into their ideas)','p|in|latin_2':'give someone facts (put shape into their ideas)',
+    'p|in|anglo_23':'what is taken in','p|in|anglo_59':'press a mark into something',
+    'p|in|latin_6':'build knowledge into someone; teach','p|in|latin_9':'carry goods into a country',
+    'p|in|latin_13':'throw or push into (medicine into the body)','p|in|latin_15':'look into closely',
+    'p|in|latin_26':'turn inwards; turn upside down','p|in|latin_30':'a small animal with a body cut into parts',
+    'p|in|latin_37':'get germs into; make sick','p|in|latin_40':'stretch your mind towards; plan to do',
+    'p|in|latin_41':'press into; make someone admire you','p|in|latin_46':'fold a meaning in; suggest without saying it',
+    'p|in|latin_47':'breathe in; fill with an idea','p|in|latin_50':'write in or on something',
+    // Words added 2026-10-15 so Morpheme Builder tiles that built nothing now build real words
+    'p|con|greek_78':'push someone to do something; force','p|dis|greek_78':'drive apart; make go away',
+    'p|ex|greek_78':'drive or push out','p|pro|greek_78':'drive or push forward',
+    'p|electro|anglo_89':'a magnet that works using electricity','p|amphi|anglo_88':'a theatre with seats all the way around',
+    'p|cyber|anglo_91':'the space of computers and the internet','p|cyber|anglo_90':'someone who bullies others using the internet',
+    'p|in|anglo_92':'not human; cruel','p|super|anglo_92':'able to do more than a person can',
+    'p|mega|greek_143':'a very large stone','p|mono|greek_143':'one huge single stone',
+    'p|pyro|greek_13':'a tool that measures very high heat, like fire','p|logo|greek_1':'a written sign that stands for a word, like &',
+    'p|litho|greek_0':'a picture drawn on stone, then printed','p|cosmo|greek_142':'a traveller through the universe; a space traveller',
+    's|hedron|greek_136':'a solid shape with four faces','s|phobia|greek_14':'a fear of flying',
+    's|chrome|greek_105':'only one colour','s|oid|greek_17':'like a star; a rock in space',
+    's|ic|greek_37':'having a strong fear','s|kinesis|greek_104':'moving things from far away with your mind',
+    's|phobia|greek_120':'a fear of heights','s|graph|greek_121':'a picture drawn on stone, then printed',
+    's|ous|greek_91':'full of sound; deep and loud','s|genic|greek_11':'looks good in photos',
+    's|lysis|greek_124':'breaking down a substance using electricity','s|phobia|greek_139':'a fear of technology',
+    's|ology|greek_131':'the study of birds','s|ologist|greek_131':'a person who studies birds',
+    's|ology|greek_130':'the study of insects','s|ologist|greek_130':'a person who studies insects',
+    's|ic|greek_144':'using or relating to electricity','s|ify|greek_144':'fill with electricity; thrill',
+    's|ity|greek_49':'being short or brief','s|ous|latin_51':'skilful with your hands',
+    's|ise|anglo_89':'make into a magnet',
+    // RE- here means "back", not "again" (reflect is bend back, not bend again)
+    'p|re|latin_9':'carry back; tell what happened','p|re|latin_11':'bending back; an action you do without thinking',
+    'p|re|latin_12':'bend back, like light off a mirror; think carefully','p|re|latin_13':'throw back; refuse to accept',
+    'p|re|latin_15':'look back at; think highly of','p|re|latin_24':'carry back to; send someone to another person for help',
+    'p|re|latin_26':'turn back to how it was','p|re|latin_36':'a break when you go back from work or class',
+    'p|re|latin_42':'step back; go backwards','p|re|latin_43':'go back; move away',
+    'p|re|latin_44':'call back; take back','p|re|latin_46':'answer back',
+    'p|re|latin_47':'breathe in and out','p|re|serve':'keep back for later',
+    'p|re|active':'acting back when something happens','p|re|locate':'move to a new place',
+    'p|re|cycle':'use again; make into something new','p|re|anglo_54':'count again; tell what happened',
+    'p|re|anglo_77':'make warm again','p|re|anglo_78':'make fresh again; make new again',
+    's|ory|direct':'a list that directs you to people or places','s|ory|sense':'relating to the senses',
+    's|ory|greek_68':'what your mind keeps; the power to remember',
+    // Roots spelt like other English words (fin, dent, nav) or with a meaning the pattern misses
+    's|al|greek_57':'at the end; last','s|al|greek_54':'relating to teeth','s|ist|greek_54':'a person who looks after teeth',
+    's|y|greek_33':"a country's ships and sailors",'s|or|greek_69':'smaller; less important',
+    's|y|greek_84':'a question','s|ate|greek_3':'give water to','s|ate|greek_64':'find the place of',
+    's|ate|greek_63':'able to read and write','s|ate|greek_30':'an official order',
+    's|es|latin_31':'more than one part of a sentence or rule',
+    's|tion|latin_29':'the act of cutting; a part cut off','s|ion|latin_30':'the act of cutting; a part cut off',
+    's|or|latin_30':'a part cut off from a whole','s|ion|latin_17':'the act of sending; an important job',
+    's|er|latin_9':'a person who carries bags','s|able|latin_9':'can be carried','s|age|latin_9':'carrying a boat over land',
+    's|ant|greek_95':'a person who rents a home','s|sion|greek_95':'the act of stretching; tightness',
+    's|logy|greek_47':'the study of animals','s|logy|greek_19':'the study of living things',
+    's|ology|greek_35':'the study of diseases','s|logy|greek_4':'the study of water',
+    's|gen|greek_4':'a gas that makes water when it burns','s|graph|greek_18':'your own name, signed by you',
+    's|nomy|greek_18':'governing yourself; being independent','s|graph|greek_11':'a picture made with light (a camera)',
+    's|phone|greek_2':'a device that makes small sounds louder','s|scope|greek_2':'an instrument for looking at very small things',
+    's|ation|greek_80':'all the people living in a place',
+    'p|in|migrate':'move into a new country to live','p|ad|locate':'give out a share to each place or person',
+    'p|geo|logical':'relating to the study of the earth','p|neuro|logical':'relating to the brain and nerves',
+    'p|pro|greek_1':'a plan written ahead; a set of instructions for a computer'
+  };
+  function buildTargetMeaning(morpheme,base,isPrefix){
+    if(isPrefix){
+      var fix=_MX_CLUE_FIX['p|'+morpheme.id+'|'+base.id];
+      if(fix) return fix;
+      var pp=morpheme.meaningPattern||("{base} "+morpheme.meaning);
+      // Every sense of the base, each without a leading "to" (un + pack is "not put
+      // things together for carrying; a bundle"). Keeping every sense means the sense the
+      // word uses is always there (stick: "a thin piece of wood; attach").
+      var bm=String(base.meaning||'').split(';').map(function(x){ return x.trim().replace(/^to\s+/,''); })
+        .filter(Boolean).join('; ')||base.meaning;
+      return pp.replace(/\{base\}/g,bm);
+    }
+    var sfix=_MX_CLUE_FIX['s|'+morpheme.id+'|'+base.id];
+    if(sfix) return sfix;
+    var pattern=morpheme.meaningPattern||(base.meaning+" "+morpheme.meaning);
+    // A Latin or Greek root (ten, man, sec) is joined as it is, even when it is
+    // spelt like an English word, so the clue never invents "manning" for mansion.
+    var isWord=!!_mxStandalone[base.id]&&!/^(latin|greek)_/.test(base.id);
+    // -ER on a describing word that also takes -EST (weak, weakest) means "more"
+    // (or is only ever a describing word, like happy)
+    var pos=base.pos||[];
+    // A root that takes -est (clos: closest) says "more" with its meaning: "more close", not "more clos".
+    if(morpheme.id==='er'&&_mxTakesEst[base.id]&&!isWord) return 'more '+String(base.meaning||'').split(';')[0].trim();
+    if(morpheme.id==='er'&&isWord&&(_mxTakesEst[base.id]||(pos.length===1&&pos[0]==='adj'))) pattern='more {base}';
+    var word=base.form||'';
+    // A root that is not a word on its own (dict, vis, aud) uses its meaning in the clue:
+    // "the act of saying" for diction, "can be heard" for audible, not "the act of dicting".
+    if(!_mxStandalone[base.id]&&base.meaning){
+      word=String(base.meaning).split(';')[0].trim().replace(/^to\s+/,'')||word; isWord=true;
+    }
+    // -S on a doing word is not "more than one" (teaches, eats): it is what one person does now
+    if((morpheme.id==='s'||morpheme.id==='es')&&isWord&&pos.length&&pos.indexOf('noun')===-1){
+      return 'what one person does now: he or she '+_mxInflectPhrase(word,'s',true);
+    }
+    return pattern.replace(/\{base\}(ing|s|d)\b/g,function(_,end){ return _mxInflectPhrase(word,end,isWord); })
+                  .replace(/\{base\}/g,word);
+  }
+
+  // ── Fair options and "why" feedback ──
+  // Two options that share a meaning (UN- and DIS- both mean "not", -FUL and -OUS both
+  // mean "full of") are never offered together, so there is only ever one right answer.
+  // Same rule as Meaning Match-Up: meanings are split into parts and tidied (a leading
+  // "having" and a trailing "of" dropped, plurals made singular) before comparing.
+  function _mxSingular(w){
+    if(w.length>4&&/ies$/.test(w)) return w.slice(0,-3)+'y';
+    if(w.length>3&&/s$/.test(w)&&!/(ss|us|is)$/.test(w)) return w.slice(0,-1);
+    return w;
+  }
+  function _mxMeaningParts(m){
+    return String((m&&m.meaning)||'').toLowerCase().split(/;|,|\bor\b/)
+      .map(function(x){
+        x=x.trim().replace(/^(to|a|an|the)\s+/,'').replace(/^having\s+/,'').replace(/\s+of$/,'');
+        return x.split(/\s+/).map(_mxSingular).join(' ');
+      }).filter(Boolean);
+  }
+  // Pairs whose meanings overlap in a way the wording does not show.
+  var _MX_SAME_MEANING=[['hyper','over'],['hyper','super'],['mis','mal'],
+    ['ary','al'],['ary','ial'],['ary','ic'],['ific','fy'],['ific','ify'],['graph','gram']];
+  function _mxSharesMeaning(a,b){
+    if(!a||!b) return false;
+    if((a.form||'').toLowerCase()===(b.form||'').toLowerCase()) return true;
+    // Same Mission pattern means the same target meaning ("the act of {base}ing")
+    if(a.meaningPattern&&a.meaningPattern===b.meaningPattern) return true;
+    var ia=(a.id||'').toLowerCase(), ib=(b.id||'').toLowerCase();
+    if(_MX_SAME_MEANING.some(function(p){ return (p[0]===ia&&p[1]===ib)||(p[0]===ib&&p[1]===ia); })) return true;
+    var pb=_mxMeaningParts(b);
+    return _mxMeaningParts(a).some(function(x){
+      return pb.some(function(y){ return x===y||x.indexOf(y+' ')===0||y.indexOf(x+' ')===0; });
+    });
+  }
+  function _mxDistractors(pool,correct){
+    var seen={};
+    return shuffleArray(pool.filter(function(p){
+      if(p.id===correct.id||seen[p.id]||_mxSharesMeaning(p,correct)) return false;
+      seen[p.id]=true; return true; // weightByStage can repeat an entry
+    })).slice(0,_supportMode?1:getDiff().options-1);
+  }
+  function generateQuestion(){
+    if(morphemeMode==='base') return generateBaseQuestion();
+    const {morphemes,bases,isPrefix}=getActiveMorphemes();
+    const make=(base,correct)=>({base,correct,isPrefix,targetMeaning:buildTargetMeaning(correct,base,isPrefix),options:shuffleArray([correct,..._mxDistractors(morphemes,correct)])});
+    // Students with a stage: the target morpheme comes from the 80/20 stage
+    // order (WordLabData.nextByStage), then any base it makes a real word with.
+    const _prevM=currentQuestion&&currentQuestion.correct;
+    if(isPrefix){
+      for(let i=0;i<50;i++){
+        const m=WordLabData.nextByStage(morphemes,'mission-mode','mission-mode:prefix',_prevM);
+        if(!m) break;
+        const bs=bases.filter(b=>isCompatible(m,b)&&isRealWord(m,b));
+        if(bs.length) return make(bs[Math.floor(Math.random()*bs.length)],m);
+      }
+      for(let i=0;i<50;i++){
+        const base=bases[Math.floor(Math.random()*bases.length)];
+        const real=morphemes.filter(p=>isCompatible(p,base)&&isRealWord(p,base));
+        if(!real.length) continue;
+        return make(base,real[Math.floor(Math.random()*real.length)]);
+      }
+      // Fallback: any base with any real prefix, ignoring part of speech
+      for(const base of bases){ const real=morphemes.filter(p=>isRealWord(p,base)); if(real.length) return make(base,real[0]); }
+      return make(bases[0],morphemes[0]);
+    }
+    const _vb=bases.filter(b=>b.validSuffixes&&b.validSuffixes.length);
+    for(let i=0;i<50;i++){
+      const m=WordLabData.nextByStage(morphemes,'mission-mode','mission-mode:suffix',_prevM);
+      if(!m) break;
+      const bs=_vb.filter(b=>b.validSuffixes.includes(m.id));
+      if(bs.length) return make(bs[Math.floor(Math.random()*bs.length)],m);
+    }
+    for(let i=0;i<50;i++){
+      const base=_vb[Math.floor(Math.random()*_vb.length)];
+      const compat=morphemes.filter(s=>base.validSuffixes.includes(s.id));
+      if(!compat.length) continue;
+      return make(base,compat[Math.floor(Math.random()*compat.length)]);
+    }
+    const _fb=_vb[0]||bases[0];
+    const _fc=_fb.validSuffixes?morphemes.filter(s=>_fb.validSuffixes.includes(s.id)):[];
+    return make(_fb,_fc[0]||morphemes[0]);
+  }
+  // The real word a morpheme and base make, e.g. un + happy → unhappy, happy + ness →
+  // happiness. Empty when they do not make a word in valid-combos.json.
+  function _mxWordFor(isPrefix,morpheme,base){
+    if(!morpheme||!base) return '';
+    return _mxWords[isPrefix?'p|'+morpheme.id+'|'+base.id:'s|'+base.id+'|'+morpheme.id]||'';
+  }
+  function _mxLabel(m,kind){var f=(m.form||'').toUpperCase();return kind==='prefix'?f+'-':kind==='suffix'?'-'+f:f;}
+  function _mxSum(isPrefix,morpheme,base){var e=WordLabData.escapeHtml;return isPrefix?e(morpheme.form)+' + '+e(base.form):e(base.form)+' + '+e(morpheme.form);}
+  // Built only from data.js morpheme meanings and real words from valid-combos.json,
+  // so the panel never states a meaning that the clue pattern made up.
+  function _mxBuildWhy(q,choice){
+    var e=WordLabData.escapeHtml, q1=String.fromCharCode(8220), q2=String.fromCharCode(8221);
+    var kind=q.isBaseMode?'base':(q.isPrefix?'prefix':'suffix');
+    var morph=q.isBaseMode?q.morpheme:q.correct, answer=q.isBaseMode?q.base:q.correct;
+    var picked='<div class="mxWhyLine picked"><span aria-hidden="true">✗ </span>You picked <b>'+e(_mxLabel(choice,kind))+'</b>. It means '+q1+e(choice.meaning||'')+q2+'.';
+    if(!q.isBaseMode){
+      var w=_mxWordFor(q.isPrefix,choice,q.base);
+      if(w) picked+=' '+_mxSum(q.isPrefix,choice,q.base)+' makes <b>'+e(w)+'</b>. That is a real word, but it does not match the target meaning.';
+    }
+    picked+='</div>';
+    var word=_mxWordFor(q.isPrefix,morph,q.base);
+    var ans='<div class="mxWhyLine answer"><span aria-hidden="true">✓ </span>The answer is <b>'+e(_mxLabel(answer,kind))+'</b>. '+
+      (q.isBaseMode?'It means '+q1+e(answer.meaning||'')+q2+', and ':e(_mxLabel(morph,kind))+' means '+q1+e(morph.meaning||'')+q2+', so ')+
+      _mxSum(q.isPrefix,morph,q.base)+(word?' = <b>'+e(word)+'</b>':'')+'.</div>';
+    return picked+ans;
+  }
+  // Need Advice, gentlest first, never naming the answer:
+  // 1. how to read the clue, 2. rule out one wrong bubble (only with 3 bubbles: with 2
+  // that would give the answer), 3. what the shown part and the missing part mean
+  // (data.js meanings only), or try each bubble in the gap. Every line is checked
+  // against the answer: a line that names it (its label, or its letters as a word when
+  // it has 3 or more, such as ABLE in "able to" or COLOUR in "to add colour") is
+  // swapped for the next wording that does not.
+  function _mxNamesAnswer(html,answer,kind){
+    // Inline tags are removed with no space, so re<b>ject</b> still reads as reject
+    var t=String(html).replace(/<\/?(b|strong|i|em|u|span)\b[^>]*>/gi,'').replace(/<[^>]+>/g,' '), f=String(answer.form||'').toLowerCase();
+    var lab=_mxLabel(answer,kind).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    if(new RegExp('(^|[^A-Z])'+lab+'([^A-Z]|$)').test(t.toUpperCase())) return true;
+    return f.length>=3&&new RegExp('(^|[^a-z])'+f.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'([^a-z]|$)').test(t.toLowerCase());
+  }
+  function _mxHintLadder(q){
+    if(!q) return [];
+    var e=WordLabData.escapeHtml, q1=String.fromCharCode(8220), q2=String.fromCharCode(8221);
+    var kind=q.isBaseMode?'base':(q.isPrefix?'prefix':'suffix');
+    var answer=q.isBaseMode?q.base:q.correct, seen=q.isBaseMode?q.morpheme:q.base;
+    var seenKind=q.isBaseMode?(q.isPrefix?'prefix':'suffix'):'base';
+    function pick(lines){ for(var i=0;i<lines.length;i++){ if(lines[i]&&!_mxNamesAnswer(lines[i],answer,kind)) return lines[i]; } return ''; }
+    var strategy=pick([
+      'Read the target meaning. Which words in it come from the part you can see? The other words tell you what the missing part means.',
+      'Look at the target meaning. Some of it comes from the piece on the card. The rest tells you what is missing.'
+    ]);
+    var seenLine='<b>'+e(_mxLabel(seen,seenKind))+'</b> means '+q1+e(seen.meaning||'')+q2+'.';
+    var tryEach=pick([
+      'Put each bubble in the gap and say the word. Which one makes a real word that matches the target meaning?',
+      'Try each bubble in the gap and say the whole word out loud. Which one matches the target meaning?'
+    ]);
+    // In Bases mode the base's meaning is already the target meaning's other half, and can
+    // hold the base itself, so the last step tries each bubble instead.
+    var last=pick([
+      q.isBaseMode?'':seenLine+' The missing '+kind+' means '+q1+e(answer.meaning||'')+q2+'. Which bubble means that?',
+      seenLine+' '+tryEach,
+      tryEach
+    ]);
+    var wrong=(q.options||[]).filter(function(o){
+      return o&&o.id!==answer.id&&String(o.form||'').toLowerCase()!==String(answer.form||'').toLowerCase();
+    });
+    if(wrong.length>=2){
+      var ruleOut=pick(wrong.map(function(w){
+        return 'It is not <b>'+e(_mxLabel(w,kind))+'</b>. '+e(_mxLabel(w,kind))+' means '+q1+e(w.meaning||'')+q2+'.';
+      }));
+      return [strategy,ruleOut||tryEach,last];
+    }
+    var both=q.isBaseMode?'':seenLine+' The missing '+kind+' means '+q1+e(answer.meaning||'')+q2+'. Which bubble means that?';
+    return [strategy,pick([both,seenLine])||tryEach,tryEach];
+  }
+  window._mxHintLadder=_mxHintLadder;
+  var _mxReading=false; // true while the wrong-answer explanation is on screen (energy holds)
+  var _mxGuardUntil=0;  // option clicks before this time are ignored (just after Next)
+  function _mxHideWhy(){
+    _mxReading=false;
+    var w=document.getElementById('mxWhy'), n=document.getElementById('mxNextRow'), sk=document.getElementById('skipBtn');
+    if(w){ w.hidden=true; w.innerHTML=''; }
+    if(n) n.hidden=true;
+    if(sk) sk.style.display='';
+  }
+  function _mxMarkOptions(choice,answerId){
+    optionsEl.querySelectorAll('button').forEach(function(b){
+      var id=b.dataset.mid, mark=null;
+      if(id===answerId){ b.classList.add('mxAnswer'); mark='✓'; }
+      else if(id===choice.id){ b.classList.add('mxPicked'); mark='✗'; }
+      if(mark){ var sp=document.createElement('span'); sp.className='mxMark'; sp.setAttribute('aria-hidden','true'); sp.textContent=mark; b.appendChild(sp); }
+    });
+  }
+
+  function resetDropZone(){dropZoneEl.classList.remove("flashSuccess","flashFail");dropZoneTextEl.textContent="____";dropZoneTextEl.style.color="#a5b4fc";}
+  function loadQuestion(){
+    if(!_missionDataReady){setTimeout(function(){loadQuestion();},100);return;}
+    if(!_wltActive && fuel<=0)return;
+    if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
+    if(typeof WLHints!=='undefined') WLHints.resetHints();
+    buttonsLocked=false;currentQuestion=generateQuestion();
+    const q=currentQuestion;
+    const _lbl=document.getElementById('challengeLabel');const _sub=document.getElementById('challengeSub');
+    if(q.isBaseMode){
+      if(_lbl)_lbl.textContent='Base word challenge';
+      if(_sub)_sub.textContent='Pick the base word that creates the target meaning with the given morpheme.';
+      // For prefix+BASE: [PREFIX given left] [BASE? right]; for BASE+suffix: [BASE? left] [-SUFFIX given right]
+      if(q.isPrefix){dropZoneEl.style.order='2';wordEl.textContent=(q.morpheme.form||'').toUpperCase()+'-';}
+      else{dropZoneEl.style.order='';wordEl.textContent='-'+(q.morpheme.form||'').toUpperCase();}
+      const mLabel=q.isPrefix?q.morpheme.form+'-':'-'+q.morpheme.form;
+      baseMeaningEl.innerHTML=`<strong>Morpheme:</strong> <em>${WordLabData.escapeHtml(mLabel)}</em> — ${WordLabData.escapeHtml(q.morpheme.meaning)}<br><strong>Target meaning:</strong> ${WordLabData.escapeHtml(q.targetMeaning)}`;
+    } else {
+      if(_lbl){_lbl.textContent=q.isPrefix?'Prefix challenge':'Suffix challenge'; if(_supportMode) _lbl.innerHTML=q.isPrefix?'<span style="color:#7c3aed;font-weight:900;">Prefix</span> challenge':'<span style="color:#ea580c;font-weight:900;">Suffix</span> challenge';}
+      if(_sub)_sub.textContent=q.isPrefix?'Pick the prefix that gives the base word the right meaning.':'Pick the suffix that completes the base word.';
+      dropZoneEl.style.order=q.isPrefix?'':'2';wordEl.textContent=getBaseLabel(q.base);
+      baseMeaningEl.innerHTML=`<strong>Base meaning:</strong> ${WordLabData.escapeHtml(q.base.meaning)}<br><strong>Target meaning:</strong> ${WordLabData.escapeHtml(q.targetMeaning)}`;
+    }
+    feedbackEl.textContent="";feedbackEl.className="feedback";subFeedbackEl.textContent="";_mxHideWhy();
+    resetDropZone();optionsEl.innerHTML="";
+    // (Need Advice reads currentQuestion through _mxHintLadder; resetHints above starts it at step 1)
+    q.options.forEach((option,index)=>{const btn=document.createElement("button");btn.type="button";btn.className=`bubbleBtn ${["blue","green","purple","orange"][index%4]}`;btn.dataset.mid=option.id;btn.style.animationDelay=`${index*.18}s`;const inner=document.createElement("div");inner.className="bubbleInner";const main=document.createElement("span");const _lbl=getPrefixLabel(option);main.innerHTML=_lbl;var _plainLen=main.textContent.length;if(_plainLen>7)main.style.fontSize='11px';else if(_plainLen>5)main.style.fontSize='13px';else if(_plainLen>4)main.style.fontSize='15px';inner.appendChild(main);btn.appendChild(inner);btn.addEventListener("click",()=>checkAnswer(option));optionsEl.appendChild(btn);});
+    // EALD: speak buttons + flip reveal on load
+    var ealdSpeakEl=document.getElementById('ealdSpeakBtns');
+    var ealdDefEl=document.getElementById('ealdDefinition');
+    var ealdEl=document.getElementById('ealdTranslation');
+    if(ealdSpeakEl) ealdSpeakEl.innerHTML='';
+    if(ealdDefEl) ealdDefEl.innerHTML='';
+    if(ealdEl){ealdEl.innerHTML='';ealdEl.dataset.translatedWord='';ealdEl.dataset.englishWord='';}
+    if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&q){
+      WordLabData.injectEALDStyles();
+      var langName=(WordLabData.EALD_LANGUAGES[WordLabData.getEALDLanguage()]||'').split(' (')[0];
+      var _meaning=q.targetMeaning||'';
+      if(ealdEl) ealdEl.dataset.englishWord=_meaning;
+      if(ealdSpeakEl) ealdSpeakEl.innerHTML=WordLabData.buildEALDSpeakButtons();
+      if(ealdDefEl) ealdDefEl.innerHTML='<button class="eald-def-btn" id="ealdDefBtn" onclick="this.classList.toggle(\'flipped\')"><span class="eald-def-front">🌐 Show in '+WordLabData.escapeHtml(langName)+'</span><span class="eald-def-back" id="ealdDefText">Loading...</span></button>';
+      WordLabData.getTranslations([_meaning],['morpheme_meaning']).then(function(t){
+        if(t&&t[_meaning]){
+          var defText=document.getElementById('ealdDefText');
+          if(defText) defText.textContent='🌐 '+t[_meaning];
+          if(ealdEl) ealdEl.dataset.translatedWord=t[_meaning];
+        }
+      });
+    }
+  }
+  function lockButtons(){optionsEl.querySelectorAll("button").forEach(b=>b.disabled=true);}
+  function checkAnswer(choice){
+    if(buttonsLocked||(!_wltActive&&fuel<=0))return;
+    if(!_wltActive&&Date.now()<_mxGuardUntil)return;
+    buttonsLocked=true;lockButtons();
+    const q=currentQuestion;
+    dropZoneTextEl.innerHTML=getPrefixLabel(choice);
+    const isCorrect=choice.id===(q.isBaseMode?q.base.id:q.correct.id);
+    const _cat=q.isBaseMode?'base:'+q.base.id:(q.isPrefix?'prefix:':'suffix:')+q.correct.id;
+    const _correctLabel=q.isBaseMode?getBaseLabel(q.base):getPrefixLabel(q.correct);
+    if(isCorrect){
+      _roundCorrect++;
+      if(!_wltActive){ score+=50+(streak*10); fuel=Math.min(fuel+getDiff().correctGain,100); }
+      streak++;
+      if(!_wltActive && typeof WordLabData!=='undefined'&&WordLabData.getSession()){const _wlResult=WordLabData.recordAttempt('mission-mode',_cat,true,0,streak);if(typeof WLScientist!=='undefined') WLScientist.react('correct',_wlResult);}
+      if(_wltActive && typeof WLScientist!=='undefined') WLScientist.react('correct');
+      if(!_wltActive && typeof WLAudio!=='undefined'){WLAudio.correct();if(streak>=3)WLAudio.streak(streak);}
+      if(!_wltActive) _ssTrackMorpheme(q.isBaseMode ? q.base.form : q.correct.form, true);
+      feedbackEl.textContent="✅ Correct!";feedbackEl.className="feedback ok";
+      var _built=_mxWordFor(q.isPrefix,q.isBaseMode?q.morpheme:q.correct,q.base);
+      subFeedbackEl.textContent=(_built?`You built ${_built}: `:'You built the idea: ')+`"${q.targetMeaning}"`;
+      dropZoneTextEl.style.color="var(--ok)";dropZoneEl.classList.add("flashSuccess");
+      if(_wltActive){
+        var _e=WordLabData.escapeHtml;
+        var _morph = q.isBaseMode ? q.morpheme : q.correct;
+        var _morphType = q.isBaseMode ? (q.isPrefix ? 'prefix' : 'suffix') : (q.isPrefix ? 'prefix' : 'suffix');
+        var _builtWord = q.isBaseMode ? (q.isPrefix ? _morph.form + q.base.form : q.base.form + _morph.form) : (q.isPrefix ? q.correct.form + q.base.form : q.base.form + q.correct.form);
+        WLTeacher.onAnswer(true,
+          '<b>' + _e(q.isPrefix ? _morph.form + ' + ' + q.base.form : q.base.form + ' + ' + _morph.form) + ' = ' + _e(_builtWord) + '</b><br>' +
+          'The ' + _morphType + ' <b>' + _e(_morph.form) + '</b> means "' + _e(_morph.meaning) + '", so <b>' + _e(_builtWord) + '</b> means "' + _e(q.targetMeaning) + '".'
+        );
+      }
+    } else {
+      streak=0;if(!_wltActive){fuel=Math.max(fuel-getDiff().wrongPenalty,0);}
+      if(!_wltActive && typeof WordLabData!=='undefined'&&WordLabData.getSession()){WordLabData.recordAttempt('mission-mode',_cat,false,0);}
+      if(!_wltActive) _ssTrackMorpheme(q.isBaseMode ? q.base.form : q.correct.form, false);
+      if(typeof WLScientist!=='undefined') WLScientist.react('wrong');
+      if(!_wltActive && typeof WLAudio!=='undefined') WLAudio.wrong();
+      feedbackEl.textContent="❌ Not quite";feedbackEl.className="feedback bad";
+      _mxMarkOptions(choice,q.isBaseMode?q.base.id:q.correct.id);
+      if(_wltActive){ subFeedbackEl.innerHTML=`Better answer: ${_correctLabel} — "${WordLabData.escapeHtml(q.targetMeaning)}"`; }
+      else { subFeedbackEl.textContent=''; var _w=document.getElementById('mxWhy'); _w.innerHTML=_mxBuildWhy(q,choice); _w.hidden=false; _mxReading=true; }
+
+      dropZoneTextEl.style.color="var(--bad)";dropZoneEl.classList.add("flashFail");
+      if(_wltActive){
+        var _e2=WordLabData.escapeHtml;
+        var _correctM = q.isBaseMode ? q.base : q.correct;
+        var _chosenM = choice;
+        var _morphType2 = q.isBaseMode ? 'base word' : (q.isPrefix ? 'prefix' : 'suffix');
+        var _correctWord = q.isBaseMode ? (q.isPrefix ? q.morpheme.form + q.base.form : q.base.form + q.morpheme.form) : (q.isPrefix ? q.correct.form + q.base.form : q.base.form + q.correct.form);
+        WLTeacher.onAnswer(false,
+          'The correct answer is <b>' + _e2(_correctM.form) + '</b> (' + _morphType2 + ', meaning "' + _e2(_correctM.meaning) + '").<br>' +
+          'You selected <b>' + _e2(_chosenM.form) + '</b>' + (_chosenM.meaning ? ' (meaning "' + _e2(_chosenM.meaning) + '")' : '') + '.<br>' +
+          'The target word is <b>' + _e2(_correctWord) + '</b>, meaning "' + _e2(q.targetMeaning) + '".'
+        );
+      }
+    }
+    if(!_wltActive) updateHud();
+    var ealdEl=document.getElementById('ealdTranslation');ealdEl.innerHTML='';
+    if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()){
+      WordLabData.injectEALDStyles();
+      ealdEl.innerHTML=WordLabData.buildEALDRevealButton();
+      var meaning=q.targetMeaning||'';
+      WordLabData.getTranslations([meaning],['morpheme_meaning']).then(function(t){
+        var contentEl=document.getElementById('ealdTranslationContent');
+        if(t&&t[meaning]&&contentEl){contentEl.innerHTML='<div class="eald-translation-pill"><span class="eald-flag">🌐</span> "'+WordLabData.escapeHtml(meaning)+'" = '+WordLabData.escapeHtml(t[meaning])+'</div>';}
+      });
+    }
+    if(_wltActive){ _showTeacherNext(); return; } // Teacher mode: wait for Next click
+    // ── Round tracking ──
+    _roundAnswered++;
+    wlUpdateRoundProgress();
+    var _wasRight=choice.id===(q.isBaseMode?q.base.id:q.correct.id);
+    if(_wasRight){
+      if (_roundAnswered >= _roundTotal) { showRoundWin(); return; }
+      if(fuel<=0){setTimeout(endGame,800);return;}setTimeout(loadQuestion,1500);
+      return;
+    }
+    if(fuel<=0&&_roundAnswered<_roundTotal){_mxReading=false;setTimeout(endGame,800);return;}
+    // Wrong answer: no auto-advance. The explanation stays until the student presses Next.
+    var _nb=document.getElementById('mxNextBtn'), _nr=document.getElementById('mxNextRow'), _sk=document.getElementById('skipBtn');
+    _nb.textContent=_roundAnswered>=_roundTotal?'See my results →':'Next word →';
+    _nr.hidden=false; if(_sk) _sk.style.display='none';
+    var _calm=document.documentElement.classList.contains('low-stim')||(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+    _nr.scrollIntoView({behavior:_calm?'auto':'smooth',block:'nearest'});
+    _nb.focus({preventScroll:true});
+  }
+  document.getElementById('mxNextBtn').addEventListener('click',function(){
+    if(!_mxReading) return;
+    _mxHideWhy();
+    if(_roundAnswered>=_roundTotal){ showRoundWin(); return; }
+    loadQuestion();
+    // Focus the question, not an option, so a quick second Enter cannot answer it.
+    // Option clicks are also ignored for a moment after Next, for fast double taps.
+    _mxGuardUntil=Date.now()+500;
+    baseMeaningEl.setAttribute('tabindex','-1'); baseMeaningEl.focus({preventScroll:true});
+  });
+  function startFuelDrain(){if(_wltActive)return;clearInterval(fuelInterval);fuelInterval=setInterval(()=>{if(_mxReading||(typeof WLHelp!=='undefined'&&WLHelp.isOpen&&WLHelp.isOpen()))return;fuel-=getDiff().drainRate;if(fuel<=0){fuel=0;updateHud();endGame();clearInterval(fuelInterval);return;}updateHud();},220);}
+  function endGame(){buttonsLocked=true;optionsEl.innerHTML="";feedbackEl.textContent="Mission over";feedbackEl.className="feedback bad";subFeedbackEl.textContent=`Final score: ${score} XP`;}
+  document.getElementById("recalibrateBtn").addEventListener("click",()=>{_roundAnswered=0;_roundCorrect=0;score=0;streak=0;fuel=100;buttonsLocked=false;if(!_wltActive){updateHud();startFuelDrain();}loadQuestion();});
+  document.getElementById("skipBtn").addEventListener("click",()=>{if(buttonsLocked)return;if(!_wltActive&&fuel<=0)return;streak=0;if(!_wltActive){fuel=Math.max(fuel-getDiff().skipPenalty,0);updateHud();if(fuel<=0){endGame();return;}}if(_wltActive){WLTeacher.clearFeedback();var nb=document.getElementById('wltNextBtn');if(nb)nb.style.display='none';}loadQuestion();});
+  if(_wltActive){
+    WLTeacher.init({game:'mission-mode'}).then(function(){
+      loadQuestion();
+      // Add Next button to action row
+      var actionRow=document.querySelector('.actionRow');
+      if(actionRow){
+        var nb=document.createElement('button');nb.className='primaryBtn';nb.id='wltNextBtn';nb.textContent='Next →';nb.style.display='none';
+        nb.addEventListener('click',function(){nb.style.display='none';loadQuestion();});
+        actionRow.appendChild(nb);
+      }
+    });
+    // Show Next button after each answer
+    function _showTeacherNext(){var nb=document.getElementById('wltNextBtn');if(nb)nb.style.display='block';}
+  } else {
+    updateHud();startFuelDrain();loadQuestion();
+  }
+</script>
+<!-- wordlab-data loaded above -->
+<script>
+// ── Word Labs login ────────────────────────────────────────────────
+
+
+document.addEventListener('DOMContentLoaded', async function() {
+  // Daily limit check
+  if(typeof WordLabData !== 'undefined' && WordLabData.getSession()){
+    try {
+      const limit = await WordLabData.checkDailyLimit();
+      if(limit && limit.blocked){
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(13,11,26,.92);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = '<div style="background:#1a1630;border:2px solid #4338ca;border-radius:24px;padding:40px;max-width:440px;text-align:center;color:#e0e7ff;font-family:Lexend,sans-serif;"><div style="font-size:48px;margin-bottom:16px;">🧪</div><h2 style="font-size:22px;font-weight:900;margin-bottom:12px;">Daily limit reached</h2><p style="color:#94a3b8;font-size:14px;margin-bottom:24px;">You\\\'ve completed 30 questions today on the free plan. Come back tomorrow or ask your teacher about upgrading.</p><a href="landing.html" style="background:#4338ca;color:#fff;padding:12px 24px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px;">Back to Home</a></div>';
+        document.body.appendChild(overlay);
+        return;
+      }
+    } catch(e) { console.warn('Daily limit check failed', e); }
+  }
+
+  if (typeof WordLabData === 'undefined') return;
+  WordLabData.initLoginUI({
+    accentColor: '#4338ca',
+    accentSoft:  '#eef2ff',
+    accentLine:  '#c7d2fe',
+    accentText:  '#312e81',
+    onLogin: function() { location.reload(); }
+  });
+  var session = WordLabData.getSession();
+  var btn = document.getElementById('wlLoginBtn');
+  if (btn) {
+    btn.onclick = function() { wlShowLogin(); };
+    if (session) btn.textContent = '👤 ' + session.studentName;
+  }
+
+  // ADD THESE after the existing code:
+
+  // Scene scientist — paint default immediately, then replace with the
+  // personalised version once student data arrives. Prevents a blank
+  // sciCharWrap while getStudentData() awaits Supabase on slow networks.
+  (async function() {
+    if (typeof WLScientist === 'undefined') return;
+    const wrap = document.getElementById('sciCharWrap');
+    if (!wrap) return;
+    function _p(svg){while(wrap.firstChild)wrap.removeChild(wrap.firstChild);wrap.appendChild(document.createRange().createContextualFragment(svg));}
+    _p(WLScientist.buildSVG({}, 'neutral'));
+    try {
+      const sd = typeof WordLabData !== 'undefined' ? await WordLabData.getStudentData() : null;
+      if (sd && sd.scientist) _p(WLScientist.buildSVG(sd.scientist, 'neutral'));
+    } catch(e) { console.error('Scientist load failed', e); }
+  })();
+
+  // Floating particles
+  const container = document.getElementById('particles');
+  if (container) {
+    const colors = ['rgba(99,102,241,.5)','rgba(13,148,136,.5)','rgba(167,139,250,.5)','rgba(251,146,60,.4)'];
+    for (let i = 0; i < 18; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.cssText = `left:${Math.random()*100}%;animation-duration:${9+Math.random()*13}s;animation-delay:${-Math.random()*22}s;width:${2+Math.random()*3}px;height:${2+Math.random()*3}px;background:${colors[Math.floor(Math.random()*colors.length)]};`;
+      container.appendChild(p);
+    }
+  }
+
+  // Mirror score/streak to wall monitor
+  const monScore = document.getElementById('monitorScore');
+  const monStreak = document.getElementById('monitorStreak');
+  const scoreEl = document.getElementById('scorePill');
+  const streakEl = document.getElementById('streakPill');
+  if (scoreEl && monScore) {
+    new MutationObserver(() => { monScore.textContent = scoreEl.textContent; }).observe(scoreEl, {childList:true,subtree:true,characterData:true});
+    monScore.textContent = scoreEl.textContent;
+  }
+  if (streakEl && monStreak) {
+    new MutationObserver(() => { monStreak.textContent = streakEl.textContent.replace('🔥 Streak: ','🔥 '); }).observe(streakEl, {childList:true,subtree:true,characterData:true});
+  }
+
+  // Patch WLScientist.react to also animate scene character
+  if (typeof WLScientist !== 'undefined') {
+    const _origReact = WLScientist.react.bind(WLScientist);
+    WLScientist.react = function(type, extras) {
+      _origReact(type, extras);
+      const wrap = document.getElementById('sciCharWrap');
+      if (!wrap) return;
+      wrap.classList.remove('sci-correct','sci-wrong','sci-streak');
+      void wrap.offsetWidth;
+      if (type === 'correct') wrap.classList.add('sci-correct');
+      else if (type === 'wrong') wrap.classList.add('sci-wrong');
+      else if (type === 'streak') wrap.classList.add('sci-streak');
+      const dur = type === 'streak' ? 2400 : 900;
+      setTimeout(() => { wrap.classList.remove('sci-correct','sci-wrong','sci-streak'); }, dur);
+    };
+  }
+  if(typeof WordLabData !== 'undefined' && WordLabData.isExtensionMode && WordLabData.isExtensionMode('mission-mode')){
+    var extPill = document.createElement('div');
+    extPill.style.cssText = 'background:#4338ca;color:#e0e7ff;font-size:10px;font-weight:900;padding:4px 10px;border-radius:20px;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;';
+    extPill.textContent = '🔬 Extension';
+    var hud = document.querySelector('.hud, .headerInner, header .innerHud');
+    if(hud) hud.appendChild(extPill);
+  }
+});
+// The shared help and hints scripts are deferred, so they only exist once the page has loaded.
+document.addEventListener('DOMContentLoaded', function(){
+if(typeof WLHelp!=='undefined') WLHelp.init({
+  game:'mission', title:'Mission Mode', emoji:'🚀',
+  steps:[
+    {icon:'🎯',title:'Choose your round',desc:'Pick how many words to answer: 10, 15, 20, 25 or 30. Finish them all before the reaction meter runs out.'},
+    {icon:'👀',title:'Read the meanings',desc:'A word has a part missing. Read the meaning of the part you can see. Then read the target meaning: it says what the finished word should mean.'},
+    {icon:'👆',title:'Pick the missing part',desc:'Tap the bubble that gives the word the target meaning. Use the tabs to practise prefixes, suffixes, bases or a mix.'},
+    {icon:'⚡',title:'Watch the meter',desc:'The reaction meter goes down slowly. Right answers fill it up. Wrong answers take some away.'},
+    {icon:'💡',title:'Learn from mistakes',desc:'If you pick the wrong part, read what each part means. The meter waits while you read. Press Next word when you are ready.'}
+  ],
+  audioText:'Choose how many words you want to answer: 10, 15, 20, 25 or 30. Finish them all before the reaction meter runs out. In Mission Mode, a word has a part missing. Read the meaning of the part you can see. Then read the target meaning. It says what the finished word should mean. Tap the bubble that gives the word the target meaning. Use the tabs to practise prefixes, suffixes, bases or a mix. The reaction meter goes down slowly. Right answers fill it up, and wrong answers take some away. If you pick the wrong part, read what each part means. The meter waits while you read. Press Next word when you are ready.'
+});
+if(typeof WLHints!=='undefined') WLHints.register({
+  getLadder: function(){ return window._mxHintLadder ? window._mxHintLadder(currentQuestion) : []; }
+});
+});
+</script>
+
+<footer style="text-align:center;padding:12px 16px;font-size:11px;color:#64748b;border-top:1px solid #e2e8f0;margin-top:auto;font-family:Lexend,sans-serif;">&#129514; Word Labs &middot; <a href="about.html" style="color:#64748b;">About</a> &middot; <a href="privacy.html" style="color:#64748b;">Privacy Policy</a> &middot; <a href="terms.html" style="color:#64748b;">Terms of Service</a> &middot; <a href="mailto:nick@wordlabs.app" style="color:#64748b;">Contact</a></footer>
+</body>
+</html>

@@ -1,0 +1,2951 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Labs – Home</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://kdpavfrzmmzknqfpodrl.supabase.co">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="wordlab-common.css">
+  <style>
+    :root{
+      --bg:#f0f4f8;
+      --panel:#ffffff;
+      --line:#e2e8f0;
+      --text:#0f172a;
+      --muted:#64748b;
+      --indigo:#4338ca;
+      --indigo-2:#6366f1;
+      --accent:#4338ca; --accent-rgb:67,56,202;
+    }
+    html{ overflow-x:hidden; }
+    body{ background:var(--bg); color:var(--text); line-height:1.6; min-height:100vh; overflow-x:hidden; }
+
+    /* ── Lab scene backdrop (static, low opacity) ── */
+    .lab-scene{ display:none !important; }
+    .scientist-stage{ display:none !important; }
+    body::before{
+      content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+      background:
+        repeating-linear-gradient(0deg,transparent 0,transparent 59px,rgba(99,102,241,.025) 60px),
+        repeating-linear-gradient(90deg,transparent 0,transparent 59px,rgba(99,102,241,.025) 60px);
+    }
+    .sections-bg{
+      position:relative; z-index:2;
+      background:linear-gradient(180deg,#0d0b1a 0%,#110f1e 50%,#0d0b1a 100%);
+      overflow:hidden;
+    }
+    /* Ambient edge glow blobs */
+    .sections-bg::before{
+      content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
+      background:
+        radial-gradient(ellipse 55% 30% at 0% 15%,  rgba(99,102,241,.13) 0%, transparent 70%),
+        radial-gradient(ellipse 45% 25% at 100% 40%, rgba(124,58,237,.10) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 20% at 0% 70%,  rgba(67,56,202,.09)  0%, transparent 70%),
+        radial-gradient(ellipse 40% 22% at 100% 90%, rgba(99,102,241,.11) 0%, transparent 70%),
+        radial-gradient(ellipse 35% 18% at 50% 50%, rgba(99,102,241,.05) 0%, transparent 70%);
+    }
+    /* Subtle dot texture */
+    .sections-bg::after{
+      content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
+      background-image:radial-gradient(circle, rgba(99,102,241,.18) 1px, transparent 1px);
+      background-size:28px 28px;
+      opacity:.22;
+    }
+
+    /* ── Header overrides ── */
+    .headerRight{ display:flex; align-items:center; gap:8px; }
+
+    .loginBtn{
+      background:rgba(99,102,241,.15); color:#a5b4fc;
+      border:1px solid rgba(99,102,241,.3);
+      font-weight:700; font-size:13px; padding:8px 16px;
+      border-radius:10px; cursor:pointer; transition:background .15s;
+      font-family:'Lexend',sans-serif;
+    }
+    .loginBtn:hover{ background:rgba(99,102,241,.28); }
+
+    #wlPillSlot{ display:inline-flex; align-items:center; }
+
+    /* Extension mode toggle */
+    #extModeToggleWrap{
+      display:none; align-items:center; gap:7px;
+      background:#fff; border:2px solid #c7d2fe;
+      border-radius:12px; padding:6px 12px;
+      font-family:'Lexend',sans-serif;
+    }
+    #extModeToggleWrap .ext-track{
+      width:36px; height:20px; border-radius:10px; background:#cbd5e1;
+      position:relative; transition:background .2s; flex-shrink:0; cursor:pointer;
+    }
+    #extModeToggleWrap .ext-track.on{ background:#4338ca; }
+    #extModeToggleWrap .ext-thumb{
+      width:14px; height:14px; border-radius:50%; background:#fff;
+      position:absolute; top:3px; left:3px; transition:left .2s;
+      box-shadow:0 1px 3px rgba(0,0,0,.25);
+    }
+    #extModeToggleWrap .ext-track.on .ext-thumb{ left:19px; }
+    #extModeToggleWrap .ext-lbl{
+      font-size:11px; font-weight:800; color:#4338ca; white-space:nowrap;
+    }
+
+    .menuBtn{
+      width:36px; height:36px; border-radius:10px;
+      background:var(--indigo); color:#fff;
+      border:none; cursor:pointer;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:4px;
+      flex-shrink:0; transition:background .15s;
+    }
+    .menuBtn:hover{ background:#3730a3; }
+    .menuBtn span{ display:block; width:16px; height:2px; background:#fff; border-radius:999px; transition:all .25s; }
+    .menuBtn.open span:nth-child(1){ transform:translateY(6px) rotate(45deg); }
+    .menuBtn.open span:nth-child(2){ opacity:0; }
+    .menuBtn.open span:nth-child(3){ transform:translateY(-6px) rotate(-45deg); }
+
+    /* On narrow phones the Pricing and Teachers text buttons overflow
+       the header — hide them and rely on the hamburger drawer. Keep
+       the Log in button visible so students have an obvious entry
+       point without having to open the drawer. */
+    @media (max-width:720px){
+      .headerRight #hdrPricingLink,
+      .headerRight #hdrTeachersLink{ display:none; }
+      .headerRight #hdrTeacherInfo{ display:none!important; }
+      .headerRight{ gap:6px; }
+      .headerRight #wlLoginBtn{ font-size:12px; padding:7px 12px; }
+    }
+    @media (max-width:480px){
+      .brandName{ font-size:15px; }
+    }
+    /* Phones: a logged-in student has the scientist widget, sound and name pills
+       and the menu button, which pushed the menu button off the screen. This is
+       already the home page, so drop the logo there to make room. */
+    @media (max-width:430px){
+      .headerInner:has(#wlScientistWidget) .brand{ display:none; }
+      .headerInner:has(#wlScientistWidget) .headerRight{ margin-left:auto; }
+    }
+
+    /* ── Animated Hero ── */
+    .video-hero{ position:relative; z-index:2; }
+    .hero-wrap{
+      position:relative; width:100%; background:#0d0b1a;
+      overflow:hidden; min-height:70vh;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .hero-scene{ position:absolute; inset:0; width:100%; height:100%; }
+    .hero-content{
+      position:relative; z-index:10;
+      text-align:center; padding:28px 24px 200px;
+      max-width:580px;
+    }
+    .hero-wordlab{
+      font-size:clamp(2.6rem,5.5vw,4.4rem); font-weight:900;
+      letter-spacing:-.04em; color:#fff; line-height:1; margin-bottom:6px;
+    }
+    .hero-sub-title{
+      font-size:clamp(0.65rem,1.2vw,0.85rem); font-weight:700;
+      letter-spacing:.22em; text-transform:uppercase;
+      color:rgba(165,180,252,.8); margin-bottom:18px;
+    }
+    .hero-tagline{
+      font-size:clamp(0.75rem,1.3vw,.9rem); font-weight:500;
+      color:rgba(255,255,255,.5); margin-bottom:22px; line-height:1.5;
+    }
+    .hero-tagline span{ color:rgba(165,240,252,.75); font-weight:600; }
+    .hero-actions{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+    .cta-btn{
+      border:none; font-weight:900; font-size:13px; padding:11px 18px;
+      border-radius:14px; cursor:pointer; text-decoration:none;
+      display:inline-flex; align-items:center; gap:7px; white-space:nowrap;
+      transition:all .15s; font-family:'Lexend',sans-serif; letter-spacing:.02em;
+    }
+    @media (max-width:600px){
+      .hero-wrap{ min-height:auto; }
+      .hero-content{ padding:24px 16px 120px; max-width:100%; }
+      .hero-wordlab{ font-size:clamp(2rem,9vw,3rem); }
+      .hero-sub-title{ font-size:10px; letter-spacing:.18em; margin-bottom:12px; }
+      .hero-tagline{ font-size:12px; margin-bottom:16px; }
+      .hero-actions{ flex-direction:column; align-items:stretch; gap:10px; padding:0 8px; }
+      .hero-actions .cta-btn{ justify-content:center; width:100%; padding:14px 16px; font-size:14px; }
+      .dash-pill{ bottom:12px; right:12px; padding:8px 12px; gap:8px; max-width:calc(100vw - 24px); }
+      .dash-pill-avatar{ width:28px; height:28px; font-size:13px; }
+      .dash-pill-name{ font-size:11px; }
+      .dash-pill-sub{ font-size:9px; }
+    }
+    .cta-btn.primary{ background:#fff; color:#312e81; box-shadow:0 8px 24px rgba(0,0,0,.35); }
+    .cta-btn.primary:hover{ background:#f0f0ff; transform:translateY(-2px); }
+    .cta-btn.secondary{ background:rgba(255,255,255,.12); color:#fff; border:2px solid rgba(255,255,255,.28); }
+    .cta-btn.secondary:hover{ background:rgba(255,255,255,.2); }
+    .dash-pill{
+      position:absolute; bottom:22px; right:22px; z-index:20; pointer-events:none;
+      background:rgba(255,255,255,.10); backdrop-filter:blur(8px);
+      border:1.5px solid rgba(255,255,255,.18); border-radius:16px;
+      padding:10px 16px; display:flex; align-items:center; gap:10px;
+    }
+    .dash-pill-avatar{
+      width:34px; height:34px; border-radius:50%; background:#312e81;
+      border:2px solid rgba(165,180,252,.4);
+      display:flex; align-items:center; justify-content:center; font-size:15px;
+    }
+    .dash-pill-text{ display:flex; flex-direction:column; }
+    .dash-pill-name{ font-size:12px; font-weight:800; color:#fff; }
+    .dash-pill-sub{ font-size:10px; font-weight:600; color:rgba(165,180,252,.8); }
+    /* Hero animations */
+    @keyframes wlBubble1{ 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-4px) scale(1.04)} }
+    @keyframes wlBubble2{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+    @keyframes wlBubble3{ 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-3px) scale(1.02)} }
+    @keyframes wlTile1{ 0%{transform:translate(0,0) rotate(-4deg)} 50%{transform:translate(6px,-14px) rotate(2deg)} 100%{transform:translate(0,0) rotate(-4deg)} }
+    @keyframes wlTile2{ 0%{transform:translate(0,0) rotate(3deg)} 50%{transform:translate(-8px,-18px) rotate(-2deg)} 100%{transform:translate(0,0) rotate(3deg)} }
+    @keyframes wlTile3{ 0%{transform:translate(0,0) rotate(-2deg)} 50%{transform:translate(4px,-12px) rotate(4deg)} 100%{transform:translate(0,0) rotate(-2deg)} }
+    @keyframes wlTile4{ 0%{transform:translate(0,0) rotate(6deg)} 50%{transform:translate(-5px,-20px) rotate(0deg)} 100%{transform:translate(0,0) rotate(6deg)} }
+    @keyframes wlTile5{ 0%{transform:translate(0,0) rotate(-5deg)} 50%{transform:translate(7px,-10px) rotate(1deg)} 100%{transform:translate(0,0) rotate(-5deg)} }
+    @keyframes wlTile6{ 0%{transform:translate(0,0) rotate(2deg)} 50%{transform:translate(-4px,-16px) rotate(-3deg)} 100%{transform:translate(0,0) rotate(2deg)} }
+    @keyframes wlSteam1{ 0%{opacity:0;transform:translateY(0) scaleX(1)} 40%{opacity:.6} 100%{opacity:0;transform:translateY(-28px) scaleX(1.4)} }
+    @keyframes wlSteam2{ 0%{opacity:0;transform:translateY(0) scaleX(1)} 40%{opacity:.5} 100%{opacity:0;transform:translateY(-24px) scaleX(1.2)} }
+    @keyframes wlGlow{ 0%,100%{opacity:.55} 50%{opacity:.9} }
+    @keyframes wlLiquid{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-2px)} }
+    @keyframes wlSciBob{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+    @keyframes wlLookL{ 0%,42%,100%{transform:translateX(0)} 50%,92%{transform:translateX(-2px)} }
+    @keyframes wlArmL{ 0%,42%,100%{transform:rotate(0deg)} 50%,92%{transform:rotate(-6deg)} }
+    @keyframes wlArmR{ 0%,42%,100%{transform:rotate(0deg)} 50%,92%{transform:rotate(6deg)} }
+    @keyframes wlBkrL{ 0%,42%,100%{transform:translateY(0)} 50%,92%{transform:translateY(-5px)} }
+    @keyframes wlBkrR{ 0%,42%,100%{transform:translateY(0)} 50%,92%{transform:translateY(-5px)} }
+    @keyframes wlLightning1{ 0%,79%,82%,100%{opacity:0} 80%,81%{opacity:.95} }
+    @keyframes wlLightning2{ 0%,69%,72%,75%,100%{opacity:0} 70%,71%{opacity:.9} 73%,74%{opacity:.7} }
+    @keyframes wlLightning3{ 0%,88%,91%,100%{opacity:0} 89%,90%{opacity:.85} }
+    .wln1{animation:wlLightning1 4.8s ease-in-out infinite}
+    .wln2{animation:wlLightning2 6.3s ease-in-out infinite 1.4s}
+    .wln3{animation:wlLightning1 5.5s ease-in-out infinite 3.2s}
+    .wln4{animation:wlLightning3 7.1s ease-in-out infinite 0.7s}
+    .wln5{animation:wlLightning2 4.2s ease-in-out infinite 2.1s}
+    .wln6{animation:wlLightning1 6.9s ease-in-out infinite 4.5s}
+    .wln7{animation:wlLightning3 5.1s ease-in-out infinite 1.1s}
+    .wln8{animation:wlLightning2 7.8s ease-in-out infinite 3.8s}
+    .wbg1{ animation:wlBubble1 2.8s ease-in-out infinite; transform-origin:center bottom; }
+    .wbg2{ animation:wlBubble2 3.4s ease-in-out infinite .6s; transform-origin:center bottom; }
+    .wbg3{ animation:wlBubble3 2.2s ease-in-out infinite 1.1s; transform-origin:center bottom; }
+    .wt1{ animation:wlTile1 5.2s ease-in-out infinite; }
+    .wt2{ animation:wlTile2 6.8s ease-in-out infinite 1s; }
+    .wt3{ animation:wlTile3 4.6s ease-in-out infinite 2s; }
+    .wt4{ animation:wlTile4 7.2s ease-in-out infinite .5s; }
+    .wt5{ animation:wlTile5 5.8s ease-in-out infinite 1.5s; }
+    .wt6{ animation:wlTile6 6.2s ease-in-out infinite 2.5s; }
+    .ws1{ animation:wlSteam1 2.1s ease-out infinite; }
+    .ws2{ animation:wlSteam2 2.1s ease-out infinite .7s; }
+    .ws3{ animation:wlSteam1 2.1s ease-out infinite 1.4s; }
+    .wg1{ animation:wlGlow 2.8s ease-in-out infinite; }
+    .wg2{ animation:wlGlow 3.2s ease-in-out infinite .8s; }
+    .wg3{ animation:wlGlow 2.4s ease-in-out infinite 1.4s; }
+    .wl1{ animation:wlLiquid 2.8s ease-in-out infinite; }
+    .wl2{ animation:wlLiquid 3.4s ease-in-out infinite .6s; }
+    .wsci{ animation:wlSciBob 3.5s ease-in-out infinite; }
+    .weyl{ animation:wlLookL 6s ease-in-out infinite; }
+    .weyr{ animation:wlLookL 6s ease-in-out infinite 3s; }
+    .warl{ animation:wlArmL 6s ease-in-out infinite; transform-origin:432px 345px; }
+    .warr{ animation:wlArmR 6s ease-in-out infinite 3s; transform-origin:468px 345px; }
+    .wbkl{ animation:wlBkrL 6s ease-in-out infinite; }
+    .wbkr{ animation:wlBkrR 6s ease-in-out infinite 3s; }
+
+    /* ── Sections ── */
+    .section{
+      max-width:1200px; margin:0 auto; padding:40px 24px;
+      position:relative; z-index:2;
+    }
+    @media(max-width:600px){ .section{ padding:28px 16px; } }
+    /* Frosted panel behind each section's card grid */
+    .section-panel{
+      background:rgba(255,255,255,.03);
+      backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+      border:1px solid rgba(255,255,255,.06);
+      border-radius:20px; padding:24px; margin-top:0;
+      box-shadow:inset 0 0 0 1px rgba(99,102,241,.06), 0 8px 32px rgba(0,0,0,.25);
+    }
+    .section-heading{
+      font-size:clamp(1.2rem,2.5vw,1.6rem); font-weight:900;
+      color:#e0e7ff; letter-spacing:-.02em; margin-bottom:20px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .section-heading::before{
+      content:''; display:inline-block; width:4px; height:1.1em;
+      background:#6366f1; border-radius:2px; flex-shrink:0;
+    }
+    .section-sub{
+      color:#94a3b8; font-size:13px; font-weight:600; margin:-12px 0 16px 14px;
+    }
+
+    /* ── Compact activity cards ── */
+    .cards-grid{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:12px;
+    }
+    @media(max-width:900px){ .cards-grid{ grid-template-columns:repeat(2,1fr); } }
+    @media(max-width:480px){ .cards-grid{ grid-template-columns:1fr; } }
+
+    @keyframes cardFloat1{ 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-6px) rotate(.4deg)} }
+    @keyframes cardFloat2{ 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-8px) rotate(-.3deg)} }
+    @keyframes cardFloat3{ 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-5px) rotate(.5deg)} }
+    @keyframes cardFloat4{ 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-7px) rotate(-.4deg)} }
+    @keyframes cardGlow{ 0%,100%{box-shadow:0 4px 20px rgba(0,0,0,.4), 0 0 18px var(--glow-lo,rgba(255,255,255,.04))} 50%{box-shadow:0 8px 32px rgba(0,0,0,.5), 0 0 28px var(--glow-hi,rgba(255,255,255,.10))} }
+
+    .act-card{
+      position:relative;
+      display:flex; flex-direction:column; align-items:flex-start;
+      padding:20px 18px; border-radius:16px; text-decoration:none;
+      min-height:120px; gap:6px;
+      box-shadow:0 4px 20px rgba(0,0,0,.4), 0 0 18px var(--glow-lo,rgba(255,255,255,.04));
+      animation: cardGlow 3s ease-in-out infinite;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .act-card:hover{
+      transform:translateY(-5px) scale(1.02) !important;
+      box-shadow:0 16px 40px rgba(0,0,0,.6), 0 0 36px var(--glow-hi,rgba(255,255,255,.14)) !important;
+      animation-play-state:paused;
+    }
+    .act-card:nth-child(1){ animation: cardFloat1 4.2s ease-in-out infinite, cardGlow 3s ease-in-out infinite; }
+    .act-card:nth-child(2){ animation: cardFloat2 5.1s ease-in-out infinite .6s, cardGlow 3.4s ease-in-out infinite .4s; }
+    .act-card:nth-child(3){ animation: cardFloat3 4.7s ease-in-out infinite 1.1s, cardGlow 2.8s ease-in-out infinite .8s; }
+    .act-card:nth-child(4){ animation: cardFloat4 5.4s ease-in-out infinite .3s, cardGlow 3.2s ease-in-out infinite 1.2s; }
+    .act-card:nth-child(5){ animation: cardFloat1 4.9s ease-in-out infinite .8s, cardGlow 3.6s ease-in-out infinite .2s; }
+    .act-card:nth-child(6){ animation: cardFloat2 4.4s ease-in-out infinite 1.4s, cardGlow 2.9s ease-in-out infinite .6s; }
+    .act-card:nth-child(7){ animation: cardFloat3 5.2s ease-in-out infinite .5s, cardGlow 3.1s ease-in-out infinite 1s; }
+    .act-card:nth-child(8){ animation: cardFloat4 4.6s ease-in-out infinite 1.2s, cardGlow 3.3s ease-in-out infinite .3s; }
+    .act-card:nth-child(9){ animation: cardFloat1 5.0s ease-in-out infinite .9s, cardGlow 2.7s ease-in-out infinite .7s; }
+    .act-card-emoji{ font-size:24px; margin-bottom:8px; line-height:1; }
+    .act-card-emoji svg{ display:block; }
+    .act-card-name{ font-size:16px; font-weight:900; color:#fff; line-height:1.2; }
+    .act-card-tag{ font-size:12px; font-weight:600; color:rgba(255,255,255,.75); line-height:1.3; }
+
+    /* ── Divider ── */
+    .section-divider{ max-width:1200px; margin:0 auto; border:none; border-top:1px solid rgba(99,102,241,.15); position:relative; z-index:2; }
+
+    /* Footer: uses wordlab-common.css */
+
+    /* Storage notice banner */
+    #storageBanner{ position:fixed; bottom:0; left:0; right:0; background:#1e1b4b; border-top:2px solid #4338ca; padding:12px 20px; display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; z-index:9999; font-size:12px; font-weight:700; color:#c7d2fe; }
+    #storageBanner a{ color:#a5b4fc; }
+    #storageBanner button{ background:#4338ca; color:#fff; border:none; font-family:'Lexend',sans-serif; font-weight:800; font-size:11px; padding:6px 14px; border-radius:8px; cursor:pointer; white-space:nowrap; flex-shrink:0; }
+
+    /* ── Side drawer ── */
+    .sideDrawer{
+      position:fixed; top:0; right:0; bottom:0;
+      width:300px; max-width:90vw;
+      background:var(--panel);
+      box-shadow:-8px 0 40px rgba(15,23,42,.12);
+      z-index:200; display:flex; flex-direction:column;
+      transform:translateX(100%);
+      transition:transform .28s cubic-bezier(.4,0,.2,1);
+      border-left:4px solid var(--line);
+    }
+    .sideDrawer.open{ transform:translateX(0); }
+    .drawerOverlay{
+      position:fixed; inset:0; background:rgba(15,23,42,.4);
+      z-index:199; opacity:0; pointer-events:none; transition:opacity .28s;
+    }
+    .drawerOverlay.open{ opacity:1; pointer-events:all; }
+    .drawerHeader{ padding:16px 16px 12px; border-bottom:2px solid var(--line); display:flex; align-items:center; justify-content:space-between; }
+    .drawerTitle{ font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.18em; color:var(--indigo); }
+    .drawerClose{
+      width:32px; height:32px; border-radius:8px;
+      border:2px solid var(--line); background:#fff;
+      cursor:pointer; font-size:18px; display:flex;
+      align-items:center; justify-content:center;
+      color:var(--muted); transition:all .15s; font-family:'Lexend',sans-serif;
+    }
+    .drawerClose:hover{ background:#f8fafc; }
+    .drawerBody{ flex:1; overflow-y:auto; padding:14px; }
+    .drawerSection{ margin-bottom:16px; }
+    .drawerSectionTitle{ font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.2em; color:var(--muted); margin-bottom:6px; padding-left:4px; }
+    .drawerBtn{
+      display:flex; align-items:center; gap:10px;
+      width:100%; padding:10px 12px;
+      border:2px solid var(--line); border-radius:12px;
+      background:#fff; color:var(--text);
+      font-weight:800; font-size:13px;
+      cursor:pointer; margin-bottom:5px;
+      text-align:left; text-decoration:none; transition:all .12s;
+      font-family:'Lexend',sans-serif;
+    }
+    .drawerBtn:hover{ border-color:#cbd5e1; background:#f8fafc; transform:translateX(2px); }
+    .drawerBtn .dIcon{
+      width:28px; height:28px; border-radius:8px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:14px; flex-shrink:0; background:#eef2ff;
+    }
+    .drawerBtn.teacher-btn .dIcon{ background:#f1f5f9; }
+    .drawerBtn .dLabel{ flex:1; }
+    .drawerBtn .dSub{ font-size:11px; font-weight:600; color:var(--muted); display:block; margin-top:1px; }
+    .drawerDivider{ height:1px; background:var(--line); margin:10px 0; }
+
+    /* ══════════════ THREE-LAYOUT SYSTEM ══════════════ */
+
+    /* Status strips */
+    .status-strip{
+      background:rgba(255,255,255,0.04);
+      backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:16px;
+      padding:12px 24px;
+      display:flex;
+      align-items:center;
+      gap:24px;
+      margin:16px 0;
+      flex-wrap:wrap;
+    }
+    .status-stat-pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.1);
+      border-radius:999px;
+      padding:6px 14px;
+      font-size:12px;
+      font-weight:800;
+      color:#e0e7ff;
+      white-space:nowrap;
+    }
+    .top3-wrap{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      min-width:160px;
+      max-width:200px;
+    }
+    .top3-label{
+      font-size:9px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.18em;
+      color:var(--muted);
+      margin-bottom:2px;
+    }
+    .top3-row{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-size:11px;
+      font-weight:800;
+      color:#e0e7ff;
+    }
+    .top3-rank{
+      font-size:10px;
+      font-weight:900;
+      color:var(--muted);
+      width:14px;
+      flex-shrink:0;
+    }
+
+    /* Classroom tool badge */
+    .classroom-badge{
+      position:absolute;
+      top:10px;
+      right:10px;
+      background:rgba(0,0,0,0.35);
+      color:rgba(255,255,255,0.8);
+      font-size:9px;
+      font-weight:800;
+      padding:3px 8px;
+      border-radius:999px;
+      letter-spacing:.06em;
+      pointer-events:none;
+    }
+
+    /* Information cards — border-only style */
+    .info-card{
+      display:flex;
+      flex-direction:column;
+      align-items:flex-start;
+      padding:16px;
+      border-radius:14px;
+      text-decoration:none;
+      border:1.5px solid rgba(255,255,255,0.1);
+      background:rgba(255,255,255,0.03);
+      gap:4px;
+      transition:border-color .15s, background .15s, transform .15s;
+    }
+    .info-card:hover{
+      border-color:rgba(99,102,241,0.4);
+      background:rgba(99,102,241,0.06);
+      transform:translateY(-2px);
+    }
+    .info-card-emoji{ font-size:20px; margin-bottom:4px; }
+    .info-card-name{ font-size:14px; font-weight:900; color:#e0e7ff; }
+
+    /* Section wrapper */
+    .layout-section{
+      max-width:1200px;
+      margin:0 auto;
+      padding:32px 24px;
+      position:relative;
+      z-index:2;
+    }
+    .layout-section + .layout-section{
+      padding-top:0;
+    }
+
+    /* Pitch cards for logged-out */
+    .pitch-grid{
+      display:grid; grid-template-columns:repeat(3,1fr); gap:16px;
+      max-width:1000px; margin:0 auto;
+    }
+    @media(max-width:700px){ .pitch-grid{ grid-template-columns:1fr; } }
+    .pitch-card{
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:18px; padding:28px 22px;
+      text-align:center;
+    }
+    .pitch-card-emoji{ font-size:32px; margin-bottom:10px; }
+    .pitch-card-title{ font-size:16px; font-weight:900; color:#e0e7ff; margin-bottom:6px; }
+    .pitch-card-desc{ font-size:13px; font-weight:500; color:#94a3b8; line-height:1.5; }
+    a.pitch-card:hover{ border-color:rgba(99,102,241,.3); transform:translateY(-2px); }
+
+    /* Info grid (4-col for teacher info section) */
+    .info-grid{
+      display:grid; grid-template-columns:repeat(4,1fr); gap:12px;
+    }
+    @media(max-width:700px){ .info-grid{ grid-template-columns:repeat(2,1fr); } }
+
+    /* Teacher manage cards — professional rectangular */
+    .manage-grid{
+      display:grid; grid-template-columns:repeat(4,1fr); gap:12px;
+    }
+    @media(max-width:900px){ .manage-grid{ grid-template-columns:repeat(2,1fr); } }
+    @media(max-width:480px){ .manage-grid{ grid-template-columns:1fr; } }
+    .manage-card{
+      display:flex; flex-direction:column; align-items:flex-start;
+      padding:18px; border-radius:16px; text-decoration:none;
+      min-height:100px; gap:4px;
+      background:#1e293b;
+      box-shadow:0 4px 16px rgba(0,0,0,.3);
+      transition:transform .15s, box-shadow .15s;
+    }
+    .manage-card:hover{
+      transform:translateY(-3px);
+      box-shadow:0 8px 28px rgba(0,0,0,.45);
+    }
+    .manage-card-emoji{ font-size:22px; margin-bottom:4px; }
+    .manage-card-name{ font-size:15px; font-weight:900; color:#e0e7ff; }
+    .manage-card-desc{ font-size:11px; font-weight:600; color:#94a3b8; line-height:1.4; }
+
+    /* Classroom tool 3-grid */
+    .classroom-grid{
+      display:grid; grid-template-columns:repeat(3,1fr); gap:12px;
+    }
+    @media(max-width:700px){ .classroom-grid{ grid-template-columns:1fr; } }
+
+    /* Student status strip compact */
+    .stu-strip{
+      max-height:80px; overflow:hidden;
+    }
+    .stu-strip .stu-avatar{
+      width:48px; height:48px; flex-shrink:0;
+      border-radius:50%; border:2px solid rgba(165,180,252,.3);
+      overflow:hidden; display:flex; align-items:center; justify-content:center;
+      background:#1e1b4b;
+    }
+    .stu-strip .stu-avatar svg{ width:100%; height:100%; }
+    .stu-strip .stu-identity{ display:flex; flex-direction:column; gap:1px; }
+    .stu-strip .stu-name{ font-size:14px; font-weight:900; color:#fff; }
+    .stu-strip .stu-title{ font-size:10px; font-weight:700; color:#a5b4fc; }
+    .stu-strip .stu-xp-bar{
+      width:80px; height:5px; background:rgba(255,255,255,.12); border-radius:999px; overflow:hidden;
+    }
+    .stu-strip .stu-xp-fill{
+      height:100%; background:linear-gradient(90deg,var(--indigo),var(--indigo-2)); border-radius:999px; transition:width .4s;
+    }
+    .stu-stats-center{
+      display:flex; gap:10px; flex:1; justify-content:center; flex-wrap:wrap;
+    }
+
+    /* Teacher glance strip */
+    .tch-strip .tch-left{ display:flex; align-items:center; gap:12px; }
+    .tch-strip .tch-icon{ font-size:28px; }
+    .tch-strip .tch-name{ font-size:16px; font-weight:900; color:#fff; }
+    .tch-strip .tch-class{ font-size:11px; font-weight:700; color:#a5b4fc; }
+    .tch-strip .tch-stats{ display:flex; gap:10px; flex:1; justify-content:center; flex-wrap:wrap; }
+    .tch-strip .tch-action{
+      background:var(--indigo); color:#fff; border:none; border-radius:999px;
+      padding:10px 22px; font-weight:900; font-size:13px; cursor:pointer;
+      font-family:'Lexend',sans-serif; text-decoration:none;
+      box-shadow:0 4px 20px rgba(67,56,202,.4);
+      transition:all .15s; white-space:nowrap;
+    }
+    .tch-strip .tch-action:hover{ background:#3730a3; transform:translateY(-1px); }
+    .tch-class-select{
+      background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15);
+      color:#e0e7ff; border-radius:8px; padding:3px 8px; font-size:11px;
+      font-weight:700; font-family:'Lexend',sans-serif; cursor:pointer;
+      margin-left:6px;
+    }
+    .tch-class-select option{ background:#1e1b4b; color:#e0e7ff; }
+
+    /* Research blurb */
+    .research-blurb{
+      max-width:700px; margin:0 auto; text-align:center;
+      color:#94a3b8; font-size:13px; font-weight:500; line-height:1.7;
+      padding:40px 24px;
+      position:relative; z-index:2;
+    }
+
+    @media(max-width:600px){
+      .layout-section{ padding:20px 16px; }
+      .status-strip{ padding:10px 14px; gap:12px; }
+      .stu-strip{ max-height:none; }
+      .manage-grid{ grid-template-columns:1fr; }
+    }
+
+    /* ── Student dashboard theme ── */
+    .lab-hub {
+      position: relative;
+      height: 370px;
+      overflow: hidden;
+      background: #080d1a;
+    }
+    .hub-scene-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .student-status-strip {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(8,13,26,0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top: 1px solid rgba(99,102,241,0.25);
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      z-index: 10;
+      flex-wrap: wrap;
+    }
+    .student-info-block {
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    }
+    .student-sci-avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: linear-gradient(135deg,#4338ca,#7c3aed);
+      border: 2px solid rgba(165,180,252,0.4);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0; overflow: hidden;
+    }
+    .student-sci-avatar svg { width: 44px; height: 54px; }
+    .student-name-display { font-size: 14px; font-weight: 800; color: #e0e7ff; }
+    .student-level-display { font-size: 10px; font-weight: 700; color: #818cf8; letter-spacing: .05em; }
+    .student-xp-track { width: 80px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 4px; }
+    .student-xp-fill { height: 100%; background: #6366f1; border-radius: 2px; transition: width .6s ease; }
+    .stat-pill-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .wl-level-pill { background: rgba(99,102,241,.12); border-color: rgba(99,102,241,.35); }
+    .wl-level-pill:hover { background: rgba(99,102,241,.22); }
+    .wl-level-panel {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff; border-radius: 16px; padding: 24px;
+      max-width: 420px; width: 90%;
+      box-shadow: 0 20px 60px rgba(0,0,0,.3); z-index: 9999;
+    }
+    .wl-level-panel-header {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 12px;
+    }
+    .wl-level-panel-header h3 {
+      margin: 0; font-size: 20px; color: #312e81; font-weight: 800;
+    }
+    .wl-level-panel-close {
+      background: none; border: none; font-size: 28px; cursor: pointer;
+      color: #64748b; line-height: 1; padding: 0 6px;
+    }
+    .wl-level-panel-close:hover { color: #111827; }
+    .wl-level-panel-mastery {
+      font-size: 14px; color: #64748b; margin-bottom: 16px;
+    }
+    .wl-level-panel-hint {
+      font-size: 12px; color: #64748b;
+      margin-top: 16px; text-align: center;
+    }
+    .wl-level-panel-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.5); z-index: 9998;
+    }
+    .wl-level-row { display: flex; align-items: center; margin-bottom: 8px; font-size: 13px; color: #111827; }
+    .wl-level-row-label { width: 140px; font-weight: 600; }
+    .wl-level-row-bar { flex: 1; height: 10px; background: #e5e7eb; border-radius: 5px; overflow: hidden; margin: 0 8px; }
+    .wl-level-row-bar > div { height: 100%; background: #6366f1; transition: width .3s ease; }
+    .wl-level-row-pct { width: 40px; text-align: right; font-variant-numeric: tabular-nums; }
+    .wl-level-row-nudge { color: #16a34a; font-size: 11px; margin-left: 4px; font-weight: 700; }
+    .wl-promo-toast {
+      position: fixed; top: 40%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #fff; padding: 32px 40px; border-radius: 20px;
+      font-size: 20px; font-weight: 800; text-align: center;
+      box-shadow: 0 20px 60px rgba(99,102,241,.4); z-index: 9999;
+    }
+    .wl-promo-toast-name { font-size: 28px; margin-top: 4px; }
+    .wl-sub-toast {
+      position: fixed; bottom: 80px; left: 50%;
+      transform: translateX(-50%);
+      background: #16a34a; color: #fff;
+      padding: 16px 24px; border-radius: 12px;
+      font-size: 16px; font-weight: 700;
+      box-shadow: 0 12px 32px rgba(22,163,74,.4); z-index: 9999;
+    }
+    .stat-pill-item {
+      display: flex; align-items: center; gap: 5px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 999px; padding: 5px 12px;
+      font-size: 12px; font-weight: 800; color: #e0e7ff; white-space: nowrap;
+      font-family: 'Lexend', sans-serif;
+    }
+    .daily-goal-block { flex: 1; min-width: 120px; }
+    .daily-goal-heading {
+      font-size: 9px; font-weight: 900; text-transform: uppercase;
+      letter-spacing: .15em; color: #6366f1; margin-bottom: 5px;
+    }
+    .daily-goal-track {
+      height: 8px; background: rgba(255,255,255,0.08);
+      border-radius: 4px; overflow: hidden;
+    }
+    .daily-goal-fill {
+      height: 100%; border-radius: 4px;
+      background: linear-gradient(90deg,#4338ca,#6366f1,#818cf8);
+      transition: width .8s ease;
+      position: relative;
+    }
+    .daily-goal-fill::after {
+      content: ''; position: absolute; right: 0; top: 0; bottom: 0;
+      width: 12px; background: rgba(255,255,255,0.35); border-radius: 4px;
+    }
+    .daily-goal-text {
+      font-size: 10px; font-weight: 700; color: #818cf8; margin-top: 4px;
+      font-family: 'Lexend', sans-serif;
+    }
+
+    /* ── Strip Challenges Block (inline in status strip) ── */
+    .strip-challenges-block {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 160px;
+    }
+    .strip-challenges-list {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      flex: 1;
+      min-width: 0;
+    }
+    .hub-flame-wrap {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      filter: drop-shadow(0 0 8px rgba(239,68,68,0.6)) drop-shadow(0 0 20px rgba(239,68,68,0.3));
+      animation: hubFlameGlow 2s ease-in-out infinite;
+    }
+    @keyframes hubFlameGlow {
+      0%,100% { filter: drop-shadow(0 0 8px rgba(239,68,68,0.6)) drop-shadow(0 0 20px rgba(239,68,68,0.3)); }
+      50% { filter: drop-shadow(0 0 14px rgba(249,115,22,0.8)) drop-shadow(0 0 30px rgba(239,68,68,0.5)); }
+    }
+    .hub-flame-days {
+      font-family: 'Lexend', sans-serif;
+      font-size: 11px; font-weight: 900;
+      color: #fef08a;
+      text-shadow: 0 0 6px rgba(239,68,68,0.8), 0 1px 2px rgba(0,0,0,0.5);
+      margin-top: -4px;
+    }
+    .hub-ch-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(8,13,26,0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(99,102,241,0.2);
+      border-radius: 10px;
+      padding: 5px 10px;
+      font-family: 'Lexend', sans-serif;
+      transition: all .2s;
+    }
+    .hub-ch-row.done { border-color: rgba(16,185,129,0.4); background: rgba(16,185,129,0.1); }
+    .hub-ch-row.claimed { opacity: 0.4; }
+    .hub-ch-icon { font-size: 12px; flex-shrink: 0; }
+    .hub-ch-label {
+      font-size: 9px; font-weight: 700; color: #e0e7ff;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      flex: 1;
+    }
+    .hub-ch-bar {
+      width: 36px; height: 4px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 2px; overflow: hidden; flex-shrink: 0;
+    }
+    .hub-ch-fill { height: 100%; border-radius: 2px; transition: width .4s; }
+    .hub-ch-fill.easy { background: #34d399; }
+    .hub-ch-fill.medium { background: #fbbf24; }
+    .hub-ch-fill.hard { background: #f87171; }
+    .hub-ch-fill.weekly { background: #a78bfa; }
+    .hub-ch-reward {
+      font-size: 8px; font-weight: 900; color: #818cf8;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .hub-ch-claim {
+      background: #4338ca; border: none; border-radius: 6px;
+      padding: 2px 8px; font-size: 8px; font-weight: 900;
+      color: #fff; cursor: pointer; font-family: 'Lexend', sans-serif;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .hub-ch-claim:hover { background: #3730a3; }
+    @media (max-width: 480px) {
+      .strip-challenges-block { min-width: 120px; gap: 5px; }
+      .hub-ch-label { font-size: 8px; }
+      .hub-flame-wrap svg { width: 24px; height: 32px; }
+    }
+
+    /* ── Daily Challenges Panel ─────────────────── */
+    .top3-block { flex-shrink: 0; min-width: 160px; }
+    .top3-heading {
+      font-size: 9px; font-weight: 900; text-transform: uppercase;
+      letter-spacing: .15em; color: #6366f1; margin-bottom: 5px;
+    }
+    .top3-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+    .top3-rank { font-size: 11px; font-weight: 900; width: 16px; color: #6366f1; }
+    .top3-student-name { font-size: 11px; font-weight: 700; color: #e0e7ff; flex: 1; font-family: 'Lexend', sans-serif; }
+    .top3-xp-val { font-size: 11px; font-weight: 800; color: #818cf8; }
+
+    /* Explore doorways */
+    .explore-doorways {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .doorway-card {
+      border-radius: 16px;
+      overflow: hidden;
+      position: relative;
+      height: 130px;
+      cursor: pointer;
+      transition: transform .2s, box-shadow .2s;
+      text-decoration: none;
+      display: block;
+    }
+    .doorway-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.5); }
+    .doorway-card:hover .doorway-light { opacity: 1; }
+    .doorway-light {
+      position: absolute; inset: 0; opacity: 0.6; transition: opacity .3s;
+      pointer-events: none;
+    }
+    .doorway-sign {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 12px 14px;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(6px);
+    }
+    .doorway-name { font-size: 14px; font-weight: 900; color: #fff; font-family: 'Lexend', sans-serif; }
+    .doorway-desc { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.65); margin-top: 2px; font-family: 'Lexend', sans-serif; }
+
+    /* Play container */
+    .play-hub-container {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .play-hub-container::after {
+      content: '';
+      position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg,#4338ca,#7c3aed,#dc2626,#ea580c,#0d9488,#16a34a);
+    }
+    .play-hub-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    @media(max-width: 900px) { .play-hub-grid { grid-template-columns: repeat(2,1fr); } .explore-doorways { grid-template-columns: 1fr; } }
+
+    /* Game card hover glow */
+    .act-card { position: relative; overflow: hidden; }
+    .act-card::before {
+      content: ''; position: absolute; top: -30px; right: -30px;
+      width: 90px; height: 90px; border-radius: 50%;
+      background: rgba(255,255,255,0.07);
+      pointer-events: none;
+    }
+    .act-card:hover { transform: translateY(-4px) rotate(0.3deg) !important; }
+
+    /* Game of the Week badge */
+    .gotw-badge {
+      position:absolute; top:6px; right:6px; background:linear-gradient(135deg,#f59e0b,#d97706);
+      color:#fff; font-size:9px; font-weight:900; padding:3px 7px; border-radius:6px;
+      text-transform:uppercase; letter-spacing:.04em; z-index:2; line-height:1.2;
+      box-shadow:0 2px 8px rgba(217,119,6,.4); animation: gotwPulse 2s ease-in-out infinite;
+    }
+    @keyframes gotwPulse { 0%,100%{box-shadow:0 2px 8px rgba(217,119,6,.3)} 50%{box-shadow:0 2px 16px rgba(217,119,6,.6)} }
+
+    /* Try me nudge badge */
+    .tryme-badge {
+      position:absolute; top:6px; left:6px; background:linear-gradient(135deg,#10b981,#059669);
+      color:#fff; font-size:9px; font-weight:900; padding:3px 7px; border-radius:6px;
+      text-transform:uppercase; letter-spacing:.04em; z-index:2; line-height:1.2;
+      box-shadow:0 2px 8px rgba(16,185,129,.4); animation: tryMePulse 2.5s ease-in-out infinite;
+    }
+    @keyframes tryMePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+
+    /* Bonus pills strip */
+    .bonus-strip { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; font-family:Lexend,sans-serif; }
+    .bonus-pill {
+      display:inline-flex; align-items:center; gap:5px; padding:5px 10px;
+      border-radius:20px; font-size:10px; font-weight:800; line-height:1.2;
+      border:1.5px solid; white-space:nowrap;
+    }
+    .bonus-pill-icon { font-size:14px; flex-shrink:0; }
+    .bonus-pill--gotw   { background:#fef9c3; border-color:#f59e0b; color:#92400e; }
+    .bonus-pill--day    { background:#fee2e2; border-color:#ef4444; color:#991b1b; }
+    .bonus-pill--variety{ background:#d1fae5; border-color:#10b981; color:#065f46; }
+
+    /* Focus game gold glow on card */
+    .act-card.focus-glow {
+      box-shadow: 0 0 16px rgba(245,158,11,.6), 0 0 40px rgba(245,158,11,.3), inset 0 0 20px rgba(245,158,11,.1) !important;
+      border: 2px solid rgba(245,158,11,.7) !important;
+      animation: focusGlow 2s ease-in-out infinite !important;
+    }
+    @keyframes focusGlow {
+      0%,100% { box-shadow: 0 0 14px rgba(245,158,11,.5), 0 0 35px rgba(245,158,11,.2), inset 0 0 16px rgba(245,158,11,.08); transform: scale(1); }
+      50%     { box-shadow: 0 0 24px rgba(245,158,11,.8), 0 0 50px rgba(245,158,11,.4), inset 0 0 24px rgba(245,158,11,.15); transform: scale(1.03); }
+    }
+
+    /* Scientist hub animations */
+    @keyframes hubSciBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    @keyframes hubBeakerBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
+    @keyframes hubGlowPulse { 0%,100%{opacity:0.6} 50%{opacity:1} }
+    @keyframes hubTwinkle { 0%,100%{opacity:0.3} 50%{opacity:1} }
+    @keyframes hubCandleFlicker { 0%,100%{transform:scaleX(1) scaleY(1)} 33%{transform:scaleX(0.85) scaleY(1.1)} 66%{transform:scaleX(1.1) scaleY(0.9)} }
+    @keyframes hubScanline { 0%{transform:translateY(-100%)} 100%{transform:translateY(300%)} }
+    @keyframes hubFloatTile { 0%,100%{transform:translate(0,0) rotate(-3deg)} 50%{transform:translate(4px,-8px) rotate(2deg)} }
+    @keyframes hubGoalShimmer { 0%,100%{opacity:0} 50%{opacity:1} }
+
+    .hub-sci { animation: hubSciBob 3s ease-in-out infinite; transform-origin: center bottom; }
+    .hub-bkr1 { animation: hubBeakerBob 2.8s ease-in-out infinite; transform-origin: center bottom; }
+    .hub-bkr2 { animation: hubBeakerBob 3.4s ease-in-out infinite 0.6s; transform-origin: center bottom; }
+    .hub-bkr3 { animation: hubBeakerBob 2.2s ease-in-out infinite 1.1s; transform-origin: center bottom; }
+    .hub-glow1 { animation: hubGlowPulse 2.8s ease-in-out infinite; }
+    .hub-glow2 { animation: hubGlowPulse 3.2s ease-in-out infinite 0.8s; }
+    .hub-glow3 { animation: hubGlowPulse 2.0s ease-in-out infinite 1.4s; }
+    .hub-star1 { animation: hubTwinkle 2.8s ease-in-out infinite; }
+    .hub-star2 { animation: hubTwinkle 3.4s ease-in-out infinite 0.7s; }
+    .hub-star3 { animation: hubTwinkle 2.2s ease-in-out infinite 1.2s; }
+    .hub-flame { animation: hubCandleFlicker 1.5s ease-in-out infinite; transform-origin: center bottom; }
+    .hub-scanline { animation: hubScanline 3s linear infinite; }
+    .hub-tile1 { animation: hubFloatTile 5s ease-in-out infinite; }
+    .hub-tile2 { animation: hubFloatTile 6s ease-in-out infinite 1.5s; }
+    .hub-tile3 { animation: hubFloatTile 4.5s ease-in-out infinite 0.8s; }
+    /* skip-link: uses wordlab-common.css */
+
+    /* ── Low-stim mode ── */
+    .low-stim .bonus-strip,
+    .low-stim .tryme-badge,
+    .low-stim .top3-block,
+    .low-stim .strip-challenges-block,
+    .low-stim .stat-pill-item:nth-child(1),
+    .low-stim .stat-pill-item:nth-child(2) { display:none !important; }
+    .low-stim .act-card.focus-glow { box-shadow:none !important; animation:none !important; border:2px solid rgba(245,158,11,.5) !important; }
+    .low-stim .act-card { animation:none !important; }
+    .low-stim .student-sci-avatar { display:none !important; }
+  </style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<!-- ── Header ── -->
+<header class="header" role="banner">
+  <div class="headerInner">
+    <a class="brand" href="landing.html">
+      <div class="brandIcon">🧪</div>
+      <span class="brandName">Word Labs</span>
+    </a>
+    <div class="headerRight">
+      <span id="wlPillSlot"></span>
+      <div id="extModeToggleWrap" title="Toggle between Base and Extension mode">
+        <div class="ext-track" id="extModeTrack" onclick="toggleExtMode()"><div class="ext-thumb"></div></div>
+        <span class="ext-lbl" id="extModeLbl">📚 Base</span>
+      </div>
+      <a href="pricing.html" class="loginBtn" id="hdrPricingLink" style="text-decoration:none;">💳 Pricing</a>
+      <a href="teacher-login.html" class="loginBtn" id="hdrTeachersLink" style="text-decoration:none;">🔬 Teachers</a>
+      <button class="loginBtn" id="wlLoginBtn" onclick="wlShowLogin()">👤 Log in</button>
+      <span id="hdrTeacherInfo" style="display:none;align-items:center;gap:8px;">
+        <span id="hdrTeacherName" style="font-size:12px;font-weight:800;color:#e0e7ff;">Teacher</span>
+        <button class="loginBtn" onclick="teacherSignOut()" style="background:#4338ca;color:#fff;border-color:#4338ca;">🚪 Sign Out</button>
+      </span>
+      <button class="menuBtn" id="menuBtn" onclick="toggleMenu()" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="drawerOverlay" id="drawerOverlay" onclick="closeMenu()"></div>
+<div class="sideDrawer" id="sideDrawer">
+  <div class="drawerHeader">
+    <span class="drawerTitle">Menu</span>
+    <button class="drawerClose" onclick="closeMenu()">×</button>
+  </div>
+  <div class="drawerBody">
+    <div class="drawerSection">
+      <div class="drawerSectionTitle">Activities</div>
+      <a class="drawerBtn" href="morpheme-builder.html"><span class="dIcon">🔬</span><span class="dLabel"><span>Morpheme Builder</span><span class="dSub">Build and explore words</span></span></a>
+      <a class="drawerBtn" href="meaning-mode.html"><span class="dIcon">🧠</span><span class="dLabel"><span>Meaning Match-Up</span><span class="dSub">Match morphemes to meanings</span></span></a>
+      <a class="drawerBtn" href="mission-mode.html"><span class="dIcon">⚡</span><span class="dLabel"><span>Mission Mode</span><span class="dSub">Match morphemes to the rest of their word</span></span></a>
+      <a class="drawerBtn" href="speed-mode.html"><span class="dIcon">⏱️</span><span class="dLabel"><span>Speed Builder</span><span class="dSub">Build real words against the clock</span></span></a>
+      <a class="drawerBtn" href="breakdown-mode.html"><span class="dIcon">🧩</span><span class="dLabel"><span>Breakdown Blitz</span><span class="dSub">Decompose words into morphemes</span></span></a>
+      <a class="drawerBtn" href="syllable-mode.html"><span class="dIcon">✂️</span><span class="dLabel"><span>Syllable Splitter</span><span class="dSub">Chop words into syllables</span></span></a>
+      <a class="drawerBtn" href="phoneme-mode.html"><span class="dIcon">🔊</span><span class="dLabel"><span>Phoneme Splitter</span><span class="dSub">Split words into sounds</span></span></a>
+      <a class="drawerBtn" href="sound-sorter.html"><span class="dIcon">🔤</span><span class="dLabel"><span>Sound Sorter</span><span class="dSub">Choose the right grapheme</span></span></a>
+      <a class="drawerBtn" href="homophone-mode.html"><span class="dIcon">📡</span><span class="dLabel"><span>Homophone Hunter</span><span class="dSub">Decode signals, pick the right spelling</span></span></a>
+      <a class="drawerBtn" href="word-spectrum.html"><span class="dIcon">🧲</span><span class="dLabel"><span>Word Spectrum</span><span class="dSub">Synonyms, antonyms and meaning</span></span></a>
+      <a class="drawerBtn" href="word-refinery.html"><span class="dIcon">⚗️</span><span class="dLabel"><span>The Refinery</span><span class="dSub">Arrange words from everyday to specialist</span></span></a>
+    </div>
+    <div class="drawerDivider"></div>
+    <div class="drawerSection">
+      <div class="drawerSectionTitle">Teacher tools</div>
+      <a class="drawerBtn teacher-btn" href="dashboard.html"><span class="dIcon">📊</span><span class="dLabel"><span>Dashboard</span><span class="dSub">View class results &amp; heatmaps</span></span></a>
+      <a class="drawerBtn teacher-btn" href="class-setup.html"><span class="dIcon">⚙️</span><span class="dLabel"><span>Class Setup</span><span class="dSub">Add students and classes</span></span></a>
+      <a class="drawerBtn teacher-btn" href="teacher-guide.html"><span class="dIcon">📖</span><span class="dLabel"><span>Teacher Guide</span><span class="dSub">Step-by-step onboarding</span></span></a>
+      <a class="drawerBtn teacher-btn" href="teacher-resources.html"><span class="dIcon">📄</span><span class="dLabel"><span>Teacher Resources</span><span class="dSub">Printable sheets &amp; reference cards</span></span></a>
+    </div>
+    <div class="drawerDivider"></div>
+    <div class="drawerSection">
+      <div class="drawerSectionTitle">Help &amp; Info</div>
+      <a class="drawerBtn" href="faq.html"><span class="dIcon">❓</span><span class="dLabel"><span>FAQ</span><span class="dSub">Frequently asked questions</span></span></a>
+      <a class="drawerBtn" href="about.html"><span class="dIcon">ℹ️</span><span class="dLabel"><span>About Word Labs</span><span class="dSub">Research base &amp; approach</span></span></a>
+      <a class="drawerBtn" href="feedback.html"><span class="dIcon">💬</span><span class="dLabel"><span>Feedback</span><span class="dSub">Report bugs or suggest features</span></span></a>
+      <a class="drawerBtn" href="upgrade.html" id="drawerUpgradeLink"><span class="dIcon">💎</span><span class="dLabel"><span>Upgrade</span><span class="dSub">Compare plans &amp; pricing</span></span></a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     LAYOUT 1 — LOGGED OUT (marketing / first-visit)
+     ═══════════════════════════════════════════════════════════════ -->
+<div id="layoutLoggedOut" style="display:none;">
+
+<!-- Hero with animated SVG lab scene -->
+<section class="video-hero" id="main-content" role="main">
+<div class="hero-wrap">
+  <svg class="hero-scene" viewBox="0 0 900 460" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="900" height="460" fill="#0d0b1a"/>
+    <rect width="900" height="460" fill="url(#heroStripes)" opacity="0.06"/>
+    <defs>
+      <pattern id="heroStripes" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="5" height="10" fill="#6366f1"/>
+      </pattern>
+      <linearGradient id="lightBeam" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#fde68a" stop-opacity="0.22"/>
+        <stop offset="100%" stop-color="#fde68a" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <rect width="900" height="295" fill="#1a1630"/>
+    <rect x="0" y="0" width="900" height="2" fill="#2d2450" opacity="0.8"/>
+    <rect x="0" y="293" width="900" height="3" fill="#0d0b1a"/>
+    <rect y="295" width="900" height="165" fill="#110f1e"/>
+    <line x1="0" y1="295" x2="900" y2="295" stroke="#1f1c33" stroke-width="2"/>
+    <line x1="0" y1="335" x2="900" y2="335" stroke="#1a1730" stroke-width="1" opacity="0.5"/>
+    <line x1="0" y1="375" x2="900" y2="375" stroke="#1a1730" stroke-width="1" opacity="0.5"/>
+    <line x1="150" y1="295" x2="150" y2="460" stroke="#1a1730" stroke-width="1" opacity="0.5"/>
+    <line x1="300" y1="295" x2="300" y2="460" stroke="#1a1730" stroke-width="1" opacity="0.5"/>
+    <line x1="450" y1="295" x2="450" y2="460" stroke="#1a1730" stroke-width="1" opacity="0.5"/>
+    <line x1="600" y1="295" x2="600" y2="460" stroke="#1a1730" stroke-width="1" opacity="0.5"/>
+    <line x1="750" y1="295" x2="750" y2="460" stroke="#1a1730" stroke-width="1" opacity="0.5"/>
+    <!-- Windows left -->
+    <rect x="30" y="90" width="70" height="85" rx="6" fill="#1a1630" stroke="#2d2450" stroke-width="3"/>
+    <rect x="33" y="93" width="64" height="79" rx="4" fill="#0a2040"/>
+    <line x1="65" y1="93" x2="65" y2="172" stroke="#2d2450" stroke-width="2"/>
+    <line x1="33" y1="132" x2="97" y2="132" stroke="#2d2450" stroke-width="2"/>
+    <rect x="33" y="93" width="30" height="38" rx="3" fill="#0e3060" opacity="0.6"/>
+    <rect x="130" y="90" width="70" height="85" rx="6" fill="#1a1630" stroke="#2d2450" stroke-width="3"/>
+    <rect x="133" y="93" width="64" height="79" rx="4" fill="#0a2040"/>
+    <line x1="165" y1="93" x2="165" y2="172" stroke="#2d2450" stroke-width="2"/>
+    <line x1="133" y1="132" x2="197" y2="132" stroke="#2d2450" stroke-width="2"/>
+    <rect x="133" y="93" width="30" height="38" rx="3" fill="#0e3060" opacity="0.5"/>
+    <!-- Windows right -->
+    <rect x="700" y="90" width="70" height="85" rx="6" fill="#1a1630" stroke="#2d2450" stroke-width="3"/>
+    <rect x="703" y="93" width="64" height="79" rx="4" fill="#0a2040"/>
+    <line x1="735" y1="93" x2="735" y2="172" stroke="#2d2450" stroke-width="2"/>
+    <line x1="703" y1="132" x2="767" y2="132" stroke="#2d2450" stroke-width="2"/>
+    <rect x="703" y="93" width="30" height="38" rx="3" fill="#0e3060" opacity="0.5"/>
+    <rect x="800" y="90" width="70" height="85" rx="6" fill="#1a1630" stroke="#2d2450" stroke-width="3"/>
+    <rect x="803" y="93" width="64" height="79" rx="4" fill="#0a2040"/>
+    <line x1="835" y1="93" x2="835" y2="172" stroke="#2d2450" stroke-width="2"/>
+    <line x1="803" y1="132" x2="867" y2="132" stroke="#2d2450" stroke-width="2"/>
+    <rect x="803" y="93" width="30" height="38" rx="3" fill="#0e3060" opacity="0.5"/>
+    <!-- Window lightning -->
+    <g class="wln1"><rect x="34" y="94" width="30" height="37" rx="2" fill="rgba(147,197,253,0.13)"/><path d="M50 97 L45 109 L51 109 L44 129" stroke="#bfdbfe" stroke-width="1.8" fill="none" stroke-linecap="round"/></g>
+    <g class="wln4"><rect x="66" y="94" width="30" height="37" rx="2" fill="rgba(147,197,253,0.13)"/><path d="M79 97 L74 109 L80 109 L73 129" stroke="#e0f2fe" stroke-width="1.8" fill="none" stroke-linecap="round"/></g>
+    <g class="wln2"><rect x="166" y="94" width="30" height="37" rx="2" fill="rgba(147,197,253,0.13)"/><path d="M179 97 L174 109 L180 109 L173 129" stroke="#bfdbfe" stroke-width="1.8" fill="none" stroke-linecap="round"/></g>
+    <g class="wln6"><rect x="134" y="133" width="30" height="38" rx="2" fill="rgba(147,197,253,0.10)"/><path d="M149 136 L144 148 L150 148 L143 168" stroke="#e0f2fe" stroke-width="1.8" fill="none" stroke-linecap="round"/></g>
+    <g class="wln3"><rect x="736" y="94" width="30" height="37" rx="2" fill="rgba(147,197,253,0.13)"/><path d="M749 97 L744 109 L750 109 L743 129" stroke="#bfdbfe" stroke-width="1.8" fill="none" stroke-linecap="round"/></g>
+    <g class="wln7"><rect x="704" y="133" width="30" height="38" rx="2" fill="rgba(147,197,253,0.10)"/><path d="M719 136 L714 148 L720 148 L713 168" stroke="#e0f2fe" stroke-width="1.8" fill="none" stroke-linecap="round"/></g>
+    <g class="wln5"><rect x="804" y="94" width="30" height="37" rx="2" fill="rgba(147,197,253,0.13)"/><path d="M818 97 L813 109 L819 109 L812 129" stroke="#bfdbfe" stroke-width="1.8" fill="none" stroke-linecap="round"/></g>
+    <g class="wln8"><rect x="836" y="94" width="30" height="37" rx="2" fill="rgba(147,197,253,0.13)"/><path d="M850 97 L845 109 L851 109 L844 129" stroke="#e0f2fe" stroke-width="1.8" fill="none" stroke-linecap="round"/></g>
+    <!-- Danger signs -->
+    <rect x="18" y="155" width="66" height="22" rx="4" fill="#f59e0b"/>
+    <text x="51" y="170" font-family="Lexend,sans-serif" font-size="8" font-weight="900" fill="#7c2d12" text-anchor="middle">⚠ DANGER</text>
+    <rect x="816" y="155" width="66" height="22" rx="4" fill="#f59e0b"/>
+    <text x="849" y="170" font-family="Lexend,sans-serif" font-size="8" font-weight="900" fill="#7c2d12" text-anchor="middle">⚠ VOLATILE</text>
+    <!-- Left bench -->
+    <rect x="0" y="275" width="170" height="20" rx="3" fill="#2a2040"/>
+    <rect x="0" y="295" width="170" height="4" rx="1" fill="#1a1530"/>
+    <rect x="10" y="299" width="140" height="130" rx="4" fill="#1a1530"/>
+    <!-- Right bench -->
+    <rect x="730" y="275" width="170" height="20" rx="3" fill="#2a2040"/>
+    <rect x="730" y="295" width="170" height="4" rx="1" fill="#1a1530"/>
+    <rect x="740" y="299" width="150" height="130" rx="4" fill="#1a1530"/>
+    <!-- Left beakers -->
+    <g class="wbg1">
+      <ellipse cx="57" cy="258" rx="10" ry="4" fill="rgba(99,102,241,0.3)"/>
+      <ellipse class="wg1" cx="57" cy="258" rx="14" ry="6" fill="rgba(99,102,241,0.15)"/>
+      <ellipse class="ws1" cx="52" cy="249" rx="4" ry="2.5" fill="rgba(165,180,252,0.5)"/>
+      <ellipse class="ws2" cx="62" cy="252" rx="3" ry="2" fill="rgba(165,180,252,0.4)"/>
+      <path d="M46 262 L38 282 Q36 289 44 289 L70 289 Q78 289 76 282 L68 262 Z" fill="#6366f1" opacity="0.85"/>
+      <rect x="46" y="249" width="22" height="14" rx="3" fill="#4338ca"/>
+      <ellipse class="wl1" cx="57" cy="276" rx="14" ry="3" fill="rgba(165,180,252,0.5)"/>
+    </g>
+    <g class="wbg2">
+      <ellipse cx="105" cy="258" rx="9" ry="3.5" fill="rgba(20,184,166,0.3)"/>
+      <ellipse class="wg2" cx="105" cy="258" rx="13" ry="5" fill="rgba(20,184,166,0.15)"/>
+      <ellipse class="ws3" cx="101" cy="252" rx="3" ry="2" fill="rgba(94,234,212,0.5)"/>
+      <path d="M95 262 L82 284 Q80 292 88 292 L122 292 Q130 292 128 284 L115 262 Z" fill="#14b8a6" opacity="0.85"/>
+      <rect x="95" y="248" width="20" height="15" rx="3" fill="#0d9488"/>
+      <ellipse class="wl2" cx="105" cy="279" rx="17" ry="3" fill="rgba(94,234,212,0.45)"/>
+    </g>
+    <g class="wbg3">
+      <ellipse cx="148" cy="262" rx="8" ry="3" fill="rgba(245,158,11,0.3)"/>
+      <ellipse class="wg3" cx="148" cy="262" rx="12" ry="5" fill="rgba(245,158,11,0.15)"/>
+      <ellipse class="ws2" cx="144" cy="256" rx="3" ry="2" fill="rgba(253,230,138,0.5)"/>
+      <circle cx="148" cy="276" r="16" fill="#f59e0b" opacity="0.85"/>
+      <rect x="142" y="252" width="12" height="14" rx="2" fill="#d97706"/>
+      <ellipse cx="148" cy="272" rx="10" ry="3" fill="rgba(253,230,138,0.5)"/>
+    </g>
+    <!-- Right beakers -->
+    <g class="wbg1">
+      <ellipse cx="780" cy="258" rx="9" ry="3.5" fill="rgba(239,68,68,0.3)"/>
+      <ellipse class="wg2" cx="780" cy="258" rx="13" ry="5" fill="rgba(239,68,68,0.15)"/>
+      <ellipse class="ws2" cx="776" cy="252" rx="3" ry="2" fill="rgba(252,165,165,0.5)"/>
+      <path d="M768 261 L760 284 Q758 291 766 291 L794 291 Q802 291 800 284 L792 261 Z" fill="#ef4444" opacity="0.85"/>
+      <rect x="768" y="248" width="24" height="14" rx="3" fill="#dc2626"/>
+      <ellipse class="wl1" cx="780" cy="276" rx="14" ry="3" fill="rgba(252,165,165,0.45)"/>
+    </g>
+    <g class="wbg2">
+      <ellipse cx="830" cy="254" rx="8" ry="3" fill="rgba(168,85,247,0.3)"/>
+      <ellipse class="wg3" cx="830" cy="254" rx="12" ry="5" fill="rgba(168,85,247,0.15)"/>
+      <ellipse class="ws1" cx="826" cy="248" rx="3" ry="2" fill="rgba(216,180,254,0.5)"/>
+      <rect x="820" y="244" width="20" height="45" rx="3" fill="#a855f7" opacity="0.85"/>
+      <rect x="819" y="242" width="22" height="6" rx="2" fill="#9333ea"/>
+      <ellipse class="wl2" cx="830" cy="271" rx="9" ry="2.5" fill="rgba(216,180,254,0.5)"/>
+    </g>
+    <g class="wbg3">
+      <ellipse cx="870" cy="259" rx="7" ry="3" fill="rgba(20,184,166,0.3)"/>
+      <ellipse class="wg1" cx="870" cy="259" rx="11" ry="4" fill="rgba(20,184,166,0.15)"/>
+      <ellipse class="ws3" cx="866" cy="254" rx="2.5" ry="1.8" fill="rgba(94,234,212,0.5)"/>
+      <path d="M862 262 L856 282 Q855 288 861 288 L879 288 Q885 288 884 282 L878 262 Z" fill="#14b8a6" opacity="0.85"/>
+      <rect x="862" y="250" width="16" height="13" rx="2" fill="#0d9488"/>
+      <ellipse cx="870" cy="274" rx="10" ry="2.5" fill="rgba(94,234,212,0.45)"/>
+    </g>
+    <!-- Floating morpheme tiles left -->
+    <g class="wt1" style="transform-origin:80px 145px">
+      <rect x="52" y="130" width="56" height="30" rx="8" fill="#4338ca" opacity="0.9"/>
+      <rect x="52" y="130" width="56" height="30" rx="8" fill="none" stroke="rgba(165,180,252,0.5)" stroke-width="1.5"/>
+      <text x="80" y="151" font-family="Lexend,sans-serif" font-size="11" font-weight="900" fill="#c7d2fe" text-anchor="middle">PRE-</text>
+    </g>
+    <g class="wt2" style="transform-origin:160px 185px">
+      <rect x="130" y="170" width="60" height="30" rx="8" fill="#0d9488" opacity="0.9"/>
+      <rect x="130" y="170" width="60" height="30" rx="8" fill="none" stroke="rgba(94,234,212,0.5)" stroke-width="1.5"/>
+      <text x="160" y="191" font-family="Lexend,sans-serif" font-size="11" font-weight="900" fill="#99f6e4" text-anchor="middle">-TION</text>
+    </g>
+    <g class="wt5" style="transform-origin:75px 215px">
+      <rect x="46" y="200" width="58" height="28" rx="7" fill="#7c3aed" opacity="0.9"/>
+      <rect x="46" y="200" width="58" height="28" rx="7" fill="none" stroke="rgba(196,181,253,0.5)" stroke-width="1.5"/>
+      <text x="75" y="219" font-family="Lexend,sans-serif" font-size="11" font-weight="900" fill="#ddd6fe" text-anchor="middle">RE-</text>
+    </g>
+    <!-- Floating morpheme tiles right -->
+    <g class="wt3" style="transform-origin:760px 120px">
+      <rect x="732" y="105" width="56" height="30" rx="8" fill="#dc2626" opacity="0.9"/>
+      <rect x="732" y="105" width="56" height="30" rx="8" fill="none" stroke="rgba(252,165,165,0.5)" stroke-width="1.5"/>
+      <text x="760" y="126" font-family="Lexend,sans-serif" font-size="11" font-weight="900" fill="#fca5a5" text-anchor="middle">UN-</text>
+    </g>
+    <g class="wt4" style="transform-origin:830px 175px">
+      <rect x="800" y="160" width="60" height="30" rx="8" fill="#b45309" opacity="0.9"/>
+      <rect x="800" y="160" width="60" height="30" rx="8" fill="none" stroke="rgba(253,230,138,0.5)" stroke-width="1.5"/>
+      <text x="830" y="181" font-family="Lexend,sans-serif" font-size="11" font-weight="900" fill="#fde68a" text-anchor="middle">-FUL</text>
+    </g>
+    <g class="wt6" style="transform-origin:838px 228px">
+      <rect x="806" y="214" width="64" height="28" rx="7" fill="#16a34a" opacity="0.9"/>
+      <rect x="806" y="214" width="64" height="28" rx="7" fill="none" stroke="rgba(187,247,208,0.5)" stroke-width="1.5"/>
+      <text x="838" y="233" font-family="Lexend,sans-serif" font-size="11" font-weight="900" fill="#bbf7d0" text-anchor="middle">-NESS</text>
+    </g>
+    <!-- Ceiling bulb -->
+    <rect x="449" y="0" width="2" height="90" fill="#2d2450"/>
+    <ellipse cx="450" cy="98" rx="12" ry="14" fill="#fde68a" opacity="0.9"/>
+    <ellipse class="wg1" cx="450" cy="98" rx="26" ry="28" fill="#fde68a" opacity="0.2"/>
+    <ellipse cx="450" cy="90" rx="6" ry="4" fill="#f59e0b"/>
+    <!-- Light cone beam -->
+    <polygon points="436,112 464,112 530,260 370,260" fill="url(#lightBeam)"/>
+    <!-- Ambient glow -->
+    <ellipse cx="450" cy="220" rx="280" ry="160" fill="#4338ca" opacity="0.04"/>
+    <ellipse cx="450" cy="220" rx="160" ry="100" fill="#4338ca" opacity="0.04"/>
+    <!-- SCIENTIST -->
+    <g transform="translate(135, 65) scale(0.7)">
+    <g class="wsci" style="transform-origin:450px 460px">
+      <g class="warl">
+        <rect x="392" y="330" width="18" height="52" rx="9" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.2"/>
+        <rect x="372" y="372" width="38" height="17" rx="8" fill="#FDBCB4"/>
+        <g class="wbkl">
+          <ellipse class="wg2" cx="382" cy="382" rx="20" ry="7" fill="rgba(99,102,241,0.2)"/>
+          <ellipse class="ws1" cx="374" cy="368" rx="5" ry="3" fill="rgba(165,180,252,0.5)"/>
+          <ellipse class="ws2" cx="388" cy="365" rx="4" ry="2.5" fill="rgba(165,180,252,0.4)"/>
+          <path d="M366 385 L354 416 Q351 426 361 426 L403 426 Q413 426 410 416 L398 385 Z" fill="#6366f1" opacity="0.9"/>
+          <rect x="366" y="368" width="36" height="19" rx="5" fill="#4338ca"/>
+          <rect x="368" y="370" width="32" height="15" rx="4" fill="#6366f1" opacity="0.3"/>
+          <ellipse cx="382" cy="402" rx="21" ry="4.5" fill="rgba(165,180,252,0.55)"/>
+          <rect x="358" y="403" width="48" height="17" rx="4" fill="rgba(20,16,60,0.92)"/>
+          <text x="382" y="415" font-family="Lexend,sans-serif" font-size="9" font-weight="900" fill="#a5b4fc" text-anchor="middle">HAPPY</text>
+        </g>
+      </g>
+      <g class="warr">
+        <rect x="490" y="330" width="18" height="52" rx="9" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.2"/>
+        <rect x="490" y="372" width="38" height="17" rx="8" fill="#FDBCB4"/>
+        <g class="wbkr">
+          <ellipse class="wg3" cx="518" cy="382" rx="20" ry="7" fill="rgba(16,163,74,0.2)"/>
+          <ellipse class="ws2" cx="510" cy="368" rx="5" ry="3" fill="rgba(187,247,208,0.5)"/>
+          <ellipse class="ws3" cx="524" cy="365" rx="4" ry="2.5" fill="rgba(187,247,208,0.4)"/>
+          <path d="M502 385 L490 416 Q487 426 497 426 L539 426 Q549 426 546 416 L534 385 Z" fill="#16a34a" opacity="0.9"/>
+          <rect x="502" y="368" width="36" height="19" rx="5" fill="#0d6b2a"/>
+          <rect x="504" y="370" width="32" height="15" rx="4" fill="#16a34a" opacity="0.3"/>
+          <ellipse cx="518" cy="402" rx="21" ry="4.5" fill="rgba(187,247,208,0.55)"/>
+          <rect x="494" y="403" width="48" height="17" rx="4" fill="rgba(5,35,14,0.92)"/>
+          <text x="518" y="415" font-family="Lexend,sans-serif" font-size="9" font-weight="900" fill="#86efac" text-anchor="middle">-NESS</text>
+        </g>
+      </g>
+      <rect x="414" y="322" width="72" height="105" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+      <polygon points="450,325 436,345 450,352" fill="white" opacity="0.35"/>
+      <polygon points="450,325 464,345 450,352" fill="white" opacity="0.35"/>
+      <rect x="419" y="341" width="16" height="13" rx="4" fill="none" stroke="#e2e8f0" stroke-width="1.2"/>
+      <line x1="425" y1="344" x2="425" y2="354" stroke="#a5b4fc" stroke-width="1" opacity="0.7"/>
+      <circle cx="450" cy="360" r="2.2" fill="#e2e8f0"/>
+      <circle cx="450" cy="374" r="2.2" fill="#e2e8f0"/>
+      <circle cx="450" cy="388" r="2.2" fill="#e2e8f0"/>
+      <rect x="437" y="312" width="26" height="15" rx="5" fill="#FDBCB4"/>
+      <ellipse cx="450" cy="285" rx="38" ry="36" fill="#FDBCB4"/>
+      <ellipse cx="412" cy="286" rx="7" ry="9" fill="#FDBCB4"/>
+      <ellipse cx="488" cy="286" rx="7" ry="9" fill="#FDBCB4"/>
+      <ellipse cx="438" cy="281" rx="8" ry="8" fill="white"/>
+      <ellipse cx="462" cy="281" rx="8" ry="8" fill="white"/>
+      <g class="weyl">
+        <circle cx="436" cy="281" r="5" fill="#1e1b4b"/>
+        <circle cx="460" cy="281" r="5" fill="#1e1b4b"/>
+        <circle cx="434" cy="279" r="1.8" fill="white"/>
+        <circle cx="458" cy="279" r="1.8" fill="white"/>
+      </g>
+      <g class="weyr">
+        <circle cx="440" cy="281" r="5" fill="#1e1b4b"/>
+        <circle cx="464" cy="281" r="5" fill="#1e1b4b"/>
+        <circle cx="442" cy="279" r="1.8" fill="white"/>
+        <circle cx="466" cy="279" r="1.8" fill="white"/>
+      </g>
+      <path d="M429 270 Q438 266 447 270" fill="none" stroke="#92400e" stroke-width="2.2" stroke-linecap="round"/>
+      <path d="M453 270 Q462 266 471 270" fill="none" stroke="#92400e" stroke-width="2.2" stroke-linecap="round"/>
+      <ellipse cx="450" cy="290" rx="3" ry="2.2" fill="rgba(0,0,0,0.1)"/>
+      <path d="M439 300 Q450 311 461 300" fill="none" stroke="#92400e" stroke-width="2.2" stroke-linecap="round"/>
+      <ellipse cx="428" cy="295" rx="7" ry="4" fill="rgba(255,100,100,0.18)"/>
+      <ellipse cx="472" cy="295" rx="7" ry="4" fill="rgba(255,100,100,0.18)"/>
+    </g>
+    </g>
+  </svg>
+
+  <div class="hero-content">
+    <p class="hero-wordlab">Word Labs</p>
+    <p class="hero-sub-title">Morphology &amp; Phonics</p>
+    <p class="hero-tagline">Where words get <span>taken apart</span> and put back together</p>
+    <div class="hero-actions">
+      <a class="cta-btn primary" href="teacher-login.html">🎓 I'm a Teacher — Get Started</a>
+      <a class="cta-btn secondary" onclick="wlShowLogin()">🧪 I'm a Student — Log In</a>
+    </div>
+  </div>
+</div>
+</section>
+
+<div class="sections-bg">
+  <!-- Three-column pitch -->
+  <div class="layout-section" style="padding-top:48px;">
+    <div class="pitch-grid">
+      <div class="pitch-card">
+        <div class="pitch-card-emoji">🔬</div>
+        <div class="pitch-card-title">13 Curriculum-Aligned Activities</div>
+        <div class="pitch-card-desc">Structured literacy games for Years 3–6 covering morphemes, phonemes, syllables, vocabulary, and spelling</div>
+      </div>
+      <div class="pitch-card">
+        <div class="pitch-card-emoji">📊</div>
+        <div class="pitch-card-title">Teacher Dashboard &amp; Tracking</div>
+        <div class="pitch-card-desc">Heatmaps, intervention flags, individual student profiles, custom word lists, and spelling check-in sets</div>
+      </div>
+      <div class="pitch-card">
+        <div class="pitch-card-emoji">🧩</div>
+        <div class="pitch-card-title">Differentiation Built In</div>
+        <div class="pitch-card-desc">Extension mode, support mode, and low-stim mode — one toggle per student, no separate setup needed</div>
+      </div>
+      <div class="pitch-card">
+        <div class="pitch-card-emoji">🌐</div>
+        <div class="pitch-card-title">EALD Support — 48 Languages</div>
+        <div class="pitch-card-desc">Translations and natural audio in students' home languages — they learn in English with their language as a scaffold</div>
+      </div>
+      <div class="pitch-card">
+        <div class="pitch-card-emoji">📝</div>
+        <div class="pitch-card-title">Customisable Worksheets</div>
+        <div class="pitch-card-desc">Supported by printable worksheets and teaching slide decks that blend offline teaching with online practising</div>
+      </div>
+      <div class="pitch-card">
+        <div class="pitch-card-emoji">🇦🇺</div>
+        <div class="pitch-card-title">Australian Data &amp; Compliance</div>
+        <div class="pitch-card-desc">Data stored in Sydney, aligned to the Australian Curriculum v9.0 and NSW Syllabus, built to meet the Australian Privacy Act and Privacy Principles</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Try the activities -->
+  <div class="layout-section">
+    <h2 class="section-heading" style="color:#e0e7ff;">Try the Activities</h2>
+    <p style="font-size:13px;font-weight:600;color:#6366f1;margin-bottom:14px;letter-spacing:.02em;">Jump straight in — no account needed. Progress saves when students log in.</p>
+    <div class="play-hub-container">
+      <div class="play-hub-grid">
+        <a class="act-card" href="morpheme-builder.html" style="background:#4338ca;--glow-lo:rgba(67,56,202,.3);--glow-hi:rgba(67,56,202,.55);">
+          <div class="act-card-emoji">🔬</div>
+          <div class="act-card-name">Morpheme Builder</div>
+          <div class="act-card-tag">Build and explore words</div>
+        </a>
+        <a class="act-card" href="homophone-mode.html" style="background:#9d174d;--glow-lo:rgba(157,23,77,.3);--glow-hi:rgba(157,23,77,.55);">
+          <div class="act-card-emoji">📡</div>
+          <div class="act-card-name">Homophone Hunter</div>
+          <div class="act-card-tag">Decode signals, pick the right spelling</div>
+        </a>
+        <a class="act-card" href="word-spectrum.html" style="background:#0e7490;--glow-lo:rgba(14,116,144,.3);--glow-hi:rgba(14,116,144,.55);">
+          <div class="act-card-emoji">🧲</div>
+          <div class="act-card-name">Word Spectrum</div>
+          <div class="act-card-tag">Synonyms, antonyms and meaning</div>
+        </a>
+        <a class="act-card" href="word-refinery.html" style="background:#92400e;--glow-lo:rgba(146,64,14,.3);--glow-hi:rgba(146,64,14,.55);">
+          <div class="act-card-emoji">⚗️</div>
+          <div class="act-card-name">The Refinery</div>
+          <div class="act-card-tag">Arrange words from everyday to specialist</div>
+        </a>
+        <a class="act-card" href="phoneme-mode.html" style="background:#7c3aed;--glow-lo:rgba(124,58,237,.3);--glow-hi:rgba(124,58,237,.55);">
+          <div class="act-card-emoji">🔊</div>
+          <div class="act-card-name">Phoneme Splitter</div>
+          <div class="act-card-tag">Split words into sounds</div>
+        </a>
+        <a class="act-card" href="breakdown-mode.html" style="background:#ea580c;--glow-lo:rgba(234,88,12,.3);--glow-hi:rgba(234,88,12,.55);">
+          <div class="act-card-emoji">🧩</div>
+          <div class="act-card-name">Breakdown Blitz</div>
+          <div class="act-card-tag">Decompose words under pressure</div>
+        </a>
+        <a class="act-card" href="speed-mode.html" style="background:#1e3a5f;--glow-lo:rgba(30,58,95,.3);--glow-hi:rgba(30,58,95,.55);">
+          <div class="act-card-emoji">⚡</div>
+          <div class="act-card-name">Speed Builder</div>
+          <div class="act-card-tag">Race the clock, build words</div>
+        </a>
+        <a class="act-card" href="syllable-mode.html" style="background:#16a34a;--glow-lo:rgba(22,163,74,.3);--glow-hi:rgba(22,163,74,.55);">
+          <div class="act-card-emoji">✂️</div>
+          <div class="act-card-name">Syllable Splitter</div>
+          <div class="act-card-tag">Chop words into syllables</div>
+        </a>
+        <a class="act-card" href="mission-mode.html" style="background:#dc2626;--glow-lo:rgba(220,38,38,.3);--glow-hi:rgba(220,38,38,.55);">
+          <div class="act-card-emoji">🚀</div>
+          <div class="act-card-name">Mission Mode</div>
+          <div class="act-card-tag">Match morphemes to the rest of their word</div>
+        </a>
+        <a class="act-card" href="meaning-mode.html" style="background:#0d9488;--glow-lo:rgba(13,148,136,.3);--glow-hi:rgba(13,148,136,.55);">
+          <div class="act-card-emoji">🧬</div>
+          <div class="act-card-name">Meaning Match-Up</div>
+          <div class="act-card-tag">Match morphemes to their meanings</div>
+        </a>
+        <a class="act-card" href="sound-sorter.html" style="background:#7e22ce;--glow-lo:rgba(126,34,206,.3);--glow-hi:rgba(126,34,206,.55);">
+          <div class="act-card-emoji">🎧</div>
+          <div class="act-card-name">Sound Sorter</div>
+          <div class="act-card-tag">Pick the right grapheme for the sound</div>
+        </a>
+        <a class="act-card" href="flashcard-mode.html" style="background:#065f46;--glow-lo:rgba(6,95,70,.3);--glow-hi:rgba(6,95,70,.55);">
+          <div class="act-card-emoji">🃏</div>
+          <div class="act-card-name">Flashcards</div>
+          <div class="act-card-tag">Flip through morpheme meanings</div>
+        </a>
+        <a class="act-card" href="root-lab.html" style="background:#854d0e;--glow-lo:rgba(133,77,14,.3);--glow-hi:rgba(133,77,14,.55);">
+          <div class="act-card-emoji">🌿</div>
+          <div class="act-card-name">Root Lab</div>
+          <div class="act-card-tag">Explore roots and etymology</div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Learn more -->
+  <div class="layout-section">
+    <h2 class="section-heading" style="color:#e0e7ff;">Find Out More</h2>
+    <div class="pitch-grid" style="grid-template-columns:repeat(2,1fr);">
+      <a href="about.html" class="pitch-card" style="text-decoration:none;cursor:pointer;transition:border-color .15s,transform .15s;">
+        <div class="pitch-card-emoji">🔬</div>
+        <div class="pitch-card-title">About Word Labs</div>
+        <div class="pitch-card-desc">Research base, syllabus alignment, how the activities work, and the story behind the project</div>
+      </a>
+      <a href="faq.html" class="pitch-card" style="text-decoration:none;cursor:pointer;transition:border-color .15s,transform .15s;">
+        <div class="pitch-card-emoji">💬</div>
+        <div class="pitch-card-title">Frequently Asked Questions</div>
+        <div class="pitch-card-desc">Getting started, features, pricing, student accounts, data privacy, and troubleshooting</div>
+      </a>
+      <a href="teacher-guide.html" class="pitch-card" style="text-decoration:none;cursor:pointer;transition:border-color .15s,transform .15s;">
+        <div class="pitch-card-emoji">📖</div>
+        <div class="pitch-card-title">Teacher Guide</div>
+        <div class="pitch-card-desc">Step-by-step setup, dashboard walkthrough, custom word lists, differentiation, and tips for classroom use</div>
+      </a>
+      <a href="parent-privacy.html" class="pitch-card" style="text-decoration:none;cursor:pointer;transition:border-color .15s,transform .15s;">
+        <div class="pitch-card-emoji">👨‍👩‍👧</div>
+        <div class="pitch-card-title">Information for Parents</div>
+        <div class="pitch-card-desc">What data we collect (just first names), where it's stored (Australia), and how to request access or deletion</div>
+      </a>
+      <a href="pricing.html" class="pitch-card" style="text-decoration:none;cursor:pointer;transition:border-color .15s,transform .15s;">
+        <div class="pitch-card-emoji">💳</div>
+        <div class="pitch-card-title">Pricing</div>
+        <div class="pitch-card-desc">Free to use during early access. Teacher and school plans available with full dashboard and tracking features</div>
+      </a>
+      <a href="data-agreement.html" class="pitch-card" style="text-decoration:none;cursor:pointer;transition:border-color .15s,transform .15s;">
+        <div class="pitch-card-emoji">🔒</div>
+        <div class="pitch-card-title">School Data Agreement</div>
+        <div class="pitch-card-desc">Printable data handling agreement for school IT and privacy officers — covers storage, retention, sub-processors</div>
+      </a>
+      <a href="for-schools.html" class="pitch-card" style="text-decoration:none;cursor:pointer;transition:border-color .15s,transform .15s;">
+        <div class="pitch-card-emoji">🏫</div>
+        <div class="pitch-card-title">For Schools</div>
+        <div class="pitch-card-desc">Overview for principals and literacy coordinators — compliance docs, pricing, and the School Information Pack</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Research blurb -->
+  <div class="research-blurb">
+    Built by a NSW primary school teacher. Aligned to the NSW English K–10 Syllabus (2022) and the Australian Curriculum v9.0. Informed by research in morphological awareness, structured literacy, and the three-tier vocabulary framework.
+  </div>
+
+  <!-- Bottom CTAs -->
+  <div class="layout-section" style="padding-top:0;padding-bottom:48px;">
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <a class="cta-btn primary" href="teacher-login.html">🎓 I'm a Teacher — Get Started Free</a>
+      <a class="cta-btn secondary" onclick="wlShowLogin()">🧪 I'm a Student — Log In</a>
+    </div>
+  </div>
+
+  <!-- Footer (logged-out) -->
+  <footer class="footer" role="contentinfo">
+    <div class="footer-inner">
+      <span class="footer-brand">🧪 Word Labs</span>
+      <span class="footer-note"><a href="landing.html">Home</a> · <a href="about.html">About</a> · <a href="for-schools.html">For schools</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a href="pricing.html">Pricing</a> · <a href="mailto:nick@wordlabs.app">Contact</a></span>
+    </div>
+  </footer>
+</div>
+</div><!-- /layoutLoggedOut -->
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     LAYOUT 2 — STUDENT
+     ═══════════════════════════════════════════════════════════════ -->
+<div id="layoutStudent" style="display:none;">
+
+<!-- Teacher preview banner -->
+<div class="sections-bg">
+  <div class="layout-section" style="padding-bottom:0;">
+    <div id="teacherPreviewBanner" style="display:none;background:linear-gradient(135deg,#7c3aed,#6d28d9);border-radius:12px;padding:10px 20px;margin-bottom:12px;align-items:center;justify-content:space-between;gap:12px;">
+      <span style="font-size:13px;font-weight:800;color:#fff;">👀 You're previewing as a student</span>
+      <button onclick="exitStudentPreview()" style="background:#fff;color:#6d28d9;border:none;border-radius:10px;padding:8px 16px;font-weight:900;font-size:12px;cursor:pointer;font-family:'Lexend',sans-serif;">← Back to Teacher Mode</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lab Hub Scene -->
+<div class="lab-hub">
+  <svg class="hub-scene-svg" viewBox="0 0 1200 300" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="300" fill="#080d1a"/>
+    <!-- Stars -->
+    <circle class="hub-star1" cx="60" cy="30" r="1.5" fill="#fff" opacity=".6"/>
+    <circle class="hub-star2" cx="180" cy="20" r="1" fill="#fff" opacity=".5"/>
+    <circle class="hub-star3" cx="320" cy="35" r="1.5" fill="#fff" opacity=".4"/>
+    <circle class="hub-star1" cx="900" cy="25" r="1" fill="#fff" opacity=".6"/>
+    <circle class="hub-star2" cx="1050" cy="15" r="1.5" fill="#fff" opacity=".5"/>
+    <circle class="hub-star3" cx="1140" cy="40" r="1" fill="#fff" opacity=".4"/>
+    <!-- Building -->
+    <rect x="80" y="40" width="1040" height="215" rx="4" fill="#111828"/>
+    <rect x="80" y="36" width="1040" height="8" rx="2" fill="#1e2d4a"/>
+    <rect x="60" y="254" width="1080" height="8" rx="2" fill="#1e2d4a"/>
+    <rect x="0" y="260" width="1200" height="40" fill="#0c1220"/>
+    <!-- Room dividers -->
+    <line x1="350" y1="40" x2="350" y2="255" stroke="#1e2d4a" stroke-width="3"/>
+    <line x1="600" y1="40" x2="600" y2="255" stroke="#1e2d4a" stroke-width="3"/>
+    <line x1="850" y1="40" x2="850" y2="255" stroke="#1e2d4a" stroke-width="3"/>
+    <!-- ROOM 1 Library -->
+    <rect x="81" y="41" width="268" height="213" fill="#2a1a0a"/>
+    <ellipse class="hub-glow1" cx="215" cy="170" rx="140" ry="80" fill="#f59e0b" opacity="0.06"/>
+    <rect x="90" y="55" width="250" height="5" fill="#4a2e10"/>
+    <rect x="90" y="100" width="250" height="5" fill="#4a2e10"/>
+    <rect x="90" y="145" width="250" height="5" fill="#4a2e10"/>
+    <rect x="92" y="62" width="14" height="36" rx="1" fill="#4338ca"/><rect x="108" y="65" width="10" height="33" rx="1" fill="#0d9488"/><rect x="120" y="60" width="16" height="38" rx="1" fill="#dc2626"/><rect x="138" y="63" width="12" height="35" rx="1" fill="#7c3aed"/><rect x="152" y="61" width="14" height="37" rx="1" fill="#b45309"/><rect x="168" y="64" width="10" height="34" rx="1" fill="#4338ca"/><rect x="180" y="60" width="16" height="38" rx="1" fill="#16a34a"/><rect x="198" y="63" width="12" height="35" rx="1" fill="#0d9488"/><rect x="212" y="61" width="14" height="37" rx="1" fill="#dc2626"/><rect x="228" y="64" width="10" height="34" rx="1" fill="#4338ca"/><rect x="240" y="60" width="16" height="38" rx="1" fill="#7c3aed"/><rect x="258" y="62" width="14" height="36" rx="1" fill="#b45309"/><rect x="274" y="65" width="12" height="33" rx="1" fill="#0d9488"/>
+    <rect x="92" y="107" width="12" height="36" rx="1" fill="#0d9488"/><rect x="106" y="110" width="16" height="33" rx="1" fill="#b45309"/><rect x="124" y="107" width="10" height="36" rx="1" fill="#4338ca"/><rect x="136" y="109" width="14" height="34" rx="1" fill="#dc2626"/><rect x="152" y="107" width="12" height="36" rx="1" fill="#16a34a"/><rect x="166" y="110" width="16" height="33" rx="1" fill="#7c3aed"/><rect x="184" y="107" width="10" height="36" rx="1" fill="#b45309"/><rect x="196" y="108" width="14" height="35" rx="1" fill="#4338ca"/><rect x="212" y="107" width="16" height="36" rx="1" fill="#0d9488"/><rect x="230" y="110" width="10" height="33" rx="1" fill="#dc2626"/><rect x="242" y="107" width="14" height="36" rx="1" fill="#7c3aed"/><rect x="258" y="108" width="16" height="35" rx="1" fill="#b45309"/><rect x="276" y="107" width="10" height="36" rx="1" fill="#16a34a"/>
+    <rect x="160" y="200" width="8" height="30" rx="2" fill="#f5e6c8"/>
+    <ellipse class="hub-flame" cx="164" cy="198" rx="5" ry="7" fill="#f59e0b" opacity="0.9"/>
+    <ellipse class="hub-glow2" cx="164" cy="198" rx="30" ry="20" fill="#f59e0b" opacity="0.12"/>
+    <rect x="220" y="170" width="60" height="80" rx="30" fill="#0a1020" stroke="#4a2e10" stroke-width="2"/>
+    <ellipse cx="250" cy="185" rx="10" ry="10" fill="#fde68a" opacity=".3"/>
+    <text x="215" y="52" text-anchor="middle" font-family="Lexend,sans-serif" font-size="8" font-weight="700" fill="#78350f" letter-spacing=".1em">LIBRARY</text>
+    <!-- ROOM 2 Chemistry -->
+    <rect x="351" y="41" width="248" height="213" fill="#061820"/>
+    <ellipse class="hub-glow2" cx="475" cy="160" rx="130" ry="70" fill="#0d9488" opacity="0.07"/>
+    <rect x="360" y="210" width="230" height="8" rx="2" fill="#1e4040"/>
+    <rect x="360" y="207" width="230" height="5" rx="1" fill="#2a5555"/>
+    <g class="hub-bkr1"><ellipse cx="400" cy="200" rx="10" ry="4" fill="rgba(20,184,166,0.3)"/><path d="M388 204 L380 228 Q378 235 386 235 L414 235 Q422 235 420 228 L412 204 Z" fill="#14b8a6" opacity="0.85"/><rect x="388" y="192" width="24" height="13" rx="3" fill="#0d9488"/><ellipse cx="400" cy="220" rx="16" ry="3" fill="rgba(94,234,212,0.5)"/></g>
+    <g class="hub-bkr2"><ellipse cx="455" cy="197" rx="9" ry="3.5" fill="rgba(99,102,241,0.3)"/><path d="M443 201 L435 225 Q433 233 441 233 L469 233 Q477 233 475 225 L467 201 Z" fill="#6366f1" opacity="0.85"/><rect x="443" y="189" width="24" height="13" rx="3" fill="#4338ca"/><ellipse cx="455" cy="217" rx="16" ry="3" fill="rgba(165,180,252,0.5)"/></g>
+    <g class="hub-bkr3"><ellipse cx="515" cy="200" rx="8" ry="3" fill="rgba(245,158,11,0.3)"/><circle cx="515" cy="218" r="16" fill="#f59e0b" opacity="0.85"/><rect x="509" y="192" width="12" height="14" rx="2" fill="#d97706"/><ellipse cx="515" cy="213" rx="10" ry="3" fill="rgba(253,230,138,0.5)"/></g>
+    <rect x="360" y="55" width="90" height="60" rx="4" fill="#0a2030" stroke="#0d9488" stroke-width="1"/>
+    <text x="405" y="70" text-anchor="middle" font-family="Lexend,sans-serif" font-size="7" font-weight="700" fill="#14b8a6">PERIODIC</text>
+    <text x="405" y="80" text-anchor="middle" font-family="Lexend,sans-serif" font-size="7" font-weight="700" fill="#14b8a6">TABLE</text>
+    <rect x="363" y="87" width="8" height="8" rx="1" fill="#4338ca" opacity=".7"/><rect x="373" y="87" width="8" height="8" rx="1" fill="#dc2626" opacity=".7"/><rect x="383" y="87" width="8" height="8" rx="1" fill="#16a34a" opacity=".7"/><rect x="393" y="87" width="8" height="8" rx="1" fill="#f59e0b" opacity=".7"/><rect x="403" y="87" width="8" height="8" rx="1" fill="#4338ca" opacity=".7"/><rect x="413" y="87" width="8" height="8" rx="1" fill="#0d9488" opacity=".7"/>
+    <rect x="363" y="97" width="8" height="8" rx="1" fill="#7c3aed" opacity=".7"/><rect x="373" y="97" width="8" height="8" rx="1" fill="#f59e0b" opacity=".7"/><rect x="383" y="97" width="8" height="8" rx="1" fill="#4338ca" opacity=".7"/><rect x="393" y="97" width="8" height="8" rx="1" fill="#dc2626" opacity=".7"/><rect x="403" y="97" width="8" height="8" rx="1" fill="#16a34a" opacity=".7"/><rect x="413" y="97" width="8" height="8" rx="1" fill="#0d9488" opacity=".7"/>
+    <g class="hub-tile1" style="transform-origin:490px 140px"><rect x="472" y="128" width="36" height="20" rx="5" fill="#4338ca" opacity=".9"/><text x="490" y="142" text-anchor="middle" font-family="Lexend,sans-serif" font-size="8" font-weight="900" fill="#c7d2fe">PRE-</text></g>
+    <g class="hub-tile2" style="transform-origin:545px 158px"><rect x="525" y="148" width="40" height="20" rx="5" fill="#0d9488" opacity=".9"/><text x="545" y="162" text-anchor="middle" font-family="Lexend,sans-serif" font-size="8" font-weight="900" fill="#99f6e4">-TION</text></g>
+    <text x="475" y="52" text-anchor="middle" font-family="Lexend,sans-serif" font-size="8" font-weight="700" fill="#0f766e" letter-spacing=".1em">CHEM LAB</text>
+    <!-- ROOM 3 Observatory -->
+    <rect x="601" y="41" width="248" height="213" fill="#060c1a"/>
+    <ellipse class="hub-glow1" cx="725" cy="150" rx="130" ry="70" fill="#1d4ed8" opacity="0.06"/>
+    <circle class="hub-star1" cx="630" cy="65" r="1.5" fill="#fff" opacity=".8"/>
+    <circle class="hub-star2" cx="680" cy="57" r="1" fill="#fff" opacity=".6"/>
+    <circle class="hub-star3" cx="720" cy="72" r="2" fill="#fbbf24" opacity=".7"/>
+    <circle class="hub-star1" cx="760" cy="60" r="1" fill="#fff" opacity=".5"/>
+    <circle class="hub-star2" cx="800" cy="68" r="1.5" fill="#fff" opacity=".7"/>
+    <circle class="hub-star3" cx="830" cy="57" r="1" fill="#fff" opacity=".6"/>
+    <rect x="690" y="160" width="10" height="70" rx="3" fill="#1e3a5f"/>
+    <rect x="680" y="225" width="30" height="6" rx="2" fill="#1e3a5f"/>
+    <rect x="684" y="231" width="22" height="20" rx="2" fill="#0f2040"/>
+    <rect x="688" y="140" width="14" height="55" rx="6" fill="#1e4060" transform="rotate(-35 695 185)"/>
+    <circle cx="672" cy="129" r="8" fill="#0a1830" stroke="#1e4060" stroke-width="2"/>
+    <rect x="615" y="75" width="70" height="45" rx="4" fill="#060c1a" stroke="#1e3a5f" stroke-width="1.5"/>
+    <rect x="619" y="79" width="62" height="37" rx="2" fill="#020810"/>
+    <polyline points="622,97 628,92 634,97 640,102 646,97 652,92 658,97 664,102 670,97 676,92" stroke="#22d3ee" stroke-width="1.5" fill="none"/>
+    <rect class="hub-scanline" x="619" y="79" width="62" height="4" rx="1" fill="rgba(34,211,238,0.08)"/>
+    <text x="725" y="52" text-anchor="middle" font-family="Lexend,sans-serif" font-size="8" font-weight="700" fill="#1e40af" letter-spacing=".1em">OBSERVATORY</text>
+    <ellipse cx="800" cy="155" rx="28" ry="12" fill="none" stroke="#1e3a5f" stroke-width="2"/>
+    <line x1="800" y1="155" x2="800" y2="180" stroke="#1e3a5f" stroke-width="2"/>
+    <rect x="793" y="180" width="14" height="25" rx="2" fill="#1e3a5f"/>
+    <!-- ROOM 4 Forensics -->
+    <rect x="851" y="41" width="268" height="213" fill="#0a0a0a"/>
+    <ellipse class="hub-glow3" cx="985" cy="140" rx="120" ry="80" fill="#fbbf24" opacity="0.05"/>
+    <path d="M985 41 L930 220 L1040 220 Z" fill="rgba(255,200,50,0.04)"/>
+    <ellipse cx="985" cy="44" rx="22" ry="8" fill="#1a1a1a" stroke="#333" stroke-width="1"/>
+    <ellipse cx="985" cy="44" rx="14" ry="5" fill="#fbbf24" opacity=".4"/>
+    <rect x="862" y="55" width="130" height="110" rx="4" fill="#2d1a08" stroke="#4a3010" stroke-width="1.5"/>
+    <rect x="870" y="63" width="45" height="28" rx="3" fill="#fde68a" opacity=".8"/>
+    <text x="893" y="74" text-anchor="middle" font-family="Lexend,sans-serif" font-size="7" font-weight="700" fill="#78350f">PREFIX</text>
+    <text x="893" y="84" text-anchor="middle" font-family="Lexend,sans-serif" font-size="6" fill="#92400e">CLUE 1</text>
+    <rect x="920" y="63" width="45" height="28" rx="3" fill="#fde68a" opacity=".8"/>
+    <text x="943" y="74" text-anchor="middle" font-family="Lexend,sans-serif" font-size="7" font-weight="700" fill="#78350f">SUFFIX</text>
+    <text x="943" y="84" text-anchor="middle" font-family="Lexend,sans-serif" font-size="6" fill="#92400e">CLUE 2</text>
+    <rect x="870" y="97" width="45" height="28" rx="3" fill="#bbf7d0" opacity=".8"/>
+    <text x="893" y="108" text-anchor="middle" font-family="Lexend,sans-serif" font-size="7" font-weight="700" fill="#166534">BASE</text>
+    <text x="893" y="118" text-anchor="middle" font-family="Lexend,sans-serif" font-size="6" fill="#15803d">EVIDENCE</text>
+    <rect x="920" y="97" width="45" height="28" rx="3" fill="#fca5a5" opacity=".7"/>
+    <text x="943" y="108" text-anchor="middle" font-family="Lexend,sans-serif" font-size="7" font-weight="700" fill="#991b1b">SUSPECT</text>
+    <text x="943" y="118" text-anchor="middle" font-family="Lexend,sans-serif" font-size="6" fill="#b91c1c">WORD 3</text>
+    <line x1="893" y1="91" x2="943" y2="91" stroke="#dc2626" stroke-width="1" opacity=".5"/>
+    <line x1="893" y1="125" x2="943" y2="97" stroke="#dc2626" stroke-width="1" opacity=".5"/>
+    <g class="hub-tile3" style="transform-origin:1060px 175px">
+      <rect x="1040" y="165" width="40" height="20" rx="5" fill="#dc2626" opacity=".9"/>
+      <text x="1060" y="179" text-anchor="middle" font-family="Lexend,sans-serif" font-size="8" font-weight="900" fill="#fca5a5">UN-</text>
+    </g>
+    <text x="985" y="52" text-anchor="middle" font-family="Lexend,sans-serif" font-size="8" font-weight="700" fill="#78350f" letter-spacing=".1em">FORENSICS</text>
+    <!-- SCIENTIST in centre hub -->
+    <!-- Door frames -->
+    <rect x="348" y="90" width="6" height="165" rx="2" fill="#1e2d4a"/>
+    <rect x="598" y="90" width="6" height="165" rx="2" fill="#1e2d4a"/>
+    <rect x="848" y="90" width="6" height="165" rx="2" fill="#1e2d4a"/>
+    <rect x="60" y="258" width="1080" height="3" fill="#1e2d4a" opacity=".5"/>
+    <!-- SCIENTIST — drawn last so it renders in front of everything -->
+    <g class="hub-sci" style="transform-origin:600px 215px" transform="translate(0,-40)">
+      <ellipse cx="600" cy="258" rx="35" ry="8" fill="rgba(0,0,0,0.4)"/>
+      <svg id="hubScientistSVG" x="560" y="132" width="80" height="120" viewBox="0 0 80 120" overflow="visible">
+        <!-- Default scientist — replaced by student's custom scientist via JS -->
+        <rect x="22" y="52" width="36" height="42" rx="8" fill="#ffffff"/>
+        <rect x="16" y="54" width="10" height="28" rx="5" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
+        <rect x="54" y="54" width="10" height="28" rx="5" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
+        <ellipse cx="40" cy="30" rx="20" ry="20" fill="#FDBCB4"/>
+        <ellipse cx="33" cy="27" rx="4.5" ry="4.5" fill="white"/><circle cx="33" cy="27" r="3" fill="#1e1b4b"/><circle cx="32" cy="26" r="1" fill="white"/>
+        <ellipse cx="47" cy="27" rx="4.5" ry="4.5" fill="white"/><circle cx="47" cy="27" r="3" fill="#1e1b4b"/><circle cx="46" cy="26" r="1" fill="white"/>
+        <path d="M35 40 Q40 46 45 40" fill="none" stroke="#92400e" stroke-width="1.5" stroke-linecap="round"/>
+        <rect x="26" y="8" width="28" height="8" rx="2" fill="#1e1b4b"/>
+        <rect x="22" y="14" width="36" height="4" rx="1.5" fill="#1e1b4b"/>
+      </svg>
+    </g>
+  </svg>
+
+  <!-- Status strip -->
+  <div class="student-status-strip">
+    <div class="student-info-block">
+      <div class="student-sci-avatar" id="hubSciAvatar"></div>
+      <div id="scientistWidget">
+        <div class="student-name-display" id="hubStudentName" aria-live="polite">Loading...</div>
+        <div class="student-level-display" id="hubStudentLevel">Quark Cadet · Lv1</div>
+        <div class="student-xp-track" id="xpArea"><div class="student-xp-fill" id="hubXpFill" style="width:0%"></div></div>
+        <div id="hubTotalXP" style="font-size:10px;font-weight:700;color:#94a3b8;margin-top:2px;"></div>
+      </div>
+    </div>
+    <div class="stat-pill-group">
+      <div class="stat-pill-item wl-level-pill" id="hubLevelPill" style="display:none; cursor:pointer;">
+        <span id="hubLevelIcon">🔬</span> <span id="hubLevelText">Explorer 1</span>
+      </div>
+      <div class="stat-pill-item" id="streakPill">🔥 <span id="hubStreak">0</span> streak</div>
+      <div class="stat-pill-item" id="quarkPill">⚛️ <span id="hubQuarks">0</span> quarks</div>
+      <div class="stat-pill-item">🏆 <span id="hubBadges">0</span> badges</div>
+      <a href="scientist.html" class="stat-pill-item" style="text-decoration:none;color:#e0e7ff;cursor:pointer;border-color:rgba(99,102,241,.3);background:rgba(99,102,241,.08);">🔬 My Scientist</a>
+      <button id="replayTourBtn" class="stat-pill-item" style="cursor:pointer;border-color:rgba(99,102,241,.3);background:rgba(99,102,241,.08);color:#a5b4fc;font-size:11px;font-weight:700;display:none;" aria-label="Replay guided tour">❓ Tour</button>
+    </div>
+    <div class="strip-challenges-block" id="stripChallengesBlock">
+      <div class="hub-flame-wrap" id="hubFlameWrap">
+        <svg id="hubFlameSVG" viewBox="0 0 40 50" width="32" height="40" xmlns="http://www.w3.org/2000/svg" style="overflow:visible;"></svg>
+        <div class="hub-flame-days" id="hubFlameDays">0</div>
+      </div>
+      <div class="strip-challenges-list" id="hubMiniChallenges">
+        <!-- Filled by JS -->
+      </div>
+    </div>
+    <div class="top3-block">
+      <div class="top3-heading">Class top 5</div>
+      <div id="hubTop3">
+        <div class="top3-row"><div class="top3-rank">👑</div><div class="top3-student-name" style="color:#94a3b8;">—</div><div class="top3-xp-val">—</div></div>
+        <div class="top3-row"><div class="top3-rank" style="color:#94a3b8;">2</div><div class="top3-student-name" style="color:#94a3b8;">—</div><div class="top3-xp-val">—</div></div>
+        <div class="top3-row"><div class="top3-rank" style="color:#94a3b8;">3</div><div class="top3-student-name" style="color:#94a3b8;">—</div><div class="top3-xp-val">—</div></div>
+        <div class="top3-row"><div class="top3-rank" style="color:#94a3b8;">4</div><div class="top3-student-name" style="color:#94a3b8;">—</div><div class="top3-xp-val">—</div></div>
+        <div class="top3-row"><div class="top3-rank" style="color:#94a3b8;">5</div><div class="top3-student-name" style="color:#94a3b8;">—</div><div class="top3-xp-val">—</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="wlLevelPanel" class="wl-level-panel" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="wlLevelPanelTitle">
+  <div class="wl-level-panel-header">
+    <h3 id="wlLevelPanelTitle">Explorer 1</h3>
+    <button id="wlLevelPanelClose" aria-label="Close" class="wl-level-panel-close">&times;</button>
+  </div>
+  <div id="wlLevelPanelMastery" class="wl-level-panel-mastery"></div>
+  <div id="wlLevelPanelBars"></div>
+  <div class="wl-level-panel-hint">Master all 6 skill games to level up!</div>
+</div>
+<div id="wlLevelPanelBackdrop" class="wl-level-panel-backdrop" style="display:none;"></div>
+
+<!-- Student content -->
+<div class="sections-bg">
+  <div class="layout-section">
+    <h2 class="section-heading">Explore</h2>
+    <p style="font-size:13px;font-weight:600;color:#6366f1;margin-bottom:14px;letter-spacing:.02em;">Deep-dive activities</p>
+    <div class="explore-doorways">
+      <a class="doorway-card" href="morpheme-builder.html" style="background:linear-gradient(135deg,#1a1040,#2d1b6b);">
+        <div class="doorway-light" style="background:radial-gradient(ellipse at 50% 0%,rgba(67,56,202,0.55),transparent 70%);"></div>
+        <div class="doorway-sign">
+          <div class="doorway-name">Morpheme Builder</div>
+          <div class="doorway-desc">Build and break apart words</div>
+        </div>
+      </a>
+      <a class="doorway-card" href="flashcard-mode.html" style="background:linear-gradient(135deg,#1a100a,#3a2008);">
+        <div class="doorway-light" style="background:radial-gradient(ellipse at 50% 0%,rgba(180,83,9,0.45),transparent 70%);"></div>
+        <div class="doorway-sign">
+          <div class="doorway-name">Flashcards</div>
+          <div class="doorway-desc">Flip through morpheme cards</div>
+        </div>
+      </a>
+      <a class="doorway-card" href="word-study.html" style="background:linear-gradient(135deg,#2a0a2e,#4a1157);">
+        <div class="doorway-light" style="background:radial-gradient(ellipse at 50% 0%,rgba(192,38,211,0.5),transparent 70%);"></div>
+        <div class="doorway-sign">
+          <div class="doorway-name">Word Study</div>
+          <div class="doorway-desc">Study one word deeply</div>
+        </div>
+      </a>
+      <!-- Word of the Week -->
+      <div class="doorway-card" id="wotwCard" style="display:none;background:linear-gradient(135deg,#0f172a,#1e1b4b);cursor:default;">
+        <div class="doorway-light" style="background:radial-gradient(ellipse at 50% 0%,rgba(13,148,136,0.45),transparent 70%);opacity:.8;"></div>
+        <div style="position:absolute;inset:0;padding:14px 16px;display:flex;flex-direction:column;justify-content:space-between;z-index:1;">
+          <div>
+            <div style="font-size:9px;font-weight:900;color:#5eead4;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;">📖 Word of the Week</div>
+            <div id="wotwWord" style="font-size:22px;font-weight:900;color:#e0e7ff;line-height:1.1;"></div>
+            <div id="wotwMeaning" style="font-size:10px;font-weight:600;color:#94a3b8;line-height:1.3;margin-top:2px;"></div>
+          </div>
+          <div>
+            <div id="wotwBreakdown" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;"></div>
+            <div id="wotwDetails" style="display:none;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="section-heading" style="margin-top:32px;">Play</h2>
+    <p style="font-size:13px;font-weight:600;color:#6366f1;margin-bottom:14px;letter-spacing:.02em;">Timed challenges and skill games</p>
+    <div class="play-hub-container">
+      <div class="play-hub-grid" id="playGrid">
+        <a class="act-card" href="sound-sorter.html" style="background:#0d9488;--glow-lo:rgba(13,148,136,.3);--glow-hi:rgba(13,148,136,.55);">
+          <div class="act-card-emoji">🔤</div>
+          <div class="act-card-name">Sound Sorter</div>
+          <div class="act-card-tag">Sort sounds, find the grapheme</div>
+        </a>
+        <a class="act-card" href="phoneme-mode.html" style="background:#7c3aed;--glow-lo:rgba(124,58,237,.3);--glow-hi:rgba(124,58,237,.55);">
+          <div class="act-card-emoji">🔊</div>
+          <div class="act-card-name">Phoneme Splitter</div>
+          <div class="act-card-tag">Split words into sounds</div>
+        </a>
+        <a class="act-card" href="syllable-mode.html" style="background:#16a34a;--glow-lo:rgba(22,163,74,.3);--glow-hi:rgba(22,163,74,.55);">
+          <div class="act-card-emoji">✂️</div>
+          <div class="act-card-name">Syllable Splitter</div>
+          <div class="act-card-tag">Chop words into syllables</div>
+        </a>
+        <a class="act-card" href="meaning-mode.html" style="background:#78350f;--glow-lo:rgba(120,53,15,.3);--glow-hi:rgba(120,53,15,.55);">
+          <div class="act-card-emoji">🧠</div>
+          <div class="act-card-name">Meaning Match-Up</div>
+          <div class="act-card-tag">Match morphemes to meanings</div>
+        </a>
+        <a class="act-card" href="mission-mode.html" style="background:#dc2626;--glow-lo:rgba(220,38,38,.3);--glow-hi:rgba(220,38,38,.55);">
+          <div class="act-card-emoji">🚀</div>
+          <div class="act-card-name">Mission Mode</div>
+          <div class="act-card-tag">Match morphemes to the rest of their word</div>
+        </a>
+        <a class="act-card" href="breakdown-mode.html" style="background:#ea580c;--glow-lo:rgba(234,88,12,.3);--glow-hi:rgba(234,88,12,.55);">
+          <div class="act-card-emoji">🧩</div>
+          <div class="act-card-name">Breakdown Blitz</div>
+          <div class="act-card-tag">Decompose words under pressure</div>
+        </a>
+        <a class="act-card" href="root-lab.html" style="background:#374151;--glow-lo:rgba(55,65,81,.25);--glow-hi:rgba(55,65,81,.45);">
+          <div class="act-card-emoji">🌿</div>
+          <div class="act-card-name">Root Lab</div>
+          <div class="act-card-tag">Identify morphemes, then unlock the meaning</div>
+        </a>
+        <a class="act-card" href="speed-mode.html" style="background:#1e3a5f;--glow-lo:rgba(30,58,95,.3);--glow-hi:rgba(30,58,95,.55);">
+          <div class="act-card-emoji">⚡</div>
+          <div class="act-card-name">Speed Builder</div>
+          <div class="act-card-tag">Race the clock, build words</div>
+        </a>
+        <a class="act-card" href="homophone-mode.html" style="background:#9d174d;--glow-lo:rgba(157,23,77,.3);--glow-hi:rgba(157,23,77,.55);">
+          <div class="act-card-emoji">📡</div>
+          <div class="act-card-name">Homophone Hunter</div>
+          <div class="act-card-tag">Decode signals, pick the right spelling</div>
+        </a>
+        <a class="act-card" href="word-spectrum.html" style="background:#0e7490;--glow-lo:rgba(14,116,144,.3);--glow-hi:rgba(14,116,144,.55);">
+          <div class="act-card-emoji">🧲</div>
+          <div class="act-card-name">Word Spectrum</div>
+          <div class="act-card-tag">Synonyms, antonyms and shades of meaning</div>
+        </a>
+        <a class="act-card" href="word-refinery.html" style="background:#92400e;--glow-lo:rgba(146,64,14,.3);--glow-hi:rgba(146,64,14,.55);">
+          <div class="act-card-emoji">⚗️</div>
+          <div class="act-card-name">The Refinery</div>
+          <div class="act-card-tag">Arrange words from everyday to specialist</div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer (student) -->
+  <footer class="footer" role="contentinfo">
+    <div class="footer-inner">
+      <span class="footer-brand">🧪 Word Labs</span>
+      <span class="footer-note"><a href="landing.html">Home</a> · <a href="about.html">About</a> · <a href="for-schools.html">For schools</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a href="pricing.html">Pricing</a> · <a href="mailto:nick@wordlabs.app">Contact</a></span>
+    </div>
+  </footer>
+</div>
+</div><!-- /layoutStudent -->
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     LAYOUT 3 — TEACHER
+     ═══════════════════════════════════════════════════════════════ -->
+<div id="layoutTeacher" style="display:none;">
+<div class="sections-bg">
+
+  <!-- Class at a glance strip -->
+  <div class="layout-section" style="padding-bottom:0;">
+    <div class="status-strip tch-strip">
+      <div class="tch-left">
+        <span class="tch-icon">🏫</span>
+        <div>
+          <div class="tch-name" id="tchStripName">Teacher</div>
+          <div class="tch-class">
+            <span id="tchStripClass">Loading...</span>
+            <select class="tch-class-select" id="tchClassSelect" style="display:none;" onchange="switchTeacherClass()"></select>
+          </div>
+        </div>
+      </div>
+      <div class="tch-stats">
+        <div class="status-stat-pill" id="tchPillStudents">👤 0 Students</div>
+        <div class="status-stat-pill" id="tchPillActive">📈 0 Active Today</div>
+        <div class="status-stat-pill" id="tchPillClasses">📚 0 Classes</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button class="tch-action" id="tchStudentModeBtn" style="background:#7c3aed;box-shadow:0 4px 20px rgba(124,58,237,.4);" onclick="tchToggleStudentMode()">👀 View as Student</button>
+        <a href="dashboard.html" class="tch-action">Open Dashboard →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Getting started: shown only while the teacher has no class -->
+  <div class="layout-section" id="tchGetStarted" style="display:none;padding-bottom:0;">
+    <div style="background:linear-gradient(135deg,rgba(99,102,241,.22),rgba(13,148,136,.16));border:1px solid rgba(165,180,252,.35);border-radius:20px;padding:24px 26px;display:flex;flex-wrap:wrap;gap:20px;align-items:center;">
+      <div style="flex:1 1 360px;min-width:0;">
+        <div style="font-size:22px;font-weight:900;color:#fff;margin-bottom:4px;">👋 Welcome! Let's get your class playing</div>
+        <div style="font-size:14px;font-weight:600;color:#c7d2fe;margin-bottom:14px;">It takes about 3 minutes, and you can change anything later.</div>
+        <ol style="margin:0;padding:0;list-style:none;display:grid;gap:8px;">
+          <li style="display:flex;gap:10px;align-items:flex-start;font-size:14px;font-weight:600;color:#e2e8f0;"><span style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#6366f1;color:#fff;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;">1</span>Name your class. We make a class code for you.</li>
+          <li style="display:flex;gap:10px;align-items:flex-start;font-size:14px;font-weight:600;color:#e2e8f0;"><span style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#6366f1;color:#fff;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;">2</span>Paste in your students' first names (no surnames or emails needed).</li>
+          <li style="display:flex;gap:10px;align-items:flex-start;font-size:14px;font-weight:600;color:#e2e8f0;"><span style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#6366f1;color:#fff;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;">3</span>Print the login cards and hand them out. Students are playing straight away.</li>
+        </ol>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:stretch;flex:0 0 auto;">
+        <a href="onboarding.html" style="display:block;font-size:16px;font-weight:800;padding:14px 24px;text-align:center;text-decoration:none;color:#fff;background:#4f46e5;border-radius:12px;box-shadow:0 6px 20px rgba(79,70,229,.45);">Set up my class →</a>
+        <a href="#tchActivities" style="font-size:13px;font-weight:700;color:#c7d2fe;text-align:center;">Or try the activities first</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manage section -->
+  <div class="layout-section">
+    <h2 class="section-heading">Manage</h2>
+    <p class="section-sub">Your teaching tools</p>
+    <div class="manage-grid">
+      <a class="manage-card" href="dashboard.html">
+        <div class="manage-card-emoji">📊</div>
+        <div class="manage-card-name">Teacher Dashboard</div>
+        <div class="manage-card-desc">Heatmaps, intervention flags and student profiles</div>
+      </a>
+      <a class="manage-card" href="class-setup.html">
+        <div class="manage-card-emoji">⚙️</div>
+        <div class="manage-card-name">Class Setup</div>
+        <div class="manage-card-desc">Create classes, add students, manage PINs</div>
+      </a>
+      <a class="manage-card" href="teacher-guide.html">
+        <div class="manage-card-emoji">📖</div>
+        <div class="manage-card-name">Teacher Guide</div>
+        <div class="manage-card-desc">Step-by-step walkthrough for getting started</div>
+      </a>
+      <a class="manage-card" href="teacher-resources.html">
+        <div class="manage-card-emoji">🖨️</div>
+        <div class="manage-card-name">Teacher Resources</div>
+        <div class="manage-card-desc">Printable reference cards and activity sheets</div>
+      </a>
+    </div>
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- Try the Activities -->
+  <div class="layout-section" id="tchActivities">
+    <h2 class="section-heading">Activities to Use With Your Class</h2>
+    <p class="section-sub">Each activity is a teaching tool — use them on your board during lessons, in guided groups, or for independent practice</p>
+
+    <div class="play-hub-container">
+      <div class="play-hub-grid">
+        <a class="act-card" href="morpheme-builder.html" style="background:#4338ca;--glow-lo:rgba(67,56,202,.3);--glow-hi:rgba(67,56,202,.55);">
+          <div class="act-card-emoji">🔬</div>
+          <div class="act-card-name">Morpheme Builder</div>
+          <div class="act-card-tag">Build and break apart words — drag and drop</div>
+        </a>
+        <a class="act-card" href="flashcard-mode.html" style="background:#b45309;--glow-lo:rgba(180,83,9,.3);--glow-hi:rgba(180,83,9,.55);">
+          <div class="act-card-emoji">📇</div>
+          <div class="act-card-name">Flashcards</div>
+          <div class="act-card-tag">Flip through morpheme meaning cards</div>
+        </a>
+        <a class="act-card" href="sound-sorter.html" style="background:#0d9488;--glow-lo:rgba(13,148,136,.3);--glow-hi:rgba(13,148,136,.55);">
+          <div class="act-card-emoji">🔤</div>
+          <div class="act-card-name">Sound Sorter</div>
+          <div class="act-card-tag">Sort sounds, find the grapheme</div>
+        </a>
+        <a class="act-card" href="phoneme-mode.html" style="background:#7c3aed;--glow-lo:rgba(124,58,237,.3);--glow-hi:rgba(124,58,237,.55);">
+          <div class="act-card-emoji">🔊</div>
+          <div class="act-card-name">Phoneme Splitter</div>
+          <div class="act-card-tag">Split words into sounds</div>
+        </a>
+        <a class="act-card" href="syllable-mode.html" style="background:#16a34a;--glow-lo:rgba(22,163,74,.3);--glow-hi:rgba(22,163,74,.55);">
+          <div class="act-card-emoji">✂️</div>
+          <div class="act-card-name">Syllable Splitter</div>
+          <div class="act-card-tag">Chop words into syllables</div>
+        </a>
+        <a class="act-card" href="meaning-mode.html" style="background:#78350f;--glow-lo:rgba(120,53,15,.3);--glow-hi:rgba(120,53,15,.55);">
+          <div class="act-card-emoji">🧠</div>
+          <div class="act-card-name">Meaning Match-Up</div>
+          <div class="act-card-tag">Match morphemes to meanings</div>
+        </a>
+        <a class="act-card" href="mission-mode.html" style="background:#dc2626;--glow-lo:rgba(220,38,38,.3);--glow-hi:rgba(220,38,38,.55);">
+          <div class="act-card-emoji">🚀</div>
+          <div class="act-card-name">Mission Mode</div>
+          <div class="act-card-tag">Match morphemes to the rest of their word</div>
+        </a>
+        <a class="act-card" href="breakdown-mode.html" style="background:#ea580c;--glow-lo:rgba(234,88,12,.3);--glow-hi:rgba(234,88,12,.55);">
+          <div class="act-card-emoji">🧩</div>
+          <div class="act-card-name">Breakdown Blitz</div>
+          <div class="act-card-tag">Decompose words under pressure</div>
+        </a>
+        <a class="act-card" href="root-lab.html" style="background:#374151;--glow-lo:rgba(55,65,81,.25);--glow-hi:rgba(55,65,81,.45);">
+          <div class="act-card-emoji">🌿</div>
+          <div class="act-card-name">Root Lab</div>
+          <div class="act-card-tag">Identify morphemes, then unlock the meaning</div>
+        </a>
+        <a class="act-card" href="speed-mode.html" style="background:#1e3a5f;--glow-lo:rgba(30,58,95,.3);--glow-hi:rgba(30,58,95,.55);">
+          <div class="act-card-emoji">⚡</div>
+          <div class="act-card-name">Speed Builder</div>
+          <div class="act-card-tag">Race the clock, build words</div>
+        </a>
+        <a class="act-card" href="homophone-mode.html" style="background:#9d174d;--glow-lo:rgba(157,23,77,.3);--glow-hi:rgba(157,23,77,.55);">
+          <div class="act-card-emoji">📡</div>
+          <div class="act-card-name">Homophone Hunter</div>
+          <div class="act-card-tag">Decode signals, pick the right spelling</div>
+        </a>
+        <a class="act-card" href="word-spectrum.html" style="background:#0e7490;--glow-lo:rgba(14,116,144,.3);--glow-hi:rgba(14,116,144,.55);">
+          <div class="act-card-emoji">🧲</div>
+          <div class="act-card-name">Word Spectrum</div>
+          <div class="act-card-tag">Synonyms, antonyms and shades of meaning</div>
+        </a>
+        <a class="act-card" href="word-refinery.html" style="background:#92400e;--glow-lo:rgba(146,64,14,.3);--glow-hi:rgba(146,64,14,.55);">
+          <div class="act-card-emoji">⚗️</div>
+          <div class="act-card-name">The Refinery</div>
+          <div class="act-card-tag">Arrange words from everyday to specialist</div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- Information section -->
+  <div class="layout-section">
+    <h2 class="section-heading">Information</h2>
+    <div class="info-grid">
+      <a class="info-card" href="faq.html">
+        <span class="info-card-emoji">❓</span>
+        <span class="info-card-name">FAQ</span>
+      </a>
+      <a class="info-card" href="about.html">
+        <span class="info-card-emoji">🧪</span>
+        <span class="info-card-name">About Word Labs</span>
+      </a>
+      <a class="info-card" href="feedback.html">
+        <span class="info-card-emoji">💬</span>
+        <span class="info-card-name">Feedback</span>
+      </a>
+      <a class="info-card" href="pricing.html" id="infoCardPricing">
+        <span class="info-card-emoji">💳</span>
+        <span class="info-card-name">Pricing</span>
+      </a>
+      <a class="info-card" href="for-schools.html">
+        <span class="info-card-emoji">🏫</span>
+        <span class="info-card-name">For Schools</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Footer (teacher) -->
+  <footer class="footer" role="contentinfo">
+    <div class="footer-inner">
+      <span class="footer-brand">🧪 Word Labs</span>
+      <span class="footer-note"><a href="landing.html">Home</a> · <a href="about.html">About</a> · <a href="for-schools.html">For schools</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a href="pricing.html">Pricing</a> · <a href="mailto:nick@wordlabs.app">Contact</a></span>
+    </div>
+  </footer>
+</div>
+</div><!-- /layoutTeacher -->
+
+
+<!-- ═══════════════ SCRIPTS ═══════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="wordlab-stage.js"></script>
+<script src="wordlab-data.js?v=20261023b"></script>
+<script src="wordlab-scientist.js?v=20261019"></script>
+<script src="wordlab-effects.js"></script>
+<script defer src="wordlab-worlds.js"></script>
+<script src="wordlab-audio.js"></script>
+<script src="wordlab-tour.js"></script>
+<script>
+/* ── Menu ── */
+function toggleMenu(){
+  var drawer=document.getElementById('sideDrawer');
+  var overlay=document.getElementById('drawerOverlay');
+  var btn=document.getElementById('menuBtn');
+  var isOpen=drawer.classList.contains('open');
+  drawer.classList.toggle('open',!isOpen);
+  overlay.classList.toggle('open',!isOpen);
+  btn.classList.toggle('open',!isOpen);
+}
+function closeMenu(){
+  document.getElementById('sideDrawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.getElementById('menuBtn').classList.remove('open');
+}
+document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeMenu(); });
+
+/* ── Extension mode toggle ── */
+function showExtToggle(){
+  var wrap = document.getElementById('extModeToggleWrap');
+  if(!wrap) return;
+  wrap.style.display = 'inline-flex';
+  updateExtToggleUI();
+}
+function updateExtToggleUI(){
+  var isExt = sessionStorage.getItem('wl_extension_mode') === 'true';
+  var track = document.getElementById('extModeTrack');
+  var lbl   = document.getElementById('extModeLbl');
+  if(!track || !lbl) return;
+  if(isExt){ track.classList.add('on'); lbl.textContent = '🔬 Extension'; }
+  else      { track.classList.remove('on'); lbl.textContent = '📚 Base'; }
+}
+function toggleExtMode(){
+  var isExt = sessionStorage.getItem('wl_extension_mode') === 'true';
+  sessionStorage.setItem('wl_extension_mode', isExt ? 'false' : 'true');
+  sessionStorage.setItem('wl_ext_pinned', 'true');
+  updateExtToggleUI();
+}
+
+/* ── Supabase helper ── */
+var SUPABASE_URL = 'https://kdpavfrzmmzknqfpodrl.supabase.co';
+var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkcGF2ZnJ6bW16a25xZnBvZHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjgzOTIsImV4cCI6MjA5MDAwNDM5Mn0.n5fe7HvXWMsM4xN_iaU_N4xLkC5xD4y9Uoer_DG-dlg';
+function _lsb(){ return window._landingSb || (window._landingSb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON)); }
+
+/* ═══════════ LAYOUT ROUTING ═══════════ */
+async function teacherSignOut() {
+  if (typeof WordLabData !== 'undefined') {
+    await WordLabData._sb().auth.signOut();
+    window.location.reload();
+  }
+}
+
+async function routeLayout() {
+  if (typeof WordLabData === 'undefined') return;
+
+  // Check teacher auth first (Supabase Auth session)
+  var teacherUser = null;
+  try { teacherUser = await WordLabData.getTeacherSession(); } catch(e){}
+
+  var studentSession = WordLabData.getSession();
+  var isPreview = typeof WordLabData !== 'undefined' && WordLabData.isTeacherPreview();
+
+  // If teacher is previewing as student, show student layout
+  if (isPreview && studentSession) {
+    document.getElementById('layoutLoggedOut').style.display = 'none';
+    document.getElementById('layoutStudent').style.display   = 'block';
+    document.getElementById('layoutTeacher').style.display   = 'none';
+    initStudentLayout(studentSession);
+  } else if (teacherUser) {
+    document.getElementById('layoutLoggedOut').style.display = 'none';
+    document.getElementById('layoutStudent').style.display   = 'none';
+    document.getElementById('layoutTeacher').style.display   = 'block';
+    initTeacherLayout(teacherUser);
+  } else if (studentSession) {
+    document.getElementById('layoutLoggedOut').style.display = 'none';
+    document.getElementById('layoutStudent').style.display   = 'block';
+    document.getElementById('layoutTeacher').style.display   = 'none';
+    initStudentLayout(studentSession);
+  } else {
+    document.getElementById('layoutLoggedOut').style.display = 'block';
+    document.getElementById('layoutStudent').style.display   = 'none';
+    document.getElementById('layoutTeacher').style.display   = 'none';
+  }
+}
+
+/* ═══════════ TEACHER STUDENT MODE ═══════════ */
+async function tchToggleStudentMode() {
+  // Need at least one class
+  if (!_tchClasses || !_tchClasses.length) {
+    alert('Create a class first before previewing as a student.');
+    return;
+  }
+  var cls = _tchClasses[_tchCurrentIdx];
+  if (!cls || !cls.id) return;
+
+  var teacherStudent = await WordLabData.getTeacherStudent(cls.id);
+
+  if (!teacherStudent) {
+    var gameName = prompt('Choose your game name for this class (e.g. Mr Smith, Coach D):');
+    if (!gameName || !gameName.trim()) return;
+    try {
+      await WordLabData.createTeacherStudent(cls.id, gameName.trim());
+    } catch(e) {
+      alert('Error creating your student account: ' + (e.message || e));
+      return;
+    }
+  }
+
+  var success = await WordLabData.enterStudentMode(cls.id);
+  if (success) {
+    window.location.reload();
+  } else {
+    alert('Could not enter student mode. Please try again.');
+  }
+}
+
+async function exitStudentPreview() {
+  if (typeof WordLabData !== 'undefined') {
+    try { await WordLabData.exitStudentMode(); } catch (e) {}
+  }
+  window.location.reload();
+}
+
+/* ═══════════ STUDENT LAYOUT INIT ═══════════ */
+async function initStudentLayout(session) {
+  // Show teacher preview banner if applicable
+  if (typeof WordLabData !== 'undefined' && WordLabData.isTeacherPreview()) {
+    var previewBanner = document.getElementById('teacherPreviewBanner');
+    if (previewBanner) previewBanner.style.display = 'flex';
+  }
+
+  // Word of the Week card
+  try {
+    if (typeof WordLabData !== 'undefined' && WordLabData.getWordOfTheWeek) {
+      var wotw = WordLabData.getWordOfTheWeek();
+      if (wotw) {
+        var card = document.getElementById('wotwCard');
+        if (card) {
+          card.style.display = 'block';
+          document.getElementById('wotwWord').textContent = wotw.word;
+          document.getElementById('wotwMeaning').textContent = wotw.meaning;
+          // Morpheme breakdown pills (compact for doorway card)
+          var parts = [];
+          if (wotw.prefix) parts.push('<span style="background:#7c3aed;color:#fff;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:800;">' + WordLabData.escapeHtml(wotw.prefix) + '-</span>');
+          if (wotw.base) parts.push('<span style="background:#4338ca;color:#fff;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:800;">' + WordLabData.escapeHtml(wotw.base) + '</span>');
+          if (wotw.suffix1) parts.push('<span style="background:#ea580c;color:#fff;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:800;">-' + WordLabData.escapeHtml(wotw.suffix1) + '</span>');
+          if (wotw.suffix2) parts.push('<span style="background:#b45309;color:#fff;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:800;">-' + WordLabData.escapeHtml(wotw.suffix2) + '</span>');
+          if (wotw.syllables) parts.push('<span style="color:#5eead4;font-size:8px;font-weight:700;">' + wotw.syllables.join('·') + '</span>');
+          document.getElementById('wotwBreakdown').innerHTML = parts.join('<span style="color:#475569;font-weight:800;font-size:10px;">+</span>');
+        }
+      }
+    }
+  } catch(e) { console.warn('WOTW error:', e); }
+
+  // Update header login button
+  var btn = document.getElementById('wlLoginBtn');
+  if (btn) btn.textContent = '👤 ' + session.studentName;
+
+  // ── Batch 1: Three independent DB queries in parallel ──
+  // (extension mode, school_id for plan check, and full student data)
+  var _extPromise = Promise.resolve(_lsb().from('students').select('extension_mode').eq('id', session.studentId).maybeSingle()).catch(function(e){ return null; });
+  var _clsPromise = Promise.resolve(_lsb().from('classes').select('school_id').eq('id', session.classId).maybeSingle()).catch(function(e){ return null; });
+  var _sdPromise = (typeof WordLabData !== 'undefined' && WordLabData.getStudentData) ? WordLabData.getStudentData().catch(function(e){ return null; }) : Promise.resolve(null);
+
+  var _batch1 = await Promise.all([_extPromise, _clsPromise, _sdPromise]);
+  var _extRes = _batch1[0];
+  var _clsRes = _batch1[1];
+  var sd = _batch1[2];
+
+  // Process extension mode result
+  try {
+    if (_extRes && _extRes.data && _extRes.data.extension_mode) showExtToggle();
+  } catch(e){}
+
+  // DOM element references (no DB needed)
+  var nameEl    = document.getElementById('hubStudentName');
+  var levelEl   = document.getElementById('hubStudentLevel');
+  var xpFillEl  = document.getElementById('hubXpFill');
+  var streakEl  = document.getElementById('hubStreak');
+  var quarksEl  = document.getElementById('hubQuarks');
+  var badgesEl  = document.getElementById('hubBadges');
+  var top3El    = document.getElementById('hubTop3');
+  var avatarEl  = document.getElementById('hubSciAvatar');
+
+  if(nameEl) nameEl.textContent = session.studentName || 'Scientist';
+  // Show EALD badge if student has translation support
+  if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()){
+    WordLabData.injectEALDStyles();
+    var ealdName=WordLabData.getEALDLanguageName();
+    if(ealdName&&nameEl){
+      var badge=document.createElement('span');badge.className='eald-badge';badge.style.marginLeft='8px';
+      var badgeText = document.createTextNode(ealdName.split(' (')[0]);
+      badge.textContent = '\uD83C\uDF10 '; // globe emoji
+      badge.appendChild(badgeText);
+      nameEl.parentNode.insertBefore(badge,nameEl.nextSibling);
+    }
+  }
+
+  try {
+    if(!sd) return;
+
+    var lvlData = sd.level || { level: 1, title: 'Quark Cadet', progress: 0 };
+
+    if(levelEl) levelEl.textContent = lvlData.title + ' · Lv' + lvlData.level;
+    if(xpFillEl) xpFillEl.style.width = (lvlData.progress || 0) + '%';
+    // Show daily play streak if available, fall back to best answer streak
+    var dayStreak = 0;
+    try { dayStreak = WordLabData.updateDailyStreak().count || 0; } catch(e) {}
+    if(streakEl) streakEl.textContent = dayStreak;
+    if(quarksEl) quarksEl.textContent = (sd.quarks || 0).toLocaleString();
+    if(badgesEl) badgesEl.textContent = (sd.badges || []).length;
+
+    if(typeof WLScientist !== 'undefined') {
+      if(avatarEl) avatarEl.innerHTML = WLScientist.buildSVG(sd.scientist || {}, 'neutral');
+      // Also inject into the hub scene SVG
+      var hubSciEl = document.getElementById('hubScientistSVG');
+      if(hubSciEl) {
+        var fullSvg = WLScientist.buildSVG(sd.scientist || {}, 'happy');
+        // Extract inner content from the <svg ...>...</svg> wrapper
+        var inner = fullSvg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
+        hubSciEl.innerHTML = inner;
+      }
+    }
+
+    // Show total XP under XP bar in status strip
+    var hubTotalXpEl = document.getElementById('hubTotalXP');
+    if (hubTotalXpEl) hubTotalXpEl.textContent = (sd.xp || 0).toLocaleString() + ' XP total';
+
+    // ── Level badge & mastery panel ──
+    try { renderLevelBadge(session.studentId); } catch(e) { console.warn('level badge error', e); }
+
+    // ── Daily Challenges (no DB dependency, uses cached data) ──
+    try { renderDailyChallenges(); } catch(e) { console.warn('challenges render error', e); }
+
+    // ── Batch 2: Five independent async operations in parallel ──
+    // Each is self-contained with its own error handling so one failure cannot block others.
+    // This replaces 6+ sequential awaits with a single parallel wait.
+
+    var _schoolPlanPromise = (function() {
+      // Hide pricing/upgrade links if the school has an active plan
+      // Uses _clsRes.school_id from Batch 1, then needs one more query for plan
+      if (!_clsRes || !_clsRes.data || !_clsRes.data.school_id) return Promise.resolve();
+      return _lsb().from('schools').select('plan').eq('id', _clsRes.data.school_id).maybeSingle().then(function(_schRes) {
+        if (_schRes && _schRes.data && _schRes.data.plan === 'active') {
+          var _p1 = document.getElementById('hdrPricingLink'); if (_p1) _p1.style.display = 'none';
+          var _p2 = document.getElementById('drawerUpgradeLink'); if (_p2) _p2.style.display = 'none';
+          var _p3 = document.getElementById('infoCardPricing'); if (_p3) _p3.style.display = 'none';
+        }
+      }).catch(function(e){});
+    })();
+
+    var _leaderboardPromise = (function() {
+      // Top 5 leaderboard: fetch class roster, then XP for each student
+      var classId = session.classId;
+      if (!classId || !top3El) return Promise.resolve();
+      return _lsb().from('students').select('id,name').eq('class_id', classId).then(function(stuRes) {
+        if (!stuRes.data || stuRes.data.length <= 1) {
+          if (top3El) {
+            var msg = document.createElement('div');
+            msg.style.cssText = 'text-align:center;color:#64748b;padding:12px;font-size:11px;font-weight:600;';
+            msg.textContent = 'Leaderboard unlocks when more classmates join!';
+            top3El.appendChild(msg);
+          }
+          return;
+        }
+        var ids = stuRes.data.map(function(s){return s.id;});
+        return _lsb().from('student_character').select('student_id,xp').in('student_id', ids).then(function(charRes) {
+          var xpMap = {};
+          (charRes.data||[]).forEach(function(c){ xpMap[c.student_id] = c.xp || 0; });
+          var ranked = stuRes.data.map(function(s){
+            return { name: s.name, xp: xpMap[s.id] || 0, isMe: s.id === session.studentId };
+          }).sort(function(a,b){ return b.xp - a.xp; }).slice(0, 5);
+
+          if (ranked.length > 0 && ranked[0].xp > 0) {
+            var ranks = ['\uD83D\uDC51','2','3','4','5'];
+            var colors = ['#fbbf24','#94a3b8','#94a3b8','#94a3b8','#94a3b8'];
+            var rows = ranked.map(function(r,i){
+              var row = document.createElement('div'); row.className = 'top3-row';
+              var rankDiv = document.createElement('div'); rankDiv.className = 'top3-rank'; rankDiv.style.color = colors[i]; rankDiv.textContent = ranks[i];
+              var nameDiv = document.createElement('div'); nameDiv.className = 'top3-student-name'; nameDiv.textContent = r.name + (r.isMe ? ' (you)' : '');
+              var xpDiv = document.createElement('div'); xpDiv.className = 'top3-xp-val'; xpDiv.textContent = r.xp.toLocaleString();
+              row.appendChild(rankDiv); row.appendChild(nameDiv); row.appendChild(xpDiv);
+              return row;
+            });
+            top3El.textContent = '';
+            rows.forEach(function(row) { top3El.appendChild(row); });
+          }
+        });
+      }).catch(function(e){});
+    })();
+
+    var _lowStimPromise = (function() {
+      // Low-stim mode refresh (picks up teacher changes)
+      try { return WordLabData.loadLowStimMode(); } catch(e) { return Promise.resolve(); }
+    })();
+
+    var _featuredPromise = (function() {
+      // Load featured game (teacher focus or auto-pick, caches for 5 min)
+      try { return WordLabData.loadFeaturedGame(); } catch(e) { return Promise.resolve(); }
+    })();
+
+    var _spellingPromise = (function() {
+      // Check for active spelling assessment
+      return WordLabData.getSpellingSetWords().then(function(ssWords) {
+        if (!ssWords.length) return;
+        var ssSetIds = [];
+        ssWords.forEach(function(w) { if (w._spellingSetId && ssSetIds.indexOf(w._spellingSetId) === -1) ssSetIds.push(w._spellingSetId); });
+        return _lsb().from('class_spelling_sets')
+          .select('id, name, assessment_active, assessment_scheduled_at, assessment_started_at')
+          .in('id', ssSetIds).then(function(result) {
+          var ssSets = result.data;
+          var activeAssess = (ssSets || []).find(function(s) {
+            return s.assessment_active || (s.assessment_scheduled_at && new Date(s.assessment_scheduled_at) <= new Date());
+          });
+          // Check if student already completed this check-in (don't trap them in a loop)
+          // Uses assessment_started_at so each new check-in start resets the flag
+          var alreadyDone = false;
+          if (activeAssess && session && session.studentId) {
+            var ts = activeAssess.assessment_started_at ? '_' + activeAssess.assessment_started_at.replace(/[^0-9]/g, '').slice(0, 12) : '';
+            var doneKey = 'wl_checkin_done_' + activeAssess.id + '_' + session.studentId + ts;
+            alreadyDone = sessionStorage.getItem(doneKey) === 'true';
+          }
+          if (activeAssess && !alreadyDone) {
+            // Show assessment takeover banner
+            var banner = document.createElement('div');
+            banner.style.cssText = 'position:fixed;inset:0;z-index:9990;background:rgba(15,23,42,0.9);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);';
+            var inner = document.createElement('div');
+            inner.style.cssText = 'background:#fff;border-radius:24px;padding:40px;max-width:440px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);font-family:Lexend,sans-serif;';
+            var icon = document.createElement('div'); icon.style.cssText = 'font-size:48px;margin-bottom:12px;'; icon.textContent = '\uD83D\uDCDD';
+            var title = document.createElement('div'); title.style.cssText = 'font-size:20px;font-weight:900;color:#312e81;margin-bottom:6px;'; title.textContent = 'Spelling Check-In Ready';
+            var desc = document.createElement('div'); desc.style.cssText = 'font-size:13px;font-weight:600;color:#64748b;margin-bottom:20px;';
+            desc.textContent = 'Your teacher has started a spelling check-in:';
+            var setLabel = document.createElement('strong'); setLabel.style.color = '#312e81'; setLabel.textContent = activeAssess.name || 'Spelling Check-In';
+            desc.appendChild(document.createElement('br')); desc.appendChild(setLabel);
+            var link = document.createElement('a'); link.href = 'spelling-test.html';
+            link.style.cssText = 'display:block;background:#4338ca;color:#fff;border:none;border-radius:14px;padding:14px;font-size:16px;font-weight:900;cursor:pointer;font-family:Lexend,sans-serif;text-decoration:none;';
+            link.textContent = 'Start Spelling Check-In \u2192';
+            inner.appendChild(icon); inner.appendChild(title); inner.appendChild(desc); inner.appendChild(link);
+            banner.appendChild(inner);
+            document.body.appendChild(banner);
+          } else {
+            // No active check-in — show results overlay if student has unseen results
+            showUnseenCheckInResults(session, ssSets);
+          }
+        });
+      }).catch(function(e) { console.warn('Assessment check error', e); });
+    })();
+
+    await Promise.all([_schoolPlanPromise, _leaderboardPromise, _lowStimPromise, _featuredPromise, _spellingPromise]);
+
+    // renderGameNudges needs featured game data loaded, so runs after Batch 2
+    try { renderGameNudges(sd); } catch(e) { console.warn('nudge render error', e); }
+
+    // Tour replay button + auto-start on first visit
+    if (typeof WLTour !== 'undefined') {
+      var _replayBtn = document.getElementById('replayTourBtn');
+      if (_replayBtn) { _replayBtn.style.display = ''; }
+      var _studentTourSteps = [
+        { target: null, title: 'Welcome to Word Labs!', text: "You're a word scientist who studies how words are built. Let's show you around your lab." },
+        { target: '#scientistWidget', title: 'Your Scientist', text: 'This is your scientist! As you play games and earn XP, you\'ll level up and unlock new ranks \u2014 from <strong>Quark Cadet</strong> all the way to <strong>Lab Director</strong>.', position: 'bottom' },
+        { target: '#quarkPill', title: 'Quarks', text: 'Quarks are your lab currency. Earn them by playing games. Spend them in the <strong>Scientist Shop</strong> on lab coats, accessories, and dance moves.', position: 'bottom', lowStimHide: true },
+        { target: '#xpArea', title: 'XP and Level', text: 'Every correct answer earns XP. Fill the bar to level up. Harder questions and longer streaks are worth more.', position: 'bottom' },
+        { target: '#stripChallengesBlock', title: 'Daily Challenges', text: 'Three new challenges every day \u2014 easy, medium, and hard \u2014 plus a weekly challenge. Complete them for bonus quarks.', position: 'bottom', lowStimHide: true },
+        { target: '#streakPill', title: 'Play Streak', text: 'Play for 10+ minutes each day to build your streak. The flame grows bigger the longer you keep it going!', position: 'bottom', lowStimHide: true },
+        { target: '#playGrid', title: 'Your Games', text: 'These are your games. Each one practises different word skills. Try them all \u2014 you get <strong>bonus rewards</strong> for playing a variety!' },
+        { target: null, title: 'Word Building Games', text: 'Some games focus on <strong>word parts</strong>: breaking words into prefixes, bases, and suffixes, matching morphemes to meanings, and building words from scratch. These help you understand how words are constructed.' },
+        { target: null, title: 'Sounds & Spelling Games', text: 'Other games focus on <strong>sounds</strong>: splitting words into phonemes, chopping syllables, sorting graphemes, and hunting homophones. These help you become a stronger speller.' },
+        { target: null, title: 'Vocabulary Games', text: 'And some games build your <strong>word power</strong>: arranging synonyms from everyday to specialist, exploring shades of meaning, and reviewing with flashcards.' },
+        { target: '.focus-glow', title: 'Featured Game', text: 'The glowing game gives you <strong>2x quarks and XP</strong>! It changes based on which skills you need to practise most.', position: 'top', lowStimHide: true },
+        { target: null, title: 'Words Grow With You', text: "As your teacher moves you to higher levels, the words in your games get more challenging. You'll always be practising words that match your year group. Good luck, scientist!" }
+      ];
+      if (_replayBtn) {
+        _replayBtn.addEventListener('click', function() { WLTour.start(_studentTourSteps, 'student-landing'); });
+      }
+      WLTour.autoStart('student-landing', _studentTourSteps);
+    }
+
+  } catch(e) {
+    console.warn('Student layout init failed', e);
+    if(nameEl) nameEl.textContent = session.studentName || 'Scientist';
+  }
+}
+
+async function showUnseenCheckInResults(session, ssSets) {
+  try {
+    if (!session || !session.studentId || !ssSets || !ssSets.length) return;
+    // Fetch student's most recent check-in result
+    var setIds = ssSets.map(function(s) { return s.id; });
+    var { data: ciResults } = await _lsb().from('spelling_check_in_results')
+      .select('id, spelling_set_id, score, total, results, created_at')
+      .eq('student_id', session.studentId)
+      .in('spelling_set_id', setIds)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (!ciResults || !ciResults.length) return;
+    var ci = ciResults[0];
+    // Check if already dismissed
+    var dismissKey = 'wl_checkin_seen_' + ci.id;
+    if (sessionStorage.getItem(dismissKey)) return;
+    // Only show if result is recent (within last 24 hours)
+    var ageMs = Date.now() - new Date(ci.created_at).getTime();
+    if (ageMs > 24 * 60 * 60 * 1000) return;
+    // Find set name
+    var setName = 'Spelling Check-In';
+    ssSets.forEach(function(s) { if (s.id === ci.spelling_set_id) setName = s.name || setName; });
+    // Build results HTML
+    var resArr = ci.results || [];
+    var resHtml = resArr.map(function(r) {
+      if (r.correct) {
+        return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #e2e8f0;">' +
+          '<span style="font-size:16px;">✅</span><span style="font-size:13px;font-weight:800;">' + WordLabData.escapeHtml(r.word) + '</span></div>';
+      } else {
+        return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #e2e8f0;">' +
+          '<span style="font-size:16px;">❌</span><span style="font-size:13px;font-weight:800;color:#16a34a;">' + WordLabData.escapeHtml(r.word) + '</span>' +
+          '<span style="font-size:11px;font-weight:600;color:#64748b;margin-left:auto;">you wrote: <span style="text-decoration:line-through;">' + WordLabData.escapeHtml(r.typed) + '</span></span></div>';
+      }
+    }).join('');
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9990;background:rgba(15,23,42,0.9);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);';
+    overlay.innerHTML = '<div style="background:#fff;border-radius:24px;padding:32px;max-width:480px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);font-family:Lexend,sans-serif;max-height:90vh;overflow-y:auto;">' +
+      '<div style="font-size:40px;margin-bottom:8px;">📝</div>' +
+      '<div style="font-size:18px;font-weight:900;color:#312e81;margin-bottom:4px;">Check-In Results</div>' +
+      '<div style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:16px;">' + WordLabData.escapeHtml(setName) + '</div>' +
+      '<div style="background:#eef2ff;border:2px solid #6366f1;border-radius:14px;padding:16px;margin-bottom:16px;">' +
+        '<div style="font-size:36px;font-weight:900;color:#4338ca;">' + ci.score + '/' + ci.total + '</div>' +
+        '<div style="font-size:11px;font-weight:700;color:#64748b;">words correct</div>' +
+      '</div>' +
+      '<div style="text-align:left;margin-bottom:16px;">' + resHtml + '</div>' +
+      '<button id="ciResultsDismiss" style="background:#4338ca;color:#fff;border:none;border-radius:12px;padding:12px 32px;font-size:14px;font-weight:900;cursor:pointer;font-family:Lexend,sans-serif;width:100%;">Done</button>' +
+    '</div>';
+    document.body.appendChild(overlay);
+    overlay.querySelector('#ciResultsDismiss').onclick = function() {
+      sessionStorage.setItem(dismissKey, 'true');
+      document.body.removeChild(overlay);
+    };
+  } catch(e) { console.warn('Check-in results overlay error', e); }
+}
+
+function renderGameNudges(sd) {
+  if (typeof WordLabData === 'undefined') return;
+
+  // Map activity keys to card href fragments
+  var keyToHref = {
+    'phoneme-splitter': 'phoneme-mode.html',
+    'syllable-splitter': 'syllable-mode.html',
+    'breakdown-blitz': 'breakdown-mode.html',
+    'mission-mode': 'mission-mode.html',
+    'meaning-mode': 'meaning-mode.html',
+    'sound-sorter': 'sound-sorter.html',
+    'speed-mode': 'speed-mode.html',
+    'root-lab': 'root-lab.html',
+    'homophone-hunter': 'homophone-mode.html',
+    'word-refinery': 'word-refinery.html',
+    'word-spectrum': 'word-spectrum.html'
+  };
+
+  // Build a compact pill strip for all active bonuses
+  var pills = [];
+  var playGrids = document.querySelectorAll('#layoutStudent .play-hub-container');
+
+  // Featured Game (teacher focus OR auto-picked)
+  var featured = WordLabData.getFeaturedGame();
+  if (featured) {
+    var featHref = keyToHref[featured.key];
+    var pillLabel = featured.source === 'teacher'
+      ? '2x ' + WordLabData.escapeHtml(featured.name) + ' (teacher pick)'
+      : '2x ' + WordLabData.escapeHtml(featured.name);
+    pills.push('<span class="bonus-pill bonus-pill--gotw"><span class="bonus-pill-icon">' + (featured.source === 'teacher' ? '🎯' : '⭐') + '</span>' + pillLabel + '</span>');
+
+    // Gold glow + badge on matching cards
+    if (featHref) {
+      document.querySelectorAll('#layoutStudent .act-card[href="' + featHref + '"]').forEach(function(card) {
+        card.classList.add('focus-glow');
+        var badge = document.createElement('div'); badge.className = 'gotw-badge'; badge.textContent = '2x'; card.appendChild(badge);
+      });
+    }
+  }
+
+  // Bonus Day
+  var dayMult = WordLabData.getBonusDayMultiplier();
+  if (dayMult.active) {
+    pills.push('<span class="bonus-pill bonus-pill--day"><span class="bonus-pill-icon">🎉</span>' + WordLabData.escapeHtml(dayMult.label) + ' — 2x XP · 1.5x quarks</span>');
+  }
+
+  // Variety nudge
+  if (sd && sd.stats) {
+    var neverPlayed = WordLabData.getLeastPlayedGames(sd.stats.activitiesPlayed);
+    if ((sd.stats.activitiesPlayed || []).length >= 1 && neverPlayed.length > 0 && neverPlayed.length <= 8) {
+      pills.push('<span class="bonus-pill bonus-pill--variety"><span class="bonus-pill-icon">🧭</span>' + neverPlayed.length + ' game' + (neverPlayed.length > 1 ? 's' : '') + ' to explore</span>');
+    }
+  }
+
+  // Insert pill strip
+  if (pills.length > 0 && playGrids.length > 0) {
+    var strip = document.createElement('div');
+    strip.className = 'bonus-strip';
+    strip.innerHTML = pills.join('');
+    playGrids[0].parentNode.insertBefore(strip, playGrids[0]);
+  }
+
+  // "Try me!" card badges for never-played games
+  if (sd && sd.stats) {
+    var neverPlayed = WordLabData.getLeastPlayedGames(sd.stats.activitiesPlayed);
+    if ((sd.stats.activitiesPlayed || []).length >= 1) {
+      neverPlayed.forEach(function(game) {
+        var href = keyToHref[game.key];
+        if (!href) return;
+        document.querySelectorAll('#layoutStudent .act-card[href="' + href + '"]').forEach(function(card) {
+          var badge = document.createElement('div'); badge.className = 'tryme-badge'; badge.textContent = 'TRY ME!'; card.appendChild(badge);
+        });
+      });
+    }
+  }
+}
+
+async function renderLevelBadge(studentId) {
+  var pillEl = document.getElementById('hubLevelPill');
+  var iconEl = document.getElementById('hubLevelIcon');
+  var textEl = document.getElementById('hubLevelText');
+  if (!pillEl || typeof WordLabData === 'undefined' || typeof WLStage === 'undefined') return;
+
+  var stage = WordLabData.getStudentStage();
+  if (!stage) { pillEl.style.display = 'none'; return; }
+
+  if (document.body.classList.contains('low-stim')) {
+    pillEl.style.display = 'none'; return;
+  }
+
+  var mastery = await computeMasteryForStudent(studentId, stage);
+
+  var icons = { s2e:'\uD83D\uDD2C', s2l:'\u2697\uFE0F', s3e:'\uD83E\uDDEC', s3l:'\uD83D\uDE80', s4:'\uD83C\uDF1F' };
+  iconEl.textContent = icons[stage] || '\uD83D\uDD2C';
+  textEl.textContent = WLStage.levelLabel(stage, mastery.overall);
+  pillEl.style.display = '';
+  pillEl.dataset.mastery = JSON.stringify(mastery);
+
+  // Sub-level crossing celebration
+  try {
+    var currentSub = WLStage.subLevel(mastery.overall || 0);
+    var lastKey = 'wl_last_sub_' + stage;
+    var lastSub = parseInt(localStorage.getItem(lastKey) || '1', 10);
+    if (currentSub > lastSub && !document.body.classList.contains('low-stim')) {
+      showSubLevelToast(stage, currentSub);
+    }
+    localStorage.setItem(lastKey, String(currentSub));
+  } catch(e) {}
+}
+
+// Stage promotion celebration — runs once on load if stage moved forward
+(function celebrateStagePromotion(){
+  if (typeof WordLabData === 'undefined' || typeof WLStage === 'undefined') return;
+  var currentStage = WordLabData.getStudentStage();
+  if (!currentStage) return;
+  var lastSeen = localStorage.getItem('wl_last_seen_stage');
+  if (lastSeen && lastSeen !== currentStage) {
+    var oldIdx = WLStage.stageIndex(lastSeen);
+    var newIdx = WLStage.stageIndex(currentStage);
+    if (newIdx > oldIdx) showPromotionToast(currentStage);
+  }
+  localStorage.setItem('wl_last_seen_stage', currentStage);
+})();
+
+function showPromotionToast(stage) {
+  if (document.body.classList.contains('low-stim')) return;
+  if (typeof WLStage === 'undefined') return;
+  var name = WLStage.STAGE_NAMES[stage];
+  var toast = document.createElement('div');
+  toast.className = 'wl-promo-toast';
+  var line1 = document.createElement('div');
+  line1.textContent = '\uD83C\uDF89';
+  var line2 = document.createElement('div');
+  line2.textContent = "You've been promoted to";
+  var line3 = document.createElement('div');
+  line3.className = 'wl-promo-toast-name';
+  line3.textContent = name + '!';
+  toast.appendChild(line1);
+  toast.appendChild(line2);
+  toast.appendChild(line3);
+  document.body.appendChild(toast);
+  setTimeout(function(){
+    toast.style.transition = 'opacity .8s';
+    toast.style.opacity = '0';
+    setTimeout(function(){ toast.remove(); }, 800);
+  }, 3000);
+}
+
+function showSubLevelToast(stage, subLvl) {
+  if (typeof WLStage === 'undefined') return;
+  var name = WLStage.STAGE_NAMES[stage];
+  var toast = document.createElement('div');
+  toast.className = 'wl-sub-toast';
+  toast.textContent = '\u2B50 ' + name + ' ' + subLvl + '!';
+  document.body.appendChild(toast);
+  setTimeout(function(){
+    toast.style.transition = 'opacity .6s';
+    toast.style.opacity = '0';
+    setTimeout(function(){ toast.remove(); }, 600);
+  }, 2500);
+}
+
+async function computeMasteryForStudent(studentId, stage) {
+  try {
+    var prog = await WordLabData._sbCall(function(){
+      return WordLabData._sb().from('student_progress')
+        .select('activity, category, correct, total')
+        .eq('student_id', studentId);
+    });
+    var rows = (prog && prog.data) || [];
+    var taggedCategories = buildTaggedCategoryMap(stage);
+    return WLStage.calcMastery(rows, stage, taggedCategories);
+  } catch(e) {
+    return { overall: 0, perGame: {} };
+  }
+}
+
+// Phase-1 stub: until content is tagged, pass empty sets so calcMastery
+// returns 0 everywhere. Task 25's CSV workflow will replace this.
+function buildTaggedCategoryMap(stage) {
+  var map = {};
+  WLStage.CORE_GAMES.forEach(function(g){ map[g] = new Set(); });
+  return map;
+}
+
+(function wireLevelPanel(){
+  var pill = document.getElementById('hubLevelPill');
+  var panel = document.getElementById('wlLevelPanel');
+  var backdrop = document.getElementById('wlLevelPanelBackdrop');
+  var close = document.getElementById('wlLevelPanelClose');
+  if (!pill || !panel) return;
+
+  var labels = {
+    'sound-sorter': 'Sound Sorter',
+    'phoneme-splitter': 'Phoneme Splitter',
+    'syllable-splitter': 'Syllable Splitter',
+    'breakdown-blitz': 'Breakdown Blitz',
+    'meaning-mode': 'Meaning Match-Up',
+    'mission-mode': 'Mission Mode'
+  };
+
+  pill.addEventListener('click', function(){
+    if (typeof WLStage === 'undefined' || typeof WordLabData === 'undefined') return;
+    var data = {};
+    try { data = JSON.parse(pill.dataset.mastery || '{}'); } catch(e){}
+    var stage = WordLabData.getStudentStage();
+    var pct = Math.round((data.overall || 0) * 100);
+
+    document.getElementById('wlLevelPanelTitle').textContent = WLStage.levelLabel(stage, data.overall || 0);
+    document.getElementById('wlLevelPanelMastery').textContent = pct + '% mastery';
+
+    var barsEl = document.getElementById('wlLevelPanelBars');
+    while (barsEl.firstChild) barsEl.removeChild(barsEl.firstChild);
+
+    var lowestGame = null;
+    var lowestScore = 2;
+    WLStage.CORE_GAMES.forEach(function(g){
+      var score = data.perGame && data.perGame[g];
+      if (score == null) {
+        if (lowestScore > -0.5) { lowestGame = g; lowestScore = -1; }
+      } else if (score < lowestScore) {
+        lowestScore = score; lowestGame = g;
+      }
+    });
+
+    WLStage.CORE_GAMES.forEach(function(g){
+      var score = data.perGame && data.perGame[g];
+      var p = score == null ? 0 : Math.round(score * 100);
+      var row = document.createElement('div');
+      row.className = 'wl-level-row';
+
+      var label = document.createElement('span');
+      label.className = 'wl-level-row-label';
+      label.textContent = labels[g] || g;
+      row.appendChild(label);
+
+      var barOuter = document.createElement('div');
+      barOuter.className = 'wl-level-row-bar';
+      var barInner = document.createElement('div');
+      barInner.style.width = p + '%';
+      barOuter.appendChild(barInner);
+      row.appendChild(barOuter);
+
+      var pctEl = document.createElement('span');
+      pctEl.className = 'wl-level-row-pct';
+      pctEl.textContent = p + '%';
+      row.appendChild(pctEl);
+
+      if (g === lowestGame) {
+        var nudge = document.createElement('span');
+        nudge.className = 'wl-level-row-nudge';
+        nudge.textContent = ' \u2190 Try this one!';
+        row.appendChild(nudge);
+      }
+
+      barsEl.appendChild(row);
+    });
+
+    panel.style.display = 'block';
+    backdrop.style.display = 'block';
+  });
+
+  function closePanel(){
+    panel.style.display = 'none';
+    backdrop.style.display = 'none';
+  }
+  if (close) close.addEventListener('click', closePanel);
+  if (backdrop) backdrop.addEventListener('click', closePanel);
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && panel.style.display === 'block') closePanel();
+  });
+})();
+
+function renderDailyChallenges() {
+  if (typeof WordLabData === 'undefined') return;
+
+  var cData = WordLabData.getDailyChallenges();
+  if (!cData.daily || !cData.daily.length) {
+    var miniList = document.getElementById('hubMiniChallenges');
+    if (miniList) { var p = document.createElement('span'); p.style.cssText = 'color:#64748b;font-size:11px;font-weight:600;'; p.textContent = 'No challenges today'; miniList.appendChild(p); }
+    return;
+  }
+
+  var streak = WordLabData.updateDailyStreak();
+  renderHubMiniChallenges(cData, streak);
+}
+
+function renderHubMiniChallenges(cData, streak) {
+  var miniList = document.getElementById('hubMiniChallenges');
+  var flameSvg = document.getElementById('hubFlameSVG');
+  var flameDays = document.getElementById('hubFlameDays');
+  var flameWrap = document.getElementById('hubFlameWrap');
+  if (!miniList) return;
+  var days = (streak && streak.count) || 0;
+
+  // Render streak flame SVG
+  if (flameSvg) {
+    var scale = Math.min(0.6 + days * 0.06, 2.5);
+    var h = 12 * scale, w = 7 * scale;
+    var cx = 20, cy = 32;
+    var outer, inner, core;
+    if (days >= 30) { outer='#dc2626'; inner='#f59e0b'; core='#93c5fd'; }
+    else if (days >= 14) { outer='#dc2626'; inner='#f97316'; core='#fef08a'; }
+    else if (days >= 7) { outer='#f97316'; inner='#fbbf24'; core='#fef9c3'; }
+    else { outer='#fb923c'; inner='#fcd34d'; core='#fef9c3'; }
+    var dur = days >= 30 ? '0.3s' : days >= 14 ? '0.5s' : days >= 7 ? '0.8s' : '1.2s';
+    var glowR = Math.min(4 + days * 0.4, 16);
+    var svg = '<circle cx="'+cx+'" cy="'+cy+'" r="'+glowR+'" fill="'+outer+'" opacity="'+(Math.min(0.15+days*0.012,0.5))+'"/>';
+    svg += '<path d="M'+cx+','+(cy-h)+' C'+(cx-w*0.6)+','+(cy-h*0.4)+' '+(cx-w)+','+(cy+1)+' '+cx+','+(cy+4)+' C'+(cx+w)+','+(cy+1)+' '+(cx+w*0.6)+','+(cy-h*0.4)+' '+cx+','+(cy-h)+'Z" fill="'+outer+'" opacity="0.9"><animateTransform attributeName="transform" type="scale" values="1,1;1.06,1.1;0.96,1.02;1,1" dur="'+dur+'" repeatCount="indefinite" additive="sum"/></path>';
+    var ih=h*0.65, iw=w*0.55;
+    svg += '<path d="M'+cx+','+(cy-ih)+' C'+(cx-iw)+','+(cy-ih*0.3)+' '+(cx-iw)+','+(cy+1)+' '+cx+','+(cy+3)+' C'+(cx+iw)+','+(cy+1)+' '+(cx+iw)+','+(cy-ih*0.3)+' '+cx+','+(cy-ih)+'Z" fill="'+inner+'" opacity="0.95"><animateTransform attributeName="transform" type="scale" values="1,1;0.94,1.12;1.07,0.95;1,1" dur="'+dur+'" repeatCount="indefinite" additive="sum"/></path>';
+    if (days >= 7) {
+      var ch=ih*0.45, cw=iw*0.5;
+      svg += '<ellipse cx="'+cx+'" cy="'+(cy-ch*0.3)+'" rx="'+cw+'" ry="'+ch+'" fill="'+core+'" opacity="0.85"><animate attributeName="ry" values="'+ch+';'+(ch*1.15)+';'+(ch*0.9)+';'+ch+'" dur="'+dur+'" repeatCount="indefinite"/></ellipse>';
+    }
+    if (days >= 14) {
+      svg += '<circle cx="'+(cx-w*0.4)+'" cy="'+(cy-h*0.8)+'" r="1" fill="#fef08a" opacity="0.8"><animate attributeName="cy" values="'+(cy-h*0.8)+';'+(cy-h*1.3)+';'+(cy-h*0.8)+'" dur="0.6s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.8;0;0.8" dur="0.6s" repeatCount="indefinite"/></circle>';
+    }
+    if (days >= 30) {
+      svg += '<circle cx="'+(cx+w*0.5)+'" cy="'+(cy-h*0.9)+'" r="0.8" fill="#93c5fd" opacity="0.9"><animate attributeName="cy" values="'+(cy-h*0.9)+';'+(cy-h*1.4)+';'+(cy-h*0.9)+'" dur="0.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.9;0;0.9" dur="0.5s" repeatCount="indefinite"/></circle>';
+    }
+    flameSvg.innerHTML = svg;
+  }
+  if (flameDays) flameDays.textContent = days > 0 ? days + ' day' + (days !== 1 ? 's' : '') : 'No streak';
+
+  // Adjust glow intensity based on streak
+  if (flameWrap) {
+    if (days >= 14) flameWrap.style.filter = 'drop-shadow(0 0 12px rgba(239,68,68,0.8)) drop-shadow(0 0 28px rgba(249,115,22,0.5))';
+    else if (days >= 7) flameWrap.style.filter = 'drop-shadow(0 0 10px rgba(249,115,22,0.7)) drop-shadow(0 0 22px rgba(239,68,68,0.4))';
+    else if (days > 0) flameWrap.style.filter = '';
+    else flameWrap.style.filter = 'drop-shadow(0 0 4px rgba(251,191,36,0.3))';
+  }
+
+  // Render mini challenge rows (daily + weekly)
+  var allCh = (cData.daily || []).slice();
+  if (cData.weekly) allCh.push(cData.weekly);
+  miniList.innerHTML = allCh.map(function(ch) {
+    var pct = Math.min(Math.round((ch.progress / ch.count) * 100), 100);
+    var done = ch.progress >= ch.count;
+    var diff = ch.difficulty || 'weekly';
+    var rowClass = 'hub-ch-row' + (ch.claimed ? ' claimed' : done ? ' done' : '');
+    var action = '';
+    if (ch.claimed) {
+      action = '<span class="hub-ch-reward" style="color:#64748b;">Done</span>';
+    } else if (done) {
+      action = '<button class="hub-ch-claim" onclick="claimChallenge(\'' + ch.id + '\',this);event.stopPropagation();">Claim</button>';
+    } else {
+      action = '<span class="hub-ch-reward">⚛️' + ch.quarks + '</span>';
+    }
+    return '<div class="' + rowClass + '">' +
+      '<span class="hub-ch-icon">' + (ch.gameIcon || (diff === 'weekly' ? '🏆' : '🎯')) + '</span>' +
+      '<span class="hub-ch-label">' + WordLabData.escapeHtml(ch.label) + '</span>' +
+      '<div class="hub-ch-bar"><div class="hub-ch-fill ' + diff + '" style="width:' + pct + '%"></div></div>' +
+      action +
+    '</div>';
+  }).join('');
+}
+
+async function claimChallenge(challengeId, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Claiming...'; }
+  try {
+    var result = await WordLabData.claimChallengeReward(challengeId);
+    if (result) {
+      // Update quarks display
+      var quarksEl = document.getElementById('hubQuarks');
+      if (quarksEl) quarksEl.textContent = (result.quarks || 0).toLocaleString();
+
+      // Trigger scientist reaction if available
+      if (typeof WLScientist !== 'undefined' && WLScientist.react) {
+        WLScientist.react('correct', { quarksEarned: result.quarksEarned, newBadges: result.newBadges || [] });
+      }
+
+      // Re-render challenges
+      renderDailyChallenges();
+    }
+  } catch(e) {
+    console.warn('claimChallenge error', e);
+    if (btn) { btn.disabled = false; btn.textContent = 'Claim!'; }
+  }
+}
+
+/* ═══════════ TEACHER LAYOUT INIT ═══════════ */
+var _tchClasses = [];
+var _tchCurrentIdx = 0;
+
+async function initTeacherLayout(teacherUser) {
+  // Show teacher name
+  var email = teacherUser.email || '';
+  var displayName = email.split('@')[0] || 'Teacher';
+  document.getElementById('tchStripName').textContent = displayName;
+
+  // Update header: hide login/teachers buttons, show teacher info + sign out
+  var loginBtn = document.getElementById('wlLoginBtn');
+  var teachersLink = document.getElementById('hdrTeachersLink');
+  var teacherInfo = document.getElementById('hdrTeacherInfo');
+  var teacherName = document.getElementById('hdrTeacherName');
+  if (loginBtn) loginBtn.style.display = 'none';
+  if (teachersLink) teachersLink.style.display = 'none';
+  if (teacherInfo) teacherInfo.style.display = 'inline-flex';
+  if (teacherName) teacherName.textContent = '🔬 ' + displayName;
+
+  // Hide pricing link for active subscribers
+  try {
+    var teacher = await WordLabData.getTeacherRecord();
+    if (teacher && teacher.school_id) {
+      var { data: _school } = await WordLabData._sb()
+        .from('schools')
+        .select('plan')
+        .eq('id', teacher.school_id)
+        .maybeSingle();
+      if (_school && _school.plan === 'active') {
+        var pricingLink = document.getElementById('hdrPricingLink');
+        if (pricingLink) pricingLink.style.display = 'none';
+        var drawerUpgrade = document.getElementById('drawerUpgradeLink');
+        if (drawerUpgrade) drawerUpgrade.style.display = 'none';
+        var infoCardPricing = document.getElementById('infoCardPricing');
+        if (infoCardPricing) infoCardPricing.style.display = 'none';
+      }
+    }
+  } catch(e) {}
+
+  // Fetch classes
+  try {
+    var classes = await WordLabData.getClasses();
+    _tchClasses = classes || [];
+  } catch(e){ _tchClasses = []; }
+
+  document.getElementById('tchPillClasses').textContent = '📚 ' + _tchClasses.length + ' Classes';
+
+  if (_tchClasses.length === 0) {
+    document.getElementById('tchStripClass').textContent = 'No classes yet';
+    var gs = document.getElementById('tchGetStarted'); if (gs) gs.style.display = '';
+    return;
+  }
+
+  // If multiple classes, show dropdown
+  if (_tchClasses.length > 1) {
+    var sel = document.getElementById('tchClassSelect');
+    sel.innerHTML = _tchClasses.map(function(c, i){
+      return '<option value="' + i + '">' + WordLabData.escapeHtml(c.name) + '</option>';
+    }).join('');
+    sel.style.display = 'inline-block';
+    document.getElementById('tchStripClass').style.display = 'none';
+  }
+
+  renderTeacherStats(0);
+}
+
+function switchTeacherClass() {
+  var sel = document.getElementById('tchClassSelect');
+  renderTeacherStats(parseInt(sel.value, 10));
+}
+
+async function renderTeacherStats(idx) {
+  _tchCurrentIdx = idx;
+  var cls = _tchClasses[idx];
+  if (!cls) return;
+
+  // Show class name (for single-class teachers)
+  document.getElementById('tchStripClass').textContent = cls.name;
+
+  // Student count
+  var studentCount = cls.students ? cls.students.length : 0;
+  document.getElementById('tchPillStudents').textContent = '👤 ' + studentCount + ' Students';
+
+  // Active today
+  try {
+    var today = new Date().toISOString().split('T')[0];
+    var activeCount = 0;
+    if (cls.students && cls.students.length > 0) {
+      var ids = cls.students.map(function(s){ return s.id; });
+      var activeRes = await _lsb().from('daily_usage').select('student_id').eq('usage_date', today).in('student_id', ids);
+      if (activeRes.data) {
+        var uniqueActive = new Set(activeRes.data.map(function(r){ return r.student_id; }));
+        activeCount = uniqueActive.size;
+      }
+    }
+    document.getElementById('tchPillActive').textContent = '📈 ' + activeCount + ' Active Today';
+  } catch(e){
+    console.warn('Active today query error:', e);
+    document.getElementById('tchPillActive').textContent = '📈 0 Active Today';
+  }
+}
+
+/* ═══════════ MAIN INIT ═══════════ */
+document.addEventListener('DOMContentLoaded', function(){
+  if (typeof WordLabData === 'undefined') return;
+  WordLabData.initLoginUI({ accentColor:'#4338ca', accentSoft:'#eef2ff', accentLine:'#c7d2fe', accentText:'#312e81', onLogin: function(){ routeLayout(); } });
+
+  var session = WordLabData.getSession();
+  var btn = document.getElementById('wlLoginBtn');
+  if (btn) {
+    btn.onclick = function(){ wlShowLogin(); };
+    if (session) btn.textContent = '👤 ' + session.studentName;
+  }
+
+  // QR login: pre-fill class code from URL parameter
+  var urlParams = new URLSearchParams(window.location.search);
+  var classParam = urlParams.get('class');
+  if (classParam && !session) {
+    setTimeout(function(){
+      wlShowLogin();
+      var inp = document.getElementById('wlCodeInput');
+      if (inp) { inp.value = classParam.toUpperCase(); WordLabData._stepClassCode(); }
+    }, 300);
+  }
+
+  // Render header scientist pill
+  (async function(){
+    if (typeof WLScientist !== 'undefined' && typeof WordLabData !== 'undefined') {
+      var sd = await WordLabData.getStudentData();
+      // Pill slot is handled by initLoginUI
+    }
+  })();
+
+  // Route to the correct layout
+  routeLayout();
+});
+</script>
+
+<!-- Storage notice (shown once, dismissed to localStorage) -->
+<div id="storageBanner" style="display:none;">
+  <span>🧪 Word Labs uses browser storage to keep your session and save game progress. No advertising cookies. No third-party tracking. <a href="privacy.html">Privacy Policy</a></span>
+  <button onclick="document.getElementById('storageBanner').style.display='none';localStorage.setItem('wl_notice_v1','1');">Got it</button>
+</div>
+<script>
+  if (!localStorage.getItem('wl_notice_v1')) {
+    document.getElementById('storageBanner').style.display = 'flex';
+  }
+</script>
+</body>
+</html>

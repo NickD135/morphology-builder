@@ -1,0 +1,1546 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Labs – Sound Sorter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="wordlab-common.css">
+  <style>
+    :root{
+      --bg:#f5f5f5; --panel:#ffffff; --panel-soft:#f8fafc; --line:#e2e8f0;
+      --text:#0f172a; --muted:#64748b;
+      --accent:#0c4a6e; --accent-rgb:12,74,110; --header-rgb:5,8,22;
+      --indigo:#4338ca; --indigo-2:#6366f1; --indigo-soft:#eef2ff;
+      --blue:#2563eb; --blue-soft:#eff6ff; --blue-line:#bfdbfe; --blue-text:#1e40af;
+      --green:#16a34a; --green-soft:#f0fdf4; --green-line:#bbf7d0; --green-text:#166534;
+      --orange:#ea580c; --orange-soft:#fff7ed; --orange-line:#fed7aa; --orange-text:#9a3412;
+      --purple:#7c3aed; --purple-soft:#f5f3ff; --purple-line:#ddd6fe; --purple-text:#4c1d95;
+      --teal:#0d9488; --teal-soft:#f0fdfa; --teal-line:#99f6e4; --teal-text:#134e4a;
+      --ok:#15803d; --warn:#b45309; --bad:#dc2626;
+    }
+    body{ margin:0; padding-top:56px; font-family:'Lexend',sans-serif; background:var(--bg); color:var(--text); line-height:1.5; letter-spacing:.02em; }
+
+    /* ── Header ── */
+    .header{ position:fixed; top:0; left:0; right:0; z-index:50; background:rgba(var(--header-rgb),.75); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border-bottom:1px solid rgba(255,255,255,.1); padding:0; }
+    .headerInner{ padding:0 20px; height:56px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; max-width:none; }
+    .brand{ display:flex; align-items:center; gap:12px; flex-shrink:0; }
+    .brandIcon{ width:36px; height:36px; border-radius:10px; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:0 8px 16px rgba(0,0,0,.15); flex:0 0 auto; }
+    .brandText h1{ margin:0; font-size:15px; font-weight:900; letter-spacing:-.02em; color:#f1f5f9; }
+    .brandText .sub{ font-size:9px; text-transform:uppercase; letter-spacing:.22em; color:rgba(255,255,255,.6); font-weight:800; margin-top:3px; display:block; }
+    .hud{ display:flex; gap:8px; align-items:center; flex-wrap:nowrap; overflow-x:auto; }
+    .hud::-webkit-scrollbar{ display:none; }
+    .pill{ display:inline-flex; align-items:center; justify-content:center; min-height:32px; border:1px solid rgba(var(--accent-rgb),.3); border-radius:999px; background:rgba(var(--accent-rgb),.12); padding:6px 14px; font-size:12px; font-weight:800; color:#bae6fd; white-space:nowrap; flex-shrink:0; }
+    .pill.score{ background:var(--accent); color:#e0f2fe; border-color:transparent; }
+    .pill.streak{ background:rgba(251,146,60,.15); color:#fed7aa; border-color:rgba(251,146,60,.3); }
+    .topBtn{ border:none; background:rgba(var(--accent-rgb),.15); color:#bae6fd; font-weight:800; font-size:11px; text-transform:uppercase; letter-spacing:.12em; padding:7px 13px; border-radius:10px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; flex-shrink:0; transition:all .15s; }
+    .topBtn:hover{ background:rgba(var(--accent-rgb),.25); }
+    #wlLoginBtn{ border:1px solid rgba(var(--accent-rgb),.25); background:rgba(var(--accent-rgb),.1); color:#bae6fd; border-radius:10px; padding:7px 13px; font-weight:800; font-size:11px; cursor:pointer; font-family:'Lexend',sans-serif; white-space:nowrap; flex-shrink:0; }
+
+    /* ── Layout ── */
+    .wrap{ max-width:1000px; margin:0 auto; padding:20px; display:flex; flex-direction:column; gap:16px; }
+    .panel{ background:rgba(255,255,255,.92); border:2px solid rgba(var(--accent-rgb),.2); border-radius:20px; box-shadow:0 16px 48px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.6); overflow:hidden; }
+    .panelInner{ padding:24px; }
+    .panelTitle{ margin:0 0 14px; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.22em; color:var(--accent); }
+
+    /* ── Setup screen ── */
+    .setupGrid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+    @media(max-width:700px){ .setupGrid{ grid-template-columns:1fr; } }
+
+    .setupSection h3{ font-size:13px; font-weight:900; color:#312e81; margin:0 0 10px; text-transform:uppercase; letter-spacing:.1em; }
+    .optionStack{ display:flex; flex-direction:column; gap:8px; }
+    .optBtn{
+      border:2px solid var(--line); background:#fff; border-radius:14px;
+      padding:11px 16px; font-weight:800; font-size:13px; cursor:pointer;
+      color:var(--muted); transition:all .15s; text-align:left;
+      display:flex; align-items:center; gap:10px;
+    }
+    .optBtn:hover:not(.active){ border-color:#cbd5e1; color:var(--text); }
+    .optBtn.active{ border-color:var(--teal); background:var(--teal-soft); color:var(--teal-text); }
+    .optBtn .optIcon{ font-size:18px; flex-shrink:0; }
+    .optBtn .optLabel{ font-size:13px; font-weight:800; }
+    .optBtn .optSub{ font-size:11px; font-weight:600; color:var(--muted); margin-top:1px; }
+
+    .soundPickWrap{ margin-top:8px; }
+    .soundPickLabel{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); margin-bottom:8px; }
+    .soundPills{ display:flex; flex-wrap:wrap; gap:6px; }
+    .soundPill{
+      border:2px solid var(--line); background:#fff; border-radius:999px;
+      padding:7px 14px; font-size:12px; font-weight:800; cursor:pointer;
+      color:var(--muted); transition:all .12s;
+    }
+    .soundPill:hover{ border-color:#cbd5e1; color:var(--text); }
+    .soundPill.active{ border-color:var(--teal); background:var(--teal-soft); color:var(--teal-text); }
+
+    .startGameBtn{
+      border:none; background:var(--accent); color:#fff;
+      font-weight:900; font-size:16px; letter-spacing:.08em;
+      padding:18px 48px; border-radius:20px; cursor:pointer;
+      text-transform:uppercase;
+      box-shadow:0 16px 32px rgba(var(--accent-rgb),.24);
+      transition:all .15s; display:block; margin:0 auto;
+    }
+    .startGameBtn:hover{ background:#075985; transform:translateY(-2px); }
+    .round-picker{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;}
+    .round-btn{background:rgba(13,148,136,.06);border:2px solid rgba(13,148,136,.15);color:var(--muted);font-family:'Lexend',sans-serif;font-weight:800;font-size:13px;padding:6px 14px;border-radius:10px;cursor:pointer;transition:all .15s;}
+    .round-btn:hover{border-color:rgba(13,148,136,.4);color:#134e4a;}
+    .round-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+    /* ── Game screen ── */
+    .gameTopRow{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+    .levelBadge{ display:inline-flex; align-items:center; gap:6px; background:var(--teal-soft); border:2px solid var(--teal-line); border-radius:999px; padding:7px 14px; font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; color:var(--teal-text); }
+    .soundBadge{ display:inline-flex; align-items:center; gap:6px; background:var(--purple-soft); border:2px solid var(--purple-line); border-radius:999px; padding:7px 14px; font-size:12px; font-weight:900; color:var(--purple-text); }
+    .changeBtn{ border:2px solid var(--line); background:#fff; color:#334155; font-weight:800; font-size:12px; padding:9px 16px; border-radius:12px; cursor:pointer; text-transform:uppercase; letter-spacing:.08em; }
+    .changeBtn:hover{ background:#f8fafc; }
+
+    /* Word display */
+    .wordDisplay{ text-align:center; margin-bottom:28px; }
+    .wordPromptLabel{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.22em; color:var(--muted); margin-bottom:12px; }
+    .clueText{ font-size:14px; color:#475569; font-weight:700; background:var(--panel-soft); border:2px solid var(--line); border-radius:12px; padding:8px 16px; display:inline-block; margin-bottom:16px; }
+    .wordRow{ display:flex; align-items:center; justify-content:center; gap:0; flex-wrap:wrap; margin-bottom:8px; }
+
+    .wordPart{ font-size:clamp(24px,10vw,60px); font-weight:900; color:#312e81; letter-spacing:.01em; line-height:1; word-break:break-word; }
+    .wordPartSplit{ font-size:clamp(24px,10vw,60px); font-weight:900; color:#312e81; letter-spacing:.01em; line-height:1; word-break:break-word; }
+
+    /* Drop zone */
+    .dropZone{
+      min-width:100px; height:76px;
+      border:4px dashed var(--teal-line);
+      border-radius:16px;
+      background:var(--teal-soft);
+      display:inline-flex; align-items:center; justify-content:center;
+      transition:all .15s;
+      vertical-align:middle;
+      position:relative;
+      margin:0 4px;
+    }
+    .dropZone.dragover{ border-color:var(--teal); background:#ccfbf1; transform:scale(1.04); }
+    .dropZone.filled{ border-style:solid; border-color:var(--teal); background:#ccfbf1; }
+    .dropZone.correct{ border-color:var(--green); background:var(--green-soft); animation:correctPop .35s ease-out; }
+    .dropZone.wrong{ border-color:var(--bad); background:#fef2f2; animation:wrongShake .4s ease-out; }
+    .dropZoneText{ font-size:14px; font-weight:900; text-transform:uppercase; letter-spacing:.14em; color:var(--teal); }
+    .dropZoneAnswer{ font-size:clamp(20px,8vw,52px); font-weight:900; color:var(--teal-text); line-height:1; word-break:break-word; }
+
+    @keyframes correctPop{ 0%{ transform:scale(.9); } 60%{ transform:scale(1.08); } 100%{ transform:scale(1); } }
+    @keyframes wrongShake{ 0%,100%{ transform:translateX(0); } 20%{ transform:translateX(-8px); } 40%{ transform:translateX(8px); } 60%{ transform:translateX(-5px); } 80%{ transform:translateX(5px); } }
+
+    /* Sound hint */
+    .soundHint{ font-size:13px; font-weight:800; color:var(--muted); text-align:center; margin-bottom:20px; }
+    .soundHintSound{ color:var(--teal); font-size:16px; }
+
+    /* Grapheme tiles */
+    .tilesSection{ margin-bottom:20px; }
+    .tilesLabel{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.18em; color:var(--muted); text-align:center; margin-bottom:12px; }
+    .tiles{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+    .tile{
+      padding:14px 22px; border-radius:16px;
+      border:3px solid var(--teal-line);
+      background:var(--teal-soft); color:var(--teal-text);
+      font-size:28px; font-weight:900;
+      cursor:pointer; user-select:none;
+      transition:all .12s;
+      font-family:inherit; line-height:1.2;
+    }
+    .tile:disabled{ cursor:not-allowed; }
+    .tile.wrong-tile:disabled{ opacity:.55; }
+    .feedbackWhyNot{ font-size:15px; color:#7f1d1d; font-weight:700; line-height:1.6; margin-top:8px; padding:10px 14px; background:#fff; border-radius:12px; border:1px solid #fecaca; }
+    .feedbackWhyNot strong{ font-weight:900; }
+    .tile:hover:not(.used){ border-color:var(--teal); transform:translateY(-3px); box-shadow:0 10px 20px rgba(13,148,136,.18); }
+    .tile.used{ opacity:.3; cursor:not-allowed; transform:none; box-shadow:none; }
+    .tile.correct-tile{ border-color:var(--green); background:var(--green-soft); color:var(--green-text); }
+    .tile.wrong-tile{ border-color:var(--bad); background:#fef2f2; color:var(--bad); animation:wrongShake .35s ease-out; }
+
+    /* Speak button */
+    .speakBtn{ border:2px solid var(--teal-line); background:var(--teal-soft); color:var(--teal-text); border-radius:14px; padding:10px 20px; font-weight:800; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all .15s; margin-bottom:20px; }
+    .speakBtn:hover{ background:var(--teal-line); border-color:var(--teal); }
+
+    /* Feedback */
+    .feedbackPanel{ border-radius:20px; padding:18px 22px; font-size:14px; line-height:1.7; display:none; animation:slideIn .25s ease-out; margin-bottom:16px; }
+    .feedbackPanel.correct{ display:block; background:var(--green-soft); border:2px solid var(--green-line); color:var(--green-text); }
+    .feedbackPanel.wrong{ display:block; background:#fef2f2; border:2px solid #fecaca; color:var(--bad); }
+    .feedbackTitle{ font-size:18px; font-weight:900; margin-bottom:4px; }
+    .feedbackExplain{ font-size:13px; color:#334155; font-weight:700; line-height:1.6; margin-top:6px; }
+    @keyframes slideIn{ 0%{ transform:translateY(-8px); opacity:0; } 100%{ transform:translateY(0); opacity:1; } }
+
+    /* Actions */
+    .actionRow{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+    .nextBtn{ border:none; background:#0f172a; color:#fff; font-weight:900; font-size:14px; letter-spacing:.08em; padding:14px 32px; border-radius:16px; cursor:pointer; text-transform:uppercase; transition:background .15s; display:none; }
+    .nextBtn:hover{ background:#000; }
+    .nextBtn.visible{ display:inline-flex; }
+    .tryAgainBtn{ border:2px solid var(--line); background:#fff; color:#334155; font-weight:800; font-size:13px; padding:12px 22px; border-radius:16px; cursor:pointer; transition:all .15s; display:none; }
+    .tryAgainBtn:hover{ background:#f8fafc; }
+    .tryAgainBtn.visible{ display:inline-flex; }
+
+    /* Right column stats */
+    .statsGrid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+    .statBox{ background:var(--panel-soft); border:2px solid var(--line); border-radius:16px; padding:14px; text-align:center; }
+    .statVal{ font-size:32px; font-weight:900; color:var(--teal); line-height:1; }
+    .statLbl{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); margin-top:4px; }
+
+    .histList{ display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto; }
+    .histItem{ display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:14px; border:2px solid var(--line); font-size:13px; }
+    .histItem.correct{ background:var(--green-soft); border-color:var(--green-line); }
+    .histItem.wrong{ background:#fef2f2; border-color:#fecaca; }
+    .histItem.correct::before{content:'\2713 ';font-weight:900;}
+    .histItem.wrong::before{content:'\2717 ';font-weight:900;}
+    .histWord{ font-weight:900; flex:1; color:#312e81; }
+    .histGrapheme{ font-size:12px; color:var(--muted); }
+
+    .hidden{ display:none !important; }
+
+    .sessionPill{ background:var(--teal-soft); border:1px solid var(--teal-line); border-radius:999px; padding:6px 14px; font-size:12px; font-weight:800; color:var(--teal-text); cursor:pointer; }
+
+  /* ── Observatory/Signal Detection Lab scene ── */
+  html{height:100%;}body{min-height:100vh;overflow-y:auto;background:transparent;}
+  .lab-scene{position:fixed;inset:0;z-index:0;display:flex;flex-direction:column;pointer-events:none;}
+  .lab-wall{flex:0 0 62%;background:#0f172a;position:relative;overflow:hidden;}
+  .lab-wall::before{content:'';position:absolute;inset:0;background:radial-gradient(circle 1px at 10% 20%,rgba(255,255,255,.9) 0,transparent 1px),radial-gradient(circle 1px at 25% 60%,rgba(255,255,255,.7) 0,transparent 1px),radial-gradient(circle 1px at 40% 15%,rgba(255,255,255,.8) 0,transparent 1px),radial-gradient(circle 1px at 55% 45%,rgba(255,255,255,.6) 0,transparent 1px),radial-gradient(circle 1px at 70% 25%,rgba(255,255,255,.9) 0,transparent 1px),radial-gradient(circle 1px at 85% 55%,rgba(255,255,255,.7) 0,transparent 1px),radial-gradient(circle 1px at 15% 80%,rgba(255,255,255,.5) 0,transparent 1px),radial-gradient(circle 1px at 90% 10%,rgba(255,255,255,.8) 0,transparent 1px),radial-gradient(circle 2px at 50% 35%,rgba(255,220,100,.8) 0,transparent 2px),radial-gradient(circle 2px at 80% 70%,rgba(200,220,255,.7) 0,transparent 2px);animation:starField 120s linear infinite;}
+  @keyframes starField{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+  .dome-opening{position:absolute;top:0;left:50%;transform:translateX(-50%);width:170px;height:115px;background:radial-gradient(ellipse at 50% 0%,#0a0520 0%,#1a0f4a 60%,#0f172a 100%);border-radius:0 0 85px 85px;border:4px solid #334155;border-top:none;overflow:hidden;box-shadow:0 0 28px rgba(99,102,241,.28);}
+  .dome-stars{position:absolute;inset:0;animation:domeRotate 60s linear infinite;}
+  .dome-star{position:absolute;background:#fff;border-radius:50%;animation:twinkle 3s ease-in-out infinite;}
+  @keyframes domeRotate{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}@keyframes twinkle{0%,100%{opacity:.3}50%{opacity:1}}
+  .signal-screen{position:absolute;background:#060c1a;border:2px solid #1e3a5f;border-radius:6px;padding:5px;box-shadow:0 0 10px rgba(59,130,246,.28);}
+  .screen-label{font-size:6px;color:#60a5fa;font-weight:900;letter-spacing:.1em;text-align:center;margin-bottom:2px;font-family:'Lexend',monospace;}
+  .signal-wave{position:absolute;border-radius:50%;border:2px solid rgba(96,165,250,.4);animation:signalExpand 2s ease-out infinite;}
+  @keyframes signalExpand{0%{transform:scale(.5);opacity:.8;}100%{transform:scale(3);opacity:0;}}
+  .lab-floor{flex:0 0 38%;background:repeating-linear-gradient(135deg,#1e293b 0,#1e293b 20px,#1a2438 20px,#1a2438 40px);position:relative;border-top:4px solid #334155;}
+  .lab-bench{position:absolute;bottom:0;height:72%;background:#0f1629;border-top:8px solid #1e3a5f;border-radius:4px 4px 0 0;}
+  .lab-bench.left{left:10px;width:165px;}.lab-bench.right{right:10px;width:165px;}
+  .bench-top{position:absolute;top:-17px;left:-6px;right:-6px;height:17px;background:#1a2d50;border-radius:4px 4px 0 0;border-top:3px solid #2d4a70;}
+  #particles{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden;}
+  .particle{position:absolute;border-radius:50%;animation:particleFloat linear infinite;}
+  @keyframes particleFloat{from{transform:translateY(0) translateX(0);opacity:.7;}to{transform:translateY(calc(-100vh - 20px)) translateX(10px);opacity:0;}}
+  /* ── Observatory header: full-width slim ── */
+  /* ── Fixed centered layout ── */
+  body{overflow:hidden!important;}
+  .wrap{position:fixed!important;top:56px!important;bottom:0!important;left:50%!important;transform:translateX(-50%)!important;width:75vw!important;max-width:none!important;margin:0!important;z-index:10;padding:16px 0!important;overflow-y:auto;display:flex!important;flex-direction:column!important;gap:14px!important;}
+  .wrap::-webkit-scrollbar{width:0;}
+  /* ── Observatory panels: deep space blue-tinted frosted glass ── */
+  .panel{backdrop-filter:blur(10px)!important;-webkit-backdrop-filter:blur(10px)!important;}
+  /* ── Signal tile colors ── */
+  .tile{border-color:rgba(125,211,252,.5)!important;background:rgba(240,249,255,.95)!important;color:#0c4a6e!important;}
+  .tile:hover:not(.used){border-color:#38bdf8!important;box-shadow:0 10px 20px rgba(56,189,248,.2)!important;}
+  .tile.correct-tile{border-color:var(--green)!important;background:var(--green-soft)!important;color:var(--green-text)!important;}
+  .tile.wrong-tile{border-color:var(--bad)!important;background:#fef2f2!important;color:var(--bad)!important;}
+  /* ── Drop zone ── */
+  .dropZone{border-color:rgba(125,211,252,.5)!important;background:rgba(240,249,255,.9)!important;}
+  .dropZone.dragover{border-color:#38bdf8!important;background:rgba(224,242,254,.95)!important;}
+  .dropZone.filled{border-color:#38bdf8!important;background:rgba(224,242,254,.95)!important;}
+  .dropZoneText{color:#0ea5e9!important;}
+  .dropZoneAnswer{color:#0c4a6e!important;}
+  /* ── Word parts ── */
+  .wordPart,.wordPartSplit{color:#0c4a6e!important;}
+  .soundHintSound{color:#0ea5e9!important;}
+  /* ── Option / level buttons ── */
+  .optBtn{background:rgba(240,249,255,.85)!important;border-color:rgba(96,165,250,.3)!important;color:#0c4a6e!important;}
+  .optBtn.active{border-color:#0ea5e9!important;background:rgba(224,242,254,.9)!important;color:#0c4a6e!important;}
+  .soundPill{background:rgba(240,249,255,.85)!important;border-color:rgba(125,211,252,.4)!important;color:#0c4a6e!important;}
+  .soundPill.active{border-color:#38bdf8!important;background:rgba(224,242,254,.9)!important;color:#0c4a6e!important;}
+  /* ── Badges ── */
+  .levelBadge{background:rgba(240,249,255,.9)!important;border-color:rgba(125,211,252,.4)!important;color:#0c4a6e!important;}
+  .soundBadge{background:rgba(237,233,254,.9)!important;border-color:rgba(167,139,250,.35)!important;color:#4c1d95!important;}
+  .changeBtn{background:rgba(240,249,255,.85)!important;border-color:rgba(125,211,252,.35)!important;color:#0c4a6e!important;}
+  /* ── Start and action buttons ── */
+  .startGameBtn{background:var(--accent)!important;box-shadow:0 16px 32px rgba(var(--accent-rgb),.24)!important;}
+  .startGameBtn:hover{background:#075985!important;}
+  .nextBtn{background:var(--accent)!important;color:#bae6fd!important;}
+  .nextBtn:hover{background:#075985!important;}
+  .tryAgainBtn{background:rgba(240,249,255,.9)!important;border-color:rgba(125,211,252,.35)!important;color:#0c4a6e!important;}
+  /* ── Stat boxes ── */
+  .statBox{background:rgba(240,249,255,.8)!important;border-color:rgba(125,211,252,.3)!important;}
+  .statVal{color:#0ea5e9!important;}
+  .panelTitle{color:var(--accent)!important;}
+  .setupSection h3{color:var(--accent)!important;}
+  /* ── Speak button ── */
+  .speakBtn{background:rgba(240,249,255,.85)!important;border-color:rgba(125,211,252,.4)!important;color:#0c4a6e!important;}
+  .speakBtn:hover{background:rgba(224,242,254,.9)!important;border-color:#38bdf8!important;}
+  /* ── Scientist ── */
+  .scientist-stage{position:fixed;right:0;width:calc((100vw - 75vw)/2);top:56px;bottom:0;z-index:11;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  #sciCharWrap{width:120px;height:150px;display:flex;align-items:flex-end;justify-content:center;animation:sciIdle 3s ease-in-out infinite;}
+  #sciCharWrap.sci-correct{animation:sciJump .6s ease-out;}#sciCharWrap.sci-wrong{animation:sciShake .5s ease-out;}#sciCharWrap.sci-streak{animation:sciDance .8s ease-in-out infinite;}
+  @keyframes sciIdle{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}@keyframes sciJump{0%{transform:translateY(0)}30%{transform:translateY(-22px)}100%{transform:translateY(0)}}@keyframes sciShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-4deg) translateX(-4px)}40%{transform:rotate(4deg) translateX(4px)}60%{transform:rotate(-3deg) translateX(-3px)}80%{transform:rotate(2deg)}}@keyframes sciDance{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+  .scene-prop-left{position:fixed;left:0;width:calc((100vw - 75vw)/2);top:56px;bottom:0;z-index:11;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;}
+  @keyframes propBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+  @keyframes propSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+  @media(max-width:700px){.lab-scene{display:none;}body{background:linear-gradient(160deg,#0f172a,#1e3a5f,#312e81)!important;overflow-y:auto!important;}.wrap{position:relative!important;top:auto!important;bottom:auto!important;left:auto!important;transform:none!important;width:calc(100vw - 24px)!important;margin:0 auto!important;padding-top:72px!important;}.scientist-stage,.scene-prop-left{display:none!important;}}
+  @media(max-width:480px){
+    .setupGrid{grid-template-columns:1fr!important;}
+    .statsGrid{grid-template-columns:1fr!important;}
+    .lab-bench{display:none!important;}
+    .pill{min-height:44px!important;padding:10px 18px!important;font-size:14px!important;}
+    button{min-height:44px;}
+  }
+  /* Room scenery stays still in low-stim mode and when the device asks for reduced motion */
+  .low-stim .lab-scene *, .low-stim .scene-prop-left, .low-stim .scene-prop-left *{ animation:none!important; }
+  .low-stim #particles{ display:none!important; }
+  @media (prefers-reduced-motion: reduce){
+    .lab-scene *, .scene-prop-left, .scene-prop-left *{ animation:none!important; }
+    #particles{ display:none!important; }
+  }
+  </style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<div class="lab-scene" aria-hidden="true">
+  <div class="lab-wall">
+    <div class="dome-opening">
+      <div class="dome-stars">
+        <div class="dome-star" style="width:2px;height:2px;left:20%;top:30%;animation-delay:0s"></div>
+        <div class="dome-star" style="width:3px;height:3px;left:50%;top:15%;animation-delay:.5s"></div>
+        <div class="dome-star" style="width:2px;height:2px;left:75%;top:40%;animation-delay:1s"></div>
+        <div class="dome-star" style="width:3px;height:3px;left:35%;top:55%;animation-delay:1.5s"></div>
+        <div class="dome-star" style="width:2px;height:2px;left:62%;top:25%;animation-delay:.8s"></div>
+      </div>
+    </div>
+    <div class="signal-screen" style="left:14%;top:18%;width:90px;height:66px">
+      <div class="screen-label">SIGNAL</div>
+      <div style="position:relative;width:100%;height:44px;display:flex;align-items:center;justify-content:center">
+        <div class="signal-wave" style="width:18px;height:18px;left:50%;top:50%;transform:translate(-50%,-50%)"></div>
+        <div class="signal-wave" style="width:18px;height:18px;left:50%;top:50%;transform:translate(-50%,-50%);animation-delay:.6s"></div>
+        <div class="signal-wave" style="width:18px;height:18px;left:50%;top:50%;transform:translate(-50%,-50%);animation-delay:1.2s"></div>
+      </div>
+    </div>
+    <div class="signal-screen" style="right:14%;top:18%;width:90px;height:66px">
+      <div class="screen-label">FREQUENCY</div>
+      <div style="position:relative;width:100%;height:44px;display:flex;align-items:center;justify-content:center">
+        <div class="signal-wave" style="width:18px;height:18px;left:50%;top:50%;transform:translate(-50%,-50%);animation-delay:.3s"></div>
+        <div class="signal-wave" style="width:18px;height:18px;left:50%;top:50%;transform:translate(-50%,-50%);animation-delay:.9s"></div>
+      </div>
+    </div>
+    <div class="lab-bench left"><div class="bench-top"></div></div>
+    <div class="lab-bench right"><div class="bench-top"></div></div>
+  </div>
+  <div class="lab-floor"></div>
+</div>
+<div id="particles"></div>
+<div class="scene-prop-left" aria-hidden="true">
+  <svg width="110" height="200" viewBox="0 0 110 200" style="animation:propBob 5s ease-in-out infinite">
+    <!-- Telescope on tripod - observatory / sound sorter theme -->
+    <!-- Tripod legs -->
+    <line x1="55" y1="130" x2="25" y2="190" stroke="#0c4a6e" stroke-width="5" stroke-linecap="round"/>
+    <line x1="55" y1="130" x2="55" y2="190" stroke="#0c4a6e" stroke-width="5" stroke-linecap="round"/>
+    <line x1="55" y1="130" x2="85" y2="190" stroke="#0c4a6e" stroke-width="5" stroke-linecap="round"/>
+    <!-- Tripod crossbar -->
+    <line x1="35" y1="165" x2="75" y2="165" stroke="#075985" stroke-width="3" stroke-linecap="round"/>
+    <!-- Mount hub -->
+    <circle cx="55" cy="130" r="10" fill="#0c4a6e"/>
+    <circle cx="55" cy="130" r="6" fill="#075985"/>
+    <!-- Telescope tube (angled up-left) -->
+    <rect x="14" y="52" width="82" height="24" rx="12" fill="#0c4a6e" transform="rotate(-25 55 64)"/>
+    <rect x="16" y="54" width="78" height="20" rx="10" fill="#0369a1" transform="rotate(-25 55 64)"/>
+    <!-- Telescope front lens -->
+    <ellipse cx="23" cy="90" rx="12" ry="12" fill="#0c4a6e" transform="rotate(-25 55 64)"/>
+    <ellipse cx="23" cy="90" rx="9" ry="9" fill="#0f172a" transform="rotate(-25 55 64)"/>
+    <ellipse cx="23" cy="90" rx="6" ry="6" fill="#1e3a5f" transform="rotate(-25 55 64)"/>
+    <!-- Lens glint -->
+    <ellipse cx="21" cy="87" rx="2" ry="3" fill="rgba(125,211,252,.5)" transform="rotate(-25 55 64)"/>
+    <!-- Eyepiece -->
+    <rect x="82" y="36" width="16" height="14" rx="4" fill="#075985" transform="rotate(-25 55 64)"/>
+    <!-- Focus knob -->
+    <circle cx="57" cy="74" r="6" fill="#0284c7"/>
+    <circle cx="57" cy="74" r="3" fill="#0c4a6e"/>
+    <!-- Stars being "seen" -->
+    <circle cx="8" cy="30" r="2" fill="#bae6fd" style="animation:propBob 2s ease-in-out infinite"/>
+    <circle cx="16" cy="15" r="3" fill="#7dd3fc" style="animation:propBob 2s ease-in-out 0.5s infinite"/>
+    <circle cx="4" cy="50" r="1.5" fill="#e0f2fe" style="animation:propBob 2s ease-in-out 1s infinite"/>
+  </svg>
+</div>
+<div class="scientist-stage"><div id="petCharWrap" class="pet-idle"></div><div id="sciCharWrap"></div></div>
+
+<header class="header wl-game-header" role="banner">
+  <div class="headerInner">
+    <div class="brand">
+      <div class="brandIcon">🔤</div>
+      <div class="brandText"><h1>Sound Sorter</h1><span class="sub">Word Labs · Grapheme Mode</span></div>
+    </div>
+    <div class="hud" role="navigation" aria-label="Game controls">
+      <span class="pill streak" id="streakPill" aria-live="polite">🔥 0 streak</span>
+      <span class="pill score" id="scorePill" aria-live="polite">Score: 0</span>
+      <span id="wlPillSlot"></span>
+      <button id="wlLoginBtn" onclick="wlShowLogin()" style="border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);font-weight:800;font-size:11px;padding:7px 13px;border-radius:10px;cursor:pointer;font-family:'Lexend',sans-serif;white-space:nowrap;flex-shrink:0;">👤 Log in</button>
+      <a href="landing.html" title="Home" class="topBtn">🏠 <span class="topBtnLabel">Home</span></a>
+      <a href="scientist.html" title="My Scientist" class="topBtn" style="background:var(--indigo-2);">🧬 <span class="topBtnLabel">My Scientist</span></a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap" id="main-content" role="main">
+
+  <!-- ── Setup screen ─────────────────────────────────────────── -->
+  <div id="setupScreen">
+    <div class="panel"><div class="panelInner">
+      <div class="panelTitle">Choose your settings</div>
+      <div class="setupGrid">
+
+        <!-- Level -->
+        <div class="setupSection">
+          <h3>1. Level</h3>
+          <div class="optionStack">
+            <button class="optBtn active" data-level="mixed" onclick="selectLevel('mixed',this)">
+              <span class="optIcon">🎲</span>
+              <div><div class="optLabel">Mixed</div><div class="optSub">All levels, any word</div></div>
+            </button>
+            <button class="optBtn" data-level="starter" onclick="selectLevel('starter',this)">
+              <span class="optIcon">🌱</span>
+              <div><div class="optLabel">Starter</div><div class="optSub">Full clue · 3 common options</div></div>
+            </button>
+            <button class="optBtn" data-level="levelup" onclick="selectLevel('levelup',this)">
+              <span class="optIcon">📈</span>
+              <div><div class="optLabel">Level Up</div><div class="optSub">Brief clue · 4 options</div></div>
+            </button>
+            <button class="optBtn" data-level="challenge" onclick="selectLevel('challenge',this)">
+              <span class="optIcon">🔥</span>
+              <div><div class="optLabel">Challenge</div><div class="optSub">Minimal clue · 5 options incl. tricky</div></div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Sound type -->
+        <div class="setupSection">
+          <h3>2. Sound type</h3>
+          <div class="optionStack">
+            <button class="optBtn active" data-type="vowel" onclick="selectType('vowel',this)">
+              <span class="optIcon">🔵</span>
+              <div><div class="optLabel">Vowel sounds</div><div class="optSub">Long a, long e, or sound, ar…</div></div>
+            </button>
+            <button class="optBtn" data-type="consonant" onclick="selectType('consonant',this)">
+              <span class="optIcon">🟠</span>
+              <div><div class="optLabel">Consonant patterns</div><div class="optSub">sh, ch, th, ck, ph, tch…</div></div>
+            </button>
+            <button class="optBtn" data-type="mixed" onclick="selectType('mixed',this)">
+              <span class="optIcon">🟣</span>
+              <div><div class="optLabel">Mixed</div><div class="optSub">Both vowel and consonant</div></div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Specific sound -->
+        <div class="setupSection">
+          <h3>3. Narrow to a sound <span style="font-weight:600;color:var(--muted);font-size:11px;">(optional)</span></h3>
+          <div class="soundPickWrap">
+            <div class="soundPickLabel">Leave on "All" or pick one:</div>
+            <div class="soundPills" id="soundPills"></div>
+          </div>
+        </div>
+
+      </div>
+      <div id="roundPickerWrap" style="margin:20px 0 8px;text-align:center;">
+        <div style="font-size:11px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;">Words this round</div>
+        <div class="round-picker" id="roundPicker">
+          <button class="round-btn" data-count="10" onclick="setRoundCount(10,this)">10</button>
+          <button class="round-btn active" data-count="15" onclick="setRoundCount(15,this)">15</button>
+          <button class="round-btn" data-count="20" onclick="setRoundCount(20,this)">20</button>
+          <button class="round-btn" data-count="25" onclick="setRoundCount(25,this)">25</button>
+          <button class="round-btn" data-count="30" onclick="setRoundCount(30,this)">30</button>
+        </div>
+      </div>
+      <div style="margin-top:28px; text-align:center;">
+        <button class="startGameBtn" onclick="startGame()">Start Sorting! →</button>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- ── Game screen ───────────────────────────────────────────── -->
+  <div id="gameScreen" class="hidden">
+
+    <div class="wlProgressBar" id="roundProgress" hidden><div class="wlProgressBar-fill" id="roundProgressFill"></div></div>
+    <div class="panel"><div class="panelInner">
+
+      <div class="gameTopRow">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <span class="levelBadge" id="levelBadge">🌱 Starter</span>
+          <span class="soundBadge" id="soundBadge">Vowel sounds</span>
+        </div>
+        <button class="changeBtn" onclick="goToSetup()">Change settings</button>
+      </div>
+
+      <div class="wordDisplay">
+        <div class="wordPromptLabel">Which grapheme makes this sound in this word?</div>
+        <div id="clueWrap"><span class="clueText" id="clueText"></span></div>
+        <div style="text-align:center;margin-bottom:12px;">
+          <button class="speakBtn" onclick="speakWord()">🔊 Hear the word</button>
+          <span id="ealdSpeakBtns"></span>
+        </div>
+        <div id="ealdDefinition" class="eald-definition" style="text-align:center;"></div>
+        <div class="wordRow" id="wordRow"></div>
+        <div class="soundHint" id="soundHint"></div>
+      </div>
+
+      <div class="tilesSection">
+        <div class="tilesLabel">Tap the correct grapheme for this word</div>
+        <div class="tiles" id="tilesRow"></div>
+      </div>
+
+      <div class="feedbackPanel" id="feedbackPanel" aria-live="assertive">
+        <div class="feedbackTitle" id="feedbackTitle"></div>
+        <div id="feedbackBody"></div>
+        <div class="feedbackWhyNot" id="feedbackWhyNot" hidden></div>
+        <div class="feedbackExplain" id="feedbackExplain"></div>
+        <div id="ealdTranslation" aria-live="polite"></div>
+      </div>
+
+      <div class="actionRow">
+        <button class="tryAgainBtn" id="tryAgainBtn">Try again</button>
+        <button class="nextBtn" id="nextBtn">Next word →</button>
+      </div>
+
+    </div></div>
+
+    <!-- Stats row -->
+    <div class="panel"><div class="panelInner">
+      <div class="statsGrid">
+        <div class="statBox"><div class="statVal" id="statScore">0</div><div class="statLbl">Score</div></div>
+        <div class="statBox"><div class="statVal" id="statCorrect">0</div><div class="statLbl">Correct</div></div>
+        <div class="statBox"><div class="statVal" id="statBest">0</div><div class="statLbl">Best streak</div></div>
+      </div>
+    </div></div>
+
+    <!-- History -->
+    <div class="panel"><div class="panelInner">
+      <div class="panelTitle" style="margin-bottom:12px;">History</div>
+      <div class="histList" id="histList"><div style="color:var(--muted);font-size:13px;">No attempts yet.</div></div>
+    </div></div>
+
+  </div>
+</div>
+
+
+
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="wordlab-stage.js"></script>
+<script defer src="wordlab-data.js?v=20261023b"></script>
+<script defer src="wordlab-scientist.js?v=20261019"></script>
+<script defer src="wordlab-effects.js"></script>
+<script defer src="wordlab-worlds.js"></script>
+<script defer src="wordlab-audio.js"></script>
+<script defer src="wordlab-teacher.js"></script>
+<script defer src="wordlab-help.js"></script>
+<script defer src="wordlab-hints.js"></script>
+<script src="sound-sorter-data.js"></script>
+<script>
+let WORDS = window.SOUND_SORTER_WORDS;
+// Apply teacher word corrections
+try { document.addEventListener('DOMContentLoaded', function(){ if(typeof WordLabData!=='undefined') try { WordLabData.getWordCorrections('sound-sorter').then(function(c){ WordLabData.applyCorrections(WORDS, c, 'word'); }); } catch(e){} }); } catch(e){}
+document.addEventListener('DOMContentLoaded', function(){
+  var extOn = (typeof WordLabData !== 'undefined' && WordLabData.isExtensionMode && WordLabData.isExtensionMode('sound-sorter'));
+  // Rebuild SOUND_GROUPS from whatever is now in WORDS
+  const seen = { vowel: new Map(), consonant: new Map() };
+  WORDS.forEach(w => {
+    const t = w.type === 'vowel' ? 'vowel' : 'consonant';
+    if (!seen[t].has(w.sound)) seen[t].set(w.sound, w.soundLabel);
+  });
+  SOUND_GROUPS.vowel     = [...seen.vowel.entries()].map(([id, label]) => ({ id, label }));
+  SOUND_GROUPS.consonant = [...seen.consonant.entries()].map(([id, label]) => ({ id, label }));
+
+  // Stage system: lock tier to Challenge when extension is on (+1 stage)
+  if(extOn){
+    document.querySelectorAll('.optBtn[data-level]').forEach(function(btn){
+      if(btn.dataset.level !== 'challenge'){
+        btn.disabled = true;
+        btn.style.opacity = '0.4';
+        btn.style.cursor = 'not-allowed';
+        btn.title = 'Locked to Challenge in +1 Stage (Extension) mode';
+      }
+    });
+    var challengeBtn = document.querySelector('.optBtn[data-level="challenge"]');
+    if(challengeBtn && typeof selectLevel === 'function'){
+      selectLevel('challenge', challengeBtn);
+    }
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// SOUND GROUP DEFINITIONS (for the pill picker)
+// ═══════════════════════════════════════════════════════════════
+let SOUND_GROUPS = {
+  vowel: [
+    { id:"long-a",   label:"Long A" },
+    { id:"long-e",   label:"Long E" },
+    { id:"long-i",   label:"Long I" },
+    { id:"long-o",   label:"Long O" },
+    { id:"long-u",   label:"Long U / OO" },
+    { id:"oo-short", label:"OO (book)" },
+    { id:"ow",       label:"OW sound" },
+    { id:"oy",       label:"OY sound" },
+    { id:"or",       label:"OR sound" },
+    { id:"ar",       label:"AR sound" },
+    { id:"er",       label:"ER sound" },
+    { id:"air",      label:"AIR sound" },
+    { id:"ear",      label:"EAR sound" },
+    { id:"short-a",  label:"Short A" },
+    { id:"short-e",  label:"Short E" },
+    { id:"short-i",  label:"Short I" },
+    { id:"short-o",  label:"Short O" },
+    { id:"short-u",  label:"Short U" },
+  ],
+  consonant: [
+    { id:"sh",  label:"SH sound" },
+    { id:"ch",  label:"CH sound" },
+    { id:"th",  label:"TH sound" },
+    { id:"f",   label:"F sound" },
+    { id:"k",   label:"K sound" },
+    { id:"j",   label:"J sound" },
+    { id:"z",   label:"Z sound" },
+    { id:"n",   label:"N sound" },
+    { id:"r",   label:"R sound" },
+    { id:"m",   label:"M sound" },
+    { id:"s",   label:"S sound" },
+    { id:"ng",  label:"NG sound" },
+    { id:"w",   label:"W sound" },
+    { id:"zh",  label:"ZH sound" },
+  ]
+};
+
+// SOUND_GROUPS is rebuilt inside the DOMContentLoaded handler above
+// (after the extension swap), so no parse-time rebuild is needed.
+
+// ── Custom word list + spelling set support ──
+// Deferred so WordLabData (loaded with defer) is available.
+var _originalSoundWords = WORDS.slice();
+function _ssRebuildSoundGroups(){
+  var seen = { vowel: new Map(), consonant: new Map() };
+  WORDS.forEach(function(w) {
+    var t = w.type === 'consonant' ? 'consonant' : 'vowel';
+    if (!seen[t].has(w.sound)) seen[t].set(w.sound, w.soundLabel);
+  });
+  SOUND_GROUPS.vowel = [];
+  SOUND_GROUPS.consonant = [];
+  seen.vowel.forEach(function(label, id){ SOUND_GROUPS.vowel.push({id:id, label:label}); });
+  seen.consonant.forEach(function(label, id){ SOUND_GROUPS.consonant.push({id:id, label:label}); });
+}
+document.addEventListener('DOMContentLoaded', async function(){
+  if (typeof WordLabData === 'undefined') return;
+  // Custom word list support
+  try {
+    if (WordLabData.getCustomWords) {
+      var custom = await WordLabData.getCustomWords('sound-sorter');
+      var customWords = custom.filter(function(w) {
+        return w.word && w.grapheme && w.sound && w.soundLabel;
+      }).map(function(w) {
+        return {
+          word: w.word, sound: w.sound, soundLabel: w.soundLabel,
+          grapheme: w.grapheme, before: w.before || '', after: w.after || '',
+          clue: w.clue || '', level: w.ssLevel || w.level || 'levelup',
+          type: w.ssType || w.type || 'vowel',
+          distractors: w.distractors || [], explain: w.explain || ''
+        };
+      });
+      if (customWords.length) {
+        var priority = WordLabData.getCustomWordPriority('sound-sorter');
+        if (priority === 'custom_only') {
+          WORDS.splice(0, WORDS.length); customWords.forEach(function(w){ WORDS.push(w); });
+        } else if (priority === 'custom_first') {
+          var orig = _originalSoundWords.slice();
+          WORDS.splice(0, WORDS.length);
+          customWords.forEach(function(w){ WORDS.push(w); });
+          orig.forEach(function(w){ WORDS.push(w); });
+        } else {
+          customWords.forEach(function(w){ WORDS.push(w); });
+        }
+        _ssRebuildSoundGroups();
+      }
+    }
+  } catch(e) { console.warn('Custom sound-sorter words load error:', e); }
+  // Spelling set words (prepended — highest priority)
+  try {
+    if (WordLabData.getSpellingSetWords) {
+      var ssWords = await WordLabData.getSpellingSetWords();
+      var ssSounds = ssWords.filter(function(w){ return w.word && w.sound && w.grapheme; }).map(function(w){
+        return {word:w.word, sound:w.sound, soundLabel:w.soundLabel||w.sound, grapheme:w.grapheme, before:w.before||'', after:w.after||'', clue:w.clue||'', level:w.ssLevel||w.level||'levelup', type:w.ssType||w.type||'vowel', distractors:w.distractors||[], explain:w.explain||'', _spellingSetId:w._spellingSetId};
+      });
+      if (ssSounds.length) {
+        WORDS.splice(0, 0, ...ssSounds);
+        _ssRebuildSoundGroups();
+      }
+    }
+  } catch(e) { console.warn('spelling set load error', e); }
+});
+// Helper: also record spelling set progress when a spelling set word is answered
+function _ssTrack(question, correct) {
+  if (question && question._spellingSetId && typeof WordLabData !== 'undefined' && WordLabData.recordSpellingAttempt) {
+    WordLabData.recordSpellingAttempt(question._spellingSetId, question.word, correct, 0);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let selectedLevel    = 'mixed';
+let selectedType     = 'vowel';
+let selectedSound    = 'all';
+let score = 0, streak = 0, bestStreak = 0, correctCount = 0, wrongCount = 0;
+let currentWord      = null;
+let usedWords        = new Set();
+let checked          = false;
+let attempts         = 0;
+let autoNextTimer    = null;
+var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+var _supportMode = false;
+document.addEventListener('DOMContentLoaded', function(){ _supportMode = !!(typeof WordLabData !== 'undefined' && WordLabData.isSupportMode()); });
+
+var _roundTotal = 15;
+var _roundAnswered = 0;
+
+function setRoundCount(n, btn) {
+  _roundTotal = n;
+  document.querySelectorAll('.round-btn').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+}
+
+function showRoundComplete() {
+  if(document.getElementById('roundCompleteOverlay')) return;
+  var total = correctCount + wrongCount;
+  var accuracy = total > 0 ? Math.round((correctCount / total) * 100) : 0;
+  var overlay = document.createElement('div');
+  overlay.id = 'roundCompleteOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(13,11,26,.95);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = '<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:40px 36px;max-width:400px;width:90%;text-align:center;">' +
+    '<div style="font-size:48px;margin-bottom:12px;">' + (accuracy >= 80 ? '🏆' : accuracy >= 60 ? '⭐' : '🔬') + '</div>' +
+    '<div style="font-size:22px;font-weight:900;color:#e0e7ff;margin-bottom:6px;">Round Complete!</div>' +
+    '<div style="font-size:14px;font-weight:600;color:#94a3b8;margin-bottom:20px;">' + _roundAnswered + ' words · ' + accuracy + '% accuracy</div>' +
+    '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">' +
+    '<button onclick="document.getElementById(\'roundCompleteOverlay\').remove();restartRound();" style="background:#0d9488;color:#fff;border:none;border-radius:14px;padding:12px 24px;font-family:Lexend,sans-serif;font-weight:800;font-size:14px;cursor:pointer;">Play Again</button>' +
+    '<a href="landing.html" style="background:rgba(255,255,255,.06);color:#94a3b8;border:2px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 24px;font-family:Lexend,sans-serif;font-weight:800;font-size:14px;cursor:pointer;text-decoration:none;">Try Another Game</a>' +
+    '</div></div>';
+  document.body.appendChild(overlay);
+}
+
+function wlUpdateRoundProgress(){var f=document.getElementById('roundProgressFill');if(!f||!_roundTotal)return;var p=Math.min(1,_roundAnswered/_roundTotal);f.style.transform='scaleX('+p+')';}
+
+function restartRound() {
+  _roundAnswered = 0;
+  wlUpdateRoundProgress();
+  var pb = document.getElementById('roundProgress'); if(pb && !_wltActive) pb.hidden = false;
+  score = 0; streak = 0; bestStreak = 0; correctCount = 0; wrongCount = 0;
+  usedWords.clear();
+  updateStats();
+  loadWord();
+}
+
+// Hide round picker in teacher mode
+if(_wltActive){ var _rpw = document.getElementById('roundPickerWrap'); if(_rpw) _rpw.style.display = 'none'; }
+
+// ═══════════════════════════════════════════════════════════════
+// SETUP UI
+// ═══════════════════════════════════════════════════════════════
+function selectLevel(level, btn){
+  selectedLevel = level;
+  document.querySelectorAll('[data-level]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function selectType(type, btn){
+  selectedType = type;
+  document.querySelectorAll('[data-type]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedSound = 'all';
+  buildSoundPills();
+}
+
+function buildSoundPills(){
+  const container = document.getElementById('soundPills');
+  container.innerHTML = '';
+
+  const groups = selectedType === 'mixed'
+    ? [...SOUND_GROUPS.vowel, ...SOUND_GROUPS.consonant]
+    : (SOUND_GROUPS[selectedType] || SOUND_GROUPS.vowel);
+
+  // All pill
+  const allPill = document.createElement('button');
+  allPill.className = 'soundPill' + (selectedSound === 'all' ? ' active' : '');
+  allPill.textContent = 'All';
+  allPill.onclick = () => { selectedSound = 'all'; buildSoundPills(); };
+  container.appendChild(allPill);
+
+  groups.forEach(g => {
+    const pill = document.createElement('button');
+    pill.className = 'soundPill' + (selectedSound === g.id ? ' active' : '');
+    pill.textContent = g.label;
+    pill.onclick = () => { selectedSound = g.id; buildSoundPills(); };
+    container.appendChild(pill);
+  });
+}
+
+function goToSetup(){
+  document.getElementById('setupScreen').classList.remove('hidden');
+  document.getElementById('gameScreen').classList.add('hidden');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GAME LOGIC
+// ═══════════════════════════════════════════════════════════════
+function startGame(){
+  usedWords.clear();
+  _roundAnswered = 0;
+  wlUpdateRoundProgress();
+  document.getElementById('setupScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.remove('hidden');
+  if(!_wltActive){ var pb = document.getElementById('roundProgress'); if(pb) pb.hidden = false; }
+
+  // Update badges
+  const levelLabels = { starter:'🌱 Starter', levelup:'📈 Level Up', challenge:'🔥 Challenge', mixed:'🎲 Mixed' };
+  document.getElementById('levelBadge').textContent = levelLabels[selectedLevel] || selectedLevel;
+
+  const typeLabel = selectedType === 'vowel' ? 'Vowel sounds' : selectedType === 'consonant' ? 'Consonant patterns' : 'Mixed';
+  const soundLabel = selectedSound === 'all' ? typeLabel : (SOUND_GROUPS[selectedType === 'mixed' ? 'vowel' : selectedType] || [...SOUND_GROUPS.vowel,...SOUND_GROUPS.consonant]).find(g=>g.id===selectedSound)?.label || selectedSound;
+  document.getElementById('soundBadge').textContent = soundLabel;
+
+  if(_wltActive){
+    WLTeacher.init({ game: 'sound-sorter' }).then(function(){ loadWord(); });
+  } else {
+    loadWord();
+  }
+}
+
+function getPool(){
+  let pool = WordLabData.weightByStage(WORDS, 'sound-sorter');
+
+  // Filter by type — spelling set words always included
+  if(selectedType !== 'mixed') pool = pool.filter(w => w.type === selectedType || w._spellingSetId);
+
+  // Filter by specific sound — spelling set words always included
+  if(selectedSound !== 'all') pool = pool.filter(w => w.sound === selectedSound || w._spellingSetId);
+
+  // Filter by level (mixed includes all) — spelling set words always included
+  if(selectedLevel !== 'mixed'){
+    const levelOrder = { starter:0, levelup:1, challenge:2 };
+    const maxLevel = levelOrder[selectedLevel] ?? 2;
+    pool = pool.filter(w => (levelOrder[w.level] ?? 0) <= maxLevel || w._spellingSetId);
+    // For starter, prefer starter words; for levelup prefer levelup etc
+    const preferred = pool.filter(w => w.level === selectedLevel || w._spellingSetId);
+    if(preferred.length >= 3) pool = preferred;
+  }
+
+  const fresh = pool.filter(w => !usedWords.has(w.word));
+  return fresh.length > 0 ? fresh : pool;
+}
+
+function loadWord(){
+  clearTimeout(autoNextTimer); autoNextTimer = null;
+  if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
+  const pool = getPool();
+  if(!pool.length){
+    document.getElementById('wordRow').innerHTML = '<div style="color:var(--muted);font-weight:700;font-size:15px;">No words found for this selection. Try changing your settings.</div>';
+    return;
+  }
+
+  currentWord = WordLabData.nextByStage(pool, 'sound-sorter', null, currentWord) || pool[Math.floor(Math.random() * pool.length)];
+  usedWords.add(currentWord.word);
+  checked = false;
+  attempts = 0;
+  // Preload cloud TTS so audio is instant when user clicks speak
+  if(typeof WordLabData!=='undefined'&&WordLabData.preloadTTS) WordLabData.preloadTTS(currentWord.word,'en-AU');
+  if(typeof WLHints!=='undefined') WLHints.resetHints();
+
+  // Clue — always shown at every level to avoid homophone confusion,
+  // but presented differently by difficulty
+  const clueWrap = document.getElementById('clueWrap');
+  const clueEl   = document.getElementById('clueText');
+  clueWrap.style.display = 'block';
+  if(selectedLevel === 'starter' || currentWord.level === 'starter'){
+    clueEl.innerHTML = '💡 <strong>Clue:</strong> ' + WordLabData.escapeHtml(currentWord.clue);
+    clueEl.style.fontSize = '14px';
+  } else if(selectedLevel === 'levelup' || currentWord.level === 'levelup'){
+    clueEl.innerHTML = '📌 ' + WordLabData.escapeHtml(currentWord.clue);
+    clueEl.style.fontSize = '13px';
+  } else {
+    // Challenge — minimal, just enough to disambiguate homophones
+    clueEl.textContent = currentWord.clue;
+    clueEl.style.fontSize = '12px';
+  }
+
+  // Build word row
+  buildWordRow();
+
+  // Sound hint
+  document.getElementById('soundHint').innerHTML =
+    `Listen for the <span class="soundHintSound">${WordLabData.escapeHtml(_ssSoundName(currentWord))}</span> in this word`;
+
+  // Build tiles
+  buildTiles();
+
+  // Reset feedback
+  hideFeedback();
+  document.getElementById('nextBtn').classList.remove('visible');
+  document.getElementById('nextBtn').textContent = 'Next word →';
+  document.getElementById('tryAgainBtn').classList.remove('visible');
+
+  // Auto-speak
+  setTimeout(speakWord, 400);
+
+  // EALD: speak buttons + definition on load
+  var ealdSpeakEl=document.getElementById('ealdSpeakBtns');
+  var ealdDefEl=document.getElementById('ealdDefinition');
+  var ealdEl=document.getElementById('ealdTranslation');
+  if(ealdSpeakEl) ealdSpeakEl.innerHTML='';
+  if(ealdDefEl) ealdDefEl.textContent='';
+  if(ealdEl){ealdEl.innerHTML='';ealdEl.dataset.translatedWord='';ealdEl.dataset.englishWord='';}
+  if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&currentWord){
+    WordLabData.injectEALDStyles();
+    var langName=(WordLabData.EALD_LANGUAGES[WordLabData.getEALDLanguage()]||'').split(' (')[0];
+    if(ealdEl) ealdEl.dataset.englishWord=currentWord.word;
+    if(ealdSpeakEl) ealdSpeakEl.innerHTML=WordLabData.buildEALDSpeakButtons();
+    if(ealdDefEl) ealdDefEl.innerHTML='<button class="eald-def-btn" id="ealdDefBtn" onclick="this.classList.toggle(\'flipped\')"><span class="eald-def-front">🌐 Show in '+WordLabData.escapeHtml(langName)+'</span><span class="eald-def-back" id="ealdDefText">Loading...</span></button>';
+    WordLabData.getTranslations([currentWord.word],['word']).then(function(t){
+      if(t&&t[currentWord.word]){
+        var defText=document.getElementById('ealdDefText');
+        if(defText) defText.textContent='🌐 '+t[currentWord.word];
+        if(ealdEl) ealdEl.dataset.translatedWord=t[currentWord.word];
+      }
+    });
+  }
+}
+
+function buildWordRow(){
+  const row = document.getElementById('wordRow');
+  row.innerHTML = '';
+
+  const { before, after, grapheme } = currentWord;
+
+  // Split digraphs (a_e, i_e, etc.): show before + _ + after + _
+  // e.g. "gate" with a_e: g _ t e  →  display as g [?] t e
+  const isSplitDigraph = grapheme.includes('_');
+
+  // Show blank width proportional to grapheme length
+  const blankWidth = isSplitDigraph ? '60px' : Math.max(80, grapheme.length * 36) + 'px';
+
+  if(before){
+    const b = document.createElement('span');
+    b.className = 'wordPart';
+    b.textContent = before;
+    row.appendChild(b);
+  }
+
+  const zone = document.createElement('div');
+  zone.className = 'dropZone';
+  zone.style.minWidth = blankWidth;
+  zone.id = 'dropZone';
+
+  const zoneText = document.createElement('span');
+  zoneText.className = 'dropZoneText';
+  zoneText.textContent = '?';
+  zoneText.id = 'dropZoneText';
+  zone.appendChild(zoneText);
+
+  // Support mode: highlight the drop zone with a pulsing border
+  if(_supportMode){
+    zone.style.borderColor = '#6366f1';
+    zone.style.boxShadow = '0 0 8px rgba(99,102,241,.4)';
+  }
+
+  // Drag events
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    const g = e.dataTransfer.getData('text/plain');
+    if(g) checkAnswer(g);
+  });
+
+  row.appendChild(zone);
+
+  if(after){
+    const a = document.createElement('span');
+    a.className = 'wordPart';
+    a.textContent = after;
+    row.appendChild(a);
+  }
+
+  // For split digraphs, show the trailing letter (e.g. the 'e' in a_e)
+  if(isSplitDigraph){
+    const parts = grapheme.split('_');
+    const trailing = document.createElement('span');
+    trailing.className = 'wordPart';
+    trailing.style.opacity = '0.4';
+    trailing.textContent = parts[1];
+    row.appendChild(trailing);
+  }
+}
+
+function buildTiles(){
+  const container = document.getElementById('tilesRow');
+  container.innerHTML = '';
+
+  // Build distractor set based on level (support mode: always 2 options)
+  let options = [currentWord.grapheme];
+  const distractors = currentWord.distractors || [];
+
+  if(_supportMode){
+    options = options.concat(distractors.slice(0,1));
+  } else if(selectedLevel === 'starter' || currentWord.level === 'starter'){
+    options = options.concat(distractors.slice(0,2));
+  } else if(selectedLevel === 'levelup' || currentWord.level === 'levelup'){
+    options = options.concat(distractors.slice(0,3));
+  } else {
+    options = options.concat(distractors.slice(0,4));
+  }
+
+  // Dedupe and shuffle
+  options = [...new Set(options)].sort(() => Math.random() - .5);
+
+  options.forEach(g => {
+    const tile = document.createElement('button');
+    tile.type = 'button';
+    tile.className = 'tile';
+    tile.textContent = g;
+    tile.setAttribute('aria-label', g.includes('_') ? g.replace('_', ' blank ') : g);
+    tile.draggable = true;
+    tile.dataset.grapheme = g;
+
+    tile.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', g);
+    });
+    tile.addEventListener('click', () => {
+      if(!checked && !tile.disabled) checkAnswer(g);
+    });
+
+    container.appendChild(tile);
+  });
+}
+
+function checkAnswer(grapheme){
+  if(checked) return;
+  attempts++;
+
+  // A quick second pick can land before an earlier split digraph pick
+  // (a_e) has put the blank back, so make sure the blank is there first
+  if(!document.getElementById('dropZone')) buildWordRow();
+
+  const zone = document.getElementById('dropZone');
+  const zoneText = document.getElementById('dropZoneText');
+
+  // Show the answer in the zone
+  zoneText.className = 'dropZoneAnswer';
+  // For split digraphs (a_e, i_e, etc.), show the grapheme label in the zone
+  // but rebuild the full word display so it reads correctly
+  zoneText.textContent = grapheme;
+  if(grapheme.includes('_')) _ssShowSplitWord(grapheme);
+
+  // Mark tile
+  document.querySelectorAll('.tile').forEach(t => {
+    if(t.dataset.grapheme === grapheme){
+      if(grapheme === currentWord.grapheme){
+        t.classList.add('correct-tile');
+      } else {
+        t.classList.add('wrong-tile');
+      }
+    }
+  });
+
+  if(grapheme === currentWord.grapheme){
+    // CORRECT
+    checked = true;
+    zone.classList.add('correct');
+
+    if(!_wltActive){
+      const pts = 10 + (streak >= 3 ? 5 : 0) - (attempts - 1) * 3;
+      score += Math.max(pts, 2);
+      streak++;
+      correctCount++;
+    }
+    if(!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()){
+      const _wlResult = WordLabData.recordAttempt('sound-sorter', currentWord.soundLabel + ':' + currentWord.grapheme, true, Date.now() - (window._questionStart||Date.now()), streak);
+      _ssTrack(currentWord, true);
+      if(typeof WLScientist!=='undefined') WLScientist.react('correct',_wlResult);
+    }
+    if(_wltActive && typeof WLScientist!=='undefined') WLScientist.react('correct');
+    if(!_wltActive && typeof WLAudio!=='undefined') WLAudio.correct();
+    if(!_wltActive && streak >= 3 && typeof WLScientist!=='undefined') WLScientist.react('streak',{streak:streak});
+    if(!_wltActive && streak >= 3 && typeof WLAudio!=='undefined') WLAudio.streak(streak);
+    if(!_wltActive && streak > bestStreak) bestStreak = streak;
+
+    var _explainExtra = currentWord.explain ? ' ' + currentWord.explain : '';
+    if(_wltActive){
+      var _tmFeedback = 'The /' + WordLabData.escapeHtml(currentWord.soundLabel) + '/ sound in \'' + WordLabData.escapeHtml(currentWord.word) + '\' is spelled \'' + WordLabData.escapeHtml(currentWord.grapheme) + '\'.' + WordLabData.escapeHtml(_explainExtra);
+      WLTeacher.onAnswer(true, _tmFeedback);
+    }
+
+    showFeedback('correct',
+      `✅ ${currentWord.word}: the ${_ssSoundName(currentWord)} is spelled "${currentWord.grapheme}"`,
+      currentWord.explain
+    );
+
+    if(!_wltActive) updateStats();
+    addHistory(currentWord.word, currentWord.grapheme, true);
+    document.getElementById('nextBtn').classList.add('visible');
+    document.getElementById('tryAgainBtn').classList.remove('visible');
+
+    window._questionStart = Date.now();
+    speakWord();
+    if(!_wltActive){ _roundAnswered++; wlUpdateRoundProgress(); if(_roundAnswered >= _roundTotal){ clearTimeout(autoNextTimer); autoNextTimer = null; setTimeout(showRoundComplete, 800); return; } }
+    if(_wltActive) return;
+    var _ealdExtra=(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage())?1500:0;
+    autoNextTimer = setTimeout(nextWord, 1500+_ealdExtra);
+  } else {
+    // WRONG
+    zone.classList.add('wrong');
+    zone.classList.remove('filled');
+    setTimeout(() => {
+      if(checked) return; // word finished: keep the correct answer showing
+      // A split digraph pick (a_e) rebuilt the whole word row, so put the blank back
+      if(!document.getElementById('dropZone')){ buildWordRow(); return; }
+      if(!zone.isConnected) return; // a later pick has already rebuilt the row
+      zone.classList.remove('wrong');
+      zoneText.className = 'dropZoneText';
+      zoneText.textContent = '?';
+    }, 600);
+    // Grey out the tile they tried so it is not picked twice
+    document.querySelectorAll('.tile').forEach(t => { if(t.dataset.grapheme === grapheme) t.disabled = true; });
+    var _whyNot = _ssWhyNot(grapheme);
+
+    if(!_wltActive && selectedLevel === 'starter' && attempts < 3){
+      // On starter, let them try again
+      showFeedback('wrong', `❌ Not quite. Try again!`, '', _whyNot);
+      document.getElementById('tryAgainBtn').classList.add('visible');
+      var _tb = document.getElementById('tryAgainBtn');
+      _tb.focus({preventScroll:true}); _tb.scrollIntoView({block:'nearest', behavior:'auto'});
+    } else {
+      checked = true;
+      if(!_wltActive){
+        score = Math.max(score - 2, 0);
+        streak = 0;
+        wrongCount++;
+      }
+      if(!_wltActive && typeof WordLabData !== 'undefined' && WordLabData.getSession()){
+        WordLabData.recordAttempt('sound-sorter', currentWord.soundLabel + ':' + currentWord.grapheme, false, Date.now() - (window._questionStart||Date.now()));
+        _ssTrack(currentWord, false);
+      }
+      if(typeof WLScientist!=='undefined') WLScientist.react('wrong');
+      if(!_wltActive && typeof WLAudio!=='undefined') WLAudio.wrong();
+
+      var _wrongExplain = currentWord.explain ? ' ' + currentWord.explain : '';
+      if(_wltActive){
+        var _tmWrongFeedback = 'Not \'' + WordLabData.escapeHtml(grapheme) + '\' — the correct grapheme for the /' + WordLabData.escapeHtml(currentWord.soundLabel) + '/ sound in \'' + WordLabData.escapeHtml(currentWord.word) + '\' is \'' + WordLabData.escapeHtml(currentWord.grapheme) + '\'.' + WordLabData.escapeHtml(_wrongExplain) + ' ' + WordLabData.escapeHtml(_whyNot);
+        WLTeacher.onAnswer(false, _tmWrongFeedback);
+      }
+
+      showFeedback('wrong',
+        `❌ The ${_ssSoundName(currentWord)} in "${currentWord.word}" is spelled "${currentWord.grapheme}"`,
+        currentWord.explain,
+        _whyNot
+      );
+
+      // Show the correct answer. A split digraph answer (i_e) is shown in the
+      // whole word, like the correct-answer path; otherwise it goes in the blank.
+      if(currentWord.grapheme.includes('_')){
+        _ssShowSplitWord(currentWord.grapheme);
+      } else {
+        if(!zone.isConnected) buildWordRow(); // the last pick was a split digraph
+        var _z = document.getElementById('dropZone'), _zt = document.getElementById('dropZoneText');
+        _zt.className = 'dropZoneAnswer';
+        _zt.textContent = currentWord.grapheme;
+        _z.classList.remove('wrong');
+        _z.classList.add('correct');
+      }
+
+      // Highlight correct tile
+      document.querySelectorAll('.tile').forEach(t => {
+        if(t.dataset.grapheme === currentWord.grapheme) t.classList.add('correct-tile');
+      });
+
+      if(!_wltActive) updateStats();
+      addHistory(currentWord.word, currentWord.grapheme, false);
+      document.getElementById('nextBtn').classList.add('visible');
+      document.getElementById('tryAgainBtn').classList.remove('visible');
+      // Last word of the round: keep the why panel up and let Next show the results
+      if(!_wltActive){ _roundAnswered++; wlUpdateRoundProgress(); if(_roundAnswered >= _roundTotal){ clearTimeout(autoNextTimer); autoNextTimer = null; document.getElementById('nextBtn').textContent = 'See my results →'; } }
+      if(_wltActive) return;
+      // No auto-advance after a wrong answer: give time to read why, then Next (or Enter) moves on
+      var _nb = document.getElementById('nextBtn');
+      if(_nb){ _nb.focus({preventScroll:true}); _nb.scrollIntoView({block:'nearest', behavior:'auto'}); }
+    }
+
+    if(!_wltActive) updateStats();
+  }
+}
+
+// Rebuild the word row as the whole word with a split digraph in place:
+// before + first part + after + last part, e.g. c[a]k[e] (a_e)
+function _ssShowSplitWord(grapheme){
+  var parts = grapheme.split('_');
+  var row = document.getElementById('wordRow');
+  row.innerHTML = '';
+  var fullWord = document.createElement('span');
+  fullWord.className = 'wordPart';
+  var beforeText = currentWord.before || '';
+  var afterText = currentWord.after || '';
+  fullWord.innerHTML = beforeText +
+    '<span class="dropZoneAnswer" style="display:inline;color:var(--indigo-2);font-weight:900;">' + parts[0] + '</span>' +
+    afterText +
+    '<span class="dropZoneAnswer" style="display:inline;color:var(--indigo-2);font-weight:900;">' + parts[1] + '</span>' +
+    ' <span style="font-size:13px;color:var(--muted);font-weight:700;">(' + grapheme + ')</span>';
+  row.appendChild(fullWord);
+}
+
+function tryAgain(){
+  document.getElementById('tryAgainBtn').classList.remove('visible');
+  hideFeedback();
+  var first = document.querySelector('.tile:not(:disabled)');
+  if(first) first.focus({preventScroll:true});
+}
+
+// ── "Why not?" — explain the grapheme the student picked ─────────
+// Position conventions follow the SPELD NSW Spelling Conventions Guide.
+// A rule is only used when it is true for this word; otherwise we show a
+// word from the game where the picked grapheme does spell this sound.
+var _SS_VOWELS = 'aeiou';
+// "Long A" -> "Long A sound", but "OR sound" stays "OR sound" (not "OR sound sound")
+function _ssSoundName(w){ return /sound/i.test(w.soundLabel) ? w.soundLabel : w.soundLabel + ' sound'; }
+// Need Advice: a 3-step ladder, gentlest first (WLHints getLadder). No line names the
+// word or the letters that fill its gap; tests/test-sound-sorter-hints.js checks every
+// word with every set of tiles the game can show.
+//  1. say it slowly, which sound, where the gap is
+//  2. rule one tile out with a spelling rule for that place in a word (only when at least
+//     3 tiles are still open), otherwise "picture it written down"
+//  3. a word from the game that spells the sound the same way, shown with its own gap
+//     (spelling by analogy), so the student still has to recall the letters
+function _ssWhere(w){ return !(w.before||'') ? 'at the start of the word' : (!(w.after||'') && w.grapheme.indexOf('_') === -1) ? 'at the end of the word' : 'in the middle of the word'; }
+function _ssPlace(w){ return !(w.before||'') ? 'start' : (!(w.after||'') && w.grapheme.indexOf('_') === -1) ? 'end' : 'middle'; }
+function _ssStrategyHint(){ return 'Say the word slowly, two or three times. Listen for the sound named under the word.'; }
+function _ssTilesOnScreen(){
+  return Array.prototype.map.call(document.querySelectorAll('#tilesRow .tile'), function(t){ return { g: t.dataset.grapheme, open: !t.disabled }; });
+}
+// A spelling rule that rules this tile out in this word (never used for the answer).
+function _ssRuleOut(w, p){
+  if(p === w.grapheme) return '';
+  var before = (w.before || '').toLowerCase(), after = (w.after || '').toLowerCase();
+  var split = w.grapheme.indexOf('_') !== -1;
+  var atStart = !before, atEnd = !after && !split;
+  var afterConsonant = after && _SS_VOWELS.indexOf(after[0]) === -1 && after[0] !== 'y';
+  var q = function(g){ return '"' + g + '"'; };
+  if(((p === 'ay' && w.sound === 'long-a') || (p === 'oy' && w.sound === 'oy')) && afterConsonant)
+    return q(p) + ' usually comes at the end of a word, like ' + (p === 'ay' ? 'play' : 'boy') + '. In this word a consonant comes after the sound.';
+  if((p === 'ai' || p === 'oi') && atEnd) return 'English words almost never end in ' + q(p) + ', and the gap is at the end.';
+  if(p === 'ck' || p === 'tch' || p === 'dge'){
+    var eg = p === 'ck' ? 'duck' : p === 'tch' ? 'catch' : 'bridge';
+    if(atStart) return 'No English word starts with ' + q(p) + ', and the gap is at the start.';
+    if(!_ssShortVowelBefore(before)) return q(p) + ' only comes straight after a short vowel, like ' + eg + '. In this word the sound just before the gap is not a short vowel.';
+  }
+  if(atStart && p.length === 2 && p[0] === p[1] && _SS_VOWELS.indexOf(p[0]) === -1) return 'No English word starts with a double letter like ' + q(p) + ', and the gap is at the start.';
+  if(p === 'j' && atEnd) return 'English words do not end in ' + q('j') + ', and the gap is at the end.';
+  return '';
+}
+// Real words for checking that a model word's gap has only one fair filling.
+// Loaded on the first Need Advice click (the third step is the one that uses it).
+var _ssDict = null, _ssDictLoading = false;
+function _ssLoadDict(){
+  if(_ssDict || _ssDictLoading) return; _ssDictLoading = true;
+  fetch('dictionary.txt').then(function(r){ return r.ok ? r.text() : ''; }).then(function(t){
+    var d = new Set(); t.split(/\r?\n/).forEach(function(x){ x = x.trim().toLowerCase(); if(x) d.add(x); }); _ssDict = d;
+  }).catch(function(){ _ssDictLoading = false; });
+}
+function _ssSpell(w, g){ var s = g.split('_'); return (w.before || '') + s[0] + (w.after || '') + (s[1] || ''); }
+function _ssTok(t){ return String(t || '').toLowerCase().match(/[a-z]+/g) || []; }
+// Words from the game with the same sound spelt the same way, best first. A model's gap
+// must not make a real word with any other tile on screen, and its clue must not name it.
+function _ssModelWords(w, tiles, dict){
+  var pool = (typeof WORDS !== 'undefined' ? WORDS : window.SOUND_SORTER_WORDS || []);
+  var rank = { starter:0, levelup:1, challenge:2 }, place = _ssPlace(w);
+  var known = dict || new Set(pool.map(function(x){ return x.word; }));
+  var out = [], seen = {};
+  for(var i = 0; i < pool.length; i++){
+    var m = pool[i];
+    if(m.sound !== w.sound || m.grapheme !== w.grapheme || m.word === w.word || seen[m.word] || m._spellingSetId || _SS_NOT_EXAMPLES[m.word]) continue;
+    if(/[A-Z]/.test(m.word)) continue; // names (Thames) make poor model words
+    if(_ssTok(m.clue).some(function(t){ return t === m.word || t === m.word + 's' || t === w.word; })) continue;
+    if(_ssTok(w.soundLabel).indexOf(m.word) !== -1) continue; // "OO (book)" already shows book
+    if(tiles.some(function(t){ return t.g !== w.grapheme && known.has(_ssSpell(m, t.g)); })) continue;
+    seen[m.word] = 1;
+    out.push({ m: m, key: [(_ssPlace(m) === place ? 0 : 1), (rank[m.level] ?? 3), m.word.length, m.word] });
+  }
+  out.sort(function(x, y){ for(var k = 0; k < 4; k++){ if(x.key[k] < y.key[k]) return -1; if(x.key[k] > y.key[k]) return 1; } return 0; });
+  return out.map(function(x){ return x.m; });
+}
+function _ssGapped(m){
+  var esc = function(x){ return WordLabData.escapeHtml(x || ''); };
+  var tail = m.grapheme.indexOf('_') !== -1 ? m.grapheme.split('_')[1] : '';
+  return '<b>' + esc(m.before) + '<span class="wlh-gap"></span>' + esc(m.after) + esc(tail) + '</b>';
+}
+// Many game words are everyday words (the, is, say, word, look, which), so each step has
+// a few wordings; use the first one that does not contain the word, its plural or the
+// model word. The sound's own name (Long E, TH sound) is already on screen, so it is not counted.
+function _ssClean(line, w, extra){
+  var t = line.replace(/<[^>]+>/g, ' ').replace(/&quot;/g, '"').replace(/&amp;/g, '&').toLowerCase().split(_ssSoundName(w).toLowerCase()).join(' ');
+  var toks = _ssTok(t), word = String(w.word).toLowerCase();
+  var bad = [word, word + 's'].concat(extra || []);
+  return !toks.some(function(x){ return bad.indexOf(x) !== -1; }) && t.indexOf('"' + w.grapheme.toLowerCase() + '"') === -1;
+}
+function _ssPick(variants, w, extra){
+  for(var i = 0; i < variants.length; i++) if(_ssClean(variants[i], w, extra)) return variants[i];
+  return '';
+}
+function _ssHintLadder(w, tiles){
+  if(!w) return [];
+  tiles = (tiles && tiles.length) ? tiles : [{ g: w.grapheme, open: true }];
+  var esc = WordLabData.escapeHtml;
+  var snd = '<b>' + esc(_ssSoundName(w)) + '</b>';
+  var place = _ssPlace(w);
+  var whereA = _ssWhere(w), whereB = { start:'at its start', middle:'in its middle', end:'at its end' }[place];
+  var lines = [];
+  // 1. Say it slowly, which sound, where the gap is
+  lines.push(_ssPick([
+    'Say the word slowly, two or three times. Listen for the ' + snd + '. The gap is ' + whereA + ', and the missing letters spell just that one sound.',
+    'Say it out loud, slowly. Can you hear the ' + snd + '? Missing letters go ' + whereB + '. They spell only one sound.',
+    'Sound it out slowly. Can you hear ' + snd + '? Missing letters go ' + whereB + '. They spell only one sound.',
+    'Sound it out slowly. Can you hear ' + snd + '? The gap is ' + whereB + ' and holds only that one sound.'
+  ], w));
+  // 2. Rule one open tile out, only when at least 3 are open (never leaves the answer alone)
+  var open = tiles.filter(function(t){ return t.open; });
+  var step2 = '';
+  if(open.length >= 3){
+    var wrong = open.map(function(t){ return t.g; }).filter(function(g){ return g !== w.grapheme; }).sort();
+    for(var i = 0; i < wrong.length && !step2; i++){
+      var rule = _ssRuleOut(w, wrong[i]);
+      if(rule) step2 = _ssPick(['Rule one out: <b>"' + esc(wrong[i]) + '"</b>. ' + esc(rule)], w);
+    }
+  }
+  lines.push(step2 || _ssPick([
+    'Put each tile in the gap in your head. Picture the whole word written down. Which one looks like the word you know?',
+    'Think of every tile in that gap, one by one. Which one makes a spelling you have seen before?',
+    'Imagine every tile in that gap. Pick one you have seen in other words.'
+  ], w));
+  // 3. Spelling by analogy: a word with the sound spelt the same way, shown with its own gap
+  var step3 = '', models = _ssModelWords(w, tiles, _ssDict);
+  for(var j = 0; j < models.length && !step3; j++){
+    var m = models[j], g = _ssGapped(m) + ' (' + esc(m.clue) + ')';
+    step3 = _ssPick([
+      'The ' + snd + ' is spelt the same way in ' + g + '. Which letters fill that gap? The same letters fill this one.',
+      g + ' has ' + snd + ' spelt like this one. Which letters go in its gap? Use them here too.',
+      'Think of ' + g + '. Its gap holds the ' + snd + ', spelt just as here. Which letters go there?',
+      'Think of ' + g + '. Whatever fills its gap fills this one too.'
+    ], w, [m.word, m.word + 's']);
+  }
+  if(!step3){
+    var len = w.grapheme.replace('_', '').length, n = ['', 'one letter', 'two letters', 'three letters', 'four letters'][len] || len + ' letters';
+    var same = w.grapheme.indexOf('_') === -1 && open.filter(function(t){ return t.g.indexOf('_') === -1 && t.g.length === len; }).length >= 2;
+    step3 = same ? _ssPick([
+      'Here the ' + snd + ' is spelt with ' + n + '. Which tiles have that many? Picture the word with each one.',
+      snd + ' uses ' + n + ' here. Which tiles have that many?'
+    ], w) : '';
+    step3 = step3 || _ssPick([
+      'This one is tricky. Think of another word you know with the ' + snd + ' ' + whereA.replace(' of the word', ' of a word') + '. How is it spelt there?',
+      'Tricky! Do you know other words with ' + snd + ' ' + whereB + '? Picture how they look.'
+    ], w);
+  }
+  lines.push(step3);
+  return lines;
+}
+function _ssShortVowelBefore(before){
+  // true when the sound comes straight after a single vowel letter (c-a-t, d-u-ck)
+  if(!before) return false;
+  var last = before.slice(-1), prev = before.slice(-2, -1);
+  return _SS_VOWELS.indexOf(last) !== -1 && (prev === '' || _SS_VOWELS.indexOf(prev) === -1);
+}
+// Never used as model words: 'tour' and 'detour' are said with the OR sound by many
+// Australians, and 'damn' is not a word to put in front of students.
+// The rest stay playable in the game but are never shown as a model in a why line or a
+// Need Advice hint: words about illness or death, and words too rare for a 10 year old
+// to recall the spelling of (a model only helps if the student already knows it).
+var _SS_NOT_EXAMPLES = { tour:1, detour:1, damn:1,
+  // illness, injury, death
+  diarrhoea:1, haemorrhage:1, cyst:1, rheumatism:1, die:1,
+  // too rare to help as a model
+  heifer:1, bureau:1, harangue:1, cavalier:1, kerchief:1, gnarl:1, laurel:1, jeopardy:1,
+  counterfeit:1, forfeit:1, sergeant:1, cologne:1, rouge:1, plaid:1, gateau:1, sleuth:1,
+  chalet:1, crochet:1, croquet:1, depot:1, hearth:1, ample:1, ounce:1, penny:1, cheque:1,
+  balm:1, oboe:1, lynx:1, catarrh:1, chaise:1, chateau:1, tableau:1, innate:1, chassis:1 };
+function _ssExampleFor(sound, grapheme, notWord){
+  var pool = (typeof WORDS !== 'undefined' ? WORDS : window.SOUND_SORTER_WORDS || []);
+  var rank = { starter:0, levelup:1, challenge:2 };
+  var best = null;
+  for(var i = 0; i < pool.length; i++){
+    var w = pool[i];
+    if(w.sound !== sound || w.grapheme !== grapheme || w.word === notWord || w._spellingSetId || _SS_NOT_EXAMPLES[w.word]) continue;
+    if(!best || (rank[w.level] ?? 3) < (rank[best.level] ?? 3) || ((rank[w.level] ?? 3) === (rank[best.level] ?? 3) && w.word.length < best.word.length)) best = w;
+  }
+  return best ? best.word : null;
+}
+function _ssWhyNot(picked){
+  var w = currentWord; if(!w || picked === w.grapheme) return '';
+  var before = (w.before || '').toLowerCase(), after = (w.after || '').toLowerCase();
+  var split = w.grapheme.indexOf('_') !== -1;
+  var atStart = !before, atEnd = !after && !split;
+  var afterConsonant = after && _SS_VOWELS.indexOf(after[0]) === -1 && after[0] !== 'y';
+  var q = function(g){ return '"' + g + '"'; };
+  var snd = _ssSoundName(w);
+  var lead = 'Why not ' + q(picked) + '? ';
+  var p = picked;
+  if(((p === 'ay' && w.sound === 'long-a') || (p === 'oy' && w.sound === 'oy')) && afterConsonant)
+    return lead + q(p) + ' usually goes at the end of a word, like ' + (p === 'ay' ? 'play' : 'boy') + '. In ' + w.word + ', a consonant comes after the sound.';
+  if((p === 'ai' || p === 'oi') && atEnd)
+    return lead + 'English words almost never end in ' + q(p) + '.' + ((w.grapheme === 'ay' || w.grapheme === 'oy') ? ' At the end of a word we use ' + q(w.grapheme) + ', like ' + (w.grapheme === 'ay' ? 'play' : 'boy') + '.' : '');
+  if(p === 'ck' || p === 'tch' || p === 'dge'){
+    var eg = p === 'ck' ? 'duck' : p === 'tch' ? 'catch' : 'bridge';
+    if(atStart) return lead + 'No English word starts with ' + q(p) + '. It only comes straight after a short vowel, like ' + eg + '.';
+    if(!_ssShortVowelBefore(before)){
+      var m = before.match(/[aeiouy]+$/);
+      var what = m ? q(m[0]) + ', which is not a short vowel' : 'the consonant ' + q(before.slice(-1));
+      return lead + q(p) + ' only comes straight after a short vowel, like ' + eg + '. In ' + w.word + ', the sound comes after ' + what + '.';
+    }
+  }
+  if(atStart && p.length === 2 && p[0] === p[1] && _SS_VOWELS.indexOf(p[0]) === -1)
+    return lead + 'No English word starts with a double letter like ' + q(p) + '.';
+  if(p === 'j' && atEnd)
+    return lead + 'English words do not end in ' + q('j') + '. At the end of a word we use ' + q('ge') + ' or ' + q('dge') + ', like page or bridge.';
+  var ex = _ssExampleFor(w.sound, p, w.word);
+  if(ex) return lead + q(p) + ' can spell the ' + snd + ', like in ' + ex + '. But ' + w.word + ' is spelled with ' + q(w.grapheme) + '. Tip: picture the word, or think of a word that looks like it.';
+  return lead + q(p) + ' does not spell the ' + snd + ' in ' + w.word + '.';
+}
+
+function nextWord(){
+  clearTimeout(autoNextTimer); autoNextTimer = null;
+  if(!_wltActive && _roundTotal && _roundAnswered >= _roundTotal && checked){ if(!document.getElementById('roundCompleteOverlay')) showRoundComplete(); return; }
+  loadWord();
+}
+
+document.getElementById('nextBtn').addEventListener('click', nextWord);
+document.getElementById('tryAgainBtn').addEventListener('click', tryAgain);
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+function speakWord(){
+  if(!currentWord) return;
+  // Use cloud TTS via WordLabData if available (high-quality Australian voice)
+  if(typeof WordLabData !== 'undefined' && WordLabData.speakInLanguage){
+    WordLabData.speakInLanguage(currentWord.word, 'en-AU'); return;
+  }
+  if(!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(currentWord.word);
+  utt.lang = 'en-AU'; utt.rate = 0.85;
+  var voices = window.speechSynthesis.getVoices();
+  var auVoice = voices.find(v => v.lang === 'en-AU' && v.name.indexOf('Google') !== -1) ||
+                voices.find(v => v.lang === 'en-AU' && v.name.indexOf('Enhanced') !== -1) ||
+                voices.find(v => v.lang === 'en-AU');
+  if(auVoice) utt.voice = auVoice;
+  window.speechSynthesis.speak(utt);
+}
+
+function showFeedback(type, title, explain, whyNot){
+  const panel = document.getElementById('feedbackPanel');
+  panel.className = 'feedbackPanel ' + type;
+  panel.style.display = 'block';
+  document.getElementById('feedbackTitle').textContent = title;
+  document.getElementById('feedbackExplain').textContent = explain;
+  var _wn = document.getElementById('feedbackWhyNot');
+  if(_wn){ _wn.textContent = whyNot || ''; _wn.hidden = !whyNot; }
+  // EALD reveal button
+  var ealdEl=document.getElementById('ealdTranslation');if(ealdEl){
+    if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&currentWord){
+      WordLabData.injectEALDStyles();
+      ealdEl.innerHTML=WordLabData.buildEALDRevealButton();
+      var cached=ealdEl.dataset.translatedWord;
+      if(cached){
+        var contentEl=document.getElementById('ealdTranslationContent');
+        if(contentEl) contentEl.innerHTML='<div class="eald-translation-pill"><span class="eald-flag">🌐</span> <b>'+WordLabData.escapeHtml(currentWord.word)+'</b> = '+WordLabData.escapeHtml(cached)+'</div>';
+      }
+    } else { ealdEl.innerHTML=''; }
+  }
+}
+
+function hideFeedback(){
+  const panel = document.getElementById('feedbackPanel');
+  panel.style.display = 'none';
+  panel.className = 'feedbackPanel';
+}
+
+function updateStats(){
+  document.getElementById('scorePill').textContent  = `Score: ${score}`;
+  document.getElementById('streakPill').textContent = `🔥 ${streak} streak`;
+  document.getElementById('statScore').textContent   = score;
+  document.getElementById('statCorrect').textContent = correctCount;
+  document.getElementById('statBest').textContent    = bestStreak;
+}
+
+function addHistory(word, grapheme, ok){
+  const list = document.getElementById('histList');
+  const ph = list.querySelector('div[style]');
+  if(ph) ph.remove();
+  const item = document.createElement('div');
+  item.className = `histItem ${ok ? 'correct' : 'wrong'}`;
+  item.innerHTML = `<span style="font-size:15px;">${ok?'✅':'❌'}</span><span class="histWord">${WordLabData.escapeHtml(word)}</span><span class="histGrapheme">"${WordLabData.escapeHtml(grapheme)}"</span>`;
+  list.insertBefore(item, list.firstChild);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════
+
+
+buildSoundPills();
+
+// The shared help and hints scripts are deferred, so they only exist once the page has loaded.
+document.addEventListener('DOMContentLoaded', function(){
+if(typeof WLHelp!=='undefined') WLHelp.init({
+  game:'sound-sorter', title:'Sound Sorter', emoji:'🔤',
+  steps:[
+    {icon:'🎯',title:'Choose your round',desc:'Pick how many words you want to practise: 10, 15, 20, 25 or 30. You will see your results at the end.'},
+    {icon:'👂',title:'Listen to the word',desc:'The word plays when it appears. Press Hear the word to hear it again.'},
+    {icon:'🔍',title:'Find the sound',desc:'Read the clue. Under the word it tells you the sound to listen for, like the OR sound. The gap in the word is where that sound goes.'},
+    {icon:'🎯',title:'Pick the letters',desc:'Tap the tile that spells that sound in this word. You can drag it into the gap too. On a keyboard, press Tab to reach a tile and Enter to pick it.'},
+    {icon:'💡',title:'Read why',desc:'After each answer you will see why. On Starter you get another go if you are wrong.'}
+  ],
+  audioText:'Choose how many words you want to practise: 10, 15, 20, 25 or 30. In Sound Sorter, you find the letters that spell a sound in a word. The word plays when it appears. Press Hear the word to hear it again. Read the clue. Under the word it tells you the sound to listen for, and the gap in the word is where that sound goes. Tap the tile that spells that sound in this word, or drag it into the gap. After each answer you will see why. On Starter you get another go if you are wrong.'
+});
+if(typeof WLHints!=='undefined') WLHints.register({
+  getStrategyHint: function(){ return _ssStrategyHint(); },
+  getLadder: function(){ _ssLoadDict(); return currentWord ? _ssHintLadder(currentWord, _ssTilesOnScreen()) : []; }
+});
+});
+
+(function(){var w=document.getElementById('particles');if(!w)return;var cs=['rgba(234,179,8,.3)','rgba(250,204,21,.25)','rgba(255,255,255,.2)'];for(var i=0;i<18;i++){var p=document.createElement('div');p.className='particle';p.style.cssText='left:'+(Math.random()*100)+'%;width:'+(6+Math.random()*8)+'px;height:'+(6+Math.random()*8)+'px;background:'+cs[Math.floor(Math.random()*cs.length)]+';animation-duration:'+(8+Math.random()*12)+'s;animation-delay:'+(-Math.random()*20)+'s;';w.appendChild(p);}})();
+(async function(){
+  if(typeof WLScientist==='undefined'){await new Promise(function(r){document.addEventListener('DOMContentLoaded',function(){r();},{once:true});});}
+  var w=document.getElementById('sciCharWrap');
+  if(!w||typeof WLScientist==='undefined')return;
+  function _p(svg){while(w.firstChild)w.removeChild(w.firstChild);w.appendChild(document.createRange().createContextualFragment(svg));}
+  _p(WLScientist.buildSVG({},'neutral'));
+  try{var sd=typeof WordLabData!=='undefined'?await WordLabData.getStudentData():null;if(sd&&sd.scientist)_p(WLScientist.buildSVG(sd.scientist,'neutral'));}catch(e){console.error('Scientist load failed',e);}
+})();
+
+// ── Word Labs login (shared) ──────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async function() {
+  // Daily limit check
+  if(typeof WordLabData !== 'undefined' && WordLabData.getSession()){
+    try {
+      const limit = await WordLabData.checkDailyLimit();
+      if(limit && limit.blocked){
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(13,11,26,.92);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = '<div style="background:#1a1630;border:2px solid #4338ca;border-radius:24px;padding:40px;max-width:440px;text-align:center;color:#e0e7ff;font-family:Lexend,sans-serif;"><div style="font-size:48px;margin-bottom:16px;">🧪</div><h2 style="font-size:22px;font-weight:900;margin-bottom:12px;">Daily limit reached</h2><p style="color:#94a3b8;font-size:14px;margin-bottom:24px;">You\\\'ve completed 30 questions today on the free plan. Come back tomorrow or ask your teacher about upgrading.</p><a href="landing.html" style="background:#4338ca;color:#fff;padding:12px 24px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px;">Back to Home</a></div>';
+        document.body.appendChild(overlay);
+        return;
+      }
+    } catch(e) { console.warn('Daily limit check failed', e); }
+  }
+
+  if(typeof WordLabData !== 'undefined') {
+    WordLabData.initLoginUI({
+      accentColor: '#0d9488',
+      accentSoft:  '#f0fdfa',
+      accentLine:  '#99f6e4',
+      accentText:  '#134e4a',
+      onLogin: function() { location.reload(); }
+    });
+    var session = WordLabData.getSession();
+    var btn = document.getElementById('wlLoginBtn');
+    if(btn && session) btn.textContent = '👤 ' + session.studentName;
+  }
+  if(typeof WordLabData !== 'undefined' && WordLabData.isExtensionMode && WordLabData.isExtensionMode('sound-sorter')){
+    var extPill = document.createElement('div');
+    extPill.style.cssText = 'background:#4338ca;color:#e0e7ff;font-size:10px;font-weight:900;padding:4px 10px;border-radius:20px;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;';
+    extPill.textContent = '🔬 Extension';
+    var hud = document.querySelector('.hud, .headerInner, header .innerHud');
+    if(hud) hud.appendChild(extPill);
+  }
+});
+</script>
+
+<footer style="text-align:center;padding:12px 16px;font-size:11px;color:#64748b;border-top:1px solid #e2e8f0;margin-top:auto;font-family:Lexend,sans-serif;">&#129514; Word Labs &middot; <a href="about.html" style="color:#64748b;">About</a> &middot; <a href="privacy.html" style="color:#64748b;">Privacy Policy</a> &middot; <a href="terms.html" style="color:#64748b;">Terms of Service</a> &middot; <a href="mailto:nick@wordlabs.app" style="color:#64748b;">Contact</a></footer>
+</body>
+</html>

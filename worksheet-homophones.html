@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Word Labs – Homophone Hunter Worksheet</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#f0f4ff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b;
+      --indigo:#4338ca; --indigo-2:#6366f1; --indigo-soft:#eef2ff;
+      --green:#16a34a; --green-soft:#f0fdf4; --green-line:#bbf7d0;
+      --orange:#ea580c; --orange-soft:#fff7ed; --orange-line:#fed7aa;
+      --ok:#15803d; --bad:#dc2626;
+      --teal:#0d9488; --teal-soft:#f0fdfa; --teal-line:#99f6e4;
+      --purple:#7c3aed; --purple-soft:#f5f3ff; --purple-line:#ddd6fe;
+      --slate:#475569; --slate-light:#e2e8f0; --slate-mid:#94a3b8;
+      --amber:#d97706; --amber-soft:#fef3c7; --amber-line:#fcd34d;
+      --pink:#db2777; --pink-soft:#fdf2f8; --pink-line:#f9a8d4;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Lexend',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;}
+    button,input,select{font:inherit;}
+
+    .header{background:#fff;border-bottom:1px solid var(--line);padding:12px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;box-shadow:0 1px 4px rgba(15,23,42,.06);}
+    .brandIcon{width:40px;height:40px;border-radius:11px;background:var(--indigo);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto;}
+    .brandText h1{font-size:18px;font-weight:900;color:#312e81;letter-spacing:-.02em;}
+    .brandText .sub{font-size:9px;text-transform:uppercase;letter-spacing:.22em;color:var(--indigo-2);font-weight:800;}
+    .headerBadge{margin-left:auto;background:var(--indigo-soft);color:var(--indigo);border:1px solid #c7d2fe;border-radius:999px;padding:4px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;}
+
+    .main{display:flex;flex:1;overflow:hidden;}
+    .sidebar{width:300px;flex-shrink:0;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;}
+    .sideInner{padding:16px;flex:1;overflow-y:auto;}
+    .section{margin-bottom:18px;}
+    .sectionLabel{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.22em;color:var(--indigo-2);margin-bottom:8px;}
+
+    .radioGroup{display:flex;flex-direction:column;gap:5px;}
+    .radioGroup label{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);border-radius:9px;padding:7px 11px;cursor:pointer;font-size:12px;font-weight:700;color:var(--slate);transition:all .12s;}
+    .radioGroup label:has(input:checked){border-color:var(--indigo-2);background:var(--indigo-soft);color:var(--indigo);}
+    .radioGroup input[type=radio]{accent-color:var(--indigo);flex-shrink:0;}
+    .radioGroup label .hint{font-size:10px;font-weight:600;color:#94a3b8;margin-left:auto;}
+    .radioGroup label:has(input:checked) .hint{color:var(--indigo-2);}
+
+    .stepper{display:flex;align-items:center;border:1.5px solid var(--line);border-radius:9px;overflow:hidden;width:fit-content;}
+    .stepperBtn{width:32px;height:32px;border:none;background:#f8fafc;cursor:pointer;font-size:14px;font-weight:700;color:var(--slate);transition:background .12s;}
+    .stepperBtn:hover{background:var(--indigo-soft);color:var(--indigo);}
+    .stepperVal{width:38px;text-align:center;font-size:13px;font-weight:800;border:none;border-left:1.5px solid var(--line);border-right:1.5px solid var(--line);height:32px;background:#fff;}
+
+    .toggleRow{display:flex;align-items:center;justify-content:space-between;padding:7px 0;}
+    .toggleRow+.toggleRow{border-top:1px solid var(--line);}
+    .toggleLabel{font-size:12px;font-weight:700;color:var(--slate);}
+    .toggleSub{font-size:10px;color:#94a3b8;font-weight:600;}
+    .toggle{position:relative;width:38px;height:21px;flex-shrink:0;}
+    .toggle input{opacity:0;width:0;height:0;}
+    .toggleSlider{position:absolute;inset:0;background:#e2e8f0;border-radius:999px;cursor:pointer;transition:background .15s;}
+    .toggleSlider::before{content:'';position:absolute;width:15px;height:15px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .15s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+    .toggle input:checked+.toggleSlider{background:var(--indigo);}
+    .toggle input:checked+.toggleSlider::before{transform:translateX(17px);}
+
+    .sideFooter{padding:14px 16px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:7px;background:#fff;flex-shrink:0;}
+    .btnGenerate{background:var(--indigo);color:#fff;border:none;border-radius:11px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;width:100%;}
+    .btnGenerate:hover{background:#3730a3;}
+    .btnRegen{background:#fff;color:var(--indigo);border:1.5px solid var(--indigo-2);border-radius:11px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;width:100%;display:none;}
+    .btnRegen:hover{background:var(--indigo-soft);}
+    .btnPrint{background:#0f172a;color:#fff;border:none;border-radius:11px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;width:100%;display:none;}
+    .btnPrint:hover{background:#1e293b;}
+
+    .preview{flex:1;overflow-y:auto;padding:24px;background:var(--bg);}
+    .previewEmpty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:#94a3b8;text-align:center;}
+    .previewEmpty .icon{font-size:44px;opacity:.35;}
+    .previewEmpty .msg{font-size:14px;font-weight:700;}
+    .previewEmpty .sub{font-size:12px;font-weight:600;}
+
+    /* ── WORKSHEET ───────────────────────────────────────────── */
+    .worksheet{background:#fff;border-radius:14px;border:1px solid var(--line);padding:26px;box-shadow:0 3px 12px rgba(15,23,42,.06);max-width:860px;margin:0 auto;}
+    .ws-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:13px;border-bottom:2px solid #e2e8f0;}
+    .ws-logo{display:flex;align-items:center;gap:9px;}
+    .ws-logo-icon{width:32px;height:32px;border-radius:8px;background:#4338ca;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex:0 0 auto;}
+    .ws-logo-text{font-size:13px;font-weight:900;color:#312e81;}
+    .ws-logo-sub{font-size:8px;text-transform:uppercase;letter-spacing:.2em;color:#6366f1;font-weight:800;}
+    .ws-meta{text-align:right;}
+    .ws-meta-label{font-size:8px;text-transform:uppercase;letter-spacing:.16em;color:#94a3b8;font-weight:800;margin-bottom:3px;}
+    .ws-meta-line{display:flex;align-items:center;gap:7px;justify-content:flex-end;margin-bottom:3px;font-size:10px;font-weight:700;color:#475569;}
+    .ws-meta-field{border-bottom:1.5px solid #94a3b8;min-width:90px;height:15px;display:inline-block;}
+    .ws-title{font-size:16px;font-weight:900;color:#312e81;margin-bottom:2px;}
+    .ws-subtitle{font-size:10px;color:#64748b;font-weight:600;margin-bottom:12px;}
+    .ws-instructions{background:#eef2ff;border:1.5px solid #c7d2fe;border-radius:8px;padding:8px 13px;margin-bottom:16px;font-size:11px;color:#4338ca;font-weight:700;line-height:1.6;}
+
+    /* homophone pair header */
+    .pair-block{margin-bottom:16px;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;}
+    .pair-header{background:#312e81;padding:7px 14px;display:flex;align-items:center;justify-content:space-between;}
+    .pair-num{font-size:10px;font-weight:900;color:#c7d2fe;}
+    .pair-words{display:flex;gap:8px;align-items:center;}
+    .pair-word{background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.25);border-radius:7px;padding:3px 10px;font-size:13px;font-weight:900;color:#fff;}
+    .pair-sep{font-size:11px;color:#c7d2fe;font-weight:700;}
+    .pair-explain{background:#f5f3ff;padding:5px 14px;font-size:10px;font-weight:700;color:#5b21b6;border-bottom:1.5px solid var(--purple-line);}
+
+    /* sentences */
+    .sentences{padding:10px 14px;display:flex;flex-direction:column;gap:8px;}
+    .sentence-row{display:flex;align-items:flex-start;gap:10px;}
+    .sentence-num{font-size:9px;font-weight:900;color:#94a3b8;min-width:14px;padding-top:2px;}
+    .sentence-text{font-size:12px;font-weight:700;color:#1e293b;flex:1;line-height:1.6;}
+    .sentence-blank{display:inline-block;border-bottom:1.5px solid #475569;min-width:60px;height:16px;vertical-align:bottom;margin:0 2px;}
+    .sentence-options{display:flex;gap:6px;flex-shrink:0;align-items:center;}
+    .sentence-option{border:1.5px solid var(--line);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:800;color:var(--slate);background:#f8fafc;}
+
+    /* answer key */
+    .ws-key{margin-top:16px;padding-top:14px;border-top:2px dashed #e2e8f0;}
+    .ws-key-title{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.18em;color:#dc2626;margin-bottom:10px;}
+    .ws-key-pair{margin-bottom:8px;}
+    .ws-key-pair-title{font-size:9px;font-weight:900;color:#312e81;margin-bottom:3px;}
+    .ws-key-answers{display:flex;flex-wrap:wrap;gap:3px 16px;}
+    .ws-key-item{font-size:10px;font-weight:700;color:#475569;}
+    .ws-key-item span{color:#0f172a;font-weight:900;}
+
+    @media print {
+      body{display:block;height:auto;}
+      .header,.sidebar{display:none!important;}
+      .main{display:block;}
+      .preview{padding:0;overflow:visible;}
+      .previewEmpty{display:none;}
+      .worksheet{border:none;border-radius:0;box-shadow:none;padding:10px 14px;max-width:none;}
+      .ws-key{page-break-before:always;border-top:none;padding-top:20px;}
+      @page{size:A4;margin:10mm 12mm;}
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brandIcon">🔬</div>
+  <div class="brandText">
+    <h1>Word Labs</h1>
+    <span class="sub">Worksheet Generator</span>
+  </div>
+  <div class="headerBadge">Homophone Hunter</div>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sideInner">
+
+      <div class="section">
+        <div class="sectionLabel">Word pool</div>
+        <div class="radioGroup">
+          <label><input type="radio" name="pool" value="standard" checked> Standard <span class="hint">everyday words</span></label>
+          <label><input type="radio" name="pool" value="extension"> Extension <span class="hint">academic words</span></label>
+          <label><input type="radio" name="pool" value="mixed"> Mixed</label>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sectionLabel">Morpheme Focus</div>
+        <div class="radioGroup">
+          <label><input type="radio" name="morphfocus" value="none" checked onchange="toggleMorphFocus()"> All words (randomised)</label>
+          <label><input type="radio" name="morphfocus" value="prefix" onchange="toggleMorphFocus()"> Prefix focus <span class="hint">e.g. un-, re-</span></label>
+          <label><input type="radio" name="morphfocus" value="suffix" onchange="toggleMorphFocus()"> Suffix focus <span class="hint">e.g. -ful, -ness</span></label>
+        </div>
+        <div id="morphPickerWrap" style="display:none;margin-top:8px;">
+          <select id="morphSelect" onchange="updateMorphMatchCount()" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;"></select>
+          <div id="morphMatchCount" style="font-size:10px;font-weight:600;color:#94a3b8;margin-top:4px;"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sectionLabel">Sentences per pair</div>
+        <div class="stepper">
+          <button class="stepperBtn" onclick="stepSentences(-1)">−</button>
+          <input type="number" class="stepperVal" id="sentenceCount" min="2" max="6" value="3" readonly>
+          <button class="stepperBtn" onclick="stepSentences(1)">+</button>
+        </div>
+        <div style="font-size:10px;font-weight:600;color:#94a3b8;margin-top:5px;">Sentences are randomly selected from the pool for each pair</div>
+      </div>
+
+      <div class="section">
+        <div class="sectionLabel">Number of pairs</div>
+        <div class="stepper">
+          <button class="stepperBtn" onclick="stepCount(-1)">−</button>
+          <input type="number" class="stepperVal" id="pairCount" min="2" max="8" value="4" readonly>
+          <button class="stepperBtn" onclick="stepCount(1)">+</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sectionLabel">Answer format</div>
+        <div class="radioGroup">
+          <label><input type="radio" name="format" value="options" checked> Options shown <span class="hint">circle correct word</span></label>
+          <label><input type="radio" name="format" value="blank"> Blank only <span class="hint">write from memory</span></label>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="sectionLabel">Extras</div>
+        <div class="toggleRow">
+          <div><div class="toggleLabel">Show explanation</div><div class="toggleSub">Difference between each pair</div></div>
+          <label class="toggle"><input type="checkbox" id="toggleExplain" checked><span class="toggleSlider"></span></label>
+        </div>
+        <div class="toggleRow">
+          <div><div class="toggleLabel">Answer key</div><div class="toggleSub">Teacher copy, separate page</div></div>
+          <label class="toggle"><input type="checkbox" id="toggleKey" checked><span class="toggleSlider"></span></label>
+        </div>
+      </div>
+
+      <!-- LANGUAGE SUPPORT -->
+      <div class="section">
+        <div class="sectionLabel">Language Support</div>
+        <div class="toggleRow">
+          <div><div class="toggleLabel">Translate words</div><div class="toggleSub">Add home language column</div></div>
+          <label class="toggle"><input type="checkbox" id="toggleTranslate" onchange="toggleLangSelect()"><span class="toggleSlider"></span></label>
+        </div>
+        <div id="langSelectWrap" style="display:none;margin-top:6px;">
+          <select id="langSelect" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;"></select>
+        </div>
+      </div>
+
+    </div>
+    <div class="sideFooter">
+      <button class="btnGenerate" onclick="generateWorksheet()">⚡ Generate Worksheet</button>
+      <button class="btnRegen" id="regenBtn" onclick="generateWorksheet()">🔄 Regenerate</button>
+      <button class="btnPrint" id="printBtn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+    </div>
+  </div>
+
+  <div class="preview">
+    <div class="previewEmpty" id="previewEmpty">
+      <div class="icon">👂</div>
+      <div class="msg">Your Homophone Hunter worksheet will appear here</div>
+      <div class="sub">Configure options on the left, then hit Generate</div>
+    </div>
+    <div id="worksheetOutput" style="display:none;"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="worksheet-common.js"></script>
+<script defer src="data.js"></script>
+<script>
+const HOMOPHONES = [
+  {group:['there','their','they\'re'], stage:'s2l', explain:'there = place, their = belonging to them, they\'re = they are', sentences:[
+    {s:'I think ___ going to the park after school.', a:'they\'re', why:'Short for "they are going"'},
+    {s:'The students left ___ bags in the classroom.', a:'their', why:'The bags belong to them'},
+    {s:'Put the books over ___ on the shelf.', a:'there', why:'Refers to a place'},
+    {s:'Is ___ a canteen at your new school?', a:'there', why:'"Is there" asks if something exists'},
+    {s:'Mum says ___ always the first to arrive at netball.', a:'they\'re', why:'Short for "they are always"'},
+    {s:'The children packed ___ lunches carefully.', a:'their', why:'The lunches belong to them'},
+  ]},
+  {group:['to','too','two'], stage:'s2e', explain:'to = direction/purpose, too = also/excessively, two = the number 2', sentences:[
+    {s:'She walked ___ the shops with her mum.', a:'to', why:'Direction: walking towards'},
+    {s:'That bag is ___ heavy for me to carry.', a:'too', why:'Means more than is wanted'},
+    {s:'I have ___ brothers and one sister.', a:'two', why:'The number 2'},
+    {s:'Can I come ___?', a:'too', why:'Means "also" or "as well"'},
+    {s:'We need ___ go home before dark.', a:'to', why:'Purpose: in order to go'},
+    {s:'There are ___ slices of cake left.', a:'two', why:'The number 2'},
+  ]},
+  {group:['wear','where'], stage:'s2l', explain:'wear = put on clothing, where = a place/location', sentences:[
+    {s:'Can you tell me ___ you put my lunchbox?', a:'where', why:'Asking about a place'},
+    {s:'I need to ___ my school uniform today.', a:'wear', why:'Putting on clothing'},
+    {s:'Do you know ___ the library is?', a:'where', why:'Asking about a place'},
+    {s:'What will you ___ to the school disco?', a:'wear', why:'Choosing clothing'},
+    {s:'You must ___ a hat when you play outside in summer.', a:'wear', why:'Having a hat on'},
+    {s:'This is the beach ___ we saw the dolphins.', a:'where', why:'Tells which place'},
+  ]},
+  {group:['right','write'], stage:'s2e', explain:'right = correct or direction, write = to put words on paper', sentences:[
+    {s:'Turn ___ at the traffic lights.', a:'right', why:'A direction: opposite of left'},
+    {s:'Please ___ your name at the top of the page.', a:'write', why:'Putting words on paper'},
+    {s:'That is the ___ answer. Well done!', a:'right', why:'Means correct'},
+    {s:'I need to ___ a letter to Grandma.', a:'write', why:'Creating a letter with words'},
+    {s:'Every child has the ___ to go to school.', a:'right', why:'Something every child is allowed to have', m:'something you are allowed to do or have, like your rights'},
+    {s:'Can you ___ a story about a koala?', a:'write', why:'Putting a story into words'},
+  ]},
+  {group:['here','hear'], stage:'s2e', explain:'here = this place, hear = to listen/detect sound', sentences:[
+    {s:'Come over ___ and sit down.', a:'here', why:'Refers to this place'},
+    {s:'I can ___ the kookaburras laughing outside.', a:'hear', why:'Detecting sound with ears'},
+    {s:'Can you ___ what the teacher is saying?', a:'hear', why:'Listening to words'},
+    {s:'The treasure is buried right ___.', a:'here', why:'At this place'},
+    {s:'Please speak up. I can\'t ___ you.', a:'hear', why:'Listening with your ears'},
+    {s:'Is anyone sitting ___, or can I have this seat?', a:'here', why:'This place'},
+  ]},
+  {group:['see','sea'], stage:'s2e', explain:'see = to look/view, sea = the ocean', sentences:[
+    {s:'We went swimming in the ___ during the holidays.', a:'sea', why:'The ocean'},
+    {s:'I can ___ the mountains from my window.', a:'see', why:'To look with your eyes'},
+    {s:'The ___ was rough and the waves were huge.', a:'sea', why:'The ocean was stormy'},
+    {s:'Let me ___ if I can find your pencil case.', a:'see', why:'To check or look for'},
+    {s:'Put on your glasses so you can ___ the board.', a:'see', why:'To look with your eyes'},
+    {s:'The ___ water tasted very salty.', a:'sea', why:'Water from the ocean'},
+  ]},
+  {group:['plain','plane'], stage:'s2l', explain:'plain = simple/flat, plane = aircraft or flat surface', sentences:[
+    {s:'The ___ flew high above the clouds.', a:'plane', why:'An aircraft'},
+    {s:'She wore a ___ white shirt with no pattern.', a:'plain', why:'Simple, without decoration'},
+    {s:'We watched the ___ take off from the runway.', a:'plane', why:'An aircraft taking off'},
+    {s:'I like ___ toast with nothing on it.', a:'plain', why:'Simple, with nothing added'},
+    {s:'We caught a ___ from Sydney to Perth.', a:'plane', why:'An aircraft you travel in'},
+    {s:'The instructions were written in ___ English so everyone could understand.', a:'plain', why:'Simple and easy to understand', m:'simple and easy to understand'},
+  ]},
+  {group:['knight','night'], stage:'s2l', explain:'knight = armoured warrior, night = after sunset', sentences:[
+    {s:'The ___ wore shining armour and rode a horse.', a:'knight', why:'A warrior from long ago'},
+    {s:'The stars come out at ___.', a:'night', why:'The time after sunset'},
+    {s:'A brave ___ protected the castle from invaders.', a:'knight', why:'A warrior defending the castle'},
+    {s:'We stayed up late into the ___ reading stories.', a:'night', why:'The dark hours'},
+    {s:'The ___ knelt in front of the queen.', a:'knight', why:'A soldier who served the queen'},
+    {s:'Owls hunt for food at ___.', a:'night', why:'The dark time after sunset'},
+  ]},
+  {group:['flower','flour'], stage:'s2l', explain:'flower = a plant bloom, flour = powder for baking', sentences:[
+    {s:'She picked a beautiful ___ from the garden.', a:'flower', why:'A bloom from a plant'},
+    {s:'We need ___ to bake a cake.', a:'flour', why:'Powder used in baking'},
+    {s:'The ___ smelled lovely in the sunshine.', a:'flower', why:'A plant bloom'},
+    {s:'Sift the ___ into the mixing bowl carefully.', a:'flour', why:'A baking ingredient'},
+    {s:'A waratah is a bright red ___.', a:'flower', why:'A bloom from a plant'},
+    {s:'Dad dusted the bench with ___ before rolling the dough.', a:'flour', why:'Powder used in baking'},
+  ]},
+  {group:['weather','whether'], stage:'s3e', explain:'weather = climate conditions, whether = if (a choice)', sentences:[
+    {s:'The ___ forecast says it will rain tomorrow.', a:'weather', why:'Rain, sun and wind outside'},
+    {s:'I don\'t know ___ to bring a jumper or not.', a:'whether', why:'Showing a choice between options'},
+    {s:'The ___ has been sunny all week.', a:'weather', why:'Rain, sun and wind outside'},
+    {s:'She asked ___ we wanted pizza or pasta for dinner.', a:'whether', why:'Giving two options'},
+    {s:'We will check ___ the pool is open today.', a:'whether', why:'Means "if"'},
+    {s:'Hot, dry ___ makes bushfires more likely.', a:'weather', why:'Rain, sun and wind outside'},
+  ]},
+  {group:['mail','male'], stage:'s2l', explain:'mail = letters/parcels, male = a boy or man', sentences:[
+    {s:'The ___ arrived late this morning.', a:'mail', why:'Letters and parcels delivered'},
+    {s:'A ___ lion has a big mane around its face.', a:'male', why:'A boy lion'},
+    {s:'I sent the letter by ___ yesterday.', a:'mail', why:'The postal system'},
+    {s:'The ___ peacock has the colourful feathers.', a:'male', why:'A boy peacock'},
+    {s:'A ___ kangaroo is called a boomer.', a:'male', why:'A boy kangaroo'},
+    {s:'Check the letterbox to see if any ___ has come.', a:'mail', why:'Letters and parcels'},
+  ]},
+  {group:['sail','sale'], stage:'s2l', explain:'sail = travel by wind on water, sale = selling at reduced price', sentences:[
+    {s:'The boat raised its ___ and set off across the harbour.', a:'sail', why:'The cloth that catches the wind'},
+    {s:'Everything in the shop was on ___ at half price!', a:'sale', why:'Being sold for less money'},
+    {s:'We went for a ___ around the bay in a yacht.', a:'sail', why:'A trip on a boat with sails'},
+    {s:'The garage ___ raised over two hundred dollars.', a:'sale', why:'An event where things are sold'},
+    {s:'The wind filled the ___ and the boat sped up.', a:'sail', why:'The cloth that catches the wind'},
+    {s:'Our neighbours have put their house up for ___.', a:'sale', why:'Being sold'},
+  ]},
+  {group:['tail','tale'], stage:'s2e', explain:'tail = an animal’s tail, tale = a story', sentences:[
+    {s:'The dog wagged its ___ happily when we got home.', a:'tail', why:'The body part dogs wag'},
+    {s:'Grandad told us a ___ about growing up on a farm.', a:'tale', why:'A story'},
+    {s:'A fairy ___ often has a happy ending.', a:'tale', why:'A type of story'},
+    {s:'The cat flicked its ___ back and forth.', a:'tail', why:'The cat\'s tail'},
+    {s:'A possum can hang from a branch by its ___.', a:'tail', why:'The possum\'s tail'},
+    {s:'The old ___ was about a clever fox and a crow.', a:'tale', why:'A story'},
+  ]},
+  {group:['bare','bear'], stage:'s2l', explain:'bare = uncovered/empty, bear = the animal or to carry/endure', sentences:[
+    {s:'A grizzly ___ lives in the forest and catches salmon.', a:'bear', why:'The large furry animal'},
+    {s:'The cupboard was completely ___ with nothing inside.', a:'bare', why:'Empty, with nothing in it'},
+    {s:'He walked across the grass in ___ feet.', a:'bare', why:'Uncovered: no shoes'},
+    {s:'I couldn\'t ___ the freezing cold any longer.', a:'bear', why:'To put up with'},
+    {s:'In winter the trees were ___, with no leaves left.', a:'bare', why:'Uncovered, with nothing on them'},
+    {s:'A koala is not a real ___. It is a marsupial.', a:'bear', why:'The large furry animal'},
+  ]},
+  {group:['whole','hole'], stage:'s2l', explain:'whole = complete/entire, hole = an opening or gap', sentences:[
+    {s:'The rabbit dug a deep ___ under the fence.', a:'hole', why:'An opening in the ground'},
+    {s:'She ate the ___ pizza by herself, every slice!', a:'whole', why:'The entire thing'},
+    {s:'There was a ___ in my sock and my toe poked through.', a:'hole', why:'A gap in the fabric'},
+    {s:'The ___ class went on the excursion together.', a:'whole', why:'The entire class: everyone'},
+    {s:'The golfer hit the ball straight into the ___.', a:'hole', why:'A gap in the ground'},
+    {s:'We spent the ___ day at the beach.', a:'whole', why:'The entire day'},
+  ]},
+  {group:['peace','piece'], stage:'s2l', explain:'peace = calm/no conflict, piece = a part of something', sentences:[
+    {s:'Can I have a ___ of cake, please?', a:'piece', why:'A slice or part'},
+    {s:'After the long war, there was finally ___ in the land.', a:'peace', why:'No more fighting'},
+    {s:'She needed some ___ and quiet to finish her homework.', a:'peace', why:'Calm, without noise'},
+    {s:'A ___ of the jigsaw puzzle is missing from the box.', a:'piece', why:'One part of a larger whole'},
+    {s:'Please put each ___ of rubbish in the bin.', a:'piece', why:'One bit of something'},
+    {s:'A white dove is often used as a sign of ___.', a:'peace', why:'No fighting'},
+  ]},
+  {group:['wait','weight'], stage:'s2l', explain:'wait = stay/pause, weight = how heavy something is', sentences:[
+    {s:'Please ___ here until I come back.', a:'wait', why:'To stay in place'},
+    {s:'The ___ of the suitcase was too much for the flight.', a:'weight', why:'How heavy it is'},
+    {s:'I can\'t ___ for the holidays to start!', a:'wait', why:'To be patient until then'},
+    {s:'She checked the ___ of the parcel before posting it.', a:'weight', why:'How heavy it is'},
+    {s:'We had to ___ in a long line for the waterslide.', a:'wait', why:'To stay until it is your turn'},
+    {s:'The vet checked the puppy\'s ___ on the scales.', a:'weight', why:'How heavy it is'},
+  ]},
+  {group:['pour','paw','poor'], stage:'s2l', explain:'pour = flow liquid, paw = animal foot, poor = not wealthy or unfortunate', sentences:[
+    {s:'Can you ___ me a glass of water, please?', a:'pour', why:'To make liquid flow from a container'},
+    {s:'The dog hurt its front ___ on a sharp stone.', a:'paw', why:'An animal\'s foot'},
+    {s:'The ___ kitten was shivering in the cold rain.', a:'poor', why:'Unlucky, so we feel sorry for it'},
+    {s:'Be careful not to ___ too much milk on your cereal.', a:'pour', why:'To make liquid flow'},
+    {s:'The cat licked its ___ clean.', a:'paw', why:'An animal\'s foot'},
+    {s:'The ___ bird had hurt its wing.', a:'poor', why:'Unlucky, so we feel sorry for it'},
+  ]},
+  {group:['no','know'], stage:'s2e', explain:'no = negative, know = to understand or be aware of', sentences:[
+    {s:'Do you ___ where the scissors are?', a:'know', why:'To be aware of something'},
+    {s:'There are ___ more biscuits left in the tin.', a:'no', why:'None left at all'},
+    {s:'I ___ the answer to that maths question!', a:'know', why:'To have the answer in your head'},
+    {s:'Mum said ___ when I asked to stay up late.', a:'no', why:'The opposite of yes'},
+    {s:'Did you ___ that echidnas lay eggs?', a:'know', why:'To be aware of a fact'},
+    {s:'There was ___ one home when we knocked.', a:'no', why:'Not any: nobody'},
+  ]},
+  {group:['brake','break'], stage:'s2l', explain:'brake = to slow down, break = to snap/damage or a pause', sentences:[
+    {s:'Press the ___ pedal to stop the car safely.', a:'brake', why:'The part that slows a vehicle'},
+    {s:'Be careful not to ___ the glass ornament.', a:'break', why:'To snap or damage'},
+    {s:'We had a short ___ for morning tea.', a:'break', why:'A pause or rest time'},
+    {s:'The bike ___ wasn\'t working, so he couldn\'t stop.', a:'brake', why:'The part for stopping'},
+    {s:'Lunch ___ starts at one o\'clock.', a:'break', why:'A rest time'},
+    {s:'The train driver put on the ___ as we came into the station.', a:'brake', why:'The part that slows the train'},
+  ]},
+  {group:['son','sun'], stage:'s2e', explain:'son = male child, sun = the star in the sky', sentences:[
+    {s:'The ___ was shining brightly on the first day of summer.', a:'sun', why:'The star that gives us light'},
+    {s:'She introduced her ___ to the new teacher.', a:'son', why:'A male child'},
+    {s:'Don\'t look straight at the ___. It can hurt your eyes.', a:'sun', why:'The bright star in the sky'},
+    {s:'Their ___ scored the winning goal in the grand final.', a:'son', why:'Their male child'},
+    {s:'Always wear sunscreen when you play in the ___.', a:'sun', why:'The bright star in the sky'},
+    {s:'Mr Lee\'s ___ is in Year 2.', a:'son', why:'A male child'},
+  ]},
+  {group:['won','one'], stage:'s2e', explain:'won = past tense of win, one = the number 1', sentences:[
+    {s:'She ___ first prize in the art competition.', a:'won', why:'Past tense of "win"'},
+    {s:'There is only ___ slice of pizza left.', a:'one', why:'The number 1'},
+    {s:'Our team ___ the grand final by three points!', a:'won', why:'Past tense of "win"'},
+    {s:'Choose ___ book from the library shelf.', a:'one', why:'A single book: the number 1'},
+    {s:'Our class ___ the trophy for reading the most books.', a:'won', why:'Past tense of "win"'},
+    {s:'I can only find ___ sock. Where is the other?', a:'one', why:'The number 1'},
+  ]},
+  {group:['aloud','allowed'], stage:'s3e', explain:'aloud = out loud with voice, allowed = permitted', sentences:[
+    {s:'She read the poem ___ to the whole class.', a:'aloud', why:'Using her voice, not reading silently'},
+    {s:'We\'re not ___ to run in the corridors.', a:'allowed', why:'Not permitted: against the rules'},
+    {s:'He said his thoughts ___ without meaning to.', a:'aloud', why:'Out loud, not just thinking'},
+    {s:'Are dogs ___ in this park?', a:'allowed', why:'Are they permitted here?'},
+    {s:'Mobile phones are not ___ in class.', a:'allowed', why:'Not permitted'},
+    {s:'Read the instructions ___ so everyone can hear.', a:'aloud', why:'Out loud with your voice'},
+  ]},
+  {group:['passed','past'], stage:'s3e', explain:'passed = went by (verb), past = previous time or beyond', sentences:[
+    {s:'She ___ the ball to her teammate quickly.', a:'passed', why:'A doing word: she threw it to a teammate'},
+    {s:'In the ___, people travelled by horse and cart.', a:'past', why:'A time before now'},
+    {s:'We ___ three petrol stations on the way home.', a:'passed', why:'A doing word: we went by them'},
+    {s:'Walk ___ the post office and turn left.', a:'past', why:'Beyond: going further than'},
+    {s:'It is half ___ three.', a:'past', why:'After the hour'},
+    {s:'The bus ___ our house without stopping.', a:'passed', why:'A doing word: it went by'},
+  ]},
+];
+
+const EXT_HOMOPHONES = [
+  {group:['stationary','stationery'], stage:'s3e', explain:'stationary = not moving, stationery = pens/paper/school supplies', sentences:[
+    {s:'The car was ___ at the traffic lights, waiting for green.', a:'stationary', why:'Not moving: standing still'},
+    {s:'I need to buy some ___ for school: pens, rulers and notebooks.', a:'stationery', why:'School supplies such as pens and paper'},
+    {s:'The train was ___ at the platform for ten minutes.', a:'stationary', why:'Not moving: still at the station'},
+    {s:'The ___ cupboard has everything you need for the project.', a:'stationery', why:'The cupboard with school supplies'},
+    {s:'Keep your seatbelt on until the bus is completely ___.', a:'stationary', why:'Not moving at all'},
+    {s:'The newsagent sells ___ such as pencils and glue.', a:'stationery', why:'Writing and school supplies'},
+  ]},
+  {group:['principal','principle'], stage:'s3l', explain:'principal = the head of a school / main, principle = a rule or belief', sentences:[
+    {s:'The ___ spoke at assembly about the new uniform rules.', a:'principal', why:'The head of the school'},
+    {s:'Honesty is an important ___ to live by.', a:'principle', why:'A rule or belief about right and wrong'},
+    {s:'The ___ reason for the delay was the heavy rain.', a:'principal', why:'Means "main" or "most important"'},
+    {s:'Telling the truth is a ___ I always try to follow.', a:'principle', why:'A personal rule or belief'},
+    {s:'Our school ___ visited every classroom on the first day.', a:'principal', why:'The head of the school'},
+    {s:'Recycling is based on the ___ that we should not waste things.', a:'principle', why:'An idea or rule that guides what we do'},
+  ]},
+  {group:['affect','effect'], stage:'s3e', explain:'affect = to influence (verb), effect = a result (noun)', sentences:[
+    {s:'The rain will ___ our sports day plans.', a:'affect', why:'Verb: it will change the plans'},
+    {s:'The ___ of the medicine was quick and she felt better.', a:'effect', why:'Noun: the result of the medicine'},
+    {s:'How does lack of sleep ___ your concentration?', a:'affect', why:'Verb: how does it change it?'},
+    {s:'The sound ___ in the movie was incredible.', a:'effect', why:'Noun: a sound made for the film', m:'a special sound or picture made for a film or show (a thing)'},
+    {s:'Too much screen time can ___ how well you sleep.', a:'affect', why:'Verb: it changes your sleep'},
+    {s:'Planting trees had a good ___ on the shade in the playground.', a:'effect', why:'Noun: the result of planting trees'},
+  ]},
+  {group:['practice','practise'], stage:'s3l', explain:'practice = noun (the thing), practise = verb (the action), Australian spelling', sentences:[
+    {s:'Netball ___ is at 4pm on Wednesdays.', a:'practice', why:'Noun: the training session'},
+    {s:'You need to ___ your spelling every night before the test.', a:'practise', why:'Verb: the action of rehearsing'},
+    {s:'The doctor opened a new medical ___ in town.', a:'practice', why:'Noun: a place of business', m:'the business where a doctor or vet works (a noun)'},
+    {s:'She needs to ___ the piano piece before the concert.', a:'practise', why:'Verb: to rehearse'},
+    {s:'I ___ my times tables on the bus.', a:'practise', why:'Verb: the action of going over something'},
+    {s:'Swimming ___ starts at seven o\'clock.', a:'practice', why:'Noun: the training session'},
+  ]},
+  {group:['complement','compliment'], stage:'s3l', explain:'complement = to complete or go well with, compliment = praise', sentences:[
+    {s:'The scarf was a perfect ___ to her winter outfit.', a:'complement', why:'It went well with the outfit'},
+    {s:'She gave me a lovely ___ about my drawing in art class.', a:'compliment', why:'Kind words of praise'},
+    {s:'The yellow cushions ___ the blue couch perfectly.', a:'complement', why:'They go well with the couch'},
+    {s:'What a nice ___. Thank you for saying that!', a:'compliment', why:'A kind remark'},
+    {s:'Mint sauce is a classic ___ to roast lamb.', a:'complement', why:'Something that goes well with it'},
+    {s:'She smiled when her coach paid her a ___.', a:'compliment', why:'Kind words of praise'},
+  ]},
+  {group:['council','counsel'], stage:'s3l', explain:'council = a governing group, counsel = advice', sentences:[
+    {s:'The local ___ is responsible for collecting rubbish bins.', a:'council', why:'The local government group'},
+    {s:'The teacher gave him wise ___ about studying for exams.', a:'counsel', why:'Advice or guidance'},
+    {s:'The town ___ voted to build a new playground.', a:'council', why:'The group of elected people'},
+    {s:'She asked a lawyer for legal ___ before signing the contract.', a:'counsel', why:'Advice from an expert'},
+    {s:'Our Student Representative ___ meets every Friday.', a:'council', why:'A group that makes decisions'},
+    {s:'The wise old owl gave the young animals good ___.', a:'counsel', why:'Advice'},
+  ]},
+  {group:['cereal','serial'], stage:'s3e', explain:'cereal = breakfast grain food, serial = in a series/sequence', sentences:[
+    {s:'I had ___ and milk for breakfast.', a:'cereal', why:'The grain breakfast food'},
+    {s:'Each laptop has a ___ number printed on the back.', a:'serial', why:'A number in a sequence'},
+    {s:'What\'s your favourite kind of breakfast ___?', a:'cereal', why:'The breakfast food'},
+    {s:'The ___ podcast kept us hooked with each new episode.', a:'serial', why:'Told in a series of parts'},
+    {s:'Wheat, rice and oats are all ___ crops.', a:'cereal', why:'Grain plants'},
+    {s:'The story came out as a ___ in the magazine, one chapter each week.', a:'serial', why:'A story told in parts'},
+  ]},
+  {group:['coarse','course'], stage:'s3e', explain:'coarse = rough texture, course = path/direction or "of course"', sentences:[
+    {s:'The sandpaper felt very ___ and rough on my fingers.', a:'coarse', why:'Rough in texture'},
+    {s:'Of ___ you can come to my birthday party!', a:'course', why:'Part of "of course": certainly'},
+    {s:'The ___ wool scratched against her skin.', a:'coarse', why:'Rough, not smooth'},
+    {s:'We followed the ___ of the river downstream.', a:'course', why:'The path or direction'},
+    {s:'The golf ___ has eighteen holes.', a:'course', why:'An area laid out for a sport'},
+    {s:'Rock salt is ___, but table salt is fine.', a:'coarse', why:'Made of big, rough grains'},
+  ]},
+  {group:['altar','alter'], stage:'s3l', explain:'altar = a sacred table in a church, alter = to change', sentences:[
+    {s:'The flowers were placed on the ___ at the front of the church.', a:'altar', why:'A special table used in a church'},
+    {s:'We might need to ___ the plan because of the weather.', a:'alter', why:'To change'},
+    {s:'The bride and groom stood at the ___ during the wedding.', a:'altar', why:'The special table in a church'},
+    {s:'Can you ___ the hem of these trousers for me?', a:'alter', why:'To change clothing to fit'},
+    {s:'The church ___ was covered with a white cloth.', a:'altar', why:'The special table in a church'},
+    {s:'Floods can ___ the shape of a riverbank.', a:'alter', why:'To change'},
+  ]},
+  {group:['cite','site','sight'], stage:'s3l', explain:'cite = to reference/quote, site = a location, sight = vision/something seen', sentences:[
+    {s:'The building ___ was fenced off with safety barriers.', a:'site', why:'A place where building happens'},
+    {s:'The sunset over the ocean was a beautiful ___.', a:'sight', why:'Something you see'},
+    {s:'Remember to ___ your sources in the bibliography.', a:'cite', why:'To name where your facts came from'},
+    {s:'The camping ___ had showers and a barbecue area.', a:'site', why:'A set place for camping'},
+    {s:'Eagles have excellent ___ and can spot a mouse from far away.', a:'sight', why:'The ability to see'},
+    {s:'When you use a fact from a book, you should ___ the author.', a:'cite', why:'To name the source'},
+  ]},
+  {group:['manner','manor'], stage:'s3l', explain:'manner = way of doing something, manor = a large house', sentences:[
+    {s:'She always spoke in a polite and friendly ___.', a:'manner', why:'The way she behaved'},
+    {s:'The old ___ house had twenty rooms and a huge garden.', a:'manor', why:'A large, grand house'},
+    {s:'The nurse spoke to the nervous patient in a calm ___.', a:'manner', why:'The way she spoke'},
+    {s:'The ghost story was set in a spooky old ___ on a hill.', a:'manor', why:'A large old house'},
+    {s:'Please behave in a sensible ___ on the excursion.', a:'manner', why:'The way you act'},
+    {s:'The lord of the ___ owned all the farmland nearby.', a:'manor', why:'A large house with land'},
+  ]},
+  {group:['descent','dissent'], stage:'s4', explain:'descent = going down, dissent = disagreement', sentences:[
+    {s:'The ___ down the mountain was steep and dangerous.', a:'descent', why:'Going downward'},
+    {s:'There was strong ___ among the students about the new homework rule.', a:'dissent', why:'Disagreement'},
+    {s:'The plane began its ___ into Sydney Airport.', a:'descent', why:'Coming down to land'},
+    {s:'When the vote was taken there was no ___. Everyone agreed.', a:'dissent', why:'Disagreement'},
+    {s:'The climbers\' slow ___ took three hours.', a:'descent', why:'Climbing down'},
+    {s:'The player was warned for showing ___ to the umpire.', a:'dissent', why:'Arguing against a decision'},
+  ]},
+];
+
+const SUPABASE_URL  = 'https://kdpavfrzmmzknqfpodrl.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkcGF2ZnJ6bW16a25xZnBvZHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjgzOTIsImV4cCI6MjA5MDAwNDM5Mn0.n5fe7HvXWMsM4xN_iaU_N4xLkC5xD4y9Uoer_DG-dlg';
+
+const EALD_LANGUAGES = {ar:'Arabic',zh:'Chinese (Mandarin)','zh-yue':'Cantonese',vi:'Vietnamese',hi:'Hindi',pa:'Punjabi',tl:'Filipino/Tagalog',ko:'Korean',ja:'Japanese',th:'Thai',bn:'Bengali',gu:'Gujarati',ta:'Tamil',te:'Telugu',kn:'Kannada',ml:'Malayalam',mr:'Marathi',ne:'Nepali',ur:'Urdu',fa:'Farsi/Persian',bo:'Tibetan',dz:'Dzongkha',my:'Burmese',km:'Khmer',lo:'Lao',id:'Indonesian',ms:'Malay',sm:'Samoan',to:'Tongan',tr:'Turkish',he:'Hebrew',sw:'Swahili',so:'Somali',af:'Afrikaans',si:'Sinhala',hr:'Croatian',es:'Spanish',pt:'Portuguese',fr:'French',de:'German',it:'Italian',nl:'Dutch',pl:'Polish',ro:'Romanian',cs:'Czech',el:'Greek',hu:'Hungarian',uk:'Ukrainian',ru:'Russian',sv:'Swedish',nb:'Norwegian',da:'Danish',fi:'Finnish',is:'Icelandic'};
+
+(function populateLangSelect(){
+  var sel = document.getElementById('langSelect');
+  if(!sel) return;
+  sel.innerHTML = Object.entries(EALD_LANGUAGES).map(function(e){ return '<option value="'+e[0]+'">'+e[1]+'</option>'; }).join('');
+})();
+
+function toggleLangSelect(){
+  document.getElementById('langSelectWrap').style.display = document.getElementById('toggleTranslate').checked ? '' : 'none';
+}
+
+// Translations come from a shared AI cache; escape them before they go into the page.
+function _escTr(v){ return String(v == null ? '' : v).replace(/[&<>"'`]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c]; }); }
+async function fetchTranslations(words, lang){
+  // Needs the signed-in teacher's session; shows a notice and returns {} if not.
+  return WSCommon.translate(words, lang, 'word');
+}
+
+function shuffle(arr) { return [...arr].sort(() => Math.random() - .5); }
+function stepCount(d) {
+  const el = document.getElementById('pairCount');
+  el.value = Math.min(8, Math.max(2, parseInt(el.value) + d));
+}
+function stepSentences(d) {
+  const el = document.getElementById('sentenceCount');
+  el.value = Math.min(6, Math.max(2, parseInt(el.value) + d));
+}
+
+// ── Morpheme focus ──────────────────────────────────────────
+function toggleMorphFocus() {
+  var val = document.querySelector('input[name=morphfocus]:checked').value;
+  document.getElementById('morphPickerWrap').style.display = val === 'none' ? 'none' : '';
+  if (val !== 'none') populateMorphSelect(val);
+}
+
+function populateMorphSelect(type) {
+  var sel = document.getElementById('morphSelect');
+  var items = type === 'prefix' ? (window.PREFIXES || []) : (window.SUFFIXES || []);
+  sel.innerHTML = items.map(function(m) {
+    return '<option value="' + m.form + '">' + (m.display || m.form) + ' — ' + m.meaning + '</option>';
+  }).join('');
+  updateMorphMatchCount();
+}
+
+function updateMorphMatchCount() {
+  var el = document.getElementById('morphMatchCount');
+  var focusVal = document.querySelector('input[name=morphfocus]:checked').value;
+  if (focusVal === 'none') { el.textContent = ''; return; }
+  var morphForm = document.getElementById('morphSelect').value.toLowerCase();
+  var all = HOMOPHONES.concat(EXT_HOMOPHONES || []);
+  var count = all.filter(function(h) {
+    return h.group.some(function(w) {
+      return focusVal === 'prefix' ? w.toLowerCase().startsWith(morphForm) : w.toLowerCase().endsWith(morphForm);
+    });
+  }).length;
+  el.textContent = count + ' matching pair' + (count !== 1 ? 's' : '') + ' in built-in pool';
+  el.style.color = count > 0 ? '#16a34a' : '#dc2626';
+}
+
+async function generateWorksheet() {
+  const pool       = document.querySelector('input[name=pool]:checked').value;
+  const format     = document.querySelector('input[name=format]:checked').value;
+  const pairCount  = parseInt(document.getElementById('pairCount').value) || 4;
+  const sentCount  = parseInt(document.getElementById('sentenceCount').value) || 3;
+  const showExpl   = document.getElementById('toggleExplain').checked;
+  const showKey    = document.getElementById('toggleKey').checked;
+
+  let allPairs = pool === 'standard' ? [...HOMOPHONES]
+               : pool === 'extension' ? [...EXT_HOMOPHONES]
+               : [...HOMOPHONES, ...EXT_HOMOPHONES];
+
+  // Apply morpheme focus filter
+  var morphFocus = document.querySelector('input[name=morphfocus]:checked').value;
+  if (morphFocus !== 'none') {
+    var morphForm = document.getElementById('morphSelect').value.toLowerCase();
+    allPairs = allPairs.filter(function(h) {
+      return h.group.some(function(w) {
+        return morphFocus === 'prefix' ? w.toLowerCase().startsWith(morphForm) : w.toLowerCase().endsWith(morphForm);
+      });
+    });
+    if (!allPairs.length) { alert('No homophone pairs match the selected ' + morphFocus + '. Try a different morpheme or use "All words".'); return; }
+  }
+
+  const pairs = shuffle(allPairs).slice(0, pairCount);
+
+  if (!pairs.length) {
+    alert('No pairs available for the selected pool.');
+    return;
+  }
+
+  // EALD translations
+  const wantTranslate = document.getElementById('toggleTranslate').checked;
+  const lang = document.getElementById('langSelect').value;
+  let translations = {};
+  let langName = '';
+  if (wantTranslate && format === 'blank') {
+    // Blank only hides the homophones, so translating them would give the answers away.
+    WSCommon.showNotice('Translations are only added with "Options shown", because they would give away the answers in "Blank only".');
+  } else if (wantTranslate) {
+    langName = EALD_LANGUAGES[lang] || lang;
+    const allWords = [];
+    pairs.forEach(p => p.group.forEach(w => { if (!allWords.includes(w)) allWords.push(w); }));
+    translations = await fetchTranslations(allWords, lang);
+  }
+  const hasTranslation = wantTranslate && Object.keys(translations).length > 0;
+
+  const poolLabel   = {standard:'Standard',extension:'Extension',mixed:'Mixed'}[pool];
+  const formatLabel = {options:'Options Shown',blank:'Blank Only'}[format];
+
+  const instrMap = {
+    options: 'Read each sentence carefully. The homophones for that pair are shown — circle or write the correct one in the blank.',
+    blank:   'Read each sentence carefully. Write the correct homophone in the blank from memory.',
+  };
+
+  let blocks = '';
+  let keyPairs = [];
+
+  const cap = w => w.charAt(0).toUpperCase() + w.slice(1);
+  pairs.forEach((pair, pi) => {
+    const sentences = shuffle(pair.sentences).slice(0, sentCount);
+    keyPairs.push({ pair, sentences });
+
+    // Blank only: no word list or explanation, so students recall the homophones themselves.
+    const wordTags = format === 'blank' ? '' : pair.group.map(w =>
+      `<span class="pair-word">${w}${hasTranslation && translations[w] ? ' <span style="font-size:9px;font-weight:600;opacity:.75;">(' + translations[w] + ')</span>' : ''}</span>`
+    ).join('<span class="pair-sep">/</span>');
+
+    let sentenceRows = '';
+    sentences.forEach((sent, si) => {
+      const parts  = sent.s.split('___');
+      const before = parts[0] || '';
+      const after  = parts[1] || '';
+
+      let answerEl = '';
+      const startsSentence = before.trim() === '';
+      if (format === 'options') {
+        const opts = pair.group.map(w =>
+          `<span class="sentence-option">${startsSentence ? cap(w) : w}</span>`
+        ).join('');
+        answerEl = `<span class="sentence-blank"></span><div class="sentence-options">${opts}</div>`;
+      } else {
+        answerEl = `<span class="sentence-blank" style="min-width:80px;"></span>`;
+      }
+
+      sentenceRows += `
+        <div class="sentence-row">
+          <span class="sentence-num">${si + 1}.</span>
+          <div class="sentence-text">${before}${answerEl}${after}</div>
+        </div>`;
+    });
+
+    blocks += `
+      <div class="pair-block">
+        <div class="pair-header">
+          <span class="pair-num">Pair ${pi + 1}</span>
+          <div class="pair-words">${wordTags}</div>
+        </div>
+        ${showExpl && format !== 'blank' ? `<div class="pair-explain">${pair.explain}</div>` : ''}
+        <div class="sentences">${sentenceRows}</div>
+      </div>`;
+  });
+
+  // Real sentence counts (some homophone groups have fewer sentences than asked for)
+  const sentNums = keyPairs.map(k => k.sentences.length);
+  const sMin = Math.min(...sentNums), sMax = Math.max(...sentNums);
+  const sentLabel = (sMin === sMax ? sMin : sMin + '–' + sMax) + ' sentence' + (sMax === 1 ? '' : 's') + ' each' +
+    (sMin < sentCount ? ' <span class="ws-short-note">(Some pairs have only ' + sMin + ' sentence' + (sMin === 1 ? '' : 's') + '; you asked for ' + sentCount + '.)</span>' : '');
+
+  // Answer key
+  let keyHtml = '';
+  if (showKey) {
+    let keyBlocks = keyPairs.map(({ pair, sentences }, pi) => {
+      const answers = sentences.map((s, si) =>
+        `<div class="ws-key-item">${si+1}. <span>${s.s.trim().startsWith('___') ? cap(s.a) : s.a}</span> — ${s.why}</div>`
+      ).join('');
+      return `
+        <div class="ws-key-pair">
+          <div class="ws-key-pair-title">Pair ${pi+1}: ${pair.group.join(' / ')}</div>
+          <div class="ws-key-answers">${answers}</div>
+        </div>`;
+    }).join('');
+    keyHtml = `
+      <div class="ws-key">
+        <div class="ws-key-title">Answer Key — Teacher Copy</div>
+        ${keyBlocks}
+      </div>`;
+  }
+
+  document.getElementById('worksheetOutput').innerHTML = `
+    <div class="worksheet">
+      <div class="ws-header">
+        <div class="ws-logo">
+          <div class="ws-logo-icon">HH</div>
+          <div><div class="ws-logo-text">Word Labs</div><div class="ws-logo-sub">Homophone Hunter</div></div>
+        </div>
+        <div class="ws-meta">
+          <div class="ws-meta-label">Student details</div>
+          <div class="ws-meta-line">Name: <span class="ws-meta-field"></span></div>
+          <div class="ws-meta-line">Date: <span class="ws-meta-field"></span></div>
+          <div class="ws-meta-line">Class: <span class="ws-meta-field"></span></div>
+        </div>
+      </div>
+      <div class="ws-title">Homophone Hunter</div>
+      <div class="ws-subtitle">${WSCommon.countLabel(pairs.length, pairCount, 'pair')} · ${sentLabel} · ${poolLabel} · ${formatLabel}${hasTranslation ? ' · ' + langName : ''} · Word Labs</div>
+      <div class="ws-instructions">📋 <strong>Instructions:</strong> ${instrMap[format]}</div>
+      ${blocks}
+      ${keyHtml}
+    </div>`;
+
+  document.getElementById('worksheetOutput').style.display = 'block';
+  document.getElementById('previewEmpty').style.display    = 'none';
+  document.getElementById('regenBtn').style.display        = 'block';
+  document.getElementById('printBtn').style.display        = 'block';
+}
+</script>
+
+<footer style="text-align:center;padding:12px 16px;font-size:11px;color:#64748b;border-top:1px solid #e2e8f0;margin-top:auto;font-family:Lexend,sans-serif;">&#129514; Word Labs &middot; <a href="about.html" style="color:#64748b;">About</a> &middot; <a href="privacy.html" style="color:#64748b;">Privacy Policy</a> &middot; <a href="terms.html" style="color:#64748b;">Terms of Service</a> &middot; <a href="mailto:nick@wordlabs.app" style="color:#64748b;">Contact</a></footer>
+</body>
+</html>

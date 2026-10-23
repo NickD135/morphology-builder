@@ -1,0 +1,1084 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Labs – Morpheme Builder</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="wordlab-common.css">
+  <style>
+    :root{
+      --bg:#f5f5f5; --panel:#ffffff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b;
+      --indigo:#4338ca; --indigo-2:#6366f1; --indigo-soft:#eef2ff;
+      --blue:#3b82f6; --blue-soft:#eff6ff; --blue-line:#bfdbfe; --blue-text:#1e40af;
+      --green:#16a34a; --green-soft:#f0fdf4; --green-line:#bbf7d0; --green-text:#166534;
+      --orange:#ea580c; --orange-soft:#fff7ed; --orange-line:#fed7aa; --orange-text:#9a3412;
+      --ok:#15803d; --bad:#dc2626;
+      --accent:#4338ca; --accent-rgb:67,56,202; --header-rgb:4,4,20;
+    }
+    body{ margin:0; padding-top:56px; font-family:'Lexend',sans-serif; background:var(--bg); color:var(--text); line-height:1.5; letter-spacing:.02em; }
+
+    .header{ position:fixed; top:0; left:0; right:0; z-index:50; background:rgba(var(--header-rgb),.75); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border-bottom:1px solid rgba(255,255,255,.1); padding:0; }
+    .headerInner{ padding:0 20px; height:56px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; max-width:none; }
+    .brand{ display:flex; align-items:center; gap:12px; }
+    .brandIcon{ width:36px; height:36px; border-radius:10px; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:0 8px 16px rgba(0,0,0,.15); flex:0 0 auto; }
+    .brand h1{ margin:0; font-size:15px; font-weight:900; letter-spacing:-.02em; color:#f1f5f9; }
+    .brand .sub{ font-size:9px; text-transform:uppercase; letter-spacing:.22em; color:rgba(255,255,255,.6); font-weight:800; display:block; margin-top:2px; }
+    .hud{ display:flex; gap:8px; align-items:center; flex-wrap:nowrap; overflow-x:auto; }
+    .hud::-webkit-scrollbar{ display:none; }
+    .pill{ display:inline-flex; align-items:center; justify-content:center; min-height:32px; border:1px solid rgba(var(--accent-rgb),.3); border-radius:999px; background:rgba(var(--accent-rgb),.12); padding:6px 14px; font-size:12px; font-weight:800; color:rgba(255,255,255,.85); white-space:nowrap; flex-shrink:0; }
+    .topBtn{ border:none; background:rgba(255,255,255,.1); color:rgba(255,255,255,.85); font-weight:800; font-size:11px; text-transform:uppercase; letter-spacing:.12em; padding:7px 13px; border-radius:10px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; flex-shrink:0; transition:all .15s; }
+    .topBtn:hover{ background:rgba(255,255,255,.18); }
+
+    .layout{ max-width:1200px; margin:0 auto; padding:20px; display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start; }
+    @media(max-width:820px){ .layout{ grid-template-columns:1fr; } }
+
+    .panel{ background:var(--panel); border:2px solid var(--line); border-radius:20px; box-shadow:0 12px 24px rgba(15,23,42,.06); overflow:hidden; }
+    .panel-inner{ padding:24px; }
+
+    .slots{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-bottom:16px; }
+    .slot{ min-width:80px; min-height:56px; padding:10px 18px; border-radius:14px; font-size:14px; font-weight:800; cursor:pointer; transition:all .15s; display:flex; align-items:center; justify-content:center; text-transform:uppercase; letter-spacing:.06em; }
+    .slot.empty{ background:transparent; border:3px dashed var(--line); color:var(--muted); cursor:default; }
+    .slot.filled{ border:3px solid transparent; cursor:pointer; }
+    .slot.filled:hover{ filter:brightness(.92); transform:translateY(-2px); }
+    .slot.filled:focus{ outline:3px solid var(--indigo-2); outline-offset:2px; }
+    .slot.empty:focus{ outline:3px solid var(--indigo-2); outline-offset:2px; }
+
+    .slot.prefix.filled{ background:var(--blue-soft); border-color:var(--blue-line); color:var(--blue-text); }
+    .slot.base.filled{ background:var(--green-soft); border-color:var(--green-line); color:var(--green-text); font-size:16px; }
+    .slot.suffix.filled, .slot.suffix2.filled{ background:var(--orange-soft); border-color:var(--orange-line); color:var(--orange-text); }
+
+    .slot.prefix.empty{ border-color:var(--blue-line); color:var(--blue-text); opacity:.5; }
+    .slot.base.empty{ border-color:var(--green-line); color:var(--green-text); opacity:.5; }
+    .slot.suffix.empty, .slot.suffix2.empty{ border-color:var(--orange-line); color:var(--orange-text); opacity:.5; }
+
+    .clear-row{ text-align:center; margin-bottom:16px; }
+    .clearBtn{ border:2px solid var(--line); background:#fff; color:var(--muted); font-weight:800; font-size:11px; text-transform:uppercase; letter-spacing:.1em; padding:6px 18px; border-radius:10px; cursor:pointer; transition:all .15s; }
+    .clearBtn:hover{ border-color:var(--bad); color:var(--bad); background:#fef2f2; }
+    .clearBtn:focus{ outline:3px solid var(--indigo-2); outline-offset:2px; }
+
+    .word-display{ text-align:center; min-height:48px; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; }
+    .word-text{ font-size:clamp(24px,5vw,40px); font-weight:900; letter-spacing:-.02em; line-height:1.2; }
+    .word-text.valid{ color:var(--ok); }
+    .word-text.invalid{ color:var(--muted); }
+    .speak-btn{ border:2px solid var(--line); background:#fff; color:var(--muted); width:36px; height:36px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; transition:all .15s; flex-shrink:0; }
+    .speak-btn:hover{ border-color:var(--accent); color:var(--accent); background:var(--indigo-soft); }
+    .speak-btn:focus{ outline:3px solid var(--indigo-2); outline-offset:2px; }
+
+    .meaning-display{ text-align:center; font-size:14px; font-weight:600; color:var(--muted); margin-bottom:16px; min-height:20px; }
+
+    .rules-display{ margin-bottom:16px; }
+    .rule-step{ background:var(--indigo-soft); border:2px solid #c7d2fe; border-radius:12px; padding:10px 14px; margin-bottom:8px; font-size:13px; font-weight:600; color:var(--text); line-height:1.6; }
+    .rule-label{ display:inline-block; background:var(--indigo); color:#fff; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; padding:2px 8px; border-radius:6px; margin-right:8px; vertical-align:middle; }
+    .hlChange{ color:var(--bad); font-weight:900; text-decoration:line-through; }
+    .hlAdd{ color:var(--ok); font-weight:900; }
+    .hlDrop{ color:var(--bad); font-weight:900; text-decoration:line-through; opacity:.6; }
+
+    .dict-display{ margin-bottom:12px; }
+    .dict-loading{ font-size:12px; color:var(--muted); font-style:italic; }
+    .dict-entry{ background:#f8fafc; border:2px solid var(--line); border-radius:12px; padding:12px 14px; }
+    .dict-pos{ font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; color:var(--accent); margin-bottom:4px; }
+    .dict-def{ font-size:13px; color:var(--text); line-height:1.5; margin-bottom:6px; }
+    .dict-def:last-child{ margin-bottom:0; }
+
+    .eald-display{ min-height:0; }
+
+    .tabs{ display:flex; gap:6px; padding:16px 16px 0; }
+    .tab{ border:2px solid var(--line); background:#fff; color:var(--muted); font-weight:800; font-size:12px; padding:8px 16px; border-radius:10px; cursor:pointer; transition:all .15s; text-transform:uppercase; letter-spacing:.06em; flex:1; text-align:center; }
+    .tab:hover:not(.active){ border-color:#cbd5e1; color:var(--text); }
+    .tab.active{ border-color:var(--accent); background:rgba(var(--accent-rgb),.1); color:var(--accent); }
+    .tab:focus{ outline:3px solid var(--indigo-2); outline-offset:2px; }
+    .tab-count{ font-size:10px; font-weight:700; opacity:.7; }
+
+    .search-wrap{ position:relative; margin:12px 16px 0; }
+    .search-icon{ position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:13px; opacity:.6; pointer-events:none; }
+    .filter-input{ display:block; width:100%; box-sizing:border-box; border:2px solid var(--line); border-radius:10px; padding:8px 34px; font-size:13px; font-weight:600; color:var(--text); background:#fff; transition:border-color .15s; }
+    .filter-input:focus{ border-color:var(--accent); outline:none; box-shadow:0 0 0 4px rgba(var(--accent-rgb),.12); }
+    .filter-input::placeholder{ color:var(--muted); font-weight:600; }
+    .search-clear{ position:absolute; right:8px; top:50%; transform:translateY(-50%); border:none; background:transparent; color:var(--muted); font-size:18px; line-height:1; cursor:pointer; width:24px; height:24px; border-radius:50%; }
+    .search-clear:hover{ color:var(--bad); }
+    .search-clear:focus{ outline:3px solid var(--indigo-2); outline-offset:2px; }
+
+    .tiles-container{ padding:12px 16px 16px; display:flex; flex-wrap:wrap; gap:8px; max-height:calc(100vh - 250px); overflow-y:auto; align-content:flex-start; }
+    .tiles-container::-webkit-scrollbar{ width:6px; }
+    .tiles-container::-webkit-scrollbar-track{ background:transparent; }
+    .tiles-container::-webkit-scrollbar-thumb{ background:#cbd5e1; border-radius:3px; }
+
+    @keyframes tileIn { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:none; } }
+    .tile{ border:2px solid var(--line); background:#fff; border-radius:10px; padding:8px 16px; cursor:pointer; transition:all .15s; display:flex; flex-direction:column; align-items:flex-start; gap:2px; min-height:44px; min-width:44px; animation:tileIn .18s ease both; }
+    .tile:hover{ transform:translateY(-2px); box-shadow:0 6px 12px rgba(0,0,0,.08); }
+    .tile:focus{ outline:3px solid var(--indigo-2); outline-offset:2px; }
+    .tile-form{ font-size:13px; font-weight:700; }
+    .tile-meaning{ font-size:10px; font-weight:600; color:var(--muted); }
+    .tile-stretch{ position:relative; }
+    .tile-stretch .tile-stretch-star{ position:absolute; top:3px; right:5px; font-size:10px; color:var(--accent); line-height:1; }
+
+    .tile-prefix{ border-color:var(--blue-line); background:var(--blue-soft); }
+    .tile-prefix .tile-form{ color:var(--blue-text); }
+    .tile-prefix:hover{ border-color:var(--blue); }
+
+    .tile-base{ border-color:var(--green-line); background:var(--green-soft); }
+    .tile-base .tile-form{ color:var(--green-text); }
+    .tile-base:hover{ border-color:var(--green); }
+
+    .tile-suffix{ border-color:var(--orange-line); background:var(--orange-soft); }
+    .tile-suffix .tile-form{ color:var(--orange-text); }
+    .tile-suffix:hover{ border-color:var(--orange); }
+
+    .tiles-empty{ width:100%; text-align:center; padding:24px; color:var(--muted); font-weight:700; font-size:13px; }
+
+    .scientist-stage{position:fixed;right:0;width:calc((100vw - 1200px)/2);top:56px;bottom:0;z-index:11;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+    #sciCharWrap{width:120px;height:150px;display:flex;align-items:flex-end;justify-content:center;animation:sciIdle 3s ease-in-out infinite;}
+    @keyframes sciIdle{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+    @media(max-width:1400px){.scientist-stage{display:none!important;}}
+    @media(max-width:820px){.scientist-stage{display:none!important;}}
+
+    body.low-stim .scientist-stage{display:none!important;}
+    body.low-stim .tile{ animation:none; }
+    body.low-stim .tile:hover{transform:none;box-shadow:none;}
+    body.low-stim .slot.filled:hover{transform:none;}
+    body.low-stim #sciCharWrap{animation:none!important;}
+    @media (prefers-reduced-motion: reduce){ .tile{ animation:none; } }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <div class="scientist-stage"><div id="petCharWrap" class="pet-idle"></div><div id="sciCharWrap"></div></div>
+
+  <header class="header wl-game-header" role="banner">
+    <div class="headerInner">
+      <div class="brand">
+        <div class="brandIcon">&#129514;</div>
+        <div>
+          <h1>Morpheme Builder</h1>
+          <span class="sub">Word Labs &middot; Morpheme Builder</span>
+        </div>
+      </div>
+      <div class="hud" role="navigation" aria-label="Page controls">
+        <span id="wlPillSlot"></span>
+        <button id="wlLoginBtn" onclick="wlShowLogin()" style="border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);font-weight:800;font-size:11px;padding:7px 13px;border-radius:10px;cursor:pointer;font-family:'Lexend',sans-serif;white-space:nowrap;flex-shrink:0;">&#128100; Log in</button>
+        <a href="landing.html" title="Home" class="topBtn">&#127968; <span class="topBtnLabel">Home</span></a>
+        <a href="scientist.html" title="My Scientist" class="topBtn" style="background:var(--indigo-2);">&#129516; <span class="topBtnLabel">My Scientist</span></a>
+      </div>
+    </div>
+  </header>
+
+  <div id="main-content" role="main">
+    <div class="layout">
+      <div class="builder-panel panel">
+        <div class="panel-inner">
+          <div class="slots" aria-label="Builder slots">
+            <button class="slot prefix empty" id="slotPrefix" aria-label="Prefix slot, empty">prefix</button>
+            <button class="slot base empty" id="slotBase" aria-label="Base slot, empty">base</button>
+            <button class="slot suffix empty" id="slotSuffix1" aria-label="Suffix slot, empty">suffix</button>
+            <button class="slot suffix2 empty" id="slotSuffix2" aria-label="Second suffix slot, empty">suffix</button>
+          </div>
+          <div class="clear-row">
+            <button class="clearBtn" id="clearBtn" aria-label="Clear all slots">Clear All</button>
+          </div>
+          <div class="word-display" id="wordDisplay" aria-live="polite"></div>
+          <div class="meaning-display" id="meaningDisplay" aria-live="polite">Click a base to start building</div>
+          <div class="rules-display" id="rulesDisplay" aria-live="polite"></div>
+          <div class="dict-display" id="dictDisplay" aria-live="polite"></div>
+          <div class="eald-display" id="ealdDisplay"></div>
+        </div>
+      </div>
+
+      <div class="bank-panel panel">
+        <div class="tabs" role="tablist" aria-label="Morpheme type tabs">
+          <button role="tab" class="tab active" data-tab="bases" aria-selected="true" id="tabBases">Bases <span class="tab-count" id="baseCount"></span></button>
+          <button role="tab" class="tab" data-tab="prefixes" aria-selected="false" id="tabPrefixes">Prefixes <span class="tab-count" id="prefixCount"></span></button>
+          <button role="tab" class="tab" data-tab="suffixes" aria-selected="false" id="tabSuffixes">Suffixes <span class="tab-count" id="suffixCount"></span></button>
+        </div>
+        <div class="search-wrap">
+          <span class="search-icon" aria-hidden="true">&#128269;</span>
+          <input type="text" class="filter-input" id="filterInput" placeholder="Search bases..." aria-label="Search morphemes">
+          <button type="button" class="search-clear" id="searchClear" aria-label="Clear search" hidden>&times;</button>
+        </div>
+        <div class="tiles-container" id="tilesContainer" role="listbox" aria-label="Available morphemes">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="wordlab-stage.js"></script>
+  <script defer src="wordlab-data.js?v=20261023b"></script>
+  <script defer src="wordlab-scientist.js?v=20261019"></script>
+  <script defer src="wordlab-effects.js"></script>
+<script defer src="wordlab-worlds.js"></script>
+  <script defer src="wordlab-audio.js"></script>
+  <script defer src="wordlab-help.js"></script>
+  <script defer src="wordlab-hints.js"></script>
+  <script defer src="data.js"></script>
+  <script>
+// Wrapped in DOMContentLoaded so that window.MORPHEMES (defined in data.js,
+// which is loaded with defer) is available when this code runs.
+document.addEventListener('DOMContentLoaded', function() {
+  'use strict';
+
+  /* ── Low-stim mode ─────────────────────────────────────────────────── */
+  if (typeof WordLabData !== 'undefined' && WordLabData.isLowStimMode && WordLabData.isLowStimMode()) {
+    document.body.classList.add('low-stim');
+  }
+
+  /* ── Data loading ──────────────────────────────────────────────────── */
+  var MORPHEMES = window.MORPHEMES;
+  if (!MORPHEMES) { console.error('Morpheme Builder: window.MORPHEMES is not defined — data.js failed to load.'); return; }
+
+  // Show the full morpheme set (parity with Flashcards) — no level gate on the bank.
+  var PREFIXES = MORPHEMES.prefixes.slice();
+  var SUFFIXES = MORPHEMES.suffixes.slice();
+  var BASES = MORPHEMES.bases.slice();
+  // Student's curriculum stage — used ONLY to mark "above your level" tiles (Task A2), never to gate.
+  var STUDENT_STAGE = (typeof WordLabData !== 'undefined' && WordLabData.getStudentStage)
+    ? WordLabData.getStudentStage('morpheme-builder') : null;
+
+  var prefixById = new Map(PREFIXES.map(function(p) { return [p.id, p]; }));
+  var baseById = new Map(BASES.map(function(b) { return [b.id, b]; }));
+  var suffixById = new Map(SUFFIXES.map(function(s) { return [s.id, s]; }));
+
+  /* ── Combo index ───────────────────────────────────────────────────── */
+  var ALL_COMBOS = [];
+  var combosByBase = new Map();
+  var combosByPrefix = new Map();
+  var combosBySuffix1 = new Map();
+  var combosBySuffix2 = new Map();
+
+  /* ── Builder state ─────────────────────────────────────────────────── */
+  var current = { prefix: null, base: null, suffix1: null, suffix2: null };
+  var activeTab = 'bases';
+  var filterText = '';
+
+  /* ── DOM refs ──────────────────────────────────────────────────────── */
+  var elSlotPrefix, elSlotBase, elSlotSuffix1, elSlotSuffix2;
+  var elWordDisplay, elMeaningDisplay, elRulesDisplay, elDictDisplay, elEaldDisplay;
+  var elTilesContainer, elFilterInput, elClearBtn;
+  var elBaseCount, elPrefixCount, elSuffixCount;
+
+  function cacheDom() {
+    elSlotPrefix = document.getElementById('slotPrefix');
+    elSlotBase = document.getElementById('slotBase');
+    elSlotSuffix1 = document.getElementById('slotSuffix1');
+    elSlotSuffix2 = document.getElementById('slotSuffix2');
+    elWordDisplay = document.getElementById('wordDisplay');
+    elMeaningDisplay = document.getElementById('meaningDisplay');
+    elRulesDisplay = document.getElementById('rulesDisplay');
+    elDictDisplay = document.getElementById('dictDisplay');
+    elEaldDisplay = document.getElementById('ealdDisplay');
+    elTilesContainer = document.getElementById('tilesContainer');
+    elFilterInput = document.getElementById('filterInput');
+    elClearBtn = document.getElementById('clearBtn');
+    elBaseCount = document.getElementById('baseCount');
+    elPrefixCount = document.getElementById('prefixCount');
+    elSuffixCount = document.getElementById('suffixCount');
+  }
+
+  /* ── Load combos JSON ──────────────────────────────────────────────── */
+  function loadCombos() {
+    // Unified combos file: extension mode is now a +1 stage runtime filter
+    // on window.MORPHEMES (via filterByStage above), so there's no separate
+    // extension combos file — valid-combos.json contains every valid word
+    // buildable from the full data.js morpheme set, and filterByStage picks
+    // the subset visible at the student's current stage (+1 for extension).
+    var file = 'valid-combos.json';
+    fetch(file)
+      .then(function(resp) { return resp.json(); })
+      .then(function(data) {
+        ALL_COMBOS = data;
+        buildIndices();
+        render();
+        applyFocusFromURL();
+      })
+      .catch(function(e) {
+        console.error('Failed to load combos:', e);
+        ALL_COMBOS = [];
+        buildIndices();
+        render();
+        applyFocusFromURL();
+      });
+  }
+
+  function buildIndices() {
+    combosByBase = new Map();
+    combosByPrefix = new Map();
+    combosBySuffix1 = new Map();
+    combosBySuffix2 = new Map();
+
+    for (var i = 0; i < ALL_COMBOS.length; i++) {
+      var combo = ALL_COMBOS[i];
+
+      if (!combosByBase.has(combo.b)) combosByBase.set(combo.b, []);
+      combosByBase.get(combo.b).push(i);
+
+      if (combo.p) {
+        if (!combosByPrefix.has(combo.p)) combosByPrefix.set(combo.p, []);
+        combosByPrefix.get(combo.p).push(i);
+      }
+
+      if (combo.s1) {
+        if (!combosBySuffix1.has(combo.s1)) combosBySuffix1.set(combo.s1, []);
+        combosBySuffix1.get(combo.s1).push(i);
+      }
+
+      if (combo.s2) {
+        if (!combosBySuffix2.has(combo.s2)) combosBySuffix2.set(combo.s2, []);
+        combosBySuffix2.get(combo.s2).push(i);
+      }
+    }
+  }
+
+  /* ── Viability ─────────────────────────────────────────────────────── */
+  function getViableCombos() {
+    var indices = null;
+
+    if (current.base) {
+      indices = new Set(combosByBase.get(current.base.id) || []);
+    }
+    if (current.prefix) {
+      var pSet = new Set(combosByPrefix.get(current.prefix.id) || []);
+      if (indices) {
+        var f1 = new Set();
+        indices.forEach(function(i) { if (pSet.has(i)) f1.add(i); });
+        indices = f1;
+      } else {
+        indices = pSet;
+      }
+    }
+    if (current.suffix1) {
+      var sSet = new Set(combosBySuffix1.get(current.suffix1.id) || []);
+      if (indices) {
+        var f2 = new Set();
+        indices.forEach(function(i) { if (sSet.has(i)) f2.add(i); });
+        indices = f2;
+      } else {
+        indices = sSet;
+      }
+    }
+    if (current.suffix2) {
+      var s2Set = new Set(combosBySuffix2.get(current.suffix2.id) || []);
+      if (indices) {
+        var f3 = new Set();
+        indices.forEach(function(i) { if (s2Set.has(i)) f3.add(i); });
+        indices = f3;
+      } else {
+        indices = s2Set;
+      }
+    }
+
+    return indices;
+  }
+
+  function getViableMorphemes() {
+    var indices = getViableCombos();
+
+    var viablePrefixes = new Set();
+    var viableBases = new Set();
+    var viableSuffixes1 = new Set();
+    var viableSuffixes2 = new Set();
+
+    if (!indices) {
+      /* Nothing chosen yet: show only morphemes that build at least one word, so a
+         tile like soph or -phile (in data.js but in no combo) is never a dead end */
+      PREFIXES.forEach(function(p) { if (combosByPrefix.has(p.id)) viablePrefixes.add(p.id); });
+      BASES.forEach(function(b) { if (combosByBase.has(b.id)) viableBases.add(b.id); });
+      SUFFIXES.forEach(function(s) {
+        if (combosBySuffix1.has(s.id)) viableSuffixes1.add(s.id);
+        if (combosBySuffix2.has(s.id)) viableSuffixes2.add(s.id);
+      });
+    } else {
+      indices.forEach(function(i) {
+        var c = ALL_COMBOS[i];
+        if (c.p) viablePrefixes.add(c.p);
+        viableBases.add(c.b);
+        if (c.s1) viableSuffixes1.add(c.s1);
+        if (c.s2) viableSuffixes2.add(c.s2);
+      });
+    }
+
+    /* Also include combos with null prefix when prefix not selected */
+    if (current.base || current.suffix1 || current.suffix2) {
+      if (!current.prefix) {
+        for (var i = 0; i < ALL_COMBOS.length; i++) {
+          var c = ALL_COMBOS[i];
+          if (!c.p) {
+            if (!current.base || c.b === current.base.id) {
+              if (!current.suffix1 || c.s1 === current.suffix1.id) {
+                if (!current.suffix2 || c.s2 === current.suffix2.id) {
+                  viableBases.add(c.b);
+                  if (c.s1) viableSuffixes1.add(c.s1);
+                  if (c.s2) viableSuffixes2.add(c.s2);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return { viablePrefixes: viablePrefixes, viableBases: viableBases, viableSuffixes1: viableSuffixes1, viableSuffixes2: viableSuffixes2 };
+  }
+
+  /* ── Exact match check ─────────────────────────────────────────────── */
+  function findExactCombo() {
+    if (!current.base) return null;
+    var indices = combosByBase.get(current.base.id) || [];
+    for (var i = 0; i < indices.length; i++) {
+      var c = ALL_COMBOS[indices[i]];
+      if ((c.p || null) === (current.prefix ? current.prefix.id : null) &&
+          (c.s1 || null) === (current.suffix1 ? current.suffix1.id : null) &&
+          (c.s2 || null) === (current.suffix2 ? current.suffix2.id : null)) {
+        return c;
+      }
+    }
+    return null;
+  }
+
+  /* ── Escape HTML (XSS protection) ──────────────────────────────────── */
+  function escapeHtml(str) {
+    if (typeof WordLabData !== 'undefined' && WordLabData.escapeHtml) return WordLabData.escapeHtml(str);
+    var d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  /* ── Above-level marker (Task A2) ──────────────────────────────────── */
+  /* A morpheme is "above the student's level" when a stage is set on both and
+     WLStage says it is not yet visible at the student's stage (no extension). */
+  function isAboveLevel(m) {
+    if (!STUDENT_STAGE || !m || !m.stage) return false;
+    if (typeof WLStage === 'undefined' || !WLStage.isItemVisible) return false;
+    return !WLStage.isItemVisible(m.stage, STUDENT_STAGE, false);
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     SPELLING RULES — ported verbatim from previous morpheme-builder.html
+     ══════════════════════════════════════════════════════════════════════ */
+
+  function isVowel(ch) { return ["a","e","i","o","u"].includes(String(ch||"").toLowerCase()); }
+
+  function isConsonant(ch) {
+    var c = String(ch||"").toLowerCase();
+    return c >= "a" && c <= "z" && !isVowel(c);
+  }
+
+  function isCVC(word) {
+    var w = String(word||"").toLowerCase();
+    if (w.length < 3) return false;
+    var a = w[w.length-3], b = w[w.length-2], c = w[w.length-1];
+    if (!isConsonant(a) || !isVowel(b) || !isConsonant(c)) return false;
+    if (["w","x","y"].includes(c)) return false;
+    return true;
+  }
+
+  function applyPrefixRulesDetailed(prefixForm, baseForm) {
+    var prefix = String(prefixForm || "");
+    var base   = String(baseForm   || "");
+    if (!prefix || !base) {
+      return { prefixBefore:prefix, prefixAfter:prefix, base:base, ruleId:null, ruleText:null, stepsHtml:"" };
+    }
+
+    var p     = prefix.toLowerCase();
+    var first = base[0] ? base[0].toLowerCase() : "";
+    var eBase = escapeHtml(base);
+    var ePrefix = escapeHtml(prefix);
+
+    if (p === "ad") {
+      var map = { c:"ac", f:"af", l:"al", p:"ap", s:"as", t:"at" };
+      if (map[first]) {
+        var pa = map[first];
+        return { prefixBefore:prefix, prefixAfter:pa, base:base,
+          ruleId:"ad_assim",
+          ruleText:"Prefix rule: ad can change to " + pa + " before " + first + " to make pronunciation easier (ad + " + base + " \u2192 " + pa + base + ").",
+          stepsHtml:"<span class='hlChange'>ad</span><span class='hlAdd'> + </span>" + eBase + " <span class='hlAdd'>\u2192</span> <span class='hlChange'>" + escapeHtml(pa) + "</span>" + eBase };
+      }
+      return { prefixBefore:prefix, prefixAfter:prefix, base:base, ruleId:"ad_no_change",
+        ruleText:"Prefix rule: no sound change needed for ad.",
+        stepsHtml:ePrefix + "<span class='hlAdd'> + </span>" + eBase + " <span class='hlAdd'>\u2192</span> " + ePrefix + eBase };
+    }
+
+    if (p === "in") {
+      if (["p","b","m"].includes(first)) return { prefixBefore:prefix, prefixAfter:"im", base:base, ruleId:"in_assim_im",
+        ruleText:"Prefix rule: in can change to im before p, b, m (in + possible \u2192 impossible).",
+        stepsHtml:"<span class='hlChange'>in</span><span class='hlAdd'> + </span>" + eBase + " <span class='hlAdd'>\u2192</span> <span class='hlChange'>im</span>" + eBase };
+      if (first === "l") return { prefixBefore:prefix, prefixAfter:"il", base:base, ruleId:"in_assim_il",
+        ruleText:"Prefix rule: in can change to il before l (in + legal \u2192 illegal).",
+        stepsHtml:"<span class='hlChange'>in</span><span class='hlAdd'> + </span>" + eBase + " <span class='hlAdd'>\u2192</span> <span class='hlChange'>il</span>" + eBase };
+      if (first === "r") return { prefixBefore:prefix, prefixAfter:"ir", base:base, ruleId:"in_assim_ir",
+        ruleText:"Prefix rule: in can change to ir before r (in + regular \u2192 irregular).",
+        stepsHtml:"<span class='hlChange'>in</span><span class='hlAdd'> + </span>" + eBase + " <span class='hlAdd'>\u2192</span> <span class='hlChange'>ir</span>" + eBase };
+      return { prefixBefore:prefix, prefixAfter:prefix, base:base, ruleId:"in_no_change",
+        ruleText:"Prefix rule: no sound change needed for in.",
+        stepsHtml:ePrefix + "<span class='hlAdd'> + </span>" + eBase + " <span class='hlAdd'>\u2192</span> " + ePrefix + eBase };
+    }
+
+    if (p === "con" && ["p","b","m"].includes(first)) {
+      return { prefixBefore:prefix, prefixAfter:"com", base:base, ruleId:"con_assim_com",
+        ruleText:"Prefix rule: con can change to com before p, b, m (con + pose \u2192 compose).",
+        stepsHtml:"<span class='hlChange'>con</span><span class='hlAdd'> + </span>" + eBase + " <span class='hlAdd'>\u2192</span> <span class='hlChange'>com</span>" + eBase };
+    }
+
+    if (p === "en" && ["p","b","m"].includes(first)) {
+      return { prefixBefore:prefix, prefixAfter:"em", base:base, ruleId:"en_assim_em",
+        ruleText:"Prefix rule: en can change to em before p, b, m (en + ploy \u2192 employ).",
+        stepsHtml:"<span class='hlChange'>en</span><span class='hlAdd'> + </span>" + eBase + " <span class='hlAdd'>\u2192</span> <span class='hlChange'>em</span>" + eBase };
+    }
+
+    if (p === "sub") {
+      var map2 = { c:"suc", f:"suf", g:"sug", p:"sup", s:"sus", t:"subt" };
+      if (map2[first]) {
+        var pa2 = map2[first];
+        return { prefixBefore:prefix, prefixAfter:pa2, base:base, ruleId:"sub_assim",
+          ruleText:"Prefix rule: sub can change to " + pa2 + " before " + first + " to make pronunciation easier (sub + " + base + " \u2192 " + pa2 + base + ").",
+          stepsHtml:"<span class='hlChange'>sub</span><span class='hlAdd'> + </span>" + eBase + " <span class='hlAdd'>\u2192</span> <span class='hlChange'>" + escapeHtml(pa2) + "</span>" + eBase };
+      }
+      return { prefixBefore:prefix, prefixAfter:prefix, base:base, ruleId:"sub_no_change",
+        ruleText:"Prefix rule: no sound change needed for sub.",
+        stepsHtml:ePrefix + "<span class='hlAdd'> + </span>" + eBase + " <span class='hlAdd'>\u2192</span> " + ePrefix + eBase };
+    }
+
+    if (p === "ob") {
+      var map3 = { c:"oc", f:"of", p:"op", s:"os", t:"obt" };
+      if (map3[first]) {
+        var pa3 = map3[first];
+        return { prefixBefore:prefix, prefixAfter:pa3, base:base, ruleId:"ob_assim",
+          ruleText:"Prefix rule: ob can change to " + pa3 + " before " + first + " to make pronunciation easier (ob + " + base + " \u2192 " + pa3 + base + ").",
+          stepsHtml:"<span class='hlChange'>ob</span><span class='hlAdd'> + </span>" + eBase + " <span class='hlAdd'>\u2192</span> <span class='hlChange'>" + escapeHtml(pa3) + "</span>" + eBase };
+      }
+      return { prefixBefore:prefix, prefixAfter:prefix, base:base, ruleId:"ob_no_change",
+        ruleText:"Prefix rule: no sound change needed for ob.",
+        stepsHtml:ePrefix + "<span class='hlAdd'> + </span>" + eBase + " <span class='hlAdd'>\u2192</span> " + ePrefix + eBase };
+    }
+
+    return { prefixBefore:prefix, prefixAfter:prefix, base:base, ruleId:"prefix_no_change",
+      ruleText:"Prefix rule: join the prefix directly to the base.",
+      stepsHtml:ePrefix + "<span class='hlAdd'> + </span>" + eBase + " <span class='hlAdd'>\u2192</span> " + ePrefix + eBase };
+  }
+
+  function applySuffixRulesDetailed(baseForm, suffixForm, skipCVC) {
+    var base = String(baseForm  || "");
+    var suff = String(suffixForm|| "");
+    if (!suff) return { baseBefore:base, baseAfter:base, suffix:"", ruleId:null, ruleText:null, stepsHtml:"" };
+
+    var last       = base.slice(-1).toLowerCase();
+    var prev       = base.slice(-2, -1).toLowerCase();
+    var first      = suff[0] ? suff[0].toLowerCase() : "";
+    var suffixLower= suff.toLowerCase();
+    var eSuff = escapeHtml(suff);
+
+    if (suffixLower === "ing" && base.toLowerCase().endsWith("ie")) {
+      var baseAfter = base.slice(0, -2) + "y";
+      return { baseBefore:base, baseAfter:baseAfter, suffix:suff, ruleId:"ie_to_y",
+        ruleText:"Suffix rule: change ie to y before adding ing (die + ing \u2192 dying).",
+        stepsHtml:escapeHtml(base.slice(0,-2)) + "<span class='hlChange'>ie</span><span class='hlAdd'> + </span>" + eSuff + " <span class='hlAdd'>\u2192</span> " + escapeHtml(baseAfter) + "<span class='hlAdd'> + </span>" + eSuff + " <span class='hlAdd'>\u2192</span> " + escapeHtml(baseAfter + suff) };
+    }
+
+    if (suffixLower === "ly" && base.toLowerCase().endsWith("le")) {
+      var baseAfterLe = base.slice(0, -2);
+      return { baseBefore:base, baseAfter:baseAfterLe, suffix:suff, ruleId:"le_to_ly",
+        ruleText:"Suffix rule: drop le before adding ly (responsible + ly \u2192 responsibly).",
+        stepsHtml:escapeHtml(baseAfterLe) + "<span class='hlDrop'>le</span><span class='hlAdd'> + </span>" + eSuff + " <span class='hlAdd'>\u2192</span> " + escapeHtml(baseAfterLe + suff) };
+    }
+
+    // keep the e of -ee (agree + ing = agreeing) and the e that keeps c/g soft before -able/-ous
+    // (manageable, courageous) - same rule as scripts/build-valid-combos.js
+    if (last === "e" && ((prev === "e" && isVowel(first) && first !== "e") ||
+        ((prev === "c" || prev === "g") && /^(able|ous)/.test(suffixLower)))) {
+      return { baseBefore:base, baseAfter:base, suffix:suff, ruleId:"keep_e",
+        ruleText:(prev === "e"
+          ? "Suffix rule: keep both e's in -ee words (agree + ing → agreeing)."
+          : "Suffix rule: keep the e so the " + prev + " stays soft (manage + able → manageable)."),
+        stepsHtml:escapeHtml(base) + "<span class='hlAdd'> + </span>" + eSuff + " <span class='hlAdd'>→</span> " + escapeHtml(base + suff) };
+    }
+
+    if (last === "e" && isVowel(first)) {
+      var baseAfter2 = base.slice(0, -1);
+      return { baseBefore:base, baseAfter:baseAfter2, suffix:suff, ruleId:"drop_e",
+        ruleText:"Suffix rule: drop the final e before a vowel suffix (create + ing \u2192 creating).",
+        stepsHtml:escapeHtml(baseAfter2) + "<span class='hlDrop'>e</span><span class='hlAdd'> + </span>" + eSuff + " <span class='hlAdd'>\u2192</span> " + escapeHtml(baseAfter2) + "<span class='hlAdd'> + </span>" + eSuff + " <span class='hlAdd'>\u2192</span> " + escapeHtml(baseAfter2 + suff) };
+    }
+
+    if (last === "y" && prev && isConsonant(prev) && suffixLower !== "ing") {
+      var baseAfter3 = base.slice(0, -1) + "i";
+      return { baseBefore:base, baseAfter:baseAfter3, suffix:suff, ruleId:"y_to_i",
+        ruleText:"Suffix rule: change y to i before most suffixes (apply + ed \u2192 applied; happy + ness \u2192 happiness). Not for ing, and not when a vowel comes before y (pay + ment \u2192 payment).",
+        stepsHtml:escapeHtml(base.slice(0,-1)) + "<span class='hlChange'>y</span><span class='hlAdd'> + </span>" + eSuff + " <span class='hlAdd'>\u2192</span> " + escapeHtml(baseAfter3) + "<span class='hlAdd'> + </span>" + eSuff + " <span class='hlAdd'>\u2192</span> " + escapeHtml(baseAfter3 + suff) };
+    }
+
+    if (!skipCVC && isCVC(base) && isVowel(first)) {
+      var c2 = base.slice(-1);
+      var baseAfter4 = base + c2;
+      return { baseBefore:base, baseAfter:baseAfter4, suffix:suff, ruleId:"double_consonant",
+        ruleText:"Suffix rule: double the final consonant for CVC + vowel suffix (run + ing \u2192 running).",
+        stepsHtml:escapeHtml(base.slice(0,-1)) + "<span class='hlChange'>" + escapeHtml(c2) + "</span><span class='hlAdd'> + </span>" + eSuff + " <span class='hlAdd'>\u2192</span> " + escapeHtml(base) + "<span class='hlAdd'>" + escapeHtml(c2) + "</span><span class='hlAdd'> + </span>" + eSuff + " <span class='hlAdd'>\u2192</span> " + escapeHtml(baseAfter4 + suff) };
+    }
+
+    if (last === "e" && isConsonant(first)) {
+      return { baseBefore:base, baseAfter:base, suffix:suff, ruleId:"keep_e",
+        ruleText:"Suffix rule: keep the final e before a consonant suffix (care + ful \u2192 careful).",
+        stepsHtml:escapeHtml(base.slice(0,-1)) + "<span class='hlAdd'>e</span><span class='hlAdd'> + </span>" + eSuff + " <span class='hlAdd'>\u2192</span> " + escapeHtml(base + suff) };
+    }
+
+    return { baseBefore:base, baseAfter:base, suffix:suff, ruleId:"no_change",
+      ruleText:"Suffix rule: no spelling change needed.",
+      stepsHtml:escapeHtml(base) + "<span class='hlAdd'> + </span>" + eSuff + " <span class='hlAdd'>\u2192</span> " + escapeHtml(base + suff) };
+  }
+
+  function applySuffixOnce(baseForm, suffixObj, skipCVC) {
+    if (!suffixObj) return { built: String(baseForm || ""), detail: null };
+    var detail = applySuffixRulesDetailed(baseForm, suffixObj.form, skipCVC);
+    return { built: String(detail.baseAfter) + String(suffixObj.form), detail: detail };
+  }
+
+  function applySuffixChain(baseForm, suffix1Obj, suffix2Obj, skipCVC) {
+    var first  = applySuffixOnce(baseForm, suffix1Obj, skipCVC);
+    var second = applySuffixOnce(first.built, suffix2Obj, skipCVC);
+    return { finalWord: second.built.toLowerCase(), firstDetail: first.detail, secondDetail: second.detail };
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     CLICK HANDLERS
+     ══════════════════════════════════════════════════════════════════════ */
+
+  function placeTile(morpheme, type) {
+    if (type === 'prefix') {
+      current.prefix = morpheme;
+    } else if (type === 'base') {
+      current.base = morpheme;
+    } else if (type === 'suffix') {
+      if (!current.suffix1) current.suffix1 = morpheme;
+      else if (!current.suffix2 && current.suffix1.id !== morpheme.id) current.suffix2 = morpheme;
+      else {
+        current.suffix1 = morpheme;
+        current.suffix2 = null;
+      }
+    }
+    render();
+  }
+
+  function removeSlot(slotName) {
+    current[slotName] = null;
+    if (slotName === 'suffix1' && current.suffix2) {
+      current.suffix1 = current.suffix2;
+      current.suffix2 = null;
+    }
+    render();
+  }
+
+  function clearAll() {
+    current = { prefix: null, base: null, suffix1: null, suffix2: null };
+    render();
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     RENDER
+     ══════════════════════════════════════════════════════════════════════ */
+
+  function render() {
+    renderSlots();
+    renderWord();
+    renderTiles();
+    updateTabCounts();
+  }
+
+  function renderSlots() {
+    renderOneSlot(elSlotPrefix, current.prefix, 'prefix', 'prefix');
+    renderOneSlot(elSlotBase, current.base, 'base', 'base');
+    renderOneSlot(elSlotSuffix1, current.suffix1, 'suffix', 'suffix1');
+    // 2nd suffix slot only appears once a first suffix is placed.
+    if (current.suffix1) {
+      elSlotSuffix2.style.display = '';
+      renderOneSlot(elSlotSuffix2, current.suffix2, 'suffix', 'suffix2');
+    } else {
+      elSlotSuffix2.style.display = 'none';
+    }
+  }
+
+  function renderOneSlot(el, morpheme, type, slotName) {
+    if (!el) return;
+    if (morpheme) {
+      el.textContent = morpheme.display || morpheme.form;
+      el.classList.add('filled');
+      el.classList.remove('empty');
+      el.setAttribute('aria-label', type + ' slot: ' + (morpheme.display || morpheme.form) + '. Click to remove.');
+      el.onclick = function() { removeSlot(slotName); };
+    } else {
+      el.textContent = type === 'suffix' ? 'suffix' : type;
+      el.classList.remove('filled');
+      el.classList.add('empty');
+      el.setAttribute('aria-label', type + ' slot, empty');
+      el.onclick = null;
+    }
+  }
+
+  function renderWord() {
+    if (!current.base) {
+      elWordDisplay.textContent = '';
+      elMeaningDisplay.textContent = 'Click a base to start building';
+      elRulesDisplay.textContent = '';
+      elDictDisplay.textContent = '';
+      if (elEaldDisplay) elEaldDisplay.textContent = '';
+      return;
+    }
+
+    var combo = findExactCombo();
+
+    var prefixDetail = current.prefix ? applyPrefixRulesDetailed(current.prefix.form, current.base.form) : null;
+    var prefixedBase = (prefixDetail ? prefixDetail.prefixAfter : '') + current.base.form;
+    var skipCVC = current.base && (current.base.group === 'latin' || current.base.group === 'greek');
+    var chain = applySuffixChain(prefixedBase, current.suffix1, current.suffix2, skipCVC);
+    var computedWord = chain.finalWord;
+
+    /* Word display */
+    var displayWord = combo ? combo.word : computedWord;
+    /* Clear and rebuild word display using DOM methods */
+    while (elWordDisplay.firstChild) elWordDisplay.removeChild(elWordDisplay.firstChild);
+    if (displayWord) {
+      var wordSpan = document.createElement('span');
+      wordSpan.className = 'word-text ' + (combo ? 'valid' : 'invalid');
+      wordSpan.textContent = displayWord;
+      elWordDisplay.appendChild(wordSpan);
+
+      var speakBtn = document.createElement('button');
+      speakBtn.className = 'speak-btn';
+      speakBtn.setAttribute('aria-label', 'Listen to word');
+      speakBtn.setAttribute('title', 'Listen to word');
+      speakBtn.textContent = '\ud83d\udd0a';
+      speakBtn.addEventListener('click', function() {
+        if (typeof WordLabData !== 'undefined' && WordLabData.speakInLanguage) {
+          WordLabData.speakInLanguage(displayWord, 'en-AU');
+        }
+      });
+      elWordDisplay.appendChild(speakBtn);
+
+      /* Handoff → Word Study. The Word Study pool now spans every make-able word, so any valid
+         built word (i.e. one with a resolved combo) is studyable — no pool membership lookup needed. */
+      if (combo) {
+        var studyBtn = document.createElement('a');
+        studyBtn.className = 'speak-btn';
+        studyBtn.href = 'word-study.html?word=' + encodeURIComponent(combo.word);
+        studyBtn.setAttribute('title', 'Study this word deeply');
+        studyBtn.setAttribute('aria-label', 'Study ' + combo.word + ' in Word Study');
+        studyBtn.textContent = '🔬'; /* 🔬 */
+        elWordDisplay.appendChild(studyBtn);
+      }
+    }
+
+    /* Meaning line */
+    var parts = [];
+    if (current.prefix) parts.push(current.prefix.meaning);
+    parts.push(current.base.meaning);
+    if (current.suffix1) parts.push(current.suffix1.meaning);
+    if (current.suffix2) parts.push(current.suffix2.meaning);
+    elMeaningDisplay.textContent = parts.join(' + ');
+
+    /* Spelling rules - uses trusted morpheme data only, not user input */
+    renderRules(prefixDetail, chain);
+
+    /* Dictionary lookup (only for valid combos) */
+    if (combo) {
+      fetchDefinition(combo.word);
+    } else {
+      elDictDisplay.textContent = '';
+    }
+
+    /* EALD */
+    renderEALD(combo ? combo.word : null);
+
+    /* TTS preload */
+    if (combo && typeof WordLabData !== 'undefined' && WordLabData.preloadTTS) {
+      WordLabData.preloadTTS(combo.word, 'en-AU');
+    }
+  }
+
+  function renderRules(prefixDetail, chain) {
+    /* Rules HTML is built from trusted morpheme data (not user input) and
+       uses the hlChange/hlAdd/hlDrop classes for educational highlighting.
+       All variable text is escaped via escapeHtml() in the rule functions. */
+    var html = '';
+    if (prefixDetail && prefixDetail.ruleId && prefixDetail.ruleId !== 'prefix_no_change' && prefixDetail.ruleId !== 'ad_no_change' && prefixDetail.ruleId !== 'in_no_change' && prefixDetail.ruleId !== 'sub_no_change' && prefixDetail.ruleId !== 'ob_no_change') {
+      html += '<div class="rule-step"><span class="rule-label">Prefix</span> ' + prefixDetail.stepsHtml + '</div>';
+    }
+    if (chain.firstDetail && chain.firstDetail.ruleId && chain.firstDetail.ruleId !== 'no_change' && chain.firstDetail.ruleId !== 'keep_e') {
+      html += '<div class="rule-step"><span class="rule-label">Suffix 1</span> ' + chain.firstDetail.stepsHtml + '</div>';
+    }
+    if (chain.secondDetail && chain.secondDetail.ruleId && chain.secondDetail.ruleId !== 'no_change' && chain.secondDetail.ruleId !== 'keep_e') {
+      html += '<div class="rule-step"><span class="rule-label">Suffix 2</span> ' + chain.secondDetail.stepsHtml + '</div>';
+    }
+    elRulesDisplay.innerHTML = html; /* trusted content only — morpheme data escaped in rule functions */
+  }
+
+  /* Definitions: the old lookup called an outside dictionary site (api.dictionaryapi.dev). The
+     live site's security policy blocks it, so it never worked there, and on the GitHub Pages
+     mirror it sent built words to a service that isn't in our privacy policy. Meanings now come
+     from the 🔬 Study page (checked Word Study data) instead. */
+  function fetchDefinition(word) {
+    if (elDictDisplay) elDictDisplay.textContent = '';
+  }
+
+  /* EALD translation */
+  function renderEALD(word) {
+    if (!elEaldDisplay) return;
+    elEaldDisplay.textContent = '';
+    if (!word || typeof WordLabData === 'undefined' || !WordLabData.getEALDLanguage || !WordLabData.getEALDLanguage()) return;
+
+    if (WordLabData.injectEALDStyles) WordLabData.injectEALDStyles();
+    /* EALD speak buttons use trusted template from WordLabData */
+    if (WordLabData.buildEALDSpeakButtons) elEaldDisplay.innerHTML = WordLabData.buildEALDSpeakButtons();
+
+    var langCode = WordLabData.getEALDLanguage();
+    var langName = '';
+    if (WordLabData.EALD_LANGUAGES && WordLabData.EALD_LANGUAGES[langCode]) {
+      langName = WordLabData.EALD_LANGUAGES[langCode].split(' (')[0];
+    }
+    var transDiv = document.createElement('div');
+    transDiv.id = 'ealdTranslation';
+    transDiv.dataset.englishWord = word;
+    elEaldDisplay.appendChild(transDiv);
+
+    if (WordLabData.getTranslations) {
+      WordLabData.getTranslations([word], ['word']).then(function(t) {
+        if (t && t[word]) {
+          var transEl = document.getElementById('ealdTranslation');
+          if (transEl) {
+            transEl.textContent = langName + ': ' + t[word];
+            transEl.dataset.translatedWord = t[word];
+          }
+        }
+      });
+    }
+  }
+
+  function renderTiles() {
+    var viable = getViableMorphemes();
+
+    var morphemes, viableSet, type;
+    if (activeTab === 'prefixes') {
+      morphemes = PREFIXES;
+      viableSet = viable.viablePrefixes;
+      type = 'prefix';
+    } else if (activeTab === 'bases') {
+      morphemes = BASES;
+      viableSet = viable.viableBases;
+      type = 'base';
+    } else {
+      morphemes = SUFFIXES;
+      viableSet = current.suffix1 ? viable.viableSuffixes2 : viable.viableSuffixes1;
+      type = 'suffix';
+    }
+
+    var filter = filterText.toLowerCase();
+    var filtered = [];
+    for (var i = 0; i < morphemes.length; i++) {
+      var m = morphemes[i];
+      if (!viableSet.has(m.id)) continue;
+      if (type === 'prefix' && current.prefix && current.prefix.id === m.id) continue;
+      if (type === 'base' && current.base && current.base.id === m.id) continue;
+      if (type === 'suffix' && current.suffix1 && current.suffix1.id === m.id) continue;
+      if (type === 'suffix' && current.suffix2 && current.suffix2.id === m.id) continue;
+
+      if (filter) {
+        var searchText = ((m.form || '') + ' ' + (m.meaning || '') + ' ' + (m.display || '')).toLowerCase();
+        if (searchText.indexOf(filter) === -1) continue;
+      }
+      filtered.push(m);
+    }
+
+    filtered.sort(function(a, b) { return (a.form || '').localeCompare(b.form || ''); });
+
+    /* Build tiles using DOM methods */
+    while (elTilesContainer.firstChild) elTilesContainer.removeChild(elTilesContainer.firstChild);
+
+    if (filtered.length === 0) {
+      var empty = document.createElement('div');
+      empty.className = 'tiles-empty';
+      empty.textContent = 'No matching morphemes';
+      elTilesContainer.appendChild(empty);
+      return;
+    }
+
+    for (var j = 0; j < filtered.length; j++) {
+      (function(fm) {
+        var btn = document.createElement('button');
+        btn.className = 'tile tile-' + type;
+        btn.dataset.id = fm.id;
+        btn.dataset.type = type;
+        btn.setAttribute('role', 'option');
+        btn.setAttribute('aria-label', (fm.display || fm.form) + ', meaning: ' + (fm.meaning || '') + (isAboveLevel(fm) ? ' (above your level)' : ''));
+
+        if (isAboveLevel(fm)) {
+          btn.classList.add('tile-stretch');
+          var star = document.createElement('span');
+          star.className = 'tile-stretch-star';
+          star.setAttribute('aria-hidden','true');
+          star.textContent = '✦';
+          btn.appendChild(star);
+        }
+
+        var formSpan = document.createElement('span');
+        formSpan.className = 'tile-form';
+        formSpan.textContent = fm.display || fm.form || '';
+        btn.appendChild(formSpan);
+
+        var meaningSpan = document.createElement('span');
+        meaningSpan.className = 'tile-meaning';
+        meaningSpan.textContent = fm.meaning || '';
+        btn.appendChild(meaningSpan);
+
+        btn.addEventListener('click', function() {
+          var morpheme;
+          if (type === 'prefix') morpheme = prefixById.get(fm.id);
+          else if (type === 'base') morpheme = baseById.get(fm.id);
+          else morpheme = suffixById.get(fm.id);
+          if (morpheme) placeTile(morpheme, type);
+        });
+
+        elTilesContainer.appendChild(btn);
+      })(filtered[j]);
+    }
+  }
+
+  function updateTabCounts() {
+    var viable = getViableMorphemes();
+    elBaseCount.textContent = '(' + viable.viableBases.size + ')';
+    elPrefixCount.textContent = '(' + viable.viablePrefixes.size + ')';
+    var suffCount = current.suffix1 ? viable.viableSuffixes2.size : viable.viableSuffixes1.size;
+    elSuffixCount.textContent = '(' + suffCount + ')';
+  }
+
+  /* ── Tab switching ─────────────────────────────────────────────────── */
+  function switchTab(tab) {
+    activeTab = tab;
+    var tabs = document.querySelectorAll('.tab');
+    for (var i = 0; i < tabs.length; i++) {
+      var isActive = tabs[i].dataset.tab === tab;
+      tabs[i].classList.toggle('active', isActive);
+      tabs[i].setAttribute('aria-selected', isActive ? 'true' : 'false');
+    }
+    // Query persists across tabs; only update the placeholder.
+    var label = tab === 'prefixes' ? 'prefixes' : (tab === 'suffixes' ? 'suffixes' : 'bases');
+    elFilterInput.placeholder = 'Search ' + label + '...';
+    renderTiles();
+    updateTabCounts();
+  }
+
+  /* Handoff ← Flashcards: ?morpheme=<id>&type=<prefix|suffix|base> pre-selects that morpheme. */
+  function applyFocusFromURL() {
+    try {
+      var qp = new URLSearchParams(location.search);
+      var id = qp.get('morpheme'); if (!id) return;
+      var type = qp.get('type');
+      function find(arr){ for (var i=0;i<arr.length;i++){ if (arr[i].id===id) return arr[i]; } return null; }
+      var m=null, t=null;
+      if (type==='prefix') { m=find(PREFIXES); t='prefix'; }
+      else if (type==='suffix') { m=find(SUFFIXES); t='suffix'; }
+      else if (type==='base') { m=find(BASES); t='base'; }
+      if (!m) { m=find(BASES); if (m) t='base'; }
+      if (!m) { m=find(PREFIXES); if (m) t='prefix'; }
+      if (!m) { m=find(SUFFIXES); if (m) t='suffix'; }
+      if (!m) return;
+      switchTab(t==='prefix'?'prefixes':t==='suffix'?'suffixes':'bases');
+      placeTile(m, t);
+    } catch(e) {}
+  }
+
+  /* ── Init ──────────────────────────────────────────────────────────── */
+  function init() {
+    cacheDom();
+
+    /* Tab clicks */
+    var tabs = document.querySelectorAll('.tab');
+    for (var i = 0; i < tabs.length; i++) {
+      (function(t) {
+        t.addEventListener('click', function() { switchTab(this.dataset.tab); });
+      })(tabs[i]);
+    }
+
+    var filterTimeout;
+    var searchClear = document.getElementById('searchClear');
+    elFilterInput.addEventListener('input', function() {
+      clearTimeout(filterTimeout);
+      var val = this.value;
+      if (searchClear) searchClear.hidden = !val;
+      filterTimeout = setTimeout(function() { filterText = val; renderTiles(); }, 150);
+    });
+    if (searchClear) {
+      searchClear.addEventListener('click', function() {
+        elFilterInput.value = ''; filterText = ''; searchClear.hidden = true;
+        elFilterInput.focus(); renderTiles();
+      });
+    }
+
+    /* Clear button */
+    elClearBtn.addEventListener('click', clearAll);
+
+    /* Login UI */
+    if (typeof WordLabData !== 'undefined' && WordLabData.initLoginUI) {
+      WordLabData.initLoginUI({
+        accentColor: '#4338ca',
+        accentSoft:  '#eef2ff',
+        accentLine:  '#c7d2fe',
+        accentText:  '#312e81',
+        onLogin: function() { location.reload(); }
+      });
+    }
+    var session = typeof WordLabData !== 'undefined' ? WordLabData.getSession() : null;
+    var loginBtn = document.getElementById('wlLoginBtn');
+    if (loginBtn) {
+      loginBtn.onclick = function() { if (typeof wlShowLogin === 'function') wlShowLogin(); };
+      if (session) loginBtn.textContent = '\ud83d\udc64 ' + session.studentName;
+    }
+
+    /* Extension pill */
+    if (typeof WordLabData !== 'undefined' && WordLabData.isExtensionMode && WordLabData.isExtensionMode('morpheme-builder')) {
+      var extPill = document.createElement('div');
+      extPill.style.cssText = 'background:#4338ca;color:#e0e7ff;font-size:10px;font-weight:900;padding:4px 10px;border-radius:20px;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;';
+      extPill.textContent = '\ud83d\udd2c Extension';
+      var hud = document.querySelector('.hud');
+      if (hud) hud.appendChild(extPill);
+    }
+
+    /* Scientist character */
+    (function() {
+      var w = document.getElementById('sciCharWrap');
+      if (!w || typeof WLScientist === 'undefined') return;
+      if (typeof WordLabData !== 'undefined' && WordLabData.getStudentData) {
+        WordLabData.getStudentData().then(function(sd) {
+          w.innerHTML = WLScientist.buildSVG(sd ? sd.scientist : {}, 'neutral'); /* trusted SVG from WLScientist */
+        }).catch(function(e) {
+          console.error('Scientist load failed', e);
+          w.innerHTML = WLScientist.buildSVG({}, 'neutral');
+        });
+      } else {
+        w.innerHTML = WLScientist.buildSVG({}, 'neutral'); /* trusted SVG from WLScientist */
+      }
+    })();
+
+    /* Help popup */
+    if (typeof WLHelp !== 'undefined') {
+      WLHelp.init({
+        gameKey: 'morpheme-builder',
+        steps: [
+          { icon: '\ud83e\uddea', title: 'Choose a Base', text: 'Start by clicking a base morpheme \u2014 the core of your word.' },
+          { icon: '\ud83d\udd27', title: 'Add Prefixes & Suffixes', text: 'Click prefixes and suffixes to attach them. Only tiles that make real words will show.' },
+          { icon: '\ud83d\udcd6', title: 'Explore Spelling Rules', text: 'See how the word changes as you build \u2014 silent e drops, y changes to i, and more.' },
+          { icon: '\ud83d\udd0d', title: 'Discover Meanings', text: 'Each valid word shows its definition. Click slots to remove tiles and try new combinations.' }
+        ],
+        audioText: 'Welcome to the Morpheme Builder. Click a base morpheme to start building words. Add prefixes and suffixes to see what real words you can create. The spelling rules will be shown as you build.'
+      });
+    }
+
+    /* Load combos */
+    loadCombos();
+  }
+
+  // We're already inside a DOMContentLoaded listener, so init() can run now.
+  init();
+});
+  </script>
+
+  <footer style="text-align:center;padding:12px 16px;font-size:11px;color:#64748b;border-top:1px solid #e2e8f0;margin-top:auto;font-family:Lexend,sans-serif;">&#129514; Word Labs &middot; <a href="about.html" style="color:#64748b;">About</a> &middot; <a href="privacy.html" style="color:#64748b;">Privacy Policy</a> &middot; <a href="terms.html" style="color:#64748b;">Terms of Service</a> &middot; <a href="mailto:nick@wordlabs.app" style="color:#64748b;">Contact</a></footer>
+</body>
+</html>

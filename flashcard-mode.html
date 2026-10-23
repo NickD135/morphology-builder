@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Word Labs – Flashcards</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="wordlab-common.css">
+  <style>
+    :root{
+      --bg:#f5f5f5; --panel:#ffffff; --panel-soft:#f8fafc; --line:#e2e8f0; --text:#0f172a; --muted:#64748b;
+      --accent:#78350f; --accent-rgb:120,53,15; --header-rgb:20,10,3;
+      --indigo:#4338ca; --indigo-2:#6366f1; --indigo-soft:#eef2ff;
+      --blue:#2563eb; --blue-soft:#eff6ff; --blue-line:#bfdbfe; --blue-text:#1e40af;
+      --green:#16a34a; --green-soft:#f0fdf4; --green-line:#bbf7d0; --green-text:#166534;
+      --orange:#ea580c; --orange-soft:#fff7ed; --orange-line:#fed7aa; --orange-text:#9a3412;
+      --ok:#15803d; --warn:#b45309; --bad:#dc2626;
+    }
+    body{ margin:0; font-family:'Lexend',sans-serif; background:var(--bg); color:var(--text); line-height:1.6; letter-spacing:.02em; padding-top:56px; }
+    h1,h2,h3,p{ margin:0; }
+
+    /* ── Header ── */
+    .header{ position:fixed; top:0; left:0; right:0; z-index:50; background:rgba(var(--header-rgb),.75); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border-bottom:1px solid rgba(255,255,255,.1); padding:0; }
+    .headerInner{ padding:0 20px; height:56px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; max-width:none; }
+    .brand{ display:flex; align-items:center; gap:12px; }
+    .brandIcon{ width:36px; height:36px; border-radius:10px; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:0 8px 16px rgba(0,0,0,.15); flex:0 0 auto; }
+    .brandText h1{ margin:0; font-size:15px; font-weight:900; letter-spacing:-.02em; color:#f1f5f9; }
+    .brandText .sub{ font-size:9px; text-transform:uppercase; letter-spacing:.22em; color:rgba(255,255,255,.6); font-weight:800; display:block; margin-top:2px; }
+    .topBtn{ border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.08); color:rgba(255,255,255,.85); font-weight:800; font-size:11px; padding:7px 13px; border-radius:10px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; white-space:nowrap; flex-shrink:0; font-family:'Lexend',sans-serif; }
+    .topBtn:hover{ background:rgba(255,255,255,.15); }
+
+    /* ── Layout ── */
+    .wrap{ max-width:1200px; margin:0 auto; padding:20px; }
+    .layout{ display:grid; grid-template-columns:300px 1fr; gap:20px; align-items:start; }
+    @media(max-width:980px){ .layout{ grid-template-columns:1fr; } }
+
+    .panel{ background:rgba(255,255,255,.92); border:2px solid rgba(var(--accent-rgb),.2); border-radius:20px; box-shadow:0 16px 48px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.6); overflow:hidden; }
+    .panelTitle{ margin:0 0 14px; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.22em; color:var(--accent); }
+
+    /* ── Controls sidebar ── */
+    .controls{ padding:24px; position:sticky; top:80px; }
+    .section{ margin-bottom:22px; }
+    .section:last-child{ margin-bottom:0; }
+    .section h2{ font-size:14px; font-weight:900; color:#312e81; margin-bottom:10px; }
+    .section p{ color:var(--muted); font-size:13px; line-height:1.5; margin-bottom:10px; }
+    .stack{ display:grid; gap:8px; }
+
+    .option{ display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--panel-soft); border:2px solid var(--line); border-radius:14px; cursor:pointer; user-select:none; transition:border-color .15s; }
+    .option:hover{ border-color:#cbd5e1; }
+    .option input[type="radio"]:checked + span,
+    .option:has(input:checked) span{ color:var(--accent); font-weight:800; }
+    .option:has(input:checked){ border-color:var(--accent); background:var(--indigo-soft); }
+    .option input{ cursor:pointer; accent-color:var(--accent); }
+    .option span{ font-weight:700; font-size:14px; }
+
+    .inline{ display:flex; gap:10px; flex-wrap:wrap; }
+
+    select{ width:100%; padding:12px 14px; border-radius:14px; border:2px solid var(--line); background:#fff; color:var(--text); font-size:14px; font-family:inherit; font-weight:700; outline:none; transition:border-color .15s; }
+    select:focus{ border-color:var(--accent); }
+
+    button{ border:none; border-radius:14px; padding:12px 18px; font-size:13px; font-weight:800; cursor:pointer; transition:all .15s; letter-spacing:.04em; }
+    button:hover{ transform:translateY(-1px); }
+    button.primary{ background:var(--accent); color:#fff; box-shadow:0 8px 18px rgba(var(--accent-rgb),.2); }
+    button.primary:hover{ background:#6b2d0a; }
+    button.secondary{ background:#fff; color:#334155; border:2px solid var(--line); }
+    button.secondary:hover{ background:#f8fafc; }
+    button.ghost{ background:var(--panel-soft); color:#334155; border:2px solid var(--line); }
+    /* "Build with this" is a link styled as a ghost button */
+    a.ghost{ display:inline-flex; align-items:center; border-radius:14px; padding:12px 18px; font-size:13px; font-weight:800; letter-spacing:.04em; background:var(--panel-soft); color:#334155; border:2px solid var(--line); }
+    button.ghost:hover{ background:var(--line); }
+
+    code{ background:var(--indigo-soft); color:var(--indigo); padding:2px 7px; border-radius:6px; font-size:12px; font-weight:800; }
+
+    /* ── Main area ── */
+    .main{ padding:24px; min-height:700px; display:flex; flex-direction:column; gap:18px; }
+
+    .stats{ display:flex; flex-wrap:wrap; gap:10px; }
+    .stat{ background:var(--panel-soft); border:2px solid var(--line); border-radius:14px; padding:9px 16px; font-weight:800; font-size:13px; color:#334155; }
+
+    .stage{ flex:1; display:flex; align-items:center; justify-content:center; min-height:520px; }
+
+    .card-wrap{ width:min(100%, 760px); perspective:1200px; }
+    .card{ position:relative; width:100%; min-height:560px; transform-style:preserve-3d; transition:transform .55s ease; cursor:pointer; }
+    .card.flipped{ transform:rotateY(180deg); }
+    .card-face{
+      position:absolute; inset:0; backface-visibility:hidden;
+      border-radius:24px; border:4px solid var(--line);
+      overflow:hidden; box-shadow:0 20px 40px rgba(15,23,42,.08);
+      background:#fff; display:flex; flex-direction:column;
+      justify-content:center; align-items:center;
+      padding:32px; text-align:center;
+    }
+    .front{ background:var(--panel); }
+    .back{ transform:rotateY(180deg); background:var(--panel); justify-content:flex-start; align-items:stretch; text-align:left; overflow-y:auto; }
+
+    .badge{ display:inline-flex; align-items:center; justify-content:center; min-width:110px; padding:7px 14px; border-radius:999px; background:var(--indigo-soft); border:2px solid #c7d2fe; color:var(--indigo); font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.12em; margin-bottom:18px; }
+
+    .morpheme{ font-size:clamp(2.4rem,6vw,4.8rem); font-weight:900; line-height:1; letter-spacing:.02em; color:#312e81; margin:0 0 16px; word-break:break-word; }
+    .hint{ color:var(--muted); font-size:15px; line-height:1.5; max-width:500px; margin:0 auto; font-weight:600; }
+
+    .back-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:18px; }
+    .back-title{ font-size:clamp(2rem,4.2vw,3.4rem); font-weight:900; margin:0; line-height:1; word-break:break-word; color:#312e81; }
+    .emoji-box{ width:84px; height:84px; border-radius:18px; background:var(--indigo-soft); border:2px solid #c7d2fe; display:flex; align-items:center; justify-content:center; font-size:2.2rem; flex-shrink:0; }
+
+    .info-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:4px; }
+    @media(max-width:600px){ .info-grid{ grid-template-columns:1fr; } }
+    .info{ background:var(--panel-soft); border:2px solid var(--line); border-radius:16px; padding:14px 16px; }
+    .info.full{ grid-column:1 / -1; }
+    .label{ display:block; font-size:10px; text-transform:uppercase; letter-spacing:.18em; color:var(--muted); margin-bottom:6px; font-weight:900; }
+    .value{ font-size:14px; line-height:1.6; font-weight:700; color:#334155; }
+
+    #examplesList{ display:grid; gap:8px; }
+    .example-item{ padding:9px 14px; border:2px solid var(--line); border-radius:12px; background:#fff; font-size:13px; line-height:1.5; font-weight:700; }
+    .example-item u{ font-weight:900; text-underline-offset:3px; color:var(--indigo); text-decoration-color:var(--indigo); }
+
+    .footer-controls{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:4px; }
+
+    .empty{ width:min(100%,760px); min-height:300px; display:flex; align-items:center; justify-content:center; background:var(--panel-soft); border:3px dashed var(--line); border-radius:24px; padding:32px; text-align:center; color:var(--muted); font-size:15px; line-height:1.6; font-weight:700; }
+
+  /* ── Archive Room scene ── */
+  html{height:100%;}body{min-height:100vh;overflow-y:auto;background:transparent;}
+  .lab-scene{position:fixed;inset:0;z-index:0;display:flex;flex-direction:column;pointer-events:none;}
+  .lab-wall{flex:0 0 62%;background:#f5f0e8;position:relative;overflow:hidden;}
+  .lab-wall::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(175deg,transparent 0,transparent 6px,rgba(139,90,30,.04) 6px,rgba(139,90,30,.04) 7px);}
+  .filing-wall{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;gap:0;}
+  .filing-cabinet{flex:1;height:100%;background:linear-gradient(180deg,#c9a96e,#b8904a,#a07830);border-right:3px solid #8b6930;position:relative;display:flex;flex-direction:column;justify-content:space-around;padding:6px 3px;}
+  .filing-cabinet:last-child{border-right:none;}
+  .drawer{background:linear-gradient(180deg,#d4b077,#c09050);border:2px solid #8b6930;border-radius:3px;height:26px;position:relative;display:flex;align-items:center;justify-content:center;}
+  .drawer-handle{width:18px;height:5px;background:radial-gradient(ellipse,#f0c860,#c8a030);border-radius:3px;border:1px solid #a08020;box-shadow:0 1px 2px rgba(0,0,0,.2);}
+  .drawer-label{position:absolute;left:3px;width:22px;height:10px;background:#f5f0e8;border:1px solid #ccc;border-radius:2px;font-size:4px;color:#555;display:flex;align-items:center;justify-content:center;font-family:'Lexend',monospace;font-weight:900;}
+  .wall-clock{position:absolute;right:58px;top:8%;z-index:2;}
+  .bankers-lamp{position:absolute;left:28px;bottom:0;z-index:2;}
+  .library-ladder{position:absolute;right:4px;top:0;bottom:0;z-index:2;width:16px;}
+  .portrait{position:absolute;background:#e8dcc4;border:3px solid #a08040;border-radius:2px;display:flex;align-items:center;justify-content:center;}
+  .lab-floor{flex:0 0 38%;background:repeating-linear-gradient(90deg,#3d1f0d 0,#3d1f0d 60px,#2d1508 60px,#2d1508 120px);position:relative;border-top:6px solid #6b3010;}
+  .lab-bench{position:absolute;bottom:0;height:72%;background:#5c3010;border-top:8px solid #8b5a30;border-radius:4px 4px 0 0;}
+  .lab-bench.left{left:10px;width:195px;}.lab-bench.right{right:10px;width:195px;}
+  .bench-top{position:absolute;top:-19px;left:-6px;right:-6px;height:19px;background:#8b6040;border-radius:4px 4px 0 0;border-top:3px solid #c8a060;}
+  #particles{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden;}
+  .particle{position:absolute;border-radius:50%;animation:particleFloat linear infinite;}
+  @keyframes particleFloat{from{transform:translateY(0) translateX(0);opacity:.4;}to{transform:translateY(calc(-100vh - 20px)) translateX(12px);opacity:0;}}
+  /* ── Archive header: full-width slim ── */
+  .hud{display:flex;gap:8px;align-items:center;flex-wrap:nowrap;overflow-x:auto;-ms-overflow-style:none;scrollbar-width:none;}.hud::-webkit-scrollbar{display:none;}.brand{flex-shrink:0;}
+  /* ── Fixed layout ── */
+  body{overflow:hidden!important;}
+  .wrap{position:fixed!important;top:56px!important;bottom:0!important;left:50%!important;transform:translateX(-50%)!important;width:min(1100px,calc(100vw - 160px))!important;max-width:none!important;margin:0!important;z-index:10;padding:16px 0!important;overflow-y:auto;}
+  .wrap::-webkit-scrollbar{width:0;}
+  .controls{top:0!important;}
+  /* ── Archive Room panels: parchment ── */
+  .panel{background:rgba(255,250,238,.93);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:2px solid rgba(var(--accent-rgb),.22);box-shadow:0 16px 48px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,245,210,.7);border-radius:20px;}
+  /* ── Index card styling ── */
+  .card-face{background:rgba(255,252,242,.97)!important;border:2px solid rgba(160,110,40,.25)!important;box-shadow:0 24px 48px rgba(0,0,0,.18)!important;border-radius:20px!important;}
+  .front{background:rgba(255,252,242,.97)!important;}
+  .back{background:rgba(255,250,235,.97)!important;}
+  .badge{background:rgba(254,243,199,.9)!important;border-color:rgba(180,130,50,.3)!important;color:#78350f!important;}
+  .morpheme{color:#3d1f0d!important;}
+  .hint{color:#78350f!important;opacity:.8;}
+  .back-title{color:#3d1f0d!important;}
+  .emoji-box{background:rgba(254,243,199,.9)!important;border-color:rgba(180,130,50,.3)!important;}
+  .info{background:rgba(255,248,225,.85)!important;border-color:rgba(160,110,40,.2)!important;}
+  .label{color:#92400e!important;}
+  .value{color:#3d1f0d!important;}
+  .example-item{background:rgba(255,252,242,.95)!important;border-color:rgba(160,110,40,.2)!important;}
+  .example-item u{color:#78350f!important;text-decoration-color:#78350f!important;}
+  /* ── Sidebar controls ── */
+  .option{background:rgba(255,248,225,.8)!important;border-color:rgba(160,110,40,.22)!important;}
+  .option:has(input:checked){border-color:#92400e!important;background:rgba(254,243,199,.9)!important;}
+  .option input{accent-color:#92400e!important;}
+  .option:has(input:checked) span{color:#78350f!important;}
+  select{background:rgba(255,248,225,.9)!important;border-color:rgba(160,110,40,.25)!important;color:#3d1f0d!important;}
+  select:focus{border-color:#92400e!important;}
+  .section h2{color:#3d1f0d!important;}
+  code{background:rgba(254,243,199,.9)!important;color:#78350f!important;}
+  /* ── Stats bar ── */
+  .stat{background:rgba(255,248,225,.85)!important;border-color:rgba(160,110,40,.2)!important;color:#3d1f0d!important;}
+  /* ── Buttons ── */
+  button.primary{background:#78350f!important;box-shadow:0 8px 18px rgba(120,53,15,.22)!important;}
+  button.primary:hover{background:#6b2d0a!important;}
+  button.secondary{background:rgba(255,248,225,.9)!important;border-color:rgba(160,110,40,.3)!important;color:#3d1f0d!important;}
+  button.ghost,a.ghost{background:rgba(255,248,225,.8)!important;border-color:rgba(160,110,40,.22)!important;color:#3d1f0d!important;}
+  .footer-controls button{background:rgba(255,248,225,.9)!important;border-color:rgba(160,110,40,.25)!important;color:#3d1f0d!important;}
+  .panelTitle{color:var(--accent);}
+  .empty{background:rgba(255,248,225,.85)!important;border-color:rgba(160,110,40,.25)!important;color:#92400e!important;}
+  /* ── Scientist ── */
+  .scientist-stage{position:fixed;left:16px;bottom:12%;z-index:11;display:flex;flex-direction:column;align-items:center;}
+  #sciCharWrap{width:80px;height:100px;display:flex;align-items:flex-end;justify-content:center;animation:sciIdle 3s ease-in-out infinite;}
+  #sciCharWrap.sci-correct{animation:sciJump .6s ease-out;}#sciCharWrap.sci-wrong{animation:sciShake .5s ease-out;}#sciCharWrap.sci-streak{animation:sciDance .8s ease-in-out infinite;}
+  @keyframes sciIdle{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}@keyframes sciJump{0%{transform:translateY(0)}30%{transform:translateY(-22px)}100%{transform:translateY(0)}}@keyframes sciShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-4deg) translateX(-4px)}40%{transform:rotate(4deg) translateX(4px)}60%{transform:rotate(-3deg) translateX(-3px)}80%{transform:rotate(2deg)}}@keyframes sciDance{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+  @media(max-width:700px){.lab-scene{display:none;}body{background:linear-gradient(160deg,#f5f0e8,#d4b077,#3d1f0d)!important;overflow-y:auto!important;}.wrap{position:relative!important;top:auto!important;bottom:auto!important;left:auto!important;transform:none!important;width:calc(100vw - 24px)!important;padding-top:72px!important;}}
+  /* Decorative scene motion stops in low-stim mode and when the device asks for reduced motion */
+  .low-stim .particle,.low-stim .wlEmpty-illus,.low-stim #sciCharWrap{animation:none!important;}
+  @media (prefers-reduced-motion: reduce){ .particle,.wlEmpty-illus,#sciCharWrap{animation:none!important;} }
+  </style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<div class="lab-scene" aria-hidden="true">
+  <div class="lab-wall">
+    <div class="filing-wall">
+      <div class="filing-cabinet">
+        <div class="drawer"><div class="drawer-handle"></div><div class="drawer-label">A–D</div></div>
+        <div class="drawer"><div class="drawer-handle"></div><div class="drawer-label">E–H</div></div>
+        <div class="drawer"><div class="drawer-handle"></div><div class="drawer-label">I–L</div></div>
+        <div class="drawer"><div class="drawer-handle"></div><div class="drawer-label">M–P</div></div>
+      </div>
+      <div class="filing-cabinet">
+        <div class="drawer"><div class="drawer-handle"></div><div class="drawer-label">Q–S</div></div>
+        <div class="drawer"><div class="drawer-handle"></div><div class="drawer-label">T–V</div></div>
+        <div class="drawer"><div class="drawer-handle"></div><div class="drawer-label">W–Z</div></div>
+        <div class="drawer"><div class="drawer-handle"></div><div class="drawer-label">MIS</div></div>
+      </div>
+      <div class="filing-cabinet">
+        <div class="drawer"><div class="drawer-handle"></div><div class="drawer-label">PRE</div></div>
+        <div class="drawer"><div class="drawer-handle"></div><div class="drawer-label">SUF</div></div>
+        <div class="drawer"><div class="drawer-handle"></div><div class="drawer-label">BASE</div></div>
+        <div class="drawer"><div class="drawer-handle"></div><div class="drawer-label">ROOT</div></div>
+      </div>
+    </div>
+    <div class="wall-clock">
+      <svg width="62" height="62" viewBox="0 0 62 62">
+        <circle cx="31" cy="31" r="29" fill="#f5f0e8" stroke="#6b4c32" stroke-width="3"/>
+        <circle cx="31" cy="31" r="2.5" fill="#3d1f0d"/>
+        <line x1="31" y1="6" x2="31" y2="14" stroke="#3d1f0d" stroke-width="2.5"/>
+        <line x1="31" y1="48" x2="31" y2="56" stroke="#3d1f0d" stroke-width="2.5"/>
+        <line x1="6" y1="31" x2="14" y2="31" stroke="#3d1f0d" stroke-width="2.5"/>
+        <line x1="48" y1="31" x2="56" y2="31" stroke="#3d1f0d" stroke-width="2.5"/>
+        <line x1="31" y1="31" x2="31" y2="15" stroke="#3d1f0d" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="31" y1="31" x2="43" y2="31" stroke="#3d1f0d" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="bankers-lamp">
+      <svg width="68" height="86" viewBox="0 0 68 86">
+        <rect x="19" y="76" width="30" height="8" rx="3" fill="#6b4c32"/>
+        <rect x="31" y="46" width="6" height="32" rx="2" fill="#6b4c32"/>
+        <rect x="27" y="42" width="14" height="6" rx="2" fill="#5c3a1e"/>
+        <polygon points="14,42 54,42 47,20 21,20" fill="#4a7c59"/>
+        <polygon points="17,42 51,42 45,22 23,22" fill="#5a9a6c" opacity=".4"/>
+        <ellipse cx="34" cy="42" rx="20" ry="3" fill="#d4a55a" opacity=".45"/>
+      </svg>
+    </div>
+    <div class="library-ladder">
+      <svg width="16" height="100%" viewBox="0 0 16 200" preserveAspectRatio="none">
+        <rect x="1" y="0" width="3" height="200" rx="1.5" fill="#6b4c32"/>
+        <rect x="12" y="0" width="3" height="200" rx="1.5" fill="#6b4c32"/>
+        <rect x="1" y="15" width="14" height="3" rx="1" fill="#8b5e3c"/>
+        <rect x="1" y="38" width="14" height="3" rx="1" fill="#8b5e3c"/>
+        <rect x="1" y="61" width="14" height="3" rx="1" fill="#8b5e3c"/>
+        <rect x="1" y="84" width="14" height="3" rx="1" fill="#8b5e3c"/>
+        <rect x="1" y="107" width="14" height="3" rx="1" fill="#8b5e3c"/>
+        <rect x="1" y="130" width="14" height="3" rx="1" fill="#8b5e3c"/>
+      </svg>
+    </div>
+    <div class="lab-bench left"><div class="bench-top"></div></div>
+    <div class="lab-bench right"><div class="bench-top"></div></div>
+  </div>
+  <div class="lab-floor"></div>
+</div>
+<div id="particles"></div>
+<div class="scientist-stage"><div id="petCharWrap" class="pet-idle"></div><div id="sciCharWrap"></div></div>
+
+<header class="header wl-game-header" role="banner">
+  <div class="headerInner">
+    <div class="brand">
+      <div class="brandIcon">🃏</div>
+      <div class="brandText"><h1>Flashcards</h1><span class="sub">Word Labs · Review Mode</span></div>
+    </div>
+    <div class="hud" role="navigation" aria-label="Game controls">
+    <span id="wlPillSlot"></span>
+    <button id="wlLoginBtn" onclick="wlShowLogin()" style="border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);font-weight:800;font-size:11px;padding:7px 13px;border-radius:10px;cursor:pointer;font-family:'Lexend',sans-serif;white-space:nowrap;flex-shrink:0;">👤 Log in</button>
+    <a href="landing.html" title="Home" class="topBtn">🏠 <span class="topBtnLabel">Home</span></a>
+    <a href="scientist.html" title="My Scientist" class="topBtn">🧬 <span class="topBtnLabel">My Scientist</span></a>
+    </div>
+  </div>
+</header>
+<div class="wrap" id="main-content" role="main">
+  <div class="layout">
+    <aside class="panel controls">
+      <div class="section">
+        <h2>Choose card type</h2>
+        <div class="stack">
+          <label class="option"><input type="radio" name="cardType" value="prefix" checked><span>Prefixes</span></label>
+          <label class="option"><input type="radio" name="cardType" value="suffix"><span>Suffixes</span></label>
+          <label class="option"><input type="radio" name="cardType" value="baseAll"><span>All bases</span></label>
+          <label class="option"><input type="radio" name="cardType" value="baseGroup"><span>Bases by origin</span></label>
+        </div>
+      </div>
+      <div class="section" id="groupSection" style="display:none;">
+        <h2>Choose base origin</h2>
+        <select id="groupSelect">
+          <option value="core">Core</option>
+          <option value="anglo">Anglo Saxon / Old English</option>
+          <option value="latin">Latin</option>
+          <option value="greek">Greek</option>
+        </select>
+      </div>
+      <div class="section">
+        <h2>Deck options</h2>
+        <div class="stack">
+          <label class="option"><input type="checkbox" id="randomMode" checked><span>Random order</span></label>
+          <label class="option"><input type="checkbox" id="showEmoji" checked><span>Show visual cue</span></label>
+        </div>
+      </div>
+      <div class="section">
+        <h2>Build deck</h2>
+        <p>Reads from your shared <code>data.js</code> file.</p>
+        <div class="inline">
+          <button class="primary" id="buildDeckBtn" type="button">Build deck</button>
+          <button class="secondary" id="shuffleBtn" type="button">Shuffle</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="panel main">
+      <div class="stats" aria-live="polite">
+        <div class="stat">Deck size: <span id="deckSize">0</span></div>
+        <div class="stat">Showing: <span id="currentType">Prefixes</span></div>
+        <div class="stat">Card: <span id="cardNumber">0</span></div>
+      </div>
+      <div class="stage">
+        <div class="wlEmpty" id="emptyState" style="background:linear-gradient(135deg,#fff8e1 0%,#fde68a 100%);border-color:rgba(160,110,40,.3);">
+          <div class="wlEmpty-illus" style="background:linear-gradient(135deg,#d97706 0%,#f59e0b 100%);box-shadow:0 16px 36px rgba(217,119,6,.35);">🃏</div>
+          <div class="wlEmpty-title" id="emptyStateTitle" style="color:#78350f;">No deck yet</div>
+          <div class="wlEmpty-sub" id="emptyStateSub" style="color:#92400e;">Pick some morphemes from the bank on the left, then flip through the cards to learn what each one means.</div>
+        </div>
+        <div class="card-wrap" id="cardWrap" style="display:none;">
+          <div class="card" id="flashcard">
+            <div class="card-face front">
+              <div class="badge" id="frontBadge">Prefix</div>
+              <h2 class="morpheme" id="frontMorpheme">un-</h2>
+              <p class="hint">Click the card to flip it and reveal the meaning, examples and extra information.</p>
+            </div>
+            <div class="card-face back">
+              <div class="back-top">
+                <div>
+                  <div class="badge" id="backBadge">Prefix</div>
+                  <h2 class="back-title" id="backMorpheme">un-</h2>
+                </div>
+                <div class="emoji-box" id="emojiBox">🧠</div>
+              </div>
+              <div class="info-grid">
+                <div class="info"><span class="label">Meaning</span><div class="value" id="meaningText"></div></div>
+                <div class="info"><span class="label">Origin / category</span><div class="value" id="originText"></div></div>
+                <div class="info full"><span class="label">Example / hint</span><div class="value" id="sentenceText"></div></div>
+                <div class="info full"><span class="label">Word examples</span><div class="value" id="examplesList"></div></div>
+                <div class="info full" id="ealdRow" style="display:none"><span class="label">🌐 Translation</span><div class="value" id="ealdTranslation"></div></div>
+                <div class="info full" id="ealdSpeakRow" style="display:none"><span class="label">🔊 Listen</span><div class="value"><span id="ealdSpeakBtns"></span></div></div>
+                <div class="info full" id="ealdDefRow" style="display:none"><span class="label"></span><div class="value"><div id="ealdDefinition" class="eald-definition"></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="footer-controls">
+        <button class="ghost" id="flipBtn" type="button">Flip card</button>
+        <a class="ghost" id="buildWithBtn" href="#" style="text-decoration:none;display:none;" title="Open the Morpheme Builder focused on this morpheme">🧱 Build with this</a>
+        <button class="primary" id="nextBtn" type="button">Next card →</button>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+  const DATA = window.MORPHEMES || { prefixes: [], suffixes: [], bases: [] };
+
+  const state = {
+    deck: [],
+    currentCard: null,
+    currentIndex: 0
+  };
+
+  const $ = (id) => document.getElementById(id);
+
+  const emptyState = $("emptyState");
+  const cardWrap = $("cardWrap");
+  const flashcard = $("flashcard");
+  const deckSizeEl = $("deckSize");
+  const currentTypeEl = $("currentType");
+  const cardNumberEl = $("cardNumber");
+  const groupSection = $("groupSection");
+  const groupSelect = $("groupSelect");
+  const showEmoji = $("showEmoji");
+  const randomMode = $("randomMode");
+
+  function titleCase(text) {
+    return String(text || "")
+      .replace(/[_-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function getSelectedCardType() {
+    const checked = document.querySelector('input[name="cardType"]:checked');
+    return checked ? checked.value : "prefix";
+  }
+
+  function shuffleArray(arr) {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+
+  function visualCueFromMeaning(meaning, type) {
+    const t = String(meaning || "").toLowerCase();
+    // Match whole words only ("air" must not match "fairly", "light" must not match "daylight")
+    const has = k => new RegExp("\\b" + k).test(t);
+
+    if (type === "Prefix") {
+      if (has("not") || has("without")) return "🚫";
+      if (has("again")) return "🔁";
+      if (has("before")) return "⏮️";
+      if (has("under") || has("below")) return "⬇️";
+      if (has("against")) return "⚔️";
+      if (has("small")) return "🔬";
+      if (has("large")) return "🦣";
+      if (has("many")) return "🔢";
+    }
+
+    if (type === "Suffix") {
+      if (has("plural")) return "👥";
+      if (has("past")) return "⏪";
+      if (has("person who")) return "🧑";
+      if (has("without")) return "🚫";
+      if (has("full of")) return "🪣";
+      if (has("state")) return "✨";
+      if (has("study of")) return "📘";
+      if (has("make")) return "🛠️";
+    }
+
+    if (has("build")) return "🏗️";
+    if (has("write")) return "✍️";
+    if (has("carry")) return "📦";
+    if (has("hear") || has("sound")) return "🔊";
+    if (has("look") || has("see")) return "👀";
+    if (has("water")) return "💧";
+    if (has("heat")) return "🔥";
+    if (has("time")) return "⏰";
+    if (has("light")) return "💡";
+    if (has("measure")) return "📏";
+    if (has("air")) return "🌬️";
+    if (has("life")) return "🌱";
+    if (has("break")) return "💥";
+    if (has("bend")) return "↪️";
+    if (has("lead")) return "➡️";
+    if (has("send")) return "📨";
+    if (has("turn")) return "🔄";
+    return "🧩";
+  }
+
+  function baseGroupLabel(group) {
+    if (group === "core") return "Core";
+    if (group === "anglo") return "Anglo Saxon / Old English";
+    if (group === "latin") return "Latin";
+    if (group === "greek") return "Greek";
+    return titleCase(group || "Unknown");
+  }
+
+  function normaliseExamples(examples) {
+    if (!Array.isArray(examples)) return [];
+    return examples
+      .filter(example => typeof example === "string" && example.trim() !== "")
+      .slice(0, 3);
+  }
+
+  function normalisePrefix(item) {
+    return {
+      id: item.id,
+      morpheme: item.display || item.form || "",
+      cleanMorpheme: String(item.form || item.display || "").replace(/-/g, "").toLowerCase(),
+      type: "Prefix",
+      meaning: item.meaning || "Meaning not added yet",
+      originLabel: "Prefix",
+      sentence: item.altForms && item.altForms.length
+        ? `Also seen in forms like ${item.altForms.join(", ")}.`
+        : `Can be used with ${item.allowedPos ? item.allowedPos.join(", ") : "different word types"}.`,
+      emoji: visualCueFromMeaning(item.meaning, "Prefix"),
+      examples: normaliseExamples(item.examples),
+      stage: item.stage // kept so filterByStage can match the student's level
+    };
+  }
+
+  function normaliseSuffix(item) {
+    return {
+      id: item.id,
+      morpheme: item.display || item.form || "",
+      cleanMorpheme: String(item.form || item.display || "").replace(/-/g, "").toLowerCase(),
+      type: "Suffix",
+      meaning: item.meaning || "Meaning not added yet",
+      originLabel: "Suffix",
+      sentence: item.hint || `Can be used with ${item.allowedPos ? item.allowedPos.join(", ") : "different word types"}.`,
+      emoji: visualCueFromMeaning(item.meaning, "Suffix"),
+      examples: normaliseExamples(item.examples),
+      stage: item.stage
+    };
+  }
+
+  function normaliseBase(item) {
+    return {
+      id: item.id,
+      morpheme: item.display || item.form || "",
+      cleanMorpheme: String(item.form || item.display || "").replace(/-/g, "").toLowerCase(),
+      type: "Base",
+      meaning: item.meaning || "Meaning not added yet",
+      originLabel: baseGroupLabel(item.group),
+      sentence: `Can be used as: ${item.pos ? item.pos.join(", ") : "various word types"}.`,
+      emoji: visualCueFromMeaning(item.meaning, "Base"),
+      group: item.group || "core",
+      examples: normaliseExamples(item.examples),
+      stage: item.stage
+    };
+  }
+
+  function makeFallbackExamples(card) {
+    const clean = String(card.cleanMorpheme || "").replace(/-/g, "");
+
+    if (card.type === "Prefix") {
+      return [
+        `<u>${clean}</u>example`,
+        `<u>${clean}</u>word`,
+        `<u>${clean}</u>form`
+      ];
+    }
+
+    if (card.type === "Suffix") {
+      return [
+        `word<u>${clean}</u>`,
+        `stem<u>${clean}</u>`,
+        `base<u>${clean}</u>`
+      ];
+    }
+
+    return [
+      `<u>${clean}</u>word`,
+      `pre<u>${clean}</u>`,
+      `<u>${clean}</u>form`
+    ];
+  }
+
+  function getExamplesForCard(card) {
+    if (Array.isArray(card.examples) && card.examples.length > 0) {
+      return card.examples.slice(0, 3);
+    }
+    return makeFallbackExamples(card);
+  }
+
+  function renderExamples(card) {
+    const examples = getExamplesForCard(card);
+    $("examplesList").innerHTML = examples
+      .map(example => `<div class="example-item">${example}</div>`)
+      .join("");
+  }
+
+  function getDeckFromSelection() {
+    const selected = getSelectedCardType();
+
+    if (selected === "prefix") {
+      return (DATA.prefixes || []).map(normalisePrefix);
+    }
+
+    if (selected === "suffix") {
+      return (DATA.suffixes || []).map(normaliseSuffix);
+    }
+
+    if (selected === "baseAll") {
+      return (DATA.bases || []).map(normaliseBase);
+    }
+
+    if (selected === "baseGroup") {
+      const chosenGroup = groupSelect.value;
+      return (DATA.bases || [])
+        .filter(item => (item.group || "core") === chosenGroup)
+        .map(normaliseBase);
+    }
+
+    return [];
+  }
+
+  function getTypeLabel() {
+    const selected = getSelectedCardType();
+    if (selected === "prefix") return "Prefixes";
+    if (selected === "suffix") return "Suffixes";
+    if (selected === "baseAll") return "All bases";
+    if (selected === "baseGroup") return "Bases by origin";
+    return "Deck";
+  }
+
+  function updateGroupVisibility() {
+    const selected = getSelectedCardType();
+    groupSection.style.display = selected === "baseGroup" ? "block" : "none";
+  }
+
+  function showEmpty(message) {
+    emptyState.style.display = "block";
+    var subEl = document.getElementById("emptyStateSub");
+    if (subEl && message) subEl.textContent = message;
+    cardWrap.style.display = "none";
+  }
+
+  function showCard(card) {
+    state.currentCard = card;
+    flashcard.classList.remove("flipped");
+
+    // Handoff → Morpheme Builder, focused on this morpheme
+    var buildBtn = $("buildWithBtn");
+    if (buildBtn) {
+      if (card.id) {
+        buildBtn.style.display = '';
+        buildBtn.href = 'morpheme-builder.html?morpheme=' + encodeURIComponent(card.id) + '&type=' + encodeURIComponent((card.type || '').toLowerCase());
+      } else {
+        buildBtn.style.display = 'none';
+      }
+    }
+
+    $("frontBadge").textContent = card.type;
+    $("backBadge").textContent = card.type;
+    $("frontMorpheme").textContent = card.morpheme;
+    $("backMorpheme").textContent = card.morpheme;
+    $("meaningText").textContent = card.meaning || "Meaning not added yet";
+    $("originText").textContent = card.originLabel || "Unknown";
+    $("sentenceText").textContent = card.sentence || "No extra note added yet.";
+    $("emojiBox").textContent = showEmoji.checked ? (card.emoji || "🧠") : "";
+    renderExamples(card);
+
+    // EALD translation + speak buttons + flip reveal
+    var ealdRow = $("ealdRow"), ealdEl = $("ealdTranslation");
+    var ealdSpeakRow = $("ealdSpeakRow"), ealdSpeakEl = $("ealdSpeakBtns");
+    var ealdDefRow = $("ealdDefRow"), ealdDefEl = $("ealdDefinition");
+    if (ealdRow) ealdRow.style.display = 'none';
+    if (ealdEl) { ealdEl.textContent = ''; ealdEl.dataset.translatedWord = ''; ealdEl.dataset.englishWord = ''; }
+    if (ealdSpeakRow) ealdSpeakRow.style.display = 'none';
+    if (ealdSpeakEl) ealdSpeakEl.innerHTML = '';
+    if (ealdDefRow) ealdDefRow.style.display = 'none';
+    if (ealdDefEl) ealdDefEl.innerHTML = '';
+    if (typeof WordLabData !== 'undefined' && WordLabData.getEALDLanguage()) {
+      WordLabData.injectEALDStyles();
+      var langName = (WordLabData.EALD_LANGUAGES[WordLabData.getEALDLanguage()] || '').split(' (')[0];
+      var morpheme = card.morpheme || '', meaning = card.meaning || '';
+      if (ealdEl) ealdEl.dataset.englishWord = meaning || morpheme;
+      if (ealdSpeakEl) { ealdSpeakEl.innerHTML = WordLabData.buildEALDSpeakButtons(); if (ealdSpeakRow) ealdSpeakRow.style.display = ''; }
+      if (ealdDefEl) { ealdDefEl.innerHTML = '<button class="eald-def-btn" id="ealdDefBtn" onclick="this.classList.toggle(\'flipped\')"><span class="eald-def-front">🌐 Show in ' + WordLabData.escapeHtml(langName) + '</span><span class="eald-def-back" id="ealdDefText">Loading...</span></button>'; if (ealdDefRow) ealdDefRow.style.display = ''; }
+      WordLabData.getTranslations([morpheme, meaning], ['word', 'morpheme_meaning']).then(function(t) {
+        if (!t) return;
+        var parts = [];
+        if (t[morpheme]) parts.push(WordLabData.escapeHtml(t[morpheme]));
+        if (t[meaning]) parts.push(WordLabData.escapeHtml(t[meaning]));
+        if (parts.length && ealdEl && ealdRow) {
+          ealdEl.innerHTML = parts.join(' — ');
+          ealdRow.style.display = '';
+        }
+        var defText = document.getElementById('ealdDefText');
+        if (defText && t[meaning]) defText.textContent = '🌐 ' + t[meaning];
+        else if (defText && t[morpheme]) defText.textContent = '🌐 ' + t[morpheme];
+        if (ealdEl && t[meaning]) ealdEl.dataset.translatedWord = t[meaning];
+        else if (ealdEl && t[morpheme]) ealdEl.dataset.translatedWord = t[morpheme];
+      });
+    }
+
+    // Support mode scaffold: show morpheme type on front (already shown via badge)
+    // and add a one-word meaning clue below the morpheme
+    var supportClueEl = document.getElementById('supportClue');
+    if(!supportClueEl){
+      supportClueEl = document.createElement('p');
+      supportClueEl.id = 'supportClue';
+      supportClueEl.style.cssText = 'color:#6366f1;font-size:14px;font-weight:700;margin:8px 0 0;font-style:italic;';
+      var frontFace = document.querySelector('.card-face.front');
+      if(frontFace) frontFace.insertBefore(supportClueEl, frontFace.querySelector('.hint'));
+    }
+    if(_supportMode && card.meaning){
+      var clueWord = card.meaning.split(/[;,]/)[0].trim().split(' ').slice(0,2).join(' ');
+      supportClueEl.textContent = '💡 Clue: ' + clueWord;
+      supportClueEl.style.display = '';
+    } else if(supportClueEl){
+      supportClueEl.style.display = 'none';
+    }
+    // Update hints for this card
+    if(typeof WLHints !== 'undefined'){
+      WLHints.resetHints();
+      WLHints.updateHints(
+        function(){ return 'Try to guess the meaning before flipping the card.'; },
+        function(){
+          if(!state.currentCard || !state.currentCard.meaning) return '';
+          var clue = state.currentCard.meaning.split(/[;,]/)[0].trim().split(' ')[0];
+          return 'Think about the word "' + clue + '".';
+        }
+      );
+    }
+
+    emptyState.style.display = "none";
+    cardWrap.style.display = "block";
+  }
+
+  function buildDeck() {
+    let deck = WordLabData.filterByStage(getDeckFromSelection(), 'flashcard-mode');
+
+    if (randomMode.checked) {
+      deck = shuffleArray(deck);
+    }
+
+    state.deck = deck;
+    state.currentIndex = 0;
+    state.currentCard = null;
+
+    deckSizeEl.textContent = deck.length;
+    currentTypeEl.textContent = getTypeLabel();
+    cardNumberEl.textContent = deck.length ? 1 : 0;
+
+    if (!deck.length) {
+      showEmpty("No cards were found in this selection. Make sure data.js is loading and window.MORPHEMES exists.");
+      return;
+    }
+
+    showCard(deck[0]);
+  }
+
+  function nextCard() {
+    if (!state.deck.length) return;
+
+    if (randomMode.checked) {
+      if (state.deck.length === 1) {
+        showCard(state.deck[0]);
+        cardNumberEl.textContent = "1";
+        return;
+      }
+
+      let next;
+      do {
+        next = state.deck[Math.floor(Math.random() * state.deck.length)];
+      } while (
+        state.currentCard &&
+        next.morpheme === state.currentCard.morpheme &&
+        next.type === state.currentCard.type
+      );
+
+      showCard(next);
+      cardNumberEl.textContent = "Random";
+      return;
+    }
+
+    state.currentIndex++;
+    if (state.currentIndex >= state.deck.length) {
+      state.currentIndex = 0;
+    }
+
+    cardNumberEl.textContent = String(state.currentIndex + 1);
+    showCard(state.deck[state.currentIndex]);
+  }
+
+  function flipCard() {
+    if (!state.currentCard) return;
+    flashcard.classList.toggle("flipped");
+  }
+
+  function resetView() {
+    deckSizeEl.textContent = "0";
+    cardNumberEl.textContent = "0";
+    currentTypeEl.textContent = getTypeLabel();
+    showEmpty("Build a deck to begin your flashcards.");
+  }
+
+  document.querySelectorAll('input[name="cardType"]').forEach(input => {
+    input.addEventListener("change", () => {
+      updateGroupVisibility();
+      resetView();
+    });
+  });
+
+  groupSelect.addEventListener("change", resetView);
+
+  showEmoji.addEventListener("change", () => {
+    if (state.currentCard) {
+      $("emojiBox").textContent = showEmoji.checked ? (state.currentCard.emoji || "🧠") : "";
+    }
+  });
+
+  $("buildDeckBtn").addEventListener("click", buildDeck);
+  $("shuffleBtn").addEventListener("click", buildDeck);
+  $("nextBtn").addEventListener("click", nextCard);
+  $("flipBtn").addEventListener("click", flipCard);
+  flashcard.addEventListener("click", flipCard);
+
+  updateGroupVisibility();
+  currentTypeEl.textContent = getTypeLabel();
+
+  if (!DATA.prefixes.length && !DATA.suffixes.length && !DATA.bases.length) {
+    showEmpty("Your data.js file was not loaded. Make sure flashcard-mode.html is in the same folder as data.js and that data.js defines window.MORPHEMES.");
+  }
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="wordlab-stage.js"></script>
+<script defer src="wordlab-data.js?v=20261023b"></script>
+<script defer src="wordlab-scientist.js?v=20261019"></script>
+<script defer src="wordlab-effects.js"></script>
+<script defer src="wordlab-worlds.js"></script>
+<script defer src="wordlab-audio.js"></script>
+<script defer src="wordlab-help.js"></script>
+<script defer src="wordlab-hints.js"></script>
+<script>
+var _supportMode = false;
+document.addEventListener('DOMContentLoaded', function(){ _supportMode = !!(typeof WordLabData !== 'undefined' && WordLabData.isSupportMode()); });
+(function(){var w=document.getElementById('particles');if(!w)return;var cs=['rgba(180,130,60,.3)','rgba(217,119,6,.25)','rgba(254,243,199,.2)'];for(var i=0;i<18;i++){var p=document.createElement('div');p.className='particle';p.style.cssText='left:'+(Math.random()*100)+'%;width:'+(6+Math.random()*8)+'px;height:'+(6+Math.random()*8)+'px;background:'+cs[Math.floor(Math.random()*cs.length)]+';animation-duration:'+(8+Math.random()*12)+'s;animation-delay:'+(-Math.random()*20)+'s;';w.appendChild(p);}})();
+(async function(){
+  if(typeof WLScientist==='undefined'){await new Promise(function(r){document.addEventListener('DOMContentLoaded',function(){r();},{once:true});});}
+  var w=document.getElementById('sciCharWrap');
+  if(!w||typeof WLScientist==='undefined')return;
+  function _p(svg){while(w.firstChild)w.removeChild(w.firstChild);w.appendChild(document.createRange().createContextualFragment(svg));}
+  _p(WLScientist.buildSVG({},'neutral'));
+  try{var sd=typeof WordLabData!=='undefined'?await WordLabData.getStudentData():null;if(sd&&sd.scientist)_p(WLScientist.buildSVG(sd.scientist,'neutral'));}catch(e){console.error('Scientist load failed',e);}
+})();
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+  // Daily limit check
+  if(typeof WordLabData !== 'undefined' && WordLabData.getSession()){
+    try {
+      const limit = await WordLabData.checkDailyLimit();
+      if(limit && limit.blocked){
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(13,11,26,.92);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = '<div style="background:#1a1630;border:2px solid #4338ca;border-radius:24px;padding:40px;max-width:440px;text-align:center;color:#e0e7ff;font-family:Lexend,sans-serif;"><div style="font-size:48px;margin-bottom:16px;">🧪</div><h2 style="font-size:22px;font-weight:900;margin-bottom:12px;">Daily limit reached</h2><p style="color:#94a3b8;font-size:14px;margin-bottom:24px;">You\\\'ve completed 30 questions today on the free plan. Come back tomorrow or ask your teacher about upgrading.</p><a href="landing.html" style="background:#4338ca;color:#fff;padding:12px 24px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px;">Back to Home</a></div>';
+        document.body.appendChild(overlay);
+        return;
+      }
+    } catch(e) { console.warn('Daily limit check failed', e); }
+  }
+
+  if(typeof WLHelp!=='undefined') WLHelp.init({
+    game:'flashcard', title:'Flashcards', emoji:'📇',
+    steps:[
+      {icon:'👀',title:'Read the morpheme',desc:'A prefix, suffix, or base word appears on the card.'},
+      {icon:'🔄',title:'Flip the card',desc:'Click or tap the card to flip it over and see the meaning.'},
+      {icon:'➡️',title:'Next card',desc:'Swipe or click the arrow to move to the next morpheme.'},
+      {icon:'🧠',title:'Test yourself',desc:'Try to remember the meaning before flipping. Use the shuffle button to mix up the order.'}
+    ],
+    audioText:'In Flashcards, a morpheme appears on a card. Try to remember its meaning, then click or tap the card to flip it and check. Click the arrow to move to the next card. Use the shuffle button to mix up the order and test your memory.'
+  });
+  // Register hint system
+  if(typeof WLHints !== 'undefined') WLHints.register({
+    getStrategyHint: function(){ return 'Try to guess the meaning before flipping the card.'; },
+    getSpecificHint: function(){
+      // Access the current card state (defined in the IIFE above)
+      var frontEl = document.getElementById('frontMorpheme');
+      var badgeEl = document.getElementById('frontBadge');
+      if(badgeEl && frontEl){
+        return 'This is a ' + badgeEl.textContent.toLowerCase() + '. What words use "' + frontEl.textContent + '"?';
+      }
+      return 'Think about words that contain this morpheme.';
+    }
+  });
+  if(typeof WordLabData !== 'undefined') {
+    WordLabData.initLoginUI({
+      accentColor: '#b45309',
+      accentSoft:  '#fffbeb',
+      accentLine:  '#fde68a',
+      accentText:  '#78350f',
+      onLogin: function() { location.reload(); }
+    });
+    var session = WordLabData.getSession();
+    var btn = document.getElementById('wlLoginBtn');
+    if(btn && session) btn.textContent = '👤 ' + session.studentName;
+  }
+  if(typeof WordLabData !== 'undefined' && WordLabData.isExtensionMode && WordLabData.isExtensionMode('flashcard-mode')){
+    var extPill = document.createElement('div');
+    extPill.style.cssText = 'background:#4338ca;color:#e0e7ff;font-size:10px;font-weight:900;padding:4px 10px;border-radius:20px;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;';
+    extPill.textContent = '🔬 Extension';
+    var hud = document.querySelector('.hud, .headerInner, header .innerHud');
+    if(hud) hud.appendChild(extPill);
+  }
+});
+</script>
+
+<footer style="text-align:center;padding:12px 16px;font-size:11px;color:#64748b;border-top:1px solid #e2e8f0;margin-top:auto;font-family:Lexend,sans-serif;">&#129514; Word Labs &middot; <a href="about.html" style="color:#64748b;">About</a> &middot; <a href="privacy.html" style="color:#64748b;">Privacy Policy</a> &middot; <a href="terms.html" style="color:#64748b;">Terms of Service</a> &middot; <a href="mailto:nick@wordlabs.app" style="color:#64748b;">Contact</a></footer>
+</body>
+</html>
