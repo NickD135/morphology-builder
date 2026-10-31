@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Labs – Breakdown Blitz</title>
+  <link rel="stylesheet" href="wordlab-common.css?v=20261031">
+  <style>
+    :root{
+      --bg:#f5f5f5; --panel:#ffffff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b;
+      --indigo:#4338ca; --indigo-2:#6366f1; --indigo-soft:#eef2ff;
+      --blue-soft:#eff6ff; --blue-line:#bfdbfe; --blue-text:#1e40af;
+      --green:#16a34a; --green-soft:#f0fdf4; --green-line:#bbf7d0; --green-text:#166634;
+      --orange:#ea580c; --orange-soft:#fff7ed; --orange-line:#fed7aa; --orange-text:#9a3412;
+      --ok:#15803d; --warn:#b45309; --bad:#dc2626;
+      --accent:#dc2626; --accent-rgb:220,38,38; --header-rgb:0,0,0;
+    }
+    body{ margin:0; padding-top:56px; font-family:'Lexend',sans-serif; background:var(--bg); color:var(--text); line-height:1.6; letter-spacing:.02em; }
+    .header{ position:fixed; top:0; left:0; right:0; z-index:50; background:rgba(var(--header-rgb),.75); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border-bottom:1px solid rgba(255,255,255,.1); padding:0; }
+    .headerInner{ padding:0 20px; height:56px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; max-width:none; }
+    .brand{ display:flex; align-items:center; gap:12px; flex-shrink:0; }
+    .brandIcon{ width:36px; height:36px; border-radius:10px; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:0 8px 16px rgba(0,0,0,.15); flex:0 0 auto; }
+    .brandText h1{ margin:0; font-size:15px; font-weight:900; letter-spacing:-.02em; color:#f1f5f9; }
+    .brandText .sub{ font-size:9px; text-transform:uppercase; letter-spacing:.22em; color:#fca5a5; font-weight:800; display:block; margin-top:2px; }
+    #wlLoginBtn{ border:1px solid rgba(var(--accent-rgb),.25); background:rgba(var(--accent-rgb),.1); color:#e2e8f0; border-radius:10px; padding:7px 13px; font-weight:800; font-size:11px; cursor:pointer; font-family:'Lexend',sans-serif; white-space:nowrap; flex-shrink:0; }
+    .hud{ display:flex; gap:8px; align-items:center; flex-wrap:nowrap; overflow-x:auto; }
+    .hud::-webkit-scrollbar{ display:none; }
+    .pill{ display:inline-flex; align-items:center; justify-content:center; min-height:32px; border:1px solid rgba(var(--accent-rgb),.2); border-radius:999px; background:rgba(var(--accent-rgb),.1); padding:6px 14px; font-size:12px; font-weight:800; color:#e2e8f0; white-space:nowrap; flex-shrink:0; }
+    .pill.score{ background:var(--accent); color:#fff; border-color:transparent; }
+    .pill.streak{ background:rgba(255,237,213,.12); color:#fed7aa; border-color:rgba(251,146,60,.25); }
+    .topBtn{ border:none; background:rgba(var(--accent-rgb),.12); color:#e2e8f0; font-weight:800; font-size:11px; text-transform:uppercase; letter-spacing:.12em; padding:7px 13px; border-radius:10px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; white-space:nowrap; flex-shrink:0; }
+    .topBtn:hover{ background:rgba(var(--accent-rgb),.22); }
+    .wrap{ max-width:1000px; margin:0 auto; padding:20px; display:flex; flex-direction:column; gap:16px; }
+    .panel{ background:rgba(255,255,255,.92); border:2px solid rgba(var(--accent-rgb),.2); border-radius:20px; box-shadow:0 16px 48px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.6); overflow:hidden; }
+    .panelInner{ padding:24px; }
+    .panelTitle{ margin:0 0 12px 0; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.22em; color:var(--accent); }
+    .energyRow{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:13px; font-weight:800; color:var(--muted); }
+    .bar{ width:100%; height:14px; background:var(--line); border-radius:999px; overflow:hidden; }
+    .barFill{ height:100%; width:100%; background:linear-gradient(90deg,var(--bad) 0%,var(--warn) 50%,var(--ok) 100%); transition:width .2s linear; border-radius:999px; }
+    .missionBadge{ display:inline-block; background:var(--indigo-soft); color:var(--indigo); padding:6px 12px; border-radius:999px; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.12em; margin-bottom:10px; border:1px solid rgba(99,102,241,.2); }
+    .missionTitle{ font-size:20px; font-weight:900; margin:0 0 4px; color:#312e81; }
+    .missionSub{ color:var(--muted); font-weight:600; font-size:14px; }
+    /* Target word */
+    .targetWordCard{ background:var(--indigo-soft); border:2px solid #c7d2fe; border-radius:20px; padding:20px 24px; text-align:center; margin-bottom:24px; }
+    .targetLabel{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.22em; color:var(--indigo-2); margin-bottom:8px; }
+    .targetWord{ font-size:clamp(20px,8vw,48px); font-weight:900; color:#312e81; letter-spacing:-.02em; line-height:1; margin-bottom:6px; word-break:break-word; }
+    .targetHint{ font-size:14px; color:var(--indigo); font-weight:700; }
+    /* Input grid */
+    .inputGrid{ display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:20px; }
+    @media(max-width:700px){ .inputGrid{ grid-template-columns:1fr 1fr; } }
+    .inputCard{ border:3px solid var(--line); border-radius:20px; padding:16px; background:#fff; transition:border-color .15s, background .15s; position:relative; }
+    .inputCard label{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.18em; color:var(--muted); display:block; margin-bottom:8px; }
+    .inputCard.prefix label{ color:var(--blue-text); }
+    .inputCard.base label{ color:var(--green-text); }
+    .inputCard.suffix label{ color:var(--orange-text); }
+    .inputCard.correct{ border-color:var(--green-line); background:var(--green-soft); }
+    .inputCard.wrong{ border-color:#fecaca; background:#fef2f2; }
+    .inputCard.correct::after{content:'\2713';position:absolute;top:4px;right:8px;font-size:14px;font-weight:900;color:var(--green-text);}
+    .inputCard.wrong::after{content:'\2717';position:absolute;top:4px;right:8px;font-size:14px;font-weight:900;color:var(--bad);}
+    .inputCard.neutral{ border-color:var(--line); background:#fff; }
+    .answerInput{ width:100%; border:2px solid var(--line); border-radius:12px; padding:10px 12px; font-size:18px; font-weight:800; color:var(--text); outline:none; transition:border-color .15s, box-shadow .15s; background:#fff; }
+    .answerInput:focus{ border-color:var(--indigo-2); box-shadow:0 0 0 4px rgba(99,102,241,.12); }
+    .boxStatus{ font-size:12px; font-weight:800; margin-top:6px; min-height:18px; }
+    .boxStatus.ok{ color:var(--ok); }
+    .boxStatus.bad{ color:var(--bad); }
+    /* Feedback */
+    .feedback{ min-height:28px; text-align:center; font-size:22px; font-weight:900; }
+    .feedback.ok{ color:var(--ok); }
+    .feedback.warn{ color:var(--warn); }
+    .feedback.bad{ color:var(--bad); }
+    .subFeedback{ min-height:24px; text-align:center; color:var(--muted); font-weight:700; margin-top:4px; font-size:14px; }
+    /* Answer reveal */
+    .answerReveal{ display:none; background:var(--indigo-soft); border:2px solid #c7d2fe; border-radius:16px; padding:14px 18px; margin:12px 0; }
+    .answerReveal.show{ display:block; }
+    .answerRevealTitle{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.18em; color:var(--indigo); margin-bottom:10px; }
+    .revealRow{ display:flex; flex-wrap:wrap; gap:8px; }
+    .whyPanel{ margin-top:12px; color:#1e1b4b; font-size:15px; font-weight:600; line-height:1.6; }
+    .whyPanel:empty{ display:none; }
+    .whyPanel .whyTitle{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.18em; color:var(--indigo); margin-bottom:4px; }
+    .whyPanel ul{ margin:0; padding-left:20px; }
+    .whyPanel li{ margin:4px 0; }
+    .whyPanel .whyBuild{ margin-top:8px; font-weight:700; }
+    .revealChip{ display:inline-flex; align-items:center; padding:7px 14px; border-radius:999px; font-size:13px; font-weight:800; border:2px solid; }
+    .revealChip.prefix{ border-color:var(--blue-line); color:var(--blue-text); background:var(--blue-soft); }
+    .revealChip.base{ border-color:var(--green-line); color:var(--green-text); background:var(--green-soft); }
+    .revealChip.suffix{ border-color:var(--orange-line); color:var(--orange-text); background:var(--orange-soft); }
+    /* Action row */
+    .actionRow{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:20px; }
+    .secondaryBtn{ border:2px solid var(--line); background:#fff; color:#334155; font-weight:800; font-size:13px; padding:12px 20px; border-radius:16px; cursor:pointer; text-transform:uppercase; letter-spacing:.08em; transition:all .15s; }
+    .secondaryBtn:hover{ background:#f8fafc; }
+    .primaryBtn{ border:none; background:var(--indigo); color:#fff; font-weight:900; font-size:13px; padding:14px 28px; border-radius:16px; cursor:pointer; text-transform:uppercase; letter-spacing:.08em; box-shadow:0 10px 20px rgba(67,56,202,.2); transition:all .15s; }
+    .primaryBtn:hover{ background:#3730a3; transform:translateY(-1px); }
+    .primaryBtn:disabled{ background:#cbd5e1; box-shadow:none; cursor:not-allowed; transform:none; }
+    .nextRow{ display:none; justify-content:center; margin-top:14px; }
+    .nextRow.show{ display:flex; }
+    .nextWordBigBtn{ border:none; background:#16a34a; color:#fff; font-weight:900; font-size:17px; padding:18px 48px; border-radius:20px; cursor:pointer; text-transform:uppercase; letter-spacing:.1em; box-shadow:0 12px 28px rgba(22,163,74,.28); transition:all .15s; width:100%; max-width:380px; animation:nextPulse 1s ease infinite; }
+    .nextWordBigBtn:hover{ background:#15803d; transform:translateY(-2px); animation:none; }
+    @keyframes nextPulse{ 0%,100%{ box-shadow:0 12px 28px rgba(22,163,74,.28); } 50%{ box-shadow:0 12px 36px rgba(22,163,74,.55); } }
+    /* Log panel */
+    .logPanel{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px; color:#475569; line-height:1.7; }
+    .logHead{ display:flex; align-items:center; gap:8px; margin-bottom:10px; font-weight:800; color:var(--muted); }
+    .dots{ display:flex; gap:5px; }
+    .dot{ width:10px; height:10px; border-radius:999px; }
+    .dot.red{ background:#f87171; } .dot.yellow{ background:#facc15; } .dot.green{ background:#4ade80; }
+    @keyframes pulse{ 0%{ transform:scale(1); } 50%{ transform:scale(1.01); } 100%{ transform:scale(1); } }
+    @keyframes shake{ 0%,100%{ transform:translateX(0); } 25%{ transform:translateX(-4px); } 75%{ transform:translateX(4px); } }
+    .pulse{ animation:pulse .35s ease; }
+    .shake{ animation:shake .35s ease; }
+
+  /* ── Round picker ── */
+  .round-picker{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;}
+  .round-btn{background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.1);color:#94a3b8;font-family:'Lexend',sans-serif;font-weight:800;font-size:13px;padding:6px 14px;border-radius:10px;cursor:pointer;transition:all .15s;}
+  .round-btn:hover{border-color:rgba(var(--accent-rgb),.4);color:#fecaca;}
+  .round-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+  /* ── Explosion/Chemistry Lab scene ── */
+  html,body{width:100%;height:100%;overflow:hidden;}
+  .lab-scene{position:fixed;inset:0;z-index:0;display:flex;flex-direction:column;pointer-events:none;}
+  .lab-wall{flex:0 0 62%;background:#2d2d3a;position:relative;overflow:hidden;}
+  .lab-wall::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 49px,rgba(255,255,255,.03) 50px),repeating-linear-gradient(90deg,transparent,transparent 49px,rgba(255,255,255,.03) 50px);}
+  .warning-light{position:absolute;top:0;left:50%;transform:translateX(-50%);width:22px;height:22px;border-radius:50%;background:radial-gradient(circle,#ff4444,#cc0000);box-shadow:0 0 30px 14px rgba(255,68,68,.75);animation:warnPulse 2s ease-in-out infinite;}
+  @keyframes warnPulse{0%,100%{opacity:.7;}50%{opacity:1;}}
+  .danger-sign{position:absolute;background:#ffcc00;color:#000;font-size:9px;font-weight:900;padding:4px 8px;border-radius:4px;border:2px solid #e6b800;letter-spacing:.05em;}
+  .lab-shelf{position:absolute;left:0;right:0;height:8px;background:#555570;border-bottom:3px solid #3a3a4a;}
+  .lab-shelf-1{top:35%;}.lab-shelf-2{top:58%;}
+  .shelf-items{position:absolute;bottom:8px;left:0;right:0;display:flex;align-items:flex-end;gap:12px;padding:0 16px;}
+  .pipe{position:absolute;top:0;height:16px;border-radius:0 0 4px 4px;background:linear-gradient(180deg,#555,#3a3a3a);border:2px solid #666;border-top:none;}
+  .pipe-steam{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);display:flex;gap:3px;}
+  .steam-puff{width:4px;height:10px;background:rgba(200,200,220,.5);border-radius:2px;animation:steamUp 1.5s ease-in infinite;}
+  .steam-puff:nth-child(2){animation-delay:.3s;}.steam-puff:nth-child(3){animation-delay:.6s;}
+  @keyframes steamUp{0%{opacity:0;transform:translateY(0);}50%{opacity:.7;}100%{opacity:0;transform:translateY(-18px) scaleX(1.5);}}
+  .beaker-wrap{position:relative;}
+  .steam{position:absolute;top:-20px;left:50%;transform:translateX(-50%);display:flex;gap:3px;}
+  .steam-line{width:3px;height:14px;background:rgba(255,150,50,.7);border-radius:2px;animation:steamRise 1s ease-in-out infinite;}
+  .steam-line:nth-child(2){animation-delay:.2s;height:18px;}.steam-line:nth-child(3){animation-delay:.4s;height:11px;}
+  @keyframes steamRise{0%{opacity:0;transform:translateY(0);}40%{opacity:.9;}100%{opacity:0;transform:translateY(-20px) scaleX(1.5);}}
+  .lab-floor{flex:0 0 38%;background:repeating-linear-gradient(45deg,#1a1a2e 0,#1a1a2e 10px,#1e1e35 10px,#1e1e35 20px);position:relative;border-top:4px solid #e63600;}
+  .lab-bench{position:absolute;bottom:0;height:72%;background:#2d1a0a;border-top:8px solid #5c3010;border-radius:4px 4px 0 0;}
+  .lab-bench.left{left:10px;width:170px;}.lab-bench.right{right:10px;width:170px;}
+  .bench-top{position:absolute;top:-17px;left:-6px;right:-6px;height:17px;background:#3d2010;border-radius:4px 4px 0 0;border-top:3px solid #5c3010;}
+  .bench-items{position:absolute;top:-78px;left:0;right:0;display:flex;justify-content:center;gap:10px;align-items:flex-end;}
+  #particles{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden;}
+  .particle{position:absolute;bottom:-10px;border-radius:50%;animation:particleFloat linear infinite;}
+  @keyframes particleFloat{from{transform:translateY(0) translateX(0);opacity:.8;}to{transform:translateY(calc(-100vh - 20px)) translateX(30px);opacity:0;}}
+  .wrap{position:fixed!important;top:56px!important;bottom:0!important;left:50%!important;transform:translateX(-50%)!important;width:75vw!important;max-width:none!important;margin:0!important;z-index:10;display:flex!important;flex-direction:column!important;justify-content:center!important;padding:16px 0!important;overflow-y:auto;}
+  .wrap::-webkit-scrollbar{width:0;}
+  /* No backdrop blur on the game panel: it is 92% opaque white, so the blur barely showed, but the
+     browser had to redo it every frame as particles drifted behind it (a big cost on Chromebooks). */
+  .panel{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
+  .panelInner{padding:16px 20px!important;}
+  .inputCard{padding:10px 12px!important;border-radius:14px!important;}
+  .inputCard label{margin-bottom:4px!important;}
+  .answerInput{padding:7px 10px!important;font-size:15px!important;}
+  .boxStatus{margin-top:3px!important;min-height:14px!important;font-size:11px!important;}
+  .targetWordCard{padding:10px 16px!important;margin-bottom:10px!important;border-radius:14px!important;}
+  .targetWord{font-size:clamp(18px,6vw,36px)!important;margin-bottom:2px!important;}
+  .targetHint{font-size:12px!important;}
+  .feedback{font-size:16px!important;min-height:20px!important;}
+  .subFeedback{font-size:12px!important;min-height:16px!important;margin-top:2px!important;}
+  .actionRow{margin-top:10px!important;}
+  .inputGrid{margin-bottom:8px!important;gap:8px!important;}
+  .scientist-stage{position:fixed;right:0;width:calc((100vw - 75vw)/2);top:56px;bottom:0;z-index:11;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  #sciCharWrap{width:120px;height:150px;display:flex;align-items:flex-end;justify-content:center;animation:sciIdle 3s ease-in-out infinite;}
+  #sciCharWrap.sci-correct{animation:sciJump .6s ease-out;}
+  #sciCharWrap.sci-wrong{animation:sciShake .5s ease-out;}
+  #sciCharWrap.sci-streak{animation:sciDance .8s ease-in-out infinite;}
+  @keyframes sciIdle{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  @keyframes sciJump{0%{transform:translateY(0)}30%{transform:translateY(-22px)}100%{transform:translateY(0)}}
+  @keyframes sciShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-4deg) translateX(-4px)}40%{transform:rotate(4deg) translateX(4px)}60%{transform:rotate(-3deg) translateX(-3px)}80%{transform:rotate(2deg)}}
+  @keyframes sciDance{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+  .scene-prop-left{position:fixed;left:0;width:calc((100vw - 75vw)/2);top:56px;bottom:0;z-index:11;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;}
+  .prop-bob{position:relative;width:110px;height:200px;animation:propBob 4.5s ease-in-out infinite;will-change:transform;}
+  .prop-bob svg{position:absolute;left:0;top:0;}
+  .prop-glow{animation:propGlow 1.8s ease-in-out infinite;will-change:opacity;}
+  @keyframes propBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+  @keyframes propGlow{0%,100%{opacity:.7}50%{opacity:1}}
+  /* Decorative scene motion stops in low-stim mode and when the device asks for reduced motion */
+  .low-stim .warning-light,.low-stim .prop-bob,.low-stim .prop-glow{animation:none!important;}
+  .low-stim #particles,.low-stim .steam,.low-stim .steam-puff{display:none!important;}
+  @media (prefers-reduced-motion: reduce){
+    .warning-light,.prop-bob,.prop-glow,#sciCharWrap{animation:none!important;}
+    #particles,.steam,.steam-puff{display:none!important;}
+    .barFill{transition:none!important;}
+  }
+  @media(max-width:700px){
+    .lab-scene{display:none;}
+    body{background:linear-gradient(160deg,#1a1a2e 0%,#2d2d3a 60%,#7f1d1d 100%)!important;overflow-y:auto!important;}
+    .wrap{width:calc(100vw - 24px)!important;position:relative!important;top:auto;bottom:auto;left:auto;transform:none;justify-content:flex-start!important;padding-top:72px!important;padding-bottom:120px!important;}
+    .scene-prop-left{display:none!important;}
+    /* Mobile scientist: pinned bottom-right so it never overlaps the site header or game HUD */
+    .scientist-stage{position:fixed!important;top:auto!important;bottom:16px!important;right:10px!important;left:auto!important;width:64px!important;height:auto!important;z-index:55!important;display:flex!important;pointer-events:none;}
+    .scientist-stage #sciCharWrap{width:64px!important;height:96px!important;}
+    .scientist-stage #petCharWrap{display:none!important;}
+  }
+  @media(max-width:480px){
+    .inputGrid{grid-template-columns:1fr!important;}
+    .nextWordBigBtn{max-width:100%!important;}
+    .inputGrid input{min-height:44px!important;font-size:15px!important;}
+    /* Nudge the pinned scientist a touch smaller on the narrowest phones */
+    .scientist-stage{width:56px!important;}
+    .scientist-stage #sciCharWrap{width:56px!important;height:84px!important;}
+  }
+  </style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+<div class="lab-scene" aria-hidden="true">
+  <div class="lab-wall">
+    <div class="warning-light"></div>
+    <div class="pipe" style="left:15%;width:110px;"><div class="pipe-steam"><span class="steam-puff"></span><span class="steam-puff"></span><span class="steam-puff"></span></div></div>
+    <div class="pipe" style="left:55%;width:75px;"><div class="pipe-steam"><span class="steam-puff"></span><span class="steam-puff"></span></div></div>
+    <div class="pipe" style="right:10%;width:95px;"><div class="pipe-steam"><span class="steam-puff"></span><span class="steam-puff"></span><span class="steam-puff"></span></div></div>
+    <div class="danger-sign" style="top:18%;left:12%;">⚠ DANGER</div>
+    <div class="danger-sign" style="top:18%;right:18%;">☢ VOLATILE</div>
+    <div class="lab-shelf lab-shelf-1"><div class="shelf-items">
+      <div class="beaker-wrap"><div class="steam"><span class="steam-line"></span><span class="steam-line"></span><span class="steam-line"></span></div><svg width="30" height="46" viewBox="0 0 30 46"><rect x="7" y="0" width="16" height="6" rx="2" fill="#555"/><path d="M7 6 L4 40 Q4 46 9 46 L21 46 Q27 46 27 40 L23 6Z" fill="rgba(220,38,38,.75)"/><ellipse cx="15" cy="36" rx="7" ry="4" fill="rgba(255,100,100,.45)"><animate attributeName="ry" values="4;5;4;3;4" dur=".5s" repeatCount="indefinite"/></ellipse></svg></div>
+      <div class="beaker-wrap"><div class="steam"><span class="steam-line" style="animation-delay:.1s"></span><span class="steam-line" style="animation-delay:.3s"></span></div><svg width="26" height="40" viewBox="0 0 26 40"><rect x="5" y="0" width="16" height="5" rx="2" fill="#555"/><path d="M5 5 L3 36 Q3 40 7 40 L19 40 Q23 40 23 36 L21 5Z" fill="rgba(234,179,8,.75)"/></svg></div>
+      <div class="beaker-wrap"><div class="steam"><span class="steam-line" style="animation-delay:.2s"></span><span class="steam-line" style="animation-delay:.5s"></span><span class="steam-line" style="animation-delay:.8s"></span></div><svg width="34" height="50" viewBox="0 0 34 50"><rect x="9" y="0" width="16" height="7" rx="2" fill="#555"/><path d="M9 7 L5 45 Q5 50 10 50 L24 50 Q29 50 29 45 L25 7Z" fill="rgba(16,185,129,.75)"/><ellipse cx="17" cy="40" rx="8" ry="4" fill="rgba(110,231,183,.4)"><animate attributeName="ry" values="4;6;4;3;4" dur=".6s" repeatCount="indefinite"/></ellipse></svg></div>
+      <div class="beaker-wrap"><div class="steam"><span class="steam-line"></span><span class="steam-line" style="animation-delay:.15s"></span></div><svg width="28" height="42" viewBox="0 0 28 42"><rect x="6" y="0" width="16" height="6" rx="2" fill="#555"/><path d="M6 6 L3 38 Q3 42 8 42 L20 42 Q25 42 25 38 L22 6Z" fill="rgba(139,92,246,.75)"/></svg></div>
+    </div></div>
+    <div class="lab-shelf lab-shelf-2"><div class="shelf-items">
+      <div class="beaker-wrap"><div class="steam"><span class="steam-line" style="animation-delay:.3s"></span><span class="steam-line"></span></div><svg width="26" height="40" viewBox="0 0 26 40"><rect x="5" y="0" width="16" height="5" rx="2" fill="#555"/><path d="M5 5 L3 36 Q3 40 7 40 L19 40 Q23 40 23 36 L21 5Z" fill="rgba(239,68,68,.7)"/></svg></div>
+      <div class="beaker-wrap"><div class="steam"><span class="steam-line"></span><span class="steam-line" style="animation-delay:.25s"></span></div><svg width="30" height="44" viewBox="0 0 30 44"><rect x="7" y="0" width="16" height="6" rx="2" fill="#555"/><path d="M7 6 L4 40 Q4 44 9 44 L21 44 Q26 44 26 40 L23 6Z" fill="rgba(234,179,8,.7)"/></svg></div>
+      <div class="beaker-wrap"><svg width="24" height="36" viewBox="0 0 24 36"><rect x="4" y="0" width="16" height="5" rx="2" fill="#555"/><path d="M4 5 L2 32 Q2 36 6 36 L18 36 Q22 36 22 32 L20 5Z" fill="rgba(99,102,241,.7)"/></svg></div>
+    </div></div>
+    <!-- Cauldron -->
+    <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);">
+      <div style="position:relative;">
+        <div style="position:absolute;top:-32px;left:50%;transform:translateX(-50%);display:flex;gap:4px;">
+          <span class="steam-puff" style="animation-duration:1.2s;width:6px;height:18px;background:rgba(150,100,200,.55);"></span>
+          <span class="steam-puff" style="animation-duration:.9s;animation-delay:.2s;width:8px;height:22px;background:rgba(150,100,200,.55);"></span>
+          <span class="steam-puff" style="animation-duration:1.1s;animation-delay:.4s;width:5px;height:16px;background:rgba(150,100,200,.55);"></span>
+        </div>
+        <svg width="78" height="58" viewBox="0 0 78 58"><rect x="14" y="49" width="8" height="9" rx="2" fill="#333"/><rect x="56" y="49" width="8" height="9" rx="2" fill="#333"/><ellipse cx="39" cy="29" rx="34" ry="24" fill="#1a1a1a"/><ellipse cx="39" cy="14" rx="33" ry="11" fill="#2a2a2a"/><ellipse cx="39" cy="17" rx="27" ry="7" fill="rgba(220,38,38,.8)"><animate attributeName="ry" values="7;9;7;5;7" dur=".7s" repeatCount="indefinite"/></ellipse><ellipse cx="39" cy="14" rx="34" ry="5" fill="none" stroke="#444" stroke-width="4"/></svg>
+      </div>
+    </div>
+  </div>
+  <div class="lab-floor">
+    <div class="lab-bench left"><div class="bench-top"></div><div class="bench-items"><div class="beaker-wrap"><div class="steam"><span class="steam-line"></span><span class="steam-line"></span></div><svg width="26" height="42" viewBox="0 0 26 42"><rect x="5" y="0" width="16" height="5" rx="2" fill="#555"/><path d="M5 5 L2 37 Q2 42 7 42 L19 42 Q24 42 24 37 L21 5Z" fill="rgba(239,68,68,.82)"/></svg></div></div></div>
+    <div class="lab-bench right"><div class="bench-top"></div><div class="bench-items"><div class="beaker-wrap"><div class="steam"><span class="steam-line" style="animation-delay:.3s"></span><span class="steam-line"></span></div><svg width="26" height="42" viewBox="0 0 26 42"><rect x="5" y="0" width="16" height="5" rx="2" fill="#555"/><path d="M5 5 L2 37 Q2 42 7 42 L19 42 Q24 42 24 37 L21 5Z" fill="rgba(234,179,8,.82)"/></svg></div></div></div>
+  </div>
+</div>
+<div id="particles"></div>
+<div class="scene-prop-left" aria-hidden="true">
+  <div class="prop-bob">
+  <svg width="110" height="200" viewBox="0 0 110 200">
+    <!-- Chemical warning barrel - breakdown/danger theme -->
+    <!-- Barrel body -->
+    <ellipse cx="55" cy="50" rx="36" ry="10" fill="#1a1a1a"/>
+    <rect x="19" y="50" width="72" height="100" fill="#333"/>
+    <ellipse cx="55" cy="150" rx="36" ry="10" fill="#222"/>
+    <!-- Barrel bands -->
+    <ellipse cx="55" cy="75" rx="36" ry="7" fill="none" stroke="#555" stroke-width="4"/>
+    <ellipse cx="55" cy="100" rx="36" ry="7" fill="none" stroke="#555" stroke-width="4"/>
+    <ellipse cx="55" cy="125" rx="36" ry="7" fill="none" stroke="#555" stroke-width="4"/>
+    <!-- Barrel sheen -->
+    <rect x="19" y="50" width="10" height="100" fill="rgba(255,255,255,.05)" rx="5"/>
+    <!-- Biohazard symbol -->
+    <circle cx="55" cy="100" r="22" fill="rgba(220,38,38,.15)" stroke="#dc2626" stroke-width="2"/>
+    <text x="55" y="107" text-anchor="middle" font-size="28" fill="#dc2626" font-family="Arial">☢</text>
+  </svg>
+  <svg class="prop-glow" width="110" height="200" viewBox="0 0 110 200" aria-hidden="true">
+    <!-- Bubbling liquid and smoke wisps: one layer so the glow fades without repainting the barrel -->
+    <ellipse cx="55" cy="157" rx="30" ry="6" fill="rgba(220,38,38,.5)"/>
+    <ellipse cx="42" cy="44" rx="5" ry="8" fill="rgba(150,100,200,.35)"/>
+    <ellipse cx="55" cy="38" rx="6" ry="10" fill="rgba(150,100,200,.4)"/>
+    <ellipse cx="68" cy="42" rx="4" ry="7" fill="rgba(150,100,200,.3)"/>
+  </svg>
+  <svg width="110" height="200" viewBox="0 0 110 200" aria-hidden="true">
+    <!-- Warning label -->
+    <rect x="28" y="155" width="54" height="20" rx="3" fill="#dc2626"/>
+    <text x="55" y="168" text-anchor="middle" font-size="7" font-weight="900" fill="#fff" font-family="Lexend,sans-serif">⚠ DANGER</text>
+  </svg>
+  </div>
+</div>
+<div class="scientist-stage"><div id="petCharWrap" class="pet-idle"></div><div id="sciCharWrap"></div></div>
+<header class="header wl-game-header" role="banner">
+  <div class="headerInner">
+    <div class="brand">
+      <div class="brandIcon">🧩</div>
+      <div class="brandText"><h1>Breakdown Blitz</h1><span class="sub">Word Labs · Breakdown Blitz</span></div>
+    </div>
+    <div class="hud" role="navigation" aria-label="Game controls">
+      <span class="pill streak" id="streakPill" aria-live="polite">🔥 Streak: 0</span>
+      <span class="pill score" id="scorePill" aria-live="polite">0 XP</span>
+      <span id="wlPillSlot"></span>
+      <button id="wlLoginBtn" onclick="wlShowLogin()" style="border:1px solid rgba(220,38,38,.25);background:rgba(220,38,38,.1);border-radius:10px;padding:7px 13px;font-weight:800;font-size:11px;cursor:pointer;font-family:'Lexend',sans-serif;color:#e2e8f0;white-space:nowrap;">👤 Log in</button>
+      <a href="landing.html" title="Home" class="topBtn">🏠 <span class="topBtnLabel">Home</span></a>
+      <a href="scientist.html" title="My Scientist" class="topBtn" style="background:var(--indigo-2);">🧬 <span class="topBtnLabel">My Scientist</span></a>
+    </div>
+  </div>
+</header>
+<div class="wrap" id="main-content" role="main">
+  <div class="panel" id="gameCard"><div class="panelInner">
+    <div style="margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#64748b;margin-bottom:3px;"><span>Energy level</span><span id="fuelLabel" aria-live="polite">100%</span></div>
+      <div class="bar" style="height:8px;"><div class="barFill" id="fuelBar"></div></div>
+      <div style="font-size:11px;font-weight:700;color:#64748b;margin-top:5px;text-align:center;letter-spacing:.04em;">Active Mission · Breakdown Blitz · Type each morpheme into the correct box</div>
+    </div>
+    <!-- Round count picker (hidden in teacher mode) -->
+    <div id="roundPickerWrap" style="margin:10px 0 8px;text-align:center;">
+      <div style="font-size:11px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;">Words this round</div>
+      <div class="round-picker" id="roundPicker">
+        <button class="round-btn" data-count="10" onclick="setRoundCount(10,this)">10</button>
+        <button class="round-btn active" data-count="15" onclick="setRoundCount(15,this)">15</button>
+        <button class="round-btn" data-count="20" onclick="setRoundCount(20,this)">20</button>
+        <button class="round-btn" data-count="25" onclick="setRoundCount(25,this)">25</button>
+        <button class="round-btn" data-count="30" onclick="setRoundCount(30,this)">30</button>
+      </div>
+    </div>
+    <div class="wlProgressBar" id="roundProgress"><div class="wlProgressBar-fill" id="roundProgressFill"></div></div>
+    <div class="targetWordCard">
+      <div class="targetLabel">Target word</div>
+      <div class="targetWord" id="targetWord">UNHAPPINESS</div>
+      <div class="targetHint" id="targetHint">Hint: the state of not being happy</div>
+      <span id="ealdSpeakBtns"></span>
+      <div id="ealdDefinition" class="eald-definition"></div>
+    </div>
+    <div class="inputGrid">
+      <div class="inputCard prefix neutral" id="prefixCard">
+        <label for="prefixInput">Prefix</label>
+        <input id="prefixInput" class="answerInput" type="text" placeholder="optional" autocomplete="off">
+        <div class="boxStatus" id="prefixStatus"></div>
+      </div>
+      <div class="inputCard base neutral" id="baseCard">
+        <label for="baseInput">Base word</label>
+        <input id="baseInput" class="answerInput" type="text" placeholder="required" autocomplete="off">
+        <div class="boxStatus" id="baseStatus"></div>
+      </div>
+      <div class="inputCard suffix neutral" id="suffix1Card">
+        <label for="suffix1Input">Suffix 1</label>
+        <input id="suffix1Input" class="answerInput" type="text" placeholder="optional" autocomplete="off">
+        <div class="boxStatus" id="suffix1Status"></div>
+      </div>
+      <div class="inputCard suffix neutral" id="suffix2Card">
+        <label for="suffix2Input">Suffix 2</label>
+        <input id="suffix2Input" class="answerInput" type="text" placeholder="optional" autocomplete="off">
+        <div class="boxStatus" id="suffix2Status"></div>
+      </div>
+    </div>
+    <div class="feedback" id="feedback" aria-live="assertive"></div>
+    <div class="subFeedback" id="subFeedback" aria-live="polite"></div>
+    <div id="ealdTranslation" aria-live="polite"></div>
+    <div class="answerReveal" id="answerReveal">
+      <div class="answerRevealTitle">Correct breakdown</div>
+      <div class="revealRow" id="revealRow"></div>
+      <div class="whyPanel" id="whyPanel" aria-live="polite"></div>
+    </div>
+    <div class="actionRow">
+      <button class="secondaryBtn" id="recalibrateBtn" type="button">Restart</button>
+      <button class="secondaryBtn" id="skipBtn" type="button">Skip</button>
+      <button class="primaryBtn" id="checkBtn" type="button">Check Answer ✓</button>
+    </div>
+    <div class="nextRow" id="nextRow">
+      <button class="nextWordBigBtn" id="nextWordBtn" type="button">Next word →</button>
+    </div>
+    <div class="logPanel" style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(0,0,0,.07);">
+      <div class="logHead" style="margin-bottom:4px;"><div class="dots"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div><span>SYSTEM_LOG</span></div>
+      <div id="logText">[00:00] Breakdown Blitz initialised...<br>[00:00] Awaiting first decomposition...</div>
+    </div>
+  </div></div>
+</div>
+<script defer src="vendor/supabase.js"></script>
+<script defer src="wordlab-stage.js"></script>
+<script defer src="wordlab-data.js?v=20261031b"></script>
+<script defer src="wordlab-scientist.js?v=20261019"></script>
+<script defer src="wordlab-effects.js"></script>
+<script defer src="wordlab-worlds.js"></script>
+<script defer src="wordlab-audio.js"></script>
+<script defer src="data.js"></script>
+<script defer src="wordlab-teacher.js"></script>
+<script defer src="wordlab-help.js"></script>
+<script defer src="wordlab-hints.js"></script>
+<script>
+  var _supportMode = false;
+  document.addEventListener('DOMContentLoaded', function(){ _supportMode = !!(typeof WordLabData !== 'undefined' && WordLabData.isSupportMode()); });
+  const MISSIONS=[{word:"unhappiness",stage:"s3e",clue:"the state of not being happy",answers:{prefix:"un",base:"happy",suffix1:"ness",suffix2:""}},{word:"careless",stage:"s2e",clue:"without care",answers:{prefix:"",base:"care",suffix1:"less",suffix2:""}},{word:"replaying",stage:"s2e",clue:"playing again",answers:{prefix:"re",base:"play",suffix1:"ing",suffix2:""}},{word:"disagreement",stage:"s3e",clue:"a state of not agreeing",answers:{prefix:"dis",base:"agree",suffix1:"ment",suffix2:""}},{word:"teacher",stage:"s2e",clue:"a person who teaches",answers:{prefix:"",base:"teach",suffix1:"er",suffix2:""}},{word:"preview",stage:"s2e",clue:"to view before",answers:{prefix:"pre",base:"view",suffix1:"",suffix2:""}},{word:"rebuild",stage:"s2e",clue:"to build again",answers:{prefix:"re",base:"build",suffix1:"",suffix2:""}},{word:"movement",stage:"s2e",clue:"the act of moving",answers:{prefix:"",base:"move",suffix1:"ment",suffix2:""}},{word:"helpful",stage:"s2e",clue:"full of help",answers:{prefix:"",base:"help",suffix1:"ful",suffix2:""}},{word:"powerless",stage:"s2e",clue:"without power",answers:{prefix:"",base:"power",suffix1:"less",suffix2:""}},{word:"return",stage:"s3e",clue:"to turn back",answers:{prefix:"re",base:"turn",suffix1:"",suffix2:""}},{word:"transport",stage:"s3e",clue:"to carry across",answers:{prefix:"trans",base:"port",suffix1:"",suffix2:""}},{word:"submarine",stage:"s3e",clue:"under the sea",answers:{prefix:"sub",base:"marine",suffix1:"",suffix2:""}},{word:"nonfiction",stage:"s3e",clue:"not fiction",answers:{prefix:"non",base:"fiction",suffix1:"",suffix2:""}},{word:"running",stage:"s2e",clue:"happening now: run",answers:{prefix:"",base:"run",suffix1:"ing",suffix2:""}},{word:"significant",stage:"s3l",clue:"having the quality of meaning or importance",answers:{prefix:"",base:"sign",suffix1:"ific",suffix2:"ant"}},{word:"happiness",stage:"s2e",clue:"the state of being happy",answers:{prefix:"",base:"happy",suffix1:"ness",suffix2:""}},{word:"unhelpful",stage:"s2e",clue:"not helpful",answers:{prefix:"un",base:"help",suffix1:"ful",suffix2:""}},{word:"rewrite",stage:"s2e",clue:"to write again",answers:{prefix:"re",base:"write",suffix1:"",suffix2:""}},{word:"preheat",stage:"s2e",clue:"to heat before",answers:{prefix:"pre",base:"heat",suffix1:"",suffix2:""}},{word:"forecast",stage:"s2e",clue:"to predict what will happen",answers:{prefix:"fore",base:"cast",suffix1:"",suffix2:""}},{word:"foresee",stage:"s2e",clue:"to see or know ahead of time",answers:{prefix:"fore",base:"see",suffix1:"",suffix2:""}},{word:"multitask",stage:"s3e",clue:"to do many tasks at the same time",answers:{prefix:"multi",base:"task",suffix1:"",suffix2:""}},{word:"hyperactive",stage:"s3l",clue:"excessively active",answers:{prefix:"hyper",base:"active",suffix1:"",suffix2:""},alts:[{prefix:"hyper",base:"act",suffix1:"ive",suffix2:""}]},{word:"malfunction",stage:"s3e",clue:"working badly or failing to work",answers:{prefix:"mal",base:"function",suffix1:"",suffix2:""}},{word:"semicircle",stage:"s3e",clue:"half of a circle",answers:{prefix:"semi",base:"circle",suffix1:"",suffix2:""}},{word:"semifinal",stage:"s3e",clue:"the round just before the final",answers:{prefix:"semi",base:"final",suffix1:"",suffix2:""}},{word:"microphone",stage:"s3e",clue:"a device that picks up small sounds",answers:{prefix:"micro",base:"phone",suffix1:"",suffix2:""}},{word:"megaphone",stage:"s3e",clue:"a device to make your voice very loud",answers:{prefix:"mega",base:"phone",suffix1:"",suffix2:""}},{word:"midpoint",stage:"s2l",clue:"the exact middle of something",answers:{prefix:"mid",base:"point",suffix1:"",suffix2:""}},{word:"midnight",stage:"s2l",clue:"the middle of the night",answers:{prefix:"mid",base:"night",suffix1:"",suffix2:""}},{word:"extraordinary",stage:"s3l",clue:"beyond what is ordinary",answers:{prefix:"extra",base:"ordinary",suffix1:"",suffix2:""}},{word:"enable",stage:"s2l",clue:"to make something possible",answers:{prefix:"en",base:"able",suffix1:"",suffix2:""}},{word:"encourage",stage:"s2l",clue:"to give courage or support to someone",answers:{prefix:"en",base:"courage",suffix1:"",suffix2:""}},{word:"empower",stage:"s2l",clue:"to give power or strength to someone",answers:{prefix:"em",base:"power",suffix1:"",suffix2:""}},{word:"construct",stage:"s3e",clue:"to build something by putting parts together",answers:{prefix:"con",base:"struct",suffix1:"",suffix2:""}},{word:"atypical",stage:"s3e",clue:"not typical or usual",answers:{prefix:"a",base:"typical",suffix1:"",suffix2:""}},{word:"progress",stage:"s3e",clue:"moving forward towards a goal",answers:{prefix:"pro",base:"gress",suffix1:"",suffix2:""}},{word:"export",stage:"s3e",clue:"to carry or send goods out of a place",answers:{prefix:"ex",base:"port",suffix1:"",suffix2:""}},{word:"observe",stage:"s3e",clue:"to watch or notice something carefully",answers:{prefix:"ob",base:"serve",suffix1:"",suffix2:""}},{word:"contradict",stage:"s3e",clue:"to say the opposite of what someone else said",answers:{prefix:"contra",base:"dict",suffix1:"",suffix2:""}},{word:"proactive",stage:"s3e",clue:"acting in advance to deal with things",answers:{prefix:"pro",base:"active",suffix1:"",suffix2:""},alts:[{prefix:"pro",base:"act",suffix1:"ive",suffix2:""}]},{word:"overpower",stage:"s2l",clue:"to have more power than someone else",answers:{prefix:"over",base:"power",suffix1:"",suffix2:""}},{word:"misplace",stage:"s2e",clue:"to put something in the wrong place",answers:{prefix:"mis",base:"place",suffix1:"",suffix2:""}},{word:"interact",stage:"s3e",clue:"to act together with others",answers:{prefix:"inter",base:"act",suffix1:"",suffix2:""}},{word:"underline",stage:"s2e",clue:"to draw a line under something",answers:{prefix:"under",base:"line",suffix1:"",suffix2:""}},{word:"supermarket",stage:"s3e",clue:"a large shop that sells food and goods",answers:{prefix:"super",base:"market",suffix1:"",suffix2:""}},{word:"discomfort",stage:"s2l",clue:"a feeling of unease or pain",answers:{prefix:"dis",base:"comfort",suffix1:"",suffix2:""}},{word:"cheerful",stage:"s2e",clue:"feeling happy and lively",answers:{prefix:"",base:"cheer",suffix1:"ful",suffix2:""}},{word:"kindness",stage:"s2e",clue:"the quality of being kind to others",answers:{prefix:"",base:"kind",suffix1:"ness",suffix2:""}},{word:"hopeless",stage:"s2e",clue:"without hope or chance of success",answers:{prefix:"",base:"hope",suffix1:"less",suffix2:""}},{word:"enjoyment",stage:"s2l",clue:"a feeling of pleasure or fun",answers:{prefix:"en",base:"joy",suffix1:"ment",suffix2:""}},{word:"replacement",stage:"s2l",clue:"something that takes the place of another",answers:{prefix:"re",base:"place",suffix1:"ment",suffix2:""}},{word:"uncomfortable",stage:"s3e",clue:"not comfortable or at ease",answers:{prefix:"un",base:"comfort",suffix1:"able",suffix2:""}},{word:"underground",stage:"s2l",clue:"below the surface of the ground",answers:{prefix:"under",base:"ground",suffix1:"",suffix2:""}},{word:"peaceful",stage:"s2e",clue:"full of peace and calm",answers:{prefix:"",base:"peace",suffix1:"ful",suffix2:""}},{word:"friendship",stage:"s2e",clue:"the bond between people who care for each other",answers:{prefix:"",base:"friend",suffix1:"ship",suffix2:""}},{word:"misspell",stage:"s2e",clue:"to spell a word incorrectly",answers:{prefix:"mis",base:"spell",suffix1:"",suffix2:""}},{word:"unbreakable",stage:"s2l",clue:"impossible to break",answers:{prefix:"un",base:"break",suffix1:"able",suffix2:""}},{word:"misbehave",stage:"s2e",clue:"to behave in a bad or naughty way",answers:{prefix:"mis",base:"behave",suffix1:"",suffix2:""}},{word:"nonexistent",stage:"s3e",clue:"not existing; not real",answers:{prefix:"non",base:"exist",suffix1:"ent",suffix2:""}},{word:"prepayment",stage:"s3e",clue:"payment made before a service is given",answers:{prefix:"pre",base:"pay",suffix1:"ment",suffix2:""}},{word:"overloaded",stage:"s2l",clue:"carrying or holding too much",answers:{prefix:"over",base:"load",suffix1:"ed",suffix2:""}},{word:"childish",stage:"s2e",clue:"behaving like a young child",answers:{prefix:"",base:"child",suffix1:"ish",suffix2:""}},{word:"darkness",stage:"s2e",clue:"the absence of light",answers:{prefix:"",base:"dark",suffix1:"ness",suffix2:""}},{word:"artist",stage:"s2e",clue:"a person who creates art",answers:{prefix:"",base:"art",suffix1:"ist",suffix2:""}},{word:"inventive",stage:"s3e",clue:"good at thinking of new ideas",answers:{prefix:"",base:"invent",suffix1:"ive",suffix2:""}},{word:"joyful",stage:"s2e",clue:"full of joy and delight",answers:{prefix:"",base:"joy",suffix1:"ful",suffix2:""}},{word:"suddenly",stage:"s2l",clue:"in a quick and unexpected way",answers:{prefix:"",base:"sudden",suffix1:"ly",suffix2:""}},{word:"active",stage:"s3e",clue:"doing things or full of energy",answers:{prefix:"",base:"act",suffix1:"ive",suffix2:""}},{word:"dangerous",stage:"s2l",clue:"likely to cause harm",answers:{prefix:"",base:"danger",suffix1:"ous",suffix2:""}},{word:"musical",stage:"s2l",clue:"relating to music",answers:{prefix:"",base:"music",suffix1:"al",suffix2:""}},{word:"brotherhood",stage:"s2l",clue:"the bond between brothers or close friends",answers:{prefix:"",base:"brother",suffix1:"hood",suffix2:""}},{word:"readable",stage:"s2l",clue:"easy to read and understand",answers:{prefix:"",base:"read",suffix1:"able",suffix2:""}},{word:"heroic",stage:"s3e",clue:"showing great bravery like a hero",answers:{prefix:"",base:"hero",suffix1:"ic",suffix2:""}},{word:"allowance",stage:"s3e",clue:"a regular amount of money given",answers:{prefix:"",base:"allow",suffix1:"ance",suffix2:""}},{word:"neighbourhood",stage:"s3e",clue:"the area where you live and its people",answers:{prefix:"",base:"neighbour",suffix1:"hood",suffix2:""}},{word:"payment",stage:"s2e",clue:"money given in exchange for something",answers:{prefix:"",base:"pay",suffix1:"ment",suffix2:""}},{word:"creative",stage:"s3e",clue:"having the ability to make new things",answers:{prefix:"",base:"create",suffix1:"ive",suffix2:""}},{word:"foolish",stage:"s2e",clue:"lacking good sense or judgement",answers:{prefix:"",base:"fool",suffix1:"ish",suffix2:""}},{word:"thankful",stage:"s2e",clue:"feeling grateful for something",answers:{prefix:"",base:"thank",suffix1:"ful",suffix2:""}},{word:"swimmer",stage:"s2e",clue:"a person who swims",answers:{prefix:"",base:"swim",suffix1:"er",suffix2:""}},{word:"rethink",stage:"s2e",clue:"to think about something again",answers:{prefix:"re",base:"think",suffix1:"",suffix2:""}},{word:"disorder",stage:"s3e",clue:"a lack of order or organisation",answers:{prefix:"dis",base:"order",suffix1:"",suffix2:""}},{word:"uncover",stage:"s2e",clue:"to remove a cover and reveal something",answers:{prefix:"un",base:"cover",suffix1:"",suffix2:""}},{word:"disappearance",stage:"s3e",clue:"the act of vanishing from sight",answers:{prefix:"dis",base:"appear",suffix1:"ance",suffix2:""}},{word:"overcrowded",stage:"s2l",clue:"filled with too many people",answers:{prefix:"over",base:"crowd",suffix1:"ed",suffix2:""}},{word:"superhero",stage:"s3e",clue:"a hero with amazing powers",answers:{prefix:"super",base:"hero",suffix1:"",suffix2:""}},{word:"mismatch",stage:"s2e",clue:"things that do not go well together",answers:{prefix:"mis",base:"match",suffix1:"",suffix2:""}},{word:"nonsense",stage:"s2e",clue:"words or ideas that have no meaning",answers:{prefix:"non",base:"sense",suffix1:"",suffix2:""}},{word:"transplant",stage:"s3e",clue:"to move something from one place to another",answers:{prefix:"trans",base:"plant",suffix1:"",suffix2:""}},{word:"intersection",stage:"s3l",clue:"the place where two roads cross",answers:{prefix:"inter",base:"sect",suffix1:"ion",suffix2:""},alts:[{prefix:"inter",base:"sec",suffix1:"tion",suffix2:""}]},{word:"decode",stage:"s3e",clue:"to work out the meaning of a code or message",answers:{prefix:"de",base:"code",suffix1:"",suffix2:""}},{word:"postgame",stage:"s2l",clue:"happening after the game ends",answers:{prefix:"post",base:"game",suffix1:"",suffix2:""}},{word:"deflate",stage:"s3e",clue:"to let air out of something",answers:{prefix:"de",base:"flate",suffix1:"",suffix2:""}},{word:"enclose",stage:"s2l",clue:"to surround or shut in on all sides",answers:{prefix:"en",base:"close",suffix1:"",suffix2:""}},{word:"anticlockwise",stage:"s3l",clue:"moving in the opposite direction to clock hands",answers:{prefix:"anti",base:"clockwise",suffix1:"",suffix2:""},alts:[{prefix:"anti",base:"clock",suffix1:"wise",suffix2:""}]},{word:"foreground",stage:"s2e",clue:"the part of a scene closest to you",answers:{prefix:"fore",base:"ground",suffix1:"",suffix2:""}},{word:"multicoloured",stage:"s3e",clue:"having many different colours",answers:{prefix:"multi",base:"colour",suffix1:"ed",suffix2:""}},{word:"microscope",stage:"s3e",clue:"a tool for seeing very small things",answers:{prefix:"micro",base:"scope",suffix1:"",suffix2:""}},{word:"hyperlink",stage:"s3e",clue:"a clickable link on a computer",answers:{prefix:"hyper",base:"link",suffix1:"",suffix2:""}},{word:"subheading",stage:"s3e",clue:"a smaller heading under the main one",answers:{prefix:"sub",base:"head",suffix1:"ing",suffix2:""}},{word:"disbelief",stage:"s3e",clue:"a feeling of not believing something",answers:{prefix:"dis",base:"belief",suffix1:"",suffix2:""}},{word:"recover",stage:"s3e",clue:"to get something back or feel better",answers:{prefix:"re",base:"cover",suffix1:"",suffix2:""}},{word:"unfairly",stage:"s2e",clue:"in a way that is not fair",answers:{prefix:"un",base:"fair",suffix1:"ly",suffix2:""}},{word:"enjoyable",stage:"s2l",clue:"pleasant and fun to do",answers:{prefix:"en",base:"joy",suffix1:"able",suffix2:""}},{word:"performer",stage:"s3e",clue:"a person who performs for others",answers:{prefix:"",base:"perform",suffix1:"er",suffix2:""}},{word:"action",stage:"s3e",clue:"the process of doing something",answers:{prefix:"",base:"act",suffix1:"ion",suffix2:""}},{word:"tasteless",stage:"s2e",clue:"having no flavour or style",answers:{prefix:"",base:"taste",suffix1:"less",suffix2:""}},{word:"adventurous",stage:"s3e",clue:"willing to try new and exciting things",answers:{prefix:"",base:"adventure",suffix1:"ous",suffix2:""}},{word:"respectful",stage:"s2l",clue:"showing politeness and care for others",answers:{prefix:"",base:"respect",suffix1:"ful",suffix2:""}},{word:"sickness",stage:"s2e",clue:"the state of being unwell",answers:{prefix:"",base:"sick",suffix1:"ness",suffix2:""}},{word:"invention",stage:"s3e",clue:"something new that has been created",answers:{prefix:"",base:"invent",suffix1:"ion",suffix2:""}},{word:"visitor",stage:"s3e",clue:"a person who visits a place",answers:{prefix:"",base:"visit",suffix1:"or",suffix2:""}},{word:"refreshment",stage:"s3e",clue:"food and drink that makes you feel better",answers:{prefix:"re",base:"fresh",suffix1:"ment",suffix2:""}},{word:"displacement",stage:"s3e",clue:"the act of moving something from its place",answers:{prefix:"dis",base:"place",suffix1:"ment",suffix2:""}},{word:"overreact",stage:"s2l",clue:"to react more strongly than needed",answers:{prefix:"over",base:"react",suffix1:"",suffix2:""}},{word:"unforgettable",stage:"s3l",clue:"so amazing that you will always remember it",answers:{prefix:"un",base:"forget",suffix1:"able",suffix2:""}},{word:"misunderstanding",stage:"s3l",clue:"a failure to understand something correctly",answers:{prefix:"mis",base:"understand",suffix1:"ing",suffix2:""}},{word:"reusable",stage:"s2l",clue:"able to be used again",answers:{prefix:"re",base:"use",suffix1:"able",suffix2:""}},{word:"unlocked",stage:"s2e",clue:"opened by removing a lock",answers:{prefix:"un",base:"lock",suffix1:"ed",suffix2:""}},{word:"preschool",stage:"s2e",clue:"a school for children before primary school",answers:{prefix:"pre",base:"school",suffix1:"",suffix2:""}},{word:"playful",stage:"s2e",clue:"full of fun and energy",answers:{prefix:"",base:"play",suffix1:"ful",suffix2:""}},{word:"replay",stage:"s2e",clue:"to play again",answers:{prefix:"re",base:"play",suffix1:"",suffix2:""}},{word:"overplay",stage:"s2l",clue:"to play too much or exaggerate",answers:{prefix:"over",base:"play",suffix1:"",suffix2:""}},{word:"misplay",stage:"s2e",clue:"to play incorrectly",answers:{prefix:"mis",base:"play",suffix1:"",suffix2:""}},{word:"rework",stage:"s2e",clue:"to work on something again",answers:{prefix:"re",base:"work",suffix1:"",suffix2:""}},{word:"overwork",stage:"s2l",clue:"to work too much",answers:{prefix:"over",base:"work",suffix1:"",suffix2:""}},{word:"worker",stage:"s2e",clue:"a person who works",answers:{prefix:"",base:"work",suffix1:"er",suffix2:""}},{word:"misread",stage:"s2e",clue:"to read something incorrectly",answers:{prefix:"mis",base:"read",suffix1:"",suffix2:""}},{word:"unreadable",stage:"s2l",clue:"not able to be read",answers:{prefix:"un",base:"read",suffix1:"able",suffix2:""}},{word:"unthinkable",stage:"s2l",clue:"too shocking to even think about",answers:{prefix:"un",base:"think",suffix1:"able",suffix2:""}},{word:"overthink",stage:"s2l",clue:"to think about something too much",answers:{prefix:"over",base:"think",suffix1:"",suffix2:""}},{word:"unkindness",stage:"s2l",clue:"the state of not being kind",answers:{prefix:"un",base:"kind",suffix1:"ness",suffix2:""}},{word:"unkindly",stage:"s2e",clue:"in a way that is not kind",answers:{prefix:"un",base:"kind",suffix1:"ly",suffix2:""}},{word:"hopeful",stage:"s2e",clue:"full of hope",answers:{prefix:"",base:"hope",suffix1:"ful",suffix2:""}},{word:"hopefully",stage:"s2l",clue:"in a way that shows hope",answers:{prefix:"",base:"hope",suffix1:"ful",suffix2:"ly"}},{word:"fearless",stage:"s2e",clue:"without any fear",answers:{prefix:"",base:"fear",suffix1:"less",suffix2:""}},{word:"fearful",stage:"s2e",clue:"full of fear",answers:{prefix:"",base:"fear",suffix1:"ful",suffix2:""}},{word:"thankless",stage:"s2e",clue:"without thanks or reward",answers:{prefix:"",base:"thank",suffix1:"less",suffix2:""}},{word:"harmful",stage:"s2e",clue:"causing harm or damage",answers:{prefix:"",base:"harm",suffix1:"ful",suffix2:""}},{word:"harmless",stage:"s2e",clue:"causing no harm",answers:{prefix:"",base:"harm",suffix1:"less",suffix2:""}},{word:"unharmed",stage:"s2e",clue:"not hurt or damaged",answers:{prefix:"un",base:"harm",suffix1:"ed",suffix2:""}},{word:"distasteful",stage:"s2l",clue:"unpleasant and offensive",answers:{prefix:"dis",base:"taste",suffix1:"ful",suffix2:""}},{word:"doubtful",stage:"s2e",clue:"feeling unsure about something",answers:{prefix:"",base:"doubt",suffix1:"ful",suffix2:""}},{word:"undoubted",stage:"s2l",clue:"not doubted; certain",answers:{prefix:"un",base:"doubt",suffix1:"ed",suffix2:""}},{word:"miscount",stage:"s2e",clue:"to count incorrectly",answers:{prefix:"mis",base:"count",suffix1:"",suffix2:""}},{word:"recount",stage:"s2e",clue:"to count again",answers:{prefix:"re",base:"count",suffix1:"",suffix2:""}},{word:"discount",stage:"s2l",clue:"a reduction in price",answers:{prefix:"dis",base:"count",suffix1:"",suffix2:""}},{word:"restart",stage:"s2e",clue:"to start again",answers:{prefix:"re",base:"start",suffix1:"",suffix2:""}},{word:"nonstop",stage:"s2e",clue:"without stopping",answers:{prefix:"non",base:"stop",suffix1:"",suffix2:""}},{word:"unstoppable",stage:"s2l",clue:"impossible to stop",answers:{prefix:"un",base:"stop",suffix1:"able",suffix2:""}},{word:"refill",stage:"s2e",clue:"to fill again",answers:{prefix:"re",base:"fill",suffix1:"",suffix2:""}},{word:"overfill",stage:"s2l",clue:"to fill too much",answers:{prefix:"over",base:"fill",suffix1:"",suffix2:""}},{word:"reprint",stage:"s2e",clue:"to print again",answers:{prefix:"re",base:"print",suffix1:"",suffix2:""}},{word:"misprint",stage:"s2e",clue:"a mistake in printing",answers:{prefix:"mis",base:"print",suffix1:"",suffix2:""}},{word:"overheat",stage:"s2l",clue:"to become too hot",answers:{prefix:"over",base:"heat",suffix1:"",suffix2:""}},{word:"repaint",stage:"s2e",clue:"to paint again",answers:{prefix:"re",base:"paint",suffix1:"",suffix2:""}},{word:"painter",stage:"s2e",clue:"a person who paints",answers:{prefix:"",base:"paint",suffix1:"er",suffix2:""}},{word:"unload",stage:"s2e",clue:"to remove a load from something",answers:{prefix:"un",base:"load",suffix1:"",suffix2:""}},{word:"reload",stage:"s2e",clue:"to load again",answers:{prefix:"re",base:"load",suffix1:"",suffix2:""}},{word:"reorder",stage:"s2e",clue:"to order again",answers:{prefix:"re",base:"order",suffix1:"",suffix2:""}},{word:"disorderly",stage:"s3e",clue:"in a way that lacks order",answers:{prefix:"dis",base:"order",suffix1:"ly",suffix2:""}},{word:"unclean",stage:"s2e",clue:"not clean; dirty",answers:{prefix:"un",base:"clean",suffix1:"",suffix2:""}},{word:"cleaner",stage:"s2e",clue:"a person who cleans; more clean",answers:{prefix:"",base:"clean",suffix1:"er",suffix2:""}},{word:"sharpener",stage:"s2e",clue:"a tool that makes things sharp",answers:{prefix:"",base:"sharp",suffix1:"en",suffix2:"er"}},{word:"sharpness",stage:"s2e",clue:"the quality of being sharp",answers:{prefix:"",base:"sharp",suffix1:"ness",suffix2:""}},{word:"brightness",stage:"s2e",clue:"the quality of being bright",answers:{prefix:"",base:"bright",suffix1:"ness",suffix2:""}},{word:"brighten",stage:"s2e",clue:"to make or become brighter",answers:{prefix:"",base:"bright",suffix1:"en",suffix2:""}},{word:"unfairness",stage:"s2e",clue:"the quality of not being fair",answers:{prefix:"un",base:"fair",suffix1:"ness",suffix2:""}},{word:"unsafe",stage:"s2e",clue:"not safe; dangerous",answers:{prefix:"un",base:"safe",suffix1:"",suffix2:""}},{word:"safely",stage:"s2e",clue:"in a safe way",answers:{prefix:"",base:"safe",suffix1:"ly",suffix2:""}},{word:"deepen",stage:"s2e",clue:"to make or become deeper",answers:{prefix:"",base:"deep",suffix1:"en",suffix2:""}},{word:"deeply",stage:"s2e",clue:"in a deep way; strongly",answers:{prefix:"",base:"deep",suffix1:"ly",suffix2:""}},{word:"weakness",stage:"s2e",clue:"the state of being weak",answers:{prefix:"",base:"weak",suffix1:"ness",suffix2:""}},{word:"weaken",stage:"s2e",clue:"to make or become weaker",answers:{prefix:"",base:"weak",suffix1:"en",suffix2:""}},{word:"soften",stage:"s2e",clue:"to make or become softer",answers:{prefix:"",base:"soft",suffix1:"en",suffix2:""}},{word:"softness",stage:"s2e",clue:"the quality of being soft",answers:{prefix:"",base:"soft",suffix1:"ness",suffix2:""}},{word:"darken",stage:"s2e",clue:"to make or become darker",answers:{prefix:"",base:"dark",suffix1:"en",suffix2:""}},{word:"sweetness",stage:"s2e",clue:"the quality of being sweet",answers:{prefix:"",base:"sweet",suffix1:"ness",suffix2:""}},{word:"sweeten",stage:"s2e",clue:"to make something sweeter",answers:{prefix:"",base:"sweet",suffix1:"en",suffix2:""}},{word:"quickness",stage:"s2e",clue:"the quality of being quick",answers:{prefix:"",base:"quick",suffix1:"ness",suffix2:""}},{word:"quicken",stage:"s2e",clue:"to make or become quicker",answers:{prefix:"",base:"quick",suffix1:"en",suffix2:""}},{word:"slowness",stage:"s2e",clue:"the quality of being slow",answers:{prefix:"",base:"slow",suffix1:"ness",suffix2:""}},{word:"warmly",stage:"s2e",clue:"in a warm and friendly way",answers:{prefix:"",base:"warm",suffix1:"ly",suffix2:""}},{word:"freshness",stage:"s2e",clue:"the quality of being fresh",answers:{prefix:"",base:"fresh",suffix1:"ness",suffix2:""}},{word:"harden",stage:"s2e",clue:"to make or become harder",answers:{prefix:"",base:"hard",suffix1:"en",suffix2:""}},{word:"hardness",stage:"s2e",clue:"the quality of being hard",answers:{prefix:"",base:"hard",suffix1:"ness",suffix2:""}},{word:"priceless",stage:"s2e",clue:"too valuable to have a price",answers:{prefix:"",base:"price",suffix1:"less",suffix2:""}},{word:"overpriced",stage:"s2l",clue:"costing too much money",answers:{prefix:"over",base:"price",suffix1:"ed",suffix2:""}},{word:"discovery",stage:"s3e",clue:"finding something new",answers:{prefix:"dis",base:"cover",suffix1:"y",suffix2:""}},{word:"landing",stage:"s2e",clue:"the act of arriving on land",answers:{prefix:"",base:"land",suffix1:"ing",suffix2:""}},{word:"overland",stage:"s2l",clue:"across land rather than sea or air",answers:{prefix:"over",base:"land",suffix1:"",suffix2:""}},{word:"retest",stage:"s2e",clue:"to test again",answers:{prefix:"re",base:"test",suffix1:"",suffix2:""}},{word:"pretest",stage:"s2e",clue:"a test done before the main one",answers:{prefix:"pre",base:"test",suffix1:"",suffix2:""}},{word:"graceful",stage:"s2e",clue:"moving in a smooth and beautiful way",answers:{prefix:"",base:"grace",suffix1:"ful",suffix2:""}},{word:"disgraceful",stage:"s2l",clue:"deserving shame or disapproval",answers:{prefix:"dis",base:"grace",suffix1:"ful",suffix2:""}},{word:"comfortable",stage:"s3e",clue:"providing comfort and ease",answers:{prefix:"",base:"comfort",suffix1:"able",suffix2:""}},{word:"agreement",stage:"s2e",clue:"a shared understanding between people",answers:{prefix:"",base:"agree",suffix1:"ment",suffix2:""}},{word:"disagreeable",stage:"s3e",clue:"unpleasant and hard to get along with",answers:{prefix:"dis",base:"agree",suffix1:"able",suffix2:""}},{word:"colourful",stage:"s2e",clue:"full of bright colours",answers:{prefix:"",base:"colour",suffix1:"ful",suffix2:""}},{word:"colourless",stage:"s2e",clue:"without colour; dull",answers:{prefix:"",base:"colour",suffix1:"less",suffix2:""}},{word:"discolour",stage:"s2e",clue:"to change colour in a bad way",answers:{prefix:"dis",base:"colour",suffix1:"",suffix2:""}},{word:"befriend",stage:"s2e",clue:"to become someone's friend",answers:{prefix:"be",base:"friend",suffix1:"",suffix2:""}},{word:"behold",stage:"s2e",clue:"to see or observe something amazing",answers:{prefix:"be",base:"hold",suffix1:"",suffix2:""}},{word:"uniform",stage:"s3e",clue:"the same for everyone; matching clothes",answers:{prefix:"uni",base:"form",suffix1:"",suffix2:""}},{word:"uniformly",stage:"s3e",clue:"in the same way for everyone",answers:{prefix:"uni",base:"form",suffix1:"ly",suffix2:""}},{word:"uniformity",stage:"s3l",clue:"the state of being the same",answers:{prefix:"uni",base:"form",suffix1:"ity",suffix2:""}},{word:"universal",stage:"s3l",clue:"relating to everyone and everything",answers:{prefix:"uni",base:"vers",suffix1:"al",suffix2:""}},{word:"circumspect",stage:"s3l",clue:"careful and cautious; looking all around",answers:{prefix:"circum",base:"spect",suffix1:"",suffix2:""}},{word:"coverage",stage:"s2l",clue:"the amount of something that is covered",answers:{prefix:"",base:"cover",suffix1:"age",suffix2:""}},{word:"package",stage:"s2e",clue:"a wrapped or boxed item",answers:{prefix:"",base:"pack",suffix1:"age",suffix2:""}},{word:"usage",stage:"s2e",clue:"the way something is used",answers:{prefix:"",base:"use",suffix1:"age",suffix2:""}},{word:"signage",stage:"s2l",clue:"signs displayed in a place",answers:{prefix:"",base:"sign",suffix1:"age",suffix2:""}},{word:"stoppage",stage:"s2l",clue:"a stop or interruption",answers:{prefix:"",base:"stop",suffix1:"age",suffix2:""}},{word:"motion",stage:"s3e",clue:"the act of moving",answers:{prefix:"",base:"mot",suffix1:"ion",suffix2:""}},{word:"motor",stage:"s3e",clue:"a machine that makes things move",answers:{prefix:"",base:"mot",suffix1:"or",suffix2:""}},{word:"motive",stage:"s3e",clue:"a reason for doing something",answers:{prefix:"",base:"mot",suffix1:"ive",suffix2:""}},{word:"promotion",stage:"s3e",clue:"moving forward or being raised up",answers:{prefix:"pro",base:"mot",suffix1:"ion",suffix2:""}},{word:"demotion",stage:"s3e",clue:"being moved down to a lower position",answers:{prefix:"de",base:"mot",suffix1:"ion",suffix2:""}},{word:"emotional",stage:"s3e",clue:"full of strong feelings",answers:{prefix:"e",base:"mot",suffix1:"ion",suffix2:"al"},meanings:{prefix:"out (a short form of ex-)"}},{word:"gradual",stage:"s3e",clue:"happening slowly, step by step",answers:{prefix:"",base:"grad",suffix1:"ual",suffix2:""},meanings:{suffix1:"related to (a form of -al)"}},{word:"degradation",stage:"s3l",clue:"the process of becoming worse",answers:{prefix:"de",base:"grad",suffix1:"ation",suffix2:""},alts:[{prefix:"de",base:"grad",suffix1:"ate",suffix2:"ion"}]},{word:"informative",stage:"s3e",clue:"providing useful information",answers:{prefix:"",base:"inform",suffix1:"ative",suffix2:""},alts:[{prefix:"in",base:"form",suffix1:"ative",suffix2:""}]},{word:"communicative",stage:"s3l",clue:"willing and able to share thoughts",answers:{prefix:"",base:"communicate",suffix1:"ive",suffix2:""}},{word:"educative",stage:"s3e",clue:"providing education or knowledge",answers:{prefix:"",base:"educate",suffix1:"ive",suffix2:""}},{word:"infectious",stage:"s3l",clue:"able to spread from person to person",answers:{prefix:"in",base:"fect",suffix1:"ious",suffix2:""}},{word:"gracious",stage:"s3e",clue:"showing kindness and good manners",answers:{prefix:"",base:"grace",suffix1:"ious",suffix2:""}},{word:"sympathy",stage:"s3e",clue:"a feeling of caring for someone who is suffering",answers:{prefix:"sym", base:"path", suffix1:"y",suffix2:""},alts:[{prefix:"sym",base:"pathy",suffix1:"",suffix2:""}]},{word:"empathy",stage:"s3e",clue:"the ability to understand how others feel",answers:{prefix:"em", base:"path", suffix1:"y",suffix2:""},alts:[{prefix:"em",base:"pathy",suffix1:"",suffix2:""}]},{word:"telepathy",stage:"s3l",clue:"communicating thoughts from far away without speaking",answers:{prefix:"tele",base:"path",suffix1:"y",suffix2:""},alts:[{prefix:"tele",base:"pathy",suffix1:"",suffix2:""}]},{word:"photosynthesis", stage:"s4", clue:"how plants make food using sunlight", answers:{prefix:"photo", base:"synthesis", suffix1:"", suffix2:""}},{word:"transmission", stage:"s4", clue:"sending a signal or disease from one place to another", answers:{prefix:"trans", base:"miss", suffix1:"ion", suffix2:""}},{word:"construction", stage:"s4", clue:"the process of building something", answers:{prefix:"con", base:"struct", suffix1:"ion", suffix2:""}},{word:"demonstration", stage:"s4", clue:"showing how something works", answers:{prefix:"", base:"demonstrate", suffix1:"ion", suffix2:""}},{word:"hypothesis", stage:"s4", clue:"a scientific guess you then try to test", answers:{prefix:"hypo", base:"thesis", suffix1:"", suffix2:""}},{word:"atmosphere", stage:"s4", clue:"the layer of air around Earth", answers:{prefix:"atmo", base:"sphere", suffix1:"", suffix2:""}},{word:"telegraph", stage:"s4", clue:"an old machine for sending messages", answers:{prefix:"tele", base:"graph", suffix1:"", suffix2:""}},{word:"geography", stage:"s4", clue:"the study of Earth and its places", answers:{prefix:"geo", base:"graph", suffix1:"y", suffix2:""}},{word:"democracy", stage:"s4", clue:"a system where people vote for leaders", answers:{prefix:"demo", base:"cracy", suffix1:"", suffix2:""},alts:[{prefix:"",base:"demo",suffix1:"cracy",suffix2:""}]},{word:"philosophy", stage:"s4", clue:"the study of big questions about life", answers:{prefix:"philo", base:"soph", suffix1:"y", suffix2:""}},{word:"biography", stage:"s4", clue:"a book about someone's life", answers:{prefix:"bio", base:"graph", suffix1:"y", suffix2:""}},{word:"civilisation", stage:"s4", clue:"an advanced society with culture and laws", answers:{prefix:"", base:"civil", suffix1:"ise", suffix2:"ation"}},{word:"communication", stage:"s4", clue:"sharing information with others", answers:{prefix:"", base:"communicate", suffix1:"ion", suffix2:""}},{word:"determination", stage:"s4", clue:"never giving up until you succeed", answers:{prefix:"", base:"determine", suffix1:"ation", suffix2:""},alts:[{prefix:"de",base:"termin",suffix1:"ate",suffix2:"ion"}]},{word:"reconstruction", stage:"s4", clue:"building or making something again", answers:{prefix:"re", base:"construct", suffix1:"ion", suffix2:""}},
+{word:"metamorphosis",stage:"s4",clue:"a complete transformation in form",answers:{prefix:"meta",base:"morph",suffix1:"osis",suffix2:""}},{word:"autobiography",stage:"s4",clue:"the story of your own life written by yourself",answers:{prefix:"auto",base:"bio",suffix1:"graph",suffix2:"y"}},{word:"circumnavigate",stage:"s4",clue:"to sail or travel completely around something",answers:{prefix:"circum",base:"navig",suffix1:"ate",suffix2:""},alts:[{prefix:"circum",base:"navigate",suffix1:"",suffix2:""}]},{word:"philanthropy",stage:"s3l",clue:"love of humanity shown through charity",answers:{prefix:"phil",base:"anthrop",suffix1:"y",suffix2:""}},{word:"psychology",stage:"s4",clue:"the scientific study of the mind and behaviour",answers:{prefix:"psych",base:"ology",suffix1:"",suffix2:""},alts:[{prefix:"psycho",base:"logy",suffix1:"",suffix2:""}]},{word:"geothermal",stage:"s3l",clue:"relating to heat produced inside the earth",answers:{prefix:"geo",base:"therm",suffix1:"al",suffix2:""}},{word:"omnivorous",stage:"s3l",clue:"eating both plants and animals",answers:{prefix:"omni",base:"vor",suffix1:"ous",suffix2:""}},{word:"synonym",stage:"s3l",clue:"a word with the same meaning as another",answers:{prefix:"syn",base:"onym",suffix1:"",suffix2:""}},{word:"chronological",stage:"s4",clue:"arranged in order of time",answers:{prefix:"chrono",base:"log",suffix1:"ical",suffix2:""},alts:[{prefix:"chrono",base:"logical",suffix1:"",suffix2:""}]},{word:"pseudoscience",stage:"s4",clue:"ideas that claim to be scientific but are not",answers:{prefix:"pseudo",base:"science",suffix1:"",suffix2:""}},{word:"retrospective",stage:"s4",clue:"looking back at past events",answers:{prefix:"retro",base:"spect",suffix1:"ive",suffix2:""}},{word:"perimeter",stage:"s3l",clue:"the distance around the outside of a shape",answers:{prefix:"peri",base:"meter",suffix1:"",suffix2:""}},{word:"monologue",stage:"s3l",clue:"a long speech by one person",answers:{prefix:"mono",base:"logue",suffix1:"",suffix2:""}},{word:"ultrasonic",stage:"s3l",clue:"sound waves with frequencies too high for humans",answers:{prefix:"ultra",base:"son",suffix1:"ic",suffix2:""},alts:[{prefix:"ultra",base:"sonic",suffix1:"",suffix2:""}]},{word:"xenophobia",stage:"s3l",clue:"fear or dislike of people from other countries",answers:{prefix:"xeno",base:"phob",suffix1:"ia",suffix2:""}},{word:"biodiversity",stage:"s3l",clue:"the variety of living things in an area",answers:{prefix:"bio",base:"diverse",suffix1:"ity",suffix2:""}},{word:"omnipresent",stage:"s3l",clue:"present everywhere at the same time",answers:{prefix:"omni",base:"pres",suffix1:"ent",suffix2:""},alts:[{prefix:"omni",base:"present",suffix1:"",suffix2:""}]},{word:"polysyllabic",stage:"s3l",clue:"having many syllables",answers:{prefix:"poly",base:"syllab",suffix1:"ic",suffix2:""}},{word:"thermodynamics",stage:"s4",clue:"the branch of physics dealing with heat and energy",answers:{prefix:"thermo",base:"dynam",suffix1:"ics",suffix2:""},alts:[{prefix:"thermo",base:"dynamics",suffix1:"",suffix2:""}]},{word:"microbiology",stage:"s4",clue:"the study of microscopic living organisms",answers:{prefix:"micro",base:"bio",suffix1:"logy",suffix2:""}},{word:"neologism",stage:"s3l",clue:"a newly invented word or expression",answers:{prefix:"neo",base:"log",suffix1:"ism",suffix2:""}},{word:"philanthropist",stage:"s4",clue:"a person who promotes human welfare",answers:{prefix:"phil",base:"anthrop",suffix1:"ist",suffix2:""}},{word:"bibliography",stage:"s4",clue:"a list of books and sources used",answers:{prefix:"biblio",base:"graph",suffix1:"y",suffix2:""}},{word:"homogeneous",stage:"s3l",clue:"of the same kind throughout",answers:{prefix:"homo",base:"gen",suffix1:"eous",suffix2:""}},{word:"heterogeneous",stage:"s4",clue:"made up of different kinds",answers:{prefix:"hetero",base:"gen",suffix1:"eous",suffix2:""}},{word:"hydrology",stage:"s4",clue:"the study of water on and under the earth",answers:{prefix:"hydro",base:"logy",suffix1:"",suffix2:""},alts:[{prefix:"",base:"hydr",suffix1:"ology",suffix2:""}]},{word:"circumference",stage:"s4",clue:"the distance around a circle",answers:{prefix:"circum",base:"fer",suffix1:"ence",suffix2:""}},{word:"astrobiology",stage:"s4",clue:"the study of life in outer space",answers:{prefix:"astro",base:"bio",suffix1:"logy",suffix2:""}},{word:"neuroscience",stage:"s3l",clue:"the study of the nervous system",answers:{prefix:"neuro",base:"science",suffix1:"",suffix2:""},alts:[{prefix:"neuro",base:"sci",suffix1:"ence",suffix2:""}]},{word:"geopolitical",stage:"s3l",clue:"relating to politics and geography",answers:{prefix:"geo",base:"polit",suffix1:"ical",suffix2:""}},{word:"thermostat",stage:"s3l",clue:"a device that regulates temperature",answers:{prefix:"thermo",base:"stat",suffix1:"",suffix2:""}},{word:"pseudonym",stage:"s3l",clue:"a false name used instead of a real one",answers:{prefix:"pseudo",base:"nym",suffix1:"",suffix2:""}},{word:"cardiovascular",stage:"s4",clue:"relating to the heart and blood vessels",answers:{prefix:"cardio",base:"vascul",suffix1:"ar",suffix2:""}},{word:"anthropology",stage:"s4",clue:"the study of humanity and human societies",answers:{prefix:"anthrop",base:"ology",suffix1:"",suffix2:""},alts:[{prefix:"",base:"anthrop",suffix1:"ology",suffix2:""}]},{word:"telekinesis",stage:"s3l",clue:"the supposed ability to move objects with the mind",answers:{prefix:"tele",base:"kines",suffix1:"is",suffix2:""}},{word:"pyrotechnics",stage:"s3l",clue:"the art of making fireworks",answers:{prefix:"pyro",base:"techn",suffix1:"ics",suffix2:""}},{word:"telescope",stage:"s3l",clue:"an instrument for viewing distant objects",answers:{prefix:"tele",base:"scope",suffix1:"",suffix2:""}},{word:"omniscient",stage:"s3l",clue:"knowing everything",answers:{prefix:"omni",base:"sci",suffix1:"ent",suffix2:""}},{word:"telecommunications",stage:"s4",clue:"communication over long distances",answers:{prefix:"tele",base:"communicate",suffix1:"ion",suffix2:"s"}},{word:"chronometer",stage:"s4",clue:"an instrument for measuring time precisely",answers:{prefix:"chrono",base:"meter",suffix1:"",suffix2:""}},{word:"infrastructure",stage:"s4",clue:"the basic systems and structures of an organisation",answers:{prefix:"infra",base:"struct",suffix1:"ure",suffix2:""},alts:[{prefix:"infra",base:"structure",suffix1:"",suffix2:""}]},{word:"ultraviolet",stage:"s3l",clue:"light beyond the visible spectrum",answers:{prefix:"ultra",base:"violet",suffix1:"",suffix2:""}},{word:"autocratic",stage:"s4",clue:"ruling with absolute power",answers:{prefix:"auto",base:"crat",suffix1:"ic",suffix2:""}},{word:"geomorphology",stage:"s4",clue:"the study of the shape and form of the earth",answers:{prefix:"geo",base:"morph",suffix1:"ology",suffix2:""}},{word:"hyperventilate",stage:"s4",clue:"to breathe excessively fast",answers:{prefix:"hyper",base:"ventil",suffix1:"ate",suffix2:""},alts:[{prefix:"hyper",base:"ventilate",suffix1:"",suffix2:""}]},{word:"pathology",stage:"s4",clue:"the study of disease",answers:{prefix:"patho",base:"logy",suffix1:"",suffix2:""}},{word:"sociology",stage:"s4",clue:"the study of human society",answers:{prefix:"socio",base:"logy",suffix1:"",suffix2:""}},{word:"ecosystem",stage:"s3l",clue:"a community of living things in an environment",answers:{prefix:"eco",base:"syst",suffix1:"em",suffix2:""}},{word:"electrochemistry",stage:"s4",clue:"chemistry involving electricity",answers:{prefix:"electro",base:"chem",suffix1:"istry",suffix2:""}},{word:"demographics",stage:"s3l",clue:"statistical data about a population",answers:{prefix:"demo",base:"graph",suffix1:"ics",suffix2:""},alts:[{prefix:"demo",base:"graph",suffix1:"ic",suffix2:"s"}]},{word:"lithosphere",stage:"s3l",clue:"the rigid outer layer of the earth",answers:{prefix:"litho",base:"sphere",suffix1:"",suffix2:""}},{word:"cyberspace",stage:"s3l",clue:"the virtual world of computer networks",answers:{prefix:"cyber",base:"space",suffix1:"",suffix2:""}},{word:"prototype",stage:"s3l",clue:"a first or original model of something",answers:{prefix:"proto",base:"type",suffix1:"",suffix2:""}},{word:"cosmopolitan",stage:"s3l",clue:"including people from many countries",answers:{prefix:"cosmo",base:"polit",suffix1:"an",suffix2:""}},{word:"orthodontics",stage:"s3l",clue:"dentistry dealing with the alignment of teeth",answers:{prefix:"ortho",base:"dont",suffix1:"ics",suffix2:""}},{word:"zoology",stage:"s4",clue:"the study of animals",answers:{prefix:"zoo",base:"logy",suffix1:"",suffix2:""}},{word:"cryptography",stage:"s4",clue:"the study of writing in secret codes",answers:{prefix:"crypto",base:"graph",suffix1:"y",suffix2:""}}
+];
+  // Extension missions have been migrated into the MISSIONS array above with
+  // s3l/s4 stage tags; the runtime filterByStage call further down handles
+  // the +1 stage semantic for extension students — no swap needed.
+  // Load custom word lists, spelling set words, and Word of the Week.
+  // Deferred so that WordLabData (loaded with defer) is available.
+  var _originalMissions = MISSIONS.slice();
+  document.addEventListener('DOMContentLoaded', async function(){
+    if(typeof WordLabData === 'undefined') return;
+    // Custom word lists from teacher (respects priority setting)
+    try{
+      var custom = await WordLabData.getCustomWords('breakdown');
+      if(custom.length){
+        var customMissions = custom.filter(function(w){ return w.word && w.base; }).map(function(w){
+          return {word:w.word, clue:w.clue||'', answers:{prefix:w.prefix||'', base:w.base, suffix1:w.suffix1||'', suffix2:w.suffix2||''}};
+        });
+        if(customMissions.length){
+          var priority = WordLabData.getCustomWordPriority('breakdown');
+          if(priority === 'custom_only'){
+            MISSIONS.splice(0, MISSIONS.length, ...customMissions);
+          } else if(priority === 'custom_first'){
+            MISSIONS.splice(0, MISSIONS.length, ...customMissions, ..._originalMissions);
+          } else {
+            customMissions.forEach(function(m){ MISSIONS.push(m); });
+          }
+        }
+      }
+    }catch(e){ console.warn('custom word load error', e); }
+    // Spelling set words (prepended — highest priority)
+    try{
+      if(WordLabData.getSpellingSetWords){
+        var ssWords = await WordLabData.getSpellingSetWords();
+        var ssMissions = ssWords.filter(function(w){ return w.word && w.base; }).map(function(w){
+          return {word:w.word, clue:w.clue||'', _spellingSetId:w._spellingSetId, answers:{prefix:w.prefix||'', base:w.base, suffix1:w.suffix1||'', suffix2:w.suffix2||''}};
+        });
+        if(ssMissions.length) MISSIONS.splice(0, 0, ...ssMissions);
+      }
+    }catch(e){ console.warn('spelling set load error', e); }
+    // Word of the Week (prepended)
+    try {
+      if (WordLabData.getWordOfTheWeek) {
+        var _wotw = WordLabData.getWordOfTheWeek();
+        if (_wotw && !MISSIONS.some(function(q){ return q.word === _wotw.word; })) {
+          MISSIONS.unshift({ word: _wotw.word, clue: _wotw.clue || '', _wotw: true, answers: { prefix: _wotw.prefix || '', base: _wotw.base || '', suffix1: _wotw.suffix1 || '', suffix2: _wotw.suffix2 || '' } });
+        }
+      }
+    } catch(e){ console.warn('WOTW load error', e); }
+    // Apply stage filtering to the final MISSIONS pool
+    try { MISSIONS.splice(0, MISSIONS.length, ...WordLabData.weightByStage(MISSIONS.slice(), 'breakdown-blitz')); } catch(e){}
+    // Apply teacher word corrections
+    try { WordLabData.getWordCorrections('breakdown').then(function(c){ WordLabData.applyCorrections(MISSIONS, c, 'word'); }); } catch(e){}
+  });
+  // Helper: also record spelling set progress when a spelling set word is answered
+  function _ssTrack(question, correct) {
+    if (question && question._spellingSetId && typeof WordLabData !== 'undefined' && WordLabData.recordSpellingAttempt) {
+      WordLabData.recordSpellingAttempt(question._spellingSetId, question.word, correct, 0);
+    }
+  }
+  var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+  // ── Round count system ──
+  var _roundTotal = 15, _roundAnswered = 0, _roundCorrect = 0;
+  function wlUpdateRoundProgress(){var f=document.getElementById('roundProgressFill');if(!f||!_roundTotal)return;var p=Math.min(1,_roundAnswered/_roundTotal);f.style.transform='scaleX('+p+')';}
+  function setRoundCount(n, btn) {
+    _roundTotal = n;
+    document.querySelectorAll('.round-btn').forEach(function(b){ b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+  }
+  if (_wltActive) { var _rpw = document.getElementById('roundPickerWrap'); if (_rpw) _rpw.style.display = 'none'; }
+  function showRoundWin() {
+    clearInterval(fuelInterval);
+    var accuracy = _roundAnswered > 0 ? Math.round((_roundCorrect / _roundAnswered) * 100) : 0;
+    var overlay = document.createElement('div');
+    overlay.id = 'roundCompleteOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(13,11,26,.95);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML = '<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:40px 36px;max-width:400px;width:90%;text-align:center;">' +
+      '<div style="font-size:48px;margin-bottom:12px;">' + (accuracy >= 80 ? '\uD83C\uDFC6' : accuracy >= 60 ? '\u2B50' : '\uD83D\uDD2C') + '</div>' +
+      '<div style="font-size:22px;font-weight:900;color:#e0e7ff;margin-bottom:6px;">Round Complete!</div>' +
+      '<div style="font-size:14px;font-weight:600;color:#94a3b8;margin-bottom:20px;">' + _roundAnswered + ' words \u00B7 ' + accuracy + '% accuracy</div>' +
+      '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">' +
+      '<button onclick="document.getElementById(\'roundCompleteOverlay\').remove();restartRound();" style="background:#4338ca;color:#fff;border:none;border-radius:14px;padding:12px 24px;font-family:Lexend,sans-serif;font-weight:800;font-size:14px;cursor:pointer;">Play Again</button>' +
+      '<a href="landing.html" style="background:rgba(255,255,255,.06);color:#94a3b8;border:2px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 24px;font-family:Lexend,sans-serif;font-weight:800;font-size:14px;cursor:pointer;text-decoration:none;">Try Another Game</a>' +
+      '</div></div>';
+    document.body.appendChild(overlay);
+  }
+  function restartRound() {
+    _roundAnswered = 0; _roundCorrect = 0;
+    wlUpdateRoundProgress();
+    score = 0; streak = 0; fuel = 100;
+    locked = false;
+    updateHud(); startFuelDrain(); loadQuestion();
+  }
+  // Helper: look up prefix/suffix meaning from data.js
+  function _morphemeMeaning(form, type) {
+    if (!form) return '';
+    var list = (type === 'prefix' && typeof PREFIXES !== 'undefined') ? PREFIXES : (typeof SUFFIXES !== 'undefined' ? SUFFIXES : []);
+    var match = list.find(function(m){ return m.form === form || m.id === form; });
+    return match ? match.meaning : '';
+  }
+  // A word can override the general data.js meaning when a part means something different in it
+  // (e.g. the e- in emotional is a short form of ex-, not the e- of email).
+  function _partMeaning(q, key) {
+    if (q && q.meanings && q.meanings[key]) return q.meanings[key];
+    return _morphemeMeaning(q.answers[key], key === 'prefix' ? 'prefix' : 'suffix');
+  }
+  let score=0,streak=0,fuel=100,currentQuestion=null,fuelInterval=null,locked=false,nextTimer=null;
+  const targetWordEl=document.getElementById("targetWord"),targetHintEl=document.getElementById("targetHint"),feedbackEl=document.getElementById("feedback"),subFeedbackEl=document.getElementById("subFeedback"),scorePillEl=document.getElementById("scorePill"),streakPillEl=document.getElementById("streakPill"),fuelBarEl=document.getElementById("fuelBar"),fuelLabelEl=document.getElementById("fuelLabel"),logTextEl=document.getElementById("logText"),revealEl=document.getElementById("answerReveal"),revealRowEl=document.getElementById("revealRow"),gameCardEl=document.getElementById("gameCard");
+  const prefixInput=document.getElementById("prefixInput"),baseInput=document.getElementById("baseInput"),suffix1Input=document.getElementById("suffix1Input"),suffix2Input=document.getElementById("suffix2Input");
+  const boxMap={prefix:{input:prefixInput,card:document.getElementById("prefixCard"),status:document.getElementById("prefixStatus")},base:{input:baseInput,card:document.getElementById("baseCard"),status:document.getElementById("baseStatus")},suffix1:{input:suffix1Input,card:document.getElementById("suffix1Card"),status:document.getElementById("suffix1Status")},suffix2:{input:suffix2Input,card:document.getElementById("suffix2Card"),status:document.getElementById("suffix2Status")}};
+  function normalise(v){return String(v||"").toLowerCase().replace(/-/g,"").replace(/\s+/g,"").trim();}
+  // The fuel timer calls this every 220 ms, so only touch the page when a shown value changes.
+  // Rewriting the pills and bar on every tick made the browser redo layout all game long, which
+  // made typing lag on slower Chromebooks. The bar now moves in 1% steps (the label already did).
+  var _hudLast={};
+  function _hudSet(key,val,apply){if(_hudLast[key]===val)return;_hudLast[key]=val;apply(val);}
+  function updateHud(){var f=Math.max(Math.round(fuel),0);_hudSet('score',`${score} XP`,function(v){scorePillEl.textContent=v;});_hudSet('streak',`🔥 Streak: ${streak}`,function(v){streakPillEl.textContent=v;});_hudSet('fuel',f,function(v){fuelBarEl.style.width=v+'%';fuelLabelEl.textContent=v+'%';});}
+  function writeLog(lines){logTextEl.innerHTML=lines.join("<br>");}
+  function clearBoxes(){Object.values(boxMap).forEach(b=>{b.input.value="";b.card.className=b.card.className.replace(/correct|wrong/g,"neutral").trim();b.status.className="boxStatus";b.status.textContent="";});}
+  function setLocked(state){locked=state;Object.values(boxMap).forEach(b=>{b.input.disabled=state;});document.getElementById("checkBtn").disabled=state;}
+  function _countParts(q){var n=1;if(q.answers.prefix)n++;if(q.answers.suffix1)n++;if(q.answers.suffix2)n++;return n;}
+  function loadQuestion(){if(!_wltActive && fuel<=0)return;if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }if(typeof WLHints!=='undefined') WLHints.resetHints();currentQuestion=WordLabData.nextByStage(MISSIONS,'breakdown-blitz',null,currentQuestion)||MISSIONS[Math.floor(Math.random()*MISSIONS.length)];targetWordEl.textContent=currentQuestion.word.toUpperCase();targetHintEl.textContent=`Hint: ${currentQuestion.clue}`;
+    // Support mode scaffold: show part count and labelled boxes
+    if(_supportMode&&currentQuestion){var _np=_countParts(currentQuestion);targetHintEl.textContent+=` (${_np} part${_np>1?'s':''})`;}feedbackEl.textContent="";feedbackEl.className="feedback";subFeedbackEl.textContent="";var _ealdEl=document.getElementById('ealdTranslation');if(_ealdEl){_ealdEl.innerHTML='';_ealdEl.dataset.translatedWord='';_ealdEl.dataset.englishWord='';}revealEl.classList.remove("show");revealRowEl.innerHTML="";_bdReading=false;var _wpc=document.getElementById("whyPanel");if(_wpc)_wpc.innerHTML="";clearBoxes();document.getElementById("nextRow").classList.remove("show");setLocked(false);writeLog([`[${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}] New target loaded...`,`[SCAN] Target word: ${WordLabData.escapeHtml(currentQuestion.word.toUpperCase())}`,`[SCAN] Awaiting decomposition...`]);var _ealdSpeakEl=document.getElementById('ealdSpeakBtns');var _ealdDefEl=document.getElementById('ealdDefinition');if(_ealdSpeakEl)_ealdSpeakEl.innerHTML='';if(_ealdDefEl)_ealdDefEl.innerHTML='';if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&currentQuestion){WordLabData.injectEALDStyles();var _langName=(WordLabData.EALD_LANGUAGES[WordLabData.getEALDLanguage()]||'').split(' (')[0];if(_ealdEl)_ealdEl.dataset.englishWord=currentQuestion.word;if(_ealdSpeakEl)_ealdSpeakEl.innerHTML=WordLabData.buildEALDSpeakButtons();if(_ealdDefEl)_ealdDefEl.innerHTML='<button class="eald-def-btn" id="ealdDefBtn" onclick="this.classList.toggle(\'flipped\')"><span class="eald-def-front">🌐 Show in '+WordLabData.escapeHtml(_langName)+'</span><span class="eald-def-back" id="ealdDefText">Loading...</span></button>';WordLabData.getTranslations([currentQuestion.word],['word']).then(function(t){if(t&&t[currentQuestion.word]){var defText=document.getElementById('ealdDefText');if(defText)defText.textContent='🌐 '+t[currentQuestion.word];if(_ealdEl)_ealdEl.dataset.translatedWord=t[currentQuestion.word];}});}baseInput.focus();}
+  function showEALDBreakdown(){if(typeof WordLabData==='undefined'||!WordLabData.getEALDLanguage()||!currentQuestion)return;WordLabData.injectEALDStyles();var el=document.getElementById('ealdTranslation');if(!el)return;el.innerHTML=WordLabData.buildEALDRevealButton();var w=currentQuestion.word,c=currentQuestion.clue||'';WordLabData.getTranslations([w,c],['word','definition']).then(function(t){if(!t)return;var contentEl=document.getElementById('ealdTranslationContent');if(!contentEl)return;var parts=[];if(t[w])parts.push('<b>'+WordLabData.escapeHtml(w)+'</b> = '+WordLabData.escapeHtml(t[w]));if(t[c])parts.push(WordLabData.escapeHtml(t[c]));if(parts.length){contentEl.innerHTML='<div class="eald-translation-pill"><span class="eald-flag">🌐</span> '+parts.join(' · ')+'</div>';}});}
+  function buildReveal(){revealRowEl.innerHTML="";[{key:"prefix",type:"prefix"},{key:"base",type:"base"},{key:"suffix1",type:"suffix"},{key:"suffix2",type:"suffix"}].forEach(part=>{const value=currentQuestion.answers[part.key];if(!value)return;const chip=document.createElement("span");chip.className=`revealChip ${part.type}`;chip.textContent=value;revealRowEl.appendChild(chip);});}
+  // Some words have more than one honest breakdown (psych + ology or psycho + logy). alts lists the
+  // others, matching Word Study; a full match with any of them counts as correct.
+  function _pickAnswerSet(q){const keys=["prefix","base","suffix1","suffix2"];const typed=keys.map(k=>normalise(boxMap[k].input.value));const sets=[q.answers].concat(q.alts||[]);for(const set of sets){if(keys.every((k,i)=>normalise(set[k])===typed[i]))return set;}return q.answers;}
+  function checkSingleBox(key){const expected=normalise((currentQuestion._expect||currentQuestion.answers)[key]);const actual=normalise(boxMap[key].input.value);if(actual===expected){boxMap[key].card.className=boxMap[key].card.className.replace(/correct|wrong|neutral/g,"correct").trim();boxMap[key].status.className="boxStatus ok";boxMap[key].status.textContent="✓ Correct";return true;}boxMap[key].card.className=boxMap[key].card.className.replace(/correct|wrong|neutral/g,"wrong").trim();boxMap[key].status.className="boxStatus bad";boxMap[key].status.textContent=expected===""?"Should be blank":"Needs fixing";return false;}
+  function _buildBreakdownExplanation(q){var _e=WordLabData.escapeHtml;var a=q.answers;var parts=[];if(a.prefix){var m=_partMeaning(q,'prefix');parts.push('prefix <b>'+_e(a.prefix)+'-</b>'+(m?' means "'+_e(m)+'"':''));}parts.push('base <b>'+_e(a.base)+'</b>');if(a.suffix1){var m1=_partMeaning(q,'suffix1');parts.push('suffix <b>-'+_e(a.suffix1)+'</b>'+(m1?' means "'+_e(m1)+'"':''));}if(a.suffix2){var m2=_partMeaning(q,'suffix2');parts.push('suffix <b>-'+_e(a.suffix2)+'</b>'+(m2?' means "'+_e(m2)+'"':''));}return '<b>'+_e(q.word)+'</b> = '+parts.join(' + ')+'.';}
+  /* Why panel: after a wrong answer, explain each box the student got wrong,
+     in student words. Only the wrong boxes get a line, so the panel stays short. */
+  var _bdReading=false; // true while the wrong-answer explanation is on screen (fuel holds)
+  function _spellingChange(q){
+    // Returns a student-friendly reason when the base is spelt differently inside the word.
+    var a=q.answers, e=WordLabData.escapeHtml;
+    var base=normalise(a.base), next=normalise(a.suffix1), rest=normalise(q.word).slice(normalise(a.prefix).length);
+    if(!base||!next||rest===base+next+normalise(a.suffix2)) return '';
+    var stem=base.slice(0,-1), last=base.slice(-1);
+    if(rest.indexOf(base+last)===0 && /[^aeiou]$/.test(base)) return 'the <b>'+e(last)+'</b> in <b>'+e(base)+'</b> is doubled before <b>-'+e(next)+'</b>, to keep the vowel short';
+    if(last==='y' && rest.indexOf(stem+'i')===0) return 'the <b>y</b> in <b>'+e(base)+'</b> changes to <b>i</b> before <b>-'+e(next)+'</b>';
+    if(last==='e' && rest.indexOf(stem)===0) return 'the <b>e</b> at the end of <b>'+e(base)+'</b> is dropped, because <b>-'+e(next)+'</b> starts with a vowel';
+    if(rest.indexOf(base)===0) return '';
+    return 'the spelling of <b>'+e(base)+'</b> changes a little before <b>-'+e(next)+'</b>';
+  }
+  function _buildWhyWrong(q){
+    var e=WordLabData.escapeHtml, a=q.answers, lines=[];
+    var typed={prefix:normalise(prefixInput.value),base:normalise(baseInput.value),suffix1:normalise(suffix1Input.value),suffix2:normalise(suffix2Input.value)};
+    var want={prefix:normalise(a.prefix),base:normalise(a.base),suffix1:normalise(a.suffix1),suffix2:normalise(a.suffix2)};
+    var where={prefix:'the start',suffix1:'the end',suffix2:'the end'};
+    // Which part is a typed value really? (e.g. a suffix typed in the prefix box)
+    function partOf(val){ if(!val) return ''; if(val===want.prefix) return 'prefix'; if(val===want.base) return 'base'; if(val===want.suffix1||val===want.suffix2) return 'suffix'; return ''; }
+    var s1Swap=(!want.suffix2 && !typed.suffix1 && typed.suffix2===want.suffix1);
+    // Prefix
+    if(typed.prefix!==want.prefix){
+      var tp=partOf(typed.prefix);
+      if(tp && tp!=='prefix') lines.push('You wrote <b>'+e(typed.prefix)+'</b> in the prefix box. That is the '+tp+', not the prefix. '+(tp==='suffix'?'A suffix goes in a suffix box at the end.':'It goes in the base word box.'));
+      if(!want.prefix) lines.push('<b>'+e(q.word)+'</b> has no prefix. It starts with the base, so leave the prefix box empty.');
+      else { var pm=_partMeaning(q,'prefix'); lines.push('The prefix is <b>'+e(a.prefix)+'-</b>. It goes at the start'+(pm?' and means "'+e(pm)+'"':'')+'.'); }
+    }
+    // Base
+    if(typed.base!==want.base){
+      var tb=partOf(typed.base);
+      if(tb && tb!=='base') lines.push('You wrote <b>'+e(typed.base)+'</b> in the base box. That is the '+tb+', not the base.');
+      lines.push('The base is <b>'+e(a.base)+'</b>. It is the main part of the word that holds its meaning.');
+      var change=_spellingChange(q);
+      if(change) lines.push('In <b>'+e(q.word)+'</b>, '+change+'. On its own, the base is spelt <b>'+e(a.base)+'</b>.');
+    }
+    // Suffixes
+    ['suffix1','suffix2'].forEach(function(k){
+      if(s1Swap || typed[k]===want[k]) return;
+      var label=(k==='suffix1'?'first':'second');
+      var tk=partOf(typed[k]);
+      if(tk && tk!=='suffix') lines.push('You wrote <b>'+e(typed[k])+'</b> in a suffix box. That is the '+tk+', not a suffix.');
+      if(!want[k]) lines.push(k==='suffix1'?'<b>'+e(q.word)+'</b> has no suffix. It ends with the base, so leave the suffix boxes empty.':'<b>'+e(q.word)+'</b> has only one suffix, so leave Suffix 2 empty.');
+      else { var sm=_partMeaning(q,k); lines.push('The '+label+' suffix is <b>-'+e(a[k])+'</b>. It goes at the end'+(sm?' and means "'+e(sm)+'"':'')+'.'); }
+    });
+    if(!lines.length) return '';
+    var built=[a.prefix,a.base,a.suffix1,a.suffix2].filter(Boolean).map(e).join(' + ');
+    return '<div class="whyTitle">Why</div><ul><li>'+lines.join('</li><li>')+'</li></ul>'+
+      '<div class="whyBuild">'+built+' → <b>'+e(q.word)+'</b></div>';
+  }
+  function checkAnswer(){if(locked||(!_wltActive&&fuel<=0)||!currentQuestion)return;const actualBase=normalise(baseInput.value);if(!actualBase){feedbackEl.textContent="Base required";feedbackEl.className="feedback bad";subFeedbackEl.textContent="The base word box must be filled in.";boxMap.base.card.className=boxMap.base.card.className.replace(/correct|wrong|neutral/g,"wrong").trim();boxMap.base.status.className="boxStatus bad";boxMap.base.status.textContent="Base is required";return;}currentQuestion._expect=_pickAnswerSet(currentQuestion);const pOk=checkSingleBox("prefix"),bOk=checkSingleBox("base");let s1Ok=checkSingleBox("suffix1"),s2Ok=checkSingleBox("suffix2");if(!s1Ok&&!s2Ok&&normalise(currentQuestion.answers.suffix2)===''&&normalise(suffix1Input.value)===''&&normalise(suffix2Input.value)===normalise(currentQuestion.answers.suffix1)){s1Ok=true;s2Ok=true;['suffix1','suffix2'].forEach(k=>{boxMap[k].card.className=boxMap[k].card.className.replace(/correct|wrong|neutral/g,'correct').trim();boxMap[k].status.className='boxStatus ok';boxMap[k].status.textContent='✓ Correct';});}const allOk=pOk&&bOk&&s1Ok&&s2Ok;const count=[pOk,bOk,s1Ok,s2Ok].filter(Boolean).length;if(allOk){_roundCorrect++;if(!_wltActive){score+=80+(streak*10);}streak++;if(!_wltActive){fuel=Math.min(fuel+(_supportMode?12:8),100);}if(!_wltActive && typeof WordLabData!=="undefined"&&WordLabData.getSession()){const _wlResult=WordLabData.recordAttempt("breakdown-blitz",currentQuestion.word,true,0,streak);_ssTrack(currentQuestion,true);if(typeof WLScientist!=='undefined') WLScientist.react('correct',_wlResult);}if(_wltActive && typeof WLScientist!=='undefined') WLScientist.react('correct');if(!_wltActive && typeof WLAudio!=='undefined'){WLAudio.correct();if(streak>=3)WLAudio.streak(streak);}feedbackEl.textContent="✅ Perfect breakdown!";feedbackEl.className="feedback ok";subFeedbackEl.textContent="All boxes correct.";if(_wltActive) WLTeacher.onAnswer(true,_buildBreakdownExplanation(currentQuestion));gameCardEl.classList.add("pulse");writeLog([`[${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}] Breakdown successful.`,`[MATCH] ${WordLabData.escapeHtml(currentQuestion.word.toUpperCase())} correctly decomposed.`]);if(!_wltActive) updateHud();showEALDBreakdown();setLocked(true);document.getElementById("nextRow").classList.add("show");if(_wltActive){_showTeacherNext();return;}_roundAnswered++;wlUpdateRoundProgress();if(_roundAnswered>=_roundTotal){showRoundWin();return;}nextTimer=setTimeout(()=>{gameCardEl.classList.remove("pulse");loadQuestion();},1400);return;}streak=0;if(!_wltActive){fuel=Math.max(fuel-(_supportMode?5:10),0);}if(!_wltActive && typeof WordLabData!=="undefined"&&WordLabData.getSession()){WordLabData.recordAttempt("breakdown-blitz",currentQuestion.word,false,0);_ssTrack(currentQuestion,false);}if(typeof WLScientist!=='undefined') WLScientist.react('wrong');if(!_wltActive && typeof WLAudio!=='undefined') WLAudio.wrong();if(!_wltActive) updateHud();feedbackEl.textContent=count>=2?"Almost there!":"Not quite";feedbackEl.className=count>=2?"feedback warn":"feedback bad";subFeedbackEl.textContent=`${count} of 4 boxes are correct.`;revealEl.classList.add("show");buildReveal();if(!_wltActive){var _wp=document.getElementById("whyPanel");if(_wp)_wp.innerHTML=_buildWhyWrong(currentQuestion);_bdReading=true;}showEALDBreakdown();if(_wltActive) WLTeacher.onAnswer(false,_buildBreakdownExplanation(currentQuestion));gameCardEl.classList.add("shake");writeLog([`[${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}] Mismatch detected.`,`[SCAN] ${count} / 4 boxes correct.`,`[CORRECT] Answer revealed.`]);setLocked(true);document.getElementById("nextRow").classList.add("show");var _nextEl=document.getElementById("nextRow");if(_nextEl)_nextEl.scrollIntoView({behavior:'smooth',block:'nearest'});setTimeout(()=>gameCardEl.classList.remove("shake"),500);if(_wltActive){_showTeacherNext();return;}_roundAnswered++;wlUpdateRoundProgress();if(_roundAnswered>=_roundTotal){showRoundWin();return;}if(fuel<=0){setTimeout(endGame,1200);}else{var _nb=document.getElementById("nextWordBtn");if(_nb)_nb.focus({preventScroll:true});}}
+  function startFuelDrain(){clearInterval(fuelInterval);fuelInterval=setInterval(()=>{if(_bdReading||(typeof WLHelp!=='undefined'&&WLHelp.isOpen&&WLHelp.isOpen()))return;fuel-=(_supportMode?.09:.18);if(fuel<=0){fuel=0;updateHud();endGame();clearInterval(fuelInterval);return;}updateHud();},220);}
+  function endGame(){setLocked(true);feedbackEl.textContent="Mission over";feedbackEl.className="feedback bad";subFeedbackEl.textContent=`Final score: ${score} XP`;writeLog([`[${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}] Fuel depleted.`,`[RESULT] Final score: ${score} XP`]);}
+  document.getElementById("checkBtn").addEventListener("click",checkAnswer);
+  document.getElementById("skipBtn").addEventListener("click",()=>{if(locked)return;if(!_wltActive&&fuel<=0)return;streak=0;if(!_wltActive){fuel=Math.max(fuel-(_supportMode?4:8),0);updateHud();if(fuel<=0){endGame();return;}}if(_wltActive){WLTeacher.clearFeedback();var nb=document.getElementById('wltNextBtn');if(nb)nb.style.display='none';}writeLog([`[${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}] Question skipped.`]);loadQuestion();});
+  document.getElementById("recalibrateBtn").addEventListener("click",()=>{_roundAnswered=0;_roundCorrect=0;wlUpdateRoundProgress();score=0;streak=0;fuel=100;locked=false;if(!_wltActive){updateHud();startFuelDrain();}loadQuestion();});
+  document.getElementById("nextWordBtn").addEventListener("click",()=>{clearTimeout(nextTimer);loadQuestion();});
+  /* Smart Enter: tab through fields, only check on last */
+  var _inputOrder=[prefixInput,baseInput,suffix1Input,suffix2Input];
+  _inputOrder.forEach(function(inp,i){inp.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();if(i<_inputOrder.length-1){_inputOrder[i+1].focus();}else{checkAnswer();}}});});
+  /* Scroll focused input into view on mobile (after virtual keyboard appears) */
+  _inputOrder.forEach(function(inp){if(inp)inp.addEventListener('focus',function(){setTimeout(function(){inp.scrollIntoView({behavior:'smooth',block:'center'});},300);});});
+  if(_wltActive){
+    WLTeacher.init({game:'breakdown'}).then(function(){ loadQuestion(); });
+    var _nBtn=document.createElement('button');_nBtn.textContent='Next Word →';_nBtn.className='primaryBtn';_nBtn.style.cssText='margin:12px auto;display:none;padding:10px 24px;font-size:15px;font-weight:800;cursor:pointer;';_nBtn.id='wltNextBtn';
+    var _anchor=document.getElementById('gameCard');if(_anchor&&_anchor.parentNode)_anchor.parentNode.insertBefore(_nBtn,_anchor.nextSibling);
+    _nBtn.addEventListener('click',function(){_nBtn.style.display='none';loadQuestion();});
+    function _showTeacherNext(){var nb=document.getElementById('wltNextBtn');if(nb)nb.style.display='block';}
+  } else {
+    // wordlab-data.js is deferred, so WordLabData (used inside loadQuestion
+    // for escapeHtml etc.) isn't available at parse time. Wait for it.
+    document.addEventListener('DOMContentLoaded', function(){
+      updateHud();startFuelDrain();loadQuestion();
+    });
+  }
+
+  // The shared help and hints scripts are deferred, so they only exist once the page has loaded.
+  document.addEventListener('DOMContentLoaded', function(){
+  if(typeof WLHelp!=='undefined') WLHelp.init({
+    game:'breakdown', title:'Breakdown Blitz', emoji:'🧩',
+    steps:[
+      {icon:'🎯',title:'Choose your round',desc:'Pick how many words to answer: 10, 15, 20, 25 or 30. Finish them all before the energy runs out.'},
+      {icon:'👀',title:'Read the word',desc:'A word appears at the top. Break it into its parts (morphemes).'},
+      {icon:'✍️',title:'Type the parts',desc:'Type the prefix, the base and any suffixes into the boxes. Not every word has all of them, so leave a box empty if the word does not need it.'},
+      {icon:'⚡',title:'Watch your energy',desc:'The energy bar goes down slowly. Right answers fill it up. Wrong answers take some away.'},
+      {icon:'✅',title:'Check your answer',desc:'Press Check. If something is wrong, you will see the right parts and why. Your energy waits while you read. Press Next word when you are ready.'}
+    ],
+    audioText:'Choose how many words you want to answer: 10, 15, 20, 25 or 30. Finish them all before your energy runs out. In Breakdown Blitz, a word appears and you break it into its parts. Type the prefix, the base and any suffixes into the boxes. Not every word has all of them, so leave a box empty if the word does not need it. The energy bar goes down slowly. Right answers fill it up, and wrong answers take some away. Press Check. If something is wrong, you will see the right parts and why. Your energy waits while you read. Press Next word when you are ready.'
+  });
+  if(typeof WLHints!=='undefined') WLHints.register({
+    getStrategyHint: function(){ return 'Look for common prefixes at the start and suffixes at the end.'; },
+    getSpecificHint: function(){
+      if(!currentQuestion) return '';
+      var np=_countParts(currentQuestion);
+      var baseFirst=(currentQuestion.answers.base||'').charAt(0).toUpperCase();
+      return 'This word has '+np+' part'+(np>1?'s':'')+'. The base starts with "'+baseFirst+'".';
+    }
+  });
+  });
+</script>
+<script>
+(function(){var w=document.getElementById('particles');if(!w)return;var cs=['rgba(239,68,68,.5)','rgba(251,146,60,.4)','rgba(234,179,8,.4)','rgba(255,255,255,.25)'];for(var i=0;i<20;i++){var p=document.createElement('div');p.className='particle';var s=(Math.random()*3+1.5)+'px';var c=cs[Math.floor(Math.random()*cs.length)];p.style.cssText='width:'+s+';height:'+s+';left:'+(Math.random()*100)+'%;bottom:'+(Math.random()*100)+'%;background:'+c+';animation-duration:'+(5+Math.random()*8)+'s;animation-delay:'+(Math.random()*8)+'s;border-radius:50%;';w.appendChild(p);}})();
+(async function(){
+  // wordlab-scientist.js is loaded with defer, so WLScientist is not
+  // available during inline-script parse. Wait until DOMContentLoaded
+  // (after which all defer scripts are guaranteed to have executed).
+  if(typeof WLScientist==='undefined'){await new Promise(function(r){document.addEventListener('DOMContentLoaded',function(){r();},{once:true});});}
+  var w=document.getElementById('sciCharWrap');
+  if(!w||typeof WLScientist==='undefined')return;
+  function _p(svg){while(w.firstChild)w.removeChild(w.firstChild);w.appendChild(document.createRange().createContextualFragment(svg));}
+  _p(WLScientist.buildSVG({},'neutral'));
+  try{var sd=typeof WordLabData!=='undefined'?await WordLabData.getStudentData():null;if(sd&&sd.scientist)_p(WLScientist.buildSVG(sd.scientist,'neutral'));}catch(e){console.error('Scientist load failed',e);}
+})();
+</script>
+<!-- wordlab-data loaded above -->
+
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+  // Daily limit check
+  if(typeof WordLabData !== 'undefined' && WordLabData.getSession()){
+    try {
+      const limit = await WordLabData.checkDailyLimit();
+      if(limit && limit.blocked){
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(13,11,26,.92);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = '<div style="background:#1a1630;border:2px solid #4338ca;border-radius:24px;padding:40px;max-width:440px;text-align:center;color:#e0e7ff;font-family:Lexend,sans-serif;"><div style="font-size:48px;margin-bottom:16px;">🧪</div><h2 style="font-size:22px;font-weight:900;margin-bottom:12px;">Daily limit reached</h2><p style="color:#94a3b8;font-size:14px;margin-bottom:24px;">You\\\'ve completed 30 questions today on the free plan. Come back tomorrow or ask your teacher about upgrading.</p><a href="landing.html" style="background:#4338ca;color:#fff;padding:12px 24px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px;">Back to Home</a></div>';
+        document.body.appendChild(overlay);
+        return;
+      }
+    } catch(e) { console.warn('Daily limit check failed', e); }
+  }
+
+  if (typeof WordLabData === 'undefined') return;
+  WordLabData.initLoginUI({
+    accentColor: '#4338ca',
+    accentSoft:  '#eef2ff',
+    accentLine:  '#c7d2fe',
+    accentText:  '#312e81',
+    onLogin: function() { location.reload(); }
+  });
+  var session = WordLabData.getSession();
+  var btn = document.getElementById('wlLoginBtn');
+  if (btn) {
+    if (session) btn.textContent = '👤 ' + session.studentName;
+  }
+  if(typeof WordLabData !== 'undefined' && WordLabData.isExtensionMode && WordLabData.isExtensionMode('breakdown-blitz')){
+    var extPill = document.createElement('div');
+    extPill.style.cssText = 'background:#4338ca;color:#e0e7ff;font-size:10px;font-weight:900;padding:4px 10px;border-radius:20px;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;';
+    extPill.textContent = '🔬 Extension';
+    var hud = document.querySelector('.hud, .headerInner, header .innerHud');
+    if(hud) hud.appendChild(extPill);
+  }
+});
+</script>
+
+
+<footer style="text-align:center;padding:12px 16px;font-size:11px;color:#64748b;border-top:1px solid #e2e8f0;margin-top:auto;font-family:Lexend,sans-serif;">&#129514; Word Labs Education &middot; ABN 62 528 046 944 &middot; <a href="about.html" style="color:#64748b;">About</a> &middot; <a href="privacy.html" style="color:#64748b;">Privacy Policy</a> &middot; <a href="terms.html" style="color:#64748b;">Terms of Service</a> &middot; <a href="mailto:nick@wordlabs.app" style="color:#64748b;">Contact</a></footer>
+</body>
+</html>

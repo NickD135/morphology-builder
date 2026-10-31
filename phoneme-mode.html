@@ -1,0 +1,1605 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Labs – Phoneme Splitter</title>
+  <link rel="stylesheet" href="wordlab-common.css?v=20261031">
+  <style>
+    :root{
+      --bg:#f5f5f5; --panel:#ffffff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b;
+      --indigo:#4338ca; --indigo-2:#6366f1; --indigo-soft:#eef2ff;
+      --green:#16a34a; --green-soft:#f0fdf4; --green-line:#bbf7d0; --green-text:#166534;
+      --orange:#ea580c; --orange-soft:#fff7ed; --orange-line:#fed7aa; --orange-text:#9a3412;
+      --purple:#7c3aed; --purple-soft:#f5f3ff; --purple-line:#ddd6fe; --purple-text:#4c1d95;
+      --bad:#dc2626;
+      --accent:#7c3aed; --accent-rgb:124,58,237; --header-rgb:10,5,25;
+    }
+    body{ margin:0; padding-top:56px; font-family:'Lexend',sans-serif; background:var(--bg); color:var(--text); line-height:1.5; letter-spacing:.02em; }
+
+    /* Unified chrome — dark variant, purple accent-tinted text (phoneme studio) */
+    .header{ position:fixed; top:0; left:0; right:0; z-index:50; background:rgba(var(--header-rgb),.75); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border-bottom:1px solid rgba(var(--accent-rgb),.3); padding:0; }
+    .headerInner{ padding:0 20px; height:56px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; max-width:none; }
+    .brand{ display:flex; align-items:center; gap:12px; flex-shrink:0; }
+    .brandIcon{ width:36px; height:36px; border-radius:10px; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:0 8px 16px rgba(0,0,0,.15); flex:0 0 auto; }
+    .brand h1{ margin:0; font-size:15px; font-weight:900; letter-spacing:-.02em; color:#e9d5ff; }
+    .brand .sub{ font-size:9px; text-transform:uppercase; letter-spacing:.22em; color:#c4b5fd; font-weight:800; display:block; margin-top:2px; }
+    .hud{ display:flex; gap:8px; align-items:center; flex-wrap:nowrap; overflow-x:auto; }
+    .hud::-webkit-scrollbar{ display:none; }
+    .pill{ display:inline-flex; align-items:center; justify-content:center; min-height:32px; border:1px solid rgba(var(--accent-rgb),.25); border-radius:999px; background:rgba(var(--accent-rgb),.12); padding:6px 14px; font-size:12px; font-weight:800; color:#e9d5ff; white-space:nowrap; flex-shrink:0; }
+    .pill.score{ background:var(--accent); color:#fff; border-color:transparent; }
+    .pill.streak{ background:rgba(251,146,60,.15); color:#fed7aa; border-color:rgba(251,146,60,.3); }
+    .topBtn{ border:none; background:rgba(var(--accent-rgb),.12); color:#e9d5ff; font-weight:800; font-size:11px; text-transform:uppercase; letter-spacing:.12em; padding:7px 13px; border-radius:10px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; flex-shrink:0; transition:all .15s; }
+    .topBtn:hover{ background:rgba(var(--accent-rgb),.2); }
+    #wlLoginBtn{ border:1px solid rgba(var(--accent-rgb),.25); background:rgba(var(--accent-rgb),.08); color:#e9d5ff; border-radius:10px; padding:7px 13px; font-weight:800; font-size:11px; cursor:pointer; font-family:'Lexend',sans-serif; white-space:nowrap; flex-shrink:0; }
+
+    .wrap{ max-width:1100px; margin:0 auto; padding:20px; }
+    .mainGrid{ display:grid; grid-template-columns:1fr 320px; gap:20px; align-items:start; }
+    @media(max-width:820px){ .mainGrid{ grid-template-columns:1fr; } }
+
+    .panel{ background:rgba(255,255,255,.92); border:2px solid rgba(var(--accent-rgb),.2); border-radius:20px; box-shadow:0 16px 48px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.6); overflow:hidden; }
+    .panelInner{ padding:28px; }
+    .panelTitle{ margin:0 0 12px 0; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.22em; color:var(--accent); }
+
+    /* Start screen */
+    .startScreen{ text-align:center; padding:36px 20px; }
+    .startIcon{ width:80px; height:80px; border-radius:24px; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:36px; margin:0 auto 20px auto; box-shadow:0 20px 40px rgba(var(--accent-rgb),.24); }
+    .startTitle{ font-size:30px; font-weight:900; color:#4c1d95; margin:0 0 10px; }
+    .startSub{ color:var(--muted); font-size:14px; margin-bottom:24px; max-width:460px; margin-left:auto; margin-right:auto; line-height:1.7; }
+    .howToGrid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:28px; text-align:left; }
+    .howToCard{ background:var(--purple-soft); border:2px solid var(--purple-line); border-radius:16px; padding:14px 16px; }
+    .howToCard.orange{ background:var(--orange-soft); border-color:var(--orange-line); }
+    .howToCard .htIcon{ font-size:20px; margin-bottom:6px; }
+    .howToCard .htTitle{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; color:var(--purple-text); margin-bottom:4px; }
+    .howToCard.orange .htTitle{ color:var(--orange-text); }
+    .howToCard .htDesc{ font-size:13px; color:#334155; line-height:1.5; }
+    .startBtn{ border:none; background:var(--accent); color:#fff; font-weight:900; font-size:16px; letter-spacing:.08em; padding:18px 48px; border-radius:20px; cursor:pointer; text-transform:uppercase; box-shadow:0 16px 32px rgba(var(--accent-rgb),.24); transition:all .15s; }
+    .startBtn:hover{ filter:brightness(.9); transform:translateY(-2px); }
+    .round-picker{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;}
+    .round-btn{background:rgba(124,58,237,.06);border:2px solid rgba(124,58,237,.15);color:var(--muted);font-family:'Lexend',sans-serif;font-weight:800;font-size:13px;padding:6px 14px;border-radius:10px;cursor:pointer;transition:all .15s;}
+    .round-btn:hover{border-color:rgba(124,58,237,.4);color:#4c1d95;}
+    .round-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+    /* Diff buttons */
+    .diffRow{ display:flex; gap:8px; margin-bottom:24px; flex-wrap:wrap; }
+    .diffBtn{ border:2px solid var(--line); background:#fff; border-radius:14px; padding:10px 14px; font-weight:800; font-size:12px; cursor:pointer; color:var(--muted); transition:all .15s; text-transform:uppercase; letter-spacing:.06em; }
+    .diffBtn.active{ border-color:var(--accent); background:rgba(var(--accent-rgb),.1); color:var(--purple-text); }
+    .diffBtn:hover:not(.active){ border-color:#cbd5e1; color:var(--text); }
+
+    /* Game area */
+    .gameArea{ display:flex; flex-direction:column; align-items:center; gap:22px; padding:8px 0; }
+    .wordPrompt{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.22em; color:var(--muted); text-align:center; }
+    .speakBtn{ border:2px solid rgba(var(--accent-rgb),.3); background:rgba(var(--accent-rgb),.08); color:var(--purple-text); border-radius:14px; padding:10px 20px; font-weight:800; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:8px; transition:all .15s; }
+    .speakBtn:hover{ background:rgba(var(--accent-rgb),.15); border-color:var(--accent); }
+
+    /* ── Core interaction area ── */
+    .chopContainer{ display:flex; align-items:center; justify-content:safe center; flex-wrap:nowrap; user-select:none; min-height:110px; gap:0; padding-top:8px;
+      /* The word always stays on one line. wlAutoFitChop() measures it and
+         sets --wl-fit so long words shrink to fit the panel. */
+      align-self:stretch; width:100%; min-width:0; box-sizing:border-box; --wl-fit:1; }
+
+    /* Each "unit" = one or more letters currently grouped */
+    .unit{ display:inline-flex; align-items:center; position:relative; flex-shrink:0; }
+
+    /* The letter(s) inside a unit */
+    .unitInner{
+      display:inline-flex; align-items:center;
+      border-radius:12px; border:2px solid transparent;
+      padding:4px max(1px, calc(4px * var(--wl-fit,1)));
+      transition:background .15s, border-color .15s;
+    }
+
+    /* When merged (2+ letters): orange highlight */
+    .unit.merged .unitInner{
+      background:var(--orange-soft);
+      border-color:var(--orange-line);
+    }
+    .unit.merged .lChar{ color:var(--orange-text); }
+
+    .lChar{ font-size:calc(52px * var(--wl-fit,1)); font-weight:900; line-height:1; color:#312e81; padding:0 calc(2px * var(--wl-fit,1)); transition:color .12s; }
+
+    /* Inner gap between letters within a merged unit — click to unmerge */
+    .innerGap{
+      width:max(12px, calc(24px * var(--wl-fit,1))); height:52px; flex-shrink:0;
+      display:inline-flex; align-items:center; justify-content:center;
+      cursor:pointer; position:relative;
+      -webkit-tap-highlight-color:transparent;
+      touch-action:manipulation;
+    }
+    .innerGap .iLine{ width:4px; height:max(20px, calc(32px * var(--wl-fit,1))); border-radius:999px; background:rgba(234,88,12,.35); transition:background .12s; }
+    .innerGap:hover .iLine{ background:var(--bad); }
+    .innerGap .iHint{ position:absolute; top:-22px; left:50%; transform:translateX(-50%); font-size:10px; font-weight:800; color:var(--bad); opacity:0; transition:opacity .1s; white-space:nowrap; pointer-events:none; }
+    .innerGap:hover .iHint{ opacity:1; }
+    @media(pointer:coarse){ .innerGap .iHint{ opacity:1; } }
+
+    /* Gap between adjacent units */
+    .unitGap{
+      width:max(14px, calc(44px * var(--wl-fit,1))); height:72px; flex-shrink:0;
+      display:inline-flex; flex-direction:column; align-items:center; justify-content:center;
+      cursor:pointer; position:relative; gap:3px;
+      -webkit-tap-highlight-color:transparent;
+      touch-action:manipulation;
+    }
+    .unitGap .gLine{ width:max(4px, calc(6px * var(--wl-fit,1))); height:max(26px, calc(44px * var(--wl-fit,1))); border-radius:999px; background:#cbd5e1; transition:background .15s, box-shadow .15s; }
+    .unitGap:hover .gLine{ background:var(--purple); }
+    .unitGap.split .gLine{ background:var(--purple); box-shadow:0 0 0 4px rgba(124,58,237,.15); }
+    .unitGap .gHint{ position:absolute; top:-22px; left:50%; transform:translateX(-50%); font-size:10px; font-weight:800; color:var(--purple); opacity:0; transition:opacity .1s; white-space:nowrap; pointer-events:none; }
+    .unitGap:hover .gHint{ opacity:1; }
+    @media(pointer:coarse){ .unitGap .gHint{ opacity:1; } }
+    .chopContainer.wlTight .gHint, .chopContainer.wlTight .iHint{ display:none; }
+
+    /* .unitGap is a <button> — strip native chrome (it keeps its own layout above) */
+    .unitGap{ background:none; border:0; font:inherit; padding:0; }
+
+    /* Split digraph (magic-e): the silent e greys out, its linked vowel tints */
+    .lChar.silentE{ color:#a78bda; opacity:.72; }
+    .lChar.magicVowel{ color:var(--purple-text); }
+
+    /* Magic-e toggle — a compact ✨ badge at the top-right of an eligible silent e */
+    .magicBtn{
+      position:absolute; top:calc(-6px - 10px * (1 - var(--wl-fit,1))); right:calc(-8px * (1 - var(--wl-fit,1)));
+      /* Shrinks with a long word (--wl-fit) so it does not cover the letter. */
+      width:max(20px, calc(26px * var(--wl-fit,1))); height:max(20px, calc(26px * var(--wl-fit,1))); padding:0; line-height:1; font-size:max(10px, calc(13px * var(--wl-fit,1)));
+      display:flex; align-items:center; justify-content:center;
+      background:var(--purple-soft); border:1.5px dashed var(--purple-line);
+      border-radius:50%; cursor:pointer; z-index:5;
+      touch-action:manipulation; -webkit-tap-highlight-color:transparent;
+      opacity:.5; transition:opacity .12s, transform .12s;
+    }
+    .unit:hover .magicBtn, .magicBtn.on, .magicBtn:focus-visible{ opacity:1; }
+    @media(pointer:coarse){ .magicBtn{ opacity:.9; } }
+    .magicBtn.on{ background:var(--purple); border-style:solid; border-color:var(--purple); transform:scale(1.08); }
+
+    /* Preview */
+    .phonemePreview{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; min-height:52px; align-items:center; }
+    .pChip{ padding:8px 16px; border-radius:14px; font-size:20px; font-weight:800; animation:popIn .18s ease-out; }
+    .pChip.single{ background:var(--purple-soft); border:2px solid var(--purple-line); color:var(--purple-text); }
+    .pChip.multi{ background:var(--orange-soft); border:2px solid var(--orange-line); color:var(--orange-text); }
+    @keyframes popIn{ 0%{ transform:scale(.78); opacity:0; } 100%{ transform:scale(1); opacity:1; } }
+
+    /* Actions */
+    .actionRow{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+    .checkBtn{ border:none; background:var(--purple); color:#fff; font-weight:900; font-size:15px; letter-spacing:.06em; padding:16px 36px; border-radius:18px; cursor:pointer; text-transform:uppercase; box-shadow:0 12px 24px rgba(124,58,237,.22); transition:all .15s; }
+    .checkBtn:hover{ background:#6d28d9; transform:translateY(-1px); }
+    .checkBtn:disabled{ background:#cbd5e1; box-shadow:none; cursor:not-allowed; transform:none; }
+    .clearBtn{ border:2px solid var(--line); background:#fff; color:#334155; font-weight:800; font-size:13px; padding:14px 22px; border-radius:16px; cursor:pointer; transition:all .15s; }
+    .clearBtn:hover{ background:#f8fafc; }
+    .clearBtn:disabled{ opacity:.45; cursor:not-allowed; }
+
+    /* Feedback */
+    .feedbackBanner{ width:100%; border-radius:20px; padding:18px 24px; font-weight:800; font-size:14px; display:none; animation:slideIn .25s ease-out; line-height:1.7; }
+    @keyframes slideIn{ 0%{ transform:translateY(-8px); opacity:0; } 100%{ transform:translateY(0); opacity:1; } }
+    .feedbackBanner.correct{ display:block; background:var(--green-soft); color:var(--green-text); border:2px solid var(--green-line); }
+    .feedbackBanner.wrong{ display:block; background:#fef2f2; color:var(--bad); border:2px solid #fecaca; }
+    .nextBtn{ border:none; background:#0f172a; color:#fff; font-weight:900; font-size:14px; letter-spacing:.08em; padding:14px 32px; border-radius:16px; cursor:pointer; text-transform:uppercase; display:none; margin-top:8px; transition:background .15s; }
+    .nextBtn:hover{ background:#000; }
+    .nextBtn.visible{ display:inline-flex; }
+    .whySounds{ margin-top:10px; text-align:left; color:#1f2937; font-size:15px; font-weight:600; line-height:1.55; }
+    .whySounds .whyTitle{ font-weight:900; color:#5b21b6; margin-bottom:4px; }
+    .whySounds ul{ margin:0; padding-left:20px; }
+    .whySounds li{ margin:3px 0; }
+    .whySounds .gChip{ display:inline-block; font-weight:900; color:#4c1d95; background:#ede9fe; border-radius:8px; padding:0 7px; }
+
+    /* Right col */
+    .bigNum{ font-size:64px; font-weight:900; letter-spacing:-.04em; color:#4c1d95; line-height:1; }
+    .subRow{ display:flex; gap:16px; margin-top:16px; flex-wrap:wrap; }
+    .subStat{ flex:1; min-width:80px; }
+    .subStat .val{ font-size:28px; font-weight:900; color:var(--purple); line-height:1; }
+    .subStat .lbl{ font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin-top:2px; }
+    .histList{ display:flex; flex-direction:column; gap:8px; max-height:240px; overflow-y:auto; }
+    .histItem{ display:flex; align-items:flex-start; gap:8px; padding:10px 12px; border-radius:14px; border:2px solid var(--line); font-size:13px; }
+    .histItem.correct{ background:var(--green-soft); border-color:var(--green-line); }
+    .histItem.wrong{ background:#fef2f2; border-color:#fecaca; }
+    .histItem.correct::before{content:'\2713 ';font-weight:900;}
+    .histItem.wrong::before{content:'\2717 ';font-weight:900;}
+    .histWord{ font-weight:800; min-width:72px; }
+    .histAnswer{ color:var(--muted); font-size:12px; line-height:1.4; }
+    .tipBox{ background:var(--purple-soft); border:2px solid var(--purple-line); border-radius:16px; padding:14px 16px; font-size:13px; color:#334155; line-height:1.65; margin-bottom:12px; }
+    .tipBox b{ color:var(--purple-text); }
+    .rightCol > .panel { flex-shrink: 0; }
+    .oChip{ display:inline-block; padding:1px 7px; border-radius:6px; background:var(--orange-soft); color:var(--orange-text); border:1px solid var(--orange-line); font-weight:800; font-size:12px; }
+    .pChipInline{ display:inline-block; padding:1px 7px; border-radius:6px; background:var(--purple-soft); color:var(--purple-text); border:1px solid var(--purple-line); font-weight:800; font-size:12px; }
+
+    .hidden{ display:none !important; }
+    @keyframes shake{ 0%,100%{ transform:translateX(0); } 20%{ transform:translateX(-6px); } 40%{ transform:translateX(6px); } 60%{ transform:translateX(-4px); } 80%{ transform:translateX(4px); } }
+    .shake{ animation:shake .4s ease-out; }
+
+  /* ── Sound/Recording Studio Lab scene ── */
+  html{height:100%;}body{min-height:100vh;overflow-y:auto;background:transparent;}
+  .lab-scene{position:fixed;inset:0;z-index:0;display:flex;flex-direction:column;pointer-events:none;}
+  .lab-wall{flex:0 0 62%;background:#1e1b2e;position:relative;overflow:hidden;}
+  .lab-wall::before{content:'';position:absolute;inset:0;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.03) 0,rgba(255,255,255,.03) 1px,transparent 1px,transparent 20px),repeating-linear-gradient(-45deg,rgba(255,255,255,.03) 0,rgba(255,255,255,.03) 1px,transparent 1px,transparent 20px);background-size:40px 40px;}
+  .on-air-sign{position:absolute;top:14px;right:28px;background:#0f0000;border:2px solid #cc0000;border-radius:6px;padding:5px 12px;color:#ff4444;font-size:11px;font-weight:900;letter-spacing:.25em;text-transform:uppercase;box-shadow:0 0 14px rgba(255,0,0,.5),inset 0 0 8px rgba(255,0,0,.1);animation:onAirGlow 2s ease-in-out infinite;}
+  @keyframes onAirGlow{0%,100%{box-shadow:0 0 14px rgba(255,0,0,.5),inset 0 0 8px rgba(255,0,0,.1);}50%{box-shadow:0 0 26px rgba(255,0,0,.9),inset 0 0 14px rgba(255,0,0,.2);}}
+  .waveform-screen{position:absolute;left:50%;transform:translateX(-50%);top:8%;width:190px;height:76px;background:#080818;border:3px solid #4c1d95;border-radius:8px;overflow:hidden;box-shadow:0 0 18px rgba(124,58,237,.4);}
+  .vu-meter{position:absolute;right:96px;top:10%;width:58px;height:86px;background:#111;border:2px solid #333;border-radius:6px;padding:5px;}
+  .vu-label{color:#888;font-size:7px;text-align:center;font-weight:900;letter-spacing:.1em;margin-bottom:3px;}
+  .vu-bar-track{width:100%;height:58px;background:#0a0a0a;border-radius:3px;overflow:hidden;display:flex;flex-direction:column-reverse;}
+  .vu-bar{width:100%;background:linear-gradient(0deg,#22c55e,#eab308,#ef4444);border-radius:3px;animation:vuBounce 1.2s ease-in-out infinite;}
+  @keyframes vuBounce{0%,100%{height:40%;}25%{height:70%;}50%{height:30%;}75%{height:82%;}}.monitor-speaker{position:absolute;bottom:0;width:48px;height:66px;background:linear-gradient(180deg,#2a2a3a,#1a1a28);border:2px solid #3a3a4a;border-radius:6px;}
+  .monitor-speaker.left{left:7%;}.monitor-speaker.right{right:7%;}
+  .speaker-cone{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:32px;height:32px;border-radius:50%;background:radial-gradient(circle at 40% 40%,#555,#222);border:2px solid #444;}
+  .speaker-led{position:absolute;top:7px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:#22c55e;box-shadow:0 0 5px rgba(34,197,94,.8);}
+  .fader-row{position:absolute;top:8px;left:50%;transform:translateX(-50%);display:flex;gap:5px;}
+  .fader{width:5px;height:38px;background:#1a1a2a;border-radius:2px;position:relative;}
+  .fader-knob{position:absolute;left:-2px;width:9px;height:3px;background:#888;border-radius:2px;top:14px;}
+  .lab-floor{flex:0 0 38%;background:repeating-linear-gradient(90deg,#2d1b0e 0,#2d1b0e 60px,#3d2510 60px,#3d2510 120px);position:relative;border-top:4px solid #7c3aed;}
+  .lab-bench{position:absolute;bottom:0;height:72%;background:#1a1225;border-top:8px solid #2d1b3d;border-radius:4px 4px 0 0;}
+  .lab-bench.left{left:10px;width:158px;}.lab-bench.right{right:10px;width:158px;}
+  .bench-top{position:absolute;top:-17px;left:-6px;right:-6px;height:17px;background:#231535;border-radius:4px 4px 0 0;border-top:3px solid #3d2060;}
+  #particles{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden;}
+  .particle{position:absolute;bottom:-10px;border-radius:50%;animation:particleFloat linear infinite;}
+  @keyframes particleFloat{from{transform:translateY(0);opacity:.6;}to{transform:translateY(calc(-100vh - 20px));opacity:0;}}
+  /* ── Fixed centered layout ── */
+  body{overflow:hidden!important;}
+  .wrap{position:fixed!important;top:56px!important;bottom:0!important;left:50%!important;transform:translateX(-50%)!important;width:75vw!important;max-width:none!important;margin:0!important;z-index:10;padding:16px 0!important;overflow-y:auto;}
+  .wrap::-webkit-scrollbar{width:0;}
+  .mainGrid{grid-template-columns:1fr 260px!important;gap:14px!important;align-items:start!important;}
+  /* ── Studio panels: pale lavender frosted glass ── */
+  .panel{background:rgba(245,240,255,.92)!important;backdrop-filter:blur(8px)!important;-webkit-backdrop-filter:blur(8px)!important;border:2px solid rgba(167,139,250,.3)!important;box-shadow:0 16px 48px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.7)!important;border-radius:20px!important;}
+  .rightCol{position:sticky;top:0;max-height:calc(100vh - 88px);overflow-y:auto;padding-right:2px;max-width:260px;}
+  .rightCol > .panel{flex-shrink:0;}
+  .rightCol::-webkit-scrollbar{width:0;}
+  /* ── Waveform letter styling ── */
+  .lChar{color:#4c1d95!important;}
+  .unitGap .gLine{background:rgba(124,58,237,.18)!important;}
+  .unitGap:hover .gLine{background:#7c3aed!important;}
+  .unitGap.split .gLine{background:#7c3aed!important;box-shadow:0 0 0 4px rgba(124,58,237,.18)!important;}
+  .innerGap .iLine{background:rgba(234,88,12,.3)!important;}
+  /* ── Phoneme chips ── */
+  .pChip.single{background:rgba(245,243,255,.98)!important;border-color:rgba(139,92,246,.4)!important;color:#5b21b6!important;}
+  .pChip.multi{background:rgba(255,247,237,.98)!important;border-color:rgba(251,146,60,.4)!important;color:#9a3412!important;}
+  /* ── Diff buttons ── */
+  .diffBtn{background:rgba(245,240,255,.8)!important;border-color:rgba(167,139,250,.3)!important;color:#4c1d95!important;}
+  .diffBtn.active{background:#6d28d9!important;color:#f5f3ff!important;border-color:#6d28d9!important;}
+  /* ── Action buttons ── */
+  .checkBtn{background:#6d28d9!important;box-shadow:0 10px 20px rgba(109,40,217,.22)!important;}
+  .checkBtn:hover{background:#5b21b6!important;}
+  .checkBtn:disabled{background:#d1d5db!important;}
+  .clearBtn{background:rgba(245,240,255,.9)!important;border-color:rgba(167,139,250,.3)!important;color:#5b21b6!important;}
+  .nextBtn{background:#4c1d95!important;color:#e9d5ff!important;}
+  .nextBtn:hover{background:#3b1474!important;}
+  /* ── Speak button ── */
+  .speakBtn{background:rgba(245,240,255,.8)!important;border-color:rgba(139,92,246,.35)!important;color:#5b21b6!important;}
+  .speakBtn:hover{background:rgba(221,214,254,.9)!important;}
+  /* ── Score panel ── */
+  .bigNum{color:#5b21b6!important;}
+  .subStat .val{color:#7c3aed!important;}
+  .panelTitle{color:#6d28d9!important;}
+  .tipBox{background:rgba(237,233,254,.9)!important;border-color:rgba(167,139,250,.35)!important;}
+  .tipBox b{color:#5b21b6!important;}
+  .oChip{background:rgba(255,247,237,.9)!important;color:#9a3412!important;border-color:rgba(251,146,60,.3)!important;}
+  .pChipInline{background:rgba(237,233,254,.9)!important;color:#5b21b6!important;border-color:rgba(139,92,246,.3)!important;}
+  /* ── How-to cards ── */
+  .howToCard{background:rgba(237,233,254,.9)!important;border-color:rgba(167,139,250,.35)!important;}
+  .howToCard.orange{background:rgba(255,247,237,.9)!important;border-color:rgba(251,146,60,.35)!important;}
+  .htTitle{color:#5b21b6!important;}
+  /* ── Start screen ── */
+  .startTitle{color:#4c1d95!important;}
+  .startIcon{background:#6d28d9!important;}
+  .startBtn{background:#6d28d9!important;box-shadow:0 16px 32px rgba(109,40,217,.24)!important;}
+  .startBtn:hover{background:#5b21b6!important;}
+  /* ── Scientist ── */
+  .scientist-stage{position:fixed;right:0;width:calc((100vw - 75vw)/2);top:56px;bottom:0;z-index:11;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  #sciCharWrap{width:120px;height:150px;display:flex;align-items:flex-end;justify-content:center;animation:sciIdle 3s ease-in-out infinite;}
+  #sciCharWrap.sci-correct{animation:sciJump .6s ease-out;}#sciCharWrap.sci-wrong{animation:sciShake .5s ease-out;}#sciCharWrap.sci-streak{animation:sciDance .8s ease-in-out infinite;}
+  @keyframes sciIdle{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}@keyframes sciJump{0%{transform:translateY(0)}30%{transform:translateY(-22px)}100%{transform:translateY(0)}}@keyframes sciShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-4deg) translateX(-4px)}40%{transform:rotate(4deg) translateX(4px)}60%{transform:rotate(-3deg) translateX(-3px)}80%{transform:rotate(2deg)}}@keyframes sciDance{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+  .scene-prop-left{position:fixed;left:0;width:calc((100vw - 75vw)/2);top:56px;bottom:0;z-index:11;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;}
+  @keyframes propBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+  @keyframes propPulse{0%,100%{opacity:.75}50%{opacity:1}}
+  /* Chromebook width: give the word more room so long words stay readable. */
+  @media(min-width:961px) and (max-width:1200px){
+    .mainGrid{grid-template-columns:minmax(0,1fr) 240px!important;}
+    .rightCol{max-width:240px;}
+    .panelInner{padding:20px 18px;}
+  }
+  /* Portrait tablets: the score and history panels go below the game. */
+  @media(min-width:701px) and (max-width:960px){
+    .mainGrid{grid-template-columns:minmax(0,1fr)!important;}
+    .rightCol{position:static;max-height:none;max-width:none;overflow:visible;}
+  }
+  @media(max-width:700px){
+    .lab-scene{display:none;}
+    body{background:linear-gradient(160deg,#1e1b2e,#4c1d95)!important;overflow-y:auto!important;}
+    .wrap{position:relative!important;top:auto!important;bottom:auto!important;left:auto!important;transform:none!important;width:calc(100vw - 24px)!important;margin:0 auto!important;padding-top:72px!important;}
+    .scientist-stage,.scene-prop-left{display:none!important;}
+    /* Prevent long words (e.g. "telescope", "information") from wrapping
+       onto two lines. On mobile the chop container becomes nowrap +
+       horizontally scrollable so the word always reads as a single
+       sequence; letter and gap sizes shrink with clamp() so short words
+       stay generous-looking. Matches the fix in syllable-mode.html. */
+    .gameArea{ min-width:0!important; width:100%!important; box-sizing:border-box; }
+    .chopContainer{
+      flex-wrap:nowrap!important;
+      justify-content:safe center!important;
+      align-self:stretch!important;
+      width:100%!important;
+      max-width:100%!important;
+      min-width:0!important;
+      box-sizing:border-box;
+      overflow-x:hidden; overflow-y:visible;
+      padding:12px 14px 8px;
+      min-height:auto!important;
+      --wl-fit:1;
+    }
+    /* Letters and gaps scale via --wl-fit, set by JS after each word
+       renders. Short words look generous; long words shrink just
+       enough to fit on one line — no horizontal scroll. */
+    .unit,.unitGap,.innerGap{flex-shrink:0;}
+    .lChar{font-size:calc(44px * var(--wl-fit,1))!important;padding:0 1px!important;}
+    .unitGap{width:calc(34px * var(--wl-fit,1))!important;height:66px!important;}
+    .unitGap .gLine{height:calc(40px * var(--wl-fit,1))!important;}
+    .innerGap{width:calc(20px * var(--wl-fit,1))!important;height:48px!important;}
+    .innerGap .iLine{height:calc(30px * var(--wl-fit,1))!important;}
+  }
+  @media(max-width:480px){
+    .howToGrid{grid-template-columns:1fr!important;}
+    .mainGrid{grid-template-columns:1fr!important;}
+    /* Use the --wl-fit scaled sizes here too, otherwise this block
+       overrides the 700px auto-fit rules on any phone <=480px. */
+    .lChar{font-size:calc(40px * var(--wl-fit,1))!important;}
+    .unitGap{width:calc(30px * var(--wl-fit,1))!important;height:60px!important;}
+    .unitGap .gLine{width:5px!important;height:calc(36px * var(--wl-fit,1))!important;}
+    .innerGap{width:calc(18px * var(--wl-fit,1))!important;height:44px!important;}
+    .diffBtn,.startBtn,.speakBtn{min-height:44px!important;padding:12px 16px!important;}
+  }
+
+  /* Room scenery stays still in low-stim mode and when the device asks for reduced motion */
+  .low-stim .lab-scene *, .low-stim .scene-prop-left, .low-stim .scene-prop-left *{ animation:none!important; }
+  .low-stim #particles{ display:none!important; }
+  @media (prefers-reduced-motion: reduce){
+    .lab-scene *, .scene-prop-left, .scene-prop-left *{ animation:none!important; }
+    #particles{ display:none!important; }
+  }
+  </style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<div class="lab-scene" aria-hidden="true">
+  <div class="lab-wall">
+    <div class="on-air-sign">ON AIR</div>
+    <div class="waveform-screen"></div>
+    <div class="vu-meter">
+      <div class="vu-label">VU</div>
+      <div class="vu-bar-track"><div class="vu-bar"></div></div>
+    </div>
+    <div class="monitor-speaker left">
+      <div class="speaker-cone"><div class="speaker-led"></div></div>
+    </div>
+    <div class="monitor-speaker right">
+      <div class="speaker-cone"><div class="speaker-led"></div></div>
+    </div>
+    <div class="fader-row">
+      <div class="fader"><div class="fader-knob"></div></div>
+      <div class="fader"><div class="fader-knob" style="top:8px"></div></div>
+      <div class="fader"><div class="fader-knob" style="top:20px"></div></div>
+      <div class="fader"><div class="fader-knob" style="top:6px"></div></div>
+      <div class="fader"><div class="fader-knob" style="top:16px"></div></div>
+    </div>
+    <div class="lab-bench left"><div class="bench-top"></div></div>
+    <div class="lab-bench right"><div class="bench-top"></div></div>
+  </div>
+  <div class="lab-floor"></div>
+</div>
+<div id="particles"></div>
+<div class="scene-prop-left" aria-hidden="true">
+  <svg width="100" height="200" viewBox="0 0 100 200" style="animation:propBob 4s ease-in-out infinite">
+    <!-- Large microphone stand - recording studio / phoneme theme -->
+    <!-- Stand base -->
+    <rect x="28" y="180" width="44" height="8" rx="4" fill="#2d1b69"/>
+    <rect x="28" y="180" width="44" height="4" rx="2" fill="#3b2080"/>
+    <!-- Vertical pole -->
+    <rect x="46" y="80" width="8" height="104" rx="4" fill="#3b2080"/>
+    <!-- Boom arm -->
+    <rect x="24" y="76" width="52" height="6" rx="3" fill="#4c1d95" transform="rotate(-15 50 79)"/>
+    <!-- Mic body -->
+    <ellipse cx="34" cy="56" rx="16" ry="24" fill="#2d1b69" stroke="#6d28d9" stroke-width="2"/>
+    <!-- Mic grille lines -->
+    <ellipse cx="34" cy="56" rx="12" ry="20" fill="none" stroke="rgba(167,139,250,.5)" stroke-width="1"/>
+    <line x1="34" y1="36" x2="34" y2="76" stroke="rgba(167,139,250,.3)" stroke-width="1"/>
+    <line x1="24" y1="46" x2="44" y2="46" stroke="rgba(167,139,250,.3)" stroke-width="1"/>
+    <line x1="22" y1="56" x2="46" y2="56" stroke="rgba(167,139,250,.3)" stroke-width="1"/>
+    <line x1="24" y1="66" x2="44" y2="66" stroke="rgba(167,139,250,.3)" stroke-width="1"/>
+    <!-- Mic top capsule glow -->
+    <ellipse cx="34" cy="38" rx="10" ry="6" fill="rgba(139,92,246,.4)" style="animation:propPulse 2s ease-in-out infinite"/>
+    <!-- Sound wave rings -->
+    <ellipse cx="34" cy="56" rx="22" ry="32" fill="none" stroke="rgba(139,92,246,.2)" stroke-width="1.5" style="animation:propPulse 1.5s ease-in-out infinite"/>
+    <ellipse cx="34" cy="56" rx="30" ry="40" fill="none" stroke="rgba(139,92,246,.12)" stroke-width="1" style="animation:propPulse 1.5s ease-in-out 0.5s infinite"/>
+    <!-- ON AIR indicator -->
+    <rect x="60" y="40" width="32" height="14" rx="4" fill="#dc2626" style="animation:propPulse 1s ease-in-out infinite"/>
+    <text x="76" y="50" text-anchor="middle" font-size="6" font-weight="900" fill="#fff" font-family="Lexend,sans-serif">ON AIR</text>
+    <!-- Cable -->
+    <path d="M34 80 Q36 100 46 104" stroke="#2d1b69" stroke-width="3" fill="none" stroke-linecap="round"/>
+  </svg>
+</div>
+<div class="scientist-stage"><div id="petCharWrap" class="pet-idle"></div><div id="sciCharWrap"></div></div>
+
+<header class="header wl-game-header" role="banner">
+  <div class="headerInner">
+    <div class="brand">
+      <div class="brandIcon">🔊</div>
+      <div>
+        <h1>Phoneme Splitter</h1>
+        <span class="sub">Word Labs · Phoneme Splitter</span>
+      </div>
+    </div>
+    <div class="hud" role="navigation" aria-label="Game controls">
+      <span class="pill score" id="scoreDisplay" aria-live="polite">Score: 0</span>
+      <span class="pill streak" id="streakDisplay" aria-live="polite">🔥 0 streak</span>
+      <span id="wlPillSlot"></span>
+      <button id="wlLoginBtn" onclick="wlShowLogin()" style="border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);font-weight:800;font-size:11px;padding:7px 13px;border-radius:10px;cursor:pointer;font-family:'Lexend',sans-serif;white-space:nowrap;flex-shrink:0;">👤 Log in</button>
+      <a href="landing.html" title="Home" class="topBtn">🏠 <span class="topBtnLabel">Home</span></a>
+      <a href="scientist.html" title="My Scientist" class="topBtn" style="background:var(--indigo-2);">🧬 <span class="topBtnLabel">My Scientist</span></a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap" id="main-content" role="main">
+  <div class="mainGrid">
+    <div class="panel">
+      <div class="panelInner">
+
+        <!-- Start screen -->
+        <div id="startScreen" class="startScreen">
+          <div class="startIcon">🔊</div>
+          <div class="startTitle">Phoneme Splitter</div>
+          <div class="startSub">Split words into their individual <em>sounds</em>. Remember — sounds and letters aren't always the same thing!</div>
+          <div class="howToGrid">
+            <div class="howToCard">
+              <div class="htIcon">✂️</div>
+              <div class="htTitle">Split sounds apart</div>
+              <div class="htDesc">Click between letters to add a phoneme boundary — just like the syllable game.</div>
+            </div>
+            <div class="howToCard orange">
+              <div class="htIcon">✨</div>
+              <div class="htTitle">Keep sounds together</div>
+              <div class="htDesc">Letters that make one sound (<b>sh</b>, <b>igh</b>) stay in one box — don't split between them. For magic-e words like <b>cake</b>, tap <b>✨ magic-e</b> on the silent e.</div>
+            </div>
+            <div class="howToCard">
+              <div class="htIcon">🔊</div>
+              <div class="htTitle">Listen carefully</div>
+              <div class="htDesc">Click "Hear the word" to hear it. Count the <em>sounds</em> you hear, not the letters.</div>
+            </div>
+            <div class="howToCard orange">
+              <div class="htIcon">💡</div>
+              <div class="htTitle">Digraph examples</div>
+              <div class="htDesc"><b>sh</b>ip = 3 sounds &nbsp;·&nbsp; <b>ch</b>at = 3 &nbsp;·&nbsp; ni<b>gh</b>t = 3</div>
+            </div>
+          </div>
+          <div id="roundPickerWrap" style="margin:16px 0 8px;text-align:center;">
+            <div style="font-size:11px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;">Words this round</div>
+            <div class="round-picker" id="roundPicker">
+              <button class="round-btn" data-count="10" onclick="setRoundCount(10,this)">10</button>
+              <button class="round-btn active" data-count="15" onclick="setRoundCount(15,this)">15</button>
+              <button class="round-btn" data-count="20" onclick="setRoundCount(20,this)">20</button>
+              <button class="round-btn" data-count="25" onclick="setRoundCount(25,this)">25</button>
+              <button class="round-btn" data-count="30" onclick="setRoundCount(30,this)">30</button>
+            </div>
+          </div>
+          <button class="startBtn" onclick="startGame()">Start Splitting!</button>
+        </div>
+
+        <!-- Game screen -->
+        <div id="gameScreen" class="hidden">
+          <div class="wlProgressBar" id="roundProgress" hidden><div class="wlProgressBar-fill" id="roundProgressFill"></div></div>
+          <div class="diffRow">
+            <button class="diffBtn active" data-diff="mixed"  onclick="setDiff('mixed')">Mixed</button>
+            <button class="diffBtn"        data-diff="Starter"   onclick="setDiff('Starter')">Starter</button>
+            <button class="diffBtn"        data-diff="Level up" onclick="setDiff('Level up')">Level up</button>
+            <button class="diffBtn"        data-diff="Challenge" onclick="setDiff('Challenge')">Challenge</button>
+          </div>
+
+          <div class="gameArea">
+            <div class="wordPrompt">Split this word into its individual sounds</div>
+            <button class="speakBtn" onclick="speakWord()">🔊 <span>Hear the word</span></button>
+            <span id="ealdSpeakBtns"></span>
+            <div id="ealdDefinition" class="eald-definition"></div>
+
+            <div class="chopContainer" id="chopContainer"></div>
+
+            <div style="text-align:center;width:100%;">
+              <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.18em;color:var(--muted);margin-bottom:10px;">Your phonemes</div>
+              <div class="phonemePreview" id="phonemePreview">
+                <span style="color:var(--muted);font-size:14px;font-weight:700;">Tap between letters to split into sounds</span>
+              </div>
+            </div>
+
+            <div class="feedbackBanner" id="feedbackBanner" aria-live="assertive"></div>
+            <div id="ealdTranslation" aria-live="polite"></div>
+
+            <div class="actionRow">
+              <button class="clearBtn" id="resetBtn" onclick="resetWord()">Reset</button>
+              <button class="checkBtn" id="checkBtn">Check ✓</button>
+            </div>
+            <button class="nextBtn" id="nextBtn">Next word →</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div class="rightCol" style="display:flex;flex-direction:column;gap:16px;">
+      <div class="panel">
+        <div class="panelInner">
+          <div class="panelTitle">Score</div>
+          <div class="bigNum" id="bigScore">0</div>
+          <div class="subRow">
+            <div class="subStat"><div class="val" id="statCorrect">0</div><div class="lbl">Correct</div></div>
+            <div class="subStat"><div class="val" id="statWrong">0</div><div class="lbl">Wrong</div></div>
+            <div class="subStat"><div class="val" id="statBest">0</div><div class="lbl">Best streak</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panelInner">
+          <div class="panelTitle" style="margin-bottom:12px;">History</div>
+          <div class="histList" id="histList">
+            <div style="color:var(--muted);font-size:13px;">No attempts yet.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panelInner">
+          <div class="panelTitle" style="margin-bottom:12px;">How to play</div>
+          <div class="tipBox">
+            <b>Split</b> — click between letters to draw a sound boundary (purple line).<br><br>
+            <b>Keep together</b> — letters that make one sound stay in the same box, so don't split between them (<span class="oChip">sh</span>, <span class="oChip">igh</span>).<br><br>
+            <b>✨ Magic-e</b> — for split-digraph words like <b>cake</b> or <b>time</b>, tap the <b>magic-e</b> button on the silent <b>e</b> to link it to its vowel (<span class="oChip">a_e</span>).
+          </div>
+          <div style="font-size:13px;color:#334155;line-height:1.8;">
+            <div><b>ship</b> → <span class="oChip">sh</span> · <span class="pChipInline">i</span> · <span class="pChipInline">p</span></div>
+            <div><b>night</b> → <span class="pChipInline">n</span> · <span class="oChip">igh</span> · <span class="pChipInline">t</span></div>
+            <div><b>chain</b> → <span class="oChip">ch</span> · <span class="oChip">ai</span> · <span class="pChipInline">n</span></div>
+            <div><b>street</b> → <span class="pChipInline">s</span> · <span class="pChipInline">t</span> · <span class="pChipInline">r</span> · <span class="oChip">ee</span> · <span class="pChipInline">t</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script defer src="vendor/supabase.js"></script>
+<script defer src="wordlab-stage.js"></script>
+<script defer src="wordlab-data.js?v=20261031b"></script>
+<script defer src="wordlab-scientist.js?v=20261019"></script>
+<script defer src="wordlab-effects.js"></script>
+<script defer src="wordlab-worlds.js"></script>
+<script defer src="wordlab-audio.js"></script>
+<script defer src="wordlab-teacher.js"></script>
+<script defer src="wordlab-help.js"></script>
+<script defer src="wordlab-hints.js"></script>
+<script>
+const WORDS = [
+  // Starter
+  { word:"cat", stage:"s2e",      phonemes:["c","a","t"],              diff:"Starter" },
+  { word:"ship", stage:"s2e",     phonemes:["sh","i","p"],              diff:"Starter" },
+  { word:"chat", stage:"s2e",     phonemes:["ch","a","t"],              diff:"Starter" },
+  { word:"thin", stage:"s2e",     phonemes:["th","i","n"],              diff:"Starter" },
+  { word:"fish", stage:"s2e",     phonemes:["f","i","sh"],              diff:"Starter" },
+  { word:"rich", stage:"s2e",     phonemes:["r","i","ch"],              diff:"Starter" },
+  { word:"bath", stage:"s2e",     phonemes:["b","a","th"],              diff:"Starter" },
+  { word:"shop", stage:"s2e",     phonemes:["sh","o","p"],              diff:"Starter" },
+  { word:"chip", stage:"s2e",     phonemes:["ch","i","p"],              diff:"Starter" },
+  { word:"rush", stage:"s2e",     phonemes:["r","u","sh"],              diff:"Starter" },
+  { word:"much", stage:"s2e",     phonemes:["m","u","ch"],              diff:"Starter" },
+  { word:"then", stage:"s2e",     phonemes:["th","e","n"],              diff:"Starter" },
+  { word:"when", stage:"s2e",     phonemes:["wh","e","n"],              diff:"Starter" },
+  { word:"shed", stage:"s2e",     phonemes:["sh","e","d"],              diff:"Starter" },
+  { word:"chin", stage:"s2e",     phonemes:["ch","i","n"],              diff:"Starter" },
+  { word:"with", stage:"s2e",     phonemes:["w","i","th"],              diff:"Starter" },
+  { word:"chop", stage:"s2e",     phonemes:["ch","o","p"],              diff:"Starter" },
+  { word:"shut", stage:"s2e",     phonemes:["sh","u","t"],              diff:"Starter" },
+  { word:"thud", stage:"s2e",     phonemes:["th","u","d"],              diff:"Starter" },
+  { word:"whip", stage:"s2e",     phonemes:["wh","i","p"],              diff:"Starter" },
+  { word:"path", stage:"s2e",     phonemes:["p","a","th"],              diff:"Starter" },
+  { word:"wish", stage:"s2e",     phonemes:["w","i","sh"],              diff:"Starter" },
+  { word:"chap", stage:"s2e",     phonemes:["ch","a","p"],              diff:"Starter" },
+  { word:"lash", stage:"s2e",     phonemes:["l","a","sh"],              diff:"Starter" },
+  // Level up
+  { word:"rain", stage:"s2e",     phonemes:["r","ai","n"],              diff:"Level up" },
+  { word:"feet", stage:"s2e",     phonemes:["f","ee","t"],              diff:"Level up" },
+  { word:"boat", stage:"s2e",     phonemes:["b","oa","t"],              diff:"Level up" },
+  { word:"moon", stage:"s2e",     phonemes:["m","oo","n"],              diff:"Level up" },
+  { word:"book", stage:"s2e",     phonemes:["b","oo","k"],              diff:"Level up" },
+  { word:"play", stage:"s2e",     phonemes:["p","l","ay"],              diff:"Level up" },
+  { word:"seed", stage:"s2e",     phonemes:["s","ee","d"],              diff:"Level up" },
+  { word:"coin", stage:"s2e",     phonemes:["c","oi","n"],              diff:"Level up" },
+  { word:"loud", stage:"s2e",     phonemes:["l","ou","d"],              diff:"Level up" },
+  { word:"night", stage:"s2e",    phonemes:["n","igh","t"],             diff:"Level up" },
+  { word:"light", stage:"s2e",    phonemes:["l","igh","t"],             diff:"Level up" },
+  { word:"read", stage:"s2e",     phonemes:["r","ea","d"],              diff:"Level up" },
+  { word:"train", stage:"s2e",    phonemes:["t","r","ai","n"],          diff:"Level up" },
+  { word:"cream", stage:"s2e",    phonemes:["c","r","ea","m"],          diff:"Level up" },
+  { word:"shout", stage:"s2e",    phonemes:["sh","ou","t"],             diff:"Level up" },
+  { word:"chain", stage:"s2e",    phonemes:["ch","ai","n"],             diff:"Level up" },
+  { word:"teeth", stage:"s2e",    phonemes:["t","ee","th"],             diff:"Level up" },
+  { word:"beach", stage:"s2e",    phonemes:["b","ea","ch"],             diff:"Level up" },
+  { word:"sheet", stage:"s2e",    phonemes:["sh","ee","t"],             diff:"Level up" },
+  { word:"wheat", stage:"s2e",    phonemes:["wh","ea","t"],             diff:"Level up" },
+  { word:"cheap", stage:"s2e",    phonemes:["ch","ea","p"],             diff:"Level up" },
+  { word:"float", stage:"s2e",    phonemes:["f","l","oa","t"],          diff:"Level up" },
+  { word:"green", stage:"s2e",    phonemes:["g","r","ee","n"],          diff:"Level up" },
+  { word:"snail", stage:"s2e",    phonemes:["s","n","ai","l"],          diff:"Level up" },
+  { word:"flight", stage:"s2l",   phonemes:["f","l","igh","t"],         diff:"Level up" },
+  { word:"loaf", stage:"s2e",     phonemes:["l","oa","f"],              diff:"Level up" },
+  { word:"steer", stage:"s2e",    phonemes:["s","t","eer"],          diff:"Level up" },
+  { word:"proud", stage:"s2e",    phonemes:["p","r","ou","d"],          diff:"Level up" },
+  { word:"boil", stage:"s2e",     phonemes:["b","oi","l"],              diff:"Level up" },
+  { word:"frown", stage:"s2e",    phonemes:["f","r","ow","n"],          diff:"Level up" },
+  { word:"clay", stage:"s2e",     phonemes:["c","l","ay"],              diff:"Level up" },
+  { word:"dream", stage:"s2e",    phonemes:["d","r","ea","m"],          diff:"Level up" },
+  // Challenge
+  { word:"bright", stage:"s2l",   phonemes:["b","r","igh","t"],         diff:"Challenge" },
+  { word:"throat", stage:"s2l",   phonemes:["th","r","oa","t"],         diff:"Challenge" },
+  { word:"thought", stage:"s3e",  phonemes:["th","ough","t"],           diff:"Challenge" },
+  { word:"street", stage:"s2l",   phonemes:["s","t","r","ee","t"],      diff:"Challenge" },
+  { word:"spring", stage:"s2l",   phonemes:["s","p","r","i","ng"],      diff:"Challenge" },
+  { word:"strong", stage:"s2l",   phonemes:["s","t","r","o","ng"],      diff:"Challenge" },
+  { word:"splash", stage:"s2l",   phonemes:["s","p","l","a","sh"],      diff:"Challenge" },
+  { word:"choice", stage:"s2e",   phonemes:["ch","oi","ce"],            diff:"Challenge" },
+  { word:"shook", stage:"s2e",    phonemes:["sh","oo","k"],             diff:"Challenge" },
+  { word:"teacher", stage:"s2l",  phonemes:["t","ea","ch","er"],        diff:"Challenge" },
+  { word:"thunder", stage:"s2l",  phonemes:["th","u","n","d","er"],     diff:"Challenge" },
+  { word:"feather", stage:"s2l",  phonemes:["f","ea","th","er"],        diff:"Challenge" },
+  { word:"birthday", stage:"s2l", phonemes:["b","ir","th","d","ay"],    diff:"Challenge" },
+  { word:"shoulder", stage:"s2l", phonemes:["sh","ou","l","d","er"],    diff:"Challenge" },
+  { word:"strength", stage:"s3e", phonemes:["s","t","r","e","ng","th"], diff:"Challenge" },
+  { word:"scratch", stage:"s2l",  phonemes:["s","c","r","a","tch"],     diff:"Challenge" },
+  { word:"squeak", stage:"s2l",   phonemes:["s","qu","ea","k"],         diff:"Challenge" },
+  { word:"shriek", stage:"s2l",   phonemes:["sh","r","ie","k"],         diff:"Challenge" },
+  { word:"screech", stage:"s2l",  phonemes:["s","c","r","ee","ch"],     diff:"Challenge" },
+  { word:"church", stage:"s2e",   phonemes:["ch","ur","ch"],            diff:"Challenge" },
+  { word:"thrush", stage:"s2e",   phonemes:["th","r","u","sh"],         diff:"Challenge" },
+
+  { word:"unhappiness", stage:"s3e",   phonemes:["u","n","h","a","pp","i","n","e","ss"],   diff:"Challenge" },
+  { word:"disagreement", stage:"s3e",   phonemes:["d","i","s","a","g","r","ee","m","e","n","t"],   diff:"Challenge" },
+  { word:"transport", stage:"s3e",   phonemes:["t","r","a","n","s","p","or","t"],   diff:"Challenge" },
+  { word:"submarine", stage:"s3e",   phonemes:["s","u","b","m","a","r","i_e","n"],   diff:"Challenge" },
+  { word:"nonfiction", stage:"s3e",   phonemes:["n","o","n","f","i","c","ti","o","n"],   diff:"Challenge" },
+  { word:"multitask", stage:"s3e",   phonemes:["m","u","l","t","i","t","a","s","k"],   diff:"Challenge" },
+  { word:"semicircle", stage:"s3e",   phonemes:["s","e","m","i","c","ir","c","le"],   diff:"Challenge" },
+  { word:"microphone", stage:"s3e",   phonemes:["m","i","c","r","o","ph","o_e","n"],   diff:"Challenge" },
+  { word:"megaphone", stage:"s3e",   phonemes:["m","e","g","a","ph","o_e","n"],   diff:"Challenge" },
+  { word:"construct", stage:"s3e",   phonemes:["c","o","n","s","t","r","u","c","t"],   diff:"Challenge" },
+  { word:"contradict", stage:"s3e",   phonemes:["c","o","n","t","r","a","d","i","c","t"],   diff:"Challenge" },
+  { word:"proactive", stage:"s3e",   phonemes:["p","r","o","a","c","t","i","ve"],   diff:"Challenge" },
+  { word:"interact", stage:"s3e",   phonemes:["i","n","t","er","a","c","t"],   diff:"Challenge" },
+  { word:"supermarket", stage:"s3e",   phonemes:["s","u","p","er","m","ar","k","e","t"],   diff:"Challenge" },
+  { word:"uncomfortable", stage:"s3e",   phonemes:["u","n","c","o","m","f","or","t","a","b","le"],   diff:"Challenge" },
+  { word:"creative", stage:"s3e",   phonemes:["c","r","e","a","t","i","ve"],   diff:"Challenge" },
+  { word:"disorder", stage:"s3e",   phonemes:["d","i","s","or","d","er"],   diff:"Challenge" },
+  { word:"superhero", stage:"s3e",   phonemes:["s","u","p","er","h","e","r","o"],   diff:"Challenge" },
+  { word:"transplant", stage:"s3e",   phonemes:["t","r","a","n","s","p","l","a","n","t"],   diff:"Challenge" },
+  { word:"microscope", stage:"s3e",   phonemes:["m","i","c","r","o","s","c","o_e","p"],   diff:"Challenge" },
+  { word:"significant", stage:"s3l",   phonemes:["s","i","g","n","i","f","i","c","a","n","t"],   diff:"Challenge" },
+  { word:"hyperactive", stage:"s3l",   phonemes:["h","y","p","er","a","c","t","i","ve"],   diff:"Challenge" },
+  { word:"extraordinary", stage:"s3l",   phonemes:["e","x","t","r","a","or","d","i","n","a","r","y"],   diff:"Challenge" },
+  { word:"intersection", stage:"s3l",   phonemes:["i","n","t","er","s","e","c","ti","o","n"],   diff:"Challenge" },
+  { word:"anticlockwise", stage:"s3l",   phonemes:["a","n","t","i","c","l","o","ck","w","i_e","s"],   diff:"Challenge" },
+  { word:"unforgettable", stage:"s3l",   phonemes:["u","n","f","or","g","e","tt","a","b","le"],   diff:"Challenge" },
+  { word:"misunderstanding", stage:"s3l",   phonemes:["m","i","s","u","n","d","er","s","t","a","n","d","i","ng"],   diff:"Challenge" },
+  { word:"universal", stage:"s3l",   phonemes:["u","n","i","v","er","s","a","l"],   diff:"Challenge" },
+  { word:"circumspect", stage:"s3l",   phonemes:["c","ir","c","u","m","s","p","e","c","t"],   diff:"Challenge" },
+  { word:"telepathy", stage:"s3l",   phonemes:["t","e","l","e","p","a","th","y"],   diff:"Challenge" },
+  { word:"magazine", stage:"s3l",   phonemes:["m","a","g","a","z","i_e","n"],   diff:"Challenge" },
+  { word:"trampoline", stage:"s3l",   phonemes:["t","r","a","m","p","o","l","i_e","n"],   diff:"Challenge" },
+  { word:"silhouette", stage:"s3l",   phonemes:["s","i","lh","ou","e","tte"],   diff:"Challenge" },
+  { word:"catastrophe", stage:"s3l",   phonemes:["c","a","t","a","s","t","r","o","ph","e"],   diff:"Challenge" },
+  { word:"avalanche", stage:"s3l",   phonemes:["a","v","a","l","a","n","che"],   diff:"Challenge" },
+  { word:"plateau", stage:"s4",   phonemes:["p","l","a","t","eau"],   diff:"Challenge" },
+  { word:"bureau", stage:"s4",   phonemes:["b","u","r","eau"],   diff:"Challenge" },
+  { word:"aesthetic", stage:"s4",   phonemes:["ae","s","th","e","t","i","c"],   diff:"Challenge" },
+  { word:"sovereign", stage:"s4",   phonemes:["s","o","v","er","eign"],   diff:"Challenge" },
+  { word:"guerrilla", stage:"s4",   phonemes:["gu","e","rr","i","ll","a"],   diff:"Challenge" },
+  { word:"memoir", stage:"s4",   phonemes:["m","e","m","oir"],   diff:"Challenge" },
+  { word:"pharaoh", stage:"s4",   phonemes:["ph","a","r","aoh"],   diff:"Challenge" },
+  { word:"marquee", stage:"s4",   phonemes:["m","ar","qu","ee"],   diff:"Challenge" },
+  { word:"mnemonic", stage:"s4",   phonemes:["mn","e","m","o","n","i","c"],   diff:"Challenge" },
+  { word:"haemorrhage", stage:"s4",   phonemes:["h","ae","m","or","rh","a","ge"],   diff:"Challenge" },
+
+  { word:"through", stage:"s3l",      phonemes:["th","r","ough"],              diff:"Starter" },
+  { word:"scheme", stage:"s3l",      phonemes:["s","ch","e_e","m"],              diff:"Starter" },
+  { word:"phrase", stage:"s3l",      phonemes:["ph","r","a_e","s"],              diff:"Starter" },
+  { word:"knight", stage:"s3l",      phonemes:["kn","igh","t"],              diff:"Starter" },
+  { word:"wreck", stage:"s3l",      phonemes:["wr","e","ck"],              diff:"Starter" },
+  { word:"gnome", stage:"s3l",      phonemes:["gn","o_e","m"],              diff:"Starter" },
+  { word:"knife", stage:"s3l",      phonemes:["kn","i_e","f"],              diff:"Starter" },
+  { word:"whole", stage:"s3l",      phonemes:["wh","o_e","l"],              diff:"Starter" },
+  { word:"write", stage:"s3l",      phonemes:["wr","i_e","t"],              diff:"Starter" },
+  { word:"wrist", stage:"s3l",      phonemes:["wr","i","s","t"],              diff:"Starter" },
+  { word:"kneel", stage:"s3l",      phonemes:["kn","ee","l"],              diff:"Starter" },
+  { word:"gnarl", stage:"s3l",      phonemes:["gn","ar","l"],              diff:"Starter" },
+  { word:"pneumonia", stage:"s3l",      phonemes:["pn","eu","m","o","n","i","a"],              diff:"Level up" },
+  { word:"psychology", stage:"s4",      phonemes:["ps","y","ch","o","l","o","g","y"],              diff:"Level up" },
+  { word:"rhythmic", stage:"s3l",      phonemes:["rh","y","th","m","i","c"],              diff:"Level up" },
+  { word:"sphinx", stage:"s3l",      phonemes:["s","ph","i","n","x"],              diff:"Level up" },
+  { word:"choir", stage:"s3l",      phonemes:["ch","oi","r"],              diff:"Level up" },
+  { word:"phlegm", stage:"s3l",      phonemes:["ph","l","e","gm"],              diff:"Level up" },
+  { word:"island", stage:"s3l",      phonemes:["is","l","a","n","d"],              diff:"Level up" },
+  { word:"yacht", stage:"s3l",      phonemes:["y","a","cht"],              diff:"Level up" },
+  { word:"subtle", stage:"s3l",      phonemes:["s","u","bt","le"],              diff:"Level up" },
+  { word:"sword", stage:"s3l",      phonemes:["sw","or","d"],              diff:"Level up" },
+  { word:"answer", stage:"s3l",      phonemes:["a","n","sw","er"],              diff:"Level up" },
+  { word:"genre", stage:"s3l",      phonemes:["g","e","n","r","e"],              diff:"Level up" },
+  { word:"debris", stage:"s3l",      phonemes:["d","e","b","r","is"],              diff:"Level up" },
+  { word:"bouquet", stage:"s3l",      phonemes:["b","ou","qu","et"],              diff:"Level up" },
+  { word:"baguette", stage:"s3l",      phonemes:["b","a","gu","e","tte"],              diff:"Level up" },
+  { word:"charade", stage:"s3l",      phonemes:["ch","a","r","a_e","d"],              diff:"Level up" },
+  { word:"chef", stage:"s3l",      phonemes:["ch","e","f"],              diff:"Level up" },
+  { word:"chalet", stage:"s3l",      phonemes:["ch","a","l","et"],              diff:"Level up" },
+  { word:"brochure", stage:"s3l",      phonemes:["b","r","o","ch","ure"],              diff:"Level up" },
+  { word:"chauffeur", stage:"s3l",      phonemes:["ch","au","ff","eur"],              diff:"Level up" },
+  { word:"crochet", stage:"s3l",      phonemes:["c","r","o","ch","et"],              diff:"Level up" },
+  { word:"cachet", stage:"s3l",      phonemes:["c","a","ch","et"],              diff:"Level up" },
+  { word:"chrysanthemum", stage:"s4",      phonemes:["ch","r","y","s","a","n","th","e","m","u","m"],              diff:"Challenge" },
+  { word:"quiche", stage:"s3l",      phonemes:["qu","i","che"],              diff:"Challenge" },
+  { word:"isthmus", stage:"s3l",      phonemes:["i","s","th","m","u","s"],              diff:"Challenge" },
+  { word:"conscientious", stage:"s4",      phonemes:["c","o","n","sc","i","e","n","ti","ou","s"],              diff:"Challenge" },
+  { word:"epitome", stage:"s3l",      phonemes:["e","p","i","t","o","m","e"],              diff:"Challenge" },
+  { word:"hyperbole", stage:"s3l",      phonemes:["h","y","p","er","b","o","l","e"],              diff:"Challenge" },
+  { word:"paradigm", stage:"s3l",      phonemes:["p","a","r","a","d","i","gm"],              diff:"Challenge" },
+  { word:"phenomenon", stage:"s3l",      phonemes:["ph","e","n","o","m","e","n","o","n"],              diff:"Challenge" },
+  { word:"archaeology", stage:"s4",      phonemes:["ar","ch","ae","o","l","o","g","y"],              diff:"Challenge" },
+  { word:"diphtheria", stage:"s3l",      phonemes:["d","i","ph","th","e","r","i","a"],              diff:"Challenge" },
+  { word:"omniscient", stage:"s3l",      phonemes:["o","m","n","i","sc","i","e","n","t"],              diff:"Challenge" },
+  { word:"onomatopoeia", stage:"s3l",      phonemes:["o","n","o","m","a","t","o","p","o","e","i","a"],              diff:"Challenge" },
+];
+
+// Extension content has been migrated into the WORDS array above with s3l/s4
+// stage tags; the runtime filterByStage call further down handles the +1
+// stage semantic. The tier lock below still applies — extension keeps
+// students at Challenge tier regardless of what their base pool contains.
+document.addEventListener('DOMContentLoaded', function(){
+  var extOn = (typeof WordLabData !== 'undefined' && WordLabData.isExtensionMode && WordLabData.isExtensionMode('phoneme-splitter'));
+
+  // Stage system: lock tier to Challenge when extension is on (+1 stage)
+  if(extOn){
+    document.querySelectorAll('.diffBtn[data-diff]').forEach(function(btn){
+      if(btn.dataset.diff !== 'Challenge'){
+        btn.disabled = true;
+        btn.style.opacity = '0.4';
+        btn.style.cursor = 'not-allowed';
+        btn.title = 'Locked to Challenge in +1 Stage (Extension) mode';
+      }
+    });
+    if(typeof setDiff === 'function') setDiff('Challenge');
+  }
+});
+
+// Load custom word lists, spelling set words, and Word of the Week.
+// Deferred so WordLabData (loaded with defer) is available.
+var _originalPhonWords = WORDS.slice();
+document.addEventListener('DOMContentLoaded', async function(){
+  if (typeof WordLabData === 'undefined') return;
+  // Custom word lists for phoneme mode (respects priority setting)
+  try {
+    var custom = await WordLabData.getCustomWords('phoneme');
+    if (custom.length) {
+      var customWords = custom.filter(function(w) { return w.word && w.phonemes && w.phonemes.length > 0; })
+        .map(function(w) { return { word: w.word, phonemes: w.phonemes, diff: w.phoneme_diff || 'Challenge' }; });
+      if (customWords.length) {
+        var priority = WordLabData.getCustomWordPriority('phoneme');
+        if (priority === 'custom_only') {
+          WORDS.splice(0, WORDS.length, ...customWords);
+        } else if (priority === 'custom_first') {
+          WORDS.splice(0, WORDS.length, ...customWords, ..._originalPhonWords);
+        } else {
+          customWords.forEach(function(w) { WORDS.push(w); });
+        }
+      }
+    }
+  } catch(e) { console.warn('custom word load error', e); }
+  // Spelling set words (prepended — highest priority)
+  try {
+    if (WordLabData.getSpellingSetWords) {
+      var ssWords = await WordLabData.getSpellingSetWords();
+      var ssPhonemes = ssWords.filter(function(w){ return w.word && w.phonemes && w.phonemes.length > 0; }).map(function(w){
+        return {word:w.word, phonemes:w.phonemes, diff:'Custom', clue:w.clue||'', _spellingSetId:w._spellingSetId};
+      });
+      if (ssPhonemes.length) WORDS.splice(0, 0, ...ssPhonemes);
+    }
+  } catch(e) { console.warn('spelling set load error', e); }
+  // Word of the Week (prepended)
+  try {
+    if (WordLabData.getWordOfTheWeek) {
+      var _wotw = WordLabData.getWordOfTheWeek();
+      if (_wotw && _wotw.phonemes && !WORDS.some(function(w){ return w.word === _wotw.word; })) {
+        WORDS.unshift({ word: _wotw.word, phonemes: _wotw.phonemes, diff: 'Level up', _wotw: true });
+      }
+    }
+  } catch(e) { console.warn('WOTW load error', e); }
+  // Apply teacher word corrections
+  try { WordLabData.getWordCorrections('phoneme').then(function(c){ WordLabData.applyCorrections(WORDS, c, 'word'); WordLabData.applyCorrections(_originalPhonWords, c, 'word'); }); } catch(e){}
+});
+// Helper: also record spelling set progress when a spelling set word is answered
+function _ssTrack(question, correct) {
+  if (question && question._spellingSetId && typeof WordLabData !== 'undefined' && WordLabData.recordSpellingAttempt) {
+    WordLabData.recordSpellingAttempt(question._spellingSetId, question.word, correct, 0);
+  }
+}
+
+var _wltActive = (typeof WLTeacher !== 'undefined' && WLTeacher.active);
+var _supportMode = false;
+document.addEventListener('DOMContentLoaded', function(){ _supportMode = !!(typeof WordLabData !== 'undefined' && WordLabData.isSupportMode()); });
+
+let currentWord = null;
+let currentDiff = "mixed";
+let usedWords   = new Set();
+// State: grapheme-grouping model.
+//   letters[]    — the word's letters, immutable for the word
+//   boundaries[] — length letters.length-1, bool: phoneme break after letter i
+//   magic        — Set of letter indices that are a silent-e linked to an earlier
+//                  vowel (a split digraph like a_e). Index-stable (letters never mutate).
+let letters    = [];
+let boundaries = [];
+let magic      = new Set();
+let score = 0, streak = 0, bestStreak = 0, correctCount = 0, wrongCount = 0;
+let checked = false;
+let autoNextTimer = null;
+
+var _roundTotal = 15;
+var _roundAnswered = 0;
+
+function setRoundCount(n, btn) {
+  _roundTotal = n;
+  document.querySelectorAll('.round-btn').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+}
+
+function showRoundComplete() {
+  var total = correctCount + wrongCount;
+  var accuracy = total > 0 ? Math.round((correctCount / total) * 100) : 0;
+  var overlay = document.createElement('div');
+  overlay.id = 'roundCompleteOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(13,11,26,.95);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = '<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:40px 36px;max-width:400px;width:90%;text-align:center;">' +
+    '<div style="font-size:48px;margin-bottom:12px;">' + (accuracy >= 80 ? '🏆' : accuracy >= 60 ? '⭐' : '🔬') + '</div>' +
+    '<div style="font-size:22px;font-weight:900;color:#e0e7ff;margin-bottom:6px;">Round Complete!</div>' +
+    '<div style="font-size:14px;font-weight:600;color:#94a3b8;margin-bottom:20px;">' + _roundAnswered + ' words · ' + accuracy + '% accuracy</div>' +
+    '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">' +
+    '<button onclick="document.getElementById(\'roundCompleteOverlay\').remove();restartRound();" style="background:#7c3aed;color:#fff;border:none;border-radius:14px;padding:12px 24px;font-family:Lexend,sans-serif;font-weight:800;font-size:14px;cursor:pointer;">Play Again</button>' +
+    '<a href="landing.html" style="background:rgba(255,255,255,.06);color:#94a3b8;border:2px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 24px;font-family:Lexend,sans-serif;font-weight:800;font-size:14px;cursor:pointer;text-decoration:none;">Try Another Game</a>' +
+    '</div></div>';
+  document.body.appendChild(overlay);
+}
+
+function restartRound() {
+  _roundAnswered = 0;
+  wlUpdateRoundProgress();
+  var pb = document.getElementById('roundProgress');
+  if(pb && !_wltActive) pb.hidden = false;
+  score = 0; streak = 0; bestStreak = 0; correctCount = 0; wrongCount = 0;
+  usedWords.clear();
+  updateStats();
+  loadWord();
+}
+
+function setDiff(d){
+  currentDiff = d;
+  document.querySelectorAll('.diffBtn').forEach(b => b.classList.toggle('active', b.dataset.diff === d));
+  usedWords.clear();
+  checked = false;
+  loadWord();
+}
+
+function getPool(){
+  let pool = currentDiff === "mixed" ? WORDS : WORDS.filter(w => w.diff === currentDiff || w._spellingSetId);
+  pool = WordLabData.weightByStage(pool, 'phoneme-splitter');
+  const fresh = pool.filter(w => !usedWords.has(w.word));
+  return fresh.length > 0 ? fresh : pool;
+}
+
+function loadWord(){
+  clearTimeout(autoNextTimer); autoNextTimer = null;
+  if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
+  const pool = getPool();
+  if(!pool || pool.length === 0) return;
+  currentWord = WordLabData.nextByStage(pool, 'phoneme-splitter', null, currentWord) || pool[Math.floor(Math.random() * pool.length)];
+  usedWords.add(currentWord.word);
+  checked = false;
+  if(typeof WLHints!=='undefined') WLHints.resetHints();
+  if(typeof WordLabData!=='undefined'&&WordLabData.preloadTTS) WordLabData.preloadTTS(currentWord.word,'en-AU');
+  // Start: whole word is one box (no breaks), no magic-e — the child adds breaks
+  letters    = currentWord.word.split("");
+  boundaries = new Array(Math.max(0, letters.length - 1)).fill(false);
+  magic      = new Set();
+  render();
+  updatePreview();
+  hideFeedback();
+  document.getElementById('nextBtn').classList.remove('visible');
+  document.getElementById('checkBtn').disabled = false;
+  document.getElementById('resetBtn').disabled = false;
+  // Support mode: show expected phoneme count badge
+  var _smBadge = document.getElementById('supportPhonemeCount');
+  if(_supportMode && currentWord){
+    if(!_smBadge){
+      _smBadge = document.createElement('div');
+      _smBadge.id = 'supportPhonemeCount';
+      _smBadge.style.cssText = 'text-align:center;margin:6px 0 2px;font-size:12px;font-weight:800;color:#6366f1;letter-spacing:.04em;';
+      var chopC = document.getElementById('chopContainer');
+      if(chopC && chopC.parentNode) chopC.parentNode.insertBefore(_smBadge, chopC);
+    }
+    _smBadge.textContent = 'This word has ' + currentWord.phonemes.length + ' phonemes';
+    _smBadge.style.display = '';
+  } else if(_smBadge){ _smBadge.style.display = 'none'; }
+  // EALD: speak buttons + definition on load
+  var ealdSpeakEl=document.getElementById('ealdSpeakBtns');
+  var ealdDefEl=document.getElementById('ealdDefinition');
+  var ealdEl=document.getElementById('ealdTranslation');
+  if(ealdSpeakEl) ealdSpeakEl.innerHTML='';
+  if(ealdDefEl) ealdDefEl.textContent='';
+  if(ealdEl){ealdEl.innerHTML='';ealdEl.dataset.translatedWord='';ealdEl.dataset.englishWord='';}
+  if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&currentWord){
+    WordLabData.injectEALDStyles();
+    var langName=(WordLabData.EALD_LANGUAGES[WordLabData.getEALDLanguage()]||'').split(' (')[0];
+    if(ealdEl) ealdEl.dataset.englishWord=currentWord.word;
+    if(ealdSpeakEl) ealdSpeakEl.innerHTML=WordLabData.buildEALDSpeakButtons();
+    // Flip button for translation — student tries in English first, then reveals
+    if(ealdDefEl) ealdDefEl.innerHTML='<button class="eald-def-btn" id="ealdDefBtn" onclick="this.classList.toggle(\'flipped\')"><span class="eald-def-front">🌐 Show in '+WordLabData.escapeHtml(langName)+'</span><span class="eald-def-back" id="ealdDefText">Loading...</span></button>';
+    WordLabData.getTranslations([currentWord.word],['word']).then(function(t){
+      if(t&&t[currentWord.word]){
+        var defText=document.getElementById('ealdDefText');
+        if(defText) defText.textContent='🌐 '+t[currentWord.word];
+        if(ealdEl) ealdEl.dataset.translatedWord=t[currentWord.word];
+      }
+    });
+  }
+}
+
+// ── State operations ──────────────────────────────────────────────────────────
+
+function isVowel(ch){ return 'aeiouy'.indexOf(ch) !== -1; }
+
+// Toggle a phoneme break AFTER letter i (between letters[i] and letters[i+1])
+// render() rebuilds the row, so put keyboard focus back on the control the student just used.
+function _phRefocus(sel, i){
+  var c = document.getElementById('chopContainer');
+  var el = c && c.querySelectorAll(sel)[i];
+  if(el) el.focus();
+}
+function toggleBoundary(i){
+  if(checked) return;
+  boundaries[i] = !boundaries[i];
+  render(); updatePreview();
+  _phRefocus('.unitGap', i);
+}
+
+// Toggle a silent-e (index i) as a split digraph linked to the nearest earlier vowel
+function toggleMagic(i){
+  if(checked) return;
+  if(magic.has(i)) magic.delete(i); else magic.add(i);
+  render(); updatePreview();
+  var u = document.querySelectorAll('#chopContainer .unit')[i];
+  var mb = u && u.querySelector('.magicBtn');
+  if(mb) mb.focus();
+}
+
+// A letter can be marked magic-e only if it's an 'e' with an earlier vowel letter
+function canBeMagicE(i){
+  if(letters[i] !== 'e') return false;
+  for(let k = 0; k < i; k++){ if(isVowel(letters[k]) && !magic.has(k)) return true; }
+  return false;
+}
+
+// Derive the correct {boundaries, magic} from a target phonemes[] (inverse of
+// getPhonemes). Split digraph "V_e" uses the vowel at the cursor + the e after its in-between letters.
+function deriveCorrectState(word, phonemes){
+  const L = word.split('');
+  const b = new Array(Math.max(0, L.length - 1)).fill(false);
+  const mg = new Set();
+  // Walk box by box. A split digraph's silent e is the e met after its in-between
+  // letters (c·a_e·k·s), so boxes after it start one letter later.
+  let li = 0, pend = 0;
+  for(let pi = 0; pi < phonemes.length; pi++){
+    const p = phonemes[pi], body = p.replace('_e', '');
+    if(pend && word.indexOf(body, li) !== li && L[li] === 'e'){ mg.add(li); pend--; li += 1; }
+    li += body.length;
+    if(p.indexOf('_') !== -1) pend++;
+    if(li - 1 < b.length && pi < phonemes.length - 1) b[li - 1] = true;
+  }
+  if(pend && L[li] === 'e') mg.add(li);
+  return { boundaries: b, magic: mg };
+}
+
+function resetWord(){
+  if(checked) return; // already marked: press Next word instead (resetting here allowed a second scored check)
+  checked = false;
+  letters    = currentWord.word.split("");
+  boundaries = new Array(Math.max(0, letters.length - 1)).fill(false);
+  magic      = new Set();
+  render();
+  updatePreview();
+  hideFeedback();
+  document.getElementById('checkBtn').disabled = false;
+  document.getElementById('nextBtn').classList.remove('visible');
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+// Model: click a gap = toggle a sound break; click a silent-e's ✨ = magic-e
+// (split digraph). A magic-e letter and its linked vowel are shown connected.
+function render(){
+  const c = document.getElementById('chopContainer');
+  c.innerHTML = '';
+
+  // Which earlier vowel each magic-e links to (for the connector highlight)
+  const linkedVowel = new Set();
+  magic.forEach(e => {
+    for(let k = e - 1; k >= 0; k--){ if(!magic.has(k) && isVowel(letters[k])){ linkedVowel.add(k); break; } }
+  });
+
+  letters.forEach((ch, i) => {
+    // Letter block
+    const unitEl = document.createElement('div');
+    unitEl.className = 'unit';
+    const inner = document.createElement('div');
+    inner.className = 'unitInner';
+
+    const lc = document.createElement('span');
+    lc.className = 'lChar';
+    if(magic.has(i)) lc.classList.add('silentE');       // greyed silent e
+    if(linkedVowel.has(i)) lc.classList.add('magicVowel');
+    lc.textContent = ch;
+    inner.appendChild(lc);
+    unitEl.appendChild(inner);
+
+    // Magic-e toggle: a compact ✨ badge on an 'e' that can link to an earlier vowel.
+    // (In this word set the silent e is always word-final, so a corner badge never
+    // gets clipped by the mobile overflow-x:hidden the way a wide button would.)
+    if(canBeMagicE(i) || magic.has(i)){
+      const me = document.createElement('button');
+      me.type = 'button';
+      me.className = 'magicBtn' + (magic.has(i) ? ' on' : '');
+      me.textContent = '✨';
+      me.title = magic.has(i) ? 'Magic-e on — silent e joins its vowel. Tap to undo.' : 'Tap: this silent e is magic-e (joins its vowel)';
+      me.setAttribute('aria-pressed', magic.has(i) ? 'true' : 'false');
+      me.setAttribute('aria-label', (magic.has(i) ? 'Unlink silent e' : 'Mark silent e as magic-e') + ' for letter ' + ch);
+      me.addEventListener('click', e => { e.stopPropagation(); toggleMagic(i); });
+      unitEl.appendChild(me);
+    }
+    c.appendChild(unitEl);
+
+    // Gap after this letter (break toggle)
+    if(i < letters.length - 1){
+      const on = boundaries[i];
+      const gap = document.createElement('button');
+      gap.type = 'button';
+      gap.className = 'unitGap' + (on ? ' split' : '');
+      gap.setAttribute('aria-pressed', on ? 'true' : 'false');
+      gap.setAttribute('aria-label', (on ? 'Remove sound break after ' : 'Insert sound break after ') + ch);
+
+      const line = document.createElement('div');
+      line.className = 'gLine';
+      const hint = document.createElement('div');
+      hint.className = 'gHint';
+      hint.textContent = on ? 'remove' : 'split here';
+      gap.appendChild(line);
+      gap.appendChild(hint);
+
+      const ci = i;
+      gap.addEventListener('click', () => toggleBoundary(ci));
+      c.appendChild(gap);
+    }
+  });
+  wlAutoFitChop();
+}
+
+// Fit the word on one line (same as Syllable Splitter). Letters and gaps are
+// sized from --wl-fit (CSS above). If the word is too wide for the panel at
+// full size, find the largest size that fits (never above full size, and
+// letters never below 16 px, 13 px on phones). Gaps keep a minimum width so they stay easy to
+// click. Runs after every render, on resize and when the font finishes loading.
+function wlFitWordRow(c, letterSel){
+  if(!c || !c.firstElementChild) return;
+  c.style.overflowX = '';
+  var fits = function(f){ c.style.setProperty('--wl-fit', f.toFixed(3)); return c.scrollWidth <= c.clientWidth; };
+  if(fits(1) || c.clientWidth <= 0) return; // fits, or board not on screen yet (startGame renders again)
+  var ch = c.querySelector(letterSel);
+  var base = ch ? parseFloat(getComputedStyle(ch).fontSize) : 40;
+  var minPx = (document.documentElement.clientWidth || window.innerWidth) <= 700 ? 13 : 16; // phones get a little smaller
+  var lo = Math.min(1, Math.max(0.25, minPx / base)), hi = 1;
+  if(!fits(lo)){ c.style.overflowX = 'auto'; return; } // longest words on the smallest screens: smallest size, swipe to see the end
+  for(var k = 0; k < 8; k++){ var mid = (lo + hi) / 2; if(fits(mid)) lo = mid; else hi = mid; }
+  fits(lo);
+}
+function wlAutoFitChop(){
+  var c = document.getElementById('chopContainer');
+  wlFitWordRow(c, '.lChar');
+  // On a shrunk word the "split here" labels (always shown on touchscreens) pile on top of each other.
+  if(c) c.classList.toggle('wlTight', parseFloat(c.style.getPropertyValue('--wl-fit') || '1') < 0.7);
+}
+(function(){
+  var _fitT = null;
+  window.addEventListener('resize', function(){
+    clearTimeout(_fitT);
+    _fitT = setTimeout(wlAutoFitChop, 120);
+  });
+  // Lexend may arrive after the first word is fitted with the fallback font.
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(wlAutoFitChop);
+})();
+
+// ── Phoneme preview ───────────────────────────────────────────────────────────
+function getPhonemes(){
+  // Groups of contiguous non-magic letters split by boundaries[]; each magic
+  // silent-e is folded into its nearest preceding vowel group as "_e".
+  const n = letters.length;
+  const groups = [];               // {str}
+  const groupOf = new Array(n).fill(-1);
+  let cur = null;
+  for(let i = 0; i < n; i++){
+    if(magic.has(i)) continue;     // silent-e handled below, never its own box
+    if(cur === null){ cur = { str: letters[i] }; groups.push(cur); }
+    else { cur.str += letters[i]; }
+    groupOf[i] = groups.length - 1;
+    if(i < n - 1 && boundaries[i]) cur = null;
+  }
+  magic.forEach(e => {
+    let v = -1;
+    for(let k = e - 1; k >= 0; k--){ if(!magic.has(k) && isVowel(letters[k])){ v = k; break; } }
+    if(v >= 0 && groupOf[v] >= 0) groups[groupOf[v]].str += '_e';
+  });
+  return groups.map(g => g.str);
+}
+
+function updatePreview(){
+  const el = document.getElementById('phonemePreview');
+  const phonemes = getPhonemes();
+  const hasSomething = boundaries.some(Boolean) || magic.size > 0;
+  if(!hasSomething){
+    el.innerHTML = '<span style="color:var(--muted);font-size:14px;font-weight:700;">Tap between letters to split into sounds</span>';
+    return;
+  }
+  el.innerHTML = phonemes.map((p,i) =>
+    `<span class="pChip ${p.length > 1 ? 'multi' : 'single'}">${p}</span>${i < phonemes.length-1 ? '<span style="font-size:18px;color:var(--muted);align-self:center;">·</span>' : ''}`
+  ).join('');
+}
+
+// ── Why feedback ──────────────────────────────────────────────────────────────
+// Explains a wrong split in student language. Works from letter spans, so it
+// suits any word list (built-in, custom lists, spelling sets, focus words).
+// Correct spans: [{start,end,magic,str}] where end is exclusive and magic is
+// the index of a silent-e linked to this vowel (or -1).
+function _correctSpans(word, phonemes){
+  // Walk the word box by box. A split digraph's silent e is the e met after its
+  // in-between letters (c·a_e·k·s: the e sits after the k), not simply the last e.
+  var spans = [], li = 0, pend = [];
+  phonemes.forEach(function(p){
+    var body = p.replace('_e', '');
+    if(pend.length && word.indexOf(body, li) !== li && word.charAt(li) === 'e'){ pend.shift().magic = li; li += 1; }
+    var sp = { start: li, end: li + body.length, magic: -1, str: p };
+    spans.push(sp);
+    if(p.indexOf('_') !== -1) pend.push(sp);
+    li += body.length;
+  });
+  if(pend.length && word.charAt(li) === 'e') pend.shift().magic = li;
+  return spans;
+}
+// The student's spans, from the current boundaries[] and magic set
+function _userSpans(){
+  var n = letters.length, spans = [], cur = null;
+  for(var i = 0; i < n; i++){
+    if(magic.has(i)) continue;
+    if(cur === null){ cur = { start: i, end: i + 1, magic: -1, str: letters[i] }; spans.push(cur); }
+    else { cur.end = i + 1; cur.str += letters[i]; }
+    if(i < n - 1 && boundaries[i]) cur = null;
+  }
+  magic.forEach(function(e){
+    for(var k = e - 1; k >= 0; k--){
+      if(!magic.has(k) && isVowel(letters[k])){
+        spans.forEach(function(sp){ if(k >= sp.start && k < sp.end && sp.magic === -1){ sp.magic = e; sp.str += '_e'; } });
+        break;
+      }
+    }
+  });
+  return spans;
+}
+var _PH_SILENT = { kn:'k', wr:'w', gn:'g', mb:'b', rh:'h', mn:'n', gm:'g', bt:'b', ft:'t', ps:'p', pn:'p', sw:'w', gu:'u', is:'s', sc:'c' };
+var _PH_VOWEL_TEAMS = ['ai','ay','ee','ea','ey','oa','oo','ou','ow','oi','oy','ie','ue','ui','ew','au','aw','ae','eu','ei','eau','igh','ough','augh','eigh'];
+var _PH_BOSSY_R = ['ar','or','er','ir','ur','ear','air','oor','our','oir','ure','eur','ore','are','ire','ere'];
+var _PH_DIGRAPHS = ['sh','ch','th','ph','wh','ng','ck','gh'];
+function _graphemeReason(g){
+  var _e = WordLabData.escapeHtml;
+  var chip = '<span class="gChip">' + _e(g) + '</span>';
+  if(g.indexOf('_') !== -1){
+    var v = g.charAt(0);
+    return chip + ': the <b>e</b> at the end is silent. It jumps back to help <b>' + _e(v) + '</b> say its name. Tap ✨ on the e to join them.';
+  }
+  if(g === 'ti' || g === 'si' || g === 'ci') return chip + ' says /sh/ here (like in sta<b>ti</b>on), so keep the two letters together.';
+  if(g === 'qu') return chip + ': <b>q</b> and <b>u</b> always stay together.';
+  if(g === 'tch' || g === 'dge') return chip + ': three letters, one sound. Keep them together.';
+  if(_PH_SILENT[g]) return chip + ': the <b>' + _e(_PH_SILENT[g]) + '</b> is silent, so these letters make one sound together.';
+  if(_PH_BOSSY_R.indexOf(g) !== -1) return chip + ': the <b>r</b> changes the vowel sound (bossy r), so they stay together as one sound.';
+  if(_PH_VOWEL_TEAMS.indexOf(g) !== -1) return chip + ': these letters are a vowel team. They work together to make one vowel sound.';
+  if(g.length === 2 && g.charAt(0) === g.charAt(1)) return chip + ': double letters make just one sound, so keep them together.';
+  if(_PH_DIGRAPHS.indexOf(g) !== -1) return chip + ': two letters, one sound. Keep them together.';
+  if(g === 'ed') return chip + ' is the ending -ed. Here it says just one sound (/d/ or /t/), so the two letters share one box. After t or d it says /id/: then e and d get a box each.';
+  if(g === 'le') return chip + ' at the end of a word makes one sound, so keep it together.';
+  if(g === 've') return chip + ': English words do not end in v, so a silent <b>e</b> comes after it. Keep them together.';
+  if(/^[a-z]e$/.test(g) && 'aeiou'.indexOf(g.charAt(0)) === -1) return chip + ': the <b>e</b> is silent here, so it stays with the ' + _e(g.charAt(0)) + '.';
+  return chip + ': in this word these letters make one sound together.';
+}
+// Need Advice clue for a sound spelt with more than one letter. Says what to look
+// for, never which letters (the grapheme is the answer).
+function _graphemeLookFor(g){
+  if(g.indexOf('_') !== -1) return 'This word has a magic-e. Find the silent e and tap ✨ on it, so it joins the vowel it helps.';
+  if(g === 'ti' || g === 'si' || g === 'ci') return 'Look for two letters that say /sh/ together. They stay in one box.';
+  if(g === 'qu') return 'Look for a letter that always has a u straight after it. Keep the two in one box.';
+  if(g === 'tch' || g === 'dge') return 'Look for three letters that make just one sound. They stay in one box.';
+  if(_PH_SILENT[g]) return 'Look for a silent letter. It shares a box with the letter next to it.';
+  if(_PH_BOSSY_R.indexOf(g) !== -1) return 'Look for a bossy r: an r that changes the vowel sound before it. The vowel and the r share one box.';
+  if(_PH_VOWEL_TEAMS.indexOf(g) !== -1) return 'Look for a vowel team: letters that work together to make one vowel sound. They share one box.';
+  if(g.length === 2 && g.charAt(0) === g.charAt(1)) return 'Look for double letters. Two of the same letter make one sound, so they share one box.';
+  // ck says /k/ and gh can say /g/: one sound, but not a new one.
+  if(g === 'ck' || g === 'gh') return 'Look for two letters that make one sound together. They share one box.';
+  if(_PH_DIGRAPHS.indexOf(g) !== -1) return 'Look for two consonants that make one new sound together. They share one box.';
+  if(g === 'ed') return 'Look at the -ed ending. Does it add a whole new sound, or just /d/ or /t/?';
+  if(g === 'le' || g === 've' || (/^[a-z]e$/.test(g) && 'aeiou'.indexOf(g.charAt(0)) === -1)) return 'Look at the end of the word. Is there a silent e? It shares a box with the letter before it.';
+  return 'Look for letters that make one sound together. They share one box.';
+}
+// Need Advice: 3 hints, gentlest first. None names the word's letters or shows
+// where a split goes: (1) how to listen, (2) how many boxes are needed and how
+// many there are now, (3) a look-for clue about ONE sound, chosen from what is on
+// screen now: a sound split apart, a wrong ✨, a missed magic e, then the first
+// sound spelt with more than one letter.
+function _phHintLadder(){
+  if(!currentWord) return ['Say the word slowly and stretch it out.'];
+  var n = currentWord.phonemes.length;
+  var want = _correctSpans(currentWord.word, currentWord.phonemes), got = _userSpans();
+  var lines = ['Say the word slowly and stretch it out. Count the sounds you hear, not the letters you see.'];
+  lines.push('This word has ' + n + ' sounds, so you need ' + n + ' boxes. You have ' + got.length + ' now.');
+  var key = function(sp){ return sp.start + ':' + sp.end + ':' + sp.magic; };
+  var gotKeys = {}; got.forEach(function(sp){ gotKeys[key(sp)] = true; });
+  var broke = null, brokeInto = 0, missedMagic = null;
+  want.forEach(function(c){
+    if(gotKeys[key(c)]) return;
+    if(!broke){
+      var cuts = 0;
+      for(var i = c.start; i < c.end - 1; i++){ if(boundaries[i]) cuts++; }
+      if(cuts){ broke = c; brokeInto = cuts + 1; }
+    }
+    if(c.magic !== -1 && !magic.has(c.magic) && !missedMagic) missedMagic = c;
+  });
+  var wrongMagic = false;
+  magic.forEach(function(e){ if(!want.some(function(c){ return c.magic === e; })) wrongMagic = true; });
+  if(broke){
+    var howMany = ['', '', 'Two', 'Three', 'Four'][brokeInto] || 'Some';
+    lines.push(howMany + ' of your boxes make one sound together. ' + _graphemeLookFor(broke.str)); return lines;
+  }
+  if(wrongMagic){ lines.push('One of your ✨ marks is not needed. A magic-e is silent and makes the vowel before it say its name. Is that true here?'); return lines; }
+  if(missedMagic){ lines.push(_graphemeLookFor(missedMagic.str)); return lines; }
+  var multi = want.filter(function(c){ return c.end - c.start > 1 && !gotKeys[key(c)]; })[0];
+  if(multi){ lines.push(_graphemeLookFor(multi.str)); return lines; }
+  lines.push('Say each box on its own. If a box makes two sounds, split it. If every box is one sound, press Check.');
+  return lines;
+}
+// Only explain what the student got wrong.
+function _buildWhySounds(){
+  if(!currentWord) return '';
+  var _e = WordLabData.escapeHtml;
+  var want = _correctSpans(currentWord.word, currentWord.phonemes), got = _userSpans();
+  var key = function(sp){ return sp.start + ':' + sp.end + ':' + sp.magic; };
+  var gotKeys = {}; got.forEach(function(sp){ gotKeys[key(sp)] = true; });
+  var wantKeys = {}; want.forEach(function(sp){ wantKeys[key(sp)] = true; });
+  var items = [], seen = {};
+  // 1. Sounds the student broke apart, or a magic-e they missed
+  want.forEach(function(c){
+    if(gotKeys[key(c)]) return;
+    var brokeInside = false;
+    for(var i = c.start; i < c.end - 1; i++){ if(boundaries[i]) brokeInside = true; }
+    var missedMagic = c.magic !== -1 && !magic.has(c.magic);
+    if((c.end - c.start > 1 && brokeInside) || missedMagic){
+      if(!seen[c.str]){ seen[c.str] = 1; items.push('<li>' + _graphemeReason(c.str) + '</li>'); }
+    }
+  });
+  // 2. Boxes the student made that hold more than one sound
+  got.forEach(function(u){
+    if(wantKeys[key(u)]) return;
+    var inside = want.filter(function(c){ return c.start >= u.start && c.start < u.end; });
+    if(inside.length > 1){
+      var parts = inside.map(function(c){ return '<span class="gChip">' + _e(c.str) + '</span>'; }).join(' · ');
+      items.push('<li><b>' + _e(u.str.replace('_e','')) + '</b> is more than one sound. Say it slowly: ' + parts + '. Split between them.</li>');
+    }
+  });
+  // 3. A silent e marked as magic-e when it is not one
+  magic.forEach(function(e){
+    var ok = want.some(function(c){ return c.magic === e; });
+    if(!ok) items.push('<li>The <b>e</b> at the end is not a magic-e in this word, so it does not join a vowel.</li>');
+  });
+  if(!items.length) return '';
+  return '<div class="whySounds"><div class="whyTitle">Why the sounds split this way</div><ul>' + items.join('') + '</ul></div>';
+}
+
+// ── Check ─────────────────────────────────────────────────────────────────────
+function checkAnswer(){
+  if(!currentWord || checked) return;
+  checked = true;
+  const user    = getPhonemes();
+  const correct = currentWord.phonemes;
+  const ok      = JSON.stringify(user) === JSON.stringify(correct);
+  const correctStr = correct.join(' · ');
+  const userStr    = user.join(' · ');
+  const banner = document.getElementById('feedbackBanner');
+
+  if(ok){
+    if(!_wltActive){
+      const pts = 10 + (streak >= 3 ? 5 : 0);
+      score += pts; streak++; correctCount++;
+      if(streak > bestStreak) bestStreak = streak;
+    } else { correctCount++; }
+    if(!_wltActive && typeof WordLabData!=='undefined'&&WordLabData.getSession()){const _wlResult=WordLabData.recordAttempt('phoneme-splitter',currentWord.diff+':'+currentWord.word,true,0,streak);if(typeof WLScientist!=='undefined') WLScientist.react('correct',_wlResult);}
+    if(!_wltActive) _ssTrack(currentWord, true);
+    if(!_wltActive && typeof WLAudio!=='undefined') WLAudio.correct();
+    if(!_wltActive && streak>=3&&typeof WLScientist!=='undefined') WLScientist.react('streak',{streak:streak});
+    if(!_wltActive && streak>=3&&typeof WLAudio!=='undefined') WLAudio.streak(streak);
+    if(_wltActive){
+      WLTeacher.onAnswer(true,'Perfect! The word \'<b>'+WordLabData.escapeHtml(currentWord.word)+'</b>\' has '+correct.length+' phonemes: <b>'+WordLabData.escapeHtml(correctStr)+'</b>.');
+    }
+    banner.className = 'feedbackBanner correct';
+    banner.innerHTML = `✅ Perfect! <b>${WordLabData.escapeHtml(currentWord.word)}</b> → ${WordLabData.escapeHtml(correctStr)} (${correct.length} phonemes)${!_wltActive && streak>=3?` <span style="color:var(--orange-text)">🔥 +5 streak bonus!</span>`:''}`;
+  } else {
+    if(!_wltActive){ score = Math.max(0, score-2); streak = 0; } wrongCount++;
+    const _why = _buildWhySounds(); // read the student's split before the answer is shown
+    if(!_wltActive && typeof WordLabData!=='undefined'&&WordLabData.getSession()){WordLabData.recordAttempt('phoneme-splitter',currentWord.diff+':'+currentWord.word,false,0);_ssTrack(currentWord, false);}
+    if(!_wltActive && typeof WLScientist!=='undefined') WLScientist.react('wrong');
+    if(!_wltActive && typeof WLAudio!=='undefined') WLAudio.wrong();
+    if(_wltActive){
+      WLTeacher.onAnswer(false,'The correct phoneme split is: <b>'+WordLabData.escapeHtml(correctStr)+'</b> ('+correct.length+' phonemes). Green lines show where you should have split.'+_why);
+    }
+    banner.className = 'feedbackBanner wrong';
+    banner.innerHTML = `❌ Not quite. Answer: <b>${WordLabData.escapeHtml(correctStr)}</b> (${correct.length} phonemes)<br><span style="font-size:13px;font-weight:700;color:#64748b;">You had: ${WordLabData.escapeHtml(userStr)}</span>${_why}`;
+    document.getElementById('chopContainer').classList.add('shake');
+    setTimeout(() => {
+      document.getElementById('chopContainer').classList.remove('shake');
+      if(_wltActive){
+        // Teacher mode: freeze student's attempt, overlay green/red markers on gaps
+        _wltShowCorrectOverlay(user, correct);
+      } else {
+        // Normal mode: show the correct answer on the letters
+        const cs = deriveCorrectState(currentWord.word, currentWord.phonemes);
+        boundaries = cs.boundaries;
+        magic = cs.magic;
+        render();
+      }
+    }, 400);
+  }
+
+  banner.style.display = 'block';
+  if(!_wltActive) updateStats();
+  addHistory(currentWord.word, correctStr, ok);
+  var _roundDone = false;
+  if(!_wltActive){ _roundAnswered++; wlUpdateRoundProgress(); if(_roundAnswered >= _roundTotal){ clearTimeout(autoNextTimer); autoNextTimer = null; _roundDone = true; if(ok){ setTimeout(showRoundComplete, 800); return; } } }
+  // EALD reveal button
+  var ealdEl=document.getElementById('ealdTranslation');if(ealdEl)ealdEl.innerHTML='';
+  if(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage()&&currentWord){
+    WordLabData.injectEALDStyles();
+    ealdEl.innerHTML=WordLabData.buildEALDRevealButton();
+    WordLabData.getTranslations([currentWord.word],['word']).then(function(t){
+      if(!t||!t[currentWord.word])return;
+      var contentEl=document.getElementById('ealdTranslationContent');
+      if(contentEl){contentEl.innerHTML='<div class="eald-translation-pill"><span class="eald-flag">🌐</span> <b>'+WordLabData.escapeHtml(currentWord.word)+'</b> = '+WordLabData.escapeHtml(t[currentWord.word])+'</div>';}
+      ealdEl.dataset.translatedWord=t[currentWord.word]||'';
+    });
+  }
+  var _nextBtnEl = document.getElementById('nextBtn');
+  _nextBtnEl.textContent = _roundDone ? 'See my results →' : 'Next word →';
+  _nextBtnEl.classList.add('visible');
+  document.getElementById('checkBtn').disabled = true;
+  document.getElementById('resetBtn').disabled = true;
+  if(_wltActive) return; // Teacher mode: wait for Next click
+  // Wrong answer: wait for the student to read why, then press Next word.
+  if(!ok){ try{ _nextBtnEl.scrollIntoView({block:'nearest'}); _nextBtnEl.focus({preventScroll:true}); }catch(e){} return; }
+  var _ealdExtra=(typeof WordLabData!=='undefined'&&WordLabData.getEALDLanguage())?1500:0;
+  autoNextTimer = setTimeout(nextWord, 1400+_ealdExtra);
+}
+
+// ── Teacher mode: green overlay on wrong answers ──────────────────────────────
+function _wltShowCorrectOverlay(userPhonemes, correctPhonemes){
+  // Correct breaks + magic-e come straight from the target phonemes[]
+  var cs = deriveCorrectState(currentWord.word, correctPhonemes);
+  var gapEls = document.getElementById('chopContainer').querySelectorAll('.unitGap');
+  // .unitGap[i] is the gap after letter i (same indexing as boundaries[])
+  for(var i = 0; i < gapEls.length; i++){
+    var gapEl = gapEls[i];
+    if(!gapEl) continue;
+    gapEl.style.position = 'relative';
+    var shouldSplit = !!cs.boundaries[i];
+    var isSplit = !!boundaries[i];
+    var gLine = gapEl.querySelector('.gLine');
+    if(shouldSplit && isSplit){
+      if(gLine){ gLine.style.background = '#16a34a'; gLine.style.boxShadow = '0 0 0 4px rgba(22,163,74,.18)'; }
+    } else if(shouldSplit && !isSplit){
+      if(gLine){ gLine.style.background = '#16a34a'; gLine.style.boxShadow = '0 0 0 4px rgba(22,163,74,.18)'; }
+      _wltMarker(gapEl, 'split here', '#16a34a');
+    } else if(!shouldSplit && isSplit){
+      if(gLine){ gLine.style.background = '#dc2626'; gLine.style.boxShadow = '0 0 0 4px rgba(220,38,38,.18)'; }
+      _wltMarker(gapEl, 'no split', '#dc2626');
+    }
+  }
+  // Magic-e the student missed: highlight the silent-e letter
+  var unitEls = document.getElementById('chopContainer').querySelectorAll('.unit');
+  cs.magic.forEach(function(j){
+    if(magic.has(j)) return;                       // student already had it
+    var u = unitEls[j];
+    if(!u) return;
+    u.style.position = 'relative';
+    var lc = u.querySelector('.lChar');
+    if(lc){ lc.style.color = '#16a34a'; }
+    _wltMarker(u, 'magic-e', '#16a34a');
+  });
+}
+function _wltMarker(el, text, color){
+  var label = document.createElement('div');
+  label.className = 'wlt-correct-label';
+  if(color !== '#16a34a') label.style.background = color;
+  label.textContent = text;
+  el.appendChild(label);
+  var arrow = document.createElement('div');
+  arrow.className = 'wlt-correct-bracket';
+  if(color !== '#16a34a') arrow.style.borderTopColor = color;
+  el.appendChild(arrow);
+}
+
+function hideFeedback(){
+  const b = document.getElementById('feedbackBanner');
+  b.style.display = 'none'; b.className = 'feedbackBanner';
+}
+
+function nextWord(){ clearTimeout(autoNextTimer); autoNextTimer = null; loadWord(); }
+
+function speakWord(){
+  if(!currentWord) return;
+  // Use cloud TTS via WordLabData if available (high-quality Australian voice)
+  if(typeof WordLabData !== 'undefined' && WordLabData.speakInLanguage){
+    WordLabData.speakInLanguage(currentWord.word, 'en-AU'); return;
+  }
+  if(!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(currentWord.word);
+  u.lang = 'en-AU'; u.rate = 0.8;
+  var voices = window.speechSynthesis.getVoices();
+  var auVoice = voices.find(v => v.lang === 'en-AU' && v.name.indexOf('Google') !== -1) ||
+                voices.find(v => v.lang === 'en-AU' && v.name.indexOf('Enhanced') !== -1) ||
+                voices.find(v => v.lang === 'en-AU');
+  if(auVoice) u.voice = auVoice;
+  window.speechSynthesis.speak(u);
+}
+
+function updateStats(){
+  document.getElementById('scoreDisplay').textContent = `Score: ${score}`;
+  document.getElementById('streakDisplay').textContent = `🔥 ${streak} streak`;
+  document.getElementById('bigScore').textContent = score;
+  document.getElementById('statCorrect').textContent = correctCount;
+  document.getElementById('statWrong').textContent = wrongCount;
+  document.getElementById('statBest').textContent = bestStreak;
+}
+
+function addHistory(word, answer, ok){
+  const list = document.getElementById('histList');
+  const ph = list.querySelector('div[style]');
+  if(ph) ph.remove();
+  const item = document.createElement('div');
+  item.className = `histItem ${ok?'correct':'wrong'}`;
+  item.innerHTML = `<span style="font-size:15px;">${ok?'✅':'❌'}</span><span class="histWord">${WordLabData.escapeHtml(word)}</span><span class="histAnswer">${WordLabData.escapeHtml(answer)}</span>`;
+  list.insertBefore(item, list.firstChild);
+}
+
+function startGame(){
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.remove('hidden');
+  _roundAnswered = 0;
+  wlUpdateRoundProgress();
+  if(!_wltActive){
+    var pb = document.getElementById('roundProgress');
+    if(pb) pb.hidden = false;
+  }
+  if(_wltActive){
+    WLTeacher.init({game:'phoneme'}).then(function(){ loadWord(); });
+  } else {
+    loadWord();
+  }
+}
+
+function wlUpdateRoundProgress(){
+  var fill = document.getElementById('roundProgressFill');
+  if(!fill || !_roundTotal) return;
+  var pct = Math.min(1, _roundAnswered / _roundTotal);
+  fill.style.transform = 'scaleX(' + pct + ')';
+}
+
+// Hide round picker and round progress bar in teacher mode
+if(_wltActive){
+  var _rpw = document.getElementById('roundPickerWrap'); if(_rpw) _rpw.style.display = 'none';
+  var _rpb = document.getElementById('roundProgress'); if(_rpb) _rpb.hidden = true;
+}
+
+document.getElementById('checkBtn').addEventListener('click', checkAnswer);
+document.getElementById('nextBtn').addEventListener('click', function(){
+  if(_wltActive){ WLTeacher.clearFeedback(); if(WLTeacher.shouldEnd()){ WLTeacher.showEndScreen(); return; } }
+  if(!_wltActive && _roundTotal && _roundAnswered >= _roundTotal && checked){ showRoundComplete(); return; }
+  nextWord();
+});
+
+// The shared help and hints scripts are deferred, so they only exist once the page has loaded.
+document.addEventListener('DOMContentLoaded', function(){
+if(typeof WLHelp!=='undefined') WLHelp.init({
+  game:'phoneme', title:'Phoneme Splitter', emoji:'🔊',
+  steps:[
+    {icon:'🎯',title:'Choose your round',desc:'Pick how many words you want to practise: 10, 15, 20, 25 or 30. You will see your results at the end.'},
+    {icon:'👀',title:'Read the word',desc:'Look at the word. Press Hear the word to listen to it.'},
+    {icon:'✂️',title:'Split the sounds',desc:'Click between letters to split the word into its sounds (phonemes).'},
+    {icon:'✨',title:'Keep sounds together',desc:'Letters that make one sound, like "sh", "th" or "igh", stay in one box, so do not split between them. For magic-e words like "cake", tap the ✨ magic-e button on the silent e.'},
+    {icon:'✅',title:'Check your answer',desc:'Press Check. If you got it wrong, the answer shows on the letters and you can read why. Press Next word when you are ready.'}
+  ],
+  audioText:'Choose how many words you want to practise: 10, 15, 20, 25 or 30. In Phoneme Splitter, you split words into their individual sounds called phonemes. Click between letters to add a split. Letters that make one sound, like sh or th or igh, stay together in one box, so do not split between them. For magic-e words like cake or time, tap the magic-e button on the silent e to join it to its vowel. Press Check when you are ready to see if you got it right. If you got it wrong, read why the sounds split that way, then press Next word when you are ready.'
+});
+if(typeof WLHints!=='undefined') WLHints.register({
+  getStrategyHint: function(){ return 'Say the word slowly and stretch it out. Count each separate sound you hear.'; },
+  getLadder: function(){ return _phHintLadder(); }
+});
+});
+</script>
+
+<script>
+(function(){var w=document.getElementById('particles');if(!w)return;var cs=['rgba(167,139,250,.3)','rgba(139,92,246,.25)','rgba(255,255,255,.2)'];for(var i=0;i<18;i++){var p=document.createElement('div');p.className='particle';p.style.cssText='left:'+(Math.random()*100)+'%;width:'+(6+Math.random()*8)+'px;height:'+(6+Math.random()*8)+'px;background:'+cs[Math.floor(Math.random()*cs.length)]+';animation-duration:'+(8+Math.random()*12)+'s;animation-delay:'+(-Math.random()*20)+'s;';w.appendChild(p);}})();
+(async function(){
+  if(typeof WLScientist==='undefined'){await new Promise(function(r){document.addEventListener('DOMContentLoaded',function(){r();},{once:true});});}
+  var w=document.getElementById('sciCharWrap');
+  if(!w||typeof WLScientist==='undefined')return;
+  function _p(svg){while(w.firstChild)w.removeChild(w.firstChild);w.appendChild(document.createRange().createContextualFragment(svg));}
+  _p(WLScientist.buildSVG({},'neutral'));
+  try{var sd=typeof WordLabData!=='undefined'?await WordLabData.getStudentData():null;if(sd&&sd.scientist)_p(WLScientist.buildSVG(sd.scientist,'neutral'));}catch(e){console.error('Scientist load failed',e);}
+})();
+</script>
+
+<script>
+
+
+// ── Word Labs login (shared) ──────────────────────────────────────
+
+
+document.addEventListener('DOMContentLoaded', async function() {
+  // Daily limit check
+  if(typeof WordLabData !== 'undefined' && WordLabData.getSession()){
+    try {
+      const limit = await WordLabData.checkDailyLimit();
+      if(limit && limit.blocked){
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(13,11,26,.92);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = '<div style="background:#1a1630;border:2px solid #4338ca;border-radius:24px;padding:40px;max-width:440px;text-align:center;color:#e0e7ff;font-family:Lexend,sans-serif;"><div style="font-size:48px;margin-bottom:16px;">🧪</div><h2 style="font-size:22px;font-weight:900;margin-bottom:12px;">Daily limit reached</h2><p style="color:#94a3b8;font-size:14px;margin-bottom:24px;">You\\\'ve completed 30 questions today on the free plan. Come back tomorrow or ask your teacher about upgrading.</p><a href="landing.html" style="background:#4338ca;color:#fff;padding:12px 24px;border-radius:12px;text-decoration:none;font-weight:800;font-size:14px;">Back to Home</a></div>';
+        document.body.appendChild(overlay);
+        return;
+      }
+    } catch(e) { console.warn('Daily limit check failed', e); }
+  }
+
+  if (typeof WordLabData === 'undefined') return;
+  WordLabData.initLoginUI({
+    accentColor: '#7c3aed',
+    accentSoft:  '#f5f3ff',
+    accentLine:  '#ddd6fe',
+    accentText:  '#4c1d95',
+    onLogin: function() { location.reload(); }
+  });
+  var session = WordLabData.getSession();
+  var btn = document.getElementById('wlLoginBtn');
+  if (btn) {
+    btn.onclick = function() { wlShowLogin(); };
+    if (session) btn.textContent = '👤 ' + session.studentName;
+  }
+  if(typeof WordLabData !== 'undefined' && WordLabData.isExtensionMode && WordLabData.isExtensionMode('phoneme-splitter')){
+    var extPill = document.createElement('div');
+    extPill.style.cssText = 'background:#4338ca;color:#e0e7ff;font-size:10px;font-weight:900;padding:4px 10px;border-radius:20px;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;';
+    extPill.textContent = '🔬 Extension';
+    var hud = document.querySelector('.hud, .headerInner, header .innerHud');
+    if(hud) hud.appendChild(extPill);
+  }
+});
+</script>
+
+<footer style="text-align:center;padding:12px 16px;font-size:11px;color:#64748b;border-top:1px solid #e2e8f0;margin-top:auto;font-family:Lexend,sans-serif;">&#129514; Word Labs Education &middot; ABN 62 528 046 944 &middot; <a href="about.html" style="color:#64748b;">About</a> &middot; <a href="privacy.html" style="color:#64748b;">Privacy Policy</a> &middot; <a href="terms.html" style="color:#64748b;">Terms of Service</a> &middot; <a href="mailto:nick@wordlabs.app" style="color:#64748b;">Contact</a></footer>
+</body>
+</html>

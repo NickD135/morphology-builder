@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Labs – Get Started</title>
+  <link rel="stylesheet" href="wordlab-common.css?v=20261031">
+  <style>
+    :root{
+      --bg:#0f172a; --panel:#1e293b; --panel-2:#233352;
+      --line:rgba(255,255,255,.08); --line-strong:rgba(255,255,255,.14);
+      --text-primary:#e2e8f0; --text-secondary:#94a3b8; --text-bright:#fff; --muted:#64748b;
+      --indigo:#6366f1; --indigo-2:#818cf8; --indigo-3:#a5b4fc; --indigo-soft:rgba(99,102,241,.15);
+      --green:#4ade80; --cyan:#22d3ee; --bad:#f87171;
+    }
+    body{
+      font-family:'Lexend',sans-serif;
+      background:linear-gradient(180deg,#0d0b1a 0%,#110f1e 50%,#0d0b1a 100%);
+      color:var(--text-primary);
+      min-height:100vh;
+      display:flex; flex-direction:column;
+    }
+
+    /* Progress bar */
+    .progress{ max-width:640px; margin:32px auto 0; padding:0 20px; }
+    .progressBar{ display:flex; align-items:flex-start; gap:0; }
+    .progressStep{ display:flex; flex-direction:column; align-items:center; gap:8px; flex:0 0 64px; }
+    .progressDot{
+      width:36px; height:36px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:14px; font-weight:900;
+      border:2px solid rgba(255,255,255,.14); background:rgba(255,255,255,.04);
+      color:var(--text-secondary); transition:all .3s; flex-shrink:0;
+    }
+    .progressDot.active{ border-color:var(--indigo); background:var(--indigo); color:#fff; box-shadow:0 6px 16px rgba(99,102,241,.35); }
+    .progressDot.done{ border-color:var(--green); background:var(--green); color:#0a1224; }
+    .progressLabel{ font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); text-align:center; white-space:nowrap; }
+    .progressLabel.active{ color:var(--indigo-3); }
+    .progressLabel.done{ color:#86efac; }
+    .progressLine{ height:2px; background:rgba(255,255,255,.08); flex:1; margin-top:17px; transition:background .3s; }
+    .progressLine.done{ background:var(--green); }
+
+    /* Card */
+    .card{
+      background:var(--panel); border:1px solid var(--line-strong); border-radius:24px;
+      padding:40px 38px; max-width:600px; margin:28px auto 48px;
+      box-shadow:0 8px 32px rgba(0,0,0,.25);
+      position:relative; overflow:hidden;
+    }
+    .card::before{ content:''; position:absolute; top:-40%; right:-10%; width:340px; height:340px; border-radius:50%; background:radial-gradient(circle,rgba(99,102,241,.1) 0%,transparent 70%); pointer-events:none; }
+    .card > *{ position:relative; z-index:1; }
+    .stepIcon{
+      font-size:36px; width:72px; height:72px; border-radius:18px;
+      background:linear-gradient(135deg,var(--indigo) 0%,var(--cyan) 100%);
+      display:flex; align-items:center; justify-content:center;
+      margin-bottom:20px; box-shadow:0 12px 28px rgba(99,102,241,.35);
+    }
+    .stepTitle{ font-size:28px; font-weight:900; color:var(--text-bright); letter-spacing:-.02em; line-height:1.1; margin-bottom:10px; }
+    .stepSub{ font-size:14px; font-weight:600; color:var(--text-secondary); margin-bottom:28px; line-height:1.6; }
+    .stepSub strong{ color:var(--indigo-3); font-weight:800; }
+
+    .field{ display:flex; flex-direction:column; gap:7px; margin-bottom:18px; }
+    .field label{ font-size:13px; font-weight:700; color:#cbd5e1; }
+    .field input, .field textarea{
+      background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:12px;
+      padding:14px 16px; font-size:15px;
+      font-family:'Lexend',sans-serif; font-weight:600;
+      color:var(--text-primary); outline:none;
+      transition:border-color .15s, box-shadow .15s;
+      min-height:48px;
+    }
+    .field input::placeholder, .field textarea::placeholder{ color:#475569; font-weight:500; }
+    .field input:focus, .field textarea:focus{ border-color:var(--indigo); box-shadow:0 0 0 3px rgba(99,102,241,.15); }
+    .field textarea{ resize:vertical; min-height:150px; }
+    .field .hint{ font-size:12px; color:var(--text-secondary); font-weight:600; }
+    .field .hint label{ color:var(--indigo-3); font-weight:800; cursor:pointer; }
+    .field .hint label:hover{ color:#c7d2fe; }
+
+    .primaryBtn{
+      width:100%; border:none;
+      background:var(--indigo); color:#fff;
+      font-family:'Lexend',sans-serif; font-weight:900; font-size:14px;
+      padding:16px; border-radius:14px; cursor:pointer;
+      text-transform:uppercase; letter-spacing:.06em;
+      box-shadow:0 8px 20px rgba(99,102,241,.35);
+      transition:transform .1s, box-shadow .15s;
+      margin-top:6px; min-height:52px;
+    }
+    .primaryBtn:hover:not(:disabled){ transform:translateY(-1px); box-shadow:0 12px 28px rgba(99,102,241,.45); }
+    .primaryBtn:disabled{ opacity:.5; cursor:default; transform:none; }
+
+    .secondaryBtn{
+      width:100%; border:1.5px solid rgba(255,255,255,.14); background:transparent;
+      color:var(--text-secondary);
+      font-family:'Lexend',sans-serif; font-weight:800; font-size:13px;
+      padding:13px; border-radius:12px; cursor:pointer; margin-top:8px;
+      transition:all .15s;
+    }
+    .secondaryBtn:hover{ background:rgba(255,255,255,.05); color:var(--text-bright); border-color:var(--indigo-2); }
+
+    .errMsg{
+      background:rgba(248,113,113,.1); border:1px solid rgba(248,113,113,.3);
+      border-radius:12px; padding:12px 16px;
+      font-size:13px; font-weight:700; color:#fca5a5;
+      margin-bottom:18px; display:none;
+    }
+    .errMsg.show{ display:block; }
+
+    /* Student list preview */
+    .studentPreview{ display:flex; flex-wrap:wrap; gap:6px; margin:14px 0 6px; }
+    .studentChip{
+      background:var(--indigo-soft); border:1px solid rgba(99,102,241,.3);
+      color:var(--indigo-3); border-radius:999px;
+      padding:6px 14px; font-size:13px; font-weight:800;
+    }
+
+    /* Login code cards */
+    .codeGrid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:16px 0 22px; }
+    .codeCard{
+      background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1);
+      border-radius:14px; padding:14px 12px; text-align:center;
+    }
+    .codeName{ font-size:13px; font-weight:800; color:var(--text-bright); margin-bottom:6px; }
+    .codeVal{
+      font-size:24px; font-weight:900; color:var(--indigo-3);
+      letter-spacing:.2em; background:var(--indigo-soft);
+      border:1px solid rgba(99,102,241,.25);
+      border-radius:10px; padding:8px 12px; display:inline-block;
+      font-family:'SF Mono',ui-monospace,monospace;
+    }
+
+    /* Step 4 class code banner */
+    .classCodeBanner{
+      background:linear-gradient(135deg,rgba(99,102,241,.12) 0%,rgba(34,211,238,.08) 100%);
+      border:1px solid rgba(99,102,241,.3); border-radius:14px;
+      padding:16px 18px; margin-bottom:18px;
+      display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    }
+    .classCodeBanner-label{ font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.12em; color:var(--text-secondary); margin-bottom:2px; }
+    .classCodeBanner-value{ font-size:22px; font-weight:900; color:var(--text-bright); letter-spacing:.15em; font-family:'SF Mono',ui-monospace,monospace; }
+    .classCodeBanner-host{ font-size:11px; font-weight:700; color:var(--text-secondary); }
+    .classCodeBanner-host strong{ color:var(--indigo-3); font-weight:900; }
+
+    /* Activity grid */
+    .actGrid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:18px 0 10px; }
+    .actCard{
+      background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1);
+      border-radius:14px; padding:14px 16px;
+      text-decoration:none; display:flex; align-items:center; gap:12px;
+      transition:all .15s;
+    }
+    .actCard:hover{ background:var(--indigo-soft); border-color:rgba(99,102,241,.4); transform:translateY(-1px); }
+    .actEmoji{
+      font-size:24px; width:42px; height:42px;
+      border-radius:12px; background:rgba(99,102,241,.15);
+      display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    }
+    .actName{ font-size:14px; font-weight:800; color:var(--text-bright); }
+    .actDesc{ font-size:12px; font-weight:600; color:var(--text-secondary); }
+
+    @media(max-width:640px){
+      .card{ padding:28px 22px; margin:20px 16px 32px; border-radius:20px; }
+      .stepTitle{ font-size:22px; }
+      .stepSub{ font-size:13px; margin-bottom:22px; }
+      .stepIcon{ width:60px; height:60px; font-size:30px; margin-bottom:16px; }
+      .progress{ margin:22px auto 0; }
+      .progressDot{ width:30px; height:30px; font-size:12px; }
+      .progressLabel{ font-size:8px; letter-spacing:.04em; }
+      .progressStep{ flex-basis:52px; }
+      .progressLine{ margin-top:14px; }
+      .field textarea{ min-height:120px; }
+      .codeGrid{ grid-template-columns:1fr; }
+      .actGrid{ grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<header class="header" role="banner">
+  <div class="headerInner">
+    <a href="landing.html" class="brand">
+      <div class="brandIcon">🧪</div>
+      <div>
+        <span class="brandName">Word Labs</span>
+        <span style="display:block;font-size:9px;text-transform:uppercase;letter-spacing:.22em;color:var(--text-secondary);font-weight:800;margin-top:1px;">Get Started</span>
+      </div>
+    </a>
+    <nav role="navigation" aria-label="Main navigation">
+      <a href="landing.html" class="topBtn">I'll do this later</a>
+    </nav>
+  </div>
+</header>
+
+<!-- Progress bar -->
+<div class="progress" id="main-content">
+  <div class="progressBar">
+    <div class="progressStep">
+      <div class="progressDot active" id="dot1">1</div>
+      <div class="progressLabel active" id="lbl1">School</div>
+    </div>
+    <div class="progressLine" id="line1"></div>
+    <div class="progressStep">
+      <div class="progressDot" id="dot2">2</div>
+      <div class="progressLabel" id="lbl2">Class</div>
+    </div>
+    <div class="progressLine" id="line2"></div>
+    <div class="progressStep">
+      <div class="progressDot" id="dot3">3</div>
+      <div class="progressLabel" id="lbl3">Students</div>
+    </div>
+    <div class="progressLine" id="line3"></div>
+    <div class="progressStep">
+      <div class="progressDot" id="dot4">4</div>
+      <div class="progressLabel" id="lbl4">Codes</div>
+    </div>
+    <div class="progressLine" id="line4"></div>
+    <div class="progressStep">
+      <div class="progressDot" id="dot5">5</div>
+      <div class="progressLabel" id="lbl5">Go!</div>
+    </div>
+  </div>
+</div>
+
+<div id="stepContainer" role="main"></div>
+
+<script src="vendor/supabase.js"></script>
+<script src="wordlab-stage.js"></script>
+<script src="wordlab-data.js?v=20261031b"></script>
+<script>
+
+let currentStep = 1;
+let schoolName   = '';
+let className    = '';
+let classCode    = '';
+let classId      = '';
+let students     = []; // [{name, student_code}]
+
+// ── Progress ─────────────────────────────────────────────────────
+function setProgress(active) {
+  for (let i = 1; i <= 5; i++) {
+    const dot = document.getElementById('dot' + i);
+    const lbl = document.getElementById('lbl' + i);
+    if (i < active) {
+      dot.className = 'progressDot done'; dot.textContent = '✓';
+      lbl.className = 'progressLabel done';
+    } else if (i === active) {
+      dot.className = 'progressDot active'; dot.textContent = i;
+      lbl.className = 'progressLabel active';
+    } else {
+      dot.className = 'progressDot'; dot.textContent = i;
+      lbl.className = 'progressLabel';
+    }
+    if (i < 5) {
+      document.getElementById('line' + i).className = 'progressLine' + (i < active ? ' done' : '');
+    }
+  }
+}
+
+function renderStep(n) {
+  currentStep = n;
+  setProgress(n);
+  const c = document.getElementById('stepContainer');
+  c.innerHTML = steps[n]();
+}
+
+// ── Step 1: School name ───────────────────────────────────────────
+const steps = {
+  1: () => `
+    <div class="card">
+      <div class="stepIcon">🏫</div>
+      <div class="stepTitle">What's your school called?</div>
+      <div class="stepSub">Check it's right. You can change it later on your Account page. Next you'll make your class, add names and print login cards: about 3 minutes in all.</div>
+      <div class="errMsg" id="err" aria-live="assertive"></div>
+      <div class="field">
+        <label for="schoolInput">School name</label>
+        <input type="text" id="schoolInput" value="${WordLabData.escapeHtml(schoolName)}" placeholder="e.g. Riverside Primary School" autocomplete="organization">
+      </div>
+      <button class="primaryBtn" onclick="submitStep1()">Next →</button>
+    </div>`,
+
+  // ── Step 2: Create class ────────────────────────────────────────
+  2: () => `
+    <div class="card">
+      <div class="stepIcon">📋</div>
+      <div class="stepTitle">Create your first class</div>
+      <div class="stepSub">Use the name your students know, like 5/6K or Room 12. We'll make a class code for you to give them.</div>
+      <div class="errMsg" id="err" aria-live="assertive"></div>
+      <div class="field">
+        <label for="classNameInput">Class name</label>
+        <input type="text" id="classNameInput" placeholder="e.g. 6D" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="gameNameInput">Your name in the class <span style="font-weight:600;color:var(--muted);">(optional)</span></label>
+        <input type="text" id="gameNameInput" placeholder="e.g. Mr Smith, Coach D">
+        <div class="hint">Adds you as a player too, so you can try the activities exactly as your students see them</div>
+      </div>
+      <button class="primaryBtn" onclick="submitStep2()">Create class →</button>
+      <button class="secondaryBtn" onclick="renderStep(3)">Skip for now</button>
+    </div>`,
+
+  // ── Step 3: Add students ────────────────────────────────────────
+  3: () => `
+    <div class="card">
+      <div class="stepIcon">👩‍🎓</div>
+      <div class="stepTitle">Add your students</div>
+      <div class="stepSub">Type one name per line, or paste a column straight from your class list. First names only, no surnames or emails. If two students share a name, add an initial (Sam B, Sam K).</div>
+      <div class="errMsg" id="err" aria-live="assertive"></div>
+      <div class="field">
+        <label for="namesInput">Student names</label>
+        <textarea id="namesInput" placeholder="Emma&#10;Liam&#10;Olivia&#10;Noah&#10;Ava"></textarea>
+        <div class="hint">Or <label>import a CSV <input type="file" accept=".csv,.txt" id="csvFile" style="display:none;"></label></div>
+      </div>
+      <div id="previewWrap" style="display:none;">
+        <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#64748b;margin-bottom:8px;">Preview</div>
+        <div class="studentPreview" id="previewChips"></div>
+      </div>
+      <button class="primaryBtn" onclick="submitStep3()">Add students →</button>
+      <button class="secondaryBtn" onclick="renderStep(4)">Skip for now</button>
+    </div>`,
+
+  // ── Step 4: Login codes ─────────────────────────────────────────
+  4: () => {
+    const cards = students.length
+      ? students.map(s => `
+          <div class="codeCard">
+            <div class="codeName">${WordLabData.escapeHtml(s.name)}</div>
+            <div class="codeVal">${WordLabData.escapeHtml(s.student_code)}</div>
+          </div>`).join('')
+      : `<div style="text-align:center;padding:24px 16px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.1);border-radius:14px;color:var(--text-secondary);font-size:13px;font-weight:600;">No students added yet. <a href="#" onclick="renderStep(3);return false;" style="color:var(--indigo-3);">Add them now</a> or later from Class Setup.</div>`;
+    const banner = classCode ? `
+      <div class="classCodeBanner">
+        <div>
+          <div class="classCodeBanner-label">Class code</div>
+          <div class="classCodeBanner-value">${WordLabData.escapeHtml(classCode)}</div>
+        </div>
+        <div class="classCodeBanner-host" style="flex:1;min-width:180px;">Students go to <strong>${WordLabData.escapeHtml(window.location.host)}</strong>, enter the class code, pick their name, then enter their 3-letter code.</div>
+      </div>` : '';
+    return `
+    <div class="card">
+      <div class="stepIcon">🔑</div>
+      <div class="stepTitle">Here's how students log in</div>
+      <div class="stepSub">Each student gets a unique 3-letter code they use with your class code to sign in.</div>
+      ${banner}
+      ${students.length ? `<button class="secondaryBtn" style="margin-bottom:16px;" onclick="printLoginCards()">🖨 Print login cards</button>` : ''}
+      <div class="codeGrid">${cards}</div>
+      <button class="primaryBtn" onclick="renderStep(5)">Next →</button>
+    </div>`;
+  },
+
+  // ── Step 5: Try it ──────────────────────────────────────────────
+  5: () => `
+    <div class="card">
+      <div class="stepIcon">🚀</div>
+      <div class="stepTitle">You're all set!</div>
+      <div class="stepSub">${classCode ? `In class: put <strong>${WordLabData.escapeHtml(window.location.host)}</strong> and your class code <strong>${WordLabData.escapeHtml(classCode)}</strong> on the board, hand out the login cards and they're in. ` : ''}Try an activity yourself first to see what students see. Their scores appear on your dashboard as they play.</div>
+      <div class="actGrid">
+        <a href="mission-mode.html" class="actCard"><span class="actEmoji">🚀</span><div><div class="actName">Mission Mode</div><div class="actDesc">Prefix & suffix drag game</div></div></a>
+        <a href="phoneme-mode.html" class="actCard"><span class="actEmoji">🔊</span><div><div class="actName">Phoneme Splitter</div><div class="actDesc">Split words into sounds</div></div></a>
+        <a href="meaning-mode.html" class="actCard"><span class="actEmoji">💡</span><div><div class="actName">Meaning Match-Up</div><div class="actDesc">Match morphemes to meanings</div></div></a>
+        <a href="speed-mode.html" class="actCard"><span class="actEmoji">⚡</span><div><div class="actName">Speed Builder</div><div class="actDesc">Build words against the clock</div></div></a>
+      </div>
+      <a href="dashboard.html" class="primaryBtn" style="text-decoration:none;display:block;text-align:center;margin-top:8px;">Go to Dashboard →</a>
+    </div>`
+};
+
+// ── Step handlers ─────────────────────────────────────────────────
+async function submitStep1() {
+  const val = document.getElementById('schoolInput').value.trim();
+  if (!val) { showErr('Please enter your school name.'); return; }
+  schoolName = val;
+
+  // Update school name in DB
+  const teacher = await WordLabData.getTeacherRecord();
+  if (teacher?.school_id) {
+    const { error: nameErr } = await WordLabData._sb().from('schools').update({ name: schoolName }).eq('id', teacher.school_id);
+    if (nameErr && nameErr.code === '23505') { showErr("Another school already has that name and postcode. If it's your school, ask a colleague for its invite code."); return; }
+  }
+  renderStep(2);
+}
+
+async function submitStep2() {
+  const name = document.getElementById('classNameInput').value.trim();
+  const err  = document.getElementById('err');
+
+  if (!name) { showErr('Please enter a class name.'); return; }
+
+  const btn = document.querySelector('.primaryBtn');
+  btn.disabled = true; btn.textContent = 'Creating...';
+
+  try {
+    classId   = await WordLabData.createClass(name, '', '', []);
+    className = name;
+    // Fetch the auto-generated code
+    var classes = await WordLabData.getClasses();
+    var created = classes.find(function(c){ return c.id === classId; });
+    classCode = created ? created.class_code : '';
+
+    var gameName = document.getElementById('gameNameInput').value.trim();
+    if (gameName) {
+      await WordLabData.createTeacherStudent(classId, gameName);
+    }
+
+    renderStep(3);
+  } catch(e) {
+    showErr(e.message || 'Could not create class. Please try again.');
+    btn.disabled = false; btn.textContent = 'Create class →';
+  }
+}
+
+async function submitStep3() {
+  if (!classId) { showErr('You need to create a class first. Go back to Step 2.'); return; }
+  const raw   = document.getElementById('namesInput').value;
+  const names = raw.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+  if (!names.length) { renderStep(4); return; }
+
+  const btn = document.querySelector('.primaryBtn');
+  btn.disabled = true; btn.textContent = 'Adding...';
+
+  try {
+    students = await WordLabData.addStudentsBulk(classId, names);
+    renderStep(4);
+  } catch(e) {
+    showErr(e.message || 'Could not add students. Please try again.');
+    btn.disabled = false; btn.textContent = 'Add students →';
+  }
+}
+
+function loadCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const lines = e.target.result.split(/[\r\n,]+/).map(l => l.trim()).filter(l => l && l !== 'Name' && l !== 'name');
+    document.getElementById('namesInput').value = lines.join('\n');
+    updatePreview(lines);
+  };
+  reader.readAsText(file);
+}
+
+function updatePreview(names) {
+  const wrap = document.getElementById('previewWrap');
+  const chips = document.getElementById('previewChips');
+  if (!wrap || !chips) return;
+  if (!names.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  // Build chips via DOM (XSS-safe — never innerHTML user input)
+  chips.textContent = '';
+  names.forEach(function(n) {
+    var chip = document.createElement('span');
+    chip.className = 'studentChip';
+    chip.textContent = n;
+    chips.appendChild(chip);
+  });
+}
+
+// Event delegation for dynamically rendered step content
+document.getElementById('stepContainer').addEventListener('input', function(e) {
+  if (e.target && e.target.id === 'namesInput') {
+    var lines = e.target.value.split('\n').map(function(n) { return n.trim(); }).filter(Boolean);
+    updatePreview(lines);
+  }
+});
+document.getElementById('stepContainer').addEventListener('change', function(e) {
+  if (e.target && e.target.id === 'csvFile') loadCSV(e.target);
+});
+
+function showErr(msg) {
+  const el = document.getElementById('err');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.setAttribute('role', 'alert');
+  el.setAttribute('aria-live', 'assertive');
+}
+
+// Enter key support for form fields
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Enter') return;
+  var t = e.target;
+  if (t.tagName === 'TEXTAREA') return; // allow newlines in textarea
+  if (t.id === 'schoolInput') { e.preventDefault(); submitStep1(); }
+  else if (t.id === 'classNameInput' || t.id === 'gameNameInput') { e.preventDefault(); submitStep2(); }
+});
+
+function printLoginCards() {
+  // Build the print-ready HTML and open it via a Blob URL.
+  // All user-supplied values (names, codes, host) are escaped first.
+  var rowsHtml = students.map(function(s) {
+    return '<div class="card">' +
+      '<div class="site">' + WordLabData.escapeHtml(window.location.host) + '</div>' +
+      '<div class="name">' + WordLabData.escapeHtml(s.name) + '</div>' +
+      '<div class="label">Class code</div>' +
+      '<div class="code">' + WordLabData.escapeHtml(classCode) + '</div>' +
+      '<div class="label">Your code</div>' +
+      '<div class="code">' + WordLabData.escapeHtml(s.student_code) + '</div>' +
+    '</div>';
+  }).join('');
+
+  var safeSchool = WordLabData.escapeHtml(schoolName);
+  var safeClass  = WordLabData.escapeHtml(className);
+  var safeHost   = WordLabData.escapeHtml(window.location.host);
+
+  var html = '<!doctype html><html><head><title>Login Cards — ' + safeClass + '</title>' +
+    '<meta charset="utf-8"><link href="' + new URL('fonts/lexend.css', location.href).href + '" rel="stylesheet">' +
+    '<style>' +
+      '@page{ size:A4; margin:12mm; }' +
+      'body{ font-family:Lexend,Arial,sans-serif; margin:0; color:#0f172a; }' +
+      '.grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8mm; }' +
+      '.card{ border:2px solid #c7d2fe; border-radius:12px; padding:14px; text-align:center; background:#fff; page-break-inside:avoid; }' +
+      '.site{ font-size:10px; font-weight:700; color:#6366f1; margin-bottom:8px; letter-spacing:.05em; }' +
+      '.name{ font-size:18px; font-weight:900; color:#1e1b4b; margin-bottom:10px; }' +
+      '.label{ font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:#64748b; margin-bottom:3px; }' +
+      '.code{ font-size:22px; font-weight:900; color:#4338ca; background:#eef2ff; border-radius:8px; padding:5px 10px; display:inline-block; margin-bottom:8px; letter-spacing:.15em; }' +
+      '@media print{ button{ display:none; } }' +
+    '</style></head><body>' +
+    '<div style="text-align:center;margin-bottom:8mm;">' +
+      '<div style="font-size:18px;font-weight:900;color:#312e81;">' + safeSchool + ' — ' + safeClass + '</div>' +
+      '<div style="font-size:12px;color:#64748b;font-weight:700;margin-top:4px;">Student login cards · ' + safeHost + '</div>' +
+    '</div>' +
+    '<div class="grid">' + rowsHtml + '</div>' +
+    '<div style="text-align:center;margin-top:8mm;">' +
+      '<button onclick="window.print()" style="padding:12px 32px;background:#4338ca;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:Lexend,sans-serif;font-weight:800;">🖨 Print</button>' +
+    '</div>' +
+    '<footer style="text-align:center;padding:12px 16px;font-size:11px;color:#64748b;border-top:1px solid #e2e8f0;margin-top:24px;">🧪 Word Labs Education · ABN 62 528 046 944 · <a href="about.html" style="color:#64748b;">About</a> · <a href="privacy.html" style="color:#64748b;">Privacy Policy</a> · <a href="terms.html" style="color:#64748b;">Terms of Service</a> · <a href="mailto:nick@wordlabs.app" style="color:#64748b;">Contact</a></footer>' +
+  '</body></html>';
+
+  var blob = new Blob([html], { type: 'text/html' });
+  var url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+  setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
+}
+
+// ── Boot ─────────────────────────────────────────────────────────
+(async function() {
+  const user = await WordLabData.requireTeacherAuth();
+  if (!user) return;
+
+  // If teacher already has classes and didn't just sign up, skip to dashboard
+  const fromSignup = new URLSearchParams(window.location.search).has('from');
+  const classes = await WordLabData.getClasses();
+  if (classes.length > 0 && !fromSignup) {
+    window.location.href = 'dashboard.html';
+    return;
+  }
+
+  // Pre-fill school name
+  const teacher = await WordLabData.getTeacherRecord();
+  if (teacher?.school_id) {
+    const { data: school } = await WordLabData._sb()
+      .from('schools').select('name').eq('id', teacher.school_id).maybeSingle();
+    if (school?.name && school.name !== 'My School') schoolName = school.name;
+  }
+
+  renderStep(1);
+})();
+</script>
+<div class="footer">
+  <div class="footer-inner">
+    <div class="footer-note">🧪 Word Labs Education · ABN 62 528 046 944 · <a href="landing.html">Home</a> · <a href="about.html">About</a> · <a href="for-schools.html">For schools</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a href="pricing.html">Pricing</a> · <a href="mailto:nick@wordlabs.app">Contact</a></div>
+  </div>
+</div>
+</body>
+</html>
