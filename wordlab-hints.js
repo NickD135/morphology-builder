@@ -1,0 +1,301 @@
+/* ──────────────────────────────────────────────────────────────
+   wordlab-hints.js  —  "Need Advice" scientist hint system
+   Loaded AFTER wordlab-data.js and wordlab-scientist.js.
+   Provides a "Need Advice" button below the scientist that gives
+   progressive hints: first click = strategy, second = specific clue.
+   Also provides a student support-mode toggle on game pages.
+   ────────────────────────────────────────────────────────────── */
+var WLHints = (function() {
+  'use strict';
+
+  var _config = null;
+  var _hintCount = 0;  // resets per question
+  var _bubbleEl = null;
+  var _adviceBtnEl = null;
+  var _supportToggleEl = null;
+  var _bubbleTimer = null;
+
+  // ── CSS ────────────────────────────────────────────────────
+  function injectCSS() {
+    if (document.getElementById('wlHintsCSS')) return;
+    var s = document.createElement('style');
+    s.id = 'wlHintsCSS';
+    s.textContent = [
+      // Speech bubble
+      '.wlh-bubble {',
+      '  position:absolute; bottom:100%; left:50%; transform:translateX(-50%);',
+      '  background:#1e293b; color:#e0e7ff; border:1.5px solid rgba(99,102,241,.3);',
+      '  border-radius:14px; padding:10px 14px; max-width:220px; min-width:160px;',
+      '  font-size:12px; font-weight:600; line-height:1.4; text-align:center;',
+      '  box-shadow:0 8px 24px rgba(0,0,0,.4); z-index:100;',
+      '  opacity:0; transform:translateX(-50%) translateY(8px); transition:all .25s ease-out;',
+      '  pointer-events:none;',  /* hidden bubble must not block taps underneath */
+      '}',
+      '.wlh-bubble.show {',
+      '  opacity:1; transform:translateX(-50%) translateY(-8px); pointer-events:auto;',
+      '}',
+      '.wlh-bubble::after {',
+      '  content:""; position:absolute; top:100%; left:50%; transform:translateX(-50%);',
+      '  border:8px solid transparent; border-top-color:#1e293b;',
+      '}',
+      '.wlh-bubble-speak {',
+      '  background:none; border:none; color:#a5b4fc; font-size:14px;',
+      '  cursor:pointer; padding:2px 4px; margin-left:4px; vertical-align:middle;',
+      '}',
+      '.wlh-bubble-speak:hover { color:#c7d2fe; }',
+      '.wlh-bubble .wlh-step { background:none; border:0; border-radius:0; box-shadow:none; padding:0; width:auto; height:auto; display:block; font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:#a5b4fc; margin-bottom:4px; }',
+      '.wlh-bubble .wlh-gap { background:none; border:0; border-radius:0; box-shadow:none; padding:0; height:auto; display:inline-block; min-width:2.2em; border-bottom:2px solid #a5b4fc; margin:0 1px; vertical-align:baseline; }',
+      '.wlh-bubble b { color:#fff; }',
+      // Need Advice button
+      '.wlh-advice-btn {',
+      '  display:block; margin:12px auto 0; padding:8px 18px;',
+      '  background:rgba(99,102,241,.2); color:#c7d2fe;',
+      '  border:2px solid rgba(99,102,241,.35); border-radius:12px;',
+      '  font-family:inherit; font-size:12px; font-weight:800;',
+      '  cursor:pointer; transition:all .15s;',
+      '  box-shadow:0 2px 8px rgba(67,56,202,.2);',
+      '}',
+      '.wlh-advice-btn:hover { background:rgba(99,102,241,.3); color:#e0e7ff; border-color:#6366f1; transform:translateY(-1px); box-shadow:0 4px 12px rgba(67,56,202,.3); }',
+      // Support mode toggle
+      '.wlh-support-toggle {',
+      '  position:fixed; bottom:20px; right:70px; z-index:9979;',
+      '  display:flex; align-items:center; gap:6px;',
+      '  background:rgba(30,41,59,.9); border:1.5px solid rgba(99,102,241,.2);',
+      '  border-radius:12px; padding:5px 12px; cursor:pointer;',
+      '  font-family:inherit; font-size:11px; font-weight:800; color:#94a3b8;',
+      '  transition:all .15s; backdrop-filter:blur(8px);',
+      '}',
+      '.wlh-support-toggle:hover { border-color:#6366f1; color:#c7d2fe; }',
+      '.wlh-support-toggle.active { border-color:#4338ca; color:#a5b4fc; background:rgba(67,56,202,.15); }',
+      '.wlh-support-dot {',
+      '  width:8px; height:8px; border-radius:50%; background:#475569; transition:background .15s;',
+      '}',
+      '.wlh-support-toggle.active .wlh-support-dot { background:#6366f1; }',
+      // Visual scaffold styles
+      'body.support-mode .wlh-scaffold-prefix { border-left:3px solid #7c3aed !important; }',
+      'body.support-mode .wlh-scaffold-base { border-left:3px solid #4338ca !important; }',
+      'body.support-mode .wlh-scaffold-suffix { border-left:3px solid #ea580c !important; }',
+      // Hide advice button when not in support mode (but show for everyone on first few visits)
+      '@media(max-width:480px) {',
+      '  .wlh-support-toggle { right:60px; font-size:10px; padding:4px 10px; }',
+      '}',
+    ].join('\n');
+    document.head.appendChild(s);
+  }
+
+  // ── Need Advice button ─────────────────────────────────────
+  function createAdviceBtn() {
+    // Remove stale elements if they exist
+    var oldBubble = document.getElementById('wlhBubble');
+    if (oldBubble) oldBubble.remove();
+    var oldBtn = document.getElementById('wlhAdviceBtn');
+    if (oldBtn) oldBtn.remove();
+
+    // Try to place inside scientist-stage (below the scientist character)
+    // Fall back to fixed floating button if stage is hidden or missing
+    var stage = document.querySelector('.scientist-stage');
+    var stageVisible = stage && stage.offsetParent !== null;
+
+    _bubbleEl = document.createElement('div');
+    _bubbleEl.className = 'wlh-bubble';
+    _bubbleEl.id = 'wlhBubble';
+
+    _adviceBtnEl = document.createElement('button');
+    _adviceBtnEl.className = 'wlh-advice-btn';
+    _adviceBtnEl.id = 'wlhAdviceBtn';
+    _adviceBtnEl.textContent = '💡 Need Advice';
+    _adviceBtnEl.setAttribute('aria-label', 'Get a hint from the scientist');
+    _adviceBtnEl.onclick = function() { giveHint(); };
+
+    if (stageVisible) {
+      // Position absolutely within the stage so we don't disrupt flex layout
+      // The stage is position:fixed with flex center, so we use absolute positioning
+      // to place the button below centre
+      _bubbleEl.style.cssText = 'position:absolute;left:50%;bottom:calc(50% + 80px);transform:translateX(-50%);z-index:100;max-width:220px;min-width:160px;';
+      stage.appendChild(_bubbleEl);
+      _adviceBtnEl.style.cssText += 'position:absolute;left:50%;top:calc(50% + 70px);transform:translateX(-50%);z-index:100;margin:0;white-space:nowrap;';
+      stage.appendChild(_adviceBtnEl);
+    } else {
+      // Floating fixed fallback, raised clear of the ? help button (20px + 44px tall),
+      // and below the instructions popup (z-index 9990) so it does not sit on top of it
+      _bubbleEl.style.cssText = 'position:fixed;bottom:126px;right:16px;left:auto;transform:none;z-index:9986;max-width:240px;';
+      _adviceBtnEl.style.cssText += 'position:fixed;bottom:76px;right:16px;z-index:9985;margin:0;box-shadow:0 4px 16px rgba(67,56,202,.4);';
+      document.body.appendChild(_bubbleEl);
+      document.body.appendChild(_adviceBtnEl);
+    }
+  }
+
+  // Re-attach if DOM elements were destroyed (e.g. by scientist SVG rebuild)
+  function ensureAdviceBtn() {
+    if (!document.getElementById('wlhAdviceBtn')) {
+      createAdviceBtn();
+    }
+  }
+
+  // ── Support mode toggle ────────────────────────────────────
+  function createSupportToggle() {
+    if (_supportToggleEl) return;
+    var isOn = typeof WordLabData !== 'undefined' && WordLabData.isSupportMode();
+    // Check if teacher locked it on (stored in sessionStorage by loadSupportMode)
+    var teacherSet = false;
+    try { teacherSet = sessionStorage.getItem('wl_support_teacher') === 'true'; } catch(e) {}
+
+    var btn = document.createElement('button');
+    btn.className = 'wlh-support-toggle';
+    btn.id = 'wlhSupportToggle';
+    if (isOn) btn.classList.add('active');
+
+    if (teacherSet) {
+      // Teacher enabled — show as locked on, student can't disable
+      btn.innerHTML = '<span class="wlh-support-dot"></span> Support (set by teacher)';
+      btn.title = 'Support mode is enabled by your teacher';
+      btn.style.cursor = 'default';
+      btn.style.opacity = '0.7';
+    } else {
+      btn.innerHTML = '<span class="wlh-support-dot"></span> Support';
+      btn.title = 'Toggle support mode — slower timers, hints, fewer options';
+      btn.setAttribute('aria-label', 'Toggle support mode');
+      btn.onclick = function() {
+        var nowOn = !(typeof WordLabData !== 'undefined' && WordLabData.isSupportMode());
+        if (typeof WordLabData !== 'undefined' && WordLabData.setSupportMode) {
+          WordLabData.setSupportMode(nowOn);
+        }
+        btn.classList.toggle('active', nowOn);
+        // Update body class for CSS-driven support scaffolds
+        if (nowOn) {
+          document.body.classList.add('support-mode');
+          document.documentElement.classList.add('support-mode');
+        } else {
+          document.body.classList.remove('support-mode');
+          document.documentElement.classList.remove('support-mode');
+        }
+      };
+    }
+    document.body.appendChild(btn);
+    _supportToggleEl = btn;
+  }
+
+  // ── Hint logic ─────────────────────────────────────────────
+  function giveHint() {
+    if (!_config) return;
+    _hintCount++;
+
+    var text = '';
+    // A game can give a ladder of hints (getLadder returns an array of HTML lines,
+    // gentlest first). Each click shows the next one; the last one stays.
+    var ladder = _config.getLadder ? (_config.getLadder() || []).filter(Boolean) : [];
+    if (ladder.length) {
+      var step = Math.min(_hintCount, ladder.length);
+      text = ladder[step - 1];
+      if (ladder.length > 1) text = '<span class="wlh-step">Hint ' + step + ' of ' + ladder.length + '</span>' + text;
+    } else if (_hintCount === 1 && _config.getStrategyHint) {
+      text = _config.getStrategyHint();
+    } else if (_config.getSpecificHint) {
+      text = _config.getSpecificHint();
+    } else if (_config.getStrategyHint) {
+      text = _config.getStrategyHint();
+    }
+
+    if (!text) text = 'Have a go. You can do this!';
+    showBubble(text);
+  }
+
+  function showBubble(text) {
+    if (!_bubbleEl) return;
+    clearTimeout(_bubbleTimer);
+
+    var speakBtn = '<button class="wlh-bubble-speak" onclick="WLHints.speakHint()" title="Listen">🔊</button>';
+    _bubbleEl.innerHTML = text + speakBtn;
+    _bubbleEl.classList.add('show');
+
+    // Auto-hide after 6 seconds, longer for longer hints (about 0.45 s a word) so a
+    // slow reader can finish it
+    var words = _bubbleEl.textContent.split(/\s+/).filter(Boolean).length;
+    _bubbleTimer = setTimeout(function() {
+      _bubbleEl.classList.remove('show');
+    }, Math.max(6000, words * 450));
+  }
+
+  // Text to read aloud: a gap (<span class="wlh-gap">) is read as "blank", and the
+  // "Hint 2 of 3" label is read too
+  function _speechText() {
+    var c = _bubbleEl.cloneNode(true);
+    c.querySelectorAll('.wlh-bubble-speak').forEach(function(b) { b.remove(); });
+    c.querySelectorAll('.wlh-gap').forEach(function(g) { g.textContent = ' blank '; });
+    c.querySelectorAll('.wlh-step').forEach(function(g) { g.textContent = g.textContent + '. '; });
+    return c.textContent.replace(/\s+/g, ' ').trim();
+  }
+
+  function hideBubble() {
+    if (_bubbleEl) _bubbleEl.classList.remove('show');
+    clearTimeout(_bubbleTimer);
+  }
+
+  function speakHint() {
+    if (!_bubbleEl) return;
+    var text = _speechText();
+    if (typeof WordLabData !== 'undefined' && WordLabData.speakInLanguage) {
+      WordLabData.speakInLanguage(text, 'en-AU');
+    }
+  }
+
+  // ── Public API ─────────────────────────────────────────────
+
+  /**
+   * register({ getStrategyHint, getSpecificHint })
+   * Called by each game to provide hint functions for the current question.
+   * getStrategyHint() → general tip string
+   * getSpecificHint() → clue about the current answer
+   * getLadder()       → optional: array of hint lines, gentlest first (used instead
+   *                     of the two above when it returns any lines)
+   */
+  function register(config) {
+    _config = config || {};
+    _hintCount = 0;
+    injectCSS();
+
+    // Create UI elements (delay to ensure scientist is rendered)
+    setTimeout(function() {
+      createAdviceBtn();
+      // Re-check after longer delay — if scientist rendered late and we fell back
+      // to floating, try again to attach to the stage
+      setTimeout(function() {
+        var btn = document.getElementById('wlhAdviceBtn');
+        var stage = document.querySelector('.scientist-stage');
+        if (btn && stage && stage.offsetParent !== null && btn.style.position === 'fixed') {
+          createAdviceBtn(); // Re-create attached to stage
+        }
+      }, 1500);
+    }, 600);
+    if (!_supportToggleEl) {
+      createSupportToggle();
+    }
+  }
+
+  /** Call this when a new question loads to reset hint counter */
+  function resetHints() {
+    _hintCount = 0;
+    hideBubble();
+    ensureAdviceBtn();
+  }
+
+  /** Update hint functions (call when question changes) */
+  function updateHints(strategyFn, specificFn) {
+    if (_config) {
+      _config.getStrategyHint = strategyFn;
+      _config.getSpecificHint = specificFn;
+    }
+    _hintCount = 0;
+    hideBubble();
+  }
+
+  return {
+    register: register,
+    resetHints: resetHints,
+    updateHints: updateHints,
+    speakHint: speakHint,
+    showBubble: showBubble,
+    hideBubble: hideBubble
+  };
+
+})();
